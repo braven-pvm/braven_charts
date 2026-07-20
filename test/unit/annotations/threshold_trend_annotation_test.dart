@@ -53,10 +53,7 @@ void main() {
         lineWidth: 2.0,
       );
 
-      final modified = original.copyWith(
-        value: 80.0,
-        lineColor: Colors.purple,
-      );
+      final modified = original.copyWith(value: 80.0, lineColor: Colors.purple);
 
       expect(modified.id, 'original'); // unchanged
       expect(modified.axis, AnnotationAxis.y); // unchanged
@@ -157,6 +154,62 @@ void main() {
       expect(annotation.degree, 3);
     });
 
+    test('creates LOESS trend with bounded smoothing parameters', () {
+      final annotation = TrendAnnotation(
+        id: 'loess_trend',
+        seriesId: 'series1',
+        trendType: TrendType.loess,
+        loessSpan: 0.42,
+        loessRobustnessIterations: 3,
+        loessSampleCount: 120,
+      );
+
+      expect(annotation.trendType, TrendType.loess);
+      expect(annotation.loessSpan, 0.42);
+      expect(annotation.loessRobustnessIterations, 3);
+      expect(annotation.loessSampleCount, 120);
+    });
+
+    test('exposes opt-in statistical diagnostics', () {
+      final annotation = TrendAnnotation(
+        trendType: TrendType.linear,
+        showEquation: true,
+        showRSquared: true,
+        showSampleCount: true,
+        showPearsonCorrelation: true,
+        showSpearmanCorrelation: true,
+      );
+
+      expect(annotation.showsStatistics, isTrue);
+      expect(annotation.showEquation, isTrue);
+      expect(annotation.showRSquared, isTrue);
+      expect(annotation.showSampleCount, isTrue);
+      expect(annotation.showPearsonCorrelation, isTrue);
+      expect(annotation.showSpearmanCorrelation, isTrue);
+      expect(
+        TrendAnnotation(trendType: TrendType.linear).showsStatistics,
+        isFalse,
+      );
+    });
+
+    test('rejects invalid LOESS smoothing parameters', () {
+      expect(
+        () => TrendAnnotation(trendType: TrendType.loess, loessSpan: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => TrendAnnotation(
+          trendType: TrendType.loess,
+          loessRobustnessIterations: -1,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => TrendAnnotation(trendType: TrendType.loess, loessSampleCount: 1),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
     test('copyWith creates modified copy', () {
       final original = TrendAnnotation(
         id: 'original',
@@ -170,6 +223,8 @@ void main() {
         trendType: TrendType.movingAverage,
         windowSize: 7,
         lineColor: Colors.green,
+        showRSquared: true,
+        showSampleCount: true,
       );
 
       expect(modified.id, 'original'); // unchanged
@@ -178,6 +233,8 @@ void main() {
       expect(modified.windowSize, 7); // changed
       expect(modified.lineColor, Colors.green); // changed
       expect(modified.lineWidth, 2.0); // unchanged
+      expect(modified.showRSquared, isTrue);
+      expect(modified.showSampleCount, isTrue);
     });
 
     test('throws assertion error when MA without window size', () {
@@ -219,11 +276,12 @@ void main() {
 
   group('TrendType enum', () {
     test('has correct values', () {
-      expect(TrendType.values.length, 4);
+      expect(TrendType.values.length, 5);
       expect(TrendType.values, contains(TrendType.linear));
       expect(TrendType.values, contains(TrendType.polynomial));
       expect(TrendType.values, contains(TrendType.movingAverage));
       expect(TrendType.values, contains(TrendType.exponentialMovingAverage));
+      expect(TrendType.values, contains(TrendType.loess));
     });
   });
 }

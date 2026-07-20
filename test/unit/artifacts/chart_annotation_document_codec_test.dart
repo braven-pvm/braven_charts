@@ -140,6 +140,33 @@ void main() {
       expect(trend.dashPattern, [5, 2]);
       expect(trend.elevation, 1.5);
 
+      final loess =
+          _roundTrip(
+                TrendAnnotation(
+                  id: 'local-fit',
+                  seriesId: 'power',
+                  trendType: TrendType.loess,
+                  loessSpan: 0.38,
+                  loessRobustnessIterations: 3,
+                  loessSampleCount: 140,
+                  showEquation: true,
+                  showRSquared: true,
+                  showSampleCount: true,
+                  showPearsonCorrelation: true,
+                  showSpearmanCorrelation: true,
+                ),
+              ).$2
+              as TrendAnnotation;
+      expect(loess.trendType, TrendType.loess);
+      expect(loess.loessSpan, 0.38);
+      expect(loess.loessRobustnessIterations, 3);
+      expect(loess.loessSampleCount, 140);
+      expect(loess.showEquation, isTrue);
+      expect(loess.showRSquared, isTrue);
+      expect(loess.showSampleCount, isTrue);
+      expect(loess.showPearsonCorrelation, isTrue);
+      expect(loess.showSpearmanCorrelation, isTrue);
+
       final chord =
           _roundTrip(
                 ChordAnnotation(
@@ -248,12 +275,23 @@ void main() {
         zIndex: 12,
         series: [nestedSeries],
         trendAnnotations: [trend],
+        errorBarAnnotations: [
+          ErrorBarAnnotation(
+            id: 'legend-error',
+            label: 'X/Y measurement error',
+            seriesId: 'power',
+            values: const [
+              ErrorBarDatum.symmetric(pointIndex: 0, x: 0.2, y: 1.5),
+            ],
+          ),
+        ],
         legendStyle: style,
         hiddenSeriesIds: const {'power'},
         customPosition: const Offset(220, 40),
       );
 
-      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+      final (document, decodedValue) = _roundTrip(source);
+      final decoded = decodedValue as LegendAnnotation;
 
       expect(decoded.legendStyle, style);
       expect(decoded.hiddenSeriesIds, {'power'});
@@ -261,8 +299,70 @@ void main() {
       expect(decoded.series.single, isA<LineChartSeries>());
       expect(decoded.series.single.annotations.single, isA<PinAnnotation>());
       expect(decoded.trendAnnotations.single.id, 'legend-trend');
+      expect(decoded.errorBarAnnotations.single.id, 'legend-error');
+      expect(decoded.errorBarAnnotations.single.label, 'X/Y measurement error');
       expect(identical(decoded.series.single, nestedSeries), isFalse);
       expect(identical(decoded.trendAnnotations.single, trend), isFalse);
+      expect(document.requiredCapabilities, contains('annotation.errorBar'));
+    });
+
+    test('round-trips regression bands and asymmetric error bars', () {
+      final trend =
+          _roundTrip(
+                TrendAnnotation(
+                  id: 'uncertain-fit',
+                  seriesId: 'observed',
+                  trendType: TrendType.linear,
+                  showConfidenceBand: true,
+                  showPredictionBand: true,
+                  confidenceLevel: 0.99,
+                  confidenceBandColor: const Color(0xFF0F766E),
+                  predictionBandColor: const Color(0xFF14B8A6),
+                  confidenceBandOpacity: 0.24,
+                  predictionBandOpacity: 0.12,
+                ),
+              ).$2
+              as TrendAnnotation;
+      expect(trend.showConfidenceBand, isTrue);
+      expect(trend.showPredictionBand, isTrue);
+      expect(trend.confidenceLevel, 0.99);
+      expect(trend.confidenceBandColor, const Color(0xFF0F766E));
+      expect(trend.predictionBandColor, const Color(0xFF14B8A6));
+      expect(trend.confidenceBandOpacity, 0.24);
+      expect(trend.predictionBandOpacity, 0.12);
+
+      final (document, decodedValue) = _roundTrip(
+        ErrorBarAnnotation(
+          id: 'measurement-error',
+          label: 'Instrument uncertainty',
+          seriesId: 'observed',
+          values: const [
+            ErrorBarDatum.symmetric(pointIndex: 0, x: 0.2, y: 1.5),
+            ErrorBarDatum(
+              pointIndex: 2,
+              xNegative: 0.1,
+              xPositive: 0.3,
+              yNegative: 0.8,
+              yPositive: 1.2,
+            ),
+          ],
+          lineColor: const Color(0xFF475569),
+          lineWidth: 2,
+          capSize: 8,
+        ),
+      );
+      final decoded = decodedValue as ErrorBarAnnotation;
+      expect(document.type, 'errorBar');
+      expect(document.requiredCapabilities, {'annotation.errorBar'});
+      expect(decoded.seriesId, 'observed');
+      expect(decoded.values, hasLength(2));
+      expect(decoded.values.first.xNegative, 0.2);
+      expect(decoded.values.last.xPositive, 0.3);
+      expect(decoded.values.last.yNegative, 0.8);
+      expect(decoded.values.last.yPositive, 1.2);
+      expect(decoded.lineColor, const Color(0xFF475569));
+      expect(decoded.lineWidth, 2);
+      expect(decoded.capSize, 8);
     });
 
     test('round-trips a nested pie series in legend annotations', () {

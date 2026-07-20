@@ -54,6 +54,26 @@ class TooltipRenderer {
           'Change: ${candle.formattedChange} · ${candle.direction.name}';
     }
     if (dataHit.category == null || dataHit.share == null) {
+      final isAggregate =
+          dataHit.sourcePointIndices.length > 1 ||
+          dataHit.formattedAggregateValue != null ||
+          (dataHit.category?.endsWith(' bin') ?? false);
+      if (isAggregate) {
+        final aggregateLabel =
+            dataHit.category ??
+            '${dataHit.sourcePointIndices.length} observations';
+        final sampleCount = dataHit.aggregateSampleCount;
+        final sourceCount = dataHit.effectiveSourcePointIndices.length;
+        final aggregateSampleLine =
+            sampleCount != null && sampleCount < sourceCount
+            ? '\nAggregate sample: $sampleCount of $sourceCount observations'
+            : '';
+        return '$seriesName\n$aggregateLabel'
+            '\nX mean: ${dataHit.formattedXValue ?? formatDataValue(dataHit.point.x)}'
+            '\nY mean: ${dataHit.formattedValue}'
+            '${dataHit.formattedAggregateValue == null ? '' : '\n${dataHit.aggregateLabel ?? 'Aggregate'}: ${dataHit.formattedAggregateValue}'}'
+            '$aggregateSampleLine';
+      }
       final sizeLine = dataHit.formattedRadiusValue == null
           ? ''
           : '\n${dataHit.radiusLabel ?? 'Magnitude'}: ${dataHit.formattedRadiusValue}';
@@ -63,8 +83,11 @@ class TooltipRenderer {
       final opacityLine = dataHit.formattedOpacityValue == null
           ? ''
           : '\n${dataHit.opacityLabel ?? 'Opacity value'}: ${dataHit.formattedOpacityValue}';
+      final categoryLine = dataHit.categoryValue == null
+          ? ''
+          : '\n${dataHit.categoryLabel ?? 'Category'}: ${dataHit.categoryValue}';
       return '$seriesName\nX: ${formatDataValue(dataHit.point.x)}\n'
-          'Y: $formattedCartesianY$sizeLine$colorLine$opacityLine';
+          'Y: $formattedCartesianY$sizeLine$colorLine$opacityLine$categoryLine';
     }
     final groupHeading = dataHit.groupLabel == null
         ? ''

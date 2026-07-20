@@ -125,6 +125,12 @@ abstract final class CrosshairTracker {
           ? null
           : series.opacityEncoding!.format(opacityValue),
       opacityLabel: opacityValue == null ? null : series.opacityEncoding!.label,
+      categoryValue:
+          series.categoryEncoding?.labelFor(point.categoryValue) ??
+          point.categoryValue,
+      categoryLabel: point.categoryValue == null
+          ? null
+          : series.categoryEncoding?.label,
     );
   }
 
@@ -459,6 +465,13 @@ abstract final class CrosshairTracker {
     if (markerColor != null) return markerColor;
     final pointColor = series.points[pointIndex].pointStyle?.color;
     if (pointColor != null) return pointColor;
+    if (series case final ScatterChartSeries scatter
+        when scatter.categoryEncoding != null) {
+      final categoryColor = scatter.categoryEncoding
+          ?.styleFor(scatter.points[pointIndex].categoryValue)
+          ?.color;
+      if (categoryColor != null) return categoryColor;
+    }
     if (series case final ScatterChartSeries scatter
         when scatter.colorEncoding != null) {
       final values = [

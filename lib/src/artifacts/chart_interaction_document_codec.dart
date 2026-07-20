@@ -72,6 +72,8 @@ abstract final class ChartInteractionDocumentCodec {
             'enableZoom': config.enableZoom,
             'enablePan': config.enablePan,
             'enableSelection': config.enableSelection,
+            if (config.selection != const ChartSelectionConfig())
+              'selection': _encodeSelection(config.selection),
             'showFocusBorder': config.showFocusBorder,
             'enableFocusOnHover': config.enableFocusOnHover,
             'showXScrollbar': config.showXScrollbar,
@@ -218,6 +220,9 @@ abstract final class ChartInteractionDocumentCodec {
           enableZoom: _bool(map, 'enableZoom'),
           enablePan: _bool(map, 'enablePan'),
           enableSelection: _bool(map, 'enableSelection'),
+          selection: map['selection'] == null
+              ? const ChartSelectionConfig()
+              : _decodeSelection(_requiredMap(map, 'selection')),
           showFocusBorder: _bool(map, 'showFocusBorder'),
           enableFocusOnHover: _bool(map, 'enableFocusOnHover'),
           showXScrollbar: _bool(map, 'showXScrollbar'),
@@ -368,6 +373,25 @@ GestureConfig _decodeGesture(Map<String, Object?> map) => GestureConfig(
   panThreshold: _double(map, 'panThreshold'),
   pinchThreshold: _double(map, 'pinchThreshold'),
 );
+
+Map<String, Object?> _encodeSelection(ChartSelectionConfig value) => {
+  'mode': value.mode.name,
+  'operation': value.operation.name,
+  'dragActivation': value.dragActivation.name,
+  'clearOnBackgroundTap': value.clearOnBackgroundTap,
+  'useModifierKeys': value.useModifierKeys,
+};
+
+ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
+    ChartSelectionConfig(
+      mode: _enum(map, 'mode', ChartSelectionMode.values),
+      operation: _enum(map, 'operation', ChartSelectionOperation.values),
+      dragActivation: map['dragActivation'] == null
+          ? ChartSelectionDragActivation.primary
+          : _enum(map, 'dragActivation', ChartSelectionDragActivation.values),
+      clearOnBackgroundTap: _bool(map, 'clearOnBackgroundTap'),
+      useModifierKeys: _bool(map, 'useModifierKeys'),
+    );
 
 Map<String, Object?> _encodeKeyboard(KeyboardConfig value) => {
   'enabled': value.enabled,

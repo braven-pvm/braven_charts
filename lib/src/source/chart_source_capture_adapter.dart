@@ -171,6 +171,7 @@ abstract final class ChartSourceCaptureAdapter {
         sizeScale: annotation.sizeScale,
         colorScale: annotation.colorScale,
         opacityScale: annotation.opacityScale,
+        categoryScale: annotation.categoryScale,
         legendStyle: annotation.legendStyle,
         hiddenSeriesIds: annotation.hiddenSeriesIds,
         customPosition: annotation.customPosition,
@@ -265,6 +266,13 @@ abstract final class ChartSourceCaptureAdapter {
           'The data-point label formatter',
         );
         return series.copyWith(dataPointLabels: _withoutLabelFormatter(labels));
+      case ScatterChartSeries(dataPointLabels: final labels?)
+          when labels.formatter != null:
+        warn(
+          '\$.series.${series.id}.dataPointLabels.formatter',
+          'The data-point label formatter',
+        );
+        return series.copyWith(dataPointLabels: _withoutLabelFormatter(labels));
       case BarChartSeries(labelStyle: final labels)
           when labels.formatter != null:
         warn(
@@ -293,8 +301,13 @@ abstract final class ChartSourceCaptureAdapter {
   ) => DataPointLabelConfig(
     show: labels.show,
     position: labels.position,
+    content: labels.content,
     offsetX: labels.offsetX,
     offsetY: labels.offsetY,
+    markerGap: labels.markerGap,
+    collisionPolicy: labels.collisionPolicy,
+    collisionPadding: labels.collisionPadding,
+    plotEdgeAware: labels.plotEdgeAware,
     labelColor: labels.labelColor,
     fontSize: labels.fontSize,
     fontWeight: labels.fontWeight,

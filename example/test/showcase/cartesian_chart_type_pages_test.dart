@@ -5,9 +5,12 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/annotation_elements.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
+import 'package:braven_charts_example/showcase/data/scatter_point_generator.dart';
 import 'package:braven_charts_example/showcase/pages/cartesian_chart_type_pages.dart';
 import 'package:braven_charts_example/showcase/widgets/chart_options.dart';
+import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1253,6 +1256,90 @@ void main() {
     );
   });
 
+  testWidgets('scatter preset catalogue wraps instead of clipping', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+
+    final picker = find.byKey(const ValueKey('scatter-preset-picker'));
+    final cohorts = find.descendant(of: picker, matching: find.text('Cohorts'));
+    final selection = find.descendant(
+      of: picker,
+      matching: find.text('Selection'),
+    );
+    final lasso = find.descendant(of: picker, matching: find.text('Lasso'));
+    final regression = find.descendant(
+      of: picker,
+      matching: find.text('Regression'),
+    );
+    final uncertainty = find.descendant(
+      of: picker,
+      matching: find.text('Uncertainty'),
+    );
+    final generator = find.descendant(
+      of: picker,
+      matching: find.text('Generator'),
+    );
+    final clusters = find.descendant(
+      of: picker,
+      matching: find.text('Clusters'),
+    );
+    final gridBins = find.descendant(
+      of: picker,
+      matching: find.text('Grid bins'),
+    );
+    final hexbin = find.descendant(of: picker, matching: find.text('Hexbin'));
+    final density = find.descendant(of: picker, matching: find.text('Density'));
+
+    expect(picker, findsOneWidget);
+    expect(cohorts, findsOneWidget);
+    expect(selection, findsOneWidget);
+    expect(lasso, findsOneWidget);
+    expect(regression, findsOneWidget);
+    expect(uncertainty, findsOneWidget);
+    expect(generator, findsOneWidget);
+    expect(clusters, findsOneWidget);
+    expect(gridBins, findsOneWidget);
+    expect(hexbin, findsOneWidget);
+    expect(density, findsOneWidget);
+    expect(
+      tester.getTopLeft(selection).dy,
+      greaterThan(tester.getTopLeft(cohorts).dy),
+    );
+    expect(
+      find.descendant(of: picker, matching: find.byType(ChoiceChip)),
+      findsNWidgets(25),
+    );
+    expect(
+      tester.getTopLeft(lasso).dy,
+      greaterThan(tester.getTopLeft(cohorts).dy),
+    );
+    expect(
+      tester.getTopLeft(regression).dy,
+      greaterThan(tester.getTopLeft(cohorts).dy),
+    );
+    expect(
+      tester.getTopLeft(generator).dy,
+      greaterThan(tester.getTopLeft(cohorts).dy),
+    );
+    expect(
+      tester.getTopLeft(clusters).dy,
+      greaterThan(tester.getTopLeft(cohorts).dy),
+    );
+
+    final pickerRect = tester.getRect(picker);
+    final chips = find.descendant(
+      of: picker,
+      matching: find.byType(ChoiceChip),
+    );
+    for (final chip in chips.evaluate()) {
+      final chipRect = tester.getRect(find.byWidget(chip.widget));
+      expect(chipRect.left, greaterThanOrEqualTo(pickerRect.left));
+      expect(chipRect.right, lessThanOrEqualTo(pickerRect.right));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('scatter Shapes showcases every visible marker silhouette', (
     tester,
   ) async {
@@ -1620,6 +1707,964 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'scatter Categories maps one series through a native categorical key',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+      final categories = find.descendant(
+        of: find.byKey(const ValueKey('scatter-preset-picker')),
+        matching: find.text('Categories'),
+      );
+      await tester.ensureVisible(categories);
+      await tester.tap(categories);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final scatter = chart.series.whereType<ScatterChartSeries>().single;
+      expect(find.text('Fleet operating profile'), findsOneWidget);
+      expect(find.textContaining('Category: powertrain'), findsOneWidget);
+      expect(scatter.points, hasLength(18));
+      expect(scatter.points.map((point) => point.categoryValue).toSet(), {
+        'electric',
+        'hybrid',
+        'combustion',
+      });
+      expect(scatter.categoryEncoding?.categories.map((style) => style.shape), [
+        SeriesMarkerShape.circle,
+        SeriesMarkerShape.diamond,
+        SeriesMarkerShape.triangle,
+      ]);
+      expect(
+        find.byKey(const ValueKey('scatter-category-palette')),
+        findsOneWidget,
+      );
+      expect(
+        find.byType(DropdownButtonFormField<SeriesMarkerShape>),
+        findsNothing,
+      );
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      final categorical = renderBox.debugElements
+          .whereType<LegendAnnotationElement>()
+          .singleWhere((legend) => legend.annotation.categoryScale != null);
+      expect(categorical.annotation.categoryScale?.label, 'Powertrain');
+      expect(
+        categorical.annotation.categoryScale?.items.map((item) => item.label),
+        ['Battery electric', 'Plug-in hybrid', 'Combustion'],
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('scatter Jitter separates duplicate raw survey responses', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final jitter = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Jitter'),
+    );
+    await tester.ensureVisible(jitter);
+    await tester.tap(jitter);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final scatter = chart.series.whereType<ScatterChartSeries>().single;
+    expect(find.text('Support survey responses'), findsOneWidget);
+    expect(scatter.points, hasLength(36));
+    expect(
+      scatter.jitter,
+      const ScatterJitterConfig(xAmplitude: 44, yAmplitude: 32, seed: 17),
+    );
+    expect(
+      scatter.points.every(
+        (point) =>
+            point.x == point.x.roundToDouble() &&
+            point.y == point.y.roundToDouble(),
+      ),
+      isTrue,
+    );
+    expect(find.byKey(const ValueKey('scatter-jitter-x')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scatter-jitter-y')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scatter-jitter-seed')), findsOneWidget);
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final element = renderBox.debugElements.whereType<SeriesElement>().single;
+    final duplicateIndices = [
+      for (var index = 0; index < scatter.points.length; index++)
+        if (scatter.points[index].x == 4 && scatter.points[index].y == 4) index,
+    ];
+    final centers = {
+      for (final index in duplicateIndices)
+        element.scatterGeometryForPoint(index)!.center,
+    };
+    expect(duplicateIndices.length, greaterThan(1));
+    expect(centers, hasLength(duplicateIndices.length));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Labels repositions chart-wide point labels', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final labels = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Labels'),
+    );
+    await tester.ensureVisible(labels);
+    await tester.tap(labels);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final scatter = chart.series.whereType<ScatterChartSeries>().toList();
+    expect(find.text('Customer expansion candidates'), findsOneWidget);
+    expect(scatter, hasLength(2));
+    expect(
+      scatter.every(
+        (series) =>
+            series.dataPointLabels?.content ==
+                DataPointLabelContent.pointLabel &&
+            series.dataPointLabels?.collisionPolicy ==
+                DataPointLabelCollisionPolicy.reposition,
+      ),
+      isTrue,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-label-position')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-label-collision')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-label-offset-x')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-label-offset-y')),
+      findsOneWidget,
+    );
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final bounds = [
+      for (final element in renderBox.debugElements.whereType<SeriesElement>())
+        ...element.visibleScatterLabelBounds,
+    ];
+    expect(bounds.length, greaterThan(10));
+    for (var first = 0; first < bounds.length; first++) {
+      for (var second = first + 1; second < bounds.length; second++) {
+        expect(bounds[first].overlaps(bounds[second]), isFalse);
+      }
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Selection exposes and applies durable point operations', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final selection = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Selection'),
+    );
+    await tester.ensureVisible(selection);
+    await tester.tap(selection);
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(find.text('Account portfolio selection'), findsOneWidget);
+    expect(
+      find.text(
+        'Tap markers or use arrow keys to focus and Enter to select. Empty primary drags stay neutral; middle-drag pans and Shift+wheel zooms.',
+      ),
+      findsOneWidget,
+    );
+    expect(chart.series.whereType<ScatterChartSeries>(), hasLength(2));
+    expect(
+      chart.interactionConfig?.selection.operation,
+      ChartSelectionOperation.toggle,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-selection-operation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-selection-background-clear')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-selection-scale')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-selection-stroke-width')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-unselected-opacity')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-focus-ring-gap')),
+      findsOneWidget,
+    );
+    expect(find.text('0 selected'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('scatter-selection-summary')),
+      findsNothing,
+    );
+
+    final selectionScale = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('scatter-selection-scale')),
+    );
+    selectionScale.onChanged(1.8);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(
+      chart.series.whereType<ScatterChartSeries>().every(
+        (series) => series.interactionStyle.selectionScale == 1.8,
+      ),
+      isTrue,
+    );
+
+    final renderFinder = find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+    );
+    final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+    final element = renderBox.debugElements.whereType<SeriesElement>().first;
+    final markerPosition =
+        tester.getTopLeft(renderFinder) +
+        renderBox.plotToWidget(element.dataHitForPointIndex(0)!.plotPosition);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(markerPosition);
+    await tester.pump();
+    await mouse.down(markerPosition);
+    await mouse.up();
+    await tester.pump();
+
+    expect(chart.bravenChartController?.selectedPointRefs, hasLength(1));
+    expect(find.text('1 selected'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('scatter-selection-summary')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('1 series · X'), findsOneWidget);
+    expect(
+      chart.bravenChartController?.selectionResult.statistics.pointCount,
+      1,
+    );
+
+    final operation = tester.widget<EnumOption<ChartSelectionOperation>>(
+      find.byKey(const ValueKey('scatter-selection-operation')),
+    );
+    operation.onChanged(ChartSelectionOperation.add);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(
+      chart.interactionConfig?.selection.operation,
+      ChartSelectionOperation.add,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Brush and Lasso expose real drag-selection presets', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final picker = find.byKey(const ValueKey('scatter-preset-picker'));
+
+    for (final preset
+        in <
+          ({
+            String label,
+            String title,
+            ChartSelectionMode mode,
+            String guidance,
+          })
+        >[
+          (
+            label: 'Brush',
+            title: 'Account portfolio brush',
+            mode: ChartSelectionMode.rectangle,
+            guidance:
+                'Drag a rectangle across account markers to select every enclosed point. Middle-drag still pans the viewport.',
+          ),
+          (
+            label: 'Lasso',
+            title: 'Account portfolio lasso',
+            mode: ChartSelectionMode.lasso,
+            guidance:
+                'Draw a free-form boundary around irregular account clusters. The live preview shows which points will be selected.',
+          ),
+        ]) {
+      final chip = find.descendant(
+        of: picker,
+        matching: find.text(preset.label),
+      );
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      expect(find.text(preset.title), findsOneWidget);
+      expect(find.text(preset.guidance), findsOneWidget);
+      expect(chart.interactionConfig?.selection.mode, preset.mode);
+      expect(chart.series.whereType<ScatterChartSeries>(), hasLength(2));
+      expect(
+        find.byKey(const ValueKey('scatter-selection-operation')),
+        findsOneWidget,
+      );
+      expect(find.text('Selection result'), findsOneWidget);
+      expect(find.text('0 selected'), findsWidgets);
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Regression renders a configurable robust LOESS curve', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final regression = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Regression'),
+    );
+    await tester.ensureVisible(regression);
+    await tester.tap(regression);
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    var loess = chart.annotations.whereType<TrendAnnotation>().singleWhere(
+      (annotation) => annotation.trendType == TrendType.loess,
+    );
+    var linear = chart.annotations.whereType<TrendAnnotation>().singleWhere(
+      (annotation) => annotation.trendType == TrendType.linear,
+    );
+    expect(find.text('Campaign frequency response'), findsOneWidget);
+    expect(chart.series.whereType<ScatterChartSeries>(), hasLength(1));
+    expect(loess.loessSpan, 0.45);
+    expect(loess.loessRobustnessIterations, 2);
+    expect(loess.loessSampleCount, 120);
+    expect(linear.showEquation, isTrue);
+    expect(linear.showRSquared, isTrue);
+    expect(linear.showSampleCount, isTrue);
+    expect(linear.showPearsonCorrelation, isTrue);
+    expect(linear.showSpearmanCorrelation, isTrue);
+
+    final renderFinder = find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+    );
+    final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+    final loessElement = renderBox.debugElements
+        .whereType<TrendAnnotationElement>()
+        .singleWhere(
+          (element) => element.annotation.trendType == TrendType.loess,
+        );
+    expect(loessElement.evaluateAt(6), isNotNull);
+    expect(loessElement.bounds.isFinite, isTrue);
+    final linearElement = renderBox.debugElements
+        .whereType<TrendAnnotationElement>()
+        .singleWhere(
+          (element) => element.annotation.trendType == TrendType.linear,
+        );
+    expect(linearElement.statistics.sampleCount, 28);
+    expect(linearElement.statistics.equation, startsWith('y = '));
+    expect(linearElement.statistics.rSquared, isNotNull);
+    expect(linearElement.statistics.pearsonCorrelation, isNotNull);
+    expect(linearElement.statistics.spearmanCorrelation, isNotNull);
+
+    tester
+        .widget<SliderOption>(find.byKey(const ValueKey('scatter-loess-span')))
+        .onChanged(0.7);
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('scatter-loess-robustness')),
+        )
+        .onChanged(3);
+    tester
+        .widget<EnumOption<int>>(
+          find.byKey(const ValueKey('scatter-loess-samples')),
+        )
+        .onChanged(160);
+    tester
+        .widget<BoolOption>(
+          find.byKey(const ValueKey('scatter-regression-show-spearman')),
+        )
+        .onChanged(false);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    loess = chart.annotations.whereType<TrendAnnotation>().singleWhere(
+      (annotation) => annotation.trendType == TrendType.loess,
+    );
+    linear = chart.annotations.whereType<TrendAnnotation>().singleWhere(
+      (annotation) => annotation.trendType == TrendType.linear,
+    );
+    expect(loess.loessSpan, 0.7);
+    expect(loess.loessRobustnessIterations, 3);
+    expect(loess.loessSampleCount, 160);
+    expect(linear.showSpearmanCorrelation, isFalse);
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final source = workbench.workbenchController!.generatedSource!.source;
+    expect(source, contains('TrendType.loess'));
+    expect(source, contains('loessSpan: 0.7'));
+    expect(source, contains('loessRobustnessIterations: 3'));
+    expect(source, contains('loessSampleCount: 160'));
+    expect(source, contains('showEquation: true'));
+    expect(source, contains('showRSquared: true'));
+    expect(source, contains('showSampleCount: true'));
+    expect(source, contains('showPearsonCorrelation: true'));
+    expect(source, isNot(contains('showSpearmanCorrelation: true')));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'scatter Uncertainty composes OLS bands with portable asymmetric X/Y errors',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+      final uncertainty = find.descendant(
+        of: find.byKey(const ValueKey('scatter-preset-picker')),
+        matching: find.text('Uncertainty'),
+      );
+      await tester.ensureVisible(uncertainty);
+      await tester.tap(uncertainty);
+      await tester.pumpAndSettle();
+
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      var trend = chart.annotations.whereType<TrendAnnotation>().single;
+      var errors = chart.annotations.whereType<ErrorBarAnnotation>().single;
+      expect(find.text('Assay calibration uncertainty'), findsOneWidget);
+      expect(find.text('Uncertainty model'), findsOneWidget);
+      expect(
+        find.textContaining('grey bars: asymmetric X/Y error'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('inner teal:'), findsOneWidget);
+      expect(
+        chart.series.whereType<ScatterChartSeries>().single.points,
+        hasLength(10),
+      );
+      expect(trend.showConfidenceBand, isTrue);
+      expect(trend.showPredictionBand, isTrue);
+      expect(trend.confidenceLevel, 0.95);
+      expect(chart.legendStyle?.position, LegendPosition.topLeft);
+      expect(chart.interactionConfig!.crosshair.mode, CrosshairMode.vertical);
+      expect(errors.values, hasLength(10));
+      expect(errors.values.first.hasX, isTrue);
+      expect(errors.values.first.hasY, isTrue);
+      expect(
+        errors.values.first.xNegative,
+        isNot(errors.values.first.xPositive),
+      );
+
+      final renderFinder = find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      );
+      final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      final trendElement = renderBox.debugElements
+          .whereType<TrendAnnotationElement>()
+          .single;
+      expect(trendElement.intervals, isNotNull);
+      expect(
+        renderBox.debugElements.whereType<ErrorBarAnnotationElement>(),
+        hasLength(1),
+      );
+      final legend = renderBox.debugElements
+          .whereType<LegendAnnotationElement>()
+          .single;
+      expect(legend.debugUncertaintyLabels, [
+        'X/Y measurement error',
+        '95% mean confidence',
+        '95% future prediction',
+      ]);
+
+      tester
+          .widget<EnumOption<double>>(
+            find.byKey(const ValueKey('scatter-uncertainty-confidence-level')),
+          )
+          .onChanged(0.99);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('scatter-uncertainty-x-errors')),
+          )
+          .onChanged(false);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('scatter-uncertainty-asymmetric')),
+          )
+          .onChanged(false);
+      await tester.pumpAndSettle();
+
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      trend = chart.annotations.whereType<TrendAnnotation>().single;
+      errors = chart.annotations.whereType<ErrorBarAnnotation>().single;
+      expect(trend.confidenceLevel, 0.99);
+      expect(errors.values.every((value) => !value.hasX), isTrue);
+      expect(
+        errors.values.every(
+          (value) => value.yNegative == value.yPositive && value.hasY,
+        ),
+        isTrue,
+      );
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      final source = workbench.workbenchController!.generatedSource!.source;
+      expect(source, contains('showConfidenceBand: true'));
+      expect(source, contains('showPredictionBand: true'));
+      expect(source, contains('confidenceLevel: 0.99'));
+      expect(source, contains('ErrorBarAnnotation('));
+      expect(source, contains('ErrorBarDatum('));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('scatter Generator rebuilds deterministic test cohorts', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final generator = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Generator'),
+    );
+    await tester.ensureVisible(generator);
+    await tester.tap(generator);
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    var scatter = chart.series.whereType<ScatterChartSeries>().toList();
+    expect(find.text('Generated relationship lab'), findsOneWidget);
+    expect(find.text('Point generator'), findsOneWidget);
+    expect(scatter, hasLength(3));
+    expect(scatter.every((series) => series.points.length == 250), isTrue);
+
+    tester
+        .widget<EnumOption<ScatterPointDistribution>>(
+          find.byKey(const ValueKey('scatter-generator-distribution')),
+        )
+        .onChanged(ScatterPointDistribution.clustered);
+    tester
+        .widget<EnumOption<int>>(
+          find.byKey(const ValueKey('scatter-generator-point-count')),
+        )
+        .onChanged(100);
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('scatter-generator-series-count')),
+        )
+        .onChanged(2);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('scatter-generator-x-spread')),
+        )
+        .onChanged(40);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('scatter-generator-y-spread')),
+        )
+        .onChanged(20);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('scatter-generator-correlation')),
+        )
+        .onChanged(-0.8);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('scatter-generator-outliers')),
+        )
+        .onChanged(10);
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('scatter-generator-seed')),
+        )
+        .onChanged(44);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    scatter = chart.series.whereType<ScatterChartSeries>().toList();
+    expect(scatter, hasLength(2));
+    expect(scatter.every((series) => series.points.length == 100), isTrue);
+    expect(
+      scatter
+          .expand((series) => series.points)
+          .every(
+            (point) =>
+                point.x >= 30 &&
+                point.x <= 70 &&
+                point.y >= 40 &&
+                point.y <= 60,
+          ),
+      isTrue,
+    );
+    expect(find.textContaining('200 observations'), findsOneWidget);
+    expect(find.textContaining('clustered distribution'), findsOneWidget);
+    expect(find.textContaining('-0.80 correlation'), findsOneWidget);
+    expect(find.textContaining('seed 44'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('scatter-generator-regenerate')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('seed 45'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'scatter Clusters preserves dense raw data behind explicit layout',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+      final clusters = find.descendant(
+        of: find.byKey(const ValueKey('scatter-preset-picker')),
+        matching: find.text('Clusters'),
+      );
+      await tester.ensureVisible(clusters);
+      await tester.tap(clusters);
+      await tester.pumpAndSettle();
+
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      var scatter = chart.series.whereType<ScatterChartSeries>().single;
+      expect(find.text('Dense customer activity clusters'), findsOneWidget);
+      expect(find.text('Cluster layout'), findsOneWidget);
+      expect(scatter.points, hasLength(25000));
+      expect(scatter.renderMode, ScatterRenderMode.clusters);
+      expect(scatter.clusterConfig.cellSize, 44);
+      expect(scatter.clusterConfig.showCountLabels, isTrue);
+
+      tester
+          .widget<EnumOption<int>>(
+            find.byKey(const ValueKey('scatter-cluster-point-count')),
+          )
+          .onChanged(1000);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('scatter-cluster-cell-size')),
+          )
+          .onChanged(60);
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('scatter-cluster-minimum-points')),
+          )
+          .onChanged(5);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('scatter-cluster-count-labels')),
+          )
+          .onChanged(false);
+      await tester.pumpAndSettle();
+
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      scatter = chart.series.whereType<ScatterChartSeries>().single;
+      expect(scatter.points, hasLength(1000));
+      expect(scatter.clusterConfig.cellSize, 60);
+      expect(scatter.clusterConfig.minimumPointCount, 5);
+      expect(scatter.clusterConfig.showCountLabels, isFalse);
+      expect(find.textContaining('1000 raw observations'), findsOneWidget);
+      expect(find.textContaining('60px screen cells'), findsOneWidget);
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        workbench.workbenchController!.tableModel!.longRows,
+        hasLength(1000),
+      );
+
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      final generated = workbench.workbenchController!.generatedSource!;
+      expect(generated.omittedPointCount, 1000);
+      expect(
+        generated.source,
+        contains('renderMode: ScatterRenderMode.clusters'),
+      );
+      expect(generated.source, contains('// 1000 points omitted.'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('scatter 2D bins expose native grid and hex aggregation', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final picker = find.byKey(const ValueKey('scatter-preset-picker'));
+
+    for (final preset in const [
+      (
+        'Grid bins',
+        ScatterRenderMode.rectangularBins,
+        ScatterBinAggregate.mean,
+        ScatterBinValueSource.x,
+      ),
+      (
+        'Hexbin',
+        ScatterRenderMode.hexbin,
+        ScatterBinAggregate.proportion,
+        ScatterBinValueSource.y,
+      ),
+    ]) {
+      final chip = find.descendant(of: picker, matching: find.text(preset.$1));
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<EnumOption<int>>(
+            find.byKey(const ValueKey('scatter-bin-point-count')),
+          )
+          .onChanged(1000);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('scatter-bin-cell-size')),
+          )
+          .onChanged(48);
+      tester
+          .widget<EnumOption<ScatterBinAggregate>>(
+            find.byKey(const ValueKey('scatter-bin-aggregate')),
+          )
+          .onChanged(preset.$3);
+      await tester.pumpAndSettle();
+      if (preset.$3 != ScatterBinAggregate.count &&
+          preset.$3 != ScatterBinAggregate.proportion) {
+        tester
+            .widget<EnumOption<ScatterBinValueSource>>(
+              find.byKey(const ValueKey('scatter-bin-value-source')),
+            )
+            .onChanged(preset.$4);
+        await tester.pumpAndSettle();
+      }
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final scatter = chart.series.whereType<ScatterChartSeries>().single;
+      expect(scatter.points, hasLength(1000));
+      expect(scatter.renderMode, preset.$2);
+      expect(scatter.binConfig.cellSize, 48);
+      expect(scatter.binConfig.aggregate, preset.$3);
+      expect(scatter.binConfig.valueSource, preset.$4);
+      expect(find.text('2D bin layout'), findsOneWidget);
+      expect(
+        chart.annotations.whereType<LegendAnnotation>().single.opacityScale,
+        isNotNull,
+      );
+      expect(
+        find.textContaining(
+          '${preset.$3.name} aggregation',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+    }
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      workbench.workbenchController!.tableModel!.longRows,
+      hasLength(1000),
+    );
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+    final generated = workbench.workbenchController!.generatedSource!;
+    expect(generated.source, contains('renderMode: ScatterRenderMode.hexbin'));
+    expect(generated.source, contains('binConfig: ScatterBinConfig('));
+    expect(
+      generated.source,
+      contains('aggregate: ScatterBinAggregate.proportion'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'scatter density exposes native contours, source data, and generated Dart',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+      final picker = find.byKey(const ValueKey('scatter-preset-picker'));
+      final density = find.descendant(
+        of: picker,
+        matching: find.text('Density'),
+      );
+      await tester.ensureVisible(density);
+      await tester.tap(density);
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<EnumOption<int>>(
+            find.byKey(const ValueKey('scatter-density-point-count')),
+          )
+          .onChanged(1000);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('scatter-density-bandwidth')),
+          )
+          .onChanged(40);
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('scatter-density-contour-count')),
+          )
+          .onChanged(8);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('scatter-density-show-points')),
+          )
+          .onChanged(true);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final scatter = chart.series.whereType<ScatterChartSeries>().single;
+      expect(scatter.points, hasLength(1000));
+      expect(scatter.renderMode, ScatterRenderMode.density);
+      expect(scatter.densityConfig.bandwidth, 40);
+      expect(scatter.densityConfig.contourCount, 8);
+      expect(scatter.densityConfig.showPoints, isTrue);
+      expect(
+        find.byKey(const ValueKey('scatter-density-contour-count')),
+        findsOneWidget,
+      );
+      expect(
+        chart.annotations.whereType<LegendAnnotation>().single.opacityScale,
+        isNotNull,
+      );
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        workbench.workbenchController!.tableModel!.longRows,
+        hasLength(1000),
+      );
+
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      final generated = workbench.workbenchController!.generatedSource!;
+      expect(
+        generated.source,
+        contains('renderMode: ScatterRenderMode.density'),
+      );
+      expect(
+        generated.source,
+        contains('densityConfig: ScatterDensityConfig('),
+      );
+      expect(generated.source, contains('bandwidth: 40.0'));
+      expect(generated.source, contains('contourCount: 8'));
+      expect(generated.source, contains('showPoints: true'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'scatter Selection links one chart point to one Workbench data row',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+      final selection = find.descendant(
+        of: find.byKey(const ValueKey('scatter-preset-picker')),
+        matching: find.text('Selection'),
+      );
+      await tester.tap(selection);
+      await tester.pumpAndSettle();
+
+      final renderFinder = find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      );
+      final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      final element = renderBox.debugElements.whereType<SeriesElement>().first;
+      final markerPosition =
+          tester.getTopLeft(renderFinder) +
+          renderBox.plotToWidget(element.dataHitForPointIndex(0)!.plotPosition);
+      await tester.tapAt(markerPosition);
+      await tester.pump();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      expect(workbench.tableOptions.rowLayout, ChartTableRowLayout.long);
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+
+      final selectedRef = workbench.chartController!.selectedPointRefs.single;
+      final model = workbench.workbenchController!.tableModel!;
+      expect(model.projectionKind, ChartTableProjectionKind.cartesianLong);
+      final selectedRow = model.longRows.singleWhere(
+        (row) => row.reference == selectedRef,
+      );
+      final rowFinder = find.byKey(ValueKey(selectedRow.rowId));
+      expect(rowFinder, findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.descendant(of: rowFinder, matching: find.byType(Semantics)).first,
+      );
+      expect(semantics.properties.selected, isTrue);
+      expect(find.textContaining('1 selected'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('line workbench supports Data, Split, and live resizing', (
     tester,

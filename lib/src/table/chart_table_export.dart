@@ -117,6 +117,8 @@ abstract final class ChartTableExporter {
       row.xRaw,
       for (final column in model.series) ...[
         row.cells[column.seriesId]?.yRaw,
+        if (column.categoryLabel != null)
+          row.cells[column.seriesId]?.categoryValue,
         for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
           row.cells[column.seriesId]?.auxiliaryValues[field]?.raw,
       ],
@@ -126,6 +128,8 @@ abstract final class ChartTableExporter {
       row.xDisplay,
       for (final column in model.series) ...[
         row.cells[column.seriesId]?.yDisplay ?? 'No value',
+        if (column.categoryLabel != null)
+          row.cells[column.seriesId]?.categoryValue ?? 'No value',
         for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
           row.cells[column.seriesId]?.auxiliaryValues[field]?.display ??
               'No value',
@@ -147,6 +151,7 @@ abstract final class ChartTableExporter {
     rawValues: [
       displayIndex + 1,
       row.seriesName,
+      if (model.hasCategoryValues) row.categoryValue,
       row.xRaw,
       row.yRaw,
       for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
@@ -158,6 +163,7 @@ abstract final class ChartTableExporter {
     displayValues: [
       '${displayIndex + 1}',
       row.seriesName,
+      if (model.hasCategoryValues) row.categoryValue ?? 'No value',
       row.xDisplay,
       row.yDisplay,
       for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
@@ -268,6 +274,8 @@ abstract final class ChartTableExporter {
             column.unit == null
                 ? column.seriesName
                 : '${column.seriesName} (${column.unit})',
+            if (column.categoryLabel != null)
+              '${column.seriesName} ${column.categoryLabel!.toLowerCase()}',
             for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
               (field.unitOverride ?? column.unit) == null
                   ? '${column.seriesName} ${field.label.toLowerCase()}'
@@ -278,6 +286,7 @@ abstract final class ChartTableExporter {
         ChartTableProjectionKind.cartesianLong => [
           '#',
           'Series',
+          if (model.hasCategoryValues) 'Category',
           model.xColumnLabel,
           'Y value',
           for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))

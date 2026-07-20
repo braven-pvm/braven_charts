@@ -443,6 +443,32 @@ same radial interaction contract.
               'type': 'boolean',
               'description': 'Show value tooltip on hover (default: true)',
             },
+            'enable_selection': {
+              'type': 'boolean',
+              'description': 'Allow durable point selection (default: true)',
+            },
+            'selection_operation': {
+              'type': 'string',
+              'enum': ['replace', 'add', 'subtract', 'toggle'],
+              'description':
+                  'Set operation applied when a Cartesian point is selected.',
+            },
+            'selection_drag_activation': {
+              'type': 'string',
+              'enum': ['primary', 'shift_primary'],
+              'description':
+                  'Primary-button chord reserved by rectangle or lasso selection. Point selection remains tap-only.',
+            },
+            'selection_clear_on_background_tap': {
+              'type': 'boolean',
+              'description':
+                  'Clear point selection when the plot background is tapped.',
+            },
+            'selection_use_modifier_keys': {
+              'type': 'boolean',
+              'description':
+                  'Let Ctrl/Command toggle, Shift add, and Alt/Option subtract.',
+            },
           },
         },
         'style': {
@@ -462,6 +488,168 @@ same radial interaction contract.
             'show_legend': {
               'type': 'boolean',
               'description': 'Show legend for multiple series (default: true)',
+            },
+            'scatter_render_mode': {
+              'type': 'string',
+              'enum': [
+                'points',
+                'clusters',
+                'rectangular_bins',
+                'hexbin',
+                'density',
+              ],
+              'description':
+                  'Scatter-only explicit rendering strategy. Dense modes aggregate visible observations in screen space while retaining raw source data.',
+            },
+            'scatter_marker_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Scatter point marker radius in logical pixels.',
+            },
+            'scatter_cluster_cell_size': {
+              'type': 'number',
+              'minimum': 8,
+              'maximum': 256,
+              'description':
+                  'Scatter cluster aggregation cell size in logical pixels.',
+            },
+            'scatter_cluster_minimum_points': {
+              'type': 'integer',
+              'minimum': 2,
+              'description':
+                  'Observations required before a screen-space cell becomes a cluster.',
+            },
+            'scatter_cluster_minimum_radius': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 128,
+              'description': 'Radius of the smallest visible Scatter cluster.',
+            },
+            'scatter_cluster_maximum_radius': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 128,
+              'description': 'Radius of the largest visible Scatter cluster.',
+            },
+            'scatter_cluster_show_labels': {
+              'type': 'boolean',
+              'description': 'Show observation counts inside Scatter clusters.',
+            },
+            'scatter_cluster_label_minimum_points': {
+              'type': 'integer',
+              'minimum': 2,
+              'description':
+                  'Smallest cluster count that receives an on-marker label.',
+            },
+            'scatter_bin_cell_size': {
+              'type': 'number',
+              'minimum': 12,
+              'maximum': 256,
+              'description':
+                  'Rectangular cell width or flat-top hexagon diameter in logical pixels.',
+            },
+            'scatter_bin_gap': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 16,
+              'description': 'Visual separation between adjacent Scatter bins.',
+            },
+            'scatter_bin_minimum_points': {
+              'type': 'integer',
+              'minimum': 1,
+              'description':
+                  'Observations required before an occupied Scatter bin is rendered.',
+            },
+            'scatter_bin_minimum_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Opacity of the least populated visible bin.',
+            },
+            'scatter_bin_maximum_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Opacity of the highest aggregate visible bin.',
+            },
+            'scatter_bin_aggregate': {
+              'type': 'string',
+              'enum': [
+                'count',
+                'sum',
+                'mean',
+                'minimum',
+                'maximum',
+                'proportion',
+              ],
+              'description':
+                  'Statistic mapped to bin opacity and optional labels.',
+            },
+            'scatter_bin_value_source': {
+              'type': 'string',
+              'enum': ['x', 'y', 'magnitude', 'color_value', 'opacity_value'],
+              'description':
+                  'Point field used by sum, mean, minimum, and maximum aggregates.',
+            },
+            'scatter_bin_show_labels': {
+              'type': 'boolean',
+              'description': 'Show aggregate values inside Scatter bins.',
+            },
+            'scatter_bin_label_minimum_points': {
+              'type': 'integer',
+              'minimum': 1,
+              'description':
+                  'Smallest bin count that receives an on-bin label.',
+            },
+            'scatter_density_grid_cell_size': {
+              'type': 'number',
+              'minimum': 4,
+              'maximum': 64,
+              'description':
+                  'Spacing between Scatter density samples in logical pixels.',
+            },
+            'scatter_density_bandwidth': {
+              'type': 'number',
+              'minimum': 4,
+              'maximum': 256,
+              'description':
+                  'Gaussian smoothing bandwidth for Scatter density in logical pixels.',
+            },
+            'scatter_density_contour_count': {
+              'type': 'integer',
+              'minimum': 2,
+              'maximum': 12,
+              'description': 'Number of relative-density isolines.',
+            },
+            'scatter_density_minimum': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'exclusiveMaximum': 1,
+              'description':
+                  'Lowest relative density included in the contours.',
+            },
+            'scatter_density_minimum_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Opacity of the outermost density contour.',
+            },
+            'scatter_density_maximum_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Opacity of the innermost density contour.',
+            },
+            'scatter_density_line_width': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 12,
+              'description': 'Density contour stroke width in logical pixels.',
+            },
+            'scatter_density_show_points': {
+              'type': 'boolean',
+              'description':
+                  'Render raw observations above the density contours.',
             },
             'height': {
               'type': 'number',

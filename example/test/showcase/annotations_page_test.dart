@@ -87,7 +87,7 @@ void main() {
     expect(find.text('Trend Options'), findsOneWidget);
     final trendChart = _mainChart(tester, 'trend');
     final trends = trendChart.annotations.whereType<TrendAnnotation>();
-    expect(trends, hasLength(4));
+    expect(trends, hasLength(TrendType.values.length));
     expect(
       trends.map((annotation) => annotation.trendType).toSet(),
       TrendType.values.toSet(),

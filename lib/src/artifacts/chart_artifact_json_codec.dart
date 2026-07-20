@@ -402,6 +402,7 @@ abstract final class ChartArtifactJsonCodec {
       'magnitudes',
       'colorValues',
       'opacityValues',
+      'categoryValues',
       'metadata',
       'segmentStyles',
       'pointStyles',

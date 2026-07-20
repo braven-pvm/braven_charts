@@ -65,6 +65,8 @@ class CrosshairSeriesValue {
     this.formattedOpacityValue,
     this.opacityLabel,
     this.candlestick,
+    this.categoryValue,
+    this.categoryLabel,
   });
 
   final String seriesId;
@@ -114,6 +116,12 @@ class CrosshairSeriesValue {
 
   /// Typed OHLC values when this tracked sample is a Candlestick.
   final CandlestickInteractionDetails? candlestick;
+
+  /// Display-ready categorical Scatter value.
+  final String? categoryValue;
+
+  /// Human-readable name for [categoryValue].
+  final String? categoryLabel;
 
   /// Returns the series ID to use for axis resolution (linked series for trends).
   String get axisSeriesId => linkedSeriesId ?? seriesId;
@@ -972,6 +980,109 @@ class KeyboardConfig {
 /// - Conflicting settings are resolved (advanced configs take precedence)
 /// - Null values use sensible defaults
 /// - All properties validated on construction
+/// Geometry used to acquire chart points.
+///
+/// [point] is activated by a direct marker tap. [rectangle] acquires marker
+/// centers inside a dragged box, while [lasso] follows a free-form polygon.
+/// Every mode commits through the same durable point-reference contract.
+enum ChartSelectionMode { point, rectangle, lasso }
+
+/// Set operation applied when a selection gesture resolves point references.
+enum ChartSelectionOperation { replace, add, subtract, toggle }
+
+/// Pointer chord that allows a drag-selection mode to own primary-button drag.
+///
+/// This policy is deliberately separate from viewport pan and zoom gestures.
+/// Point selection never owns drag, regardless of this value.
+enum ChartSelectionDragActivation { primary, shiftPrimary }
+
+/// Portable policy for chart point selection.
+class ChartSelectionConfig {
+  const ChartSelectionConfig({
+    this.mode = ChartSelectionMode.point,
+    this.operation = ChartSelectionOperation.replace,
+    this.dragActivation = ChartSelectionDragActivation.primary,
+    this.clearOnBackgroundTap = true,
+    this.useModifierKeys = true,
+  });
+
+  /// Geometry used to acquire points.
+  final ChartSelectionMode mode;
+
+  /// Default set operation for a completed selection gesture.
+  final ChartSelectionOperation operation;
+
+  /// Pointer chord that activates drag selection for drag-capable [mode]s.
+  final ChartSelectionDragActivation dragActivation;
+
+  /// Whether tapping outside a data point clears durable selection.
+  final bool clearOnBackgroundTap;
+
+  /// Whether platform modifiers temporarily override [operation].
+  ///
+  /// Ctrl/Command toggles, Shift adds, and Alt/Option subtracts. Alt has the
+  /// highest precedence, followed by Shift and then Ctrl/Command.
+  final bool useModifierKeys;
+
+  /// Whether this selection policy owns the current primary-button drag.
+  ///
+  /// Direct point selection is tap-only. Rectangle and lasso policies can
+  /// reserve either every primary drag or only Shift+primary drag.
+  bool ownsPrimaryDrag({bool shift = false}) {
+    if (mode == ChartSelectionMode.point) return false;
+    return switch (dragActivation) {
+      ChartSelectionDragActivation.primary => true,
+      ChartSelectionDragActivation.shiftPrimary => shift,
+    };
+  }
+
+  /// Resolves the operation for the current platform modifier state.
+  ChartSelectionOperation resolveOperation({
+    bool controlOrMeta = false,
+    bool shift = false,
+    bool alt = false,
+  }) {
+    if (!useModifierKeys) return operation;
+    if (alt) return ChartSelectionOperation.subtract;
+    if (shift) return ChartSelectionOperation.add;
+    if (controlOrMeta) return ChartSelectionOperation.toggle;
+    return operation;
+  }
+
+  ChartSelectionConfig copyWith({
+    ChartSelectionMode? mode,
+    ChartSelectionOperation? operation,
+    ChartSelectionDragActivation? dragActivation,
+    bool? clearOnBackgroundTap,
+    bool? useModifierKeys,
+  }) => ChartSelectionConfig(
+    mode: mode ?? this.mode,
+    operation: operation ?? this.operation,
+    dragActivation: dragActivation ?? this.dragActivation,
+    clearOnBackgroundTap: clearOnBackgroundTap ?? this.clearOnBackgroundTap,
+    useModifierKeys: useModifierKeys ?? this.useModifierKeys,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionConfig &&
+          other.mode == mode &&
+          other.operation == operation &&
+          other.dragActivation == dragActivation &&
+          other.clearOnBackgroundTap == clearOnBackgroundTap &&
+          other.useModifierKeys == useModifierKeys;
+
+  @override
+  int get hashCode => Object.hash(
+    mode,
+    operation,
+    dragActivation,
+    clearOnBackgroundTap,
+    useModifierKeys,
+  );
+}
+
 class InteractionConfig {
   /// Creates an interaction configuration.
   ///
@@ -987,6 +1098,7 @@ class InteractionConfig {
     this.enableZoom = true,
     this.enablePan = true,
     this.enableSelection = true,
+    this.selection = const ChartSelectionConfig(),
     this.showFocusBorder = false,
     this.enableFocusOnHover = true,
     this.showXScrollbar = false,
@@ -997,6 +1109,7 @@ class InteractionConfig {
     this.onDataPointHover,
     this.onDataPointLongPress,
     this.onSelectionChanged,
+    this.onSelectionResultChanged,
     this.onZoomChanged,
     this.onPanChanged,
     this.onViewportChanged,
@@ -1099,6 +1212,9 @@ class InteractionConfig {
   /// Whether data point selection is enabled.
   final bool enableSelection;
 
+  /// Point acquisition and set-operation policy.
+  final ChartSelectionConfig selection;
+
   /// Whether to show focus border when chart has keyboard focus.
   final bool showFocusBorder;
 
@@ -1188,6 +1304,12 @@ class InteractionConfig {
   /// }
   /// ```
   final SelectionCallback? onSelectionChanged;
+
+  /// Called with stable references, data extents, and aggregate statistics.
+  ///
+  /// This complements [onSelectionChanged], which remains available for
+  /// consumers that only need the raw selected data points.
+  final SelectionResultCallback? onSelectionResultChanged;
 
   /// Called when the zoom level changes.
   ///
@@ -1289,6 +1411,7 @@ class InteractionConfig {
     bool? enableZoom,
     bool? enablePan,
     bool? enableSelection,
+    ChartSelectionConfig? selection,
     bool? showFocusBorder,
     bool? enableFocusOnHover,
     bool? showXScrollbar,
@@ -1298,6 +1421,7 @@ class InteractionConfig {
     DataPointHoverCallback? onDataPointHover,
     DataPointLongPressCallback? onDataPointLongPress,
     SelectionCallback? onSelectionChanged,
+    SelectionResultCallback? onSelectionResultChanged,
     ZoomCallback? onZoomChanged,
     PanCallback? onPanChanged,
     ViewportCallback? onViewportChanged,
@@ -1314,6 +1438,7 @@ class InteractionConfig {
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
+      selection: selection ?? this.selection,
       showFocusBorder: showFocusBorder ?? this.showFocusBorder,
       enableFocusOnHover: enableFocusOnHover ?? this.enableFocusOnHover,
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
@@ -1323,6 +1448,8 @@ class InteractionConfig {
       onDataPointHover: onDataPointHover ?? this.onDataPointHover,
       onDataPointLongPress: onDataPointLongPress ?? this.onDataPointLongPress,
       onSelectionChanged: onSelectionChanged ?? this.onSelectionChanged,
+      onSelectionResultChanged:
+          onSelectionResultChanged ?? this.onSelectionResultChanged,
       onZoomChanged: onZoomChanged ?? this.onZoomChanged,
       onPanChanged: onPanChanged ?? this.onPanChanged,
       onViewportChanged: onViewportChanged ?? this.onViewportChanged,
@@ -1344,6 +1471,7 @@ class InteractionConfig {
         other.enableZoom == enableZoom &&
         other.enablePan == enablePan &&
         other.enableSelection == enableSelection &&
+        other.selection == selection &&
         other.showFocusBorder == showFocusBorder &&
         other.enableFocusOnHover == enableFocusOnHover &&
         other.showXScrollbar == showXScrollbar &&
@@ -1361,6 +1489,7 @@ class InteractionConfig {
     enableZoom,
     enablePan,
     enableSelection,
+    selection,
     showFocusBorder,
     enableFocusOnHover,
     showXScrollbar,

@@ -19,6 +19,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -313,7 +314,12 @@ class ChartConfigBuilder {
         color: color,
         unit: unit,
         yAxisConfig: yAxisConfig,
-        markerRadius: 5.0,
+        markerRadius:
+            (chartStyle?['scatter_marker_radius'] as num?)?.toDouble() ?? 5,
+        renderMode: _parseScatterRenderMode(chartStyle?['scatter_render_mode']),
+        clusterConfig: _parseScatterClusterConfig(chartStyle),
+        binConfig: _parseScatterBinConfig(chartStyle),
+        densityConfig: _parseScatterDensityConfig(chartStyle),
       ),
       SeriesStyle.pie => _buildPieSeries(
         id: id,
@@ -418,6 +424,200 @@ class ChartConfigBuilder {
     staggerFraction:
         (json?['candlestick_animation_stagger'] as num?)?.toDouble() ?? 0,
   );
+
+  static ScatterRenderMode _parseScatterRenderMode(Object? value) =>
+      switch (value) {
+        null || 'points' => ScatterRenderMode.points,
+        'clusters' => ScatterRenderMode.clusters,
+        'rectangular_bins' => ScatterRenderMode.rectangularBins,
+        'hexbin' => ScatterRenderMode.hexbin,
+        'density' => ScatterRenderMode.density,
+        _ => throw FormatException('Unknown scatter_render_mode "$value".'),
+      };
+
+  static ScatterClusterConfig _parseScatterClusterConfig(
+    Map<String, dynamic>? style,
+  ) {
+    try {
+      final cellSize =
+          (style?['scatter_cluster_cell_size'] as num?)?.toDouble() ?? 40;
+      final minimumPointCount =
+          (style?['scatter_cluster_minimum_points'] as num?)?.toInt() ?? 2;
+      final minimumRadius =
+          (style?['scatter_cluster_minimum_radius'] as num?)?.toDouble() ?? 8;
+      final maximumRadius =
+          (style?['scatter_cluster_maximum_radius'] as num?)?.toDouble() ?? 24;
+      final showCountLabels =
+          style?['scatter_cluster_show_labels'] as bool? ?? true;
+      final labelMinimumPointCount =
+          (style?['scatter_cluster_label_minimum_points'] as num?)?.toInt() ??
+          2;
+      if (!cellSize.isFinite ||
+          cellSize < 8 ||
+          cellSize > 256 ||
+          minimumPointCount < 2 ||
+          !minimumRadius.isFinite ||
+          !maximumRadius.isFinite ||
+          minimumRadius <= 0 ||
+          minimumRadius > maximumRadius ||
+          maximumRadius > 128 ||
+          labelMinimumPointCount < 2) {
+        throw const FormatException(
+          'Scatter cluster style values are outside supported bounds.',
+        );
+      }
+      return ScatterClusterConfig(
+        cellSize: cellSize,
+        minimumPointCount: minimumPointCount,
+        minimumRadius: minimumRadius,
+        maximumRadius: maximumRadius,
+        showCountLabels: showCountLabels,
+        labelMinimumPointCount: labelMinimumPointCount,
+      );
+    } on TypeError {
+      throw const FormatException(
+        'Scatter cluster style values have invalid JSON types.',
+      );
+    } on AssertionError {
+      throw const FormatException(
+        'Scatter cluster style values are outside supported bounds.',
+      );
+    }
+  }
+
+  static ScatterBinConfig _parseScatterBinConfig(Map<String, dynamic>? style) {
+    try {
+      final cellSize =
+          (style?['scatter_bin_cell_size'] as num?)?.toDouble() ?? 36;
+      final gap = (style?['scatter_bin_gap'] as num?)?.toDouble() ?? 1;
+      final minimumPointCount =
+          (style?['scatter_bin_minimum_points'] as num?)?.toInt() ?? 1;
+      final minimumOpacity =
+          (style?['scatter_bin_minimum_opacity'] as num?)?.toDouble() ?? 0.2;
+      final maximumOpacity =
+          (style?['scatter_bin_maximum_opacity'] as num?)?.toDouble() ?? 0.95;
+      final aggregate = switch (style?['scatter_bin_aggregate']) {
+        null || 'count' => ScatterBinAggregate.count,
+        'sum' => ScatterBinAggregate.sum,
+        'mean' => ScatterBinAggregate.mean,
+        'minimum' => ScatterBinAggregate.minimum,
+        'maximum' => ScatterBinAggregate.maximum,
+        'proportion' => ScatterBinAggregate.proportion,
+        _ => throw const FormatException(
+          'scatter_bin_aggregate must be count, sum, mean, minimum, maximum, or proportion.',
+        ),
+      };
+      final valueSource = switch (style?['scatter_bin_value_source']) {
+        null || 'y' => ScatterBinValueSource.y,
+        'x' => ScatterBinValueSource.x,
+        'magnitude' => ScatterBinValueSource.magnitude,
+        'color_value' => ScatterBinValueSource.colorValue,
+        'opacity_value' => ScatterBinValueSource.opacityValue,
+        _ => throw const FormatException(
+          'scatter_bin_value_source must be x, y, magnitude, color_value, or opacity_value.',
+        ),
+      };
+      final showLabels = style?['scatter_bin_show_labels'] as bool? ?? false;
+      final labelMinimumPointCount =
+          (style?['scatter_bin_label_minimum_points'] as num?)?.toInt() ?? 10;
+      if (!cellSize.isFinite ||
+          cellSize < 12 ||
+          cellSize > 256 ||
+          !gap.isFinite ||
+          gap < 0 ||
+          gap > 16 ||
+          minimumPointCount < 1 ||
+          !minimumOpacity.isFinite ||
+          minimumOpacity < 0 ||
+          minimumOpacity > 1 ||
+          !maximumOpacity.isFinite ||
+          maximumOpacity < minimumOpacity ||
+          maximumOpacity > 1 ||
+          labelMinimumPointCount < 1) {
+        throw const FormatException(
+          'Scatter bin style values are outside supported bounds.',
+        );
+      }
+      return ScatterBinConfig(
+        cellSize: cellSize,
+        gap: gap,
+        minimumPointCount: minimumPointCount,
+        minimumOpacity: minimumOpacity,
+        maximumOpacity: maximumOpacity,
+        aggregate: aggregate,
+        valueSource: valueSource,
+        showLabels: showLabels,
+        labelMinimumPointCount: labelMinimumPointCount,
+      );
+    } on TypeError {
+      throw const FormatException(
+        'Scatter bin style values have invalid JSON types.',
+      );
+    }
+  }
+
+  static ScatterDensityConfig _parseScatterDensityConfig(
+    Map<String, dynamic>? style,
+  ) {
+    try {
+      final gridCellSize =
+          (style?['scatter_density_grid_cell_size'] as num?)?.toDouble() ?? 8;
+      final bandwidth =
+          (style?['scatter_density_bandwidth'] as num?)?.toDouble() ?? 32;
+      final contourCount =
+          (style?['scatter_density_contour_count'] as num?)?.toInt() ?? 6;
+      final minimumDensity =
+          (style?['scatter_density_minimum'] as num?)?.toDouble() ?? 0.08;
+      final minimumOpacity =
+          (style?['scatter_density_minimum_opacity'] as num?)?.toDouble() ??
+          0.28;
+      final maximumOpacity =
+          (style?['scatter_density_maximum_opacity'] as num?)?.toDouble() ??
+          0.9;
+      final lineWidth =
+          (style?['scatter_density_line_width'] as num?)?.toDouble() ?? 1.5;
+      final showPoints =
+          style?['scatter_density_show_points'] as bool? ?? false;
+      if (!gridCellSize.isFinite ||
+          gridCellSize < 4 ||
+          gridCellSize > 64 ||
+          !bandwidth.isFinite ||
+          bandwidth < 4 ||
+          bandwidth > 256 ||
+          contourCount < 2 ||
+          contourCount > 12 ||
+          !minimumDensity.isFinite ||
+          minimumDensity <= 0 ||
+          minimumDensity >= 1 ||
+          !minimumOpacity.isFinite ||
+          minimumOpacity < 0 ||
+          minimumOpacity > 1 ||
+          !maximumOpacity.isFinite ||
+          maximumOpacity < minimumOpacity ||
+          maximumOpacity > 1 ||
+          !lineWidth.isFinite ||
+          lineWidth <= 0 ||
+          lineWidth > 12) {
+        throw const FormatException(
+          'Scatter density style values are outside supported bounds.',
+        );
+      }
+      return ScatterDensityConfig(
+        gridCellSize: gridCellSize,
+        bandwidth: bandwidth,
+        contourCount: contourCount,
+        minimumDensity: minimumDensity,
+        minimumOpacity: minimumOpacity,
+        maximumOpacity: maximumOpacity,
+        lineWidth: lineWidth,
+        showPoints: showPoints,
+      );
+    } on TypeError {
+      throw const FormatException(
+        'Scatter density style values have invalid JSON types.',
+      );
+    }
+  }
 
   static void _validateCategoryCoordinates(
     List<ChartSeries> series,
@@ -1208,10 +1408,35 @@ class ChartConfigBuilder {
 
     final showCrosshair = json?['show_crosshair'] as bool? ?? true;
     final showTooltip = json?['show_tooltip'] as bool? ?? true;
+    final selectionOperation = switch (json?['selection_operation']) {
+      null || 'replace' => ChartSelectionOperation.replace,
+      'add' => ChartSelectionOperation.add,
+      'subtract' => ChartSelectionOperation.subtract,
+      'toggle' => ChartSelectionOperation.toggle,
+      final value => throw FormatException(
+        'Unknown selection_operation "$value".',
+      ),
+    };
+    final selectionDragActivation =
+        switch (json?['selection_drag_activation']) {
+          null || 'primary' => ChartSelectionDragActivation.primary,
+          'shift_primary' => ChartSelectionDragActivation.shiftPrimary,
+          final value => throw FormatException(
+            'Unknown selection_drag_activation "$value".',
+          ),
+        };
 
     return InteractionConfig(
       enablePan: isPie ? false : (json?['enable_pan'] as bool? ?? true),
       enableZoom: isPie ? false : (json?['enable_zoom'] as bool? ?? true),
+      enableSelection: json?['enable_selection'] as bool? ?? true,
+      selection: ChartSelectionConfig(
+        operation: selectionOperation,
+        dragActivation: selectionDragActivation,
+        clearOnBackgroundTap:
+            json?['selection_clear_on_background_tap'] as bool? ?? true,
+        useModifierKeys: json?['selection_use_modifier_keys'] as bool? ?? true,
+      ),
       crosshair: CrosshairConfig(enabled: isPie ? false : showCrosshair),
       tooltip: TooltipConfig(enabled: showTooltip),
     );

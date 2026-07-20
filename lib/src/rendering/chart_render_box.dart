@@ -39,6 +39,7 @@ import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
 import 'bar_label_layout.dart';
+import 'data_point_label_layout.dart';
 import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
 import 'modules/event_handler_manager.dart';
@@ -107,6 +108,7 @@ class ChartRenderBox extends RenderBox {
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
+    this.onSelectionGestureComplete,
     this.onViewportInteracted,
     this.onViewportChanged,
     this.onDataXCursorChanged,
@@ -272,6 +274,9 @@ class ChartRenderBox extends RenderBox {
   /// Provides data coordinates of dragged rectangle (startX, endX, startY, endY).
   final void Function(double startX, double endX, double startY, double endY)?
   onRangeCreationComplete;
+
+  /// Callback for completed rectangle or lasso data acquisition.
+  void Function(List<ChartDataHit> hits)? onSelectionGestureComplete;
 
   /// Callback for manual viewport interactions such as wheel zoom or scrollbar drag.
   void Function()? onViewportInteracted;
@@ -2171,6 +2176,40 @@ class ChartRenderBox extends RenderBox {
         .toList();
   }
 
+  /// Resolves visible Scatter data enclosed by a widget-space rectangle.
+  List<ChartDataHit> dataHitsInWidgetRect(Rect widgetRect) {
+    final plotRect = Rect.fromPoints(
+      widgetToPlot(widgetRect.topLeft),
+      widgetToPlot(widgetRect.bottomRight),
+    );
+    final seriesElements = _elements
+        .whereType<SeriesElement>()
+        .where((element) => element.series is ScatterChartSeries)
+        .toList(growable: false);
+    _ensureSeriesTransformsUpdated(seriesElements);
+    return [
+      for (final element in seriesElements)
+        ...element.scatterDataHitsInPlotRect(plotRect),
+    ];
+  }
+
+  /// Resolves visible Scatter data enclosed by a widget-space polygon.
+  List<ChartDataHit> dataHitsInWidgetPolygon(List<Offset> widgetPolygon) {
+    if (widgetPolygon.length < 3) return const [];
+    final plotPolygon = [
+      for (final point in widgetPolygon) widgetToPlot(point),
+    ];
+    final seriesElements = _elements
+        .whereType<SeriesElement>()
+        .where((element) => element.series is ScatterChartSeries)
+        .toList(growable: false);
+    _ensureSeriesTransformsUpdated(seriesElements);
+    return [
+      for (final element in seriesElements)
+        ...element.scatterDataHitsInPlotPolygon(plotPolygon),
+    ];
+  }
+
   // ============================================================================
   // Event Handling (delegated to EventHandlerManager)
   // ============================================================================
@@ -2326,11 +2365,15 @@ class ChartRenderBox extends RenderBox {
     final barLabelLayout = BarLabelLayoutCoordinator(
       plotBounds: Offset.zero & size,
     );
+    final dataPointLabelLayout = DataPointLabelLayoutCoordinator(
+      plotBounds: Offset.zero & size,
+    );
 
     // Paint each series with current transform
     for (final series in seriesElements) {
       if (_transform != null && series is SeriesElement) {
         series.setBarLabelLayoutCoordinator(barLabelLayout);
+        series.setDataPointLabelLayoutCoordinator(dataPointLabelLayout);
         // CRITICAL: Update transform before painting (enables path caching!)
         // This allows SeriesElement to cache paths and only regenerate when transform changes.
 
@@ -2476,26 +2519,18 @@ class ChartRenderBox extends RenderBox {
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
-      final previewElements = coordinator.previewSelectedElements;
-      for (final element in previewElements) {
-        // Only draw preview for elements that aren't already selected
-        if (!element.isSelected &&
-            element.elementType == ChartElementType.datapoint) {
-          // Convert plot bounds to widget bounds for preview rendering
-          final plotBounds = element.bounds;
-          final widgetCenter = plotToWidget(plotBounds.center);
-          final radius = plotBounds.width / 2;
-
-          // Draw dashed preview ring (different from solid selection ring)
-          final interactionTheme = _theme?.interactionTheme;
-          final previewPaint = Paint()
-            ..color =
-                (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF))
-                    .withValues(alpha: 0.5)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2;
-          canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
-        }
+      for (final hit in coordinator.previewDataHits) {
+        final widgetCenter = plotToWidget(hit.plotPosition);
+        final radius =
+            math.max(hit.semanticBounds.width, hit.semanticBounds.height) / 2;
+        final interactionTheme = _theme?.interactionTheme;
+        final previewPaint = Paint()
+          ..color =
+              (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF))
+                  .withValues(alpha: 0.65)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+        canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
       }
     }
 
@@ -2520,6 +2555,33 @@ class ChartRenderBox extends RenderBox {
                 interactionTheme?.selectionColor ?? const Color(0xFF0088FF)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1,
+        );
+      }
+    }
+
+    // Paint free-form lasso geometry when lasso owns the active drag.
+    if (coordinator.currentMode == InteractionMode.boxSelecting &&
+        _interactionConfig?.selection.mode == ChartSelectionMode.lasso) {
+      final points = coordinator.lassoSelectionPath;
+      if (points.length >= 2) {
+        final interactionTheme = _theme?.interactionTheme;
+        final color =
+            interactionTheme?.selectionColor ?? const Color(0xFF0088FF);
+        final path = Path()..addPolygon(points, points.length >= 3);
+        if (points.length >= 3) {
+          canvas.drawPath(
+            path,
+            Paint()
+              ..color = color.withValues(alpha: 0.18)
+              ..style = PaintingStyle.fill,
+          );
+        }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
         );
       }
     }
@@ -3557,6 +3619,10 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   VoidCallback? get onViewportChanged => _renderBox.onViewportChanged;
 
+  @override
+  void Function(List<ChartDataHit>)? get onSelectionGestureComplete =>
+      _renderBox.onSelectionGestureComplete;
+
   // ============================================================================
   // Hit testing
   // ============================================================================
@@ -3569,6 +3635,16 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   List<ChartElement> hitTestRect(Rect rect) {
     return _renderBox.hitTestRect(rect).toList();
+  }
+
+  @override
+  List<ChartDataHit> hitTestDataRect(Rect rect) {
+    return _renderBox.dataHitsInWidgetRect(rect);
+  }
+
+  @override
+  List<ChartDataHit> hitTestDataPolygon(List<Offset> polygon) {
+    return _renderBox.dataHitsInWidgetPolygon(polygon);
   }
 
   @override

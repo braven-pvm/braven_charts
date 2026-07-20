@@ -113,6 +113,12 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Box selection rectangle (if boxSelecting mode is active).
   Rect? _boxSelectionRect;
 
+  /// Free-form widget-space path for a lasso selection gesture.
+  final List<Offset> _lassoSelectionPath = [];
+
+  /// Data hits enclosed by the current drag geometry before commit.
+  List<ChartDataHit> _previewDataHits = const [];
+
   // ============================================================================
   // Public Getters
   // ============================================================================
@@ -158,6 +164,13 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
   /// Current box selection rectangle (if in boxSelecting mode).
   Rect? get boxSelectionRect => _boxSelectionRect;
+
+  /// Current free-form lasso path in widget coordinates.
+  List<Offset> get lassoSelectionPath =>
+      List<Offset>.unmodifiable(_lassoSelectionPath);
+
+  /// Data hits currently enclosed by a brush or lasso preview.
+  List<ChartDataHit> get previewDataHits => _previewDataHits;
 
   /// Whether chart is currently in a modal state (blocks other interactions).
   bool get isModal => _currentMode.isModal;
@@ -239,6 +252,8 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       _interactionStartPosition = null;
       _interactionStartElement = null;
       _boxSelectionRect = null;
+      _lassoSelectionPath.clear();
+      _previewDataHits = const [];
     }
 
     notifyListeners();
@@ -437,6 +452,24 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Starts or extends a free-form lasso path.
+  ///
+  /// Points closer than two logical pixels are coalesced to bound memory and
+  /// exact containment work during high-frequency pointer input.
+  void updateLassoSelection(Offset start, Offset current) {
+    if (_lassoSelectionPath.isEmpty) _lassoSelectionPath.add(start);
+    if ((_lassoSelectionPath.last - current).distance >= 2) {
+      _lassoSelectionPath.add(current);
+      notifyListeners();
+    }
+  }
+
+  /// Replaces the data-hit preview for a drag-selection gesture.
+  void updatePreviewDataHits(List<ChartDataHit> hits) {
+    _previewDataHits = List<ChartDataHit>.unmodifiable(hits);
+    notifyListeners();
+  }
+
   /// Updates preview selection set with elements currently in the box.
   ///
   /// This provides live visual feedback during box drag without committing
@@ -462,6 +495,8 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     _interactionStartPosition = null;
     _interactionStartElement = null;
     _boxSelectionRect = null;
+    _lassoSelectionPath.clear();
+    _previewDataHits = const [];
     clearPreviewSelection(); // Clear preview when interaction ends
   }
 

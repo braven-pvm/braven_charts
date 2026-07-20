@@ -16,6 +16,11 @@ import '../models/candlestick_chart_series.dart';
 import '../models/data_range.dart';
 import '../models/enums.dart';
 import '../models/legend_style.dart';
+import '../rendering/scatter_marker_path.dart';
+import '../statistics/linear_regression_intervals.dart';
+import '../statistics/loess_smoother.dart';
+import '../statistics/trend_statistics.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 import 'resize_handle_element.dart';
 
 /// Position for edge value labels during range annotation resize.
@@ -2491,6 +2496,17 @@ class TrendAnnotationElement extends ChartElement {
   bool _isSelected;
   bool _isHovered;
   List<Offset> _trendPoints = [];
+  String? _trendEquation;
+  late TrendStatistics _statistics;
+  LinearRegressionIntervals? _intervals;
+  TextPainter? _statisticsPainter;
+  double? _statisticsPainterMaxWidth;
+
+  /// Diagnostics calculated from the finite source observations and fit.
+  TrendStatistics get statistics => _statistics;
+
+  /// OLS interval calculation used by the rendered bands, when available.
+  LinearRegressionIntervals? get intervals => _intervals;
 
   // Cached plot-space points and bounds to avoid O(n) recomputation
   // on every QuadTree insert/query/split and every hitTest/paint call.
@@ -2568,15 +2584,29 @@ class TrendAnnotationElement extends ChartElement {
 
   /// Calculate trend line points based on series data and trend type.
   void _calculateTrendPoints() {
-    final dataPoints = series.points;
+    _trendEquation = null;
+    _intervals = null;
+    final dataPoints = series.points
+        .where((point) => point.x.isFinite && point.y.isFinite)
+        .toList(growable: false);
     if (dataPoints.isEmpty) {
       _trendPoints = [];
+      _statistics = TrendStatisticsCalculator.calculate(
+        points: dataPoints,
+        predict: (_) => null,
+      );
       return;
     }
 
     switch (annotation.trendType) {
       case TrendType.linear:
         _trendPoints = _calculateLinearTrend(dataPoints);
+        if (annotation.showConfidenceBand || annotation.showPredictionBand) {
+          _intervals = LinearRegressionIntervalCalculator.calculate(
+            points: dataPoints,
+            confidenceLevel: annotation.confidenceLevel,
+          );
+        }
         break;
       case TrendType.polynomial:
         _trendPoints = _calculatePolynomialTrend(dataPoints, annotation.degree);
@@ -2593,7 +2623,19 @@ class TrendAnnotationElement extends ChartElement {
           annotation.windowSize ?? 10,
         );
         break;
+      case TrendType.loess:
+        _trendPoints = LoessSmoother(
+          span: annotation.loessSpan,
+          robustnessIterations: annotation.loessRobustnessIterations,
+          sampleCount: annotation.loessSampleCount,
+        ).smooth(dataPoints).map((point) => Offset(point.x, point.y)).toList();
+        break;
     }
+    _statistics = TrendStatisticsCalculator.calculate(
+      points: dataPoints,
+      predict: evaluateAt,
+      equation: _trendEquation,
+    );
   }
 
   /// Calculate linear regression trend line.
@@ -2611,12 +2653,15 @@ class TrendAnnotationElement extends ChartElement {
       sumX2 += point.x * point.x;
     }
 
-    final m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final denominator = n * sumX2 - sumX * sumX;
+    if (denominator.abs() <= 1e-12) return [];
+    final m = (n * sumXY - sumX * sumY) / denominator;
     final b = (sumY - m * sumX) / n;
+    _trendEquation = TrendEquationFormatter.linear(m, b);
 
     // Generate trend line points
-    final minX = points.first.x;
-    final maxX = points.last.x;
+    final minX = points.map((point) => point.x).reduce(math.min);
+    final maxX = points.map((point) => point.x).reduce(math.max);
     return [Offset(minX, m * minX + b), Offset(maxX, m * maxX + b)];
   }
 
@@ -2640,6 +2685,7 @@ class TrendAnnotationElement extends ChartElement {
     // We need to solve: X * coefficients = Y
     // Where X is the Vandermonde matrix
     final coefficients = _solvePolynomialLeastSquares(xValues, yValues, degree);
+    _trendEquation = TrendEquationFormatter.polynomial(coefficients);
 
     // Generate trend line points using the polynomial
     final minX = xValues.reduce((a, b) => a < b ? a : b);
@@ -2883,14 +2929,47 @@ class TrendAnnotationElement extends ChartElement {
       minY = math.min(minY, point.dy);
       maxY = math.max(maxY, point.dy);
     }
+    final intervals = _intervals;
+    if (intervals != null) {
+      for (final point in intervals.points) {
+        final values = <double>[
+          if (annotation.showConfidenceBand) ...[
+            point.confidenceLower,
+            point.confidenceUpper,
+          ],
+          if (annotation.showPredictionBand) ...[
+            point.predictionLower,
+            point.predictionUpper,
+          ],
+        ];
+        for (final value in values) {
+          final plot = _dataToPlot(point.x, value);
+          minX = math.min(minX, plot.dx);
+          maxX = math.max(maxX, plot.dx);
+          minY = math.min(minY, plot.dy);
+          maxY = math.max(maxY, plot.dy);
+        }
+      }
+    }
 
     // Add hit test margin (12px matches the hitTest radius for reliable selection)
-    _cachedBounds = Rect.fromLTRB(
+    var resolvedBounds = Rect.fromLTRB(
       minX - annotation.lineWidth - 12,
       minY - annotation.lineWidth - 12,
       maxX + annotation.lineWidth + 12,
       maxY + annotation.lineWidth + 12,
     );
+    if (annotation.showsStatistics) {
+      final statisticsRect = _statisticsRect(
+        Size(_currentTransform.plotWidth, _currentTransform.plotHeight),
+      );
+      if (statisticsRect != null) {
+        resolvedBounds = resolvedBounds.expandToInclude(
+          statisticsRect.inflate(2),
+        );
+      }
+    }
+    _cachedBounds = resolvedBounds;
     return _cachedBounds!;
   }
 
@@ -2959,6 +3038,8 @@ class TrendAnnotationElement extends ChartElement {
     if (_trendPoints.isEmpty) return;
 
     final plotPoints = _plotPoints;
+
+    _paintIntervalBands(canvas);
 
     // Draw elevation glow in DEFAULT state only (not selected)
     // This creates a subtle glow effect using the line color — same pattern
@@ -3035,6 +3116,173 @@ class TrendAnnotationElement extends ChartElement {
       }
       canvas.drawPath(path, paint);
     }
+
+    _paintStatistics(canvas, size);
+  }
+
+  void _paintIntervalBands(Canvas canvas) {
+    final intervals = _intervals;
+    if (intervals == null || intervals.points.length < 2) return;
+    if (annotation.showPredictionBand) {
+      _paintIntervalBand(
+        canvas,
+        intervals.points,
+        lower: (point) => point.predictionLower,
+        upper: (point) => point.predictionUpper,
+        color: (annotation.predictionBandColor ?? annotation.lineColor)
+            .withValues(alpha: annotation.predictionBandOpacity),
+      );
+    }
+    if (annotation.showConfidenceBand) {
+      _paintIntervalBand(
+        canvas,
+        intervals.points,
+        lower: (point) => point.confidenceLower,
+        upper: (point) => point.confidenceUpper,
+        color: (annotation.confidenceBandColor ?? annotation.lineColor)
+            .withValues(alpha: annotation.confidenceBandOpacity),
+      );
+    }
+  }
+
+  void _paintIntervalBand(
+    Canvas canvas,
+    List<LinearRegressionIntervalPoint> points, {
+    required double Function(LinearRegressionIntervalPoint point) lower,
+    required double Function(LinearRegressionIntervalPoint point) upper,
+    required Color color,
+  }) {
+    final path = Path();
+    final first = _dataToPlot(points.first.x, upper(points.first));
+    path.moveTo(first.dx, first.dy);
+    for (var index = 1; index < points.length; index++) {
+      final plot = _dataToPlot(points[index].x, upper(points[index]));
+      path.lineTo(plot.dx, plot.dy);
+    }
+    for (var index = points.length - 1; index >= 0; index--) {
+      final plot = _dataToPlot(points[index].x, lower(points[index]));
+      path.lineTo(plot.dx, plot.dy);
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  List<String> _statisticsLines() {
+    if (!annotation.showsStatistics) return const [];
+    final lines = <String>[];
+    final label = annotation.label?.trim();
+    if (label != null && label.isNotEmpty) lines.add(label);
+    if (annotation.showEquation && _statistics.equation != null) {
+      lines.add(_statistics.equation!);
+    }
+
+    final fit = <String>[];
+    if (annotation.showRSquared && _statistics.rSquared != null) {
+      fit.add('R² ${_statistics.rSquared!.toStringAsFixed(3)}');
+    }
+    if (annotation.showSampleCount) {
+      fit.add('n ${_statistics.sampleCount}');
+    }
+    if (fit.isNotEmpty) lines.add(fit.join('  ·  '));
+
+    final correlation = <String>[];
+    if (annotation.showPearsonCorrelation &&
+        _statistics.pearsonCorrelation != null) {
+      correlation.add(
+        'Pearson r ${_statistics.pearsonCorrelation!.toStringAsFixed(3)}',
+      );
+    }
+    if (annotation.showSpearmanCorrelation &&
+        _statistics.spearmanCorrelation != null) {
+      correlation.add(
+        'Spearman ρ ${_statistics.spearmanCorrelation!.toStringAsFixed(3)}',
+      );
+    }
+    if (correlation.isNotEmpty) lines.add(correlation.join('  ·  '));
+    return lines;
+  }
+
+  TextPainter? _statisticsTextPainter(Size size) {
+    final lines = _statisticsLines();
+    if (lines.isEmpty || size.width <= 32) return null;
+    final maxWidth = math.min(280.0, size.width - 32);
+    if (_statisticsPainter != null && _statisticsPainterMaxWidth == maxWidth) {
+      return _statisticsPainter;
+    }
+
+    final baseStyle = annotation.style.textStyle.copyWith(
+      fontSize: annotation.style.textStyle.fontSize ?? 11,
+      height: 1.35,
+    );
+    final spans = <InlineSpan>[];
+    for (var index = 0; index < lines.length; index++) {
+      if (index > 0) spans.add(const TextSpan(text: '\n'));
+      spans.add(
+        TextSpan(
+          text: lines[index],
+          style: index == 0 && annotation.label?.trim().isNotEmpty == true
+              ? baseStyle.copyWith(fontWeight: FontWeight.w700)
+              : baseStyle,
+        ),
+      );
+    }
+    _statisticsPainter = TextPainter(
+      text: TextSpan(children: spans),
+      textDirection: TextDirection.ltr,
+      maxLines: lines.length,
+    )..layout(maxWidth: maxWidth);
+    _statisticsPainterMaxWidth = maxWidth;
+    return _statisticsPainter;
+  }
+
+  Rect? _statisticsRect(Size size) {
+    if (_plotPoints.isEmpty) return null;
+    final painter = _statisticsTextPainter(size);
+    if (painter == null) return null;
+    final padding =
+        annotation.style.padding ??
+        const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
+    final cardSize = Size(
+      painter.width + padding.horizontal,
+      painter.height + padding.vertical,
+    );
+    final anchor = _plotPoints.last;
+    final desired = Offset(
+      anchor.dx - cardSize.width - 8,
+      anchor.dy - cardSize.height - 8,
+    );
+    final maxX = math.max(4.0, size.width - cardSize.width - 4);
+    final maxY = math.max(4.0, size.height - cardSize.height - 4);
+    return Offset(desired.dx.clamp(4.0, maxX), desired.dy.clamp(4.0, maxY)) &
+        cardSize;
+  }
+
+  void _paintStatistics(Canvas canvas, Size size) {
+    final painter = _statisticsTextPainter(size);
+    final rect = _statisticsRect(size);
+    if (painter == null || rect == null) return;
+    final style = annotation.style;
+    final radius = style.borderRadius ?? BorderRadius.circular(6);
+    final rrect = radius.toRRect(rect);
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = style.backgroundColor ?? const Color(0xF2FFFFFF)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = style.borderColor ?? annotation.lineColor.withAlpha(110)
+        ..strokeWidth = style.borderWidth
+        ..style = PaintingStyle.stroke,
+    );
+    final padding =
+        style.padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
+    painter.paint(
+      canvas,
+      Offset(rect.left + padding.left, rect.top + padding.top),
+    );
   }
 
   /// Draws a dashed polyline that carries dash state across all segments.
@@ -3103,12 +3351,159 @@ class TrendAnnotationElement extends ChartElement {
       annotation: annotation,
       series: series,
       transform: _currentTransform,
+      axisBounds: _axisBounds,
     );
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._trendPoints = _trendPoints;
+    copy._intervals = _intervals;
     return copy;
   }
+}
+
+/// Paints data-space uncertainty bars around selected points in one series.
+class ErrorBarAnnotationElement extends ChartElement {
+  ErrorBarAnnotationElement({
+    required this.annotation,
+    required this.series,
+    required this.transform,
+    this.axisBounds,
+  }) : _currentTransform = transform,
+       _axisBounds = axisBounds;
+
+  final ErrorBarAnnotation annotation;
+  final ChartSeries series;
+  final ChartTransform transform;
+  final ChartTransform _currentTransform;
+  final DataRange? axisBounds;
+  final DataRange? _axisBounds;
+
+  Offset _dataToPlot(double x, double y) {
+    final bounds = _axisBounds;
+    if (bounds != null && bounds.span > 0) {
+      final plotX = _currentTransform.dataToPlot(x, 0).dx;
+      final normalizedY = (y - bounds.min) / bounds.span;
+      return Offset(plotX, _currentTransform.plotHeight * (1 - normalizedY));
+    }
+    return _currentTransform.dataToPlot(x, y);
+  }
+
+  Iterable<(ChartDataPoint, ErrorBarDatum)> get _resolved sync* {
+    for (final value in annotation.values) {
+      if (value.pointIndex >= series.points.length) continue;
+      final point = series.points[value.pointIndex];
+      if (!point.x.isFinite || !point.y.isFinite) continue;
+      yield (point, value);
+    }
+  }
+
+  @override
+  String get id => annotation.id;
+
+  @override
+  Rect get bounds {
+    Rect? result;
+    for (final (point, value) in _resolved) {
+      final start = _dataToPlot(
+        point.x - value.xNegative,
+        point.y - value.yNegative,
+      );
+      final end = _dataToPlot(
+        point.x + value.xPositive,
+        point.y + value.yPositive,
+      );
+      final rect = Rect.fromPoints(
+        start,
+        end,
+      ).inflate(annotation.capSize + annotation.lineWidth + 2);
+      result = result == null ? rect : result.expandToInclude(rect);
+    }
+    return result ?? Rect.zero;
+  }
+
+  @override
+  ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  int get renderOrder => RenderOrder.trendAnnotation;
+
+  @override
+  bool get isSelected => false;
+
+  @override
+  bool get isHovered => false;
+
+  @override
+  bool get isSelectable => false;
+
+  @override
+  bool get isDraggable => false;
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth = annotation.lineWidth
+      ..strokeCap = StrokeCap.square
+      ..style = PaintingStyle.stroke;
+    final halfCap = annotation.capSize / 2;
+    for (final (point, value) in _resolved) {
+      if (value.hasX) {
+        final left = _dataToPlot(point.x - value.xNegative, point.y);
+        final right = _dataToPlot(point.x + value.xPositive, point.y);
+        canvas.drawLine(left, right, paint);
+        canvas.drawLine(
+          Offset(left.dx, left.dy - halfCap),
+          Offset(left.dx, left.dy + halfCap),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(right.dx, right.dy - halfCap),
+          Offset(right.dx, right.dy + halfCap),
+          paint,
+        );
+      }
+      if (value.hasY) {
+        final lower = _dataToPlot(point.x, point.y - value.yNegative);
+        final upper = _dataToPlot(point.x, point.y + value.yPositive);
+        canvas.drawLine(lower, upper, paint);
+        canvas.drawLine(
+          Offset(lower.dx - halfCap, lower.dy),
+          Offset(lower.dx + halfCap, lower.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(upper.dx - halfCap, upper.dy),
+          Offset(upper.dx + halfCap, upper.dy),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  void onSelect() {}
+
+  @override
+  void onDeselect() {}
+
+  @override
+  void onHoverEnter() {}
+
+  @override
+  void onHoverExit() {}
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) =>
+      ErrorBarAnnotationElement(
+        annotation: annotation,
+        series: series,
+        transform: _currentTransform,
+        axisBounds: _axisBounds,
+      );
 }
 
 // =============================================================================
@@ -3698,6 +4093,22 @@ class ChordAnnotationElement extends ChartElement {
 // Legend Annotation Element
 // =============================================================================
 
+enum _LegendUncertaintyGlyph { errorBar, band }
+
+class _LegendUncertaintyItem {
+  const _LegendUncertaintyItem({
+    required this.label,
+    required this.glyph,
+    required this.color,
+    this.fillColor,
+  });
+
+  final String label;
+  final _LegendUncertaintyGlyph glyph;
+  final Color color;
+  final Color? fillColor;
+}
+
 /// A chart element that renders a draggable legend.
 ///
 /// Displays series names with color indicators, similar to professional
@@ -3727,6 +4138,10 @@ class LegendAnnotationElement extends ChartElement {
   /// Cached text painters for each trend annotation item.
   final List<TextPainter> _trendTextPainters = [];
 
+  TextPainter? _uncertaintyHeaderPainter;
+  final List<TextPainter> _uncertaintyTextPainters = [];
+  bool _stackUncertaintyItems = false;
+
   TextPainter? _sizeScaleTitlePainter;
   final List<TextPainter> _sizeScaleSamplePainters = [];
   TextPainter? _colorScaleTitlePainter;
@@ -3734,11 +4149,20 @@ class LegendAnnotationElement extends ChartElement {
   TextPainter? _colorScaleMidpointPainter;
   TextPainter? _colorScaleMaximumPainter;
   final List<TextPainter> _colorScaleSegmentPainters = [];
+  TextPainter? _categoryScaleTitlePainter;
+  final List<TextPainter> _categoryScaleItemPainters = [];
 
   static const double _maximumSizeLegendRadius = 14;
 
   /// Get the current temp position (used during drag completion).
   Offset? get tempPosition => _tempPosition;
+
+  /// Semantic uncertainty labels currently rendered by this native legend.
+  ///
+  /// Exposed for renderer and showcase regression tests.
+  List<String> get debugUncertaintyLabels => [
+    for (final item in _uncertaintyItems()) item.label,
+  ];
 
   /// Update chart size (called when chart is resized).
   void updateChartSize(Size newSize) {
@@ -3756,6 +4180,9 @@ class LegendAnnotationElement extends ChartElement {
     // Clear and rebuild text painters
     _textPainters.clear();
     _trendTextPainters.clear();
+    _uncertaintyHeaderPainter = null;
+    _uncertaintyTextPainters.clear();
+    _stackUncertaintyItems = false;
     _sizeScaleTitlePainter = null;
     _sizeScaleSamplePainters.clear();
     _colorScaleTitlePainter = null;
@@ -3763,6 +4190,14 @@ class LegendAnnotationElement extends ChartElement {
     _colorScaleMidpointPainter = null;
     _colorScaleMaximumPainter = null;
     _colorScaleSegmentPainters.clear();
+    _categoryScaleTitlePainter = null;
+    _categoryScaleItemPainters.clear();
+
+    final categoryScale = annotation.categoryScale;
+    if (categoryScale != null) {
+      _calculateCategoryScaleBounds(categoryScale, style, padding);
+      return;
+    }
 
     final opacityScale = annotation.opacityScale;
     if (opacityScale != null) {
@@ -3834,12 +4269,34 @@ class LegendAnnotationElement extends ChartElement {
       }
     }
 
+    final uncertaintyItems = _uncertaintyItems();
+    if (uncertaintyItems.isNotEmpty) {
+      _uncertaintyHeaderPainter = TextPainter(
+        text: TextSpan(
+          text: 'Uncertainty',
+          style: style.textStyle.copyWith(
+            fontWeight: FontWeight.w600,
+            color: style.textStyle.color?.withValues(alpha: 0.72),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      for (final item in uncertaintyItems) {
+        _uncertaintyTextPainters.add(
+          TextPainter(
+            text: TextSpan(text: item.label, style: style.textStyle),
+            textDirection: TextDirection.ltr,
+          )..layout(),
+        );
+      }
+    }
+
     // Calculate legend size
     final itemCount = annotation.series.length;
     final markerItemWidth = style.markerSize + style.markerLabelSpacing;
     final halfSpacing = style.itemSpacing / 2;
-    final double legendWidth;
-    final double legendHeight;
+    double legendWidth;
+    double legendHeight;
 
     if (style.orientation == LegendOrientation.vertical) {
       if (!hasTrends) {
@@ -3931,6 +4388,52 @@ class LegendAnnotationElement extends ChartElement {
         legendHeight =
             padding.top + seriesRowHeight + trendHeight + padding.bottom;
       }
+    }
+
+    if (uncertaintyItems.isNotEmpty) {
+      var uncertaintyRowWidth = 0.0;
+      var uncertaintyRowHeight = style.markerSize;
+      var maximumUncertaintyItemWidth = 0.0;
+      var stackedUncertaintyHeight = 0.0;
+      for (var index = 0; index < uncertaintyItems.length; index++) {
+        final painter = _uncertaintyTextPainters[index];
+        final itemWidth = markerItemWidth + painter.width;
+        final itemHeight = math.max(style.markerSize, painter.height);
+        uncertaintyRowWidth += itemWidth;
+        if (index > 0) uncertaintyRowWidth += style.itemSpacing;
+        uncertaintyRowHeight = math.max(uncertaintyRowHeight, itemHeight);
+        maximumUncertaintyItemWidth = math.max(
+          maximumUncertaintyItemWidth,
+          itemWidth,
+        );
+        stackedUncertaintyHeight += itemHeight;
+        if (index > 0) stackedUncertaintyHeight += style.itemSpacing;
+      }
+      final uncertaintyHeader = _uncertaintyHeaderPainter!;
+      final availableContentWidth = math.max(
+        0,
+        _chartSize.width - 16 - padding.horizontal,
+      );
+      _stackUncertaintyItems = uncertaintyRowWidth > availableContentWidth;
+      final uncertaintyContentWidth = _stackUncertaintyItems
+          ? maximumUncertaintyItemWidth
+          : uncertaintyRowWidth;
+      final uncertaintyContentHeight = _stackUncertaintyItems
+          ? stackedUncertaintyHeight
+          : uncertaintyRowHeight;
+      legendWidth = math.max(
+        legendWidth,
+        padding.left +
+            math.max(uncertaintyHeader.width, uncertaintyContentWidth) +
+            padding.right,
+      );
+      legendHeight +=
+          halfSpacing +
+          1 +
+          halfSpacing +
+          uncertaintyHeader.height +
+          halfSpacing +
+          uncertaintyContentHeight;
     }
 
     // Calculate position based on anchor or custom position
@@ -4081,6 +4584,42 @@ class LegendAnnotationElement extends ChartElement {
     _bounds = topLeft & legendSize;
   }
 
+  void _calculateCategoryScaleBounds(
+    LegendCategoryScale scale,
+    LegendStyle style,
+    EdgeInsets padding,
+  ) {
+    final title = TextPainter(
+      text: TextSpan(
+        text: scale.label,
+        style: style.textStyle.copyWith(fontWeight: FontWeight.w600),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _categoryScaleTitlePainter = title;
+    var itemsWidth = 0.0;
+    var itemHeight = style.markerSize;
+    for (var index = 0; index < scale.items.length; index++) {
+      final painter = TextPainter(
+        text: TextSpan(text: scale.items[index].label, style: style.textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      _categoryScaleItemPainters.add(painter);
+      itemsWidth += style.markerSize + style.markerLabelSpacing + painter.width;
+      if (index > 0) itemsWidth += style.itemSpacing;
+      itemHeight = math.max(itemHeight, painter.height);
+    }
+    final legendSize = Size(
+      padding.left + math.max(title.width, itemsWidth) + padding.right,
+      padding.top + title.height + 5 + itemHeight + padding.bottom,
+    );
+    final topLeft =
+        _tempPosition ??
+        annotation.customPosition ??
+        _calculateAnchoredPosition(legendSize, style.position, style.offset);
+    _bounds = topLeft & legendSize;
+  }
+
   /// Calculates position based on anchor point.
   Offset _calculateAnchoredPosition(
     Size legendSize,
@@ -4147,6 +4686,47 @@ class LegendAnnotationElement extends ChartElement {
   @override
   bool get isDraggable => annotation.legendStyle.allowDragging;
 
+  List<_LegendUncertaintyItem> _uncertaintyItems() {
+    final result = <_LegendUncertaintyItem>[];
+    for (final errorBar in annotation.errorBarAnnotations) {
+      result.add(
+        _LegendUncertaintyItem(
+          label: errorBar.label?.trim().isNotEmpty == true
+              ? errorBar.label!.trim()
+              : 'X/Y measurement error',
+          glyph: _LegendUncertaintyGlyph.errorBar,
+          color: errorBar.lineColor,
+        ),
+      );
+    }
+    for (final trend in annotation.trendAnnotations) {
+      final coverage = '${(trend.confidenceLevel * 100).round()}%';
+      if (trend.showConfidenceBand) {
+        final color = trend.confidenceBandColor ?? trend.lineColor;
+        result.add(
+          _LegendUncertaintyItem(
+            label: '$coverage mean confidence',
+            glyph: _LegendUncertaintyGlyph.band,
+            color: color,
+            fillColor: color.withValues(alpha: trend.confidenceBandOpacity),
+          ),
+        );
+      }
+      if (trend.showPredictionBand) {
+        final color = trend.predictionBandColor ?? trend.lineColor;
+        result.add(
+          _LegendUncertaintyItem(
+            label: '$coverage future prediction',
+            glyph: _LegendUncertaintyGlyph.band,
+            color: color,
+            fillColor: color.withValues(alpha: trend.predictionBandOpacity),
+          ),
+        );
+      }
+    }
+    return result;
+  }
+
   @override
   bool hitTest(Offset position) => _bounds?.contains(position) ?? false;
 
@@ -4155,9 +4735,11 @@ class LegendAnnotationElement extends ChartElement {
     if (_bounds == null ||
         (annotation.series.isEmpty &&
             annotation.trendAnnotations.isEmpty &&
+            annotation.errorBarAnnotations.isEmpty &&
             annotation.sizeScale == null &&
             annotation.colorScale == null &&
-            annotation.opacityScale == null)) {
+            annotation.opacityScale == null &&
+            annotation.categoryScale == null)) {
       return;
     }
 
@@ -4197,6 +4779,13 @@ class LegendAnnotationElement extends ChartElement {
     final sizeScale = annotation.sizeScale;
     if (sizeScale != null) {
       _paintSizeScale(canvas, sizeScale, style, padding);
+      canvas.restore();
+      return;
+    }
+
+    final categoryScale = annotation.categoryScale;
+    if (categoryScale != null) {
+      _paintCategoryScale(canvas, categoryScale, style, padding);
       canvas.restore();
       return;
     }
@@ -4279,6 +4868,14 @@ class LegendAnnotationElement extends ChartElement {
 
       if (series is CandlestickChartSeries) {
         _drawCandlestickMarker(canvas, markerCenter, seriesColor, style);
+      } else if (series is ScatterChartSeries) {
+        _drawScatterSeriesMarker(
+          canvas,
+          markerCenter,
+          series,
+          seriesColor,
+          style,
+        );
       } else {
         _drawMarker(canvas, markerCenter, seriesColor, style);
       }
@@ -4448,7 +5045,160 @@ class LegendAnnotationElement extends ChartElement {
       }
     }
 
+    _paintUncertaintySection(canvas, style, padding);
+
     canvas.restore();
+  }
+
+  void _paintUncertaintySection(
+    Canvas canvas,
+    LegendStyle style,
+    EdgeInsets padding,
+  ) {
+    final items = _uncertaintyItems();
+    final header = _uncertaintyHeaderPainter;
+    if (items.isEmpty || header == null) return;
+
+    final halfSpacing = style.itemSpacing / 2;
+    final itemHeights = [
+      for (final painter in _uncertaintyTextPainters)
+        math.max(style.markerSize, painter.height),
+    ];
+    final contentHeight = _stackUncertaintyItems
+        ? itemHeights.fold<double>(0, (sum, height) => sum + height) +
+              style.itemSpacing * math.max(0, itemHeights.length - 1)
+        : itemHeights.fold<double>(0, math.max);
+    final rowTop = _bounds!.bottom - padding.bottom - contentHeight;
+    final headerTop = rowTop - halfSpacing - header.height;
+    final dividerY = headerTop - halfSpacing - 0.5;
+    canvas.drawLine(
+      Offset(_bounds!.left + padding.left, dividerY),
+      Offset(_bounds!.right - padding.right, dividerY),
+      Paint()
+        ..color =
+            style.textStyle.color?.withValues(alpha: 0.16) ??
+            const Color(0x29000000)
+        ..strokeWidth = 1,
+    );
+    header.paint(canvas, Offset(_bounds!.left + padding.left, headerTop));
+
+    var currentX = _bounds!.left + padding.left;
+    var currentY = rowTop;
+    for (var index = 0; index < items.length; index++) {
+      final item = items[index];
+      final painter = _uncertaintyTextPainters[index];
+      final itemHeight = _stackUncertaintyItems
+          ? itemHeights[index]
+          : contentHeight;
+      final center = Offset(
+        currentX + style.markerSize / 2,
+        currentY + itemHeight / 2,
+      );
+      _drawUncertaintyGlyph(canvas, center, item, style);
+      final textX = currentX + style.markerSize + style.markerLabelSpacing;
+      painter.paint(
+        canvas,
+        Offset(textX, currentY + (itemHeight - painter.height) / 2),
+      );
+      if (_stackUncertaintyItems) {
+        currentY += itemHeight + style.itemSpacing;
+      } else {
+        currentX = textX + painter.width + style.itemSpacing;
+      }
+    }
+  }
+
+  void _drawUncertaintyGlyph(
+    Canvas canvas,
+    Offset center,
+    _LegendUncertaintyItem item,
+    LegendStyle style,
+  ) {
+    final half = style.markerSize / 2;
+    switch (item.glyph) {
+      case _LegendUncertaintyGlyph.errorBar:
+        final paint = Paint()
+          ..color = item.color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4;
+        const cap = 3.5;
+        canvas.drawLine(
+          Offset(center.dx - half, center.dy),
+          Offset(center.dx + half, center.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - half),
+          Offset(center.dx, center.dy + half),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx - half, center.dy - cap),
+          Offset(center.dx - half, center.dy + cap),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx + half, center.dy - cap),
+          Offset(center.dx + half, center.dy + cap),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx - cap, center.dy - half),
+          Offset(center.dx + cap, center.dy - half),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx - cap, center.dy + half),
+          Offset(center.dx + cap, center.dy + half),
+          paint,
+        );
+      case _LegendUncertaintyGlyph.band:
+        final rect = Rect.fromCenter(
+          center: center,
+          width: style.markerSize,
+          height: math.max(8, style.markerSize * 0.62),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+          Paint()..color = item.fillColor ?? item.color.withValues(alpha: 0.2),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+          Paint()
+            ..color = item.color.withValues(alpha: 0.72)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+    }
+  }
+
+  void _drawScatterSeriesMarker(
+    Canvas canvas,
+    Offset center,
+    ScatterChartSeries series,
+    Color fallbackColor,
+    LegendStyle style,
+  ) {
+    final markerStyle = series.markerStyle;
+    final path = Path();
+    addScatterMarkerPath(
+      path,
+      center: center,
+      radius: style.markerSize / 2,
+      shape: series.markerShape,
+    );
+    final fillColor = markerStyle?.fillColor ?? fallbackColor;
+    canvas.drawPath(path, Paint()..color = fillColor);
+    final strokeColor = markerStyle?.strokeColor;
+    if (strokeColor != null && (markerStyle?.strokeWidth ?? 0) > 0) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = strokeColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = markerStyle!.strokeWidth!,
+      );
+    }
   }
 
   void _paintSizeScale(
@@ -4566,6 +5316,54 @@ class LegendAnnotationElement extends ChartElement {
       canvas,
       Offset((left + right - midpoint.width) / 2, labelY),
     );
+  }
+
+  void _paintCategoryScale(
+    Canvas canvas,
+    LegendCategoryScale scale,
+    LegendStyle style,
+    EdgeInsets padding,
+  ) {
+    final title = _categoryScaleTitlePainter;
+    if (title == null) return;
+    final left = _bounds!.left + padding.left;
+    final top = _bounds!.top + padding.top;
+    title.paint(canvas, Offset(left, top));
+    final rowTop = top + title.height + 5;
+    final rowHeight = _bounds!.bottom - padding.bottom - rowTop;
+    var currentX = left;
+    for (var index = 0; index < scale.items.length; index++) {
+      final item = scale.items[index];
+      final painter = _categoryScaleItemPainters[index];
+      final center = Offset(
+        currentX + style.markerSize / 2,
+        rowTop + rowHeight / 2,
+      );
+      final path = Path();
+      addScatterMarkerPath(
+        path,
+        center: center,
+        radius: style.markerSize / 2,
+        shape: item.shape ?? SeriesMarkerShape.circle,
+      );
+      final color = item.color ?? style.textStyle.color ?? Colors.black87;
+      if (item.color != null) {
+        canvas.drawPath(path, Paint()..color = color);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = item.color == null ? 1.8 : 1,
+      );
+      final textX = currentX + style.markerSize + style.markerLabelSpacing;
+      painter.paint(
+        canvas,
+        Offset(textX, rowTop + (rowHeight - painter.height) / 2),
+      );
+      currentX = textX + painter.width + style.itemSpacing;
+    }
   }
 
   /// Draws a marker at the given position.

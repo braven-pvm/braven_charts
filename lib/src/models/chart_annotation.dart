@@ -9,6 +9,7 @@ import 'annotation_style.dart';
 import 'chart_series.dart';
 import 'enums.dart';
 import 'legend_style.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 
 /// Counter for auto-generating annotation IDs.
 int _annotationIdCounter = 0;
@@ -1214,6 +1215,9 @@ enum TrendType {
 
   /// Exponential moving average.
   exponentialMovingAverage,
+
+  /// Locally estimated scatterplot smoothing with robust reweighting.
+  loess,
 }
 
 /// A trend annotation that overlays statistical trend lines on chart data.
@@ -1244,6 +1248,21 @@ class TrendAnnotation extends ChartAnnotation {
     required this.trendType,
     this.windowSize,
     this.degree = 2,
+    this.loessSpan = 0.5,
+    this.loessRobustnessIterations = 2,
+    this.loessSampleCount = 100,
+    this.showEquation = false,
+    this.showRSquared = false,
+    this.showSampleCount = false,
+    this.showPearsonCorrelation = false,
+    this.showSpearmanCorrelation = false,
+    this.showConfidenceBand = false,
+    this.showPredictionBand = false,
+    this.confidenceLevel = 0.95,
+    this.confidenceBandColor,
+    this.predictionBandColor,
+    this.confidenceBandOpacity = 0.20,
+    this.predictionBandOpacity = 0.10,
     this.lineColor = Colors.blue,
     this.lineWidth = 2.0,
     this.dashPattern,
@@ -1254,6 +1273,34 @@ class TrendAnnotation extends ChartAnnotation {
          'windowSize must be positive when trendType is movingAverage',
        ),
        assert(degree > 0, 'degree must be positive'),
+       assert(
+         loessSpan.isFinite && loessSpan > 0 && loessSpan <= 1,
+         'loessSpan must be finite and in the range (0, 1]',
+       ),
+       assert(
+         loessRobustnessIterations >= 0 && loessRobustnessIterations <= 10,
+         'loessRobustnessIterations must be between 0 and 10',
+       ),
+       assert(
+         loessSampleCount >= 2 && loessSampleCount <= 500,
+         'loessSampleCount must be between 2 and 500',
+       ),
+       assert(
+         confidenceLevel.isFinite && confidenceLevel > 0 && confidenceLevel < 1,
+         'confidenceLevel must be finite and in the range (0, 1)',
+       ),
+       assert(
+         confidenceBandOpacity.isFinite &&
+             confidenceBandOpacity >= 0 &&
+             confidenceBandOpacity <= 1,
+         'confidenceBandOpacity must be in the range [0, 1]',
+       ),
+       assert(
+         predictionBandOpacity.isFinite &&
+             predictionBandOpacity >= 0 &&
+             predictionBandOpacity <= 1,
+         'predictionBandOpacity must be in the range [0, 1]',
+       ),
        assert(elevation >= 0, 'Elevation must be non-negative'),
        super(id: id ?? ChartAnnotation.generateId());
 
@@ -1268,6 +1315,68 @@ class TrendAnnotation extends ChartAnnotation {
 
   /// Polynomial degree for polynomial regression (default 2).
   final int degree;
+
+  /// Fraction of finite source points used by each LOESS local fit.
+  final double loessSpan;
+
+  /// Number of residual-based robustness passes applied to LOESS.
+  final int loessRobustnessIterations;
+
+  /// Number of fitted points emitted across the finite X domain for LOESS.
+  final int loessSampleCount;
+
+  /// Whether to show a human-readable equation for parametric fits.
+  ///
+  /// Linear and polynomial trends expose equations. Non-parametric and moving
+  /// trends omit the equation even when this option is enabled.
+  final bool showEquation;
+
+  /// Whether to show the coefficient of determination for the rendered fit.
+  final bool showRSquared;
+
+  /// Whether to show the number of finite source observations.
+  final bool showSampleCount;
+
+  /// Whether to show the Pearson product-moment correlation.
+  final bool showPearsonCorrelation;
+
+  /// Whether to show Spearman rank correlation with average ranks for ties.
+  final bool showSpearmanCorrelation;
+
+  /// Whether to draw a two-sided confidence interval for the fitted mean.
+  ///
+  /// Confidence bands are currently calculated for linear ordinary
+  /// least-squares trends only.
+  final bool showConfidenceBand;
+
+  /// Whether to draw a two-sided prediction interval for one future value.
+  ///
+  /// Prediction bands are currently calculated for linear ordinary
+  /// least-squares trends only.
+  final bool showPredictionBand;
+
+  /// Two-sided interval coverage, expressed as a fraction such as `0.95`.
+  final double confidenceLevel;
+
+  /// Optional confidence-band color. Defaults to [lineColor] when omitted.
+  final Color? confidenceBandColor;
+
+  /// Optional prediction-band color. Defaults to [lineColor] when omitted.
+  final Color? predictionBandColor;
+
+  /// Confidence-band fill opacity.
+  final double confidenceBandOpacity;
+
+  /// Prediction-band fill opacity.
+  final double predictionBandOpacity;
+
+  /// Whether this annotation requests any visible statistical diagnostics.
+  bool get showsStatistics =>
+      showEquation ||
+      showRSquared ||
+      showSampleCount ||
+      showPearsonCorrelation ||
+      showSpearmanCorrelation;
 
   /// The color of the trend line.
   final Color lineColor;
@@ -1298,6 +1407,23 @@ class TrendAnnotation extends ChartAnnotation {
       'trendType': trendType.name,
       if (windowSize != null) 'windowSize': windowSize,
       'degree': degree,
+      'loessSpan': loessSpan,
+      'loessRobustnessIterations': loessRobustnessIterations,
+      'loessSampleCount': loessSampleCount,
+      'showEquation': showEquation,
+      'showRSquared': showRSquared,
+      'showSampleCount': showSampleCount,
+      'showPearsonCorrelation': showPearsonCorrelation,
+      'showSpearmanCorrelation': showSpearmanCorrelation,
+      'showConfidenceBand': showConfidenceBand,
+      'showPredictionBand': showPredictionBand,
+      'confidenceLevel': confidenceLevel,
+      if (confidenceBandColor != null)
+        'confidenceBandColor': confidenceBandColor!.toARGB32(),
+      if (predictionBandColor != null)
+        'predictionBandColor': predictionBandColor!.toARGB32(),
+      'confidenceBandOpacity': confidenceBandOpacity,
+      'predictionBandOpacity': predictionBandOpacity,
       'lineColor': lineColor.toARGB32(),
       'lineWidth': lineWidth,
       if (dashPattern != null) 'dashPattern': dashPattern,
@@ -1320,6 +1446,21 @@ class TrendAnnotation extends ChartAnnotation {
     TrendType? trendType,
     int? windowSize,
     int? degree,
+    double? loessSpan,
+    int? loessRobustnessIterations,
+    int? loessSampleCount,
+    bool? showEquation,
+    bool? showRSquared,
+    bool? showSampleCount,
+    bool? showPearsonCorrelation,
+    bool? showSpearmanCorrelation,
+    bool? showConfidenceBand,
+    bool? showPredictionBand,
+    double? confidenceLevel,
+    Color? confidenceBandColor,
+    Color? predictionBandColor,
+    double? confidenceBandOpacity,
+    double? predictionBandOpacity,
     Color? lineColor,
     double? lineWidth,
     List<double>? dashPattern,
@@ -1336,12 +1477,145 @@ class TrendAnnotation extends ChartAnnotation {
       trendType: trendType ?? this.trendType,
       windowSize: windowSize ?? this.windowSize,
       degree: degree ?? this.degree,
+      loessSpan: loessSpan ?? this.loessSpan,
+      loessRobustnessIterations:
+          loessRobustnessIterations ?? this.loessRobustnessIterations,
+      loessSampleCount: loessSampleCount ?? this.loessSampleCount,
+      showEquation: showEquation ?? this.showEquation,
+      showRSquared: showRSquared ?? this.showRSquared,
+      showSampleCount: showSampleCount ?? this.showSampleCount,
+      showPearsonCorrelation:
+          showPearsonCorrelation ?? this.showPearsonCorrelation,
+      showSpearmanCorrelation:
+          showSpearmanCorrelation ?? this.showSpearmanCorrelation,
+      showConfidenceBand: showConfidenceBand ?? this.showConfidenceBand,
+      showPredictionBand: showPredictionBand ?? this.showPredictionBand,
+      confidenceLevel: confidenceLevel ?? this.confidenceLevel,
+      confidenceBandColor: confidenceBandColor ?? this.confidenceBandColor,
+      predictionBandColor: predictionBandColor ?? this.predictionBandColor,
+      confidenceBandOpacity:
+          confidenceBandOpacity ?? this.confidenceBandOpacity,
+      predictionBandOpacity:
+          predictionBandOpacity ?? this.predictionBandOpacity,
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       elevation: elevation ?? this.elevation,
     );
   }
+}
+
+// =============================================================================
+// Error Bar Annotation
+// =============================================================================
+
+/// Per-point symmetric or asymmetric uncertainty used by [ErrorBarAnnotation].
+class ErrorBarDatum {
+  const ErrorBarDatum({
+    required this.pointIndex,
+    this.xNegative = 0,
+    this.xPositive = 0,
+    this.yNegative = 0,
+    this.yPositive = 0,
+  }) : assert(pointIndex >= 0),
+       assert(xNegative >= 0 && xPositive >= 0),
+       assert(yNegative >= 0 && yPositive >= 0);
+
+  /// Creates symmetric uncertainty around one source point.
+  const ErrorBarDatum.symmetric({
+    required this.pointIndex,
+    double x = 0,
+    double y = 0,
+  }) : xNegative = x,
+       xPositive = x,
+       yNegative = y,
+       yPositive = y,
+       assert(pointIndex >= 0),
+       assert(x >= 0 && y >= 0);
+
+  final int pointIndex;
+  final double xNegative;
+  final double xPositive;
+  final double yNegative;
+  final double yPositive;
+
+  bool get hasX => xNegative > 0 || xPositive > 0;
+  bool get hasY => yNegative > 0 || yPositive > 0;
+}
+
+/// Draws X and Y uncertainty around selected points in a chart series.
+///
+/// Error magnitudes are expressed in data units. Each side can be configured
+/// independently, enabling both symmetric and asymmetric error bars without
+/// changing the source observations.
+class ErrorBarAnnotation extends ChartAnnotation {
+  ErrorBarAnnotation({
+    String? id,
+    super.label,
+    super.style,
+    super.allowEditing,
+    super.zIndex,
+    this.seriesId = '',
+    required List<ErrorBarDatum> values,
+    this.lineColor = Colors.black54,
+    this.lineWidth = 1.5,
+    this.capSize = 6,
+  }) : values = List.unmodifiable(values),
+       assert(lineWidth > 0),
+       assert(capSize >= 0),
+       super(id: id ?? ChartAnnotation.generateId());
+
+  final String seriesId;
+  final List<ErrorBarDatum> values;
+  final Color lineColor;
+  final double lineWidth;
+  final double capSize;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': 'ErrorBarAnnotation',
+    if (label != null) 'label': label,
+    'seriesId': seriesId,
+    'values': [
+      for (final value in values)
+        {
+          'pointIndex': value.pointIndex,
+          'xNegative': value.xNegative,
+          'xPositive': value.xPositive,
+          'yNegative': value.yNegative,
+          'yPositive': value.yPositive,
+        },
+    ],
+    'lineColor': lineColor.toARGB32(),
+    'lineWidth': lineWidth,
+    'capSize': capSize,
+    'allowEditing': allowEditing,
+    'zIndex': zIndex,
+  };
+
+  ErrorBarAnnotation copyWith({
+    String? id,
+    String? label,
+    AnnotationStyle? style,
+    bool? allowEditing,
+    int? zIndex,
+    String? seriesId,
+    List<ErrorBarDatum>? values,
+    Color? lineColor,
+    double? lineWidth,
+    double? capSize,
+  }) => ErrorBarAnnotation(
+    id: id ?? this.id,
+    label: label ?? this.label,
+    style: style ?? this.style,
+    allowEditing: allowEditing ?? this.allowEditing,
+    zIndex: zIndex ?? this.zIndex,
+    seriesId: seriesId ?? this.seriesId,
+    values: values ?? this.values,
+    lineColor: lineColor ?? this.lineColor,
+    lineWidth: lineWidth ?? this.lineWidth,
+    capSize: capSize ?? this.capSize,
+  );
 }
 
 // =============================================================================
@@ -1802,6 +2076,47 @@ class LegendOpacityScale {
   );
 }
 
+/// One item in a categorical color/shape key.
+@immutable
+class LegendCategoryItem {
+  const LegendCategoryItem({required this.label, this.color, this.shape})
+    : assert(shape != SeriesMarkerShape.none);
+
+  final String label;
+  final Color? color;
+  final SeriesMarkerShape? shape;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendCategoryItem &&
+          other.label == label &&
+          other.color == color &&
+          other.shape == shape;
+
+  @override
+  int get hashCode => Object.hash(label, color, shape);
+}
+
+/// A categorical color/shape key rendered by a native [LegendAnnotation].
+@immutable
+class LegendCategoryScale {
+  const LegendCategoryScale({required this.label, required this.items});
+
+  final String label;
+  final List<LegendCategoryItem> items;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendCategoryScale &&
+          other.label == label &&
+          listEquals(other.items, items);
+
+  @override
+  int get hashCode => Object.hash(label, Object.hashAll(items));
+}
+
 class LegendAnnotation extends ChartAnnotation {
   /// Creates a legend annotation.
   ///
@@ -1815,16 +2130,24 @@ class LegendAnnotation extends ChartAnnotation {
     super.zIndex,
     this.series = const [],
     this.trendAnnotations = const [],
+    this.errorBarAnnotations = const [],
     this.sizeScale,
     this.colorScale,
     this.opacityScale,
+    this.categoryScale,
     this.legendStyle = const LegendStyle(),
     this.hiddenSeriesIds = const {},
     this.onSeriesToggle,
     Offset? customPosition,
   }) : assert(
-         [sizeScale, colorScale, opacityScale].whereType<Object>().length <= 1,
-         'Quantitative scales use separate LegendAnnotation instances.',
+         [
+               sizeScale,
+               colorScale,
+               opacityScale,
+               categoryScale,
+             ].whereType<Object>().length <=
+             1,
+         'Legend scales use separate LegendAnnotation instances.',
        ),
        _customPosition = customPosition,
        super(
@@ -1840,6 +2163,13 @@ class LegendAnnotation extends ChartAnnotation {
   ///
   /// Only trends with a non-empty [TrendAnnotation.label] are shown.
   final List<TrendAnnotation> trendAnnotations;
+
+  /// Error-bar annotations described by this legend.
+  ///
+  /// The native legend renders their X/Y capped-line glyphs in a dedicated
+  /// uncertainty section alongside any confidence or prediction bands
+  /// requested by [trendAnnotations].
+  final List<ErrorBarAnnotation> errorBarAnnotations;
 
   /// Optional quantitative marker-size key.
   ///
@@ -1858,6 +2188,12 @@ class LegendAnnotation extends ChartAnnotation {
   /// Opacity scales intentionally occupy their own legend annotation so they
   /// can be positioned independently from categorical, size, and color keys.
   final LegendOpacityScale? opacityScale;
+
+  /// Optional categorical marker color/shape key.
+  ///
+  /// Category keys use the same annotation surface as every other native
+  /// legend and remain independently positionable.
+  final LegendCategoryScale? categoryScale;
 
   /// Visual style configuration for the legend.
   final LegendStyle legendStyle;
@@ -1884,12 +2220,15 @@ class LegendAnnotation extends ChartAnnotation {
     int? zIndex,
     List<ChartSeries>? series,
     List<TrendAnnotation>? trendAnnotations,
+    List<ErrorBarAnnotation>? errorBarAnnotations,
     LegendSizeScale? sizeScale,
     bool clearSizeScale = false,
     LegendColorScale? colorScale,
     bool clearColorScale = false,
     LegendOpacityScale? opacityScale,
     bool clearOpacityScale = false,
+    LegendCategoryScale? categoryScale,
+    bool clearCategoryScale = false,
     LegendStyle? legendStyle,
     Set<String>? hiddenSeriesIds,
     ValueChanged<String>? onSeriesToggle,
@@ -1902,11 +2241,15 @@ class LegendAnnotation extends ChartAnnotation {
       zIndex: zIndex ?? this.zIndex,
       series: series ?? this.series,
       trendAnnotations: trendAnnotations ?? this.trendAnnotations,
+      errorBarAnnotations: errorBarAnnotations ?? this.errorBarAnnotations,
       sizeScale: clearSizeScale ? null : (sizeScale ?? this.sizeScale),
       colorScale: clearColorScale ? null : (colorScale ?? this.colorScale),
       opacityScale: clearOpacityScale
           ? null
           : (opacityScale ?? this.opacityScale),
+      categoryScale: clearCategoryScale
+          ? null
+          : (categoryScale ?? this.categoryScale),
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,

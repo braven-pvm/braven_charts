@@ -19,6 +19,7 @@ abstract final class ChartDataBinaryCodec {
     'magnitudes',
     'colorValues',
     'opacityValues',
+    'categoryValues',
     'metadata',
     'segmentStyles',
     'pointStyles',

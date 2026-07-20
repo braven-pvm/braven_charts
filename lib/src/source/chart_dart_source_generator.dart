@@ -27,6 +27,7 @@ import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
+import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/x_axis_config.dart';
@@ -331,6 +332,33 @@ class _ChartDartEmitter {
           if (series.opacityEncoding != null) {
             _emitScatterOpacityEncoding(writer, series.opacityEncoding!);
           }
+          if (series.categoryEncoding != null) {
+            _emitScatterCategoryEncoding(writer, series.categoryEncoding!);
+          }
+          if (series.jitter != const ScatterJitterConfig()) {
+            _emitScatterJitter(writer, series.jitter);
+          }
+          _enumIf(
+            writer,
+            'renderMode',
+            'ScatterRenderMode',
+            series.renderMode.name,
+            defaultName: 'points',
+          );
+          if (series.clusterConfig != const ScatterClusterConfig()) {
+            _emitScatterClusterConfig(writer, series.clusterConfig);
+          }
+          if (series.binConfig != const ScatterBinConfig()) {
+            _emitScatterBinConfig(writer, series.binConfig);
+          }
+          if (series.densityConfig != const ScatterDensityConfig()) {
+            _emitScatterDensityConfig(writer, series.densityConfig);
+          }
+          _emitSeriesLabelConfig(
+            writer,
+            dataPointLabels: series.dataPointLabels,
+            inlineLabel: null,
+          );
           if (series.interactionStyle != const ScatterInteractionStyle()) {
             _emitScatterInteraction(
               writer,
@@ -394,6 +422,7 @@ class _ChartDartEmitter {
       _optionalNumber(writer, 'magnitude', point.magnitude);
       _optionalNumber(writer, 'colorValue', point.colorValue);
       _optionalNumber(writer, 'opacityValue', point.opacityValue);
+      _optionalString(writer, 'categoryValue', point.categoryValue);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',
@@ -606,6 +635,142 @@ class _ChartDartEmitter {
     writer.writeLine('),');
   }
 
+  void _emitScatterCategoryEncoding(
+    DartSourceWriter writer,
+    ScatterCategoryEncoding encoding,
+  ) {
+    writer.writeLine('categoryEncoding: ScatterCategoryEncoding(');
+    writer.indented(() {
+      writer.writeLine('categories: [');
+      writer.indented(() {
+        for (final category in encoding.categories) {
+          writer.writeLine('ScatterCategoryStyle(');
+          writer.indented(() {
+            writer.namedArgument(
+              'key',
+              DartSourceWriter.stringLiteral(category.key),
+            );
+            _optionalString(writer, 'label', category.label);
+            _optionalColor(writer, 'color', category.color);
+            if (category.shape != null) {
+              writer.namedArgument(
+                'shape',
+                'SeriesMarkerShape.${category.shape!.name}',
+              );
+            }
+          });
+          writer.writeLine('),');
+        }
+      });
+      writer.writeLine('],');
+      if (options.includeDefaultValues || encoding.label != 'Category') {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(encoding.label),
+        );
+      }
+      _valueIf(writer, 'showLegend', encoding.showLegend, defaultValue: true);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterJitter(DartSourceWriter writer, ScatterJitterConfig jitter) {
+    writer.writeLine('jitter: ScatterJitterConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'xAmplitude', jitter.xAmplitude, 0);
+      _numberIf(writer, 'yAmplitude', jitter.yAmplitude, 0);
+      _valueIf(writer, 'seed', jitter.seed, defaultValue: 0);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterClusterConfig(
+    DartSourceWriter writer,
+    ScatterClusterConfig config,
+  ) {
+    writer.writeLine('clusterConfig: ScatterClusterConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'cellSize', config.cellSize, 40);
+      _valueIf(
+        writer,
+        'minimumPointCount',
+        config.minimumPointCount,
+        defaultValue: 2,
+      );
+      _numberIf(writer, 'minimumRadius', config.minimumRadius, 8);
+      _numberIf(writer, 'maximumRadius', config.maximumRadius, 24);
+      _valueIf(
+        writer,
+        'showCountLabels',
+        config.showCountLabels,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'labelMinimumPointCount',
+        config.labelMinimumPointCount,
+        defaultValue: 2,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterBinConfig(DartSourceWriter writer, ScatterBinConfig config) {
+    writer.writeLine('binConfig: ScatterBinConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'cellSize', config.cellSize, 36);
+      _numberIf(writer, 'gap', config.gap, 1);
+      _valueIf(
+        writer,
+        'minimumPointCount',
+        config.minimumPointCount,
+        defaultValue: 1,
+      );
+      _numberIf(writer, 'minimumOpacity', config.minimumOpacity, 0.2);
+      _numberIf(writer, 'maximumOpacity', config.maximumOpacity, 0.95);
+      _enumIf(
+        writer,
+        'aggregate',
+        'ScatterBinAggregate',
+        config.aggregate.name,
+        defaultName: ScatterBinAggregate.count.name,
+      );
+      _enumIf(
+        writer,
+        'valueSource',
+        'ScatterBinValueSource',
+        config.valueSource.name,
+        defaultName: ScatterBinValueSource.y.name,
+      );
+      _valueIf(writer, 'showLabels', config.showLabels, defaultValue: false);
+      _valueIf(
+        writer,
+        'labelMinimumPointCount',
+        config.labelMinimumPointCount,
+        defaultValue: 10,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterDensityConfig(
+    DartSourceWriter writer,
+    ScatterDensityConfig config,
+  ) {
+    writer.writeLine('densityConfig: ScatterDensityConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'gridCellSize', config.gridCellSize, 8);
+      _numberIf(writer, 'bandwidth', config.bandwidth, 32);
+      _valueIf(writer, 'contourCount', config.contourCount, defaultValue: 6);
+      _numberIf(writer, 'minimumDensity', config.minimumDensity, 0.08);
+      _numberIf(writer, 'minimumOpacity', config.minimumOpacity, 0.28);
+      _numberIf(writer, 'maximumOpacity', config.maximumOpacity, 0.9);
+      _numberIf(writer, 'lineWidth', config.lineWidth, 1.5);
+      _valueIf(writer, 'showPoints', config.showPoints, defaultValue: false);
+    });
+    writer.writeLine('),');
+  }
+
   void _emitScatterInteraction(
     DartSourceWriter writer,
     String argument,
@@ -692,6 +857,7 @@ class _ChartDartEmitter {
       ThresholdAnnotation() => 'ThresholdAnnotation',
       PinAnnotation() => 'PinAnnotation',
       TrendAnnotation() => 'TrendAnnotation',
+      ErrorBarAnnotation() => 'ErrorBarAnnotation',
       ChordAnnotation() => 'ChordAnnotation',
       LegendAnnotation() => 'LegendAnnotation',
     };
@@ -728,6 +894,8 @@ class _ChartDartEmitter {
           _emitPinAnnotation(writer, annotation);
         case TrendAnnotation():
           _emitTrendAnnotation(writer, annotation);
+        case ErrorBarAnnotation():
+          _emitErrorBarAnnotation(writer, annotation);
         case ChordAnnotation():
           _emitChordAnnotation(writer, annotation, path);
         case LegendAnnotation():
@@ -895,10 +1063,92 @@ class _ChartDartEmitter {
       writer.namedArgument('windowSize', annotation.windowSize.toString());
     }
     _numberIf(writer, 'degree', annotation.degree, 2);
+    _numberIf(writer, 'loessSpan', annotation.loessSpan, 0.5);
+    if (annotation.loessRobustnessIterations != 2) {
+      writer.namedArgument(
+        'loessRobustnessIterations',
+        annotation.loessRobustnessIterations.toString(),
+      );
+    }
+    if (annotation.loessSampleCount != 100) {
+      writer.namedArgument(
+        'loessSampleCount',
+        annotation.loessSampleCount.toString(),
+      );
+    }
+    if (annotation.showEquation) {
+      writer.namedArgument('showEquation', 'true');
+    }
+    if (annotation.showRSquared) {
+      writer.namedArgument('showRSquared', 'true');
+    }
+    if (annotation.showSampleCount) {
+      writer.namedArgument('showSampleCount', 'true');
+    }
+    if (annotation.showPearsonCorrelation) {
+      writer.namedArgument('showPearsonCorrelation', 'true');
+    }
+    if (annotation.showSpearmanCorrelation) {
+      writer.namedArgument('showSpearmanCorrelation', 'true');
+    }
+    if (annotation.showConfidenceBand) {
+      writer.namedArgument('showConfidenceBand', 'true');
+    }
+    if (annotation.showPredictionBand) {
+      writer.namedArgument('showPredictionBand', 'true');
+    }
+    _numberIf(writer, 'confidenceLevel', annotation.confidenceLevel, 0.95);
+    _optionalColor(
+      writer,
+      'confidenceBandColor',
+      annotation.confidenceBandColor,
+    );
+    _optionalColor(
+      writer,
+      'predictionBandColor',
+      annotation.predictionBandColor,
+    );
+    _numberIf(
+      writer,
+      'confidenceBandOpacity',
+      annotation.confidenceBandOpacity,
+      0.20,
+    );
+    _numberIf(
+      writer,
+      'predictionBandOpacity',
+      annotation.predictionBandOpacity,
+      0.10,
+    );
     _colorIf(writer, 'lineColor', annotation.lineColor, Colors.blue);
     _numberIf(writer, 'lineWidth', annotation.lineWidth, 2);
     _optionalNumberList(writer, 'dashPattern', annotation.dashPattern);
     _numberIf(writer, 'elevation', annotation.elevation, 0);
+  }
+
+  void _emitErrorBarAnnotation(
+    DartSourceWriter writer,
+    ErrorBarAnnotation annotation,
+  ) {
+    _optionalString(writer, 'seriesId', annotation.seriesId);
+    writer.writeLine('values: const [');
+    writer.indented(() {
+      for (final value in annotation.values) {
+        writer.writeLine('ErrorBarDatum(');
+        writer.indented(() {
+          writer.namedArgument('pointIndex', value.pointIndex.toString());
+          _numberIf(writer, 'xNegative', value.xNegative, 0);
+          _numberIf(writer, 'xPositive', value.xPositive, 0);
+          _numberIf(writer, 'yNegative', value.yNegative, 0);
+          _numberIf(writer, 'yPositive', value.yPositive, 0);
+        });
+        writer.writeLine('),');
+      }
+    });
+    writer.writeLine('],');
+    _colorIf(writer, 'lineColor', annotation.lineColor, Colors.black54);
+    _numberIf(writer, 'lineWidth', annotation.lineWidth, 1.5);
+    _numberIf(writer, 'capSize', annotation.capSize, 6);
   }
 
   void _emitChordAnnotation(
@@ -980,6 +1230,14 @@ class _ChartDartEmitter {
         'trendAnnotations',
         annotation.trendAnnotations,
         pathPrefix: '$path.trendAnnotations',
+      );
+    }
+    if (annotation.errorBarAnnotations.isNotEmpty) {
+      _emitAnnotationList(
+        writer,
+        'errorBarAnnotations',
+        annotation.errorBarAnnotations,
+        pathPrefix: '$path.errorBarAnnotations',
       );
     }
     final sizeScale = annotation.sizeScale;
@@ -1083,6 +1341,38 @@ class _ChartDartEmitter {
           'maximumLabel',
           DartSourceWriter.stringLiteral(opacityScale.maximumLabel),
         );
+      });
+      writer.writeLine('),');
+    }
+    final categoryScale = annotation.categoryScale;
+    if (categoryScale != null) {
+      writer.writeLine('categoryScale: LegendCategoryScale(');
+      writer.indented(() {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(categoryScale.label),
+        );
+        writer.writeLine('items: [');
+        writer.indented(() {
+          for (final item in categoryScale.items) {
+            writer.writeLine('LegendCategoryItem(');
+            writer.indented(() {
+              writer.namedArgument(
+                'label',
+                DartSourceWriter.stringLiteral(item.label),
+              );
+              _optionalColor(writer, 'color', item.color);
+              if (item.shape != null) {
+                writer.namedArgument(
+                  'shape',
+                  'SeriesMarkerShape.${item.shape!.name}',
+                );
+              }
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
       });
       writer.writeLine('),');
     }
@@ -1284,8 +1574,35 @@ class _ChartDartEmitter {
           dataPointLabels.position.name,
           defaultName: 'above',
         );
+        _enumIf(
+          writer,
+          'content',
+          'DataPointLabelContent',
+          dataPointLabels.content.name,
+          defaultName: 'value',
+        );
         _numberIf(writer, 'offsetX', dataPointLabels.offsetX, 0);
         _numberIf(writer, 'offsetY', dataPointLabels.offsetY, 0);
+        _numberIf(writer, 'markerGap', dataPointLabels.markerGap, 4);
+        _enumIf(
+          writer,
+          'collisionPolicy',
+          'DataPointLabelCollisionPolicy',
+          dataPointLabels.collisionPolicy.name,
+          defaultName: 'none',
+        );
+        _numberIf(
+          writer,
+          'collisionPadding',
+          dataPointLabels.collisionPadding,
+          2,
+        );
+        _valueIf(
+          writer,
+          'plotEdgeAware',
+          dataPointLabels.plotEdgeAware,
+          defaultValue: true,
+        );
         _optionalColor(writer, 'labelColor', dataPointLabels.labelColor);
         _numberIf(writer, 'fontSize', dataPointLabels.fontSize, 10);
         _fontWeightIf(
@@ -3005,6 +3322,45 @@ class _ChartDartEmitter {
         interaction.enableSelection,
         defaultValue: true,
       );
+      if (interaction.selection != const ChartSelectionConfig()) {
+        writer.writeLine('selection: ChartSelectionConfig(');
+        writer.indented(() {
+          if (interaction.selection.mode != ChartSelectionMode.point) {
+            writer.namedArgument(
+              'mode',
+              'ChartSelectionMode.${interaction.selection.mode.name}',
+            );
+          }
+          if (interaction.selection.operation !=
+              ChartSelectionOperation.replace) {
+            writer.namedArgument(
+              'operation',
+              'ChartSelectionOperation.${interaction.selection.operation.name}',
+            );
+          }
+          if (interaction.selection.dragActivation !=
+              ChartSelectionDragActivation.primary) {
+            writer.namedArgument(
+              'dragActivation',
+              'ChartSelectionDragActivation.'
+                  '${interaction.selection.dragActivation.name}',
+            );
+          }
+          _valueIf(
+            writer,
+            'clearOnBackgroundTap',
+            interaction.selection.clearOnBackgroundTap,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'useModifierKeys',
+            interaction.selection.useModifierKeys,
+            defaultValue: true,
+          );
+        });
+        writer.writeLine('),');
+      }
       _valueIf(
         writer,
         'showFocusBorder',

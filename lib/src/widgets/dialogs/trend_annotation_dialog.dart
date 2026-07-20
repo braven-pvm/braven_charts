@@ -16,7 +16,12 @@ import 'annotation_dialog_header.dart';
 /// - Line style (color, width, dash pattern)
 /// - Optional label
 class TrendAnnotationDialog extends StatefulWidget {
-  const TrendAnnotationDialog({super.key, this.annotation, required this.availableSeries, this.preselectedSeriesId});
+  const TrendAnnotationDialog({
+    super.key,
+    this.annotation,
+    required this.availableSeries,
+    this.preselectedSeriesId,
+  });
 
   /// Existing annotation to edit, or null to create new.
   final TrendAnnotation? annotation;
@@ -42,6 +47,17 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
   late double _lineWidth;
   late List<double>? _dashPattern;
   late double _elevation;
+  late double _loessSpan;
+  late int _loessRobustnessIterations;
+  late int _loessSampleCount;
+  late bool _showEquation;
+  late bool _showRSquared;
+  late bool _showSampleCount;
+  late bool _showPearsonCorrelation;
+  late bool _showSpearmanCorrelation;
+  late bool _showConfidenceBand;
+  late bool _showPredictionBand;
+  late double _confidenceLevel;
 
   // Predefined dash patterns
   final Map<String, List<double>?> _dashPatterns = {
@@ -56,15 +72,33 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
-    _selectedSeriesId = annotation?.seriesId ?? widget.preselectedSeriesId ?? (widget.availableSeries.isNotEmpty ? widget.availableSeries.first : '');
+    _selectedSeriesId =
+        annotation?.seriesId ??
+        widget.preselectedSeriesId ??
+        (widget.availableSeries.isNotEmpty ? widget.availableSeries.first : '');
     _trendType = annotation?.trendType ?? TrendType.linear;
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    _windowSizeController = TextEditingController(text: annotation?.windowSize?.toString() ?? '5');
-    _degreeController = TextEditingController(text: annotation?.degree.toString() ?? '2');
+    _windowSizeController = TextEditingController(
+      text: annotation?.windowSize?.toString() ?? '5',
+    );
+    _degreeController = TextEditingController(
+      text: annotation?.degree.toString() ?? '2',
+    );
     _lineColor = annotation?.lineColor ?? Colors.blue;
     _lineWidth = annotation?.lineWidth ?? 2.0;
     _dashPattern = annotation?.dashPattern;
     _elevation = annotation?.elevation ?? 0.0;
+    _loessSpan = annotation?.loessSpan ?? 0.5;
+    _loessRobustnessIterations = annotation?.loessRobustnessIterations ?? 2;
+    _loessSampleCount = annotation?.loessSampleCount ?? 100;
+    _showEquation = annotation?.showEquation ?? false;
+    _showRSquared = annotation?.showRSquared ?? false;
+    _showSampleCount = annotation?.showSampleCount ?? false;
+    _showPearsonCorrelation = annotation?.showPearsonCorrelation ?? false;
+    _showSpearmanCorrelation = annotation?.showSpearmanCorrelation ?? false;
+    _showConfidenceBand = annotation?.showConfidenceBand ?? false;
+    _showPredictionBand = annotation?.showPredictionBand ?? false;
+    _confidenceLevel = annotation?.confidenceLevel ?? 0.95;
   }
 
   @override
@@ -96,16 +130,25 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
 
   void _handleCreate() {
     if (_selectedSeriesId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a series')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a series')));
       return;
     }
 
     // Validate type-specific parameters
     int? windowSize;
-    if (_trendType == TrendType.movingAverage || _trendType == TrendType.exponentialMovingAverage) {
+    if (_trendType == TrendType.movingAverage ||
+        _trendType == TrendType.exponentialMovingAverage) {
       windowSize = int.tryParse(_windowSizeController.text);
       if (windowSize == null || windowSize <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid window size (positive integer)')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please enter a valid window size (positive integer)',
+            ),
+          ),
+        );
         return;
       }
     }
@@ -114,7 +157,13 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     if (_trendType == TrendType.polynomial) {
       final parsedDegree = int.tryParse(_degreeController.text);
       if (parsedDegree == null || parsedDegree <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid polynomial degree (positive integer)')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please enter a valid polynomial degree (positive integer)',
+            ),
+          ),
+        );
         return;
       }
       degree = parsedDegree;
@@ -126,6 +175,21 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
       trendType: _trendType,
       windowSize: windowSize,
       degree: degree,
+      loessSpan: _loessSpan,
+      loessRobustnessIterations: _loessRobustnessIterations,
+      loessSampleCount: _loessSampleCount,
+      showEquation: _showEquation,
+      showRSquared: _showRSquared,
+      showSampleCount: _showSampleCount,
+      showPearsonCorrelation: _showPearsonCorrelation,
+      showSpearmanCorrelation: _showSpearmanCorrelation,
+      showConfidenceBand: _showConfidenceBand,
+      showPredictionBand: _showPredictionBand,
+      confidenceLevel: _confidenceLevel,
+      confidenceBandColor: widget.annotation?.confidenceBandColor,
+      predictionBandColor: widget.annotation?.predictionBandColor,
+      confidenceBandOpacity: widget.annotation?.confidenceBandOpacity ?? 0.20,
+      predictionBandOpacity: widget.annotation?.predictionBandOpacity ?? 0.10,
       label: _labelController.text.isEmpty ? null : _labelController.text,
       lineColor: _lineColor,
       lineWidth: _lineWidth,
@@ -144,9 +208,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 750),
@@ -176,9 +238,15 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedSeriesId,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: Icon(Icons.show_chart)),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.show_chart),
+                        ),
                         items: widget.availableSeries.map((seriesId) {
-                          return DropdownMenuItem(value: seriesId, child: Text(seriesId));
+                          return DropdownMenuItem(
+                            value: seriesId,
+                            child: Text(seriesId),
+                          );
                         }).toList(),
                         onChanged: (value) {
                           if (value != null) {
@@ -191,12 +259,23 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       // Show read-only series info
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.show_chart, color: theme.colorScheme.onSurfaceVariant),
+                            Icon(
+                              Icons.show_chart,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 12),
-                            Text('Series: $_selectedSeriesId', style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                            Text(
+                              'Series: $_selectedSeriesId',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -221,7 +300,8 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                     const SizedBox(height: 16),
 
                     // Type-specific parameters
-                    if (_trendType == TrendType.movingAverage || _trendType == TrendType.exponentialMovingAverage) ...[
+                    if (_trendType == TrendType.movingAverage ||
+                        _trendType == TrendType.exponentialMovingAverage) ...[
                       TextField(
                         controller: _windowSizeController,
                         decoration: const InputDecoration(
@@ -250,6 +330,159 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       ),
                       const SizedBox(height: 16),
                     ],
+
+                    if (_trendType == TrendType.loess) ...[
+                      Text(
+                        'LOESS smoothing',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Use a wider neighborhood for a smoother curve. Robust passes reduce outlier influence.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _TrendParameterSlider(
+                        key: const ValueKey('trend-loess-span'),
+                        label: 'Neighborhood',
+                        valueLabel: '${(_loessSpan * 100).round()}%',
+                        value: _loessSpan,
+                        min: 0.1,
+                        max: 1,
+                        divisions: 18,
+                        onChanged: (value) =>
+                            setState(() => _loessSpan = value),
+                      ),
+                      _TrendParameterSlider(
+                        key: const ValueKey('trend-loess-robustness'),
+                        label: 'Robust passes',
+                        valueLabel: '$_loessRobustnessIterations',
+                        value: _loessRobustnessIterations.toDouble(),
+                        min: 0,
+                        max: 4,
+                        divisions: 4,
+                        onChanged: (value) => setState(
+                          () => _loessRobustnessIterations = value.round(),
+                        ),
+                      ),
+                      _TrendParameterSlider(
+                        key: const ValueKey('trend-loess-samples'),
+                        label: 'Curve detail',
+                        valueLabel: '$_loessSampleCount points',
+                        value: _loessSampleCount.toDouble(),
+                        min: 20,
+                        max: 200,
+                        divisions: 9,
+                        onChanged: (value) =>
+                            setState(() => _loessSampleCount = value.round()),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    Text('Trend details', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose the diagnostics shown beside the fitted line.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (_trendType == TrendType.linear ||
+                            _trendType == TrendType.polynomial)
+                          FilterChip(
+                            key: const ValueKey('trend-show-equation'),
+                            label: const Text('Equation'),
+                            selected: _showEquation,
+                            onSelected: (value) =>
+                                setState(() => _showEquation = value),
+                          ),
+                        FilterChip(
+                          key: const ValueKey('trend-show-r-squared'),
+                          label: const Text('R²'),
+                          selected: _showRSquared,
+                          onSelected: (value) =>
+                              setState(() => _showRSquared = value),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('trend-show-sample-count'),
+                          label: const Text('Sample n'),
+                          selected: _showSampleCount,
+                          onSelected: (value) =>
+                              setState(() => _showSampleCount = value),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('trend-show-pearson'),
+                          label: const Text('Pearson r'),
+                          selected: _showPearsonCorrelation,
+                          onSelected: (value) =>
+                              setState(() => _showPearsonCorrelation = value),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('trend-show-spearman'),
+                          label: const Text('Spearman ρ'),
+                          selected: _showSpearmanCorrelation,
+                          onSelected: (value) =>
+                              setState(() => _showSpearmanCorrelation = value),
+                        ),
+                      ],
+                    ),
+                    if (_trendType == TrendType.linear) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Linear uncertainty',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'OLS bands assume independent observations, constant residual variance, normal residuals, and fixed X values.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            key: const ValueKey('trend-confidence-band'),
+                            label: const Text('Mean confidence'),
+                            selected: _showConfidenceBand,
+                            onSelected: (value) =>
+                                setState(() => _showConfidenceBand = value),
+                          ),
+                          FilterChip(
+                            key: const ValueKey('trend-prediction-band'),
+                            label: const Text('Future prediction'),
+                            selected: _showPredictionBand,
+                            onSelected: (value) =>
+                                setState(() => _showPredictionBand = value),
+                          ),
+                        ],
+                      ),
+                      if (_showConfidenceBand || _showPredictionBand) ...[
+                        const SizedBox(height: 8),
+                        SegmentedButton<double>(
+                          key: const ValueKey('trend-confidence-level'),
+                          segments: const [
+                            ButtonSegment(value: 0.90, label: Text('90%')),
+                            ButtonSegment(value: 0.95, label: Text('95%')),
+                            ButtonSegment(value: 0.99, label: Text('99%')),
+                          ],
+                          selected: {_confidenceLevel},
+                          onSelectionChanged: (values) =>
+                              setState(() => _confidenceLevel = values.first),
+                        ),
+                      ],
+                    ],
+                    const SizedBox(height: 16),
 
                     // Label (Optional)
                     TextField(
@@ -307,10 +540,17 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                             max: 10.0,
                             divisions: 19,
                             label: '${_lineWidth.toStringAsFixed(1)}px',
-                            onChanged: (value) => setState(() => _lineWidth = value),
+                            onChanged: (value) =>
+                                setState(() => _lineWidth = value),
                           ),
                         ),
-                        SizedBox(width: 50, child: Text('${_lineWidth.toStringAsFixed(1)}px', textAlign: TextAlign.right)),
+                        SizedBox(
+                          width: 50,
+                          child: Text(
+                            '${_lineWidth.toStringAsFixed(1)}px',
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
                       ],
                     ),
 
@@ -329,11 +569,22 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                             min: 0.0,
                             max: 12.0,
                             divisions: 24,
-                            label: _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
-                            onChanged: (value) => setState(() => _elevation = value),
+                            label: _elevation == 0
+                                ? 'Off'
+                                : _elevation.toStringAsFixed(1),
+                            onChanged: (value) =>
+                                setState(() => _elevation = value),
                           ),
                         ),
-                        SizedBox(width: 50, child: Text(_elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1), textAlign: TextAlign.right)),
+                        SizedBox(
+                          width: 50,
+                          child: Text(
+                            _elevation == 0
+                                ? 'Off'
+                                : _elevation.toStringAsFixed(1),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
                       ],
                     ),
 
@@ -349,11 +600,16 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                         DropdownButton<String>(
                           value: _getDashPatternName(),
                           items: _dashPatterns.keys.map((name) {
-                            return DropdownMenuItem(value: name, child: Text(name));
+                            return DropdownMenuItem(
+                              value: name,
+                              child: Text(name),
+                            );
                           }).toList(),
                           onChanged: (name) {
                             if (name != null) {
-                              setState(() => _dashPattern = _dashPatterns[name]);
+                              setState(
+                                () => _dashPattern = _dashPatterns[name],
+                              );
                             }
                           },
                         ),
@@ -363,7 +619,6 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                 ),
               ),
             ),
-
           ],
         ),
       ),
@@ -380,6 +635,8 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
         return 'Moving Average';
       case TrendType.exponentialMovingAverage:
         return 'Exponential Moving Average';
+      case TrendType.loess:
+        return 'LOESS';
     }
   }
 
@@ -393,7 +650,52 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
         return 'Simple moving average';
       case TrendType.exponentialMovingAverage:
         return 'Weighted moving average';
+      case TrendType.loess:
+        return 'Robust locally weighted curve';
     }
   }
+}
 
+class _TrendParameterSlider extends StatelessWidget {
+  const _TrendParameterSlider({
+    super.key,
+    required this.label,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String valueLabel;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 108, child: Text(label)),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: valueLabel,
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 72,
+          child: Text(valueLabel, textAlign: TextAlign.right),
+        ),
+      ],
+    );
+  }
 }
