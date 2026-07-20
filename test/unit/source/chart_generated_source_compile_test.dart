@@ -29,6 +29,13 @@ void main() {
           label: 'Confidence',
           unit: '%',
         ),
+        jitter: ScatterJitterConfig(xAmplitude: 9, yAmplitude: 5, seed: 31),
+        dataPointLabels: DataPointLabelConfig(
+          show: true,
+          content: DataPointLabelContent.pointLabel,
+          collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+          markerGap: 6,
+        ),
       );
       final candles = CandlestickChartSeries(
         id: 'price',
@@ -131,7 +138,14 @@ void main() {
             ),
           ).value,
           interaction: _success(
-            ChartInteractionDocumentCodec.encode(const InteractionConfig()),
+            ChartInteractionDocumentCodec.encode(
+              const InteractionConfig(
+                selection: ChartSelectionConfig(
+                  operation: ChartSelectionOperation.toggle,
+                  clearOnBackgroundTap: false,
+                ),
+              ),
+            ),
           ).value,
         ),
         viewState: ChartViewState(

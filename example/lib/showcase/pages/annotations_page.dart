@@ -1657,6 +1657,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
       TrendType.polynomial => const Color(0xFFF59E0B),
       TrendType.movingAverage => const Color(0xFF10B981),
       TrendType.exponentialMovingAverage => const Color(0xFF8B5CF6),
+      TrendType.loess => const Color(0xFF0EA5E9),
     };
     return TrendAnnotation(
       id: 'trend-${trendType.name}',
@@ -1713,7 +1714,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     _AnnotationKind.pin =>
       '3 variants · data coordinates (${_pinX.toStringAsFixed(0)}, ${_pinY.toStringAsFixed(0)}) · ${_markerShape.name} marker',
     _AnnotationKind.trend =>
-      '4 calculations · ${_trendLabel(_trendType)} selected · computed overlays',
+      '${TrendType.values.length} calculations · ${_trendLabel(_trendType)} selected · computed overlays',
     _AnnotationKind.chord =>
       '2 variants · indexes $_chordStart–$_chordEnd${_showPerpendicular ? ' · perpendicular deflection at $_perpendicularIndex' : ''}',
     _AnnotationKind.legend =>
@@ -1890,6 +1891,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     TrendType.polynomial => 'Polynomial regression',
     TrendType.movingAverage => 'Moving average',
     TrendType.exponentialMovingAverage => 'Exponential moving average',
+    TrendType.loess => 'LOESS',
   };
 }
 

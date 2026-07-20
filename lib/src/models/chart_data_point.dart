@@ -9,8 +9,8 @@ import 'scatter_marker_style.dart';
 /// ChartDataPoint is an immutable data structure representing a point
 /// in 2D space, with optional timestamp and label for rich data visualization.
 ///
-/// Equality is based on x, y, magnitude, colorValue, opacityValue, timestamp, label,
-/// segmentStyle, and pointStyle.
+/// Equality is based on x, y, magnitude, colorValue, opacityValue,
+/// categoryValue, timestamp, label, segmentStyle, and pointStyle.
 /// Metadata is excluded from equality comparisons for performance optimization.
 ///
 /// Example:
@@ -47,6 +47,7 @@ class ChartDataPoint {
     this.magnitude,
     this.colorValue,
     this.opacityValue,
+    this.categoryValue,
     this.timestamp,
     this.label,
     this.metadata,
@@ -79,6 +80,12 @@ class ChartDataPoint {
   /// Scatter point to encode three separate measures through area, color, and
   /// opacity.
   final double? opacityValue;
+
+  /// Optional categorical value used by Scatter color and shape encodings.
+  ///
+  /// This is independent from [label]: labels identify individual points,
+  /// while multiple points can share the same category value.
+  final String? categoryValue;
 
   /// Optional timestamp for time-series data.
   final DateTime? timestamp;
@@ -173,6 +180,8 @@ class ChartDataPoint {
     bool clearColorValue = false,
     double? opacityValue,
     bool clearOpacityValue = false,
+    String? categoryValue,
+    bool clearCategoryValue = false,
     DateTime? timestamp,
     String? label,
     Map<String, dynamic>? metadata,
@@ -189,6 +198,9 @@ class ChartDataPoint {
       opacityValue: clearOpacityValue
           ? null
           : (opacityValue ?? this.opacityValue),
+      categoryValue: clearCategoryValue
+          ? null
+          : (categoryValue ?? this.categoryValue),
       timestamp: timestamp ?? this.timestamp,
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,
@@ -209,6 +221,7 @@ class ChartDataPoint {
           magnitude == other.magnitude &&
           colorValue == other.colorValue &&
           opacityValue == other.opacityValue &&
+          categoryValue == other.categoryValue &&
           timestamp == other.timestamp &&
           label == other.label &&
           segmentStyle == other.segmentStyle &&
@@ -222,6 +235,7 @@ class ChartDataPoint {
     magnitude,
     colorValue,
     opacityValue,
+    categoryValue,
     timestamp,
     label,
     segmentStyle,
@@ -240,6 +254,9 @@ class ChartDataPoint {
     }
     if (opacityValue != null) {
       buffer.write(', opacityValue: $opacityValue');
+    }
+    if (categoryValue != null) {
+      buffer.write(', categoryValue: "$categoryValue"');
     }
     if (hasTimestamp) {
       buffer.write(', timestamp: $timestamp');

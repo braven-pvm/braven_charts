@@ -1151,6 +1151,135 @@ void main() {
       expect(base.style, SeriesStyle.line);
     });
 
+    test('round-trips explicit Scatter clustering and capability', () {
+      const source = ScatterChartSeries(
+        id: 'clustered-scatter',
+        points: [ChartDataPoint(x: 1, y: 2), ChartDataPoint(x: 1.1, y: 2.1)],
+        renderMode: ScatterRenderMode.clusters,
+        clusterConfig: ScatterClusterConfig(
+          cellSize: 52,
+          minimumPointCount: 3,
+          minimumRadius: 9,
+          maximumRadius: 31,
+          showCountLabels: false,
+          labelMinimumPointCount: 6,
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.clusters.v1'),
+      );
+      final restored = _roundTrip(source) as ScatterChartSeries;
+      expect(restored.renderMode, ScatterRenderMode.clusters);
+      expect(restored.clusterConfig, source.clusterConfig);
+    });
+
+    for (final mode in [
+      ScatterRenderMode.rectangularBins,
+      ScatterRenderMode.hexbin,
+    ]) {
+      test('round-trips ${mode.name} Scatter bins and capability', () {
+        final source = ScatterChartSeries(
+          id: '${mode.name}-scatter',
+          points: const [
+            ChartDataPoint(x: 1, y: 2),
+            ChartDataPoint(x: 1.1, y: 2.1),
+          ],
+          renderMode: mode,
+          binConfig: const ScatterBinConfig(
+            cellSize: 48,
+            gap: 2,
+            minimumPointCount: 3,
+            minimumOpacity: 0.15,
+            maximumOpacity: 0.9,
+            aggregate: ScatterBinAggregate.maximum,
+            valueSource: ScatterBinValueSource.magnitude,
+            showLabels: true,
+            labelMinimumPointCount: 8,
+          ),
+        );
+
+        final encoded =
+            ChartSeriesDocumentCodec.encode(source)
+                as ChartArtifactSuccess<ChartSeriesDocument>;
+        final decoded = _roundTrip(source) as ScatterChartSeries;
+
+        expect(decoded, source);
+        expect(
+          encoded.value.requiredCapabilities,
+          contains('series.scatter.bins.v1'),
+        );
+        expect(
+          encoded.value.requiredCapabilities,
+          isNot(contains('series.scatter.clusters.v1')),
+        );
+      });
+    }
+
+    test('round-trips Scatter density contours and capability', () {
+      const source = ScatterChartSeries(
+        id: 'density-scatter',
+        points: [ChartDataPoint(x: 1, y: 2), ChartDataPoint(x: 1.1, y: 2.1)],
+        renderMode: ScatterRenderMode.density,
+        densityConfig: ScatterDensityConfig(
+          gridCellSize: 6,
+          bandwidth: 28,
+          contourCount: 7,
+          minimumDensity: 0.12,
+          minimumOpacity: 0.22,
+          maximumOpacity: 0.84,
+          lineWidth: 2.5,
+          showPoints: true,
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final decoded = _roundTrip(source) as ScatterChartSeries;
+
+      expect(decoded, source);
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.density.v1'),
+      );
+      expect(
+        encoded.value.requiredCapabilities,
+        isNot(contains('series.scatter.bins.v1')),
+      );
+    });
+
+    test('rejects unknown Scatter bin aggregate values structurally', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                const ScatterChartSeries(
+                  id: 'invalid-bin-aggregate',
+                  points: [ChartDataPoint(x: 1, y: 2)],
+                  renderMode: ScatterRenderMode.hexbin,
+                  binConfig: ScatterBinConfig(
+                    aggregate: ScatterBinAggregate.mean,
+                  ),
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = Map<String, Object?>.from(encoded.value.toJson());
+      final style = Map<String, Object?>.from(json['style']! as Map);
+      final binConfig = Map<String, Object?>.from(style['binConfig']! as Map)
+        ..['aggregate'] = 'median';
+      style['binConfig'] = binConfig;
+      json['style'] = style;
+
+      final result = ChartSeriesDocumentCodec.decode(
+        ChartSeriesDocument.fromJson(json),
+      );
+
+      expect(result, isA<ChartArtifactFailure<ChartSeries>>());
+    });
+
     test('rejects malformed Scatter interaction values structurally', () {
       final encoded =
           ChartSeriesDocumentCodec.encode(

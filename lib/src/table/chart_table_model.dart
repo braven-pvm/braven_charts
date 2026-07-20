@@ -74,6 +74,7 @@ class ChartTableSeriesColumn {
     required this.hidden,
     this.unit,
     this.colorValue,
+    this.categoryLabel,
     this.auxiliaryFields = const {},
   });
 
@@ -88,6 +89,9 @@ class ChartTableSeriesColumn {
   /// theme palette. Keeping the value as an integer preserves the table model's
   /// portable boundary while allowing widgets to render the same visual cue.
   final int? colorValue;
+
+  /// Categorical Scatter field heading, when one is encoded by this series.
+  final String? categoryLabel;
 
   /// Point-aligned passive measures exposed next to this series' main value.
   final Set<ChartTableAuxiliaryField> auxiliaryFields;
@@ -109,6 +113,7 @@ class ChartTableLongRow {
     this.unit,
     this.timestamp,
     this.label,
+    this.categoryValue,
     this.metadata,
     this.auxiliaryValues = const {},
   });
@@ -123,6 +128,7 @@ class ChartTableLongRow {
   final String? unit;
   final DateTime? timestamp;
   final String? label;
+  final String? categoryValue;
   final bool isValid;
   final bool hiddenSeries;
   final JsonObjectValue? metadata;
@@ -139,6 +145,7 @@ class ChartTableWideCell {
     this.unit,
     this.timestamp,
     this.label,
+    this.categoryValue,
     this.metadata,
     this.isDerived = false,
     this.auxiliaryValues = const {},
@@ -150,6 +157,7 @@ class ChartTableWideCell {
   final String? unit;
   final DateTime? timestamp;
   final String? label;
+  final String? categoryValue;
   final bool isValid;
   final JsonObjectValue? metadata;
   final bool isDerived;
@@ -475,6 +483,7 @@ class ChartTableModel {
             document.series.indexOf(series),
             themeSeriesColors,
           ),
+          categoryLabel: _categoryLabelForSeries(series),
           auxiliaryFields: _auxiliaryFieldsForSeries(series),
         ),
       );
@@ -534,6 +543,7 @@ class ChartTableModel {
             unit: unit,
             timestamp: point.timestamp,
             label: point.label,
+            categoryValue: point.categoryValue,
             isValid: x.isFinite && y.isFinite,
             hiddenSeries: hidden,
             metadata: options.includeMetadata ? point.metadata : null,
@@ -615,6 +625,9 @@ class ChartTableModel {
   Set<ChartTableAuxiliaryField> get auxiliaryFields => Set.unmodifiable({
     for (final column in series) ...column.auxiliaryFields,
   });
+
+  bool get hasCategoryValues =>
+      series.any((column) => column.categoryLabel != null);
 
   int get rowCount => switch (projectionKind) {
     ChartTableProjectionKind.cartesianLong => longRows.length,
@@ -1491,6 +1504,7 @@ List<ChartTableWideRow> _pivotExactX(
       unit: row.unit,
       timestamp: row.timestamp,
       label: row.label,
+      categoryValue: row.categoryValue,
       isValid: row.isValid,
       metadata: row.metadata,
       auxiliaryValues: row.auxiliaryValues,
@@ -1509,6 +1523,13 @@ List<ChartTableWideRow> _pivotExactX(
         },
       ),
   ];
+}
+
+String? _categoryLabelForSeries(ChartSeriesDocument series) {
+  final encoding = series.style?.values['categoryEncoding'];
+  if (encoding is! JsonObjectValue) return null;
+  final label = encoding.values['label']?.toJson();
+  return label is String && label.isNotEmpty ? label : 'Category';
 }
 
 class _MutableWideRow {

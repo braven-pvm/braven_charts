@@ -7,6 +7,7 @@ library;
 import 'dart:ui' show Offset;
 
 import 'chart_data_point.dart';
+import 'chart_selection_result.dart';
 
 // ==============================================================================
 // Callback Type Definitions (FR-007)
@@ -26,8 +27,8 @@ import 'chart_data_point.dart';
 ///   },
 /// )
 /// ```
-typedef DataPointCallback = void Function(
-    ChartDataPoint point, Offset position);
+typedef DataPointCallback =
+    void Function(ChartDataPoint point, Offset position);
 
 /// Called when the cursor hovers over a data point.
 ///
@@ -37,8 +38,8 @@ typedef DataPointCallback = void Function(
 ///
 /// This callback may be invoked frequently during mouse movement.
 /// Keep logic lightweight to avoid performance issues.
-typedef DataPointHoverCallback = void Function(
-    ChartDataPoint? point, Offset position);
+typedef DataPointHoverCallback =
+    void Function(ChartDataPoint? point, Offset position);
 
 /// Called when a user performs a long-press gesture on a data point.
 ///
@@ -47,8 +48,8 @@ typedef DataPointHoverCallback = void Function(
 /// - [position]: Screen coordinates of the long-press event
 ///
 /// Typically used on mobile devices for context menus or additional actions.
-typedef DataPointLongPressCallback = void Function(
-    ChartDataPoint point, Offset position);
+typedef DataPointLongPressCallback =
+    void Function(ChartDataPoint point, Offset position);
 
 /// Called when the selected data points change.
 ///
@@ -60,6 +61,9 @@ typedef DataPointLongPressCallback = void Function(
 /// - Keyboard navigation
 /// - Programmatic selection changes
 typedef SelectionCallback = void Function(List<ChartDataPoint> selectedPoints);
+
+/// Called with stable identities and aggregates when selection changes.
+typedef SelectionResultCallback = void Function(ChartSelectionResult result);
 
 /// Called when the zoom level changes.
 ///
@@ -101,10 +105,8 @@ typedef ViewportCallback = void Function(Map<String, double> visibleBounds);
 /// - [snapPoints]: List of data points near the crosshair (empty if no snapping)
 ///
 /// Triggered when the cursor moves over the chart.
-typedef CrosshairChangeCallback = void Function(
-  Offset? position,
-  List<ChartDataPoint> snapPoints,
-);
+typedef CrosshairChangeCallback =
+    void Function(Offset? position, List<ChartDataPoint> snapPoints);
 
 /// Called when a tooltip is shown or hidden.
 ///
@@ -113,8 +115,8 @@ typedef CrosshairChangeCallback = void Function(
 /// - [dataPoint]: The data point the tooltip is showing (null if hidden)
 ///
 /// Useful for coordinating external UI with tooltip state.
-typedef TooltipChangeCallback = void Function(
-    bool visible, ChartDataPoint? dataPoint);
+typedef TooltipChangeCallback =
+    void Function(bool visible, ChartDataPoint? dataPoint);
 
 /// Called when a keyboard action is performed.
 ///
@@ -123,8 +125,8 @@ typedef TooltipChangeCallback = void Function(
 /// - [targetPoint]: The data point targeted by the action (null for global actions)
 ///
 /// Useful for logging keyboard interactions or custom keyboard handlers.
-typedef KeyboardActionCallback = void Function(
-    String action, ChartDataPoint? targetPoint);
+typedef KeyboardActionCallback =
+    void Function(String action, ChartDataPoint? targetPoint);
 
 // ==============================================================================
 // Callback Invoker Helper Class
@@ -150,10 +152,7 @@ class CallbackInvoker {
   ///   () => [point, position],
   /// );
   /// ```
-  static void invoke<T>(
-    T? callback,
-    List<dynamic> Function() getArgs,
-  ) {
+  static void invoke<T>(T? callback, List<dynamic> Function() getArgs) {
     if (callback == null) return;
 
     try {
@@ -205,6 +204,14 @@ class CallbackInvoker {
     invoke(callback, () => [selectedPoints]);
   }
 
+  /// Invokes a rich selection-result callback.
+  static void invokeSelectionResult(
+    SelectionResultCallback? callback,
+    ChartSelectionResult result,
+  ) {
+    invoke(callback, () => [result]);
+  }
+
   /// Invokes a zoom changed callback.
   static void invokeZoom(
     ZoomCallback? callback,
@@ -215,10 +222,7 @@ class CallbackInvoker {
   }
 
   /// Invokes a pan changed callback.
-  static void invokePan(
-    PanCallback? callback,
-    Offset panOffset,
-  ) {
+  static void invokePan(PanCallback? callback, Offset panOffset) {
     invoke(callback, () => [panOffset]);
   }
 

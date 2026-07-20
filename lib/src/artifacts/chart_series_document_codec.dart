@@ -18,6 +18,7 @@ import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
+import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
@@ -76,6 +77,7 @@ abstract final class ChartSeriesDocumentCodec {
       final dataPointLabels = switch (series) {
         LineChartSeries() => series.dataPointLabels,
         AreaChartSeries() => series.dataPointLabels,
+        ScatterChartSeries() => series.dataPointLabels,
         _ => null,
       };
       if (dataPointLabels?.formatter != null) {
@@ -179,6 +181,21 @@ abstract final class ChartSeriesDocumentCodec {
               'series.scatter.color-encoding.v1',
             if (series is ScatterChartSeries && series.opacityEncoding != null)
               'series.scatter.opacity-encoding.v1',
+            if (series is ScatterChartSeries && series.categoryEncoding != null)
+              'series.scatter.category-encoding.v1',
+            if (series is ScatterChartSeries &&
+                series.jitter != const ScatterJitterConfig())
+              'series.scatter.jitter.v1',
+            if (series is ScatterChartSeries &&
+                series.renderMode == ScatterRenderMode.clusters)
+              'series.scatter.clusters.v1',
+            if (series is ScatterChartSeries &&
+                (series.renderMode == ScatterRenderMode.rectangularBins ||
+                    series.renderMode == ScatterRenderMode.hexbin))
+              'series.scatter.bins.v1',
+            if (series is ScatterChartSeries &&
+                series.renderMode == ScatterRenderMode.density)
+              'series.scatter.density.v1',
             if (series is PieChartSeries) 'series.pie.style.v2',
             if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
             if (series is PieChartSeries && series.hasVariableSliceRadius)
@@ -389,6 +406,27 @@ abstract final class ChartSeriesDocumentCodec {
           ),
           opacityEncoding: _decodeScatterOpacityEncoding(
             _optionalMap(style, 'opacityEncoding'),
+          ),
+          categoryEncoding: _decodeScatterCategoryEncoding(
+            _optionalMap(style, 'categoryEncoding'),
+          ),
+          jitter: _decodeScatterJitter(_optionalMap(style, 'jitter')),
+          renderMode:
+              _optionalEnum(
+                style['renderMode'],
+                ScatterRenderMode.values,
+                r'$.style.renderMode',
+              ) ??
+              ScatterRenderMode.points,
+          clusterConfig: _decodeScatterClusterConfig(
+            _optionalMap(style, 'clusterConfig'),
+          ),
+          binConfig: _decodeScatterBinConfig(_optionalMap(style, 'binConfig')),
+          densityConfig: _decodeScatterDensityConfig(
+            _optionalMap(style, 'densityConfig'),
+          ),
+          dataPointLabels: _decodeDataPointLabels(
+            _optionalMap(style, 'dataPointLabels'),
           ),
           interactionStyle: _decodeScatterInteraction(
             _optionalMap(style, 'interaction'),
@@ -693,6 +731,7 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
       opacityValue: point.opacityValue == null
           ? null
           : ChartNumberDocument.fromDouble(point.opacityValue!),
+      categoryValue: point.categoryValue,
       timestamp: point.timestamp,
       label: point.label,
       metadata: _jsonObjectOrNull(
@@ -749,6 +788,7 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
     magnitude: point.magnitude?.asDouble,
     colorValue: point.colorValue?.asDouble,
     opacityValue: point.opacityValue?.asDouble,
+    categoryValue: point.categoryValue,
     timestamp: point.timestamp,
     label: point.label,
     metadata: _dynamicMap(point.metadata),
@@ -877,6 +917,40 @@ Map<String, Object?> _encodeSeriesStyle(
       if (series.opacityEncoding != null) {
         result['opacityEncoding'] = _encodeScatterOpacityEncoding(
           series.opacityEncoding!,
+        );
+      }
+      if (series.categoryEncoding != null) {
+        if (!series.categoryEncoding!.hasValidConfiguration) {
+          throw const FormatException(
+            'Scatter category encodings require unique non-empty keys and at least one color or shape per category.',
+          );
+        }
+        result['categoryEncoding'] = _encodeScatterCategoryEncoding(
+          series.categoryEncoding!,
+        );
+      }
+      if (series.jitter != const ScatterJitterConfig()) {
+        result['jitter'] = _encodeScatterJitter(series.jitter);
+      }
+      if (series.renderMode != ScatterRenderMode.points) {
+        result['renderMode'] = series.renderMode.name;
+      }
+      if (series.clusterConfig != const ScatterClusterConfig()) {
+        result['clusterConfig'] = _encodeScatterClusterConfig(
+          series.clusterConfig,
+        );
+      }
+      if (series.binConfig != const ScatterBinConfig()) {
+        result['binConfig'] = _encodeScatterBinConfig(series.binConfig);
+      }
+      if (series.densityConfig != const ScatterDensityConfig()) {
+        result['densityConfig'] = _encodeScatterDensityConfig(
+          series.densityConfig,
+        );
+      }
+      if (series.dataPointLabels != null) {
+        result['dataPointLabels'] = _encodeDataPointLabels(
+          series.dataPointLabels!,
         );
       }
       if (series.interactionStyle != const ScatterInteractionStyle()) {
@@ -1744,6 +1818,279 @@ ScatterOpacityEncoding? _decodeScatterOpacityEncoding(
   );
 }
 
+Map<String, Object?> _encodeScatterCategoryEncoding(
+  ScatterCategoryEncoding encoding,
+) => {
+  'label': encoding.label,
+  'showLegend': encoding.showLegend,
+  'categories': [
+    for (final category in encoding.categories)
+      {
+        'key': category.key,
+        if (category.label != null) 'label': category.label,
+        if (category.color != null) 'color': category.color!.toARGB32(),
+        if (category.shape != null) 'shape': category.shape!.name,
+      },
+  ],
+};
+
+ScatterCategoryEncoding? _decodeScatterCategoryEncoding(
+  Map<String, Object?>? value,
+) {
+  if (value == null) return null;
+  final rawCategories = value['categories'];
+  if (rawCategories is! List || rawCategories.isEmpty) {
+    throw const FormatException(
+      'Scatter category encoding requires at least one category.',
+    );
+  }
+  final categories = <ScatterCategoryStyle>[];
+  for (var index = 0; index < rawCategories.length; index++) {
+    final raw = rawCategories[index];
+    if (raw is! Map) {
+      throw FormatException(
+        'Scatter category encoding categories[$index] must be an object.',
+      );
+    }
+    final category = Map<String, Object?>.from(raw);
+    final key = category['key'];
+    final label = category['label'];
+    final rawShape = category['shape'];
+    if (key is! String ||
+        key.isEmpty ||
+        label != null && label is! String ||
+        rawShape != null && rawShape is! String) {
+      throw FormatException(
+        'Scatter category encoding categories[$index] has invalid key, label, or shape.',
+      );
+    }
+    final shape = rawShape == null
+        ? null
+        : _optionalEnum(
+            rawShape,
+            SeriesMarkerShape.values,
+            r'$.style.categoryEncoding.categories['
+            '${index.toString()}].shape',
+          );
+    final color = _optionalColor(
+      category['color'],
+      r'$.style.categoryEncoding.categories['
+      '${index.toString()}].color',
+    );
+    categories.add(
+      ScatterCategoryStyle(
+        key: key,
+        label: label as String?,
+        color: color,
+        shape: shape,
+      ),
+    );
+  }
+  final label = value['label'];
+  final showLegend = value['showLegend'];
+  if (label != null && label is! String ||
+      showLegend != null && showLegend is! bool) {
+    throw const FormatException(
+      'Scatter category encoding label must be a string and showLegend must be a boolean.',
+    );
+  }
+  final encoding = ScatterCategoryEncoding(
+    categories: categories,
+    label: label as String? ?? 'Category',
+    showLegend: showLegend as bool? ?? true,
+  );
+  if (!encoding.hasValidConfiguration) {
+    throw const FormatException(
+      'Scatter category encodings require unique non-empty keys and at least one color or shape per category.',
+    );
+  }
+  return encoding;
+}
+
+Map<String, Object?> _encodeScatterJitter(ScatterJitterConfig jitter) => {
+  'xAmplitude': _number(jitter.xAmplitude),
+  'yAmplitude': _number(jitter.yAmplitude),
+  'seed': jitter.seed,
+};
+
+ScatterJitterConfig _decodeScatterJitter(Map<String, Object?>? value) {
+  if (value == null) return const ScatterJitterConfig();
+  final xAmplitude = _optionalDouble(value['xAmplitude']) ?? 0;
+  final yAmplitude = _optionalDouble(value['yAmplitude']) ?? 0;
+  final seed = value['seed'] ?? 0;
+  if (!xAmplitude.isFinite ||
+      xAmplitude < 0 ||
+      !yAmplitude.isFinite ||
+      yAmplitude < 0 ||
+      seed is! int) {
+    throw const FormatException(
+      'Scatter jitter amplitudes must be finite and non-negative and seed must be an integer.',
+    );
+  }
+  return ScatterJitterConfig(
+    xAmplitude: xAmplitude,
+    yAmplitude: yAmplitude,
+    seed: seed,
+  );
+}
+
+Map<String, Object?> _encodeScatterClusterConfig(ScatterClusterConfig config) =>
+    {
+      'cellSize': _number(config.cellSize),
+      'minimumPointCount': config.minimumPointCount,
+      'minimumRadius': _number(config.minimumRadius),
+      'maximumRadius': _number(config.maximumRadius),
+      'showCountLabels': config.showCountLabels,
+      'labelMinimumPointCount': config.labelMinimumPointCount,
+    };
+
+ScatterClusterConfig _decodeScatterClusterConfig(Map<String, Object?>? value) {
+  if (value == null) return const ScatterClusterConfig();
+  final cellSize = _optionalDouble(value['cellSize']) ?? 40;
+  final minimumPointCount = _optionalInt(value['minimumPointCount']) ?? 2;
+  final minimumRadius = _optionalDouble(value['minimumRadius']) ?? 8;
+  final maximumRadius = _optionalDouble(value['maximumRadius']) ?? 24;
+  final showCountLabels = value['showCountLabels'] as bool? ?? true;
+  final labelMinimumPointCount =
+      _optionalInt(value['labelMinimumPointCount']) ?? 2;
+  if (cellSize < 8 ||
+      cellSize > 256 ||
+      minimumPointCount < 2 ||
+      minimumRadius <= 0 ||
+      minimumRadius > maximumRadius ||
+      maximumRadius > 128 ||
+      labelMinimumPointCount < 2) {
+    throw const FormatException(
+      'Scatter cluster configuration is outside its supported bounds.',
+    );
+  }
+  return ScatterClusterConfig(
+    cellSize: cellSize,
+    minimumPointCount: minimumPointCount,
+    minimumRadius: minimumRadius,
+    maximumRadius: maximumRadius,
+    showCountLabels: showCountLabels,
+    labelMinimumPointCount: labelMinimumPointCount,
+  );
+}
+
+Map<String, Object?> _encodeScatterBinConfig(ScatterBinConfig config) => {
+  'cellSize': _number(config.cellSize),
+  'gap': _number(config.gap),
+  'minimumPointCount': config.minimumPointCount,
+  'minimumOpacity': _number(config.minimumOpacity),
+  'maximumOpacity': _number(config.maximumOpacity),
+  'aggregate': config.aggregate.name,
+  'valueSource': config.valueSource.name,
+  'showLabels': config.showLabels,
+  'labelMinimumPointCount': config.labelMinimumPointCount,
+};
+
+ScatterBinConfig _decodeScatterBinConfig(Map<String, Object?>? value) {
+  if (value == null) return const ScatterBinConfig();
+  final cellSize = _optionalDouble(value['cellSize']) ?? 36;
+  final gap = _optionalDouble(value['gap']) ?? 1;
+  final minimumPointCount = _optionalInt(value['minimumPointCount']) ?? 1;
+  final minimumOpacity = _optionalDouble(value['minimumOpacity']) ?? 0.2;
+  final maximumOpacity = _optionalDouble(value['maximumOpacity']) ?? 0.95;
+  final aggregate = value.containsKey('aggregate')
+      ? _enum(value, 'aggregate', ScatterBinAggregate.values)
+      : ScatterBinAggregate.count;
+  final valueSource = value.containsKey('valueSource')
+      ? _enum(value, 'valueSource', ScatterBinValueSource.values)
+      : ScatterBinValueSource.y;
+  final showLabels = value['showLabels'] as bool? ?? false;
+  final labelMinimumPointCount =
+      _optionalInt(value['labelMinimumPointCount']) ?? 10;
+  if (!cellSize.isFinite ||
+      cellSize < 12 ||
+      cellSize > 256 ||
+      !gap.isFinite ||
+      gap < 0 ||
+      gap > 16 ||
+      minimumPointCount < 1 ||
+      !minimumOpacity.isFinite ||
+      minimumOpacity < 0 ||
+      minimumOpacity > 1 ||
+      !maximumOpacity.isFinite ||
+      maximumOpacity < minimumOpacity ||
+      maximumOpacity > 1 ||
+      labelMinimumPointCount < 1) {
+    throw const FormatException(
+      'Scatter bin configuration is outside its supported bounds.',
+    );
+  }
+  return ScatterBinConfig(
+    cellSize: cellSize,
+    gap: gap,
+    minimumPointCount: minimumPointCount,
+    minimumOpacity: minimumOpacity,
+    maximumOpacity: maximumOpacity,
+    aggregate: aggregate,
+    valueSource: valueSource,
+    showLabels: showLabels,
+    labelMinimumPointCount: labelMinimumPointCount,
+  );
+}
+
+Map<String, Object?> _encodeScatterDensityConfig(ScatterDensityConfig config) =>
+    {
+      'gridCellSize': _number(config.gridCellSize),
+      'bandwidth': _number(config.bandwidth),
+      'contourCount': config.contourCount,
+      'minimumDensity': _number(config.minimumDensity),
+      'minimumOpacity': _number(config.minimumOpacity),
+      'maximumOpacity': _number(config.maximumOpacity),
+      'lineWidth': _number(config.lineWidth),
+      'showPoints': config.showPoints,
+    };
+
+ScatterDensityConfig _decodeScatterDensityConfig(Map<String, Object?>? value) {
+  if (value == null) return const ScatterDensityConfig();
+  final gridCellSize = _optionalDouble(value['gridCellSize']) ?? 8;
+  final bandwidth = _optionalDouble(value['bandwidth']) ?? 32;
+  final contourCount = _optionalInt(value['contourCount']) ?? 6;
+  final minimumDensity = _optionalDouble(value['minimumDensity']) ?? 0.08;
+  final minimumOpacity = _optionalDouble(value['minimumOpacity']) ?? 0.28;
+  final maximumOpacity = _optionalDouble(value['maximumOpacity']) ?? 0.9;
+  final lineWidth = _optionalDouble(value['lineWidth']) ?? 1.5;
+  final showPoints = value['showPoints'] as bool? ?? false;
+  if (!gridCellSize.isFinite ||
+      gridCellSize < 4 ||
+      gridCellSize > 64 ||
+      !bandwidth.isFinite ||
+      bandwidth < 4 ||
+      bandwidth > 256 ||
+      contourCount < 2 ||
+      contourCount > 12 ||
+      !minimumDensity.isFinite ||
+      minimumDensity <= 0 ||
+      minimumDensity >= 1 ||
+      !minimumOpacity.isFinite ||
+      minimumOpacity < 0 ||
+      minimumOpacity > 1 ||
+      !maximumOpacity.isFinite ||
+      maximumOpacity < minimumOpacity ||
+      maximumOpacity > 1 ||
+      !lineWidth.isFinite ||
+      lineWidth <= 0 ||
+      lineWidth > 12) {
+    throw const FormatException(
+      'Scatter density configuration is outside its supported bounds.',
+    );
+  }
+  return ScatterDensityConfig(
+    gridCellSize: gridCellSize,
+    bandwidth: bandwidth,
+    contourCount: contourCount,
+    minimumDensity: minimumDensity,
+    minimumOpacity: minimumOpacity,
+    maximumOpacity: maximumOpacity,
+    lineWidth: lineWidth,
+    showPoints: showPoints,
+  );
+}
+
 Map<String, Object?> _encodeScatterInteraction(ScatterInteractionStyle style) =>
     {
       if (style.hoverColor != null) 'hoverColor': style.hoverColor!.toARGB32(),
@@ -2534,8 +2881,13 @@ Map<String, Object?> _encodeLineStyle({
 Map<String, Object?> _encodeDataPointLabels(DataPointLabelConfig config) => {
   'show': config.show,
   'position': config.position.name,
+  'content': config.content.name,
   'offsetX': _number(config.offsetX),
   'offsetY': _number(config.offsetY),
+  'markerGap': _number(config.markerGap),
+  'collisionPolicy': config.collisionPolicy.name,
+  'collisionPadding': _number(config.collisionPadding),
+  'plotEdgeAware': config.plotEdgeAware,
   if (config.labelColor != null) 'labelColor': config.labelColor!.toARGB32(),
   'fontSize': _number(config.fontSize),
   'fontWeightIndex': FontWeight.values.indexOf(config.fontWeight),
@@ -2549,8 +2901,25 @@ DataPointLabelConfig? _decodeDataPointLabels(Map<String, Object?>? value) {
   return DataPointLabelConfig(
     show: _bool(value, 'show'),
     position: _enum(value, 'position', DataPointLabelPosition.values),
+    content:
+        _optionalEnum(
+          value['content'],
+          DataPointLabelContent.values,
+          r'$.style.dataPointLabels.content',
+        ) ??
+        DataPointLabelContent.value,
     offsetX: _double(value, 'offsetX'),
     offsetY: _double(value, 'offsetY'),
+    markerGap: _optionalDouble(value['markerGap']) ?? 4,
+    collisionPolicy:
+        _optionalEnum(
+          value['collisionPolicy'],
+          DataPointLabelCollisionPolicy.values,
+          r'$.style.dataPointLabels.collisionPolicy',
+        ) ??
+        DataPointLabelCollisionPolicy.none,
+    collisionPadding: _optionalDouble(value['collisionPadding']) ?? 2,
+    plotEdgeAware: _bool(value, 'plotEdgeAware', fallback: true),
     labelColor: _optionalColor(
       value['labelColor'],
       r'$.style.dataPointLabels.labelColor',

@@ -453,6 +453,8 @@ class CrosshairRenderer {
               opacityValue: hit.opacityValue,
               formattedOpacityValue: hit.formattedOpacityValue,
               opacityLabel: hit.opacityLabel,
+              categoryValue: hit.categoryValue,
+              categoryLabel: hit.categoryLabel,
             );
       final existingIndex = trackingState.seriesValues.indexWhere(
         (value) => value.seriesId == scatter.id,
@@ -1211,7 +1213,8 @@ class CrosshairRenderer {
           value.pointLabel != null ||
           value.formattedMagnitudeValue != null ||
           value.formattedColorValue != null ||
-          value.formattedOpacityValue != null;
+          value.formattedOpacityValue != null ||
+          value.categoryValue != null;
       final label = candle != null
           ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
                 'O ${candle.formattedOpen} · H ${candle.formattedHigh}\n'
@@ -1223,6 +1226,7 @@ class CrosshairRenderer {
                 '${value.formattedMagnitudeValue == null ? '' : '\n${value.magnitudeLabel ?? 'Magnitude'}: ${value.formattedMagnitudeValue}'}'
                 '${value.formattedColorValue == null ? '' : '\n${value.colorLabel ?? 'Color value'}: ${value.formattedColorValue}'}'
                 '${value.formattedOpacityValue == null ? '' : '\n${value.opacityLabel ?? 'Opacity value'}: ${value.formattedOpacityValue}'}'
+                '${value.categoryValue == null ? '' : '\n${value.categoryLabel ?? 'Category'}: ${value.categoryValue}'}'
           : '${value.seriesName}: $displayY';
       final tp = TextPainter(
         text: TextSpan(

@@ -112,6 +112,7 @@ export 'src/models/data_point_label_config.dart';
 export 'src/models/series_inline_label_config.dart';
 export 'src/models/chart_series.dart';
 export 'src/models/chart_state_config.dart';
+export 'src/models/chart_selection_result.dart';
 export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/concentric_donut_config.dart';
@@ -138,6 +139,7 @@ export 'src/models/radial_category_series.dart';
 export 'src/models/radial_legend_item.dart';
 export 'src/models/segment_style.dart';
 export 'src/models/scatter_marker_style.dart';
+export 'src/models/scatter_render_config.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';
 export 'src/models/x_axis_config.dart';
@@ -154,6 +156,9 @@ export 'src/rendering/multi_axis_painter.dart';
 export 'src/source/chart_dart_source_generator.dart';
 export 'src/source/chart_source_models.dart';
 export 'src/source/chart_source_view.dart';
+// Statistics
+export 'src/statistics/trend_statistics.dart';
+export 'src/statistics/linear_regression_intervals.dart';
 // Streaming
 export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';

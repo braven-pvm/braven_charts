@@ -981,6 +981,16 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? null
                   : Color(column.colorValue!),
             ),
+            if (column.categoryLabel != null)
+              _SortHeader(
+                label:
+                    '${column.seriesName} ${column.categoryLabel!.toLowerCase()}',
+                columnId: 'series:${column.seriesId}:category',
+                width: tableTheme.seriesColumnWidth,
+                controller: _controller,
+                theme: tableTheme,
+                hidden: column.hidden,
+              ),
             for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
               _SortHeader(
                 label: _auxiliaryColumnLabel(column, field),
@@ -1020,6 +1030,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
           controller: _controller,
           theme: tableTheme,
         ),
+        if (model.hasCategoryValues)
+          _SortHeader(
+            label: 'Category',
+            columnId: 'category',
+            width: tableTheme.seriesColumnWidth,
+            controller: _controller,
+            theme: tableTheme,
+          ),
         _SortHeader(
           label: model.xColumnLabel,
           columnId: 'x',
@@ -1354,6 +1372,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
           ),
           for (final column in model.series) ...[
             _buildWideValueCell(row, column, theme),
+            if (column.categoryLabel != null)
+              _TableCell(
+                text: row.cells[column.seriesId]?.categoryValue ?? 'No value',
+                width: theme.seriesColumnWidth,
+                theme: theme,
+              ),
             for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
               _buildWideAuxiliaryCell(row, column, field, theme),
           ],
@@ -1431,6 +1455,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
           secondary: row.hiddenSeries ? 'Hidden in chart' : null,
           theme: theme,
         ),
+        if (model.hasCategoryValues)
+          _TableCell(
+            text: row.categoryValue ?? 'No value',
+            width: theme.seriesColumnWidth,
+            theme: theme,
+          ),
         _TableCell(
           text: row.xDisplay,
           width: theme.xColumnWidth,
@@ -1716,6 +1746,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
         'series' => left.seriesName.compareTo(right.seriesName),
         'x' => _compareNumbers(left.xRaw, right.xRaw),
         'y' => _compareNumbers(left.yRaw, right.yRaw),
+        'category' => (left.categoryValue ?? '').compareTo(
+          right.categoryValue ?? '',
+        ),
         _ when column.startsWith('aux:') => _compareNullableNumbers(
           _auxiliaryRaw(left.auxiliaryValues, column.substring(4)),
           _auxiliaryRaw(right.auxiliaryValues, column.substring(4)),
@@ -2830,6 +2863,16 @@ int _compareWideColumn(
   ChartTableWideRow right,
   String columnId,
 ) {
+  const categoryMarker = ':category';
+  if (columnId.endsWith(categoryMarker)) {
+    final seriesId = columnId.substring(
+      0,
+      columnId.length - categoryMarker.length,
+    );
+    return (left.cells[seriesId]?.categoryValue ?? '').compareTo(
+      right.cells[seriesId]?.categoryValue ?? '',
+    );
+  }
   const marker = ':aux:';
   final markerIndex = columnId.lastIndexOf(marker);
   if (markerIndex < 0) {
@@ -2853,6 +2896,9 @@ String _wideSemantics(ChartTableWideRow row, ChartTableModel model) {
   final values = [
     for (final column in model.series) ...[
       '${column.seriesName} ${row.cells[column.seriesId]?.yDisplay ?? 'No value'}',
+      if (column.categoryLabel != null)
+        '${column.seriesName} ${column.categoryLabel!.toLowerCase()} '
+            '${row.cells[column.seriesId]?.categoryValue ?? 'No value'}',
       for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
         '${column.seriesName} ${field.label.toLowerCase()} '
             '${row.cells[column.seriesId]?.auxiliaryValues[field]?.display ?? 'No value'}',
@@ -2870,6 +2916,7 @@ String _longSemantics(ChartTableLongRow row, ChartTableModel model) {
           '${field.unitOverride == null ? unit : ' ${field.unitOverride}'}',
   ];
   return '${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}$unit'
+      '${row.categoryValue == null ? '' : ', category ${row.categoryValue}'}'
       '${auxiliary.isEmpty ? '' : ', ${auxiliary.join(', ')}'}, '
       '${row.isValid ? 'valid point' : 'invalid point'}';
 }

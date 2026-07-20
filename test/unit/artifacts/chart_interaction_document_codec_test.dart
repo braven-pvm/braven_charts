@@ -72,6 +72,13 @@ void main() {
         enableZoom: false,
         enablePan: false,
         enableSelection: false,
+        selection: ChartSelectionConfig(
+          mode: ChartSelectionMode.lasso,
+          operation: ChartSelectionOperation.subtract,
+          dragActivation: ChartSelectionDragActivation.shiftPrimary,
+          clearOnBackgroundTap: false,
+          useModifierKeys: false,
+        ),
         showFocusBorder: true,
         enableFocusOnHover: false,
         showXScrollbar: true,

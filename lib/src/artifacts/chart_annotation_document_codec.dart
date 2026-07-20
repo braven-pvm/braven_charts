@@ -5,6 +5,7 @@ import '../models/annotation_style.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/enums.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 import 'chart_annotation_document.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
@@ -116,6 +117,7 @@ abstract final class ChartAnnotationDocumentCodec {
         'threshold' => _decodeThreshold(document.id, payload, common),
         'pin' => _decodePin(document.id, payload, common),
         'trend' => _decodeTrend(document.id, payload, common),
+        'errorBar' => _decodeErrorBar(document.id, payload, common),
         'chord' => _decodeChord(document.id, payload, common),
         'legend' => _decodeLegend(document.id, payload, common),
         final type => throw _CodecException(
@@ -146,6 +148,7 @@ String _typeOf(ChartAnnotation annotation) => switch (annotation) {
   ThresholdAnnotation() => 'threshold',
   PinAnnotation() => 'pin',
   TrendAnnotation() => 'trend',
+  ErrorBarAnnotation() => 'errorBar',
   ChordAnnotation() => 'chord',
   LegendAnnotation() => 'legend',
 };
@@ -162,6 +165,9 @@ Set<String> _requiredCapabilities(ChartAnnotation annotation) {
     if (annotation.opacityScale != null) {
       result.add('annotation.legend.opacity-scale.v1');
     }
+    if (annotation.categoryScale != null) {
+      result.add('annotation.legend.category-scale.v1');
+    }
     for (final series in annotation.series) {
       result.add('series.${_seriesTypeOf(series)}');
       for (final nested in series.annotations) {
@@ -170,6 +176,9 @@ Set<String> _requiredCapabilities(ChartAnnotation annotation) {
     }
     for (final trend in annotation.trendAnnotations) {
       result.addAll(_requiredCapabilities(trend));
+    }
+    for (final errorBar in annotation.errorBarAnnotations) {
+      result.addAll(_requiredCapabilities(errorBar));
     }
   }
   return result;
@@ -270,11 +279,46 @@ Map<String, Object?> _encodePayload(
         'trendType': annotation.trendType.name,
         if (annotation.windowSize != null) 'windowSize': annotation.windowSize,
         'degree': annotation.degree,
+        'loessSpan': _number(annotation.loessSpan),
+        'loessRobustnessIterations': annotation.loessRobustnessIterations,
+        'loessSampleCount': annotation.loessSampleCount,
+        'showEquation': annotation.showEquation,
+        'showRSquared': annotation.showRSquared,
+        'showSampleCount': annotation.showSampleCount,
+        'showPearsonCorrelation': annotation.showPearsonCorrelation,
+        'showSpearmanCorrelation': annotation.showSpearmanCorrelation,
+        'showConfidenceBand': annotation.showConfidenceBand,
+        'showPredictionBand': annotation.showPredictionBand,
+        'confidenceLevel': _number(annotation.confidenceLevel),
+        if (annotation.confidenceBandColor != null)
+          'confidenceBandColor': annotation.confidenceBandColor!.toARGB32(),
+        if (annotation.predictionBandColor != null)
+          'predictionBandColor': annotation.predictionBandColor!.toARGB32(),
+        'confidenceBandOpacity': _number(annotation.confidenceBandOpacity),
+        'predictionBandOpacity': _number(annotation.predictionBandOpacity),
         'lineColor': annotation.lineColor.toARGB32(),
         'lineWidth': _number(annotation.lineWidth),
         if (annotation.dashPattern != null)
           'dashPattern': annotation.dashPattern!.map(_number).toList(),
         'elevation': _number(annotation.elevation),
+      });
+    case ErrorBarAnnotation():
+      payload.addAll({
+        'coordinateSpace': 'data',
+        'seriesId': annotation.seriesId,
+        'values': [
+          for (final value in annotation.values)
+            {
+              'pointIndex': value.pointIndex,
+              'xNegative': _number(value.xNegative),
+              'xPositive': _number(value.xPositive),
+              'yNegative': _number(value.yNegative),
+              'yPositive': _number(value.yPositive),
+            },
+        ],
+        'lineColor': annotation.lineColor.toARGB32(),
+        'lineWidth': _number(annotation.lineWidth),
+        'capSize': _number(annotation.capSize),
       });
     case ChordAnnotation():
       payload.addAll({
@@ -322,12 +366,20 @@ Map<String, Object?> _encodePayload(
           for (final trend in annotation.trendAnnotations)
             _encodeAnnotationOrThrow(trend, context).toJson(),
         ],
+        'errorBarAnnotations': [
+          for (final errorBar in annotation.errorBarAnnotations)
+            _encodeAnnotationOrThrow(errorBar, context).toJson(),
+        ],
         if (annotation.sizeScale != null)
           'sizeScale': _encodeLegendSizeScale(annotation.sizeScale!),
         if (annotation.colorScale != null)
           'colorScale': _encodeLegendColorScale(annotation.colorScale!),
         if (annotation.opacityScale != null)
           'opacityScale': _encodeLegendOpacityScale(annotation.opacityScale!),
+        if (annotation.categoryScale != null)
+          'categoryScale': _encodeLegendCategoryScale(
+            annotation.categoryScale!,
+          ),
         'legendStyle': ChartStyleDocumentCodec.encodeLegendStyle(
           annotation.legendStyle,
         ).toJson(),
@@ -494,10 +546,59 @@ TrendAnnotation _decodeTrend(
     trendType: _enum(payload, 'trendType', TrendType.values),
     windowSize: _optionalInt(payload['windowSize']),
     degree: _int(payload, 'degree'),
+    loessSpan: _optionalDouble(payload['loessSpan']) ?? 0.5,
+    loessRobustnessIterations:
+        _optionalInt(payload['loessRobustnessIterations']) ?? 2,
+    loessSampleCount: _optionalInt(payload['loessSampleCount']) ?? 100,
+    showEquation: _optionalBool(payload['showEquation']) ?? false,
+    showRSquared: _optionalBool(payload['showRSquared']) ?? false,
+    showSampleCount: _optionalBool(payload['showSampleCount']) ?? false,
+    showPearsonCorrelation:
+        _optionalBool(payload['showPearsonCorrelation']) ?? false,
+    showSpearmanCorrelation:
+        _optionalBool(payload['showSpearmanCorrelation']) ?? false,
+    showConfidenceBand: _optionalBool(payload['showConfidenceBand']) ?? false,
+    showPredictionBand: _optionalBool(payload['showPredictionBand']) ?? false,
+    confidenceLevel: _optionalDouble(payload['confidenceLevel']) ?? 0.95,
+    confidenceBandColor: _optionalColor(payload['confidenceBandColor']),
+    predictionBandColor: _optionalColor(payload['predictionBandColor']),
+    confidenceBandOpacity:
+        _optionalDouble(payload['confidenceBandOpacity']) ?? 0.20,
+    predictionBandOpacity:
+        _optionalDouble(payload['predictionBandOpacity']) ?? 0.10,
     lineColor: _color(payload, 'lineColor'),
     lineWidth: _double(payload, 'lineWidth'),
     dashPattern: _optionalDoubleList(payload['dashPattern']),
     elevation: _double(payload, 'elevation'),
+  );
+}
+
+ErrorBarAnnotation _decodeErrorBar(
+  String id,
+  Map<String, Object?> payload,
+  _CommonAnnotationFields common,
+) {
+  _requireDefaultSnap(common, 'errorBar');
+  return ErrorBarAnnotation(
+    id: id,
+    label: common.label,
+    style: common.style,
+    allowEditing: common.allowEditing,
+    zIndex: common.zIndex,
+    seriesId: _string(payload, 'seriesId'),
+    values: [
+      for (final item in _list(payload, 'values'))
+        ErrorBarDatum(
+          pointIndex: _int(_map(item), 'pointIndex'),
+          xNegative: _double(_map(item), 'xNegative'),
+          xPositive: _double(_map(item), 'xPositive'),
+          yNegative: _double(_map(item), 'yNegative'),
+          yPositive: _double(_map(item), 'yPositive'),
+        ),
+    ],
+    lineColor: _color(payload, 'lineColor'),
+    lineWidth: _double(payload, 'lineWidth'),
+    capSize: _double(payload, 'capSize'),
   );
 }
 
@@ -583,6 +684,13 @@ LegendAnnotation _decodeLegend(
       for (final item in _list(payload, 'trendAnnotations'))
         _decodeTrendOrThrow(ChartAnnotationDocument.fromJson(_map(item))),
     ],
+    errorBarAnnotations: [
+      for (final item
+          in payload['errorBarAnnotations'] == null
+              ? const <Object?>[]
+              : _list(payload, 'errorBarAnnotations'))
+        _decodeErrorBarOrThrow(ChartAnnotationDocument.fromJson(_map(item))),
+    ],
     sizeScale: payload['sizeScale'] == null
         ? null
         : _decodeLegendSizeScale(_requiredMap(payload, 'sizeScale')),
@@ -592,6 +700,9 @@ LegendAnnotation _decodeLegend(
     opacityScale: payload['opacityScale'] == null
         ? null
         : _decodeLegendOpacityScale(_requiredMap(payload, 'opacityScale')),
+    categoryScale: payload['categoryScale'] == null
+        ? null
+        : _decodeLegendCategoryScale(_requiredMap(payload, 'categoryScale')),
     legendStyle: style,
     hiddenSeriesIds: _stringSet(payload, 'hiddenSeriesIds'),
     customPosition: payload['customPosition'] == null
@@ -722,6 +833,53 @@ LegendOpacityScale _decodeLegendOpacityScale(Map<String, Object?> payload) {
   );
 }
 
+Map<String, Object?> _encodeLegendCategoryScale(LegendCategoryScale scale) => {
+  'label': scale.label,
+  'items': [
+    for (final item in scale.items)
+      {
+        'label': item.label,
+        if (item.color != null) 'color': item.color!.toARGB32(),
+        if (item.shape != null) 'shape': item.shape!.name,
+      },
+  ],
+};
+
+LegendCategoryScale _decodeLegendCategoryScale(Map<String, Object?> payload) {
+  final rawItems = _list(payload, 'items');
+  if (rawItems.isEmpty) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Legend category scales require at least one item.',
+      r'$.payload.categoryScale.items',
+    );
+  }
+  final items = <LegendCategoryItem>[];
+  for (var index = 0; index < rawItems.length; index++) {
+    final item = _map(rawItems[index]);
+    final rawShape = item['shape'];
+    final shape = rawShape == null
+        ? null
+        : _enum(item, 'shape', SeriesMarkerShape.values);
+    final color = item['color'] == null ? null : _color(item, 'color');
+    if (shape == null && color == null) {
+      throw _CodecException(
+        ChartArtifactDiagnosticCodes.invalidArtifact,
+        'Legend category item $index must define color or shape.',
+        r'$.payload.categoryScale.items',
+      );
+    }
+    items.add(
+      LegendCategoryItem(
+        label: _string(item, 'label'),
+        color: color,
+        shape: shape,
+      ),
+    );
+  }
+  return LegendCategoryScale(label: _string(payload, 'label'), items: items);
+}
+
 void _requireDefaultSnap(_CommonAnnotationFields common, String type) {
   if (common.snapToValue || common.snapIncrement != 0.5) {
     throw _CodecException(
@@ -785,6 +943,24 @@ TrendAnnotation _decodeTrendOrThrow(ChartAnnotationDocument document) {
   };
 }
 
+ErrorBarAnnotation _decodeErrorBarOrThrow(ChartAnnotationDocument document) {
+  final result = ChartAnnotationDocumentCodec.decode(document);
+  return switch (result) {
+    ChartArtifactSuccess<ChartAnnotation>(
+      value: final ErrorBarAnnotation value,
+    ) =>
+      value,
+    ChartArtifactSuccess<ChartAnnotation>() => throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Legend errorBarAnnotations must contain error-bar annotations.',
+      r'$.payload.errorBarAnnotations',
+    ),
+    ChartArtifactFailure<ChartAnnotation>() => throw _CodecException.fromError(
+      result.error,
+    ),
+  };
+}
+
 JsonObjectValue _object(Map<String, Object?> value) =>
     JsonValue.fromJson(value) as JsonObjectValue;
 
@@ -829,6 +1005,11 @@ bool _bool(Map<String, Object?> map, String key) {
   final value = map[key];
   if (value is bool) return value;
   throw FormatException('Expected bool at $key.');
+}
+
+bool? _optionalBool(Object? value) {
+  if (value == null || value is bool) return value as bool?;
+  throw const FormatException('Expected optional bool.');
 }
 
 int _int(Map<String, Object?> map, String key) {

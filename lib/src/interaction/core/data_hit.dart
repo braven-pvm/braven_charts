@@ -17,6 +17,7 @@ class ChartDataHit {
     required this.semanticBounds,
     required this.point,
     required this.formattedValue,
+    this.formattedXValue,
     required this.ordinal,
     required this.count,
     this.category,
@@ -30,6 +31,8 @@ class ChartDataHit {
     this.groupName,
     this.groupOrdinal,
     this.groupCount,
+    this.categoryValue,
+    this.categoryLabel,
     this.colorValue,
     this.formattedColorValue,
     this.colorLabel,
@@ -39,6 +42,10 @@ class ChartDataHit {
     this.opacityLabel,
     this.markerOpacity,
     this.candlestick,
+    this.aggregateValue,
+    this.formattedAggregateValue,
+    this.aggregateLabel,
+    this.aggregateSampleCount,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -106,6 +113,12 @@ class ChartDataHit {
   /// Number of groups participating in the composition.
   final int? groupCount;
 
+  /// Optional categorical Scatter value encoded through marker color/shape.
+  final String? categoryValue;
+
+  /// Human-readable field name for [categoryValue].
+  final String? categoryLabel;
+
   /// Optional quantitative Scatter value represented through marker color.
   final double? colorValue;
 
@@ -133,8 +146,26 @@ class ChartDataHit {
   /// Typed OHLC values for a native Candlestick datum.
   final CandlestickInteractionDetails? candlestick;
 
+  /// Optional statistic represented by an aggregate Cartesian mark.
+  final double? aggregateValue;
+
+  /// Display-ready [aggregateValue], including any unit or percent suffix.
+  final String? formattedAggregateValue;
+
+  /// Human-readable name of the aggregate statistic.
+  final String? aggregateLabel;
+
+  /// Number of source observations that contributed to [aggregateValue].
+  ///
+  /// This can be smaller than [effectiveSourcePointIndices] when an optional
+  /// Scatter metric is absent from some observations in an aggregate bin.
+  final int? aggregateSampleCount;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
+
+  /// Optional preformatted X value for genuinely two-dimensional marks.
+  final String? formattedXValue;
 
   /// One-based visible position of this datum.
   final int ordinal;
@@ -151,15 +182,13 @@ class ChartDataHit {
   /// Complete non-color-only announcement for assistive technologies.
   String get semanticLabel {
     final name = category ?? point.label ?? 'Data point';
-    final parts = <String>[
-      ?groupLabel,
-      ?groupName,
-      name,
-      if (candlestick case final details?)
-        details.semanticLabel
-      else
-        formattedValue,
-    ];
+    final parts = <String>[?groupLabel, ?groupName, name];
+    if (candlestick case final details?) {
+      parts.add(details.semanticLabel);
+    } else {
+      if (formattedXValue != null) parts.add('X $formattedXValue');
+      parts.add(formattedValue);
+    }
     if (share != null) {
       final display = formattedShare ?? '${(share! * 100).toStringAsFixed(1)}%';
       parts.add(
@@ -177,8 +206,25 @@ class ChartDataHit {
     if (formattedOpacityValue != null) {
       parts.add('${opacityLabel ?? 'Opacity value'} $formattedOpacityValue');
     }
+    if (categoryValue != null) {
+      parts.add('${categoryLabel ?? 'Category'} $categoryValue');
+    }
+    if (formattedAggregateValue != null) {
+      parts.add('${aggregateLabel ?? 'Aggregate'} $formattedAggregateValue');
+    }
+    if (aggregateSampleCount case final sampleCount?
+        when sampleCount < effectiveSourcePointIndices.length) {
+      parts.add(
+        '$sampleCount of ${effectiveSourcePointIndices.length} observations '
+        'contributed to the aggregate',
+      );
+    }
     if (effectiveSourcePointIndices.length > 1) {
-      parts.add('${effectiveSourcePointIndices.length} grouped categories');
+      parts.add(
+        share == null
+            ? '${effectiveSourcePointIndices.length} source points'
+            : '${effectiveSourcePointIndices.length} grouped categories',
+      );
     }
     parts.add('${share == null ? 'point' : 'slice'} $ordinal of $count');
     parts.add(isSelected ? 'selected' : 'not selected');

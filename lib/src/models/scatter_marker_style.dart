@@ -4,6 +4,162 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+
+/// One categorical Scatter mapping entry.
+///
+/// Color and shape are independent: a shape-only category mapping can coexist
+/// with a quantitative color encoding, while a color-bearing entry takes
+/// precedence over that quantitative color for matching points.
+class ScatterCategoryStyle {
+  const ScatterCategoryStyle({
+    required this.key,
+    this.label,
+    this.color,
+    this.shape,
+  }) : assert(key != ''),
+       assert(shape != SeriesMarkerShape.none);
+
+  /// Stable value matched against [ChartDataPoint.categoryValue].
+  final String key;
+
+  /// Optional user-facing label. [key] is used when omitted.
+  final String? label;
+
+  /// Optional marker fill for this category.
+  final Color? color;
+
+  /// Optional marker silhouette for this category.
+  final SeriesMarkerShape? shape;
+
+  String get displayLabel => label == null || label!.isEmpty ? key : label!;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScatterCategoryStyle &&
+          other.key == key &&
+          other.label == label &&
+          other.color == color &&
+          other.shape == shape;
+
+  @override
+  int get hashCode => Object.hash(key, label, color, shape);
+}
+
+/// Maps a Scatter point's categorical value to color, shape, or both.
+///
+/// Explicit point styling always wins. Unmatched and null categories inherit
+/// the quantitative, series, or theme styling beneath this encoding.
+class ScatterCategoryEncoding {
+  const ScatterCategoryEncoding({
+    required this.categories,
+    this.label = 'Category',
+    this.showLegend = true,
+  });
+
+  /// Ordered category entries. Order is retained by native legends.
+  final List<ScatterCategoryStyle> categories;
+
+  /// Human-readable field name used by tracking, tables, and legends.
+  final String label;
+
+  /// Whether chart integrations should expose a categorical legend key.
+  final bool showLegend;
+
+  /// Whether every key is non-empty and unique and each entry changes at
+  /// least one visible channel.
+  bool get hasValidConfiguration {
+    final keys = <String>{};
+    for (final category in categories) {
+      if (category.key.isEmpty ||
+          !keys.add(category.key) ||
+          (category.color == null && category.shape == null) ||
+          category.shape == SeriesMarkerShape.none) {
+        return false;
+      }
+    }
+    return categories.isNotEmpty;
+  }
+
+  ScatterCategoryStyle? styleFor(String? key) {
+    if (key == null || key.isEmpty) return null;
+    for (final category in categories) {
+      if (category.key == key) return category;
+    }
+    return null;
+  }
+
+  String? labelFor(String? key) => styleFor(key)?.displayLabel;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScatterCategoryEncoding &&
+          _categoryListsEqual(other.categories, categories) &&
+          other.label == label &&
+          other.showLegend == showLegend;
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(categories), label, showLegend);
+}
+
+bool _categoryListsEqual(
+  List<ScatterCategoryStyle> left,
+  List<ScatterCategoryStyle> right,
+) {
+  if (identical(left, right)) return true;
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
+}
+
+/// Deterministically separates overlapping Scatter markers in plot space.
+///
+/// [xAmplitude] and [yAmplitude] are maximum logical-pixel displacements from
+/// the raw data position. Jitter never mutates source values or axis bounds,
+/// so tables, exports, tooltips, and tracking continue to report exact data.
+/// The same series id, point index, and [seed] always resolve to the same
+/// offset across repaint, pan, zoom, artifact hydration, and generated source.
+class ScatterJitterConfig {
+  const ScatterJitterConfig({
+    this.xAmplitude = 0,
+    this.yAmplitude = 0,
+    this.seed = 0,
+  }) : assert(xAmplitude >= 0 && xAmplitude < double.infinity),
+       assert(yAmplitude >= 0 && yAmplitude < double.infinity);
+
+  /// Maximum horizontal displacement in logical pixels.
+  final double xAmplitude;
+
+  /// Maximum vertical displacement in logical pixels.
+  final double yAmplitude;
+
+  /// Stable layout seed. Changing it produces a different deterministic
+  /// arrangement without changing point identities or raw values.
+  final int seed;
+
+  bool get isEnabled => xAmplitude > 0 || yAmplitude > 0;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScatterJitterConfig &&
+          other.xAmplitude == xAmplitude &&
+          other.yAmplitude == yAmplitude &&
+          other.seed == seed;
+
+  @override
+  int get hashCode => Object.hash(xAmplitude, yAmplitude, seed);
+
+  @override
+  String toString() =>
+      'ScatterJitterConfig(xAmplitude: $xAmplitude, yAmplitude: $yAmplitude, seed: $seed)';
+}
+
 /// Quantitative color mapping strategy for Scatter markers.
 enum ScatterColorScaleType {
   /// Interpolate smoothly across the configured colors.
@@ -607,6 +763,47 @@ class ScatterInteractionStyle {
 
   /// Opacity multiplier for unselected points while any point is selected.
   final double dimmedOpacity;
+
+  /// Creates a copy with selected interaction-state values replaced.
+  ///
+  /// The color clear flags restore inheritance from the chart interaction
+  /// theme or the point's effective series color.
+  ScatterInteractionStyle copyWith({
+    Color? hoverColor,
+    double? hoverScale,
+    double? hoverStrokeWidth,
+    Color? pressedColor,
+    double? pressedScale,
+    double? pressedOpacity,
+    Color? selectionColor,
+    double? selectionScale,
+    double? selectionOpacity,
+    double? selectionStrokeWidth,
+    Color? focusColor,
+    double? focusGap,
+    double? focusStrokeWidth,
+    double? dimmedOpacity,
+    bool clearHoverColor = false,
+    bool clearSelectionColor = false,
+    bool clearFocusColor = false,
+  }) => ScatterInteractionStyle(
+    hoverColor: clearHoverColor ? null : (hoverColor ?? this.hoverColor),
+    hoverScale: hoverScale ?? this.hoverScale,
+    hoverStrokeWidth: hoverStrokeWidth ?? this.hoverStrokeWidth,
+    pressedColor: pressedColor ?? this.pressedColor,
+    pressedScale: pressedScale ?? this.pressedScale,
+    pressedOpacity: pressedOpacity ?? this.pressedOpacity,
+    selectionColor: clearSelectionColor
+        ? null
+        : (selectionColor ?? this.selectionColor),
+    selectionScale: selectionScale ?? this.selectionScale,
+    selectionOpacity: selectionOpacity ?? this.selectionOpacity,
+    selectionStrokeWidth: selectionStrokeWidth ?? this.selectionStrokeWidth,
+    focusColor: clearFocusColor ? null : (focusColor ?? this.focusColor),
+    focusGap: focusGap ?? this.focusGap,
+    focusStrokeWidth: focusStrokeWidth ?? this.focusStrokeWidth,
+    dimmedOpacity: dimmedOpacity ?? this.dimmedOpacity,
+  );
 
   @override
   bool operator ==(Object other) =>

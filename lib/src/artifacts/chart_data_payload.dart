@@ -60,6 +60,7 @@ class ChartPointDocument {
     this.magnitude,
     this.colorValue,
     this.opacityValue,
+    this.categoryValue,
     this.timestamp,
     this.label,
     this.metadata,
@@ -73,6 +74,7 @@ class ChartPointDocument {
   final ChartNumberDocument? magnitude;
   final ChartNumberDocument? colorValue;
   final ChartNumberDocument? opacityValue;
+  final String? categoryValue;
   final DateTime? timestamp;
   final String? label;
   final JsonObjectValue? metadata;
@@ -86,6 +88,7 @@ class ChartPointDocument {
     if (magnitude != null) 'magnitude': magnitude!.toJson(),
     if (colorValue != null) 'colorValue': colorValue!.toJson(),
     if (opacityValue != null) 'opacityValue': opacityValue!.toJson(),
+    if (categoryValue != null) 'categoryValue': categoryValue,
     if (timestamp != null) 'timestamp': timestamp!.toUtc().toIso8601String(),
     if (label != null) 'label': label,
     if (metadata != null) 'metadata': metadata!.toJson(),
@@ -108,6 +111,7 @@ class ChartPointDocument {
             json.containsKey('opacityValue') && json['opacityValue'] != null
             ? ChartNumberDocument.fromJson(json['opacityValue'])
             : null,
+        categoryValue: readOptionalString(json, 'categoryValue'),
         timestamp: readOptionalDateTime(json, 'timestamp'),
         label: readOptionalString(json, 'label'),
         metadata: readOptionalJsonObject(json, 'metadata'),
@@ -289,6 +293,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     Iterable<ChartNumberDocument?>? magnitudes,
     Iterable<ChartNumberDocument?>? colorValues,
     Iterable<ChartNumberDocument?>? opacityValues,
+    Iterable<String?>? categoryValues,
     Iterable<DateTime?>? timestamps,
     Iterable<String?>? labels,
     Iterable<JsonObjectValue?>? metadata,
@@ -300,6 +305,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
        magnitudes = _immutableOptionalColumn(magnitudes),
        colorValues = _immutableOptionalColumn(colorValues),
        opacityValues = _immutableOptionalColumn(opacityValues),
+       categoryValues = _immutableOptionalColumn(categoryValues),
        timestamps = _immutableOptionalColumn(timestamps),
        labels = _immutableOptionalColumn(labels),
        metadata = _immutableOptionalColumn(metadata),
@@ -319,6 +325,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     _validateColumnLength('magnitudes', this.magnitudes?.length);
     _validateColumnLength('colorValues', this.colorValues?.length);
     _validateColumnLength('opacityValues', this.opacityValues?.length);
+    _validateColumnLength('categoryValues', this.categoryValues?.length);
     _validateColumnLength('labels', this.labels?.length);
     _validateColumnLength('metadata', this.metadata?.length);
     _validateColumnLength('segmentStyles', this.segmentStyles?.length);
@@ -338,6 +345,10 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       opacityValues: _optionalPointColumn(
         points,
         (point) => point.opacityValue,
+      ),
+      categoryValues: _optionalPointColumn(
+        points,
+        (point) => point.categoryValue,
       ),
       timestamps: _optionalPointColumn(points, (point) => point.timestamp),
       labels: _optionalPointColumn(points, (point) => point.label),
@@ -359,6 +370,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
   final List<ChartNumberDocument?>? magnitudes;
   final List<ChartNumberDocument?>? colorValues;
   final List<ChartNumberDocument?>? opacityValues;
+  final List<String?>? categoryValues;
   final List<DateTime?>? timestamps;
   final List<String?>? labels;
   final List<JsonObjectValue?>? metadata;
@@ -381,6 +393,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
         magnitude: magnitudes?[index],
         colorValue: colorValues?[index],
         opacityValue: opacityValues?[index],
+        categoryValue: categoryValues?[index],
         timestamp: timestamps?[index],
         label: labels?[index],
         metadata: metadata?[index],
@@ -401,6 +414,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       'colorValues': [for (final value in colorValues!) value?.toJson()],
     if (opacityValues != null)
       'opacityValues': [for (final value in opacityValues!) value?.toJson()],
+    if (categoryValues != null) 'categoryValues': categoryValues,
     if (timestamps != null)
       'timestamps': [
         for (final value in timestamps!) value?.toUtc().toIso8601String(),
@@ -445,6 +459,16 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       (value, path) =>
           value == null ? null : ChartNumberDocument.fromJson(value),
     ),
+    categoryValues: _readOptionalColumn(optionalColumns, 'categoryValues', (
+      value,
+      path,
+    ) {
+      if (value == null) return null;
+      if (value is! String) {
+        throw FormatException('$path must be a string or null');
+      }
+      return value;
+    }),
     timestamps: _readOptionalColumn(optionalColumns, 'timestamps', (
       value,
       path,

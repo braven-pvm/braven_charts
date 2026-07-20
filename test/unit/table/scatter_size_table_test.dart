@@ -15,6 +15,7 @@ void main() {
           magnitude: 340,
           colorValue: 78,
           opacityValue: 86,
+          categoryValue: 'enterprise',
         ),
       ],
       sizeEncoding: ScatterSizeEncoding(label: 'Accounts', unit: 'k'),
@@ -24,6 +25,17 @@ void main() {
         unit: '%',
       ),
       opacityEncoding: ScatterOpacityEncoding(label: 'Confidence', unit: '%'),
+      categoryEncoding: ScatterCategoryEncoding(
+        label: 'Segment',
+        categories: [
+          ScatterCategoryStyle(
+            key: 'enterprise',
+            label: 'Enterprise',
+            color: Color(0xFF2563EB),
+            shape: SeriesMarkerShape.diamond,
+          ),
+        ],
+      ),
     );
     final encoded =
         ChartSeriesDocumentCodec.encode(source)
@@ -66,5 +78,8 @@ void main() {
     expect(opacityValue?.raw, 86);
     expect(opacityValue?.display, '86 %');
     expect(opacityValue?.isValid, isTrue);
+    expect(model.series.single.categoryLabel, 'Segment');
+    expect(model.hasCategoryValues, isTrue);
+    expect(model.longRows.single.categoryValue, 'enterprise');
   });
 }

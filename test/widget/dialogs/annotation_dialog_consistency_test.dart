@@ -101,6 +101,142 @@ void main() {
     }
   });
 
+  testWidgets('trend editor progressively exposes and saves LOESS controls', (
+    tester,
+  ) async {
+    TrendAnnotation? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () async {
+                saved = await showDialog<TrendAnnotation>(
+                  context: context,
+                  builder: (_) => const TrendAnnotationDialog(
+                    availableSeries: ['observed'],
+                  ),
+                );
+              },
+              child: const Text('Open trend editor'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open trend editor'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('trend-loess-span')), findsNothing);
+    expect(find.byKey(const ValueKey('trend-show-equation')), findsOneWidget);
+
+    await tester.ensureVisible(find.text('LOESS'));
+    await tester.tap(find.text('LOESS'));
+    await tester.pump();
+
+    final span = find.byKey(const ValueKey('trend-loess-span'));
+    final robustness = find.byKey(const ValueKey('trend-loess-robustness'));
+    final samples = find.byKey(const ValueKey('trend-loess-samples'));
+    expect(span, findsOneWidget);
+    expect(robustness, findsOneWidget);
+    expect(samples, findsOneWidget);
+    expect(find.byKey(const ValueKey('trend-show-equation')), findsNothing);
+    tester
+        .widget<Slider>(
+          find.descendant(of: span, matching: find.byType(Slider)),
+        )
+        .onChanged
+        ?.call(0.7);
+    tester
+        .widget<Slider>(
+          find.descendant(of: robustness, matching: find.byType(Slider)),
+        )
+        .onChanged
+        ?.call(3);
+    tester
+        .widget<Slider>(
+          find.descendant(of: samples, matching: find.byType(Slider)),
+        )
+        .onChanged
+        ?.call(160);
+    await tester.pump();
+
+    for (final key in const [
+      'trend-show-r-squared',
+      'trend-show-sample-count',
+      'trend-show-pearson',
+      'trend-show-spearman',
+    ]) {
+      final chip = find.byKey(ValueKey(key));
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pump();
+    }
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.trendType, TrendType.loess);
+    expect(saved?.loessSpan, 0.7);
+    expect(saved?.loessRobustnessIterations, 3);
+    expect(saved?.loessSampleCount, 160);
+    expect(saved?.showEquation, isFalse);
+    expect(saved?.showRSquared, isTrue);
+    expect(saved?.showSampleCount, isTrue);
+    expect(saved?.showPearsonCorrelation, isTrue);
+    expect(saved?.showSpearmanCorrelation, isTrue);
+  });
+
+  testWidgets('trend editor documents and saves linear uncertainty bands', (
+    tester,
+  ) async {
+    TrendAnnotation? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () async {
+                saved = await showDialog<TrendAnnotation>(
+                  context: context,
+                  builder: (_) => const TrendAnnotationDialog(
+                    availableSeries: ['observed'],
+                  ),
+                );
+              },
+              child: const Text('Open uncertainty editor'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open uncertainty editor'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('OLS bands assume'), findsOneWidget);
+    for (final key in const [
+      'trend-confidence-band',
+      'trend-prediction-band',
+    ]) {
+      final chip = find.byKey(ValueKey(key));
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pump();
+    }
+    final level = find.byKey(const ValueKey('trend-confidence-level'));
+    await tester.ensureVisible(level);
+    tester.widget<SegmentedButton<double>>(level).onSelectionChanged?.call({
+      0.99,
+    });
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.pumpAndSettle();
+    expect(saved?.showConfidenceBand, isTrue);
+    expect(saved?.showPredictionBand, isTrue);
+    expect(saved?.confidenceLevel, 0.99);
+  });
+
   testWidgets('every chord color field uses the shared color palette', (
     tester,
   ) async {

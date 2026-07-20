@@ -201,6 +201,132 @@ void main() {
           'Change: +10.00 USD (+10.00%) · rising',
         );
       });
+
+      test(
+        'summarizes a Scatter cluster without pretending it is one point',
+        () {
+          const hit = ChartDataHit(
+            seriesId: 'accounts',
+            pointIndex: 2,
+            sourcePointIndices: [2, 5, 9, 12],
+            plotPosition: Offset(80, 80),
+            semanticBounds: Rect.fromLTWH(60, 60, 40, 40),
+            point: ChartDataPoint(x: 32, y: 48),
+            formattedXValue: '36.25',
+            formattedValue: '52.75 %',
+            ordinal: 1,
+            count: 24,
+            category: '4 observations',
+          );
+
+          expect(
+            renderer.buildBaseTooltipText(
+              dataHit: hit,
+              seriesName: 'Customer accounts',
+              formattedCartesianY: '48 %',
+              formatDataValue: (value) => value.toStringAsFixed(0),
+            ),
+            'Customer accounts\n4 observations\n'
+            'X mean: 36.25\nY mean: 52.75 %',
+          );
+        },
+      );
+
+      test('discloses a single-observation Scatter bin as an aggregate', () {
+        const hit = ChartDataHit(
+          seriesId: 'demand',
+          pointIndex: 7,
+          sourcePointIndices: [7],
+          plotPosition: Offset(80, 80),
+          semanticBounds: Rect.fromLTWH(60, 60, 40, 40),
+          point: ChartDataPoint(x: 32, y: 48),
+          formattedXValue: '32.00',
+          formattedValue: '48.00',
+          ordinal: 1,
+          count: 24,
+          category: '1 observation · hexagonal bin',
+          aggregateValue: 0.125,
+          formattedAggregateValue: '12.5%',
+          aggregateLabel: 'Share of visible observations',
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Pickup demand',
+            formattedCartesianY: '48.00',
+            formatDataValue: (value) => value.toStringAsFixed(0),
+          ),
+          'Pickup demand\n1 observation · hexagonal bin\n'
+          'X mean: 32.00\nY mean: 48.00\n'
+          'Share of visible observations: 12.5%',
+        );
+      });
+
+      test('discloses omitted optional values from a bin aggregate', () {
+        const hit = ChartDataHit(
+          seriesId: 'demand',
+          pointIndex: 7,
+          sourcePointIndices: [7, 8, 9],
+          plotPosition: Offset(80, 80),
+          semanticBounds: Rect.fromLTWH(60, 60, 40, 40),
+          point: ChartDataPoint(x: 32, y: 48),
+          formattedXValue: '32.00',
+          formattedValue: '48.00',
+          ordinal: 1,
+          count: 24,
+          category: '3 observations · hexagonal bin',
+          aggregateValue: 12,
+          formattedAggregateValue: '12.00',
+          aggregateLabel: 'Mean Magnitude',
+          aggregateSampleCount: 2,
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Pickup demand',
+            formattedCartesianY: '48.00',
+            formatDataValue: (value) => value.toStringAsFixed(0),
+          ),
+          contains('Aggregate sample: 2 of 3 observations'),
+        );
+        expect(
+          hit.semanticLabel,
+          contains('2 of 3 observations contributed to the aggregate'),
+        );
+      });
+
+      test('presents a single-observation density region as an aggregate', () {
+        const hit = ChartDataHit(
+          seriesId: 'density',
+          pointIndex: 2,
+          sourcePointIndices: [2],
+          plotPosition: Offset(40, 30),
+          semanticBounds: Rect.fromLTWH(36, 26, 8, 8),
+          point: ChartDataPoint(x: 4, y: 3),
+          category: '1 nearby observation · density region',
+          formattedValue: '3.00',
+          formattedXValue: '4.00',
+          aggregateValue: 0.72,
+          formattedAggregateValue: '72.0%',
+          aggregateLabel: 'Relative density',
+          aggregateSampleCount: 1,
+          ordinal: 3,
+          count: 6,
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Demand',
+            formattedCartesianY: '3',
+            formatDataValue: (value) => '$value',
+          ),
+          'Demand\n1 nearby observation · density region\nX mean: 4.00'
+          '\nY mean: 3.00\nRelative density: 72.0%',
+        );
+      });
     });
 
     group('drawMarkerTooltip', () {

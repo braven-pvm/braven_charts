@@ -7,6 +7,7 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_preview.dart';
 import '../artifacts/chart_preview_capture.dart';
 import '../artifacts/chart_view_state.dart';
+import 'chart_selection_result.dart';
 
 /// Internal chart-state bridge for revision-bound point commands.
 typedef ChartPointCommandHandler =
@@ -68,6 +69,7 @@ class BravenChartController extends ChangeNotifier {
   Set<String> _hiddenSeriesIds = const {};
   Set<ChartPointRef> _focusedPointRefs = const {};
   Set<ChartPointRef> _selectedPointRefs = const {};
+  ChartSelectionResult _selectionResult = const ChartSelectionResult.empty();
 
   // ---- Public read API ----
 
@@ -90,6 +92,9 @@ class BravenChartController extends ChangeNotifier {
   /// Durable point selection currently rendered by the attached chart.
   Set<ChartPointRef> get selectedPointRefs =>
       Set.unmodifiable(_selectedPointRefs);
+
+  /// Latest stable identities, extents, and statistics for point selection.
+  ChartSelectionResult get selectionResult => _selectionResult;
 
   /// Opaque revision of the effective document source attached to this chart.
   ///
@@ -370,14 +375,17 @@ class BravenChartController extends ChangeNotifier {
   void updatePointState({
     required Set<ChartPointRef> focusedPointRefs,
     required Set<ChartPointRef> selectedPointRefs,
+    required ChartSelectionResult selectionResult,
   }) {
     if (_disposed) return;
     if (setEquals(_focusedPointRefs, focusedPointRefs) &&
-        setEquals(_selectedPointRefs, selectedPointRefs)) {
+        setEquals(_selectedPointRefs, selectedPointRefs) &&
+        _selectionResult == selectionResult) {
       return;
     }
     _focusedPointRefs = Set.unmodifiable(focusedPointRefs);
     _selectedPointRefs = Set.unmodifiable(selectedPointRefs);
+    _selectionResult = selectionResult;
     notifyListeners();
   }
 

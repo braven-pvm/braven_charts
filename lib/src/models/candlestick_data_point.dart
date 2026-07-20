@@ -19,6 +19,7 @@ final class CandlestickDataPoint extends ChartDataPoint {
     super.magnitude,
     super.colorValue,
     super.opacityValue,
+    super.categoryValue,
     super.timestamp,
     super.label,
     super.metadata,
@@ -124,6 +125,8 @@ final class CandlestickDataPoint extends ChartDataPoint {
     bool clearColorValue = false,
     double? opacityValue,
     bool clearOpacityValue = false,
+    String? categoryValue,
+    bool clearCategoryValue = false,
     DateTime? timestamp,
     String? label,
     Map<String, dynamic>? metadata,
@@ -155,6 +158,9 @@ final class CandlestickDataPoint extends ChartDataPoint {
       opacityValue: clearOpacityValue
           ? null
           : (opacityValue ?? this.opacityValue),
+      categoryValue: clearCategoryValue
+          ? null
+          : (categoryValue ?? this.categoryValue),
       timestamp: timestamp ?? this.timestamp,
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,

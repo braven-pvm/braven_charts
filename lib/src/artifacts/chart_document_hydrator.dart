@@ -265,6 +265,11 @@ abstract final class ChartDocumentHydrator {
     'series.scatter.size-encoding.v1',
     'series.scatter.color-encoding.v1',
     'series.scatter.opacity-encoding.v1',
+    'series.scatter.category-encoding.v1',
+    'series.scatter.jitter.v1',
+    'series.scatter.clusters.v1',
+    'series.scatter.bins.v1',
+    'series.scatter.density.v1',
     'series.area',
     'series.area.gradient.v1',
     'series.candlestick',
@@ -302,11 +307,13 @@ abstract final class ChartDocumentHydrator {
     'annotation.threshold',
     'annotation.pin',
     'annotation.trend',
+    'annotation.errorBar',
     'annotation.chord',
     'annotation.legend',
     'annotation.legend.size-scale.v1',
     'annotation.legend.color-scale.v1',
     'annotation.legend.opacity-scale.v1',
+    'annotation.legend.category-scale.v1',
   };
   static const _builtInSeriesTypes = <String>{
     'base',
@@ -326,6 +333,7 @@ abstract final class ChartDocumentHydrator {
     'threshold',
     'pin',
     'trend',
+    'errorBar',
     'chord',
     'legend',
   };

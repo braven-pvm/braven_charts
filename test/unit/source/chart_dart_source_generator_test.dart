@@ -70,6 +70,13 @@ void main() {
         const ScatterChartSeries(
           id: 'scatter',
           points: [ChartDataPoint(x: 0, y: 3)],
+          jitter: ScatterJitterConfig(xAmplitude: 10, yAmplitude: 6, seed: 23),
+          dataPointLabels: DataPointLabelConfig(
+            show: true,
+            content: DataPointLabelContent.pointLabel,
+            collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+            offsetX: 4,
+          ),
         ),
         const BarChartSeries(
           id: 'bar',
@@ -112,6 +119,23 @@ void main() {
           ChartSeries() => 'ChartSeries(',
         };
         expect(generated.source, contains(constructor));
+        if (item is ScatterChartSeries) {
+          expect(generated.source, contains('jitter: ScatterJitterConfig('));
+          expect(generated.source, contains('xAmplitude: 10.0,'));
+          expect(generated.source, contains('yAmplitude: 6.0,'));
+          expect(generated.source, contains('seed: 23,'));
+          expect(
+            generated.source,
+            contains('content: DataPointLabelContent.pointLabel,'),
+          );
+          expect(
+            generated.source,
+            contains(
+              'collisionPolicy: DataPointLabelCollisionPolicy.reposition,',
+            ),
+          );
+          expect(generated.source, contains('offsetX: 4.0,'));
+        }
       }
     });
 
@@ -437,7 +461,34 @@ void main() {
               TrendAnnotation(
                 id: 'trend',
                 seriesId: 'power',
-                trendType: TrendType.linear,
+                trendType: TrendType.loess,
+                loessSpan: 0.4,
+                loessRobustnessIterations: 3,
+                loessSampleCount: 160,
+                showEquation: true,
+                showRSquared: true,
+                showSampleCount: true,
+                showPearsonCorrelation: true,
+                showSpearmanCorrelation: true,
+                showConfidenceBand: true,
+                showPredictionBand: true,
+                confidenceLevel: 0.99,
+                confidenceBandOpacity: 0.24,
+                predictionBandOpacity: 0.12,
+              ),
+              ErrorBarAnnotation(
+                id: 'errors',
+                seriesId: 'power',
+                values: const [
+                  ErrorBarDatum.symmetric(pointIndex: 0, y: 4),
+                  ErrorBarDatum(
+                    pointIndex: 1,
+                    xNegative: 0.1,
+                    xPositive: 0.2,
+                    yNegative: 3,
+                    yPositive: 5,
+                  ),
+                ],
               ),
               ChordAnnotation(
                 id: 'chord',
@@ -458,6 +509,7 @@ void main() {
         'ThresholdAnnotation(',
         'PinAnnotation(',
         'TrendAnnotation(',
+        'ErrorBarAnnotation(',
         'ChordAnnotation(',
       ]) {
         expect(generated.source, contains(constructor));
@@ -468,6 +520,23 @@ void main() {
       expect(generated.source, contains('perpendicularIndex: 1'));
       expect(generated.source, contains('style: AnnotationStyle('));
       expect(generated.source, contains('backgroundColor: Color(0xFFF3F4F6)'));
+      expect(generated.source, contains('TrendType.loess'));
+      expect(generated.source, contains('loessSpan: 0.4'));
+      expect(generated.source, contains('loessRobustnessIterations: 3'));
+      expect(generated.source, contains('loessSampleCount: 160'));
+      expect(generated.source, contains('showEquation: true'));
+      expect(generated.source, contains('showRSquared: true'));
+      expect(generated.source, contains('showSampleCount: true'));
+      expect(generated.source, contains('showPearsonCorrelation: true'));
+      expect(generated.source, contains('showSpearmanCorrelation: true'));
+      expect(generated.source, contains('showConfidenceBand: true'));
+      expect(generated.source, contains('showPredictionBand: true'));
+      expect(generated.source, contains('confidenceLevel: 0.99'));
+      expect(generated.source, contains('confidenceBandOpacity: 0.24'));
+      expect(generated.source, contains('predictionBandOpacity: 0.12'));
+      expect(generated.source, contains('ErrorBarDatum('));
+      expect(generated.source, contains('xNegative: 0.1'));
+      expect(generated.source, contains('yPositive: 5.0'));
     });
 
     test('emits complete canvas legend content and styling', () {
@@ -492,6 +561,16 @@ void main() {
                     trendType: TrendType.linear,
                   ),
                 ],
+                errorBarAnnotations: [
+                  ErrorBarAnnotation(
+                    id: 'legend-error',
+                    label: 'X/Y measurement error',
+                    seriesId: 'legend-power',
+                    values: const [
+                      ErrorBarDatum.symmetric(pointIndex: 0, x: 1, y: 2),
+                    ],
+                  ),
+                ],
                 hiddenSeriesIds: const {'legend-power'},
                 legendStyle: const LegendStyle(
                   position: LegendPosition.bottomLeft,
@@ -508,7 +587,9 @@ void main() {
       expect(generated.source, contains('LegendAnnotation('));
       expect(generated.source, contains("id: 'legend-power'"));
       expect(generated.source, contains('trendAnnotations: ['));
+      expect(generated.source, contains('errorBarAnnotations: ['));
       expect(generated.source, contains("label: 'Power trend'"));
+      expect(generated.source, contains("label: 'X/Y measurement error'"));
       expect(generated.source, contains('legendStyle: LegendStyle('));
       expect(generated.source, contains('position: LegendPosition.bottomLeft'));
       expect(generated.source, contains("hiddenSeriesIds: {'legend-power'}"));
@@ -576,6 +657,128 @@ void main() {
       expect(generated.source, contains("label: 'Recovery readiness'"));
       expect(generated.source, contains("minimumLabel: '45 %'"));
       expect(generated.source, contains("maximumLabel: '95 %'"));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits explicit Scatter cluster rendering', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'clusters',
+              points: [
+                ChartDataPoint(x: 1, y: 2),
+                ChartDataPoint(x: 1.1, y: 2.1),
+              ],
+              renderMode: ScatterRenderMode.clusters,
+              clusterConfig: ScatterClusterConfig(
+                cellSize: 52,
+                minimumPointCount: 3,
+                minimumRadius: 9,
+                maximumRadius: 30,
+                showCountLabels: false,
+                labelMinimumPointCount: 5,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('renderMode: ScatterRenderMode.clusters'),
+      );
+      expect(
+        generated.source,
+        contains('clusterConfig: ScatterClusterConfig('),
+      );
+      expect(generated.source, contains('cellSize: 52.0'));
+      expect(generated.source, contains('minimumPointCount: 3'));
+      expect(generated.source, contains('showCountLabels: false'));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits explicit Scatter hexagonal bin rendering', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'hexbin',
+              points: [
+                ChartDataPoint(x: 1, y: 2),
+                ChartDataPoint(x: 1.1, y: 2.1),
+              ],
+              renderMode: ScatterRenderMode.hexbin,
+              binConfig: ScatterBinConfig(
+                cellSize: 48,
+                gap: 2,
+                minimumPointCount: 3,
+                minimumOpacity: 0.15,
+                maximumOpacity: 0.9,
+                aggregate: ScatterBinAggregate.sum,
+                valueSource: ScatterBinValueSource.x,
+                showLabels: true,
+                labelMinimumPointCount: 8,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('renderMode: ScatterRenderMode.hexbin'),
+      );
+      expect(generated.source, contains('binConfig: ScatterBinConfig('));
+      expect(generated.source, contains('cellSize: 48.0'));
+      expect(generated.source, contains('minimumPointCount: 3'));
+      expect(generated.source, contains('aggregate: ScatterBinAggregate.sum'));
+      expect(
+        generated.source,
+        contains('valueSource: ScatterBinValueSource.x'),
+      );
+      expect(generated.source, contains('showLabels: true'));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits explicit Scatter density contour rendering', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'density',
+              points: [
+                ChartDataPoint(x: 1, y: 2),
+                ChartDataPoint(x: 1.1, y: 2.1),
+              ],
+              renderMode: ScatterRenderMode.density,
+              densityConfig: ScatterDensityConfig(
+                gridCellSize: 6,
+                bandwidth: 28,
+                contourCount: 7,
+                minimumDensity: 0.12,
+                minimumOpacity: 0.22,
+                maximumOpacity: 0.84,
+                lineWidth: 2.5,
+                showPoints: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('renderMode: ScatterRenderMode.density'),
+      );
+      expect(
+        generated.source,
+        contains('densityConfig: ScatterDensityConfig('),
+      );
+      expect(generated.source, contains('gridCellSize: 6.0'));
+      expect(generated.source, contains('bandwidth: 28.0'));
+      expect(generated.source, contains('contourCount: 7'));
+      expect(generated.source, contains('showPoints: true'));
       expect(generated.warnings, isEmpty);
     });
 
@@ -997,6 +1200,41 @@ void main() {
       expect(generated.source, contains('tickCount: 7'));
     });
 
+    test('emits portable chart selection policy', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'selectable',
+              points: [ChartDataPoint(x: 1, y: 2)],
+            ),
+            interaction: const InteractionConfig(
+              selection: ChartSelectionConfig(
+                mode: ChartSelectionMode.rectangle,
+                operation: ChartSelectionOperation.add,
+                dragActivation: ChartSelectionDragActivation.shiftPrimary,
+                clearOnBackgroundTap: false,
+                useModifierKeys: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('selection: ChartSelectionConfig('));
+      expect(generated.source, contains('mode: ChartSelectionMode.rectangle'));
+      expect(
+        generated.source,
+        contains('operation: ChartSelectionOperation.add'),
+      );
+      expect(
+        generated.source,
+        contains('dragActivation: ChartSelectionDragActivation.shiftPrimary'),
+      );
+      expect(generated.source, contains('clearOnBackgroundTap: false'));
+      expect(generated.source, contains('useModifierKeys: false'));
+    });
+
     test('returns a structured failure for an invalid variable name', () {
       final result = ChartDartSourceGenerator.generate(
         _snapshot(
@@ -1034,6 +1272,7 @@ ChartDocumentSnapshot _snapshot(
   ChartTheme? theme,
   String? themeReference = 'braven.light',
   ChartViewState? viewState,
+  InteractionConfig interaction = const InteractionConfig(),
 }) {
   final encodedSeries = [
     for (final item in [series, ...additionalSeries])
@@ -1045,9 +1284,7 @@ ChartDocumentSnapshot _snapshot(
     theme ?? ChartTheme.light,
     reference: themeReference,
   );
-  final encodedInteraction = ChartInteractionDocumentCodec.encode(
-    const InteractionConfig(),
-  );
+  final encodedInteraction = ChartInteractionDocumentCodec.encode(interaction);
   final encodedXAxis = ChartAxisDocumentCodec.encodeXAxis(
     const XAxisConfig(label: 'Elapsed interval'),
   );

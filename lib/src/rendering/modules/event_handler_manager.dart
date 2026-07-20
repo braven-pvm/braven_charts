@@ -13,6 +13,7 @@ import '../../elements/resize_handle_element.dart';
 import '../../elements/series_element.dart';
 import '../../interaction/core/chart_element.dart';
 import '../../interaction/core/coordinator.dart';
+import '../../interaction/core/data_hit.dart';
 import '../../interaction/core/element_types.dart';
 import '../../interaction/core/hit_test_strategy.dart';
 import '../../interaction/core/interaction_mode.dart';
@@ -72,6 +73,9 @@ abstract class EventHandlerDelegate {
   /// Callback invoked after visible viewport bounds change.
   VoidCallback? get onViewportChanged;
 
+  /// Callback invoked when a brush or lasso resolves durable data hits.
+  void Function(List<ChartDataHit> hits)? get onSelectionGestureComplete;
+
   // ==================== Delegated Operations ====================
 
   /// Converts widget coordinates to plot coordinates.
@@ -82,6 +86,12 @@ abstract class EventHandlerDelegate {
 
   /// Hit tests elements within a rectangle.
   List<ChartElement> hitTestRect(Rect widgetRect);
+
+  /// Resolves Scatter data hits enclosed by a widget-space rectangle.
+  List<ChartDataHit> hitTestDataRect(Rect widgetRect);
+
+  /// Resolves Scatter data hits enclosed by a widget-space polygon.
+  List<ChartDataHit> hitTestDataPolygon(List<Offset> widgetPolygon);
 
   /// Rebuilds the spatial index after element changes.
   void rebuildSpatialIndex();
@@ -955,16 +965,8 @@ class EventHandlerManager {
 
       // Update box selection rectangle if already in box select mode
       if (coordinator.currentMode == InteractionMode.boxSelecting) {
-        coordinator.updateBoxSelection(startPos, position);
-        final newRect = coordinator.boxSelectionRect;
-
         _cursorPosition = position;
-
-        if (newRect != null) {
-          final previewElements = _delegate.hitTestRect(newRect);
-          coordinator.updatePreviewSelection(previewElements.toSet());
-        }
-
+        _updateDragSelectionPreview(startPos, position);
         _delegate.markNeedsPaint();
         return;
       }
@@ -982,17 +984,55 @@ class EventHandlerManager {
           );
         }
       } else if (coordinator.shouldStartBoxSelect(position)) {
-        // Clear deferred selection states since we're transitioning to box select
-        _pointerDownOnEmptyArea = false;
-        _emptyAreaClickPosition = null;
-        _emptyAreaClickEvent = null;
-        _potentialSelectElement = null;
-        _potentialSelectEvent = null;
-        coordinator.claimMode(InteractionMode.boxSelecting);
-        coordinator.updateBoxSelection(startPos, position);
-        _delegate.markNeedsPaint();
+        // Crossing drag slop means this is no longer an empty-area click,
+        // even when the active selection policy does not own the gesture.
+        _cancelDeferredEmptyAreaClick();
+
+        final interaction =
+            _delegate.interactionConfig ?? const InteractionConfig();
+        final selection = interaction.selection;
+        final ownsSelectionDrag =
+            interaction.enabled &&
+            interaction.enableSelection &&
+            selection.mode != ChartSelectionMode.point &&
+            selection.ownsPrimaryDrag(shift: coordinator.isShiftPressed);
+        if (ownsSelectionDrag) {
+          coordinator.claimMode(InteractionMode.boxSelecting);
+          _updateDragSelectionPreview(startPos, position);
+          _delegate.markNeedsPaint();
+        }
       }
     }
+  }
+
+  void _updateDragSelectionPreview(Offset start, Offset current) {
+    final coordinator = _delegate.coordinator;
+    final mode = (_delegate.interactionConfig ?? const InteractionConfig())
+        .selection
+        .mode;
+    final hits = switch (mode) {
+      ChartSelectionMode.rectangle => () {
+        coordinator.updateBoxSelection(start, current);
+        final rect = coordinator.boxSelectionRect;
+        return rect == null
+            ? const <ChartDataHit>[]
+            : _delegate.hitTestDataRect(rect);
+      }(),
+      ChartSelectionMode.lasso => () {
+        coordinator.updateLassoSelection(start, current);
+        return _delegate.hitTestDataPolygon(coordinator.lassoSelectionPath);
+      }(),
+      ChartSelectionMode.point => const <ChartDataHit>[],
+    };
+    coordinator.updatePreviewDataHits(hits);
+  }
+
+  void _cancelDeferredEmptyAreaClick() {
+    _pointerDownOnEmptyArea = false;
+    _emptyAreaClickPosition = null;
+    _emptyAreaClickEvent = null;
+    _potentialSelectElement = null;
+    _potentialSelectEvent = null;
   }
 
   // ==========================================================================
@@ -1066,12 +1106,9 @@ class EventHandlerManager {
 
   void _completeBoxSelection() {
     final coordinator = _delegate.coordinator;
-    final boxRect = coordinator.boxSelectionRect;
-    if (boxRect != null) {
-      final selectedElements = _delegate.hitTestRect(boxRect);
-      coordinator.clearPreviewSelection();
-      coordinator.addToSelection(selectedElements.toSet());
-    }
+    final hits = coordinator.previewDataHits;
+    coordinator.clearPreviewSelection();
+    _delegate.onSelectionGestureComplete?.call(hits);
   }
 
   void _completeRangeAnnotationCreation() {

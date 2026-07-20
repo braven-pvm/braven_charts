@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
+import 'package:braven_charts/src/rendering/data_point_label_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -75,6 +77,374 @@ void main() {
       expect(element.dataHitAt(const Offset(50, 50))?.pointIndex, 0);
     });
 
+    test(
+      'cluster mode aggregates nearby markers and retains raw identities',
+      () {
+        final element = SeriesElement(
+          series: const ScatterChartSeries(
+            id: 'clustered',
+            name: 'Clustered cohort',
+            points: [
+              ChartDataPoint(x: 0, y: 0),
+              ChartDataPoint(x: 0.1, y: 0.1),
+              ChartDataPoint(x: 10, y: 10),
+            ],
+            renderMode: ScatterRenderMode.clusters,
+            clusterConfig: ScatterClusterConfig(
+              cellSize: 40,
+              minimumPointCount: 2,
+              minimumRadius: 8,
+              maximumRadius: 20,
+            ),
+          ),
+          transform: _transform(),
+        );
+
+        expect(element.visibleScatterGeometryCount, 3);
+        expect(element.visibleScatterRenderedMarkerCount, 2);
+        expect(element.visibleScatterClusteredPointCount, 2);
+
+        final hit = element.dataHitAt(const Offset(0.5, 99.5));
+        expect(hit, isNotNull);
+        expect(hit!.pointIndex, 0);
+        expect(hit.sourcePointIndices, [0, 1]);
+        expect(hit.category, '2 observations');
+        expect(hit.formattedXValue, '0.05');
+        expect(hit.formattedValue, '0.05');
+        expect(hit.semanticLabel, contains('2 source points'));
+
+        final recorder = PictureRecorder();
+        expect(
+          () => element.paint(Canvas(recorder), const Size(100, 100)),
+          returnsNormally,
+        );
+        recorder.endRecording().dispose();
+      },
+    );
+
+    test('cluster hit comparisons remain bounded by screen-space cells', () {
+      final points = [
+        for (var index = 0; index < 10000; index++)
+          ChartDataPoint(
+            x: (index % 100).toDouble() / 10,
+            y: (index ~/ 100).toDouble() / 10,
+          ),
+      ];
+      final element = SeriesElement(
+        series: ScatterChartSeries(
+          id: 'dense-clusters',
+          points: points,
+          renderMode: ScatterRenderMode.clusters,
+          clusterConfig: const ScatterClusterConfig(cellSize: 32),
+        ),
+        transform: _transform(),
+      );
+
+      expect(element.visibleScatterRenderedMarkerCount, lessThan(30));
+      expect(element.dataHitAt(const Offset(50, 50)), isNotNull);
+      expect(element.scatterHitComparisonCount, lessThan(20));
+    });
+
+    for (final mode in [
+      ScatterRenderMode.rectangularBins,
+      ScatterRenderMode.hexbin,
+    ]) {
+      test('${mode.name} aggregates, paints, and retains raw identities', () {
+        final element = SeriesElement(
+          series: ScatterChartSeries(
+            id: '${mode.name}-series',
+            name: 'Dense observations',
+            points: const [
+              ChartDataPoint(x: 1, y: 5),
+              ChartDataPoint(x: 1.1, y: 5.1),
+              ChartDataPoint(x: 8, y: 8),
+            ],
+            color: const Color(0xFF0F8FA8),
+            renderMode: mode,
+            binConfig: const ScatterBinConfig(
+              cellSize: 32,
+              aggregate: ScatterBinAggregate.mean,
+              valueSource: ScatterBinValueSource.y,
+              showLabels: true,
+              labelMinimumPointCount: 2,
+            ),
+          ),
+          transform: _transform(),
+        );
+
+        expect(element.visibleScatterGeometryCount, 3);
+        expect(element.visibleScatterRenderedMarkerCount, 2);
+        expect(element.visibleScatterBinnedPointCount, 3);
+
+        final first = element.dataHitForPointIndex(1);
+        expect(first, isNotNull);
+        expect(first!.sourcePointIndices, [0, 1]);
+        expect(first.category, contains('bin'));
+        expect(first.aggregateValue, closeTo(5.05, 0.0001));
+        expect(first.aggregateLabel, 'Mean Y');
+        expect(first.formattedAggregateValue, '5.05');
+        expect(first.aggregateSampleCount, 2);
+        expect(first.semanticLabel, contains('2 source points'));
+        expect(first.semanticLabel, contains('Mean Y 5.05'));
+        expect(element.dataHitAt(first.plotPosition), isNotNull);
+
+        final recorder = PictureRecorder();
+        expect(
+          () => element.paint(Canvas(recorder), const Size(100, 100)),
+          returnsNormally,
+        );
+        recorder.endRecording().dispose();
+      });
+    }
+
+    test('density mode paints contours and exposes honest aggregate hits', () {
+      final element = SeriesElement(
+        series: ScatterChartSeries(
+          id: 'density-series',
+          name: 'Pickup demand',
+          color: const Color(0xFF0F8FA8),
+          points: [
+            for (var index = 0; index < 30; index++)
+              ChartDataPoint(
+                x: 4.6 + (index % 6) * 0.14,
+                y: 4.6 + (index ~/ 6) * 0.14,
+              ),
+          ],
+          renderMode: ScatterRenderMode.density,
+          densityConfig: const ScatterDensityConfig(
+            gridCellSize: 5,
+            bandwidth: 14,
+            contourCount: 5,
+            minimumDensity: 0.1,
+          ),
+        ),
+        transform: _transform(),
+      );
+
+      expect(element.visibleScatterGeometryCount, 30);
+      expect(element.visibleScatterRenderedMarkerCount, inInclusiveRange(1, 5));
+
+      final hit = element.dataHitAt(const Offset(50, 50));
+      expect(hit, isNotNull);
+      expect(hit!.sourcePointIndices.length, greaterThan(1));
+      expect(hit.category, contains('density region'));
+      expect(hit.aggregateLabel, 'Relative density');
+      expect(hit.aggregateValue, inInclusiveRange(0.1, 1));
+      expect(hit.formattedAggregateValue, endsWith('%'));
+      expect(hit.aggregateSampleCount, hit.sourcePointIndices.length);
+      expect(hit.semanticLabel, contains('Relative density'));
+      expect(hit.semanticBounds.contains(const Offset(50, 50)), isTrue);
+      expect(element.dataHitAt(const Offset(98, 2)), isNull);
+
+      final sourceHit = element.dataHitForPointIndex(12);
+      expect(sourceHit, isNotNull);
+      expect(sourceHit!.category, contains('density region'));
+
+      final recorder = PictureRecorder();
+      expect(
+        () => element.paint(Canvas(recorder), const Size(100, 100)),
+        returnsNormally,
+      );
+      recorder.endRecording().dispose();
+    });
+
+    test('cluster layout reveals raw observations as the viewport zooms', () {
+      final element = SeriesElement(
+        series: const ScatterChartSeries(
+          id: 'zooming-clusters',
+          points: [ChartDataPoint(x: 1, y: 5), ChartDataPoint(x: 1.5, y: 5)],
+          renderMode: ScatterRenderMode.clusters,
+          clusterConfig: ScatterClusterConfig(cellSize: 40),
+        ),
+        transform: _transform(),
+      );
+
+      expect(element.visibleScatterRenderedMarkerCount, 1);
+      expect(element.visibleScatterClusteredPointCount, 2);
+
+      element.updateTransform(
+        const ChartTransform(
+          dataXMin: 0.8,
+          dataXMax: 1.7,
+          dataYMin: 4.5,
+          dataYMax: 5.5,
+          plotWidth: 100,
+          plotHeight: 100,
+        ),
+      );
+
+      expect(element.visibleScatterRenderedMarkerCount, 2);
+      expect(element.visibleScatterClusteredPointCount, 0);
+    });
+
+    test('jitter is deterministic, seeded, and stable through zoom', () {
+      const series = ScatterChartSeries(
+        id: 'jittered-responses',
+        points: [
+          ChartDataPoint(x: 5, y: 5),
+          ChartDataPoint(x: 5, y: 5),
+          ChartDataPoint(x: 5, y: 5),
+        ],
+        markerRadius: 2,
+        jitter: ScatterJitterConfig(xAmplitude: 18, yAmplitude: 12, seed: 42),
+      );
+      final first = SeriesElement(series: series, transform: _transform());
+      final second = SeriesElement(series: series, transform: _transform());
+      final firstCenters = [
+        for (var index = 0; index < series.points.length; index++)
+          first.scatterGeometryForPoint(index)!.center,
+      ];
+      final secondCenters = [
+        for (var index = 0; index < series.points.length; index++)
+          second.scatterGeometryForPoint(index)!.center,
+      ];
+
+      expect(firstCenters.toSet(), hasLength(3));
+      expect(secondCenters, firstCenters);
+      expect(
+        firstCenters.map((center) => center.dx).reduce(math.max) -
+            firstCenters.map((center) => center.dx).reduce(math.min),
+        greaterThan(9),
+      );
+      expect(
+        firstCenters.map((center) => center.dy).reduce(math.max) -
+            firstCenters.map((center) => center.dy).reduce(math.min),
+        greaterThan(6),
+      );
+      expect(
+        first.dataHitAt(firstCenters.first)?.plotPosition,
+        firstCenters.first,
+      );
+
+      final reseeded = SeriesElement(
+        series: series.copyWith(
+          jitter: const ScatterJitterConfig(
+            xAmplitude: 18,
+            yAmplitude: 12,
+            seed: 43,
+          ),
+        ),
+        transform: _transform(),
+      );
+      expect(
+        reseeded.scatterGeometryForPoint(0)!.center,
+        isNot(firstCenters[0]),
+      );
+
+      const zoomed = ChartTransform(
+        dataXMin: 2.5,
+        dataXMax: 7.5,
+        dataYMin: 2.5,
+        dataYMax: 7.5,
+        plotWidth: 100,
+        plotHeight: 100,
+      );
+      final rawBefore = _transform().dataToPlot(5, 5);
+      final offsetBefore = firstCenters.first - rawBefore;
+      first.updateTransform(zoomed);
+      final rawAfter = zoomed.dataToPlot(5, 5);
+      final offsetAfter = first.scatterGeometryForPoint(0)!.center - rawAfter;
+      expect(offsetAfter, offsetBefore);
+    });
+
+    test('point labels honor content, marker gap, and explicit offsets', () {
+      final element = SeriesElement(
+        series: const ScatterChartSeries(
+          id: 'label-offset',
+          points: [ChartDataPoint(x: 5, y: 5, label: 'A')],
+          markerRadius: 5,
+          dataPointLabels: DataPointLabelConfig(
+            show: true,
+            content: DataPointLabelContent.pointLabel,
+            position: DataPointLabelPosition.right,
+            markerGap: 6,
+            offsetX: 8,
+            offsetY: 4,
+          ),
+        ),
+        transform: _transform(),
+      );
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size(100, 100));
+      recorder.endRecording();
+
+      final rect = element.visibleScatterLabelBounds.single;
+      expect(rect.left, greaterThanOrEqualTo(69));
+      expect(rect.center.dy, closeTo(54, 0.01));
+    });
+
+    test('reposition coordinates label collisions across scatter series', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        content: DataPointLabelContent.pointLabel,
+        position: DataPointLabelPosition.above,
+        collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+        collisionPadding: 2,
+      );
+      final first = SeriesElement(
+        series: const ScatterChartSeries(
+          id: 'labels-a',
+          points: [ChartDataPoint(x: 5, y: 5, label: 'Alpha')],
+          dataPointLabels: labels,
+        ),
+        transform: _transform(),
+      );
+      final second = SeriesElement(
+        series: const ScatterChartSeries(
+          id: 'labels-b',
+          points: [ChartDataPoint(x: 5, y: 5, label: 'Beta')],
+          dataPointLabels: labels,
+        ),
+        transform: _transform(),
+      );
+      final coordinator = DataPointLabelLayoutCoordinator(
+        plotBounds: const Rect.fromLTWH(0, 0, 100, 100),
+      );
+      first.setDataPointLabelLayoutCoordinator(coordinator);
+      second.setDataPointLabelLayoutCoordinator(coordinator);
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      first.paint(canvas, const Size(100, 100));
+      second.paint(canvas, const Size(100, 100));
+      recorder.endRecording();
+
+      final firstRect = first.visibleScatterLabelBounds.single;
+      final secondRect = second.visibleScatterLabelBounds.single;
+      expect(firstRect.overlaps(secondRect), isFalse);
+      expect(coordinator.occupiedBounds, hasLength(2));
+    });
+
+    test('hide collision policy omits an occupied point label', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        content: DataPointLabelContent.pointLabel,
+        collisionPolicy: DataPointLabelCollisionPolicy.hide,
+      );
+      final coordinator = DataPointLabelLayoutCoordinator(
+        plotBounds: const Rect.fromLTWH(0, 0, 100, 100),
+      );
+      final elements = [
+        for (final id in ['first', 'second'])
+          SeriesElement(
+            series: ScatterChartSeries(
+              id: id,
+              points: [ChartDataPoint(x: 5, y: 5, label: id)],
+              dataPointLabels: labels,
+            ),
+            transform: _transform(),
+          )..setDataPointLabelLayoutCoordinator(coordinator),
+      ];
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      for (final element in elements) {
+        element.paint(canvas, const Size(100, 100));
+      }
+      recorder.endRecording();
+
+      expect(elements.first.visibleScatterLabelBounds, hasLength(1));
+      expect(elements.last.visibleScatterLabelBounds, isEmpty);
+    });
+
     test('series marker radius takes precedence over ambient theme size', () {
       final element = SeriesElement(
         series: const ScatterChartSeries(
@@ -145,6 +515,38 @@ void main() {
       expect(element.hitTest(const Offset(58, 58)), isTrue);
     });
 
+    test(
+      'categorical shape and color resolve below explicit point styling',
+      () {
+        final element = SeriesElement(
+          series: const ScatterChartSeries(
+            id: 'category',
+            points: [ChartDataPoint(x: 5, y: 5, categoryValue: 'hybrid')],
+            color: Color(0xFF111111),
+            markerRadius: 5,
+            markerShape: SeriesMarkerShape.circle,
+            categoryEncoding: ScatterCategoryEncoding(
+              label: 'Powertrain',
+              categories: [
+                ScatterCategoryStyle(
+                  key: 'hybrid',
+                  color: Color(0xFF16A34A),
+                  shape: SeriesMarkerShape.square,
+                ),
+              ],
+            ),
+          ),
+          transform: _transform(),
+        );
+
+        expect(element.hitTest(const Offset(58, 58)), isTrue);
+        final hit = element.dataHitAt(const Offset(50, 50));
+        expect(hit?.markerColor, const Color(0xFF16A34A));
+        expect(hit?.categoryValue, 'hybrid');
+        expect(hit?.categoryLabel, 'Powertrain');
+      },
+    );
+
     test('marker geometry participates in series equality', () {
       const source = ScatterChartSeries(
         id: 'equality',
@@ -214,6 +616,41 @@ void main() {
       );
       expect(source.copyWith(), source);
     });
+
+    test(
+      'interaction style copyWith preserves and clears inherited colors',
+      () {
+        const source = ScatterInteractionStyle(
+          hoverColor: Color(0xFF0F172A),
+          selectionColor: Color(0xFF4F46E5),
+          focusColor: Color(0xFFF59E0B),
+          selectionScale: 1.4,
+          dimmedOpacity: 0.24,
+        );
+
+        expect(
+          source.copyWith(selectionScale: 1.8, dimmedOpacity: 0.4),
+          const ScatterInteractionStyle(
+            hoverColor: Color(0xFF0F172A),
+            selectionColor: Color(0xFF4F46E5),
+            focusColor: Color(0xFFF59E0B),
+            selectionScale: 1.8,
+            dimmedOpacity: 0.4,
+          ),
+        );
+        expect(
+          source.copyWith(
+            clearHoverColor: true,
+            clearSelectionColor: true,
+            clearFocusColor: true,
+          ),
+          const ScatterInteractionStyle(
+            selectionScale: 1.4,
+            dimmedOpacity: 0.24,
+          ),
+        );
+      },
+    );
 
     test('bubble magnitude maps linearly to marker area', () {
       final element = SeriesElement(
@@ -415,17 +852,41 @@ void main() {
       expect(element.hitTest(const Offset(61, 50)), isTrue);
     });
 
-    test('selection and focus feedback add shape-aware geometry', () async {
+    test('selection feedback adds shape-aware geometry', () async {
       final plainPixels = await _paintedPixelCount(markerRadius: 5);
-      final linkedPixels = await _paintedPixelCount(
+      final selectedPixels = await _paintedPixelCount(
         markerRadius: 5,
         selectedPointIndices: const {0},
-        focusedPointIndices: const {0},
         hasAnySelectedPoints: true,
       );
 
-      expect(linkedPixels, greaterThan(plainPixels));
+      expect(selectedPixels, greaterThan(plainPixels));
     });
+
+    test('focus feedback adds an independent shape-aware outline', () async {
+      final plainPixels = await _paintedPixelCount(markerRadius: 5);
+      final focusedPixels = await _paintedPixelCount(
+        markerRadius: 5,
+        focusedPointIndices: const {0},
+      );
+
+      expect(focusedPixels, greaterThan(plainPixels));
+    });
+
+    test(
+      'unselected feedback dims marker opacity while selection is active',
+      () async {
+        final plainAlpha = await _paintedMarkerCenterAlpha();
+        final dimmedAlpha = await _paintedMarkerCenterAlpha(
+          selectedPointIndices: const {0},
+          hasAnySelectedPoints: true,
+        );
+
+        expect(plainAlpha, greaterThan(0));
+        expect(dimmedAlpha, greaterThan(0));
+        expect(dimmedAlpha, lessThan(plainAlpha * 0.4));
+      },
+    );
 
     test('hover feedback paints through the uncached overlay path', () async {
       final element = SeriesElement(
@@ -512,6 +973,35 @@ Future<int> _paintedPixelCount({
   image.dispose();
   picture.dispose();
   return paintedPixels;
+}
+
+Future<int> _paintedMarkerCenterAlpha({
+  Set<int> selectedPointIndices = const {},
+  bool hasAnySelectedPoints = false,
+}) async {
+  final element = SeriesElement(
+    series: const ScatterChartSeries(
+      id: 'paint-state-alpha',
+      points: [ChartDataPoint(x: 3, y: 5), ChartDataPoint(x: 7, y: 5)],
+      markerRadius: 6,
+      color: Color(0xFF2563EB),
+      interactionStyle: ScatterInteractionStyle(dimmedOpacity: 0.2),
+    ),
+    transform: _transform(),
+    selectedPointIndices: selectedPointIndices,
+    hasAnySelectedPoints: hasAnySelectedPoints,
+  );
+  final recorder = PictureRecorder();
+  element.paint(Canvas(recorder), const Size(100, 100));
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(100, 100);
+  final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+  const sampleX = 70;
+  const sampleY = 50;
+  final alpha = bytes!.getUint8((sampleY * 100 + sampleX) * 4 + 3);
+  image.dispose();
+  picture.dispose();
+  return alpha;
 }
 
 ChartTransform _transform() => const ChartTransform(

@@ -1342,6 +1342,7 @@ ChartAnnotation _withCaptureAnnotationFont(ChartAnnotation annotation) {
     final TextAnnotation value => value.copyWith(style: style),
     final ThresholdAnnotation value => value.copyWith(style: style),
     final TrendAnnotation value => value.copyWith(style: style),
+    final ErrorBarAnnotation value => value.copyWith(style: style),
     final PinAnnotation value => value.copyWith(style: style),
     final ChordAnnotation value => value.copyWith(style: style),
     final LegendAnnotation value => value.copyWith(

@@ -10,6 +10,7 @@ import 'data_point_label_config.dart';
 import 'series_inline_label_config.dart';
 import 'path_animation_style.dart';
 import 'scatter_marker_style.dart';
+import 'scatter_render_config.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
@@ -454,6 +455,13 @@ class ScatterChartSeries extends ChartSeries {
     this.sizeEncoding,
     this.colorEncoding,
     this.opacityEncoding,
+    this.categoryEncoding,
+    this.jitter = const ScatterJitterConfig(),
+    this.renderMode = ScatterRenderMode.points,
+    this.clusterConfig = const ScatterClusterConfig(),
+    this.binConfig = const ScatterBinConfig(),
+    this.densityConfig = const ScatterDensityConfig(),
+    this.dataPointLabels,
     this.interactionStyle = const ScatterInteractionStyle(),
   });
 
@@ -463,6 +471,13 @@ class ScatterChartSeries extends ChartSeries {
   final ScatterSizeEncoding? sizeEncoding;
   final ScatterColorEncoding? colorEncoding;
   final ScatterOpacityEncoding? opacityEncoding;
+  final ScatterCategoryEncoding? categoryEncoding;
+  final ScatterJitterConfig jitter;
+  final ScatterRenderMode renderMode;
+  final ScatterClusterConfig clusterConfig;
+  final ScatterBinConfig binConfig;
+  final ScatterDensityConfig densityConfig;
+  final DataPointLabelConfig? dataPointLabels;
   final ScatterInteractionStyle interactionStyle;
 
   @override
@@ -488,6 +503,15 @@ class ScatterChartSeries extends ChartSeries {
     bool clearColorEncoding = false,
     ScatterOpacityEncoding? opacityEncoding,
     bool clearOpacityEncoding = false,
+    ScatterCategoryEncoding? categoryEncoding,
+    bool clearCategoryEncoding = false,
+    ScatterJitterConfig? jitter,
+    ScatterRenderMode? renderMode,
+    ScatterClusterConfig? clusterConfig,
+    ScatterBinConfig? binConfig,
+    ScatterDensityConfig? densityConfig,
+    DataPointLabelConfig? dataPointLabels,
+    bool clearDataPointLabels = false,
     ScatterInteractionStyle? interactionStyle,
   }) {
     return ScatterChartSeries(
@@ -514,13 +538,24 @@ class ScatterChartSeries extends ChartSeries {
       opacityEncoding: clearOpacityEncoding
           ? null
           : (opacityEncoding ?? this.opacityEncoding),
+      categoryEncoding: clearCategoryEncoding
+          ? null
+          : (categoryEncoding ?? this.categoryEncoding),
+      jitter: jitter ?? this.jitter,
+      renderMode: renderMode ?? this.renderMode,
+      clusterConfig: clusterConfig ?? this.clusterConfig,
+      binConfig: binConfig ?? this.binConfig,
+      densityConfig: densityConfig ?? this.densityConfig,
+      dataPointLabels: clearDataPointLabels
+          ? null
+          : (dataPointLabels ?? this.dataPointLabels),
       interactionStyle: interactionStyle ?? this.interactionStyle,
     );
   }
 
   @override
   String toString() =>
-      'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius, markerShape: ${markerShape.name}, markerStyle: $markerStyle, sizeEncoding: $sizeEncoding, colorEncoding: $colorEncoding, opacityEncoding: $opacityEncoding, interactionStyle: $interactionStyle)';
+      'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius, markerShape: ${markerShape.name}, markerStyle: $markerStyle, sizeEncoding: $sizeEncoding, colorEncoding: $colorEncoding, opacityEncoding: $opacityEncoding, categoryEncoding: $categoryEncoding, jitter: $jitter, renderMode: ${renderMode.name}, clusterConfig: $clusterConfig, binConfig: $binConfig, densityConfig: $densityConfig, dataPointLabels: $dataPointLabels, interactionStyle: $interactionStyle)';
 
   @override
   bool operator ==(Object other) {
@@ -533,6 +568,13 @@ class ScatterChartSeries extends ChartSeries {
         other.sizeEncoding == sizeEncoding &&
         other.colorEncoding == colorEncoding &&
         other.opacityEncoding == opacityEncoding &&
+        other.categoryEncoding == categoryEncoding &&
+        other.jitter == jitter &&
+        other.renderMode == renderMode &&
+        other.clusterConfig == clusterConfig &&
+        other.binConfig == binConfig &&
+        other.densityConfig == densityConfig &&
+        other.dataPointLabels == dataPointLabels &&
         other.interactionStyle == interactionStyle;
   }
 
@@ -545,6 +587,13 @@ class ScatterChartSeries extends ChartSeries {
     sizeEncoding,
     colorEncoding,
     opacityEncoding,
+    categoryEncoding,
+    jitter,
+    renderMode,
+    clusterConfig,
+    binConfig,
+    densityConfig,
+    dataPointLabels,
     interactionStyle,
   );
 }
