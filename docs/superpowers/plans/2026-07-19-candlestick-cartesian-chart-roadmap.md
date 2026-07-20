@@ -515,6 +515,9 @@ retaining Braven styling and Workbench behavior.
   canonical presets, custom colour dialog, opacity support, and recent colours.
   Each cleared value restores the active chart or interaction theme instead of
   retaining a hidden showcase-only colour.
+- Disabled hover-acquired keyboard focus on the Workbench Candlestick chart,
+  removing the misleading blue hover outline while preserving the optional
+  focus border after an intentional click or keyboard focus.
 - Increased compact composition height to preserve a valid plot after the
   expanded wrapping preset catalogue and options surface; focused compact and
   full Candlestick showcase tests pass. The Candlestick suite now has 15 tests,

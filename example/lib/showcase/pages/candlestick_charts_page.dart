@@ -1023,6 +1023,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       enablePan: options.enablePan,
       enableSelection: _selectionEnabled,
       showFocusBorder: _showFocusBorder,
+      enableFocusOnHover: false,
       showXScrollbar: options.showXScrollbar,
       showYScrollbar: options.showYScrollbar,
       crosshair: CrosshairConfig(
