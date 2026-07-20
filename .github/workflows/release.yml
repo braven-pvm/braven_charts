@@ -1,0 +1,129 @@
+name: Release tagger
+
+# Label-driven release automation.
+#
+# When a pull request into master is merged while carrying the `release`
+# label, this workflow:
+#   1. waits for the "Package quality" workflow to pass on the merge commit,
+#   2. creates and pushes the annotated tag v<pubspec version>,
+#   3. dispatches the "Publish to pub.dev" workflow on that tag ref.
+#
+# The explicit dispatch in step 3 is required: the tag in step 2 is pushed
+# with the default GITHUB_TOKEN, and events created with GITHUB_TOKEN never
+# trigger other workflows (GitHub's recursion guard). workflow_dispatch is
+# exempt from that guard. See docs/releasing.md for the full design.
+#
+# The run is idempotent: if the tag already exists and points at this merge
+# commit (e.g. a previous run pushed the tag but failed to dispatch),
+# re-running resumes at the dispatch step. A same-name tag on a different
+# commit aborts.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write # push the release tag
+  actions: write # dispatch the publish workflow (also grants runs read for the CI wait)
+
+# No concurrency group on purpose: every closed PR starts a (usually skipped)
+# run of this workflow, and a shared group would let unrelated PR closures
+# evict a pending release run. Parallel release runs are safe — versions
+# differ, and the tag-state guard handles a same-version race.
+
+jobs:
+  tag-and-dispatch:
+    name: Tag release and dispatch publish
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'master' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    env:
+      MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - name: Check out merge commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Read version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep -E '^version:' pubspec.yaml | head -n 1 | awk '{print $2}' | tr -d '\r')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read version from pubspec.yaml"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing version $VERSION as tag v$VERSION"
+
+      - name: Resolve tag state
+        id: tagstate
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          PEELED=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
+          PLAIN=$(git ls-remote origin "refs/tags/$TAG" | cut -f1)
+          TARGET=${PEELED:-$PLAIN}
+          if [ -z "$TARGET" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG does not exist yet."
+          elif [ "$TARGET" = "$MERGE_SHA" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG already points at this merge commit — resuming (dispatch only)."
+          else
+            echo "::error::Tag $TAG already exists and points at $TARGET, not this merge commit ($MERGE_SHA). Bump the version in pubspec.yaml before applying the release label."
+            exit 1
+          fi
+
+      - name: Wait for the Package quality workflow on the merge commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # package-quality.yml also runs on this push to master. Poll that
+          # specific workflow's run (not just any check named "verify") for
+          # up to 60 minutes. Transient API errors count as another wait.
+          for attempt in $(seq 1 120); do
+            STATUS=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow=package-quality.yml \
+              --commit "$MERGE_SHA" \
+              --limit 1 \
+              --json status,conclusion \
+              --jq 'first | if . == null then "missing" elif .status != "completed" then "pending" else (.conclusion // "pending") end' \
+              2> /dev/null || echo "pending")
+            echo "Package quality on $MERGE_SHA: $STATUS (attempt $attempt/120)"
+            case "$STATUS" in
+              success)
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required|stale|neutral|skipped|startup_failure)
+                echo "::error::Package quality concluded '$STATUS' on the merge commit. Not tagging."
+                exit 1
+                ;;
+              *)
+                sleep 30
+                ;;
+            esac
+          done
+          echo "::error::Timed out waiting for Package quality on $MERGE_SHA. Not tagging."
+          exit 1
+
+      - name: Create and push the annotated release tag
+        if: steps.tagstate.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG" "$MERGE_SHA"
+          git push origin "refs/tags/$TAG"
+
+      - name: Dispatch the publish workflow on the tag ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh workflow run publish.yml --repo "${{ github.repository }}" --ref "refs/tags/$TAG"
