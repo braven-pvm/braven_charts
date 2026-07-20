@@ -25,6 +25,15 @@ and renderer paint order; zero-valued semantic categories; automatic-axis
 bound reset; safe target lookup; and a layered/grouped/stacked/Rose resize
 matrix. Local verification is complete; final user visual acceptance remains
 the gate before PR handoff.
+A deterministic seeded property generator now supplements those fixed presets
+with reproducible variation across all eight Polar presentations, their data,
+pane geometry, composition, labels, grids, themes, palettes, reference marks,
+tooltips, and selection effects. This is a showcase verification surface, not
+a package-level random chart API.
+The eight authored examples remain unchanged. A ninth randomized showcase mode
+can generate one seed on demand or play a pausable sequence at a configurable
+interval, making broad visual review possible without replacing the deliberate
+feature demonstrations.
 
 ## Executive decision
 
@@ -488,6 +497,14 @@ and paint-priority restoration. A real-renderer matrix now combines full and
 partial sweeps, clockwise and counter-clockwise panes, layered references,
 grouped columns, diverging stacks, both selection effects, area-correct Rose,
 high contrast, and constrained resize.
+A 2026-07-20 showcase follow-up adds a bounded seed generator and a
+real-renderer seed matrix across every Polar presentation. Seeds preserve
+presentation invariants while exposing substantially more visual combinations
+for manual hardening; the generated configuration remains editable through the
+same complete Options surface.
+The same surface now includes a dedicated randomized example with deterministic
+Play/Pause sequencing. Selecting any authored example stops playback and
+restores its fixed, documented configuration.
 
 Deliver in small slices:
 
