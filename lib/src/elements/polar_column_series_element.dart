@@ -249,7 +249,7 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   @override
   Iterable<ChartDataHit> get semanticDataHits =>
-      geometry.marks.where((mark) => mark.isVisible).map(_dataHitForMark);
+      geometry.marks.map(_dataHitForMark);
 
   /// Effective fill colors in stable category order.
   List<Color> get resolvedMarkColors => List<Color>.unmodifiable([
@@ -677,6 +677,13 @@ class PolarColumnSeriesElement implements DataHitElement {
   ChartDataHit _dataHitForMark(PolarColumnMarkGeometry mark) {
     final point = series.points[mark.index];
     final path = _displayPath(mark);
+    final pathBounds = path.getBounds();
+    final semanticBounds = pathBounds.isEmpty
+        ? Rect.fromCircle(
+            center: _displayPoint(mark, mark.labelAnchor),
+            radius: 8,
+          )
+        : pathBounds;
     final value = MultiAxisValueFormatter.format(
       value: point.y,
       unit: series.unit,
@@ -692,7 +699,7 @@ class PolarColumnSeriesElement implements DataHitElement {
       seriesId: series.id,
       pointIndex: mark.index,
       plotPosition: _displayPoint(mark, mark.tooltipAnchor),
-      semanticBounds: path.getBounds(),
+      semanticBounds: semanticBounds,
       point: point,
       category: mark.category,
       formattedValue: '$value$target$interval',

@@ -118,6 +118,46 @@ void main() {
       }
     });
 
+    test('corner modes stay bounded across radii and sweep directions', () {
+      const center = Offset(120, 100);
+      for (final innerRadius in const [18.0, 44.0, 72.0]) {
+        for (final sweepAngle in const [math.pi / 7, -math.pi / 3, math.pi]) {
+          for (final cornerMode in const [
+            (roundOuter: true, roundInner: true),
+            (roundOuter: true, roundInner: false),
+            (roundOuter: false, roundInner: true),
+          ]) {
+            final geometry = AnnularSectorGeometry(
+              center: center,
+              innerRadius: innerRadius,
+              outerRadius: 92,
+              startAngle: 0.7,
+              sweepAngle: sweepAngle,
+              cornerRadius: 14,
+              roundOuterCorners: cornerMode.roundOuter,
+              roundInnerCorners: cornerMode.roundInner,
+              seamInset: 4,
+            );
+
+            expect(geometry.contains(geometry.pointAt()), isTrue);
+            expect(
+              geometry.contains(
+                center + Offset.fromDirection(0.7, innerRadius * 0.5),
+              ),
+              isFalse,
+            );
+            for (final fraction in const [0.25, 0.5, 0.75]) {
+              final angle = 0.7 + sweepAngle * fraction;
+              expect(
+                geometry.contains(center + Offset.fromDirection(angle, 92.5)),
+                isFalse,
+              );
+            }
+          }
+        }
+      }
+    });
+
     test('rejects invalid radii, angles, corners, and lookup fractions', () {
       AnnularSectorGeometry build({
         double innerRadius = 20,

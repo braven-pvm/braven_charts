@@ -572,7 +572,9 @@ class PolarColumnChartSeries extends ChartSeries {
   }
 
   double? targetValueFor(int pointIndex) =>
-      pointIndex < targetValues.length ? targetValues[pointIndex] : null;
+      pointIndex >= 0 && pointIndex < targetValues.length
+      ? targetValues[pointIndex]
+      : null;
 
   List<String> get categories =>
       List<String>.unmodifiable(points.map((point) => point.label!));

@@ -71,8 +71,27 @@ void main() {
       expect(series.targetValues, [40, null, 30]);
       expect(series.targetValueFor(0), 40);
       expect(series.targetValueFor(1), isNull);
+      expect(series.targetValueFor(-1), isNull);
+      expect(series.targetValueFor(3), isNull);
       expect(series.targetMarkerStyle.color, Colors.amber);
       expect(series.copyWith(clearTargetValues: true).targetValues, isEmpty);
+    });
+
+    test('numeric axis copy can return explicit bounds to automatic', () {
+      const axis = PolarNumericAxisConfig(
+        minimum: -20,
+        maximum: 80,
+        scaleMode: PolarRadialScaleMode.linear,
+      );
+
+      expect(axis.copyWith().minimum, -20);
+      expect(axis.copyWith().maximum, 80);
+      expect(axis.copyWith(clearMinimum: true).minimum, isNull);
+      expect(axis.copyWith(clearMaximum: true).maximum, isNull);
+      expect(
+        axis.copyWith(clearMinimum: true, clearMaximum: true),
+        const PolarNumericAxisConfig(scaleMode: PolarRadialScaleMode.linear),
+      );
     });
 
     test('fromMap aligns absolute intervals to stable category identity', () {

@@ -1,4 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts_example/showcase/data/polar_showcase_randomizer.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,11 @@ void main() {
     expect(find.text('Stacked comparison'), findsOneWidget);
     expect(find.text('Targets & thresholds'), findsOneWidget);
     expect(find.text('Ranges & uncertainty'), findsOneWidget);
+    expect(find.text('Randomized properties'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('polar-randomized-example-card')),
+      findsOneWidget,
+    );
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -142,7 +148,159 @@ void main() {
         .whereType<EnumOption<PolarColumnCornerRadiusMode>>()
         .singleWhere((item) => item.label == 'Corner placement');
     expect(cornerPlacement.values, PolarColumnCornerRadiusMode.values);
+
+    final randomizer = section('Property randomizer');
+    expect(
+      randomizer.children.whereType<IntSliderOption>().map(
+        (item) => item.label,
+      ),
+      containsAll(['Seed', 'Playback interval']),
+    );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'seeded randomizer applies a complete reproducible configuration',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Property randomizer'), findsOneWidget);
+      expect(find.text('Randomize all'), findsOneWidget);
+      final seedOption = tester.widget<IntSliderOption>(
+        find.byKey(const ValueKey('polar-randomizer-seed')),
+      );
+      seedOption.onChanged(317);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('polar-randomizer-generate')));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final generated = PolarShowcaseRandomizer.generate(317);
+      expect(find.text('Generated seed 317'), findsOneWidget);
+      _expectGeneratedChart(tester, generated);
+
+      await tester.tap(
+        find.byKey(const ValueKey('polar-column-randomize-all')),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Generated seed 318'), findsOneWidget);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(318));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'randomized example plays on schedule, pauses, and yields to authored presets',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('polar-randomizer-playback-interval')),
+          )
+          .onChanged(2);
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Generated seed 48'), findsOneWidget);
+      expect(find.text('Pause sequence'), findsOneWidget);
+      expect(find.text('Playing · every 2 s'), findsOneWidget);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(48));
+
+      await tester.pump(const Duration(milliseconds: 1800));
+      expect(find.text('Generated seed 48'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Generated seed 49'), findsOneWidget);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(49));
+
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+      );
+      await tester.pump();
+      expect(find.text('Play sequence'), findsOneWidget);
+      expect(find.text('Paused · every 2 s'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.text('Generated seed 49'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+      );
+      await tester.pump();
+      expect(find.text('Generated seed 50'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('polar-presentation-standard')),
+      );
+      await tester.pump();
+      expect(find.text('Generated seed 50'), findsNothing);
+      expect(find.text('Play sequence'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.text('Generated seed 51'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('seed matrix renders every Polar presentation without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final seeds = _firstSeedForEveryPresentation();
+    expect(seeds.keys, PolarShowcasePresentationKind.values.toSet());
+    for (final presentation in PolarShowcasePresentationKind.values) {
+      final seed = seeds[presentation]!;
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('polar-randomizer-seed')),
+          )
+          .onChanged(seed);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('polar-randomizer-generate')));
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      expect(
+        chart.series,
+        hasLength(switch (presentation) {
+          PolarShowcasePresentationKind.layered => 2,
+          PolarShowcasePresentationKind.grouped ||
+          PolarShowcasePresentationKind.stacked => 3,
+          _ => 1,
+        }),
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'seed $seed: $presentation',
+      );
+    }
   });
 
   testWidgets('appearance controls drive public chart styling', (tester) async {
@@ -670,4 +828,85 @@ Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {
   for (var attempt = 0; attempt < 20 && !condition(); attempt++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+void _expectGeneratedChart(
+  WidgetTester tester,
+  PolarShowcaseRandomization generated,
+) {
+  final chart = tester.widget<BravenChartPlus>(
+    find.descendant(
+      of: find.byKey(const ValueKey('polar-column-live-chart')),
+      matching: find.byType(BravenChartPlus),
+    ),
+  );
+  final config = chart.polarChartConfig;
+  expect(config.pane.startAngleDegrees, generated.startAngle);
+  expect(config.pane.sweepAngleDegrees, generated.sweepAngle);
+  expect(config.pane.clockwise, generated.clockwise);
+  expect(config.pane.innerRadiusFactor, generated.innerRadius);
+  expect(config.pane.outerRadiusFactor, generated.outerRadius);
+  expect(config.angularAxis.innerPadding, generated.innerPadding);
+  expect(config.angularAxis.outerPadding, generated.outerPadding);
+  expect(config.angularAxis.showLabels, generated.showAngularLabels);
+  expect(config.angularAxis.showGridLines, generated.showAngularGrid);
+  expect(config.radialAxis.scaleMode, generated.scaleMode);
+  expect(config.radialAxis.tickCount, generated.tickCount);
+  expect(config.composition.mode, generated.compositionMode);
+
+  final primaryId = switch (generated.presentation) {
+    PolarShowcasePresentationKind.layered => 'showcase-polar-observed',
+    PolarShowcasePresentationKind.grouped => 'showcase-polar-north',
+    PolarShowcasePresentationKind.stacked => 'showcase-polar-new',
+    PolarShowcasePresentationKind.references => 'showcase-polar-actual-targets',
+    PolarShowcasePresentationKind.intervals =>
+      'showcase-polar-forecast-intervals',
+    _ => 'showcase-polar-column',
+  };
+  final primary = chart.series.whereType<PolarColumnChartSeries>().singleWhere(
+    (series) => series.id == primaryId,
+  );
+  expect(
+    primary.points.map((point) => point.label),
+    generated.primaryValues.keys,
+  );
+  expect(
+    primary.points.map((point) => point.y),
+    generated.primaryValues.values,
+  );
+  expect(primary.polarStyle.cornerRadius, generated.cornerRadius);
+  expect(primary.polarStyle.cornerRadiusMode, generated.cornerRadiusMode);
+  expect(primary.polarStyle.opacity, generated.opacity);
+  expect(primary.selectionStyle.effect, generated.selectionEffect);
+  expect(primary.selectionStyle.liftScale, generated.selectionScale);
+  expect(primary.selectionStyle.liftOffset, generated.selectionOffset);
+
+  final baseTheme = switch (generated.theme) {
+    PolarShowcaseThemeKind.light => ChartTheme.light,
+    PolarShowcaseThemeKind.dark => ChartTheme.dark,
+    PolarShowcaseThemeKind.corporate => ChartTheme.corporateBlue,
+    PolarShowcaseThemeKind.vibrant => ChartTheme.vibrant,
+    PolarShowcaseThemeKind.minimal => ChartTheme.minimal,
+    PolarShowcaseThemeKind.highContrast => ChartTheme.highContrast,
+    PolarShowcaseThemeKind.colorblind => ChartTheme.colorblindFriendly,
+  };
+  expect(
+    chart.theme?.backgroundColor,
+    generated.canvasColor ?? baseTheme.backgroundColor,
+  );
+  expect(chart.interactionConfig!.tooltip.enabled, generated.showTooltip);
+  expect(
+    chart.interactionConfig!.tooltip.triggerMode,
+    generated.tooltipTrigger,
+  );
+}
+
+Map<PolarShowcasePresentationKind, int> _firstSeedForEveryPresentation() {
+  final seeds = <PolarShowcasePresentationKind, int>{};
+  for (var seed = 0; seed < 1000; seed++) {
+    final presentation = PolarShowcaseRandomizer.generate(seed).presentation;
+    seeds.putIfAbsent(presentation, () => seed);
+    if (seeds.length == PolarShowcasePresentationKind.values.length) break;
+  }
+  return seeds;
 }
