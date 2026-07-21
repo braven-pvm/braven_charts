@@ -12,6 +12,8 @@ import 'package:braven_charts/src/models/candlestick_chart_series.dart';
 import 'package:braven_charts/src/models/candlestick_data_point.dart';
 import 'package:braven_charts/src/models/chart_selection_result.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
+import 'package:braven_charts/src/models/range_area_chart_series.dart';
+import 'package:braven_charts/src/models/range_area_data_point.dart';
 import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
@@ -405,6 +407,93 @@ void main() {
         await tester.pump();
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'price', pointIndex: 1),
+        });
+      },
+    );
+
+    testWidgets(
+      'range area keyboard navigation skips gaps and announces both bounds',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: [
+                    RangeAreaChartSeries(
+                      id: 'expected',
+                      name: 'Expected interval',
+                      unit: '°C',
+                      points: [
+                        RangeAreaDataPoint(
+                          x: 0,
+                          low: 10,
+                          high: 16,
+                          label: 'Monday',
+                        ),
+                        RangeAreaDataPoint.gap(x: 1),
+                        RangeAreaDataPoint(
+                          x: 2,
+                          low: 12,
+                          high: 18,
+                          label: 'Wednesday',
+                        ),
+                      ],
+                    ),
+                    const LineChartSeries(
+                      id: 'observed',
+                      points: [
+                        ChartDataPoint(x: 0, y: 13),
+                        ChartDataPoint(x: 2, y: 15),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'expected', pointIndex: 0),
+        });
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'expected', pointIndex: 2),
+        });
+
+        final semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive range area chart',
+          ),
+        );
+        expect(
+          semantics.properties.value,
+          contains(
+            'Expected interval, Wednesday, Low 12.00 °C, High 18.00 °C, '
+            'Midpoint 15.00 °C, Span 6.00 °C, interval 2 of 2, not selected',
+          ),
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'expected', pointIndex: 2),
         });
       },
     );

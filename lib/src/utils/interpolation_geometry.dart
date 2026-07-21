@@ -7,6 +7,116 @@ import '../models/chart_series.dart';
 
 typedef CoordinateGetter<T> = double Function(T point);
 
+/// One immutable interpolation segment that can be appended in either order.
+///
+/// Range Area uses the reverse form to close its lower boundary without
+/// recomputing monotone or Bezier control points from descending X input.
+sealed class PathInterpolationSegment {
+  const PathInterpolationSegment();
+
+  Offset get start;
+  Offset get end;
+
+  void appendForward(Path path);
+  void appendReverse(Path path);
+  double evaluateYForX(double targetX);
+}
+
+final class LinearPathInterpolationSegment extends PathInterpolationSegment {
+  const LinearPathInterpolationSegment({
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  final Offset start;
+  @override
+  final Offset end;
+
+  @override
+  void appendForward(Path path) => path.lineTo(end.dx, end.dy);
+
+  @override
+  void appendReverse(Path path) => path.lineTo(start.dx, start.dy);
+
+  @override
+  double evaluateYForX(double targetX) =>
+      InterpolationGeometry._linearInterpolate(
+        start.dx,
+        start.dy,
+        end.dx,
+        end.dy,
+        targetX,
+      );
+}
+
+final class SteppedPathInterpolationSegment extends PathInterpolationSegment {
+  const SteppedPathInterpolationSegment({
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  final Offset start;
+  @override
+  final Offset end;
+
+  Offset get corner => Offset(end.dx, start.dy);
+
+  @override
+  void appendForward(Path path) {
+    path.lineTo(corner.dx, corner.dy);
+    path.lineTo(end.dx, end.dy);
+  }
+
+  @override
+  void appendReverse(Path path) {
+    path.lineTo(corner.dx, corner.dy);
+    path.lineTo(start.dx, start.dy);
+  }
+
+  @override
+  double evaluateYForX(double targetX) => start.dy;
+}
+
+final class CubicPathInterpolationSegment extends PathInterpolationSegment {
+  const CubicPathInterpolationSegment(this.cubic);
+
+  final CubicSegment cubic;
+
+  @override
+  Offset get start => Offset(cubic.startX, cubic.startY);
+
+  @override
+  Offset get end => Offset(cubic.endX, cubic.endY);
+
+  CubicSegment get reversed => cubic.reversed();
+
+  @override
+  void appendForward(Path path) => path.cubicTo(
+    cubic.control1X,
+    cubic.control1Y,
+    cubic.control2X,
+    cubic.control2Y,
+    cubic.endX,
+    cubic.endY,
+  );
+
+  @override
+  void appendReverse(Path path) => path.cubicTo(
+    cubic.control2X,
+    cubic.control2Y,
+    cubic.control1X,
+    cubic.control1Y,
+    cubic.startX,
+    cubic.startY,
+  );
+
+  @override
+  double evaluateYForX(double targetX) =>
+      cubic.evaluateY(cubic.solveTForX(targetX));
+}
+
 /// Immutable cubic segment representation shared by rendering and tracking.
 class CubicSegment {
   const CubicSegment({
@@ -28,6 +138,18 @@ class CubicSegment {
   final double control2Y;
   final double endX;
   final double endY;
+
+  /// The exact same cubic traversed from end to start.
+  CubicSegment reversed() => CubicSegment(
+    startX: endX,
+    startY: endY,
+    control1X: control2X,
+    control1Y: control2Y,
+    control2X: control1X,
+    control2Y: control1Y,
+    endX: startX,
+    endY: startY,
+  );
 
   double evaluateX(double t) {
     final omt = 1.0 - t;
@@ -118,6 +240,74 @@ class CubicSegment {
 
 /// Shared interpolation math used by both series rendering and crosshair tracking.
 abstract final class InterpolationGeometry {
+  /// Creates reusable forward/reverse descriptors for an interpolated path.
+  static List<PathInterpolationSegment> segmentsFor<T>({
+    required List<T> points,
+    required LineInterpolation interpolation,
+    required CoordinateGetter<T> getX,
+    required CoordinateGetter<T> getY,
+    int startIndex = 1,
+    int? endIndex,
+    double tension = 0.25,
+  }) {
+    if (points.length < 2) return const [];
+
+    final lastIndex = points.length - 1;
+    final segmentStart = startIndex.clamp(1, lastIndex);
+    final segmentEnd = math.min(endIndex ?? lastIndex, lastIndex);
+    if (segmentStart > segmentEnd) return const [];
+
+    return List<PathInterpolationSegment>.unmodifiable([
+      for (var index = segmentStart - 1; index < segmentEnd; index++)
+        _descriptorFor(
+          points: points,
+          startIndex: index,
+          interpolation: interpolation,
+          getX: getX,
+          getY: getY,
+          tension: tension,
+        ),
+    ]);
+  }
+
+  static PathInterpolationSegment _descriptorFor<T>({
+    required List<T> points,
+    required int startIndex,
+    required LineInterpolation interpolation,
+    required CoordinateGetter<T> getX,
+    required CoordinateGetter<T> getY,
+    required double tension,
+  }) {
+    final start = Offset(getX(points[startIndex]), getY(points[startIndex]));
+    final end = Offset(
+      getX(points[startIndex + 1]),
+      getY(points[startIndex + 1]),
+    );
+    return switch (interpolation) {
+      LineInterpolation.linear => LinearPathInterpolationSegment(
+        start: start,
+        end: end,
+      ),
+      LineInterpolation.stepped => SteppedPathInterpolationSegment(
+        start: start,
+        end: end,
+      ),
+      LineInterpolation.bezier || LineInterpolation.monotone => () {
+        final cubic = cubicSegmentFor(
+          points: points,
+          startIndex: startIndex,
+          interpolation: interpolation,
+          getX: getX,
+          getY: getY,
+          tension: tension,
+        );
+        return cubic == null
+            ? LinearPathInterpolationSegment(start: start, end: end)
+            : CubicPathInterpolationSegment(cubic);
+      }(),
+    };
+  }
+
   static void addPathSegments<T>({
     required Path path,
     required List<T> points,

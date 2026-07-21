@@ -13,6 +13,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Candlestick Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
 
+[**Open Range Area Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=range-area-charts)
+
 [**Open Tracking & Value Display directly →**](https://braven-pvm.github.io/braven_charts/?page=value-summary)
 
 [**Open Donut Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
@@ -41,10 +43,12 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Start with a native-rendered nine-family sampler, then compare a readable multi-axis session profile, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
-| Chart Types | Choose between line, area, bar, scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
+| Gallery | Start with a native-rendered ten-family sampler, then compare a readable multi-axis session profile, three native Range Area compositions, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
+| Chart Types | Choose between line, area, Range Area, bar, scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
 | Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; use Synchronized's full-distance navigator across three independent plots; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; use Forecast's full-time-domain navigator; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
+| Range Area Charts | Compare temperature, seasonal, confidence, nested forecast fan, volatility, and stepped-gap intervals; vary count and breadth; configure fill, boundaries, labels, tracking, summaries, and motion; inspect every preset in Chart/Data/Split/Source |
+| Technical Indicators | Compose a native 20-session Range Area volatility envelope with Candlestick and Line overlays, synchronized volume/MACD/momentum panes, and one shared navigator |
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source; use Categories' snapped navigator across a dense categorical domain |
 | Scatter Charts | Compare fixed and point-styled marks, unsorted and stress datasets, interaction states, area-correct bubbles, continuous and piecewise colour scales, and opacity encodings; use Correlation's binned-distribution navigator without reordering its raw points; inspect the same values in Chart/Data/Split/Source modes |
 | Candlestick Charts | Explore typed OHLC rendering, elapsed and ordinal spacing, mixed analytical overlays, live latest-candle revision, dense-data grouping, and synchronized price/volume panes controlled by the public Cartesian navigator |
@@ -105,10 +109,10 @@ bar.
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
 also be captured from Line Charts, Area Charts, Bar Charts, Scatter Charts,
-Candlestick Charts, Pie Charts, Donut Charts, Concentric Donut, Polar Column,
-Tracking & Value Display, Multi-Axis, Live Stream, Annotations, and Loading
-States to show path motion, workbench composition, radial rendering,
-categorical composition, the interaction engine, and application states in
+Range Area Charts, Candlestick Charts, Pie Charts, Donut Charts, Concentric
+Donut, Polar Column, Tracking & Value Display, Multi-Axis, Live Stream,
+Annotations, and Loading States to show path motion, workbench composition,
+radial rendering, categorical composition, the interaction engine, and application states in
 more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
@@ -124,3 +128,5 @@ For axis-based cyclical magnitude, see
 [Polar Column and Rose charts](../doc/polar_column_charts.md).
 For path-series motion, streaming boundaries, and the Line/Area workbench, see
 [Line and Area charts](../doc/line_area_charts.md).
+For paired low/high intervals, nested bands, gaps, typed tracking, and portable
+surfaces, see [Range Area charts](../doc/range_area_charts.md).

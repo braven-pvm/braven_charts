@@ -27,12 +27,16 @@ import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
+import '../models/path_animation_style.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_data_point.dart';
+import '../models/range_area_style.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
@@ -45,6 +49,7 @@ import '../theming/components/axis_style.dart';
 import '../theming/components/candlestick_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
+import '../theming/components/range_area_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../theming/components/series_theme.dart' as series_theme;
 import '../theming/components/typography_theme.dart';
@@ -298,6 +303,7 @@ class _ChartDartEmitter {
       LineChartSeries() => 'LineChartSeries',
       ScatterChartSeries() => 'ScatterChartSeries',
       AreaChartSeries() => 'AreaChartSeries',
+      RangeAreaChartSeries() => 'RangeAreaChartSeries',
       BarChartSeries() => 'BarChartSeries',
       PieChartSeries() => 'PieChartSeries',
       DonutChartSeries() => 'DonutChartSeries',
@@ -322,7 +328,8 @@ class _ChartDartEmitter {
         );
       }
       if (series is! PolarColumnChartSeries &&
-          series is! CandlestickChartSeries) {
+          series is! CandlestickChartSeries &&
+          series is! RangeAreaChartSeries) {
         _valueIf(
           writer,
           'isXOrdered',
@@ -342,6 +349,8 @@ class _ChartDartEmitter {
           _emitLineOptions(writer, series);
         case AreaChartSeries():
           _emitAreaOptions(writer, series);
+        case RangeAreaChartSeries():
+          _emitRangeAreaOptions(writer, series);
         case ScatterChartSeries():
           _numberIf(writer, 'markerRadius', series.markerRadius, 5);
           _enumIf(
@@ -442,6 +451,10 @@ class _ChartDartEmitter {
     int seriesIndex,
     int pointIndex,
   ) {
+    if (point is RangeAreaDataPoint) {
+      _emitRangeAreaPoint(writer, point);
+      return;
+    }
     if (point is CandlestickDataPoint) {
       _emitCandlestickPoint(writer, point);
       return;
@@ -465,6 +478,43 @@ class _ChartDartEmitter {
         _emitSegmentStyle(writer, point.segmentStyle!);
       }
       if (point.pointStyle != null) {
+        _emitPointStyle(writer, point.pointStyle!);
+      }
+      if (point.metadata != null && point.metadata!.isNotEmpty) {
+        writer.namedArgument('metadata', _dynamicLiteral(point.metadata!));
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitRangeAreaPoint(DartSourceWriter writer, RangeAreaDataPoint point) {
+    writer.writeLine(
+      point.isGap ? 'RangeAreaDataPoint.gap(' : 'RangeAreaDataPoint(',
+    );
+    writer.indented(() {
+      writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
+      if (!point.isGap) {
+        writer.namedArgument('low', DartSourceWriter.numberLiteral(point.low!));
+        writer.namedArgument(
+          'high',
+          DartSourceWriter.numberLiteral(point.high!),
+        );
+        _optionalNumber(writer, 'magnitude', point.magnitude);
+        _optionalNumber(writer, 'colorValue', point.colorValue);
+        _optionalNumber(writer, 'opacityValue', point.opacityValue);
+        _optionalString(writer, 'categoryValue', point.categoryValue);
+      }
+      if (point.timestamp != null) {
+        writer.namedArgument(
+          'timestamp',
+          'DateTime.parse(${DartSourceWriter.stringLiteral(point.timestamp!.toIso8601String())})',
+        );
+      }
+      _optionalString(writer, 'label', point.label);
+      if (!point.isGap && point.segmentStyle != null) {
+        _emitSegmentStyle(writer, point.segmentStyle!);
+      }
+      if (!point.isGap && point.pointStyle != null) {
         _emitPointStyle(writer, point.pointStyle!);
       }
       if (point.metadata != null && point.metadata!.isNotEmpty) {
@@ -1522,6 +1572,227 @@ class _ChartDartEmitter {
       });
       writer.writeLine('),');
     }
+  }
+
+  void _emitRangeAreaOptions(
+    DartSourceWriter writer,
+    RangeAreaChartSeries series,
+  ) {
+    _enumIf(
+      writer,
+      'interpolation',
+      'LineInterpolation',
+      series.interpolation.name,
+      defaultName: 'linear',
+    );
+    _numberIf(writer, 'tension', series.tension, .25);
+    _numberIf(writer, 'fillOpacity', series.fillOpacity, .28);
+    if (series.fillGradient case final gradient?) {
+      writer.writeLine('fillGradient: AreaGradient(');
+      writer.indented(() {
+        writer.writeLine('colors: [');
+        writer.indented(() {
+          for (final color in gradient.colors) {
+            writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
+          }
+        });
+        writer.writeLine('],');
+        if (gradient.stops case final stops?) {
+          writer.namedArgument(
+            'stops',
+            '[${stops.map(DartSourceWriter.numberLiteral).join(', ')}]',
+          );
+        }
+        if (options.includeDefaultValues ||
+            gradient.begin != Alignment.topCenter) {
+          writer.namedArgument('begin', _alignmentLiteral(gradient.begin));
+        }
+        if (options.includeDefaultValues ||
+            gradient.end != Alignment.bottomCenter) {
+          writer.namedArgument('end', _alignmentLiteral(gradient.end));
+        }
+      });
+      writer.writeLine('),');
+    }
+    _enumIf(
+      writer,
+      'borderMode',
+      'RangeAreaBorderMode',
+      series.borderMode.name,
+      defaultName: 'boundaries',
+    );
+    _emitRangeAreaBoundaryStyle(
+      writer,
+      'upperBoundaryStyle',
+      series.upperBoundaryStyle,
+    );
+    _emitRangeAreaBoundaryStyle(
+      writer,
+      'lowerBoundaryStyle',
+      series.lowerBoundaryStyle,
+    );
+    _valueIf(writer, 'connectGaps', series.connectGaps, defaultValue: false);
+    _valueIf(
+      writer,
+      'showBoundaryMarkers',
+      series.showBoundaryMarkers,
+      defaultValue: false,
+    );
+    _numberIf(writer, 'markerRadius', series.markerRadius, 3);
+    _emitRangeAreaLabelConfig(writer, series.labelConfig);
+    _enumIf(
+      writer,
+      'hitTestMode',
+      'RangeAreaHitTestMode',
+      series.hitTestMode.name,
+      defaultName: 'band',
+    );
+    _emitPathAnimationStyle(writer, series.pathAnimation);
+  }
+
+  void _emitRangeAreaBoundaryStyle(
+    DartSourceWriter writer,
+    String argument,
+    RangeAreaBoundaryStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const RangeAreaBoundaryStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: RangeAreaBoundaryStyle(');
+    writer.indented(() {
+      _valueIf(writer, 'visible', style.visible, defaultValue: true);
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'strokeWidth', style.strokeWidth, 1.5);
+      _optionalNumberList(writer, 'dashPattern', style.dashPattern);
+      _numberIf(writer, 'glowRadius', style.glowRadius, 0);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitRangeAreaLabelConfig(
+    DartSourceWriter writer,
+    RangeAreaLabelConfig config,
+  ) {
+    if (!options.includeDefaultValues &&
+        config == const RangeAreaLabelConfig()) {
+      return;
+    }
+    writer.writeLine('labelConfig: RangeAreaLabelConfig(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'value',
+        'RangeAreaLabelValue',
+        config.value.name,
+        defaultName: 'none',
+      );
+      final labels = config.labels;
+      writer.writeLine('labels: DataPointLabelConfig(');
+      writer.indented(() {
+        _valueIf(writer, 'show', labels.show, defaultValue: false);
+        _enumIf(
+          writer,
+          'position',
+          'DataPointLabelPosition',
+          labels.position.name,
+          defaultName: 'above',
+        );
+        _enumIf(
+          writer,
+          'content',
+          'DataPointLabelContent',
+          labels.content.name,
+          defaultName: 'value',
+        );
+        _numberIf(writer, 'offsetX', labels.offsetX, 0);
+        _numberIf(writer, 'offsetY', labels.offsetY, 0);
+        _numberIf(writer, 'markerGap', labels.markerGap, 4);
+        _enumIf(
+          writer,
+          'collisionPolicy',
+          'DataPointLabelCollisionPolicy',
+          labels.collisionPolicy.name,
+          defaultName: 'none',
+        );
+        _numberIf(writer, 'collisionPadding', labels.collisionPadding, 2);
+        _valueIf(
+          writer,
+          'plotEdgeAware',
+          labels.plotEdgeAware,
+          defaultValue: true,
+        );
+        _optionalColor(writer, 'labelColor', labels.labelColor);
+        _numberIf(writer, 'fontSize', labels.fontSize, 10);
+        _fontWeightIf(writer, 'fontWeight', labels.fontWeight, FontWeight.w600);
+        _valueIf(writer, 'showUnit', labels.showUnit, defaultValue: false);
+        _optionalColor(writer, 'background', labels.background);
+        _numberIf(writer, 'backgroundOpacity', labels.backgroundOpacity, .85);
+      });
+      writer.writeLine('),');
+      _numberIf(writer, 'boundaryGap', config.boundaryGap, 4);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitPathAnimationStyle(
+    DartSourceWriter writer,
+    PathAnimationStyle style,
+  ) {
+    if (!options.includeDefaultValues && style == const PathAnimationStyle()) {
+      return;
+    }
+    writer.writeLine('pathAnimation: PathAnimationStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'entranceMode',
+        'PathEntranceAnimationMode',
+        style.entranceMode.name,
+        defaultName: 'none',
+      );
+      _enumIf(
+        writer,
+        'dataUpdateMode',
+        'PathDataUpdateAnimationMode',
+        style.dataUpdateMode.name,
+        defaultName: 'none',
+      );
+      _emitPathAnimationTiming(writer, 'entranceTiming', style.entranceTiming);
+      _emitPathAnimationTiming(
+        writer,
+        'dataUpdateTiming',
+        style.dataUpdateTiming,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitPathAnimationTiming(
+    DartSourceWriter writer,
+    String argument,
+    PathAnimationTiming timing,
+  ) {
+    if (!options.includeDefaultValues &&
+        timing == const PathAnimationTiming()) {
+      return;
+    }
+    writer.writeLine('$argument: PathAnimationTiming(');
+    writer.indented(() {
+      if (options.includeDefaultValues || timing.delay != Duration.zero) {
+        writer.namedArgument(
+          'delay',
+          'Duration(microseconds: ${timing.delay.inMicroseconds})',
+        );
+      }
+      if (timing.duration case final duration?) {
+        writer.namedArgument(
+          'duration',
+          'Duration(microseconds: ${duration.inMicroseconds})',
+        );
+      }
+    });
+    writer.writeLine('),');
   }
 
   void _emitLineOptions(DartSourceWriter writer, LineChartSeries series) {
@@ -3023,6 +3294,7 @@ class _ChartDartEmitter {
       _emitLegendStyle(writer, theme.legendStyle, force: true);
       _emitPieChartTheme(writer, theme.pieChartTheme);
       _emitCandlestickTheme(writer, theme.candlestickTheme);
+      _emitRangeAreaTheme(writer, theme.rangeAreaTheme);
       writer.namedArgument(
         'focusBorderColor',
         DartSourceWriter.colorLiteral(theme.focusBorderColor),
@@ -3159,6 +3431,45 @@ class _ChartDartEmitter {
       writer.namedArgument(
         'dojiWickColor',
         DartSourceWriter.colorLiteral(theme.dojiWickColor),
+      );
+      writer.namedArgument(
+        'selectionColor',
+        DartSourceWriter.colorLiteral(theme.selectionColor),
+      );
+      writer.namedArgument(
+        'focusColor',
+        DartSourceWriter.colorLiteral(theme.focusColor),
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitRangeAreaTheme(DartSourceWriter writer, RangeAreaTheme theme) {
+    writer.writeLine('rangeAreaTheme: RangeAreaTheme(');
+    writer.indented(() {
+      writer.namedArgument(
+        'fillOpacity',
+        DartSourceWriter.numberLiteral(theme.fillOpacity),
+      );
+      writer.namedArgument(
+        'boundaryOpacity',
+        DartSourceWriter.numberLiteral(theme.boundaryOpacity),
+      );
+      writer.namedArgument(
+        'boundaryWidth',
+        DartSourceWriter.numberLiteral(theme.boundaryWidth),
+      );
+      writer.namedArgument(
+        'markerFillColor',
+        DartSourceWriter.colorLiteral(theme.markerFillColor),
+      );
+      writer.namedArgument(
+        'markerStrokeColor',
+        DartSourceWriter.colorLiteral(theme.markerStrokeColor),
+      );
+      writer.namedArgument(
+        'markerStrokeWidth',
+        DartSourceWriter.numberLiteral(theme.markerStrokeWidth),
       );
       writer.namedArgument(
         'selectionColor',

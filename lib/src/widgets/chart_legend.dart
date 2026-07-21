@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../models/chart_series.dart';
 import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
+import '../models/range_area_chart_series.dart';
 import '../rendering/bar_pattern_painter.dart';
 import '../utils/dashed_path.dart';
 
@@ -237,6 +238,17 @@ class _LegendSwatch extends StatelessWidget {
         painter: _CandlestickLegendSwatchPainter(color: color),
       );
     }
+    if (series is RangeAreaChartSeries) {
+      final rangeSeries = series as RangeAreaChartSeries;
+      return CustomPaint(
+        size: const Size(18, 12),
+        painter: _RangeAreaLegendSwatchPainter(
+          color: color,
+          upperDashPattern: rangeSeries.upperBoundaryStyle.dashPattern,
+          lowerDashPattern: rangeSeries.lowerBoundaryStyle.dashPattern,
+        ),
+      );
+    }
     if (series case final BarChartSeries barSeries) {
       return CustomPaint(
         size: const Size(18, 12),
@@ -298,6 +310,57 @@ class _CandlestickLegendSwatchPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CandlestickLegendSwatchPainter oldDelegate) =>
       oldDelegate.color != color;
+}
+
+class _RangeAreaLegendSwatchPainter extends CustomPainter {
+  const _RangeAreaLegendSwatchPainter({
+    required this.color,
+    required this.upperDashPattern,
+    required this.lowerDashPattern,
+  });
+
+  final Color color;
+  final List<double> upperDashPattern;
+  final List<double> lowerDashPattern;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final upperY = size.height * 0.25;
+    final lowerY = size.height * 0.75;
+    canvas.drawRect(
+      Rect.fromLTRB(1, upperY, size.width - 1, lowerY),
+      Paint()..color = color.withValues(alpha: 0.24),
+    );
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(
+      createDashedPath(
+        Path()
+          ..moveTo(1, upperY)
+          ..lineTo(size.width - 1, upperY),
+        upperDashPattern,
+      ),
+      stroke,
+    );
+    canvas.drawPath(
+      createDashedPath(
+        Path()
+          ..moveTo(1, lowerY)
+          ..lineTo(size.width - 1, lowerY),
+        lowerDashPattern,
+      ),
+      stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RangeAreaLegendSwatchPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      !_patternsEqual(oldDelegate.upperDashPattern, upperDashPattern) ||
+      !_patternsEqual(oldDelegate.lowerDashPattern, lowerDashPattern);
 }
 
 class _PathLegendSwatchPainter extends CustomPainter {

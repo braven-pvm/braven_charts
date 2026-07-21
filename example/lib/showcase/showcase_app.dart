@@ -25,6 +25,7 @@ import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/pie_charts_page.dart';
 import 'pages/polar_column_page.dart';
+import 'pages/range_area_charts_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
@@ -299,6 +300,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
   Widget _pageForChartType(String slug) => switch (slug) {
     'line-charts' => const LineChartsPage(),
     'area-charts' => const AreaChartsPage(),
+    'range-area-charts' => const RangeAreaChartsPage(),
     'bar-charts' => const BarLabPage(),
     'scatter-charts' => const ScatterChartsPage(),
     'candlestick-charts' => const CandlestickChartsPage(),

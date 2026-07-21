@@ -48,7 +48,16 @@ void main() {
     );
 
     expect(price.series.whereType<CandlestickChartSeries>(), hasLength(1));
+    expect(price.series.whereType<RangeAreaChartSeries>(), hasLength(1));
     expect(price.series.whereType<LineChartSeries>(), hasLength(2));
+    final volatility = price.series.whereType<RangeAreaChartSeries>().single;
+    expect(volatility.intervals, hasLength(180));
+    expect(volatility.intervals.take(19).every((point) => point.isGap), isTrue);
+    expect(volatility.intervals[19].isGap, isFalse);
+    expect(
+      volatility.intervals[19].low,
+      lessThan(volatility.intervals[19].high!),
+    );
     expect(volume.series.whereType<BarChartSeries>(), hasLength(1));
     expect(macd.series.whereType<BarChartSeries>(), hasLength(1));
     expect(macd.series.whereType<LineChartSeries>(), hasLength(2));
@@ -191,6 +200,45 @@ void main() {
     await tester.tap(volumeToggle);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('financial-volume-chart')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('volatility preset and toggle use one native Range Area series', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byKey(const ValueKey('financial-preset-volatility')));
+    await tester.pumpAndSettle();
+
+    final price = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('financial-price-chart')),
+    );
+    expect(price.series.whereType<CandlestickChartSeries>(), hasLength(1));
+    expect(price.series.whereType<RangeAreaChartSeries>(), hasLength(1));
+    expect(price.series.whereType<LineChartSeries>(), hasLength(1));
+    expect(
+      find.byKey(const ValueKey('financial-volume-chart')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('financial-macd-chart')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('financial-momentum-chart')),
+      findsNothing,
+    );
+
+    final bandToggle = find.descendant(
+      of: find.byKey(const ValueKey('financial-show-volatility-band')),
+      matching: find.byType(SwitchListTile),
+    );
+    await tester.ensureVisible(bandToggle);
+    await tester.tap(bandToggle);
+    await tester.pumpAndSettle();
+
+    final withoutBand = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('financial-price-chart')),
+    );
+    expect(withoutBand.series.whereType<RangeAreaChartSeries>(), isEmpty);
     expect(tester.takeException(), isNull);
   });
 

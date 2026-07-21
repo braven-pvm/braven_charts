@@ -777,6 +777,63 @@ void main() {
       expect(row.overlayCells['volume']?.reference.pointIndex, 0);
     });
 
+    test('projects Range Area low, high, midpoint, span, and gaps', () {
+      final range = RangeAreaChartSeries(
+        id: 'forecast',
+        name: 'Forecast range',
+        unit: '°C',
+        points: [
+          RangeAreaDataPoint(x: 1, low: 8.25, high: 12.75),
+          RangeAreaDataPoint.gap(x: 2, label: 'Missing'),
+        ],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(range)).value,
+        ], xLabel: 'Day'),
+      );
+
+      expect(model.projectionKind, ChartTableProjectionKind.cartesianWide);
+      expect(model.wideRows, hasLength(2));
+      final value = model.wideRows.first.cells['forecast']!;
+      expect(value.yRaw, 10.5);
+      expect(value.yDisplay, '10.50');
+      expect(
+        value.auxiliaryValues[ChartTableAuxiliaryField.rangeLow]?.raw,
+        8.25,
+      );
+      expect(
+        value.auxiliaryValues[ChartTableAuxiliaryField.rangeHigh]?.raw,
+        12.75,
+      );
+      expect(
+        value.auxiliaryValues[ChartTableAuxiliaryField.rangeSpan]?.raw,
+        4.5,
+      );
+      final gap = model.wideRows.last.cells['forecast']!;
+      expect(gap.isValid, isFalse);
+      expect(gap.yDisplay, 'No value');
+      expect(gap.auxiliaryValues, isEmpty);
+
+      final export = ChartTableExporter.csvForDisplayedRows(
+        model,
+        wideRows: model.wideRows.take(1),
+      );
+      expect(export.headers, [
+        '#',
+        'Day',
+        'Forecast range (°C)',
+        'Forecast range low (°C)',
+        'Forecast range high (°C)',
+        'Forecast range span (°C)',
+      ]);
+      expect(
+        export.csv,
+        '#,Day,Forecast range (°C),Forecast range low (°C),Forecast range high (°C),Forecast range span (°C)\r\n'
+        '1,1.0,10.5,8.25,12.75,4.5',
+      );
+    });
+
     test('rejects mixed pie and Cartesian table projections', () {
       final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
       final document = _document([

@@ -51,6 +51,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Range Area route attaches the native review surface', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'range-area-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Range Area Charts'), findsWidgets);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('range-area-chart-temperature')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow showcase uses a drawer for the complete feature list', (
     tester,
   ) async {

@@ -19,6 +19,7 @@ import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
 import '../../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../../models/candlestick_interaction_details.dart';
 import '../../models/interaction_config.dart' show CrosshairSeriesValue;
+import '../../models/range_area_interaction_details.dart';
 
 /// Number of fields declared on [CrosshairSeriesValue] that
 /// [CartesianTrackedSeriesValue.fromCrosshairValue] must copy exhaustively.
@@ -31,7 +32,7 @@ import '../../models/interaction_config.dart' show CrosshairSeriesValue;
 /// assert this constant, so a new field forces a deliberate review of the
 /// copy chain before either test can pass again.
 @visibleForTesting
-const int crosshairSeriesValueFieldCount = 23;
+const int crosshairSeriesValueFieldCount = 24;
 
 /// The interaction source that produced a [CartesianTrackingSnapshot].
 ///
@@ -88,6 +89,7 @@ class CartesianTrackedSeriesValue {
     this.formattedOpacityValue,
     this.opacityLabel,
     this.candlestick,
+    this.rangeArea,
     this.categoryValue,
     this.categoryLabel,
     required this.formattedX,
@@ -131,6 +133,7 @@ class CartesianTrackedSeriesValue {
       formattedOpacityValue: value.formattedOpacityValue,
       opacityLabel: value.opacityLabel,
       candlestick: value.candlestick,
+      rangeArea: value.rangeArea,
       categoryValue: value.categoryValue,
       categoryLabel: value.categoryLabel,
       formattedX: formattedX,
@@ -205,6 +208,9 @@ class CartesianTrackedSeriesValue {
 
   /// Typed OHLC values when this tracked sample is a Candlestick.
   final CandlestickInteractionDetails? candlestick;
+
+  /// Typed low/high values when this tracked sample is a Range Area.
+  final RangeAreaInteractionDetails? rangeArea;
 
   /// Display-ready categorical Scatter value.
   final String? categoryValue;
@@ -297,7 +303,8 @@ class CartesianTrackingSnapshot {
           a.dataPointIndex != b.dataPointIndex ||
           a.isTrend != b.isTrend ||
           a.formattedY != b.formattedY ||
-          a.candlestick?._identityKey != b.candlestick?._identityKey) {
+          a.candlestick?._identityKey != b.candlestick?._identityKey ||
+          a.rangeArea?._identityKey != b.rangeArea?._identityKey) {
         return false;
       }
     }
@@ -311,4 +318,8 @@ extension on CandlestickInteractionDetails {
   /// member of its own, so the snapshot composes one here.
   (DateTime?, double, double, double, double, int) get _identityKey =>
       (timestamp, open, high, low, close, sourceCount);
+}
+
+extension on RangeAreaInteractionDetails {
+  (DateTime?, double, double) get _identityKey => (timestamp, low, high);
 }
