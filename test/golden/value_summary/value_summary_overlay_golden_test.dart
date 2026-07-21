@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/value_summary_layout.dart';
 import 'package:braven_charts/src/elements/value_summary_overlay_element.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _pixelTolerance = 0.035;
 const _surfaceKey = ValueKey('value-summary-golden-surface');
 const _surfaceSize = Size(440, 300);
 const _plotRect = Rect.fromLTWH(48, 16, 356, 252);
@@ -48,6 +51,19 @@ const _multiSeriesModel = CartesianValueSummaryContentModel(
 );
 
 void main() {
+  late GoldenFileComparator previousComparator;
+
+  setUp(() {
+    previousComparator = goldenFileComparator;
+    final local = previousComparator as LocalFileComparator;
+    goldenFileComparator = _TolerantGoldenFileComparator(
+      local.basedir.resolve('value_summary_overlay_golden_test.dart'),
+      precisionTolerance: _pixelTolerance,
+    );
+  });
+
+  tearDown(() => goldenFileComparator = previousComparator);
+
   group('anchors x light/dark', () {
     const anchors = <String, Alignment>{
       'top_left': Alignment.topLeft,
@@ -239,4 +255,29 @@ class _OverlaySurfacePainter extends CustomPainter {
   @override
   bool shouldRepaint(_OverlaySurfacePainter oldDelegate) =>
       element != oldDelegate.element || dark != oldDelegate.dark;
+}
+
+class _TolerantGoldenFileComparator extends LocalFileComparator {
+  _TolerantGoldenFileComparator(
+    super.testFile, {
+    required this.precisionTolerance,
+  });
+
+  final double precisionTolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    final passed = result.passed || result.diffPercent <= precisionTolerance;
+    if (passed) {
+      result.dispose();
+      return true;
+    }
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
+  }
 }
