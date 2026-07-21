@@ -91,6 +91,12 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   FontWeight _textWeight = FontWeight.w500;
   bool _textWeightOverridden = false;
 
+  /// The row-text color dimension. Unlike the surface palettes there is no
+  /// "none" state — a cleared text color would be nonsense — so the clear
+  /// swatch means automatic, matching the annotation dialogs: null keeps
+  /// the theme base color flowing through the row-text override.
+  Color? _textColor;
+
   /// The weight choices the annotation dialog offers, in the same order.
   static const _textWeightChoices = <(FontWeight, String)>[
     (FontWeight.w300, 'Light'),
@@ -153,20 +159,37 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   /// Builds the row-text override for one of the two text fields.
   ///
   /// Untouched controls keep the field on [ChartStyleValue.inherit]. The
-  /// first touch of either the Text size slider or the Text weight selector
-  /// promotes BOTH `textStyle` and `labelStyle` to one explicit override
-  /// built from the theme preset's corresponding base style, so the
-  /// untouched dimension — and the base color — still comes from the theme.
-  /// Size then weight compose into a single override carrying both.
+  /// first touch of the Text color palette, the Text size slider, or the
+  /// Text weight selector promotes BOTH `textStyle` and `labelStyle` to one
+  /// explicit override built from the theme preset's corresponding base
+  /// style, so every untouched dimension still comes from the theme
+  /// ([TextStyle.copyWith] skips null arguments). Color, size, and weight
+  /// compose into a single override; clearing the palette drops only the
+  /// color dimension back onto the theme base.
   ChartStyleValue<TextStyle> _rowTextOverride(TextStyle base) =>
-      _textSizeOverridden || _textWeightOverridden
+      _textColor != null || _textSizeOverridden || _textWeightOverridden
       ? ChartStyleValue.value(
           base.copyWith(
+            color: _textColor,
             fontSize: _textSizeOverridden ? _textSize : null,
             fontWeight: _textWeightOverridden ? _textWeight : null,
           ),
         )
       : const ChartStyleValue.inherit();
+
+  /// The row-text dimensions currently composed onto the theme base, in the
+  /// order the controls appear. Empty means both fields inherit.
+  List<String> get _overriddenRowTextDimensions => [
+    if (_textColor != null) 'color',
+    if (_textSizeOverridden) 'size',
+    if (_textWeightOverridden) 'weight',
+  ];
+
+  static String _joinDimensions(List<String> dims) => switch (dims) {
+    [final only] => only,
+    [final first, final second] => '$first and $second',
+    _ => '${dims.sublist(0, dims.length - 1).join(', ')} and ${dims.last}',
+  };
 
   CartesianValueSummaryStyle get _summaryStyle => CartesianValueSummaryStyle(
     backgroundColor: _backgroundColor,
@@ -269,6 +292,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       _textSizeOverridden = false;
       _textWeight = FontWeight.w500;
       _textWeightOverridden = false;
+      _textColor = null;
     });
   }
 
@@ -1054,6 +1078,17 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             onChanged: (color) =>
                 setState(() => _accentColor = _styleValueFor(color)),
           ),
+          PaletteColorOption(
+            label: 'Text color',
+            subtitle: _textColor == null
+                ? 'Automatic — the theme row color flows through'
+                : 'Composed into the row-text override; clear returns '
+                      'to the theme color',
+            keyPrefix: 'value-summary-text-color',
+            value: _textColor,
+            customColorFallback: _textColor,
+            onChanged: (color) => setState(() => _textColor = color),
+          ),
           SliderOption(
             key: const ValueKey('value-summary-text-size'),
             label: 'Text size',
@@ -1097,13 +1132,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            _textSizeOverridden || _textWeightOverridden
-                ? 'ChartStyleValue.value() — the theme value and label '
-                      'styles with your size and weight composed on top. '
-                      'The title stays theme-driven.'
-                : 'ChartStyleValue.inherit() — the theme resolves the row '
-                      'text. Touch either control to override value and '
-                      'label rows together.',
+            switch (_overriddenRowTextDimensions) {
+              [] =>
+                'ChartStyleValue.inherit() — the theme resolves the row '
+                    'text. Touch the color palette or either control to '
+                    'override value and label rows together.',
+              final dims =>
+                'ChartStyleValue.value() — the theme value and label '
+                    'styles with your ${_joinDimensions(dims)} composed '
+                    'on top. The title stays theme-driven.',
+            },
             style: TextStyle(
               fontSize: 10,
               color: Theme.of(context).hintColor.withValues(alpha: 0.7),

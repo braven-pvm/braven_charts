@@ -649,6 +649,90 @@ void main() {
     await tester.pumpAndSettle();
     expect(style().textStyle.isInherit, isTrue);
     expect(style().labelStyle.isInherit, isTrue);
+
+    // A text-color pick promotes both fields the same way: the theme base
+    // plus the chosen color, with the untouched size and weight dimensions
+    // still coming from the theme.
+    final tealSwatch = find.byKey(
+      ValueKey('value-summary-text-color-${Colors.teal.toARGB32()}'),
+    );
+    await revealOption(tester, tealSwatch);
+    await tester.tap(tealSwatch);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(color: Colors.teal),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(color: Colors.teal),
+      ),
+    );
+
+    // Color and size compose into ONE override per field.
+    await revealOption(tester, sizeSlider);
+    tester.widget<SliderOption>(sizeSlider).onChanged(13);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(color: Colors.teal, fontSize: 13),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(color: Colors.teal, fontSize: 13),
+      ),
+    );
+
+    // Clearing the palette removes only the color dimension — the size
+    // override survives on the theme base color. For text, clear means
+    // BACK TO THEME (the annotation dialogs' automatic), never a
+    // color-less style.
+    final textColorClear = find.byKey(
+      const ValueKey('value-summary-text-color-clear'),
+    );
+    await revealOption(tester, textColorClear);
+    await tester.tap(textColorClear);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(fontSize: 13),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(fontSize: 13),
+      ),
+    );
+
+    // Reset clears the color dimension along with everything else.
+    await revealOption(tester, tealSwatch);
+    await tester.tap(tealSwatch);
+    await tester.pumpAndSettle();
+    await revealOption(tester, reset);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(style().textStyle.isInherit, isTrue);
+    expect(style().labelStyle.isInherit, isTrue);
     expect(tester.takeException(), isNull);
   });
 
