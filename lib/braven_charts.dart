@@ -175,6 +175,9 @@ export 'src/rendering/multi_axis_painter.dart';
 export 'src/source/chart_dart_source_generator.dart';
 export 'src/source/chart_source_models.dart';
 export 'src/source/chart_source_view.dart';
+// The themed Dart renderer the Source tab is built from — reusable anywhere a
+// surface shows Dart (lives in src/widgets, exported here next to its caller).
+export 'src/widgets/chart_code_block.dart';
 // Statistics
 export 'src/statistics/trend_statistics.dart';
 export 'src/statistics/linear_regression_intervals.dart';

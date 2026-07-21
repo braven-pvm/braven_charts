@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../widgets/chart_code_block.dart';
 import 'chart_source_models.dart';
 
 /// Read-only, selectable Dart source presentation for a generated chart.
@@ -89,7 +90,12 @@ class _ChartSourceViewState extends State<ChartSourceView> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: _SourceCode(source: source.source, wrapLines: _wrapLines),
+          child: ChartCodeBlock(
+            code: source.source,
+            wrapLines: _wrapLines,
+            surfaceKey: const ValueKey('chart-source-dark-window'),
+            codeKey: const ValueKey('chart-source-code'),
+          ),
         ),
       ],
     );
@@ -101,109 +107,6 @@ class _ChartSourceViewState extends State<ChartSourceView> {
     ScaffoldMessenger.maybeOf(
       context,
     )?.showSnackBar(const SnackBar(content: Text('Chart source copied')));
-  }
-}
-
-class _SourceCode extends StatelessWidget {
-  const _SourceCode({required this.source, required this.wrapLines});
-
-  final String source;
-  final bool wrapLines;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final codeStyle = theme.textTheme.bodyMedium?.copyWith(
-      fontFamily: 'monospace',
-      height: 1.55,
-      color: _SourceCodeColors.text,
-    );
-    final lineCount = '\n'.allMatches(source).length + 1;
-    final numberStyle = codeStyle?.copyWith(color: _SourceCodeColors.muted);
-    Widget buildCode({required bool flexible}) => SelectionArea(
-      child: Row(
-        mainAxisSize: flexible ? MainAxisSize.max : MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            excludeSemantics: true,
-            child: Container(
-              padding: const EdgeInsets.only(right: 16),
-              decoration: const BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: _SourceCodeColors.divider),
-                ),
-              ),
-              child: Text(
-                [
-                  for (var line = 1; line <= lineCount; line++) '$line',
-                ].join('\n'),
-                textAlign: TextAlign.right,
-                style: numberStyle,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          if (flexible)
-            Expanded(
-              child: Text.rich(
-                _highlightDart(source),
-                key: const ValueKey('chart-source-code'),
-                style: codeStyle,
-                softWrap: true,
-              ),
-            )
-          else
-            Text.rich(
-              _highlightDart(source),
-              key: const ValueKey('chart-source-code'),
-              style: codeStyle,
-              softWrap: false,
-            ),
-        ],
-      ),
-    );
-    return Theme(
-      data: theme.copyWith(
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: _SourceCodeColors.keyword,
-          selectionColor: _SourceCodeColors.selection,
-          selectionHandleColor: _SourceCodeColors.keyword,
-        ),
-        scrollbarTheme: const ScrollbarThemeData(
-          thumbColor: WidgetStatePropertyAll(_SourceCodeColors.scrollbar),
-          trackColor: WidgetStatePropertyAll(_SourceCodeColors.background),
-          trackBorderColor: WidgetStatePropertyAll(_SourceCodeColors.divider),
-        ),
-      ),
-      child: ColoredBox(
-        key: const ValueKey('chart-source-dark-window'),
-        color: _SourceCodeColors.background,
-        child: LayoutBuilder(
-          builder: (context, constraints) => Scrollbar(
-            child: SingleChildScrollView(
-              child: wrapLines
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: buildCode(flexible: true),
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: constraints.maxWidth,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: buildCode(flexible: false),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -230,58 +133,4 @@ class _SourceStatus extends StatelessWidget {
       ],
     ),
   );
-}
-
-TextSpan _highlightDart(String source) {
-  final pattern = RegExp(
-    r"//[^\n]*|'(?:\\.|[^'\\])*'|\b(?:abstract|as|assert|async|await|break|case|class|const|continue|default|do|else|enum|extends|factory|false|final|for|if|implements|import|in|is|late|mixin|new|null|on|required|return|sealed|static|super|switch|this|throw|true|try|typedef|var|void|while|with|yield)\b|\b\d+(?:\.\d+)?\b|\b[A-Z][A-Za-z0-9_]*\b",
-  );
-  final spans = <InlineSpan>[];
-  var cursor = 0;
-  for (final match in pattern.allMatches(source)) {
-    if (match.start > cursor) {
-      spans.add(TextSpan(text: source.substring(cursor, match.start)));
-    }
-    final token = match.group(0)!;
-    final color = token.startsWith('//')
-        ? _SourceCodeColors.comment
-        : token.startsWith("'")
-        ? _SourceCodeColors.string
-        : RegExp(r'^\d').hasMatch(token)
-        ? _SourceCodeColors.number
-        : RegExp(r'^[A-Z]').hasMatch(token)
-        ? _SourceCodeColors.type
-        : _SourceCodeColors.keyword;
-    spans.add(
-      TextSpan(
-        text: token,
-        style: TextStyle(
-          color: color,
-          fontStyle: token.startsWith('//') ? FontStyle.italic : null,
-          fontWeight: RegExp(r'^[A-Z]').hasMatch(token)
-              ? FontWeight.w600
-              : null,
-        ),
-      ),
-    );
-    cursor = match.end;
-  }
-  if (cursor < source.length) {
-    spans.add(TextSpan(text: source.substring(cursor)));
-  }
-  return TextSpan(children: spans);
-}
-
-abstract final class _SourceCodeColors {
-  static const background = Color(0xFF0F172A);
-  static const text = Color(0xFFE5E7EB);
-  static const muted = Color(0xFF94A3B8);
-  static const comment = Color(0xFF94A3B8);
-  static const keyword = Color(0xFF7DD3FC);
-  static const type = Color(0xFFC4B5FD);
-  static const string = Color(0xFFF0ABFC);
-  static const number = Color(0xFFFBBF24);
-  static const divider = Color(0xFF64748B);
-  static const scrollbar = Color(0xFF64748B);
-  static const selection = Color(0xFF1D4ED8);
 }
