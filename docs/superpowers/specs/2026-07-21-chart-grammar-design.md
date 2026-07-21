@@ -208,6 +208,17 @@ becomes the single source of truth the hand-written mirrors converge on.
   scatter color/size/opacity/category (the only family with scale-driven
   channels today). Channels simply do not exist on marks that cannot honor
   them: the coord×geom validity matrix is enforced by the type system.
+- **Marks get NO `copyWith` in V1** (owner decision, Task 9). A `copyWith`
+  would make marks config-shaped; enforcement
+  (`test/meta/surface_enforcement_test.dart`) reads "instantiable, public,
+  has a `copyWith`" as "must carry `@chartSurface`", and the emitter would
+  then generate a fluent verb surface over the grammar layer — a SECOND
+  vocabulary for the same objects, `LineMark.withStrokeWidth` sitting beside
+  `LineChartSeries.withStrokeWidth`. Marks are small: modify one by
+  constructing a new one, or author through the chained facade (Task 12).
+  The same reasoning applies to `PlotSpec`, `Channel`, `CategoryChannel` and
+  `LoweredPlot`; none of them has a `copyWith`, and `enforcement missing=0`
+  holds with the grammar layer exported from the core barrel.
 - Multiple marks over one data list lower to multi-series composition on the
   multi-axis path exclusively (the legacy single-axis path is never
   targeted). Each mark accepts `axis:`/`yAxisId:` hints that lower onto
