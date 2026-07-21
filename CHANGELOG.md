@@ -35,6 +35,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated from the same annotated model that drives the fluent layer, so the
   AI tool schema and the config builder are derived from one source, guarded
   by a bidirectional drift gate in both directions.
+- Grammar-chain source generation, and a Config / Grammar toggle in the
+  Workbench Source pane. `ChartGrammarSourceGenerator` reads a captured chart
+  document and writes the `BravenChart.of(rows).x(...).geomLine(...).build()`
+  chain that rebuilds it, over a SYNTHESISED row class — one field for the
+  shared x, one per measure, named after each series, with candlesticks
+  contributing open/high/low/close and scatter channels their own fields.
+  Fidelity is proven rather than asserted: before emitting anything the
+  generator lowers the spec it is about to write and compares the resulting
+  series, annotations and axes to the ones the document hydrated to, so a
+  chain that would render a different chart is refused with a named diagnostic
+  and no code. Non-Cartesian families, misaligned x domains, partially
+  populated scatter channels, mixed bar orientations, annotations other than
+  `TrendAnnotation` and chart-level options `BravenPlot` does not forward are
+  each diagnosed by name; runtime bindings and over-budget data are warned
+  about and emitted, exactly as the config form does. Both forms read the same
+  captured document, so switching never re-extracts the chart, and the config
+  form's output, keys and tests are byte-for-byte unchanged.
+  `BravenChartWorkbench` gains `grammarSourceOptions` and `initialSourceForm`.
 - Typed grammar-of-graphics authoring layer in the core barrel: `PlotSpec<T>`,
   the sealed `Mark<T>` hierarchy (`LineMark`, `AreaMark`, `BarMark`,
   `ScatterMark`, `CandlestickMark`, `TrendMark`), `Channel<T>` and

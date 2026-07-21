@@ -404,6 +404,143 @@ swaps the widget without changing the picture.
 
 ---
 
+## Grammar source emission
+
+The Workbench Source pane reads one chart in **two forms**, chosen with the
+`Config` / `Grammar` toggle:
+
+| Form | What it writes | Generator |
+| --- | --- | --- |
+| **Config** | The `BravenChartPlus` this chart *is* | `ChartDartSourceGenerator` |
+| **Grammar** | A `BravenChart.of(rows)…` chain that *rebuilds* it | `ChartGrammarSourceGenerator` |
+
+Both read the **same captured chart document**, so switching form never
+re-extracts the chart — the pane re-emits from the snapshot it already holds,
+and "stale" keeps meaning "the chart moved on since this snapshot". Both
+render through `ChartCodeBlock`, and the config form keeps its original
+`chart-source-code` / `chart-source-dark-window` keys unchanged.
+
+The toggle is a **package** feature, not a showcase one: every
+`BravenChartWorkbench` consumer gets both forms on every chart.
+`grammarSourceOptions` names what the chain is called
+(`ChartGrammarSourceOptions(variableName:, rowClassName:, rowsVariableName:)`),
+and `initialSourceForm` chooses which form the pane opens on.
+
+### The synthesised row type — the caveat that matters
+
+A chart document stores **materialised points per series**. The grammar takes
+the opposite shape: **one row list plus one total accessor per channel**. The
+two cannot be bridged by renaming fields, so the generator **synthesises a row
+class**:
+
+```dart
+class GrammarRow {
+  const GrammarRow({
+    required this.x,
+    required this.power,
+    required this.heartRate,
+  });
+
+  final double x;
+  final double power;
+  final double heartRate;
+}
+
+final List<GrammarRow> rows = <GrammarRow>[
+  GrammarRow(x: 0.0, power: 168.0, heartRate: 112.0),
+  // …
+];
+
+final chart = BravenChart.of(rows)
+    .x((row) => row.x, label: 'Elapsed')
+    .yAxis(YAxisConfig.withId(id: 'watts', position: YAxisPosition.left, …))
+    .yAxis(YAxisConfig.withId(id: 'bpm', position: YAxisPosition.right, …))
+    .geomArea(id: 'power', y: (row) => row.power, name: 'Power', …)
+    .geomLine(id: 'hr', y: (row) => row.heartRate, name: 'Heart rate', …)
+    .theme(ChartTheme.light)
+    .build();
+```
+
+Field names derive from each series' `name` (falling back to its `id`),
+lower-camel-cased into a valid, non-keyword Dart identifier and de-duplicated
+with a numeric suffix. A candlestick series contributes
+`<base>Open` / `<base>High` / `<base>Low` / `<base>Close` (plus
+`<base>Timestamp` when its candles carry one); a scatter series contributes
+`<base>Size` / `<base>Color` / `<base>Opacity` / `<base>Category` for whichever
+channels it populates.
+
+**`GrammarRow` is not — and can never be — your row type.** A document keeps
+the numbers a chart was built from, never the objects they were read out of.
+That is the honest limit of this direction, and it is why the Chart Grammar
+showcase page keeps its hand-written *Authoring code* card: that card shows the
+real `GrammarSample` authoring, and the contrast with the generated chain is
+the point.
+
+Every synthesised field is **non-nullable and required**. That follows from the
+x-alignment rule below rather than being a style choice: accessors are
+`num Function(T)`, so they are total, so a field that has no value at some row
+cannot exist.
+
+### The x-alignment rule
+
+**Every series must have exactly one point at every x of one shared, ordered
+domain**, compared element-wise for equality against the first series.
+
+`BravenChart.of(rows)` hands *every* mark the same rows and reads each through
+a total accessor. A "union of x values with nullable fields" form is therefore
+not expressible: if a series has no point at some x, its accessor still has to
+return a `num`, and inventing one would draw a chart the document does not
+describe. Anything else is diagnosed, naming the series that disagree. (`NaN`
+never compares equal, so a non-finite x — the way a gap is expressed — is
+diagnosed rather than silently treated as a shared row key.)
+
+### Fidelity: the round-trip proof
+
+Before emitting anything, the generator **builds the spec it is about to
+write**, lowers it with the real `PlotSpecLowering`, and compares the resulting
+`ChartSeries`, `ChartAnnotation`s and axis configs to the ones the document
+hydrated to. So *"a chain was emitted"* already means *"this chain rebuilds
+this chart"* — the emitter never has to enumerate every option a V1 mark
+happens not to carry.
+
+### Fidelity matrix
+
+A chain that renders a **different** chart is worse than no chain, so nothing
+is degraded silently. Each unsupported case emits a **named diagnostic and no
+code**, in the same comment-header style the config emitter uses for
+runtime-only bindings.
+
+| Case | Outcome |
+| --- | --- |
+| A non-Cartesian family (Pie, Donut, Concentric, Polar, Range Area) | **Blocked**, naming each series and its family: the grammar layer is Cartesian-only in V1 (line, area, bar, scatter, candlestick). |
+| Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
+| A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
+| Mixed bar orientations | **Blocked**: `.transposed()` is a whole-chart operation, so a transposed chain may contain horizontal bar marks only. |
+| An annotation other than `TrendAnnotation` | **Blocked and LISTED**, never dropped. `TrendAnnotation` maps to `.trend(of:)`. |
+| A chart-level option `BravenPlot` does not forward — title, subtitle, `showLegend`, `legendStyle`, grid, `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, `axisSwapMode`, `normalizationMode`, width/height, background | **Blocked**, naming each one. `BravenPlot` passes only series, annotations, the X axis, interaction and the theme. |
+| Anything else the reconstructed chain would not reproduce exactly | **Blocked** by the round-trip proof, naming the series, annotation or axis that differs. |
+| A runtime interaction binding | **Emitted with a warning**, exactly as the config form does. |
+| Data above `maxInlinePoints` | **Emitted with a placeholder row list and a warning**, exactly as the config form does. |
+| A host-owned theme reference | **Emitted without `.theme(...)`**, with a warning naming the reference. |
+
+`test/unit/source/chart_grammar_source_generator_test.dart` is the evidence:
+seven shapes (single line, shared-x multi-series, multi-axis, scatter with
+channels, candlestick, transposed bars, trend) each **compile** through
+`dart format` + `dart analyze` and each **rebuild a document equal to the
+original**, and one test per matrix row asserts the diagnostic text.
+
+### Sharing one emitter
+
+The chain hands the same `XAxisConfig`, `YAxisConfig`, `ChartTheme`,
+`InteractionConfig` and scatter encodings to its verbs that `BravenChartPlus`
+takes. Rather than fork a second set of literal writers that would drift, the
+config emitter lives in a non-exported `chart_config_dart_emitter.dart` and
+exposes a narrow seam of **field-level** writers (never the enclosing
+`name: Type(` header, which differs between the forms). Its own output is
+unchanged.
+
+---
+
 ## Not in V1
 
 Deferred deliberately, so the V1 mark list is closed:
