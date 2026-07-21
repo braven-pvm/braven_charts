@@ -17,6 +17,7 @@ import 'pages/cartesian_chart_type_pages.dart';
 import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/gallery_page.dart';
+import 'pages/technical_indicators_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
@@ -107,6 +108,12 @@ class NavDestination {
 
   bool get isNested => parentSlug != null;
 
+  String? get navigationSection => switch (parentSlug) {
+    'chart-types' => 'CHART TYPE GUIDES',
+    'financial' => 'FINANCIAL',
+    _ => null,
+  };
+
   bool matchesSlug(String? requestedSlug) =>
       slug == requestedSlug || routeAliases.contains(requestedSlug);
 
@@ -163,18 +170,36 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.show_chart,
       page: ChartTypesPage(onOpenChartType: _selectSlug),
     ),
-    ...showcaseChartTypes.map(
-      (chartType) => NavDestination(
-        label: '${chartType.label} Charts',
-        icon: chartType.icon,
-        selectedIcon: chartType.icon,
-        page: _pageForChartType(chartType.slug),
-        routeSlug: chartType.slug,
-        routeAliases: chartType.slug == 'bar-charts'
-            ? const ['bar-lab']
-            : const [],
-        parentSlug: 'chart-types',
-      ),
+    ...showcaseChartTypes
+        .where((chartType) => chartType.slug != 'candlestick-charts')
+        .map(
+          (chartType) => NavDestination(
+            label: '${chartType.label} Charts',
+            icon: chartType.icon,
+            selectedIcon: chartType.icon,
+            page: _pageForChartType(chartType.slug),
+            routeSlug: chartType.slug,
+            routeAliases: chartType.slug == 'bar-charts'
+                ? const ['bar-lab']
+                : const [],
+            parentSlug: 'chart-types',
+          ),
+        ),
+    const NavDestination(
+      label: 'Candlestick Charts',
+      icon: Icons.candlestick_chart_outlined,
+      selectedIcon: Icons.candlestick_chart,
+      page: CandlestickChartsPage(),
+      routeSlug: 'candlestick-charts',
+      parentSlug: 'financial',
+    ),
+    const NavDestination(
+      label: 'Technical Indicators',
+      icon: Icons.monitor_heart_outlined,
+      selectedIcon: Icons.monitor_heart,
+      page: TechnicalIndicatorsPage(),
+      routeSlug: 'technical-indicators',
+      parentSlug: 'financial',
     ),
     const NavDestination(
       label: 'Interaction',
@@ -332,6 +357,12 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     if (index >= 0) _selectDestination(index);
   }
 
+  bool _startsNavigationSection(int index) {
+    final section = _destinations[index].navigationSection;
+    if (section == null) return false;
+    return index == 0 || section != _destinations[index - 1].navigationSection;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChartWorkbenchScope(
@@ -420,12 +451,10 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
           ),
           const Divider(),
           for (var index = 0; index < _destinations.length; index++) ...[
-            if (index > 0 &&
-                _destinations[index].isNested &&
-                !_destinations[index - 1].isNested)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(28, 14, 16, 4),
-                child: Text('CHART TYPE GUIDES'),
+            if (_startsNavigationSection(index))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 14, 16, 4),
+                child: Text(_destinations[index].navigationSection!),
               ),
             if (index > 0 &&
                 !_destinations[index].isNested &&
@@ -668,9 +697,14 @@ class _ScrollableNav extends StatelessWidget {
                       ? destinationTile
                       : Tooltip(message: dest.label, child: destinationTile);
                   final startsNestedGroup =
-                      i > 0 && dest.isNested && !destinations[i - 1].isNested;
+                      dest.navigationSection != null &&
+                      (i == 0 ||
+                          dest.navigationSection !=
+                              destinations[i - 1].navigationSection);
                   final endsNestedGroup =
-                      i > 0 && !dest.isNested && destinations[i - 1].isNested;
+                      i > 0 &&
+                      destinations[i - 1].navigationSection != null &&
+                      dest.navigationSection == null;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -678,7 +712,7 @@ class _ScrollableNav extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(24, 14, 12, 4),
                           child: Text(
-                            'CHART TYPE GUIDES',
+                            dest.navigationSection!,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w800,

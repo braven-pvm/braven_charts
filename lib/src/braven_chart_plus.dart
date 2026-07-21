@@ -194,6 +194,7 @@ class BravenChartPlus extends StatefulWidget {
     this.grid,
     this.width,
     this.height,
+    this.axislessPlotInsets = ChartRenderBox.axislessPlotInsets,
     this.backgroundColor = Colors.white,
     this.showDebugInfo = false,
     this.showXScrollbar = false,
@@ -854,6 +855,14 @@ class BravenChartPlus extends StatefulWidget {
   final GridConfig? grid;
   final double? width;
   final double? height;
+
+  /// Insets retained around a Cartesian plot when both axes are hidden.
+  ///
+  /// Defaults to 10 logical pixels on every edge so markers and strokes are
+  /// not clipped. Dense synchronized compositions can remove only the vertical
+  /// insets while preserving horizontal breathing room.
+  final EdgeInsets axislessPlotInsets;
+
   final Color backgroundColor;
   final bool showDebugInfo;
 
@@ -8045,6 +8054,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           primaryYAxisConfig: isNonCartesian
                               ? null
                               : widget.yAxis,
+                          axislessPlotInsets: widget.axislessPlotInsets,
                           theme: widget.theme,
                           tooltipsEnabled:
                               (effectiveInteractionConfig?.enabled ?? true) &&
@@ -8726,6 +8736,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.xAxisConfig,
     this.yAxis,
     this.primaryYAxisConfig,
+    this.axislessPlotInsets = ChartRenderBox.axislessPlotInsets,
     this.theme,
     required this.tooltipsEnabled,
     this.selectedTooltipSeriesId,
@@ -8771,6 +8782,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   /// The NEW [YAxisConfig] type from the widget for multi-axis system integration.
   final YAxisConfig? primaryYAxisConfig;
+  final EdgeInsets axislessPlotInsets;
   final ChartTheme? theme;
 
   /// Grid configuration for controlling grid line visibility and styling.
@@ -8817,6 +8829,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         showYScrollbar: showYScrollbar,
         scrollbarTheme: scrollbarTheme,
         interactionConfig: interactionConfig,
+        axislessInsets: axislessPlotInsets,
         textScaleFactor: textScaleFactor,
         textDirection: textDirection,
         normalizationMode: normalizationMode,
@@ -8857,6 +8870,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
+      ..setAxislessPlotInsets(axislessPlotInsets)
       ..setTheme(theme)
       ..setTooltipsEnabled(tooltipsEnabled)
       ..setSelectedTooltipPoint(
