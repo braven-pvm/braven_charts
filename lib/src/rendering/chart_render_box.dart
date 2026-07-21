@@ -130,6 +130,7 @@ class ChartRenderBox extends RenderBox {
     this.onDataXCursorChanged,
     double textScaleFactor = 1,
     TextDirection textDirection = TextDirection.ltr,
+    EdgeInsets axislessInsets = axislessPlotInsets,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
@@ -138,6 +139,7 @@ class ChartRenderBox extends RenderBox {
        _interactionConfig = interactionConfig,
        _textScaleFactor = textScaleFactor,
        _textDirection = textDirection,
+       _axislessInsets = axislessInsets,
        assert(
          (elements != null) != (elementGenerator != null),
          'Must provide either elements or elementGenerator, but not both',
@@ -589,6 +591,15 @@ class ChartRenderBox extends RenderBox {
   /// Public getter for current coordinate transform.
   /// Returns null if chart hasn't been laid out yet.
   ChartTransform? get transform => _transform;
+
+  EdgeInsets _axislessInsets;
+
+  /// Updates the plot insets used when no visible axes reserve geometry.
+  void setAxislessPlotInsets(EdgeInsets value) {
+    if (_axislessInsets == value) return;
+    _axislessInsets = value;
+    markNeedsLayout();
+  }
 
   /// Restores durable data-space viewport bounds after hydration.
   bool restoreVisibleDataBounds({
@@ -2378,12 +2389,12 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate plot area (reserve space for axes AND scrollbars)
     // Default margins if no axes
-    double leftMargin = axislessPlotInsets.left;
+    double leftMargin = _axislessInsets.left;
     double rightMargin =
-        axislessPlotInsets.right + rightReserved; // Add scrollbar space
-    double topMargin = axislessPlotInsets.top;
+        _axislessInsets.right + rightReserved; // Add scrollbar space
+    double topMargin = _axislessInsets.top;
     double bottomMargin =
-        axislessPlotInsets.bottom + bottomReserved; // Add scrollbar space
+        _axislessInsets.bottom + bottomReserved; // Add scrollbar space
     double xAxisReservedHeight = 50;
 
     // Track right axis width separately for scrollbar positioning
