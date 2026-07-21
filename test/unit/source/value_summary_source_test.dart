@@ -206,8 +206,38 @@ void main() {
       expect(generated.source, contains(expectedBlock));
       expect(generated.source, isNot(contains('presentation:')));
       expect(generated.source, isNot(contains('valuePolicy:')));
+      expect(generated.source, isNot(contains('valueMode:')));
       expect(generated.source, isNot(contains('content:')));
       expect(generated.source, isNot(contains('CartesianValueSummaryStyle')));
+    });
+
+    test('emits a non-default value mode as the enum literal', () {
+      const config = CartesianValueSummaryConfig(
+        enabled: true,
+        valueMode: CartesianValueSummaryValueMode.dataPoints,
+      );
+      final interaction = const InteractionConfig(valueSummary: config);
+      final generated = _generate(interaction);
+
+      const expectedBlock =
+          '    valueSummary: CartesianValueSummaryConfig(\n'
+          '      enabled: true,\n'
+          '      valueMode: CartesianValueSummaryValueMode.dataPoints,\n'
+          '    ),\n';
+      expect(generated.source, contains(expectedBlock));
+      expect(generated.warnings, isEmpty);
+
+      // The document the generator consumed reconstructs the mode.
+      final decoded = ChartInteractionDocumentCodec.decode(
+        _encodeInteraction(interaction),
+      );
+      expect(decoded, isA<ChartArtifactSuccess<InteractionConfig>>());
+      expect(
+        (decoded as ChartArtifactSuccess<InteractionConfig>)
+            .value
+            .valueSummary,
+        config,
+      );
     });
 
     test('emits a non-placement Alignment as a coordinate literal', () {

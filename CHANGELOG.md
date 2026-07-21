@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deterministic `CartesianValueSummaryValuePolicy` precedence chains over
   tracking, selection, pinning, and latest/first visible fallbacks, with
   automatic invalid-pin clearing.
+- `CartesianValueSummaryConfig.valueMode`
+  (`interpolated` default / `dataPoints`): tracked summary rows can snap to
+  the nearest actual data point instead of following the interpolated curve,
+  independent of the crosshair's own interpolation setting. The summary
+  keeps reusing the shared per-frame tracking resolution in every compatible
+  combination; only crosshair interpolation and summary `dataPoints`
+  simultaneously active add one extra memoized resolution per frame.
+  Serialized in artifacts and generated Source when non-default, with a
+  'Value mode' toggle on the showcase page.
 - Family-aware `CartesianValueSummaryContent.automatic()` rows (Line/Area/Bar
   values with grouped context, Scatter encodings, Candlestick OHLC/change/
   direction, per-series sections for mixed charts, optional trend rows) and

@@ -168,6 +168,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('value mode toggle flows into the config and survives preset '
+      'switches', (tester) async {
+    await pumpPage(tester);
+
+    CartesianValueSummaryValueMode valueMode() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+        .interactionConfig!
+        .valueSummary
+        .valueMode;
+
+    // Default: interpolated — the pre-existing curve-tracking behavior, with
+    // the showcase crosshair interpolating so the difference is visible.
+    expect(valueMode(), CartesianValueSummaryValueMode.interpolated);
+    expect(
+      tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .interactionConfig!
+          .crosshair
+          .interpolateValues,
+      isTrue,
+    );
+
+    final segmented = find.byKey(const ValueKey('value-summary-value-mode'));
+    await revealOption(tester, segmented);
+    final dataPointsSegment = find.descendant(
+      of: segmented,
+      matching: find.text('Data points'),
+    );
+    await tester.tap(dataPointsSegment);
+    await tester.pumpAndSettle();
+    expect(valueMode(), CartesianValueSummaryValueMode.dataPoints);
+
+    // The choice is preset-independent: it survives switching presets and
+    // applies to every chart of the synchronized pair.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-multiSeries')),
+    );
+    await tester.pumpAndSettle();
+    expect(valueMode(), CartesianValueSummaryValueMode.dataPoints);
+
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-synchronized')),
+    );
+    await tester.pumpAndSettle();
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList();
+    expect(charts, hasLength(2));
+    for (final chart in charts) {
+      expect(
+        chart.interactionConfig?.valueSummary.valueMode,
+        CartesianValueSummaryValueMode.dataPoints,
+      );
+    }
+
+    // Back to the default segment.
+    await revealOption(tester, segmented);
+    final interpolatedSegment = find.descendant(
+      of: segmented,
+      matching: find.text('Interpolated'),
+    );
+    await tester.tap(interpolatedSegment);
+    await tester.pumpAndSettle();
+    expect(valueMode(), CartesianValueSummaryValueMode.interpolated);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('color palette clear affordance drives the tri-state style', (
     tester,
   ) async {

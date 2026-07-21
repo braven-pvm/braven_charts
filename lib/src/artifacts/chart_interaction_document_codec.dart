@@ -457,6 +457,8 @@ Map<String, Object?> _encodeValueSummary(
 ) => {
   'enabled': value.enabled,
   'valuePolicy': value.valuePolicy.name,
+  if (value.valueMode != CartesianValueSummaryValueMode.interpolated)
+    'valueMode': value.valueMode.name,
   'presentation': _encodeValueSummaryPresentation(value.presentation),
   'content': _encodeValueSummaryContent(
     value.content,
@@ -482,6 +484,10 @@ CartesianValueSummaryConfig _decodeValueSummary(
     'valuePolicy',
     CartesianValueSummaryValuePolicy.values,
   ),
+  // Absent means the default: only non-default modes are encoded.
+  valueMode: map['valueMode'] == null
+      ? CartesianValueSummaryValueMode.interpolated
+      : _enum(map, 'valueMode', CartesianValueSummaryValueMode.values),
   presentation: _decodeValueSummaryPresentation(
     _requiredMap(map, 'presentation'),
   ),

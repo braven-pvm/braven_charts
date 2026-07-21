@@ -52,6 +52,7 @@ const _fullStyle = CartesianValueSummaryStyle(
 const _fullConfig = CartesianValueSummaryConfig(
   enabled: true,
   valuePolicy: CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest,
+  valueMode: CartesianValueSummaryValueMode.dataPoints,
   presentation: CartesianValueSummaryPresentation.annotation(
     placement: ChartOverlayPlacement(
       anchor: Alignment(0.25, -1),
@@ -100,6 +101,7 @@ void main() {
 
       expect(json['enabled'], isTrue);
       expect(json['valuePolicy'], 'pinnedThenTrackingThenLatest');
+      expect(json['valueMode'], 'dataPoints');
       final presentation = Map<String, Object?>.from(
         json['presentation']! as Map,
       );
@@ -208,6 +210,40 @@ void main() {
         roundTrip(packed).labelValueGap,
         const ChartStyleValue<double>.value(22.5),
       );
+    });
+
+    test('omits the default value mode and decodes an absent key to '
+        'interpolated', () {
+      final document = _encode(
+        const InteractionConfig(
+          valueSummary: CartesianValueSummaryConfig(enabled: true),
+        ),
+      );
+      final json = _valueSummaryJson(document);
+      expect(json.containsKey('valueMode'), isFalse);
+
+      final decoded = _decode(
+        ChartInteractionDocument.fromJson(document.toJson()),
+      );
+      expect(
+        decoded.valueSummary.valueMode,
+        CartesianValueSummaryValueMode.interpolated,
+      );
+    });
+
+    test('rejects an unknown value mode with a structured diagnostic', () {
+      final result = ChartInteractionDocumentCodec.decode(
+        _mutateValueSummary(
+          _encode(const InteractionConfig(valueSummary: _fullConfig)),
+          (summary) => summary..['valueMode'] = 'quantumMode',
+        ),
+      );
+
+      expect(result, isA<ChartArtifactFailure<InteractionConfig>>());
+      final failure = result as ChartArtifactFailure<InteractionConfig>;
+      expect(failure.error.code, ChartArtifactDiagnosticCodes.invalidArtifact);
+      expect(failure.error.message, contains('valueMode'));
+      expect(failure.error.message, contains('quantumMode'));
     });
 
     test('rejects an unknown value policy with a structured diagnostic', () {

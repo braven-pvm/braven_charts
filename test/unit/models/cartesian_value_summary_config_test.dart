@@ -346,6 +346,7 @@ void main() {
         config.valuePolicy,
         CartesianValueSummaryValuePolicy.trackingThenLatest,
       );
+      expect(config.valueMode, CartesianValueSummaryValueMode.interpolated);
       expect(config.content, isA<CartesianValueSummaryAutomaticContent>());
       expect(config.style, const CartesianValueSummaryStyle());
       expect(config.showSeriesAccent, isTrue);
@@ -411,6 +412,22 @@ void main() {
         base,
         isNot(
           const CartesianValueSummaryConfig(
+            valueMode: CartesianValueSummaryValueMode.dataPoints,
+          ),
+        ),
+      );
+      expect(
+        base.hashCode,
+        isNot(
+          const CartesianValueSummaryConfig(
+            valueMode: CartesianValueSummaryValueMode.dataPoints,
+          ).hashCode,
+        ),
+      );
+      expect(
+        base,
+        isNot(
+          const CartesianValueSummaryConfig(
             content: CartesianValueSummaryContent.automatic(
               includeTrends: true,
             ),
@@ -455,7 +472,15 @@ void main() {
       );
       expect(updated.controller, same(controller));
       expect(updated.presentation, base.presentation);
+      expect(updated.valueMode, base.valueMode);
       expect(updated.content, base.content);
+
+      final snapped = base.copyWith(
+        valueMode: CartesianValueSummaryValueMode.dataPoints,
+      );
+      expect(snapped.valueMode, CartesianValueSummaryValueMode.dataPoints);
+      expect(snapped.enabled, base.enabled);
+      expect(snapped.valuePolicy, base.valuePolicy);
       expect(updated.style, base.style);
       expect(updated.showSeriesAccent, isTrue);
       expect(updated.announceChanges, isFalse);

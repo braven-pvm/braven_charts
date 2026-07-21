@@ -49,6 +49,34 @@ enum CartesianValueSummaryValuePolicy {
   explicitOnly,
 }
 
+/// What the value summary's live-tracking rows report while the cursor sits
+/// between samples.
+///
+/// The mode governs only the tracking stage of the value policy chain; the
+/// pinned, selection, and latest/first fallback stages always report actual
+/// data points.
+enum CartesianValueSummaryValueMode {
+  /// Track the interpolated curve (the default, matching the crosshair).
+  ///
+  /// The summary reuses the crosshair's value resolution as-is: with
+  /// `CrosshairConfig.interpolateValues` true (its default) the rows carry
+  /// values computed at the exact cursor X between samples; with it false
+  /// they snap to the nearest datum. Zero additional resolutions in either
+  /// case.
+  interpolated,
+
+  /// Snap the rows to the nearest actual data point, regardless of the
+  /// crosshair's interpolation setting.
+  ///
+  /// Rows report the real sample (`isInterpolated` false, the datum's own
+  /// formatted values). While the crosshair simultaneously tracks with
+  /// interpolation enabled, the summary resolves through a dedicated
+  /// memoized resolver — one extra resolution per cursor change, never per
+  /// repaint; in every other combination the shared resolution is reused
+  /// with no extra cost.
+  dataPoints,
+}
+
 /// How the value summary is presented inside the plot.
 ///
 /// The hierarchy is sealed: the two concrete kinds are
@@ -463,6 +491,7 @@ class CartesianValueSummaryConfig {
     this.enabled = false,
     this.presentation = const CartesianValueSummaryPresentation.overlay(),
     this.valuePolicy = CartesianValueSummaryValuePolicy.trackingThenLatest,
+    this.valueMode = CartesianValueSummaryValueMode.interpolated,
     this.content = const CartesianValueSummaryContent.automatic(),
     this.style = const CartesianValueSummaryStyle(),
     this.showSeriesAccent = true,
@@ -479,6 +508,10 @@ class CartesianValueSummaryConfig {
 
   /// How the displayed datum is chosen.
   final CartesianValueSummaryValuePolicy valuePolicy;
+
+  /// Whether tracked rows follow the interpolated curve or snap to actual
+  /// data points. Defaults to [CartesianValueSummaryValueMode.interpolated].
+  final CartesianValueSummaryValueMode valueMode;
 
   /// What the summary displays for the resolved datum.
   final CartesianValueSummaryContent content;
@@ -512,6 +545,7 @@ class CartesianValueSummaryConfig {
     bool? enabled,
     CartesianValueSummaryPresentation? presentation,
     CartesianValueSummaryValuePolicy? valuePolicy,
+    CartesianValueSummaryValueMode? valueMode,
     CartesianValueSummaryContent? content,
     CartesianValueSummaryStyle? style,
     bool? showSeriesAccent,
@@ -522,6 +556,7 @@ class CartesianValueSummaryConfig {
     enabled: enabled ?? this.enabled,
     presentation: presentation ?? this.presentation,
     valuePolicy: valuePolicy ?? this.valuePolicy,
+    valueMode: valueMode ?? this.valueMode,
     content: content ?? this.content,
     style: style ?? this.style,
     showSeriesAccent: showSeriesAccent ?? this.showSeriesAccent,
@@ -539,6 +574,7 @@ class CartesianValueSummaryConfig {
           other.enabled == enabled &&
           other.presentation == presentation &&
           other.valuePolicy == valuePolicy &&
+          other.valueMode == valueMode &&
           other.content == content &&
           other.style == style &&
           other.showSeriesAccent == showSeriesAccent &&
@@ -549,6 +585,7 @@ class CartesianValueSummaryConfig {
     enabled,
     presentation,
     valuePolicy,
+    valueMode,
     content,
     style,
     showSeriesAccent,

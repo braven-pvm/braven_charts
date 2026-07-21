@@ -5,7 +5,8 @@ persistent in-plot panel — the Cartesian value summary. It applies to every
 built-in Cartesian family (Line, Area, Bar, Scatter, and Candlestick),
 including multi-series, mixed, and multi-axis charts, and is fed by the same
 immutable tracking snapshot as the crosshair, so the panel never resolves the
-data a second time. It is independent of the crosshair panel, point tooltip,
+data a second time (the sole exception is the divergent value mode described
+under "Value mode" below). It is independent of the crosshair panel, point tooltip,
 and axis value labels: enabling one never implicitly enables another.
 
 Open the runnable [Value Summary showcase](https://braven-pvm.github.io/braven_charts/?page=value-summary)
@@ -75,6 +76,42 @@ source yields a valid datum the summary hides:
 Live tracking covers the local pointer, keyboard data navigation, and the
 synchronized cursor. A pin that references a removed or replaced point is
 cleared automatically and resolution continues through the chain.
+
+## Value mode: interpolated curve vs actual data points
+
+`valueMode` chooses what the *tracking* stage reports while the cursor sits
+between samples:
+
+- `CartesianValueSummaryValueMode.interpolated` (default) — the summary
+  reuses the crosshair's value resolution as-is. With
+  `CrosshairConfig.interpolateValues` true (its default) rows carry values
+  computed at the exact cursor X on the curve (`Power: 240.54 W` halfway
+  between two samples); with it false they already snap to the nearest
+  datum. This is the pre-existing behavior.
+- `CartesianValueSummaryValueMode.dataPoints` — rows always snap to the
+  nearest actual data point, regardless of the crosshair's interpolation
+  setting: `isInterpolated` is false and the formatted strings are those of
+  the real sample, matching what the point tooltip shows for that datum.
+
+```dart
+CartesianValueSummaryConfig(
+  enabled: true,
+  valueMode: CartesianValueSummaryValueMode.dataPoints,
+)
+```
+
+The mode governs only live tracking; the pinned, selection, and
+latest/first-visible fallback stages always report actual data points.
+
+Cost: the summary keeps reusing the chart's single shared per-frame tracking
+resolution whenever the mode is compatible with it — interpolated mode
+always, and dataPoints mode while the crosshair does not interpolate (or is
+not consuming the tracking resolution at all). Only when the crosshair
+actively tracks *with* interpolation while the summary wants data points do
+the two genuinely diverge: the summary then runs one extra memoized
+resolution per frame — recomputed per cursor change, republished per datum
+change, and never per repaint. The crosshair's own resolution cost is
+unchanged in every combination.
 
 ## Content model
 
@@ -245,6 +282,9 @@ The summary is designed to be free when idle and marginal when tracking:
 
 - Series values resolve once per interaction frame through the shared
   tracking snapshot; the crosshair and summary reuse the same resolution.
+  The one exception is the divergent value mode combination — crosshair
+  interpolation and summary `dataPoints` simultaneously active — which adds
+  exactly one extra memoized resolution per frame (see "Value mode" above).
 - A snapshot is republished only when the resolved datum identity or its
   formatted values change; pointer movement within the same snapped datum
   never rebuilds or repaints the panel.

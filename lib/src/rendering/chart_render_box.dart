@@ -510,14 +510,32 @@ class ChartRenderBox extends RenderBox {
   /// disabled.
   late final ValueSummaryCoordinator _valueSummaryCoordinator;
 
+  /// Dedicated resolver for the value summary's divergent live-tracking
+  /// resolution: used only while the crosshair actively resolves the shared
+  /// pointer-path snapshot WITH interpolation and the summary's `valueMode`
+  /// wants snapped data points. Keeping the divergent preference on its own
+  /// instance preserves the shared resolver's input memo — one computation
+  /// per consumer per cursor change, no memo thrash, no publish ping-pong.
+  /// In every compatible combination this resolver is never touched.
+  final CartesianTrackingSnapshotResolver _summaryTrackingResolver =
+      CartesianTrackingSnapshotResolver();
+
+  /// Whether the current frame's summary tracking resolution went through
+  /// the shared pointer-path resolver (compatible path) rather than the
+  /// dedicated [_summaryTrackingResolver] (divergent path). Written by
+  /// [_resolveSummaryTracking] each frame.
+  bool _valueSummaryUsedSharedResolver = false;
+
   /// Whether the value summary consumed a live pointer/synchronized tracking
-  /// resolution during the current paint frame.
+  /// resolution from the SHARED resolver during the current paint frame.
   ///
   /// While true, the crosshair path's gate-off `clear()` calls are skipped so
   /// they cannot wipe the resolver state (and its input memo) the summary
   /// resolved this frame — the summary is a legitimate consumer of tracking
-  /// even when the crosshair itself is disabled. With the summary disabled
-  /// this flag is always false and every clear behaves exactly as before.
+  /// even when the crosshair itself is disabled. A divergent-mode summary
+  /// resolution (dedicated resolver) leaves this false: the shared state
+  /// belongs to the crosshair that frame. With the summary disabled this
+  /// flag is always false and every clear behaves exactly as before.
   bool _valueSummaryTrackingActive = false;
 
   /// Tooltip renderer module.
@@ -902,17 +920,22 @@ class ChartRenderBox extends RenderBox {
         coordinator.isDragging || coordinator.isPanningOrZooming;
 
     // Live tracking feeds every policy chain except explicitOnly. The
-    // resolution goes through the chart's shared pointer-path resolver, so
-    // when the crosshair also tracks this frame its own resolve call is an
-    // input-memo hit — one computation per frame either way.
+    // resolution goes through the chart's shared pointer-path resolver
+    // whenever the summary's value mode is compatible with it, so when the
+    // crosshair also tracks this frame its own resolve call is an input-memo
+    // hit — one computation per frame either way. Only the genuinely
+    // divergent combination (crosshair interpolating while the summary wants
+    // data points) resolves through the dedicated summary resolver.
     CartesianTrackingSnapshot? tracking;
+    _valueSummaryUsedSharedResolver = false;
     if (summaryConfig != null &&
         summaryConfig.valuePolicy !=
             CartesianValueSummaryValuePolicy.explicitOnly &&
         !suspended) {
-      tracking = _resolveSummaryTracking();
+      tracking = _resolveSummaryTracking(summaryConfig);
     }
-    _valueSummaryTrackingActive = tracking != null;
+    _valueSummaryTrackingActive =
+        tracking != null && _valueSummaryUsedSharedResolver;
 
     ChartPointRef? selection;
     if (summaryConfig?.valuePolicy ==
@@ -950,22 +973,88 @@ class ChartRenderBox extends RenderBox {
   /// cursor takes precedence over the local pointer, and a snapshot already
   /// retained by the synchronized-position computation is reused instead of
   /// re-resolving at the Y-adjusted cursor.
-  CartesianTrackingSnapshot? _resolveSummaryTracking() {
+  ///
+  /// The summary's `valueMode` decides how the resolution is sourced:
+  ///
+  /// - **Compatible with the shared resolution** (interpolated mode; or
+  ///   dataPoints mode while the crosshair's interpolation is off; or the
+  ///   crosshair not consuming the shared tracking resolution at all, in
+  ///   which case the summary owns the resolve and passes the interpolation
+  ///   flag its mode implies): reuse the shared pointer-path resolver —
+  ///   zero extra resolutions per frame.
+  /// - **Divergent** (crosshair actively tracking WITH interpolation while
+  ///   the summary wants data points): resolve once through the dedicated
+  ///   [_summaryTrackingResolver] with the same memo discipline, leaving the
+  ///   shared resolver's input memo to the crosshair.
+  CartesianTrackingSnapshot? _resolveSummaryTracking(
+    CartesianValueSummaryConfig summaryConfig,
+  ) {
     final cursorPos = _effectiveCrosshairCursorPosition;
     if (cursorPos == null || !_plotArea.contains(cursorPos)) return null;
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final origin = _synchronizedCursorPosition != null
+        ? CartesianTrackingOrigin.synchronized
+        : CartesianTrackingOrigin.pointer;
+    final wantsDataPoints =
+        summaryConfig.valueMode == CartesianValueSummaryValueMode.dataPoints;
+
+    if (wantsDataPoints &&
+        crosshair.interpolateValues &&
+        _crosshairConsumesSharedTracking(crosshair)) {
+      // Divergent path. Sharing the pointer-path resolver here would flip
+      // its interpolateValues memo key every frame (two computations plus
+      // publish ping-pong), so the summary resolves on its own instance:
+      // one extra memoized computation per cursor change, none per repaint.
+      final transform = _transform;
+      if (transform == null || _plotArea.isEmpty) {
+        _summaryTrackingResolver.clear();
+        return null;
+      }
+      return _summaryTrackingResolver.resolve(
+        cursorPlotPosition: cursorPos - _plotArea.topLeft,
+        plotArea: _plotArea,
+        transform: transform,
+        elements: _elements,
+        axisInfo: _buildMultiAxisInfo(),
+        origin: origin,
+        includeTrends: true,
+        interpolateValues: false,
+        dataRevision: _trackingDataRevision,
+      );
+    }
+
+    _valueSummaryUsedSharedResolver = true;
+    // The synchronized-position snapshot was resolved with the crosshair's
+    // interpolation preference; reuse it unless the summary wants data
+    // points while that preference interpolates (in which case the divergent
+    // branch above already ran — a retained sync snapshot here is always
+    // compatible, but keep the guard explicit).
     final syncSnapshot = _syncPositionSnapshot;
-    if (_synchronizedCursorPosition != null &&
+    if ((!wantsDataPoints || !crosshair.interpolateValues) &&
+        _synchronizedCursorPosition != null &&
         syncSnapshot != null &&
         identical(syncSnapshot, _trackingSnapshotResolver.current)) {
       return syncSnapshot;
     }
-    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
     return _resolveTrackingSnapshot(
       cursorPosition: cursorPos,
-      origin: _synchronizedCursorPosition != null
-          ? CartesianTrackingOrigin.synchronized
-          : CartesianTrackingOrigin.pointer,
-      interpolateValues: crosshair.interpolateValues,
+      origin: origin,
+      interpolateValues: wantsDataPoints ? false : crosshair.interpolateValues,
+    );
+  }
+
+  /// Whether the crosshair itself resolves the shared pointer-path tracking
+  /// snapshot this frame: enabled and in tracking mode for the current data
+  /// density, including the synchronized-cursor override that forces
+  /// tracking mode.
+  bool _crosshairConsumesSharedTracking(CrosshairConfig crosshair) {
+    final effective = _effectiveCrosshairConfig(crosshair);
+    if (!effective.enabled) return false;
+    return effective.shouldUseTrackingMode(
+      CrosshairTracker.getTotalPointCount([
+        for (final element in _elements)
+          if (element is SeriesElement) element.series,
+      ]),
     );
   }
 
@@ -990,6 +1079,25 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   Rect get debugValueSummaryBounds =>
       _valueSummaryCoordinator.debugOverlayBounds;
+
+  /// Total resolve calls on the summary's dedicated divergent-mode tracking
+  /// resolver. Stays zero while every configuration is compatible with the
+  /// shared pointer-path resolution.
+  @visibleForTesting
+  int get debugSummaryTrackingResolveCount =>
+      _summaryTrackingResolver.debugResolveCount;
+
+  /// Actual computations on the dedicated divergent-mode resolver
+  /// (input-cache misses). Stationary repaints must not increment this.
+  @visibleForTesting
+  int get debugSummaryTrackingComputeCount =>
+      _summaryTrackingResolver.debugComputeCount;
+
+  /// Published snapshot changes on the dedicated divergent-mode resolver —
+  /// one per snapped-datum change, never per cursor pixel or repaint.
+  @visibleForTesting
+  int get debugSummaryTrackingPublishCount =>
+      _summaryTrackingResolver.debugPublishCount;
 
   /// The current plot area rectangle, for widget tests.
   @visibleForTesting

@@ -47,6 +47,8 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
 
   // Summary options.
   bool _summaryEnabled = true;
+  CartesianValueSummaryValueMode _valueMode =
+      CartesianValueSummaryValueMode.interpolated;
   Alignment _anchor = Alignment.topLeft;
   double _offsetX = 12;
   double _offsetY = 12;
@@ -167,6 +169,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
       },
       valuePolicy: _effectivePolicy,
+      valueMode: _valueMode,
       style: _summaryStyle,
       showSeriesAccent: _showAccent,
       announceChanges: _announceChanges,
@@ -400,7 +403,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         enabled: _crosshairEnabled,
         mode: crosshairMode,
         displayMode: CrosshairDisplayMode.tracking,
-        interpolateValues: false,
+        // The crosshair interpolates so the summary's Value mode option has
+        // a visible effect: Interpolated rides the curve between samples,
+        // Data points snaps to the real samples.
+        interpolateValues: true,
         showTrackingTooltip: false,
         showCoordinateLabels: false,
         showIntersectionMarkers: true,
@@ -811,6 +817,34 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             },
             onChanged: (choice) => setState(() => _policyChoice = choice),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Value mode',
+            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+          ),
+          const SizedBox(height: 4),
+          SegmentedOption<CartesianValueSummaryValueMode>(
+            key: const ValueKey('value-summary-value-mode'),
+            value: _valueMode,
+            options: CartesianValueSummaryValueMode.values,
+            labelBuilder: (mode) => switch (mode) {
+              CartesianValueSummaryValueMode.interpolated => 'Interpolated',
+              CartesianValueSummaryValueMode.dataPoints => 'Data points',
+            },
+            onChanged: (mode) => setState(() => _valueMode = mode),
+          ),
+          Text(
+            _valueMode == CartesianValueSummaryValueMode.interpolated
+                ? 'Rows follow the interpolated curve at the cursor X — '
+                      'values exist between samples.'
+                : 'Rows snap to the nearest real data point — exactly what '
+                      'was measured, even between samples.',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).hintColor.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 4),
           BoolOption(
             label: 'Series Accent Marks',
             value: _showAccent,

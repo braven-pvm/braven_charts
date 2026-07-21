@@ -3605,6 +3605,13 @@ class _ChartDartEmitter {
         config.valuePolicy.name,
         defaultName: 'trackingThenLatest',
       );
+      _enumIf(
+        writer,
+        'valueMode',
+        'CartesianValueSummaryValueMode',
+        config.valueMode.name,
+        defaultName: 'interpolated',
+      );
       _emitValueSummaryContent(writer, config.content, builderDescriptorId);
       _emitValueSummaryStyle(writer, config.style);
       _valueIf(
