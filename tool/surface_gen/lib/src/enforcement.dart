@@ -24,6 +24,49 @@
 /// exactly like a member, so leaving it out would be a silent escape hatch
 /// (move `copyWith` to an extension, vanish from enforcement).
 ///
+/// ## What the rule does NOT cover — read `missing=0` correctly
+///
+/// `copyWith` is a PRECONDITION of the rule, not just a heuristic for
+/// spotting configs. A public config class that declares no `copyWith` is not
+/// "missing"; it is INVISIBLE — to this check, to `surface_reader.dart`, and
+/// therefore to the whole fluent layer. So `annotated=95 exempt=3 missing=0`
+/// means:
+///
+/// > every exported class that HAS a `copyWith` is modelled
+///
+/// and NOT "the public config surface is fully modelled". The two coincide
+/// only for classes that already carry a `copyWith`.
+///
+/// The gap is real and currently ~29 classes wide. A scan of the export
+/// namespace for instantiable, `*Config`/`*Style`-named classes with no
+/// `copyWith` (2026-07-21) finds:
+///
+/// - `lib/src/models/bar_chart_style.dart` — `BarBorderStyle`,
+///   `BarBulletStyle`, `BarChartStyle`, `BarDivergingStyle`,
+///   `BarErrorBarStyle`, `BarInteractionStyle`, `BarLabelCalloutStyle`,
+///   `BarLabelStyle`, `BarLollipopStyle`, `BarMotionStyle`,
+///   `BarPatternStyle`, `BarTargetMarkerStyle`, `BarTrackStyle`,
+///   `BarWaterfallConnectorStyle`, `BarWaterfallStyle` (15);
+/// - `lib/src/models/candlestick_chart_style.dart` —
+///   `CandlestickAnimationStyle`, `CandlestickChartStyle`,
+///   `CandlestickPointStyle` (3);
+/// - `lib/src/models/scatter_marker_style.dart` — `ScatterCategoryStyle`,
+///   `ScatterJitterConfig` (2);
+/// - `lib/src/models/scatter_render_config.dart` — `ScatterBinConfig`,
+///   `ScatterClusterConfig`, `ScatterDensityConfig` (3);
+/// - `lib/src/models/chart_context_action.dart` — `ChartContextMenuConfig`,
+///   `ChartOverlayActionButtonConfig` (2);
+/// - `lib/src/models/chart_state_config.dart` — `ChartEmptyStateConfig`,
+///   `ChartLoadingConfig`, `ChartLoadingSkeletonStyle` (3);
+/// - `lib/src/navigator/cartesian_navigator_models.dart` —
+///   `CartesianNavigatorStyle` (1).
+///
+/// Closing it means ADDING a `copyWith` to each class — a public-API change
+/// on the core surface, not a generator change — so it is deliberately a
+/// follow-up rather than part of Slice 2. Until then the honest claim about
+/// those classes is that construction is their only path, which is what the
+/// fluent layer says about every parameter it cannot model.
+///
 /// ## Reachability
 ///
 /// "Reachable" means present in the EXPORT NAMESPACE of any public entrypoint

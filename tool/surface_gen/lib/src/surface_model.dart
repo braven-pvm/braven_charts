@@ -145,6 +145,7 @@ class SurfaceClass {
     this.combinedSetters = const <CombinedSetterModel>[],
     this.bodyValidations = const <BodyValidationModel>[],
     this.bodyValidationGroups = const <BodyValidationGroup>[],
+    this.paramNotes = const <String, String>{},
     this.unnamedConstructorParams,
     this.isSealed = false,
   });
@@ -207,6 +208,19 @@ class SurfaceClass {
 
   /// `ChartSurface(bodyValidated: [...])` acknowledgements.
   final List<BodyValidationModel> bodyValidations;
+
+  /// `ChartSurface(paramNotes: {...})` — parameter name -> a caveat appended
+  /// to that parameter's generated verb dartdoc.
+  ///
+  /// For truths about a verb that the surface model cannot derive and the
+  /// generator cannot fix: `TextAnnotation.withText` type-checks on every
+  /// instance but is a no-op on a RICH one, because the class's rich half is
+  /// reachable only through `TextAnnotation.rich`. The verb stays (it is the
+  /// primary verb on a plain annotation) and says what it does not do.
+  ///
+  /// The reader rejects a note for an unknown or EXCLUDED parameter: a note
+  /// with no verb to carry it is documentation nobody will ever read.
+  final Map<String, String> paramNotes;
 
   /// Parameters of the class's PUBLIC UNNAMED generative constructor, or
   /// `null` when it declares none (a sealed base, or the `const _internal`

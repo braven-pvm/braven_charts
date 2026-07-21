@@ -338,8 +338,38 @@ class FluentEmitter implements SurfaceEmitter {
         : '';
     return '''
 /// Replaces [${cls.name}.${param.name}] with [value].
-$gap$self ${_verb('with', param.name)}($type value) => copyWith(${param.name}: value);
+$gap${_note(cls, param.name)}$self ${_verb('with', param.name)}($type value) => copyWith(${param.name}: value);
 ''';
+  }
+
+  /// The `paramNotes` caveat for [name] as a trailing dartdoc paragraph, or
+  /// the empty string when the class declares none.
+  String _note(SurfaceClass cls, String name) {
+    final note = cls.paramNotes[name];
+    if (note == null) return '';
+    return '///\n${[for (final line in _wrap(note)) '/// $line\n'].join()}';
+  }
+
+  /// Splits [text] into <= 70-column dartdoc lines so a note never trips the
+  /// repo's line-length lint (dart_style does not reflow comments).
+  List<String> _wrap(String text) {
+    final lines = <String>[];
+    final buffer = StringBuffer();
+    for (final word in text.split(RegExp(r'\s+'))) {
+      if (buffer.isEmpty) {
+        buffer.write(word);
+        continue;
+      }
+      if (buffer.length + 1 + word.length > 70) {
+        lines.add(buffer.toString());
+        buffer.clear();
+        buffer.write(word);
+        continue;
+      }
+      buffer.write(' $word');
+    }
+    if (buffer.isNotEmpty) lines.add(buffer.toString());
+    return lines;
   }
 
   String _updateMethod(SurfaceClass cls, String self, SurfaceParam param) {
@@ -370,7 +400,7 @@ $self ${_verb('clear', param.name)}() => copyWith(${param.clearFlag}: true);
     return [
       '''
 /// Overrides [${cls.name}.$name] with [value].
-$self ${_verb('with', name)}($payload value) => copyWith($name: ChartStyleValue.value(value));
+${_note(cls, name)}$self ${_verb('with', name)}($payload value) => copyWith($name: ChartStyleValue.value(value));
 ''',
       '''
 /// Suppresses [${cls.name}.$name] —

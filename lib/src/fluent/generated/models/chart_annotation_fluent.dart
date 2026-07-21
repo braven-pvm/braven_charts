@@ -156,6 +156,10 @@ extension TextAnnotationFluent on TextAnnotation {
   TextAnnotation withZIndex(int value) => copyWith(zIndex: value);
 
   /// Replaces [TextAnnotation.text] with [value].
+  ///
+  /// No effect on a RICH annotation (one built with TextAnnotation.rich):
+  /// richTextDelta keeps winning at render time, so the new text is stored
+  /// but never drawn. The rich half is construction-only.
   TextAnnotation withText(String value) => copyWith(text: value);
 
   /// Replaces [TextAnnotation.position] with [value].

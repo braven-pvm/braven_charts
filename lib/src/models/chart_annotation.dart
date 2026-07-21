@@ -473,7 +473,25 @@ class RangeAnnotation extends ChartAnnotation {
 /// it — so a verb that rewrites it mid-chain silently detaches the
 /// annotation from everything that references it. Construct the annotation
 /// with the id it should carry.
-@ChartSurface(excluded: ['id'])
+///
+/// The RICH half of this class has no fluent surface. `surface_gen` models
+/// the public plain-text constructor — [richTextDelta] is not one of its
+/// parameters, so no `withRichTextDelta` exists — while [copyWith] rebuilds
+/// through the private `_internal` constructor, which accepts both. The
+/// consequence is stated on the generated `withText` verb: on a rich
+/// annotation [isRichText] stays `true` and every renderer keeps reading the
+/// Delta, so the new plain text is never drawn. Build rich content with
+/// [TextAnnotation.rich].
+@ChartSurface(
+  excluded: ['id'],
+  paramNotes: {
+    'text':
+        'No effect on a RICH annotation (one built with '
+        'TextAnnotation.rich): richTextDelta keeps winning at render time, '
+        'so the new text is stored but never drawn. The rich half is '
+        'construction-only.',
+  },
+)
 class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {

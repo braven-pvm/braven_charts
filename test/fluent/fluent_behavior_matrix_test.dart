@@ -1292,6 +1292,29 @@ void main() {
       );
     });
 
+    test('TextAnnotation withText SAYS it does nothing on a rich annotation',
+        () {
+      // The reader models the public plain-text constructor while copyWith
+      // rebuilds through `_internal`, so `withText` type-checks on a rich
+      // annotation, stores the text, and is never drawn: `isRichText` stays
+      // true and the Delta keeps winning. The class cannot be fixed from the
+      // fluent layer, so the generated verb states the limitation.
+      final rich = TextAnnotation.rich(
+        richTextDelta: const [
+          {'insert': 'bold\n'},
+        ],
+        position: const Offset(4, 4),
+      );
+      final retexted = rich.withText('plain');
+      expect(retexted.isRichText, isTrue);
+      expect(retexted.richTextDelta, isNotNull);
+
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, contains('No effect on a RICH annotation'));
+      // The rich half itself is construction-only.
+      expect(source, isNot(contains('withRichTextDelta(')));
+    });
+
     test('ThresholdAnnotation withValue equals the copyWith equivalent', () {
       final base = ThresholdAnnotation(axis: AnnotationAxis.y, value: 100);
       expect(base.withValue(180).value, 180);

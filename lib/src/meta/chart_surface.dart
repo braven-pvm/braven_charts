@@ -16,6 +16,7 @@ class ChartSurface {
     this.excluded = const <String>[], // param names to force-exclude
     this.clearFlags = const <String, String>{}, // paramName -> copyWith clear flag name
     this.bodyValidated = const <BodyValidated>[],
+    this.paramNotes = const <String, String>{}, // paramName -> verb dartdoc caveat
   });
 
   final List<String> presetFactories;
@@ -27,6 +28,21 @@ class ChartSurface {
   /// Acknowledgements for constructor-BODY validation the surface model
   /// cannot express. See [BodyValidated].
   final List<BodyValidated> bodyValidated;
+
+  /// Parameter name -> a caveat appended to that parameter's generated verb
+  /// dartdoc.
+  ///
+  /// For a truth about a verb that the generator cannot derive and cannot
+  /// fix. `TextAnnotation.withText` is the canonical case: the reader models
+  /// the public plain-text constructor while `copyWith` rebuilds through
+  /// `_internal`, so `withText` type-checks on every instance and is a no-op
+  /// on a RICH one. Excluding `text` would delete the primary verb on a
+  /// plain annotation, so the verb stays and states what it does not do.
+  ///
+  /// A note for an unknown or EXCLUDED parameter fails the build: it has no
+  /// generated verb to carry it, and documentation nobody can read is worse
+  /// than none. Document an exclusion in the class's own dartdoc instead.
+  final Map<String, String> paramNotes;
 }
 
 /// Couples assert-linked constructor parameters into a single generated

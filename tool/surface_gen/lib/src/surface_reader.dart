@@ -262,6 +262,9 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       params,
     );
 
+    final paramNotes = _stringMap(annotation.getField('paramNotes'));
+    _checkParamNotes(cls, paramNotes, params);
+
     final sealedVariants = _stringList(annotation.getField('sealedVariants'));
 
     return SurfaceClass(
@@ -275,6 +278,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       assertGroups: assertGroups,
       bodyValidationGroups: bodyGroups,
       bodyValidations: bodyValidations,
+      paramNotes: paramNotes,
       unnamedConstructorParams: _unnamedConstructorParams(
         cls,
         excluded: excluded,
@@ -771,6 +775,39 @@ class AnalyzerSurfaceReader implements SurfaceReader {
         '@ChartSurface(combinedSetters: [$suggestion]) to ${cls.name}, or '
         'force-exclude the parameters.',
       );
+    }
+  }
+
+  /// Named diagnostic: a `paramNotes` entry with no verb to carry it.
+  ///
+  /// A note documents a generated verb, so it is only meaningful for a
+  /// parameter that HAS one. Naming an unknown parameter is a typo; naming an
+  /// excluded one is documentation that will never be emitted, and both used
+  /// to fail silently.
+  void _checkParamNotes(
+    ClassElement cls,
+    Map<String, String> notes,
+    List<SurfaceParam> params,
+  ) {
+    if (notes.isEmpty) return;
+    final byName = {for (final param in params) param.name: param};
+    for (final name in notes.keys) {
+      final param = byName[name];
+      if (param == null) {
+        throw StateError(
+          'surface_gen: ${cls.name} carries a paramNotes entry for `$name`, '
+          'which is not a parameter of its constructor. Known: '
+          '${byName.keys.join(', ')}.',
+        );
+      }
+      if (_isExcludedKind(param.kind)) {
+        throw StateError(
+          'surface_gen: ${cls.name} carries a paramNotes entry for `$name`, '
+          'which is excluded (${param.kind.name}) and therefore has no '
+          'generated verb to carry the note. Document the exclusion in the '
+          "class's own dartdoc instead.",
+        );
+      }
     }
   }
 

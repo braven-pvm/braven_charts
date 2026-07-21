@@ -56,9 +56,41 @@ becomes the single source of truth the hand-written mirrors converge on.
   constructor parameters with types and defaults, enums, nesting, sealed
   hierarchies, tri-state `ChartStyleValue` fields, copyWith shape.
 - **Enforcement:** a generator check fails the build when a class reachable
-  from the public barrel matches config heuristics (const ctor + copyWith)
-  but carries neither `@chartSurface` nor `@chartSurfaceExempt`. New features
-  therefore cannot bypass the model.
+  from the public barrel matches config heuristics but carries neither
+  `@chartSurface` nor `@chartSurfaceExempt`. New features therefore cannot
+  bypass the model.
+- **Enforcement scope — exactly what `missing=0` claims.** The rule is
+  "reachable from a public entrypoint" AND "instantiable (neither `abstract`
+  nor `sealed`)" AND "an instance `copyWith` is callable on it" (declared,
+  inherited, or supplied by a public extension; a `static` one does not
+  count). Const-ness is deliberately NOT part of it. `copyWith` is a
+  PRECONDITION, not merely a detector: a public config class that declares no
+  `copyWith` is not reported as missing, it is INVISIBLE — to enforcement, to
+  the reader, and therefore to the fluent layer. So
+  `annotated=95 exempt=3 missing=0` means **"every exported class that has a
+  `copyWith` is modelled"**, not "the public config surface is fully
+  modelled".
+- **Known follow-up: the `copyWith`-less config classes.** A scan of the
+  export namespace (2026-07-21) for instantiable `*Config`/`*Style`-named
+  classes with no `copyWith` finds 29, in six files:
+  `models/bar_chart_style.dart` (`BarBorderStyle`, `BarBulletStyle`,
+  `BarChartStyle`, `BarDivergingStyle`, `BarErrorBarStyle`,
+  `BarInteractionStyle`, `BarLabelCalloutStyle`, `BarLabelStyle`,
+  `BarLollipopStyle`, `BarMotionStyle`, `BarPatternStyle`,
+  `BarTargetMarkerStyle`, `BarTrackStyle`, `BarWaterfallConnectorStyle`,
+  `BarWaterfallStyle`), `models/candlestick_chart_style.dart`
+  (`CandlestickAnimationStyle`, `CandlestickChartStyle`,
+  `CandlestickPointStyle`), `models/scatter_marker_style.dart`
+  (`ScatterCategoryStyle`, `ScatterJitterConfig`),
+  `models/scatter_render_config.dart` (`ScatterBinConfig`,
+  `ScatterClusterConfig`, `ScatterDensityConfig`),
+  `models/chart_context_action.dart` (`ChartContextMenuConfig`,
+  `ChartOverlayActionButtonConfig`), `models/chart_state_config.dart`
+  (`ChartEmptyStateConfig`, `ChartLoadingConfig`,
+  `ChartLoadingSkeletonStyle`) and
+  `navigator/cartesian_navigator_models.dart` (`CartesianNavigatorStyle`).
+  Closing the gap means ADDING `copyWith` to each — a core public-API change,
+  not a generator change — so it is a deliberate follow-up, not Slice 2 work.
 - Generated files are checked in under `lib/src/fluent/generated/` (and the
   schema location below), and the opt-in barrel `lib/braven_charts_fluent.dart`
   is GENERATED from that file set by a second, aggregating builder — a
@@ -118,11 +150,41 @@ becomes the single source of truth the hand-written mirrors converge on.
   no chain step can construct an invalid intermediate config. The generator
   DETECTS assert coupling from the constructor's initializer list and REFUSES
   to model a class whose coupled parameters lack a `CombinedSetter`.
+  **Two members stay positional; three or more take REQUIRED NAMED
+  parameters** — `withOhlc(1, 6, 0.5, 3)` is a tuple nobody can read at the
+  call site — and the dartdoc pluralises off the member count ("as a pair" is
+  a claim only a two-member setter may make).
+- **An OR-shaped assert is not a combined setter.** `assert(a != null || b !=
+  null)` says the two are ALTERNATIVES; modelling it as an AND-shaped
+  `withBoth(a, b)` produces a verb whose arguments cannot both be honoured
+  and whose "off" state is unreachable. Because `copyWith` merges with `??`
+  and (on this fleet) exposes no clear flag for these parameters, no verb can
+  select one alternative and retire the other, so such parameters are
+  force-excluded and documented as construction-only:
+  `BarChartSeries.barWidthPercent`/`barWidthPixels`, and
+  `RangeAnnotation`'s four bounds (whose `withBounds` silently converted an
+  X-only band into a 2-D box).
+- **Cross-object JOIN KEYS get no verb.** `id` is excluded on every series and
+  annotation class, as it already was on `YAxisConfig`: series ids bind axes,
+  annotations and artifact documents; annotation ids bind selection state. A
+  mid-chain rewrite detaches the value from everything referencing it.
+- **`paramNotes` metadata** appends a caveat to a generated verb's dartdoc for
+  a truth the generator can neither derive nor fix — `TextAnnotation.withText`
+  type-checks on a rich annotation, stores the text, and is never drawn,
+  because the reader models the public plain-text constructor while
+  `copyWith` rebuilds through `_internal`. A note for an unknown or excluded
+  parameter fails the build.
 - **Sealed hierarchies** get one constructor helper per sealed FACTORY on the
   owning parameter, named `with<Factory><Param>` (`.overlay` on
   `presentation` → `withOverlayPresentation`), mirroring the factory
   signature verbatim including default expressions, plus the `updateX` escape
-  hatch. Nothing is emitted on the sealed base itself.
+  hatch. Nothing is emitted on the sealed base itself. The
+  function-typed/controller-typed exclusion rules apply to FACTORY parameters
+  too: `withBuilderContent` was the fleet's only function-typed verb, and the
+  config it minted is exactly the one the artifact codec refuses to serialize
+  without a registered `descriptorId`. Callers reach that variant through the
+  plain `withContent(...)` verb, at the constructor that documents the
+  requirement.
 - **`presetFactories` get NO fluent surface.** Dart factories already chain:
   `CrosshairConfig.tracking(...).withSnapRadius(12)` works today because the
   extension applies to the factory's result. The metadata stays in the model
