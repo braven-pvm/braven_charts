@@ -3,6 +3,7 @@
 
 import 'package:flutter/painting.dart';
 
+import '../../meta/chart_surface.dart';
 import '../../models/annotation_style.dart';
 import '../styles/label_style.dart';
 import 'series_theme.dart'; // For SeriesMarkerShape enum
@@ -36,6 +37,7 @@ import 'series_theme.dart'; // For SeriesMarkerShape enum
 ///   ),
 /// );
 /// ```
+@chartSurface
 class AnnotationTheme {
   const AnnotationTheme({
     required this.pointDefaults,
@@ -158,6 +160,7 @@ class AnnotationTheme {
 }
 
 /// Default styling for point annotations with state-based colors.
+@chartSurface
 class PointAnnotationDefaults {
   const PointAnnotationDefaults({
     required this.markerShape,
@@ -417,6 +420,7 @@ class PointAnnotationDefaults {
 }
 
 /// Default styling for range annotations with state-based colors.
+@chartSurface
 class RangeAnnotationDefaults {
   const RangeAnnotationDefaults({
     required this.normalFillColor,
@@ -688,6 +692,7 @@ class RangeAnnotationDefaults {
 }
 
 /// Default styling for text annotations.
+@chartSurface
 class TextAnnotationDefaults {
   const TextAnnotationDefaults({
     required this.textStyle,
@@ -858,6 +863,7 @@ class TextAnnotationDefaults {
 }
 
 /// Default styling for threshold annotations (horizontal/vertical lines).
+@chartSurface
 class ThresholdAnnotationDefaults {
   const ThresholdAnnotationDefaults({
     required this.lineColor,
@@ -1065,6 +1071,7 @@ class ThresholdAnnotationDefaults {
 }
 
 /// Default styling for trend annotations (trend lines/regression).
+@chartSurface
 class TrendAnnotationDefaults {
   const TrendAnnotationDefaults({
     required this.lineColor,

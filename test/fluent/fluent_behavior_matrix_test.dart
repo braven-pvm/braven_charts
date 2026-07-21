@@ -40,6 +40,22 @@ String _generatedSource(String fileName) {
   return File(path).readAsStringSync();
 }
 
+/// Reads a checked-in generated fluent file under `generated/theming/`.
+String _generatedThemingSource(String subdirectory, String fileName) {
+  final separator = Platform.pathSeparator;
+  final path = [
+    Directory.current.path,
+    'lib',
+    'src',
+    'fluent',
+    'generated',
+    'theming',
+    subdirectory,
+    fileName,
+  ].join(separator);
+  return File(path).readAsStringSync();
+}
+
 void main() {
   // ===========================================================================
   // lib/src/models/chart_series.dart
@@ -1612,6 +1628,268 @@ void main() {
           backdropBlur: 2,
         ),
       );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/chart_theme.dart
+  // ===========================================================================
+  group('chart_theme.dart', () {
+    test('every nested component updater reaches its leaf', () {
+      final base = ChartTheme.light;
+      expect(
+        base.updateGridStyle((c) => c.withMajorWidth(3)).gridStyle.majorWidth,
+        3,
+      );
+      expect(
+        base.updateAxisStyle((c) => c.withTickLength(9)).axisStyle.tickLength,
+        9,
+      );
+      expect(
+        base
+            .updateSeriesTheme((c) => c.withLineWidths(const [4]))
+            .seriesTheme
+            .lineWidths,
+        const [4],
+      );
+      expect(
+        base
+            .updateTypographyTheme((c) => c.withBaseFontSize(15))
+            .typographyTheme
+            .baseFontSize,
+        15,
+      );
+      expect(
+        base
+            .updateInteractionTheme((c) => c.withCrosshairWidth(2.5))
+            .interactionTheme
+            .crosshairWidth,
+        2.5,
+      );
+      expect(
+        base
+            .updateAnnotationTheme(
+              (c) => c.updateTrendDefaults((t) => t.withLineWidth(4)),
+            )
+            .annotationTheme
+            .trendDefaults
+            .lineWidth,
+        4,
+      );
+      expect(
+        base
+            .updateScrollbarConfig((c) => c.withThickness(20))
+            .scrollbarConfig
+            .thickness,
+        20,
+      );
+      expect(
+        base
+            .updateAnimationTheme(
+              (c) => c.withInteractionDuration(const Duration(seconds: 3)),
+            )
+            .animationTheme
+            .interactionDuration,
+        const Duration(seconds: 3),
+      );
+      expect(
+        base
+            .updateCandlestickTheme(
+              (c) => c.withRisingBodyFillColor(const Color(0xFF00FF00)),
+            )
+            .candlestickTheme
+            .risingBodyFillColor,
+        const Color(0xFF00FF00),
+      );
+      expect(
+        base
+            .updateCartesianValueSummaryTheme((c) => c.withBorderWidth(3))
+            .cartesianValueSummaryTheme
+            .borderWidth,
+        3,
+      );
+      expect(
+        base.updateLegendStyle((c) => c.withItemSpacing(11)).legendStyle
+            .itemSpacing,
+        11,
+      );
+      expect(
+        base.updatePieChartTheme((c) => c.withOpacity(0.5)).pieChartTheme
+            .opacity,
+        0.5,
+      );
+      // The chain did not mutate the receiver.
+      expect(base.gridStyle.majorWidth, ChartTheme.light.gridStyle.majorWidth);
+    });
+
+    test('the deprecated private-field-backed params get no verb (E1)', () {
+      // `gridColor`, `axisColor`, `textColor` and `seriesColors` are
+      // `@Deprecated` constructor params with no matching `copyWith`
+      // parameter; the engine drops them instead of emitting dead verbs.
+      final source = _generatedSource('chart_theme_fluent.dart');
+      expect(source, isNot(contains('withGridColor(')));
+      expect(source, isNot(contains('withAxisColor(')));
+      expect(source, isNot(contains('withTextColor(')));
+      expect(source, isNot(contains('withSeriesColors(')));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/theming/components/ + styles/ + table/
+  // ===========================================================================
+  group('theming components', () {
+    test('AnimationTheme: withX equals the copyWith equivalent', () {
+      final base = AnimationTheme.defaultLight;
+      expect(
+        base.withDataUpdateDuration(const Duration(milliseconds: 700)),
+        base.copyWith(dataUpdateDuration: const Duration(milliseconds: 700)),
+      );
+    });
+
+    test('AnnotationTheme: all five nested updaters edit a leaf', () {
+      const base = AnnotationTheme.defaultLight;
+      expect(
+        base.updatePointDefaults((c) => c.withMarkerSize(20)).pointDefaults
+            .markerSize,
+        20,
+      );
+      expect(
+        base.updateRangeDefaults((c) => c.withBorderWidth(4)).rangeDefaults
+            .borderWidth,
+        4,
+      );
+      expect(
+        base.updateTextDefaults((c) => c.withBorderRadius(21)).textDefaults
+            .borderRadius,
+        21,
+      );
+      expect(
+        base
+            .updateThresholdDefaults((c) => c.withLineWidth(6))
+            .thresholdDefaults
+            .lineWidth,
+        6,
+      );
+      expect(
+        base.updateTrendDefaults((c) => c.withLineWidth(7)).trendDefaults
+            .lineWidth,
+        7,
+      );
+      expect(
+        base
+            .updatePointDefaults(
+              (c) => c.updateLabelStyle((l) => l.withBorderWidth(5)),
+            )
+            .pointDefaults
+            .labelStyle
+            .borderWidth,
+        5,
+      );
+    });
+
+    test('AxisStyle: a 3-step chain equals the single copyWith', () {
+      const base = AxisStyle.defaultLight;
+      expect(
+        base.withLineWidth(2).withShowTicks(false).withTickWidth(3),
+        base.copyWith(lineWidth: 2, showTicks: false, tickWidth: 3),
+      );
+    });
+
+    test('CandlestickTheme: withX equals the copyWith equivalent', () {
+      const base = CandlestickTheme.light;
+      expect(
+        base.withDojiWickColor(const Color(0xFF123456)),
+        base.copyWith(dojiWickColor: const Color(0xFF123456)),
+      );
+    });
+
+    test('CartesianValueSummaryTheme: withX equals the copyWith', () {
+      const base = CartesianValueSummaryTheme.light;
+      expect(base.withRowGap(6), base.copyWith(rowGap: 6));
+    });
+
+    test('GridStyle: withMinorGrid moves the three coupled inputs', () {
+      const base = GridStyle.defaultLight;
+      final minor = base.withMinorGrid(true, const Color(0xFFEEEEEE), 0.5);
+      expect(minor.showMinor, isTrue);
+      expect(minor.minorColor, const Color(0xFFEEEEEE));
+      expect(minor.minorWidth, 0.5);
+    });
+
+    test('GridStyle: the invalid intermediate is unreachable', () {
+      // Turning minor lines on without a colour/width throws...
+      expect(
+        () => GridStyle.defaultLight.copyWith(showMinor: true),
+        throwsA(isA<AssertionError>()),
+      );
+      // ...and no individual verb exists for any of the three.
+      final source = _generatedThemingSource(
+        'components',
+        'grid_style_fluent.dart',
+      );
+      expect(source, isNot(contains('withShowMinor(')));
+      expect(source, isNot(contains('withMinorColor(')));
+      expect(source, isNot(contains('withMinorWidth(')));
+    });
+
+    test('InteractionTheme: withX plus the nested label-style updaters', () {
+      const base = InteractionTheme.defaultLight;
+      expect(base.withCrosshairWidth(3), base.copyWith(crosshairWidth: 3));
+      expect(
+        base
+            .updateCrosshairLabelStyle((c) => c.withBorderRadius(7))
+            .crosshairLabelStyle
+            .borderRadius,
+        7,
+      );
+    });
+
+    test('ScrollbarConfig: a 3-step chain equals the single copyWith', () {
+      const base = ScrollbarConfig();
+      expect(
+        base.withThickness(14).withAutoHide(false).withPadding(6),
+        base.copyWith(thickness: 14, autoHide: false, padding: 6),
+      );
+    });
+
+    test('SeriesTheme: withX equals the copyWith equivalent', () {
+      final base = SeriesTheme.defaultLight;
+      expect(
+        base.withMarkerSizes(const [3, 4]),
+        base.copyWith(markerSizes: const [3, 4]),
+      );
+    });
+
+    test('TypographyTheme: withX equals the copyWith equivalent', () {
+      final base = TypographyTheme.defaultLight;
+      expect(
+        base.withTitleMultiplier(1.8),
+        base.copyWith(titleMultiplier: 1.8),
+      );
+    });
+
+    test('LabelStyle: withX equals the copyWith equivalent', () {
+      final base = InteractionTheme.defaultLight.crosshairLabelStyle;
+      expect(base.withBorderWidth(3), base.copyWith(borderWidth: 3));
+    });
+
+    test('ChartDataTableTheme: a 3-step chain matches the single copyWith', () {
+      // A ThemeExtension carries no `operator ==`, so the chain is compared
+      // field by field.
+      const base = ChartDataTableTheme();
+      final chained = base
+          .withRowHeight(40)
+          .withHeaderHeight(50)
+          .withDividerColor(const Color(0xFF999999));
+      final direct = base.copyWith(
+        rowHeight: 40,
+        headerHeight: 50,
+        dividerColor: const Color(0xFF999999),
+      );
+      expect(chained.rowHeight, direct.rowHeight);
+      expect(chained.headerHeight, direct.headerHeight);
+      expect(chained.dividerColor, direct.dividerColor);
+      expect(base.rowHeight, 36);
     });
   });
 

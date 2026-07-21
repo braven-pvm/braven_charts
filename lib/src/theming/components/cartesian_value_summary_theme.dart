@@ -5,6 +5,8 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Theme defaults for the Cartesian value summary panel.
 ///
 /// `CartesianValueSummaryStyle` overrides resolve against these defaults:
@@ -17,6 +19,7 @@ import 'package:flutter/material.dart';
 /// scaling, and on dark plot backgrounds; text colors never rely on the
 /// panel surface remaining opaque.
 @immutable
+@chartSurface
 class CartesianValueSummaryTheme {
   const CartesianValueSummaryTheme({
     required this.background,

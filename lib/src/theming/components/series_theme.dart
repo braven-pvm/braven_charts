@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Marker shapes for series data points.
 ///
 /// This is deliberately distinct from the annotation-specific `MarkerShape`
@@ -37,6 +39,7 @@ enum SeriesMarkerShape {
 /// print(theme.colorAt(0)); // Colors.blue
 /// print(theme.colorAt(3)); // Colors.blue (cycles)
 /// ```
+@chartSurface
 class SeriesTheme {
   SeriesTheme({
     required this.colors,

@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Styling for chart grid lines (major and optional minor).
 ///
 /// Grid lines can be solid or dashed. Dash patterns follow Canvas API format.
@@ -19,6 +21,15 @@ import 'package:flutter/material.dart';
 ///   minorWidth: 0.5,
 /// );
 /// ```
+@ChartSurface(
+  combinedSetters: [
+    // `!showMinor || (minorColor != null && minorWidth != null)` — turning
+    // minor lines on without a colour and a width throws, so the three move
+    // as one. Every combination this non-nullable setter can build satisfies
+    // the assert.
+    CombinedSetter('withMinorGrid', ['showMinor', 'minorColor', 'minorWidth']),
+  ],
+)
 class GridStyle {
   const GridStyle({
     required this.majorColor,

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Host-overridable visual tokens for chart data tables.
 ///
 /// Add this extension to `ThemeData.extensions` to style every chart table in
 /// an application, or pass an instance directly to a chart data table.
+@chartSurface
 @immutable
 class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
   const ChartDataTableTheme({
