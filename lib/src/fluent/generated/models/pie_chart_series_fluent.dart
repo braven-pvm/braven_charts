@@ -44,13 +44,37 @@ extension PieChartSeriesFluent on PieChartSeries {
   /// Replaces [PieChartSeries.pieStyle] with [value].
   PieChartSeries withPieStyle(PieChartStyle value) => copyWith(pieStyle: value);
 
+  /// Rebuilds [PieChartSeries.pieStyle] from its current value.
+  ///
+  /// `update` receives the current [PieChartStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  PieChartSeries updatePieStyle(
+    PieChartStyle Function(PieChartStyle current) update,
+  ) => copyWith(pieStyle: update(pieStyle));
+
   /// Replaces [PieChartSeries.selectionStyle] with [value].
   PieChartSeries withSelectionStyle(RadialSelectionStyle value) =>
       copyWith(selectionStyle: value);
 
+  /// Rebuilds [PieChartSeries.selectionStyle] from its current value.
+  ///
+  /// `update` receives the current [RadialSelectionStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  PieChartSeries updateSelectionStyle(
+    RadialSelectionStyle Function(RadialSelectionStyle current) update,
+  ) => copyWith(selectionStyle: update(selectionStyle));
+
   /// Replaces [PieChartSeries.dataLabels] with [value].
   PieChartSeries withDataLabels(PieDataLabelConfig value) =>
       copyWith(dataLabels: value);
+
+  /// Rebuilds [PieChartSeries.dataLabels] from its current value.
+  ///
+  /// `update` receives the current [PieDataLabelConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  PieChartSeries updateDataLabels(
+    PieDataLabelConfig Function(PieDataLabelConfig current) update,
+  ) => copyWith(dataLabels: update(dataLabels));
 
   /// Replaces [PieChartSeries.sliceRadiusConfig] with [value].
   PieChartSeries withSliceRadiusConfig(PieSliceRadiusConfig value) =>

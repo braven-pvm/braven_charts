@@ -146,6 +146,14 @@ extension PolarColumnStyleFluent on PolarColumnStyle {
   PolarColumnStyle withDataLabelStyle(PolarLabelStyle value) =>
       copyWith(dataLabelStyle: value);
 
+  /// Rebuilds [PolarColumnStyle.dataLabelStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  PolarColumnStyle updateDataLabelStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(dataLabelStyle: update(dataLabelStyle));
+
   /// Replaces [PolarColumnStyle.gradient] with [value].
   PolarColumnStyle withGradient(PolarColumnGradientStyle value) =>
       copyWith(gradient: value);
@@ -223,6 +231,14 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
   /// Replaces [PolarColumnChartSeries.selectionStyle] with [value].
   PolarColumnChartSeries withSelectionStyle(RadialSelectionStyle value) =>
       copyWith(selectionStyle: value);
+
+  /// Rebuilds [PolarColumnChartSeries.selectionStyle] from its current value.
+  ///
+  /// `update` receives the current [RadialSelectionStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  PolarColumnChartSeries updateSelectionStyle(
+    RadialSelectionStyle Function(RadialSelectionStyle current) update,
+  ) => copyWith(selectionStyle: update(selectionStyle));
 
   /// Replaces [PolarColumnChartSeries.targetValues] with [value].
   PolarColumnChartSeries withTargetValues(List<double?> value) =>

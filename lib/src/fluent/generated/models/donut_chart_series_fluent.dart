@@ -45,17 +45,49 @@ extension DonutChartSeriesFluent on DonutChartSeries {
   DonutChartSeries withDonutStyle(DonutChartStyle value) =>
       copyWith(donutStyle: value);
 
+  /// Rebuilds [DonutChartSeries.donutStyle] from its current value.
+  ///
+  /// `update` receives the current [DonutChartStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  DonutChartSeries updateDonutStyle(
+    DonutChartStyle Function(DonutChartStyle current) update,
+  ) => copyWith(donutStyle: update(donutStyle));
+
   /// Replaces [DonutChartSeries.selectionStyle] with [value].
   DonutChartSeries withSelectionStyle(RadialSelectionStyle value) =>
       copyWith(selectionStyle: value);
+
+  /// Rebuilds [DonutChartSeries.selectionStyle] from its current value.
+  ///
+  /// `update` receives the current [RadialSelectionStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  DonutChartSeries updateSelectionStyle(
+    RadialSelectionStyle Function(RadialSelectionStyle current) update,
+  ) => copyWith(selectionStyle: update(selectionStyle));
 
   /// Replaces [DonutChartSeries.centerContent] with [value].
   DonutChartSeries withCenterContent(DonutCenterContent value) =>
       copyWith(centerContent: value);
 
+  /// Rebuilds [DonutChartSeries.centerContent] from its current value.
+  ///
+  /// `update` receives the current [DonutCenterContent] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  DonutChartSeries updateCenterContent(
+    DonutCenterContent Function(DonutCenterContent current) update,
+  ) => copyWith(centerContent: update(centerContent));
+
   /// Replaces [DonutChartSeries.dataLabels] with [value].
   DonutChartSeries withDataLabels(PieDataLabelConfig value) =>
       copyWith(dataLabels: value);
+
+  /// Rebuilds [DonutChartSeries.dataLabels] from its current value.
+  ///
+  /// `update` receives the current [PieDataLabelConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  DonutChartSeries updateDataLabels(
+    PieDataLabelConfig Function(PieDataLabelConfig current) update,
+  ) => copyWith(dataLabels: update(dataLabels));
 
   /// Replaces [DonutChartSeries.sliceRadiusConfig] with [value].
   DonutChartSeries withSliceRadiusConfig(PieSliceRadiusConfig value) =>

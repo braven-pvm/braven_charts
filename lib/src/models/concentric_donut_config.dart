@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
 import 'donut_chart_config.dart';
 
 /// Determines which radial edge receives the first Donut series.
@@ -26,6 +27,7 @@ enum ConcentricDonutLegendMode {
 /// This configuration only controls how those series occupy one shared radial
 /// pane; [ringWeights] affect visual band thickness and never alter data totals.
 @immutable
+@chartSurface
 class ConcentricDonutConfig {
   /// Creates a Concentric Donut composition.
   const ConcentricDonutConfig({

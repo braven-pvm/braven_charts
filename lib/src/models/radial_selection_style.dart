@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Visual treatment applied to a durably selected partition-radial slice.
 ///
 /// Selection identity remains owned by the controller, legend, table, and
@@ -16,6 +18,7 @@ enum RadialSelectionEffect {
 
 /// Presentation controls for durable partition-radial slice selection.
 @immutable
+@chartSurface
 class RadialSelectionStyle {
   /// Creates a radial slice-selection presentation.
   const RadialSelectionStyle({

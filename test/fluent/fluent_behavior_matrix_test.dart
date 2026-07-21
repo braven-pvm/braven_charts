@@ -1342,6 +1342,280 @@ void main() {
   });
 
   // ===========================================================================
+  // lib/src/models/pie_chart_config.dart
+  // ===========================================================================
+  group('pie_chart_config.dart', () {
+    test('PieGradientStyle: withX plus both derived clear verbs', () {
+      const base = PieGradientStyle();
+      expect(base.withAngleDegrees(30), base.copyWith(angleDegrees: 30));
+      final tinted = base
+          .withStartColor(const Color(0xFFAABBCC))
+          .withEndColor(const Color(0xFF112233));
+      expect(tinted.clearStartColor().startColor, isNull);
+      expect(tinted.clearEndColor().endColor, isNull);
+    });
+
+    test('PieElevationStyle: withX equals the copyWith equivalent', () {
+      const base = PieElevationStyle();
+      expect(base.withBlurRadius(6), base.copyWith(blurRadius: 6));
+      expect(
+        base.withColor(const Color(0xFF000000)).clearColor().color,
+        isNull,
+      );
+    });
+
+    test('PieChartTheme: nested updaters reach both elevation leaves', () {
+      const base = PieChartTheme();
+      final lifted = base.updateShadow((current) => current.withBlurRadius(9));
+      expect(lifted.shadow.blurRadius, 9);
+      final selected = base.updateSelectedElevation(
+        (current) => current.withSpreadRadius(4),
+      );
+      expect(selected.selectedElevation.spreadRadius, 4);
+      expect(base.shadow.blurRadius, 0);
+    });
+
+    test('PieSliceRadiusConfig: withX and clearUnit', () {
+      const base = PieSliceRadiusConfig();
+      expect(base.withMinimumFactor(0.5), base.copyWith(minimumFactor: 0.5));
+      expect(base.withUnit('mm').clearUnit().unit, isNull);
+    });
+
+    test('PieChartStyle: a 3-step chain equals the single copyWith', () {
+      const base = PieChartStyle();
+      expect(
+        base
+            .withRadiusFactor(0.7)
+            .withSliceGap(4)
+            .withClockwise(false),
+        base.copyWith(radiusFactor: 0.7, sliceGap: 4, clockwise: false),
+      );
+      expect(base.radiusFactor, 0.9);
+    });
+
+    test('PieChartStyle: every derived clear verb unsets its field', () {
+      const base = PieChartStyle();
+      final loaded = base
+          .withBorderColor(const Color(0xFF010203))
+          .withOpacity(0.5)
+          .withCornerRadius(3)
+          .withGradient(const PieGradientStyle())
+          .withShadow(const PieElevationStyle())
+          .withSelectedElevation(const PieElevationStyle())
+          .withCornerTreatment(PieCornerTreatment.outerOnly)
+          .withBorderColorMode(PieBorderColorMode.slice)
+          .withAnimationMode(PieAnimationMode.fade);
+      expect(loaded.clearBorderColor().borderColor, isNull);
+      expect(loaded.clearOpacity().opacity, isNull);
+      expect(loaded.clearCornerRadius().cornerRadius, isNull);
+      expect(loaded.clearGradient().gradient, isNull);
+      expect(loaded.clearShadow().shadow, isNull);
+      expect(loaded.clearSelectedElevation().selectedElevation, isNull);
+      expect(loaded.clearCornerTreatment().cornerTreatment, isNull);
+      expect(loaded.clearBorderColorMode().borderColorMode, isNull);
+      expect(loaded.clearAnimationMode().animationMode, isNull);
+    });
+
+    test('PieDataLabelConfig: withX and clearSecondaryContent', () {
+      const base = PieDataLabelConfig();
+      expect(base.withPadding(9), base.copyWith(padding: 9));
+      final loaded = base.withSecondaryContent(PieDataLabelContent.value);
+      expect(loaded.clearSecondaryContent().secondaryContent, isNull);
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/donut_chart_config.dart
+  // ===========================================================================
+  group('donut_chart_config.dart', () {
+    test('DonutCenterContent: withX and its derived clear verbs', () {
+      const base = DonutCenterContent();
+      expect(base.withLabel('Total'), base.copyWith(label: 'Total'));
+      final loaded = base.withLabel('Total').withCustomValue('42');
+      expect(loaded.clearLabel().label, isNull);
+      expect(loaded.clearCustomValue().customValue, isNull);
+    });
+
+    test('DonutChartStyle: withX equals the copyWith equivalent', () {
+      const base = DonutChartStyle();
+      expect(
+        base.withInnerRadiusFactor(0.4),
+        base.copyWith(innerRadiusFactor: 0.4),
+      );
+    });
+
+    test('a base-typed verb keeps the subclass and its fields', () {
+      // The cross-library slicing question, pinned as behaviour: `withX` is
+      // typed to PieChartStyle, but `copyWith` dispatches VIRTUALLY, so the
+      // DonutChartStyle identity and its own fields survive. This is why
+      // PieChartStyle is modelled rather than exempted.
+      const PieChartStyle style = DonutChartStyle(innerRadiusFactor: 0.4);
+      final widened = style.withRadiusFactor(0.5);
+      expect(widened, isA<DonutChartStyle>());
+      expect((widened as DonutChartStyle).innerRadiusFactor, 0.4);
+      expect(widened.radiusFactor, 0.5);
+    });
+
+    test('ChartDataPoint verbs keep a CandlestickDataPoint intact', () {
+      final ChartDataPoint point = CandlestickDataPoint(
+        x: 0,
+        open: 1,
+        high: 3,
+        low: 0.5,
+        close: 2,
+      );
+      final labelled = point.withLabel('bar');
+      expect(labelled, isA<CandlestickDataPoint>());
+      expect((labelled as CandlestickDataPoint).open, 1);
+      expect(labelled.high, 3);
+      expect(labelled.label, 'bar');
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/polar_chart_config.dart
+  // ===========================================================================
+  group('polar_chart_config.dart', () {
+    test('PolarThreshold: withX and its derived clear verbs', () {
+      const base = PolarThreshold(value: 10);
+      expect(base.withWidth(3), base.copyWith(width: 3));
+      final loaded = base
+          .withLabel('cap')
+          .withColor(const Color(0xFF223344));
+      expect(loaded.clearLabel().label, isNull);
+      expect(loaded.clearColor().color, isNull);
+    });
+
+    test('PolarColumnCompositionConfig: withX equals the copyWith', () {
+      const base = PolarColumnCompositionConfig();
+      expect(
+        base.withMode(PolarColumnCompositionMode.grouped),
+        base.copyWith(mode: PolarColumnCompositionMode.grouped),
+      );
+    });
+
+    test('PolarPaneConfig: a 3-step chain equals the single copyWith', () {
+      const base = PolarPaneConfig();
+      expect(
+        base
+            .withStartAngleDegrees(0)
+            .withSweepAngleDegrees(180)
+            .withClipMarks(false),
+        base.copyWith(
+          startAngleDegrees: 0,
+          sweepAngleDegrees: 180,
+          clipMarks: false,
+        ),
+      );
+    });
+
+    test('PolarLabelStyle: withX plus all three clear verbs', () {
+      const base = PolarLabelStyle();
+      final loaded = base
+          .withColor(const Color(0xFF556677))
+          .withFontSize(14)
+          .withFontWeight(FontWeight.w600);
+      expect(loaded.clearColor().color, isNull);
+      expect(loaded.clearFontSize().fontSize, isNull);
+      expect(loaded.clearFontWeight().fontWeight, isNull);
+    });
+
+    test('PolarCategoryAxisConfig: withX and the nested label updater', () {
+      const base = PolarCategoryAxisConfig();
+      expect(base.withLabelOffset(6), base.copyWith(labelOffset: 6));
+      final restyled = base.updateLabelStyle(
+        (current) => current.withFontSize(11),
+      );
+      expect(restyled.labelStyle.fontSize, 11);
+    });
+
+    test('PolarNumericAxisConfig: withX and every derived clear verb', () {
+      const base = PolarNumericAxisConfig();
+      final loaded = base
+          .withMinimum(0)
+          .withMaximum(100)
+          .withScaleMode(PolarRadialScaleMode.areaCorrect);
+      expect(loaded.clearMinimum().minimum, isNull);
+      expect(loaded.clearMaximum().maximum, isNull);
+      expect(loaded.clearScaleMode().scaleMode, isNull);
+      expect(base.withTickCount(8), base.copyWith(tickCount: 8));
+    });
+
+    test('PolarChartConfig: all four nested updaters reach a leaf', () {
+      const base = PolarChartConfig();
+      expect(
+        base.updatePane((c) => c.withInnerRadiusFactor(0.2)).pane
+            .innerRadiusFactor,
+        0.2,
+      );
+      expect(
+        base
+            .updateAngularAxis((c) => c.withShowLabels(false))
+            .angularAxis
+            .showLabels,
+        isFalse,
+      );
+      expect(
+        base.updateRadialAxis((c) => c.withTickCount(9)).radialAxis.tickCount,
+        9,
+      );
+      expect(
+        base
+            .updateComposition((c) => c.withGroupInnerPadding(0.3))
+            .composition
+            .groupInnerPadding,
+        0.3,
+      );
+      expect(
+        base.withThresholds(const [PolarThreshold(value: 5)]).thresholds,
+        hasLength(1),
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/concentric_donut_config.dart
+  // ===========================================================================
+  group('concentric_donut_config.dart', () {
+    const base = ConcentricDonutConfig();
+
+    test('withRingGap equals the copyWith equivalent', () {
+      expect(base.withRingGap(8), base.copyWith(ringGap: 8));
+    });
+
+    test('updateCenterContent reaches the donut centre leaf', () {
+      expect(
+        base
+            .updateCenterContent((current) => current.withLabel('Sum'))
+            .centerContent
+            .label,
+        'Sum',
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/radial_selection_style.dart
+  // ===========================================================================
+  group('radial_selection_style.dart', () {
+    const base = RadialSelectionStyle();
+
+    test('a 3-step chain equals the single copyWith', () {
+      expect(
+        base
+            .withEffect(RadialSelectionEffect.lift)
+            .withLiftScale(1.2)
+            .withBackdropBlur(2),
+        base.copyWith(
+          effect: RadialSelectionEffect.lift,
+          liftScale: 1.2,
+          backdropBlur: 2,
+        ),
+      );
+    });
+  });
+
+  // ===========================================================================
   // Exempt runtime/result types (Task 5 judgement call)
   // ===========================================================================
   group('exempt runtime types', () {
