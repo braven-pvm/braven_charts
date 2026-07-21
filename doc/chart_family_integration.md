@@ -153,3 +153,22 @@ A chart family is ready for Workbench and public showcase use only when:
 - the direct showcase route and release web build pass; and
 - its public docs, feature matrix, and changelog are updated.
 
+## Completed built-in family evidence: Range Area
+
+Range Area is the first built-in family delivered against this checklist as an
+explicit vertical contract rather than as a renderer-only extension:
+
+| Contract seam | Range Area evidence |
+| --- | --- |
+| Public model | `RangeAreaDataPoint`, `RangeAreaChartSeries`, boundary, label, interaction, animation, and theme configuration are exported from the package entrypoint. |
+| Rendering and interaction | The Cartesian renderer owns paired low/high geometry, explicit gaps, fill and independent boundaries, viewport culling, typed tracking, hit testing, selection, keyboard navigation, semantics, and atomic path motion. |
+| Portable document | The first-party document codec, hydrator, theme codec, and strict AI builder preserve interval data and supported configuration; malformed or midpoint-only input fails closed. |
+| Native data | Long and wide projections expose low, high, midpoint, span, and explicit gaps while retaining source identity for focus, selection, copy, and CSV. |
+| Generated Dart | The source generator emits typed points or gaps, supported styling and interaction configuration, formatter descriptors, and deterministic compilable fixtures. |
+| Workbench and showcase | Every Range Area preset uses the mounted controller across Chart, Data, Split, and Source; the dedicated route exercises six materially different compositions and compact/desktop layouts. |
+| Regression and readiness | Focused unit, widget, benchmark, source-compile, artifact, and golden tests cover the family in addition to the package and standalone showcase suites. |
+
+This evidence does not create a public renderer plug-in API. It demonstrates
+that a built-in family can satisfy the existing explicit seams without making
+the Workbench family-specific.
+

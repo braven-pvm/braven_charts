@@ -17,6 +17,7 @@ import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
 import '../../models/normalization_mode.dart';
+import '../../models/range_area_chart_series.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/x_axis_config.dart';
 import '../../models/y_axis_config.dart';
@@ -542,6 +543,20 @@ class CrosshairRenderer {
       );
     }
 
+    if (crosshairConfig.showCoordinateLabels) {
+      _paintRangeAreaBoundaryLabels(
+        canvas: canvas,
+        size: size,
+        plotArea: plotArea,
+        theme: theme,
+        dataX: dataX,
+        values: trackedValues,
+        crosshairConfig: crosshairConfig,
+        multiAxisInfo: multiAxisInfo,
+        seriesElements: seriesElements,
+      );
+    }
+
     // Draw Y label (per-axis if any axis has showCrosshairLabel)
     if (crosshairConfig.showCoordinateLabels &&
         mode != CrosshairMode.vertical) {
@@ -596,6 +611,134 @@ class CrosshairRenderer {
           theme: theme,
           dataY: dataY,
         );
+      }
+    }
+  }
+
+  void _paintRangeAreaBoundaryLabels({
+    required Canvas canvas,
+    required Size size,
+    required Rect plotArea,
+    required ChartTheme? theme,
+    required double dataX,
+    required List<CartesianTrackedSeriesValue> values,
+    required CrosshairConfig crosshairConfig,
+    required MultiAxisInfo multiAxisInfo,
+    required List<SeriesElement> seriesElements,
+  }) {
+    if (multiAxisInfo.effectiveAxes.isEmpty) return;
+    final labelStyle = theme?.interactionTheme.crosshairLabelStyle;
+    final textStyle =
+        labelStyle?.textStyle ??
+        const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final padding = labelStyle?.padding.left ?? 4.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
+
+    for (final value in values) {
+      final snapshotRange = value.rangeArea;
+      if (snapshotRange == null) continue;
+      SeriesElement? element;
+      for (final candidate in seriesElements) {
+        if (candidate.id == value.seriesId &&
+            candidate.series is RangeAreaChartSeries) {
+          element = candidate;
+          break;
+        }
+      }
+      if (element == null) continue;
+      final rangeSeries = element.series as RangeAreaChartSeries;
+      final range = crosshairConfig.interpolateValues
+          ? CrosshairTracker.interpolatedRangeAt(
+                  series: rangeSeries,
+                  targetX: dataX,
+                ) ??
+                snapshotRange
+          : snapshotRange;
+      final markerDataX = crosshairConfig.interpolateValues ? dataX : value.x;
+      final axis =
+          SeriesAxisResolver.resolveAxis(
+            value.axisSeriesId,
+            multiAxisInfo.effectiveBindings,
+            multiAxisInfo.effectiveAxes,
+          ) ??
+          multiAxisInfo.effectiveAxes.first;
+      if (!axis.visible || !axis.showCrosshairLabel) continue;
+
+      final entries = <(double, String, Color)>[
+        (
+          range.high,
+          range.formattedHigh,
+          rangeSeries.upperBoundaryStyle.color ?? value.seriesColor,
+        ),
+        (
+          range.low,
+          range.formattedLow,
+          rangeSeries.lowerBoundaryStyle.color ??
+              value.seriesColor.withValues(alpha: 0.76),
+        ),
+      ];
+      final painters = <TextPainter>[
+        for (final entry in entries)
+          TextPainter(
+            text: TextSpan(text: entry.$2, style: textStyle),
+            textDirection: resolveChartTextDirection(entry.$2),
+          )..layout(),
+      ];
+      final yPositions = <double>[
+        for (var index = 0; index < entries.length; index++)
+          (plotArea.top +
+                  element.dataToCurrentPlot(markerDataX, entries[index].$1).dy -
+                  painters[index].height / 2)
+              .clamp(
+                plotArea.top + padding,
+                plotArea.bottom - painters[index].height - padding,
+              ),
+      ];
+      final minimumSeparation =
+          (painters[0].height + painters[1].height) / 2 + padding * 2;
+      if ((yPositions[1] - yPositions[0]).abs() < minimumSeparation) {
+        final center = (yPositions[0] + yPositions[1]) / 2;
+        yPositions[0] = (center - minimumSeparation / 2).clamp(
+          plotArea.top + padding,
+          plotArea.bottom - painters[0].height - padding,
+        );
+        yPositions[1] = (center + minimumSeparation / 2).clamp(
+          plotArea.top + padding,
+          plotArea.bottom - painters[1].height - padding,
+        );
+      }
+
+      for (var index = 0; index < entries.length; index++) {
+        final painter = painters[index];
+        final color = entries[index].$3;
+        final x = calculateYAxisCrosshairLabelX(
+          chartSize: size,
+          plotArea: plotArea,
+          axis: axis,
+          textWidth: painter.width,
+          labelPadding: padding,
+          multiAxisInfo: multiAxisInfo,
+        );
+        final background = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            x - padding,
+            yPositions[index] - padding,
+            painter.width + padding * 2,
+            painter.height + padding * 2,
+          ),
+          Radius.circular(borderRadius),
+        );
+        canvas.drawRRect(
+          background,
+          Paint()..color = color.withValues(alpha: 0.15),
+        );
+        canvas.drawRRect(
+          background,
+          Paint()
+            ..color = color.withValues(alpha: 0.65)
+            ..style = PaintingStyle.stroke,
+        );
+        painter.paint(canvas, Offset(x, yPositions[index]));
       }
     }
   }
@@ -1040,6 +1183,54 @@ class CrosshairRenderer {
       final scatterHit = seriesElement?.series is ScatterChartSeries
           ? seriesElement?.dataHitForPointIndex(value.dataPointIndex)
           : null;
+      final rangeSeries = seriesElement?.series is RangeAreaChartSeries
+          ? seriesElement!.series as RangeAreaChartSeries
+          : null;
+
+      if (value.rangeArea case final snapshotRange? when rangeSeries != null) {
+        final liveRange = crosshairConfig.interpolateValues
+            ? CrosshairTracker.interpolatedRangeAt(
+                series: rangeSeries,
+                targetX: dataX,
+              )
+            : null;
+        final range = liveRange ?? snapshotRange;
+        final markerDataX = crosshairConfig.interpolateValues ? dataX : value.x;
+        final upper = seriesElement!.dataToCurrentPlot(markerDataX, range.high);
+        final lower = seriesElement.dataToCurrentPlot(markerDataX, range.low);
+        final upperColor =
+            rangeSeries.upperBoundaryStyle.color ?? value.seriesColor;
+        final lowerColor =
+            rangeSeries.lowerBoundaryStyle.color ??
+            value.seriesColor.withValues(alpha: 0.76);
+        for (final (point, color) in [
+          (upper, upperColor),
+          (lower, lowerColor),
+        ]) {
+          final center = plotArea.topLeft + point;
+          canvas.drawCircle(
+            center,
+            crosshairConfig.intersectionMarkerRadius,
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.fill,
+          );
+          canvas.drawCircle(
+            center,
+            crosshairConfig.intersectionMarkerRadius,
+            Paint()
+              ..color = const Color(0xFFFFFFFF)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.5,
+          );
+          paintedMarkerSink?.add((
+            seriesId: value.seriesId,
+            isTrend: false,
+            center: center,
+          ));
+        }
+        continue;
+      }
 
       // Live curve Y at the cursor's data X. Only tracker-interpolated
       // resolutions recompute: with interpolation off the tracked value IS
@@ -1223,6 +1414,7 @@ class CrosshairRenderer {
       // the multi-axis unit exactly as the legacy per-paint resolution did.
       final displayY = value.formattedY;
       final candle = value.candlestick;
+      final range = value.rangeArea;
       final hasScatterDetail =
           value.pointLabel != null ||
           value.formattedMagnitudeValue != null ||
@@ -1234,6 +1426,10 @@ class CrosshairRenderer {
                 'O ${candle.formattedOpen} · H ${candle.formattedHigh}\n'
                 'L ${candle.formattedLow} · C ${candle.formattedClose}\n'
                 '${candle.formattedChange} · ${candle.direction.name}'
+          : range != null
+          ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
+                'Low ${range.formattedLow} · High ${range.formattedHigh}\n'
+                'Midpoint ${range.formattedMidpoint} · Span ${range.formattedSpan}'
           : hasScatterDetail
           ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
                 'X: ${value.formattedX} · Y: $displayY'

@@ -13,6 +13,7 @@ import '../theming/components/candlestick_theme.dart';
 import '../theming/components/cartesian_value_summary_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
+import '../theming/components/range_area_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../theming/components/series_theme.dart';
 import '../theming/components/typography_theme.dart';
@@ -62,6 +63,7 @@ class ChartTheme {
     required this.legendStyle,
     this.pieChartTheme = const PieChartTheme(),
     this.candlestickTheme = CandlestickTheme.light,
+    this.rangeAreaTheme = RangeAreaTheme.light,
     this.cartesianValueSummaryTheme = CartesianValueSummaryTheme.light,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
@@ -112,6 +114,9 @@ class ChartTheme {
 
   /// Candlestick-specific direction and interaction defaults.
   final CandlestickTheme candlestickTheme;
+
+  /// Range Area fill, boundary, marker, and linked-state defaults.
+  final RangeAreaTheme rangeAreaTheme;
 
   /// Cartesian value summary panel defaults resolved beneath
   /// `CartesianValueSummaryStyle` overrides.
@@ -173,6 +178,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultDark,
     legendStyle: LegendStyle.dark,
     candlestickTheme: CandlestickTheme.dark,
+    rangeAreaTheme: RangeAreaTheme.dark,
     cartesianValueSummaryTheme: CartesianValueSummaryTheme.dark,
   );
 
@@ -233,6 +239,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.highContrast,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.highContrast,
+    rangeAreaTheme: RangeAreaTheme.highContrast,
     cartesianValueSummaryTheme: CartesianValueSummaryTheme.highContrast,
   );
 
@@ -266,6 +273,7 @@ class ChartTheme {
     LegendStyle? legendStyle,
     PieChartTheme? pieChartTheme,
     CandlestickTheme? candlestickTheme,
+    RangeAreaTheme? rangeAreaTheme,
     CartesianValueSummaryTheme? cartesianValueSummaryTheme,
     Color? focusBorderColor,
     double? focusBorderWidth,
@@ -284,6 +292,7 @@ class ChartTheme {
       legendStyle: legendStyle ?? this.legendStyle,
       pieChartTheme: pieChartTheme ?? this.pieChartTheme,
       candlestickTheme: candlestickTheme ?? this.candlestickTheme,
+      rangeAreaTheme: rangeAreaTheme ?? this.rangeAreaTheme,
       cartesianValueSummaryTheme:
           cartesianValueSummaryTheme ?? this.cartesianValueSummaryTheme,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
@@ -313,6 +322,7 @@ class ChartTheme {
         legendStyle == other.legendStyle &&
         pieChartTheme == other.pieChartTheme &&
         candlestickTheme == other.candlestickTheme &&
+        rangeAreaTheme == other.rangeAreaTheme &&
         cartesianValueSummaryTheme == other.cartesianValueSummaryTheme &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
@@ -333,6 +343,7 @@ class ChartTheme {
     legendStyle,
     pieChartTheme,
     candlestickTheme,
+    rangeAreaTheme,
     cartesianValueSummaryTheme,
     focusBorderColor,
     focusBorderWidth,
@@ -364,6 +375,7 @@ class ChartTheme {
       legendStyle: t < 0.5 ? a.legendStyle : b.legendStyle,
       pieChartTheme: t < 0.5 ? a.pieChartTheme : b.pieChartTheme,
       candlestickTheme: t < 0.5 ? a.candlestickTheme : b.candlestickTheme,
+      rangeAreaTheme: t < 0.5 ? a.rangeAreaTheme : b.rangeAreaTheme,
       cartesianValueSummaryTheme: CartesianValueSummaryTheme.lerp(
         a.cartesianValueSummaryTheme,
         b.cartesianValueSummaryTheme,
@@ -371,8 +383,11 @@ class ChartTheme {
       ),
       focusBorderColor: Color.lerp(a.focusBorderColor, b.focusBorderColor, t)!,
       focusBorderWidth: lerpDouble(a.focusBorderWidth, b.focusBorderWidth, t)!,
-      focusBorderRadius:
-          lerpDouble(a.focusBorderRadius, b.focusBorderRadius, t)!,
+      focusBorderRadius: lerpDouble(
+        a.focusBorderRadius,
+        b.focusBorderRadius,
+        t,
+      )!,
     );
   }
 }

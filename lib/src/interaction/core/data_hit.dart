@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../models/chart_data_point.dart';
 import '../../models/candlestick_interaction_details.dart';
+import '../../models/range_area_interaction_details.dart';
 
 /// Immutable identity and display payload for one interactable chart datum.
 ///
@@ -44,6 +45,7 @@ class ChartDataHit {
     this.opacityLabel,
     this.markerOpacity,
     this.candlestick,
+    this.rangeArea,
     this.aggregateValue,
     this.formattedAggregateValue,
     this.aggregateLabel,
@@ -149,6 +151,9 @@ class ChartDataHit {
   /// Typed OHLC values for a native Candlestick datum.
   final CandlestickInteractionDetails? candlestick;
 
+  /// Typed low/high values for a native Range Area datum.
+  final RangeAreaInteractionDetails? rangeArea;
+
   /// Optional statistic represented by an aggregate Cartesian mark.
   final double? aggregateValue;
 
@@ -199,6 +204,8 @@ class ChartDataHit {
     final name = category ?? point.label ?? 'Data point';
     final parts = <String>[?groupLabel, ?groupName, name];
     if (candlestick case final details?) {
+      parts.add(details.semanticLabel);
+    } else if (rangeArea case final details?) {
       parts.add(details.semanticLabel);
     } else {
       if (formattedXValue != null) parts.add('X $formattedXValue');

@@ -87,6 +87,43 @@ void main() {
     });
   });
 
+  group('ValueSummaryAdapter range area', () {
+    test('preserves the typed low-high interval instead of midpoint only', () {
+      const details = RangeAreaInteractionDetails(
+        low: 12.25,
+        high: 18.75,
+        midpoint: 15.5,
+        span: 6.5,
+        formattedLow: '12.25 °C',
+        formattedHigh: '18.75 °C',
+        formattedMidpoint: '15.50 °C',
+        formattedSpan: '6.50 °C',
+      );
+      final value = CartesianTrackedSeriesValue(
+        seriesId: 'interval',
+        seriesName: 'Expected interval',
+        seriesColor: _blue,
+        x: 5,
+        y: details.midpoint,
+        dataPointIndex: 4,
+        isInterpolated: true,
+        rangeArea: details,
+        formattedX: '5',
+        formattedY: details.formattedMidpoint,
+      );
+
+      final model = _build(_snapshot([value]));
+
+      expect(model.title, 'Expected interval');
+      expect(model.rows, const [
+        CartesianValueSummaryRow(label: 'Low', value: '12.25 °C'),
+        CartesianValueSummaryRow(label: 'High', value: '18.75 °C'),
+        CartesianValueSummaryRow(label: 'Midpoint', value: '15.50 °C'),
+        CartesianValueSummaryRow(label: 'Span', value: '6.50 °C'),
+      ]);
+    });
+  });
+
   group('ValueSummaryAdapter bar', () {
     test('category context comes from formattedX with the formatted value', () {
       final model = _build(

@@ -3,7 +3,9 @@
 
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/range_area_chart_series.dart';
 import 'interpolation_geometry.dart';
+import 'range_area_series_transition.dart';
 
 /// Pure transition helpers for Line and Area series.
 ///
@@ -19,6 +21,9 @@ abstract final class PathSeriesTransition {
   /// bracketed by retained identities. Reordered retained identities remain
   /// deliberately incompatible.
   static bool isCompatible(ChartSeries from, ChartSeries to) {
+    if (from is RangeAreaChartSeries && to is RangeAreaChartSeries) {
+      return RangeAreaSeriesTransition.isCompatible(from, to);
+    }
     return _plan(from, to) != null;
   }
 
@@ -41,6 +46,17 @@ abstract final class PathSeriesTransition {
     required ChartSeries to,
     required double progress,
   }) {
+    if (from is RangeAreaChartSeries && to is RangeAreaChartSeries) {
+      final identityMap = PathSeriesPointMap.identity(to.points.length);
+      return PathSeriesTransitionFrame(
+        series: RangeAreaSeriesTransition.interpolate(
+          from: from,
+          to: to,
+          progress: progress,
+        ),
+        pointMap: identityMap,
+      );
+    }
     final plan = _plan(from, to);
     final identityMap = PathSeriesPointMap.identity(to.points.length);
     if (plan == null) {
@@ -82,6 +98,14 @@ abstract final class PathSeriesTransition {
     ChartSeries to,
     int sourceIndex,
   ) {
+    if (from is RangeAreaChartSeries && to is RangeAreaChartSeries) {
+      if (!RangeAreaSeriesTransition.isCompatible(from, to) ||
+          sourceIndex < 0 ||
+          sourceIndex >= to.points.length) {
+        return null;
+      }
+      return sourceIndex;
+    }
     final plan = _plan(from, to);
     if (plan == null ||
         sourceIndex < 0 ||

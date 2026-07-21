@@ -30,6 +30,9 @@ import '../models/scatter_marker_style.dart'
     show ScatterCategoryStyle, ScatterJitterConfig;
 import '../models/scatter_render_config.dart';
 import '../models/data_point_label_config.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_interaction_details.dart';
+import '../models/range_area_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../rendering/bar_geometry.dart';
 import '../rendering/bar_bullet_painter.dart';
@@ -37,6 +40,7 @@ import '../rendering/bar_label_layout.dart';
 import '../rendering/bar_pattern_painter.dart';
 import '../rendering/candlestick_geometry.dart';
 import '../rendering/data_point_label_layout.dart';
+import '../rendering/range_area_geometry.dart';
 import '../rendering/scatter_binning.dart';
 import '../rendering/scatter_geometry.dart';
 import '../rendering/scatter_clustering.dart';
@@ -44,6 +48,7 @@ import '../rendering/scatter_density.dart';
 import '../rendering/scatter_marker_path.dart';
 import '../theming/components/series_theme.dart';
 import '../theming/components/candlestick_theme.dart';
+import '../theming/components/range_area_theme.dart';
 import '../utils/dashed_path.dart';
 import '../utils/interpolation_geometry.dart';
 import '../utils/path_series_transition.dart';
@@ -248,6 +253,7 @@ class SeriesElement implements DataHitElement {
     this.isHovered = false,
     this.seriesTheme,
     this.candlestickTheme = CandlestickTheme.light,
+    this.rangeAreaTheme = RangeAreaTheme.light,
     this.seriesIndex = 0,
     this.coordinator,
     this.barGroupInfo,
@@ -288,6 +294,7 @@ class SeriesElement implements DataHitElement {
       _currentTransform.dataToPlot(x, y);
   final SeriesTheme? seriesTheme;
   final CandlestickTheme candlestickTheme;
+  final RangeAreaTheme rangeAreaTheme;
   @override
   final int seriesIndex;
 
@@ -316,7 +323,7 @@ class SeriesElement implements DataHitElement {
   /// Ambient reading direction used by canvas value labels.
   final TextDirection textDirection;
 
-  /// Leading-edge reveal progress for Line, Area, and Candlestick series.
+  /// Leading-edge reveal progress for path-based Cartesian series.
   final double revealProgress;
 
   /// Canonical point identities for temporary Line/Area transition geometry.
@@ -325,6 +332,7 @@ class SeriesElement implements DataHitElement {
   bool get _supportsReveal =>
       series is LineChartSeries ||
       series is AreaChartSeries ||
+      series is RangeAreaChartSeries ||
       series is CandlestickChartSeries;
 
   double get _effectiveRevealProgress =>
@@ -367,6 +375,9 @@ class SeriesElement implements DataHitElement {
     }
     if (series is AreaChartSeries) {
       return (series as AreaChartSeries).strokeWidth;
+    }
+    if (series is RangeAreaChartSeries) {
+      return rangeAreaTheme.boundaryWidth;
     }
     // Fall back to theme for series types without explicit strokeWidth
     return seriesTheme?.lineWidthAt(seriesIndex) ??
@@ -428,6 +439,7 @@ class SeriesElement implements DataHitElement {
       _clearResolvedBarGeometry();
       _clearResolvedScatterGeometry();
       _clearResolvedCandlestickGeometry();
+      _clearResolvedRangeAreaGeometry();
       _computeBounds();
     }
   }
@@ -454,9 +466,11 @@ class SeriesElement implements DataHitElement {
     _barViewportIndex = null;
     _scatterViewportIndex = null;
     _candlestickViewportIndex = null;
+    _rangeAreaViewportIndex = null;
     _clearResolvedBarGeometry();
     _clearResolvedScatterGeometry();
     _clearResolvedCandlestickGeometry();
+    _clearResolvedRangeAreaGeometry();
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -487,6 +501,8 @@ class SeriesElement implements DataHitElement {
     _clearResolvedScatterGeometry();
     _candlestickViewportIndex = null;
     _clearResolvedCandlestickGeometry();
+    _rangeAreaViewportIndex = null;
+    _clearResolvedRangeAreaGeometry();
     _labelPainterCache.clear();
   }
 
@@ -554,6 +570,10 @@ class SeriesElement implements DataHitElement {
   List<_CandlestickPaintBatch>? _candlestickUniformPaintBatches;
   bool? _candlestickHasPointOverrides;
   int _candlestickHitComparisonCount = 0;
+  RangeAreaViewportIndex? _rangeAreaViewportIndex;
+  List<RangeAreaGeometryRun>? _rangeAreaGeometryRuns;
+  Map<int, RangeAreaScreenPoint> _rangeAreaPointBySourceIndex = const {};
+  int _rangeAreaHitComparisonCount = 0;
   DataPointLabelLayoutCoordinator? _dataPointLabelLayoutCoordinator;
   List<Rect> _visibleScatterLabelBounds = const [];
 
@@ -620,6 +640,17 @@ class SeriesElement implements DataHitElement {
 
   /// Exact geometry comparisons made by the most recent candle hit test.
   int get candlestickHitComparisonCount => _candlestickHitComparisonCount;
+
+  /// Number of contiguous Range Area runs materialized for the viewport.
+  int get visibleRangeAreaRunCount => _resolveRangeAreaGeometry().length;
+
+  /// Original interval identities represented by visible Range Area geometry.
+  List<int> get visibleRangeAreaPointIndices => [
+    for (final run in _resolveRangeAreaGeometry()) ...run.sourcePointIndices,
+  ];
+
+  /// Exact run/point comparisons made by the latest Range Area hit query.
+  int get rangeAreaHitComparisonCount => _rangeAreaHitComparisonCount;
 
   /// Label rectangles accepted by the latest Scatter paint pass.
   List<Rect> get visibleScatterLabelBounds => _visibleScatterLabelBounds;
@@ -823,6 +854,38 @@ class SeriesElement implements DataHitElement {
     return geometries;
   }
 
+  List<RangeAreaGeometryRun> _resolveRangeAreaGeometry() {
+    final cached = _rangeAreaGeometryRuns;
+    if (cached != null) return cached;
+    final rangeSeries = series;
+    if (rangeSeries is! RangeAreaChartSeries) return const [];
+
+    var viewportIndex = _rangeAreaViewportIndex;
+    if (viewportIndex == null) {
+      viewportIndex = RangeAreaViewportIndex(rangeSeries.intervals);
+      _rangeAreaViewportIndex = viewportIndex;
+    }
+    var runs = RangeAreaGeometryEngine.resolve(
+      index: viewportIndex,
+      transform: _currentTransform,
+      interpolation: rangeSeries.interpolation,
+      tension: rangeSeries.tension,
+      connectGaps: rangeSeries.connectGaps,
+    );
+    if (_effectiveRevealProgress < 1) {
+      final revealEdge = _revealEdge;
+      runs = runs
+          .where((run) => run.paintBounds.left <= revealEdge)
+          .toList(growable: false);
+    }
+    _rangeAreaPointBySourceIndex = {
+      for (final run in runs)
+        for (final point in run.points) point.sourceIndex: point,
+    };
+    _rangeAreaGeometryRuns = runs;
+    return runs;
+  }
+
   void _clearResolvedScatterGeometry() {
     _scatterGeometries = null;
     _scatterGeometryByPointIndex = const {};
@@ -849,6 +912,12 @@ class SeriesElement implements DataHitElement {
     _candlestickGeometryByPointIndex = const {};
     _candlestickUniformPaintBatches = null;
     _candlestickHitComparisonCount = 0;
+  }
+
+  void _clearResolvedRangeAreaGeometry() {
+    _rangeAreaGeometryRuns = null;
+    _rangeAreaPointBySourceIndex = const {};
+    _rangeAreaHitComparisonCount = 0;
   }
 
   CandlestickGeometry? candlestickGeometryForPoint(int pointIndex) {
@@ -1113,7 +1182,9 @@ class SeriesElement implements DataHitElement {
       return;
     }
 
-    if (series is BarChartSeries || series is CandlestickChartSeries) {
+    if (series is BarChartSeries ||
+        series is CandlestickChartSeries ||
+        series is RangeAreaChartSeries) {
       // Bar points are virtualized by category viewport. Keep the series
       // eligible for plot-level hit routing without materializing every bar
       // merely to compute one aggregate element rectangle.
@@ -1240,6 +1311,21 @@ class SeriesElement implements DataHitElement {
       return candlestickGeometryAt(position) != null;
     }
 
+    if (series case final RangeAreaChartSeries rangeSeries) {
+      return _rangeAreaDataHitAt(
+            position,
+            maxDistance:
+                math.max(
+                      rangeSeries.upperBoundaryStyle.strokeWidth,
+                      rangeSeries.lowerBoundaryStyle.strokeWidth,
+                    ) *
+                    2 +
+                4,
+            requirePolicyHit: true,
+          ) !=
+          null;
+    }
+
     if (series is ScatterChartSeries) {
       return _scatterDataHitAt(position, maxDistance: 0, markerHitSlop: 4) !=
           null;
@@ -1287,6 +1373,9 @@ class SeriesElement implements DataHitElement {
       );
       return geometry == null ? null : _candlestickDataHit(geometry);
     }
+    if (source is RangeAreaChartSeries) {
+      return _rangeAreaDataHitAt(position, maxDistance: maxDistance);
+    }
     if (source is ScatterChartSeries) {
       return _scatterDataHitAt(position, maxDistance: maxDistance);
     }
@@ -1307,6 +1396,104 @@ class SeriesElement implements DataHitElement {
       }
     }
     return nearest;
+  }
+
+  ChartDataHit? _rangeAreaDataHitAt(
+    Offset position, {
+    required double maxDistance,
+    bool requirePolicyHit = false,
+  }) {
+    final rangeSeries = series;
+    if (rangeSeries is! RangeAreaChartSeries) return null;
+    final runs = _resolveRangeAreaGeometry();
+    if (runs.isEmpty) return null;
+
+    RangeAreaScreenPoint? nearestPoint;
+    var nearestXDistance = double.infinity;
+    var policyHit = false;
+    _rangeAreaHitComparisonCount = 0;
+    for (final run in runs) {
+      _rangeAreaHitComparisonCount++;
+      final insideBand = run.points.length == 1
+          ? Rect.fromPoints(
+              run.points.first.upper,
+              run.points.first.lower,
+            ).inflate(4).contains(position)
+          : run.fillPath.contains(position);
+      var nearBoundary = false;
+      if (rangeSeries.hitTestMode == RangeAreaHitTestMode.nearestBoundary) {
+        if (run.points.length == 1) {
+          nearBoundary =
+              math.min(
+                (position - run.points.first.upper).distance,
+                (position - run.points.first.lower).distance,
+              ) <=
+              maxDistance;
+        } else {
+          for (var index = 0; index < run.points.length - 1; index++) {
+            final current = run.points[index];
+            final next = run.points[index + 1];
+            _rangeAreaHitComparisonCount += 2;
+            if (_distanceToLineSegment(position, current.upper, next.upper) <=
+                    maxDistance ||
+                _distanceToLineSegment(position, current.lower, next.lower) <=
+                    maxDistance) {
+              nearBoundary = true;
+              break;
+            }
+          }
+        }
+      }
+      final runPolicyHit = rangeSeries.hitTestMode == RangeAreaHitTestMode.band
+          ? insideBand
+          : nearBoundary;
+      policyHit = policyHit || runPolicyHit;
+      if (requirePolicyHit && !runPolicyHit) continue;
+
+      for (final point in run.points) {
+        _rangeAreaHitComparisonCount++;
+        final xDistance = (point.upper.dx - position.dx).abs();
+        if (xDistance < nearestXDistance) {
+          nearestXDistance = xDistance;
+          nearestPoint = point;
+        }
+      }
+    }
+    if (nearestPoint == null) return null;
+    if (requirePolicyHit && !policyHit) return null;
+    if (!requirePolicyHit && !policyHit && nearestXDistance > maxDistance) {
+      return null;
+    }
+    return _rangeAreaDataHit(nearestPoint);
+  }
+
+  ChartDataHit _rangeAreaDataHit(RangeAreaScreenPoint geometry) {
+    final point = geometry.point;
+    final center = Offset(
+      geometry.upper.dx,
+      (geometry.upper.dy + geometry.lower.dy) / 2,
+    );
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: geometry.sourceIndex,
+      plotPosition: center,
+      semanticBounds: Rect.fromPoints(
+        geometry.upper,
+        geometry.lower,
+      ).inflate(12),
+      point: point,
+      formattedValue:
+          '${point.low!.toStringAsFixed(2)}–${point.high!.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      rangeArea: RangeAreaInteractionDetails.fromPoint(
+        point,
+        unit: series.unit,
+      ),
+      markerColor: themeColor,
+      ordinal: geometry.sourceIndex + 1,
+      count: pointCount,
+      isSelected: selectedPointIndices.contains(geometry.sourceIndex),
+      isFocused: focusedPointIndices.contains(geometry.sourceIndex),
+    );
   }
 
   ChartDataHit? _scatterDataHitAt(
@@ -1933,6 +2120,12 @@ class SeriesElement implements DataHitElement {
       final geometry = candlestickGeometryForPoint(pointIndex);
       if (geometry != null) return _candlestickDataHit(geometry);
     }
+    if (series is RangeAreaChartSeries) {
+      _resolveRangeAreaGeometry();
+      final geometry = _rangeAreaPointBySourceIndex[pointIndex];
+      if (geometry != null) return _rangeAreaDataHit(geometry);
+      return null;
+    }
     final renderIndex = _renderIndexForTargetIndex(pointIndex);
     if (renderIndex == null) return null;
     final currentSeries = series;
@@ -2148,9 +2341,17 @@ class SeriesElement implements DataHitElement {
 
   @override
   Iterable<ChartDataHit> get semanticDataHits sync* {
-    if (series is! CandlestickChartSeries) return;
-    for (final geometry in _resolveCandlestickGeometries()) {
-      yield _candlestickDataHit(geometry);
+    if (series is CandlestickChartSeries) {
+      for (final geometry in _resolveCandlestickGeometries()) {
+        yield _candlestickDataHit(geometry);
+      }
+      return;
+    }
+    if (series is RangeAreaChartSeries) {
+      _resolveRangeAreaGeometry();
+      for (final geometry in _rangeAreaPointBySourceIndex.values) {
+        yield _rangeAreaDataHit(geometry);
+      }
     }
   }
 
@@ -2208,6 +2409,13 @@ class SeriesElement implements DataHitElement {
       case AreaChartSeries():
         _paintAreaSeries(canvas, series as AreaChartSeries, baseColor);
         break;
+      case RangeAreaChartSeries():
+        _paintRangeAreaSeries(
+          canvas,
+          series as RangeAreaChartSeries,
+          baseColor,
+        );
+        break;
       case CandlestickChartSeries():
         _paintCandlestickSeries(canvas, series as CandlestickChartSeries);
         break;
@@ -2228,6 +2436,10 @@ class SeriesElement implements DataHitElement {
     }
     if (series is CandlestickChartSeries) {
       _paintLinkedCandlesticks(canvas);
+      return;
+    }
+    if (series is RangeAreaChartSeries) {
+      _paintLinkedRangeArea(canvas);
       return;
     }
     final focusPaint = Paint()
@@ -2265,6 +2477,359 @@ class SeriesElement implements DataHitElement {
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 7, focusPaint);
     }
+  }
+
+  void _paintRangeAreaSeries(
+    Canvas canvas,
+    RangeAreaChartSeries rangeSeries,
+    Color baseColor,
+  ) {
+    final runs = _resolveRangeAreaGeometry();
+    if (runs.isEmpty) return;
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    canvas.save();
+    canvas.clipRect(plotBounds);
+
+    final fillPaint = _rangeAreaFillPaint(rangeSeries, baseColor, plotBounds);
+    for (final run in runs) {
+      canvas.drawPath(run.fillPath, fillPaint);
+    }
+
+    if (rangeSeries.borderMode != RangeAreaBorderMode.none) {
+      for (final run in runs) {
+        _paintRangeAreaBoundary(
+          canvas,
+          path: run.upperPath,
+          style: rangeSeries.upperBoundaryStyle,
+          fallbackColor: baseColor,
+        );
+        _paintRangeAreaBoundary(
+          canvas,
+          path: run.lowerPath,
+          style: rangeSeries.lowerBoundaryStyle,
+          fallbackColor: baseColor.withValues(alpha: 0.76),
+        );
+        if (rangeSeries.borderMode == RangeAreaBorderMode.closed) {
+          _paintRangeAreaBoundary(
+            canvas,
+            path: run.sidePath,
+            style: rangeSeries.upperBoundaryStyle.copyWith(
+              glowRadius: 0,
+              dashPattern: const [],
+            ),
+            fallbackColor: baseColor.withValues(alpha: 0.72),
+          );
+        }
+      }
+    }
+
+    if (rangeSeries.showBoundaryMarkers && rangeSeries.markerRadius > 0) {
+      final markerFill = Paint()
+        ..color = rangeAreaTheme.markerFillColor
+        ..style = PaintingStyle.fill;
+      final markerStroke = Paint()
+        ..color = rangeSeries.upperBoundaryStyle.color ?? baseColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = rangeAreaTheme.markerStrokeWidth;
+      for (final run in runs) {
+        for (final point in run.points) {
+          canvas
+            ..drawCircle(point.upper, rangeSeries.markerRadius, markerFill)
+            ..drawCircle(point.upper, rangeSeries.markerRadius, markerStroke)
+            ..drawCircle(point.lower, rangeSeries.markerRadius, markerFill)
+            ..drawCircle(point.lower, rangeSeries.markerRadius, markerStroke);
+        }
+      }
+    }
+    _paintRangeAreaLabels(canvas, rangeSeries, runs, baseColor);
+    canvas.restore();
+  }
+
+  void _paintRangeAreaLabels(
+    Canvas canvas,
+    RangeAreaChartSeries rangeSeries,
+    List<RangeAreaGeometryRun> runs,
+    Color baseColor,
+  ) {
+    final rangeConfig = rangeSeries.labelConfig;
+    final config = rangeConfig.labels;
+    if (!config.show || rangeConfig.value == RangeAreaLabelValue.none) return;
+    final coordinator =
+        _dataPointLabelLayoutCoordinator ??
+        DataPointLabelLayoutCoordinator(
+          plotBounds: Rect.fromLTWH(
+            0,
+            0,
+            _currentTransform.plotWidth,
+            _currentTransform.plotHeight,
+          ),
+        );
+    const horizontalPadding = 4.0;
+    const verticalPadding = 2.0;
+
+    for (final run in runs) {
+      for (final geometry in run.points) {
+        final point = geometry.point;
+        final entries = switch (rangeConfig.value) {
+          RangeAreaLabelValue.low => <(Offset, RangeAreaLabelBoundary, double)>[
+            (geometry.lower, RangeAreaLabelBoundary.low, point.low!),
+          ],
+          RangeAreaLabelValue.high =>
+            <(Offset, RangeAreaLabelBoundary, double)>[
+              (geometry.upper, RangeAreaLabelBoundary.high, point.high!),
+            ],
+          RangeAreaLabelValue.both =>
+            <(Offset, RangeAreaLabelBoundary, double)>[
+              (geometry.upper, RangeAreaLabelBoundary.high, point.high!),
+              (geometry.lower, RangeAreaLabelBoundary.low, point.low!),
+            ],
+          RangeAreaLabelValue.midpoint =>
+            <(Offset, RangeAreaLabelBoundary, double)>[
+              (
+                Offset(
+                  geometry.upper.dx,
+                  (geometry.upper.dy + geometry.lower.dy) / 2,
+                ),
+                RangeAreaLabelBoundary.midpoint,
+                point.midpoint!,
+              ),
+            ],
+          RangeAreaLabelValue.span =>
+            <(Offset, RangeAreaLabelBoundary, double)>[
+              (
+                Offset(
+                  geometry.upper.dx,
+                  (geometry.upper.dy + geometry.lower.dy) / 2,
+                ),
+                RangeAreaLabelBoundary.span,
+                point.span!,
+              ),
+            ],
+          RangeAreaLabelValue.none =>
+            const <(Offset, RangeAreaLabelBoundary, double)>[],
+        };
+
+        for (final entry in entries) {
+          final details = RangeAreaLabelDetails(
+            point: point,
+            boundary: entry.$2,
+            value: entry.$3,
+            unit: rangeSeries.unit,
+          );
+          final text =
+              rangeConfig.formatter?.call(details) ??
+              config.formatter?.call(point) ??
+              DataPointLabelConfig.autoFormatLabelValue(
+                entry.$3,
+                config.showUnit ? rangeSeries.unit : null,
+              );
+          if (text.isEmpty) continue;
+          final boundaryColor = switch (entry.$2) {
+            RangeAreaLabelBoundary.high =>
+              rangeSeries.upperBoundaryStyle.color ?? baseColor,
+            RangeAreaLabelBoundary.low =>
+              rangeSeries.lowerBoundaryStyle.color ??
+                  baseColor.withValues(alpha: 0.76),
+            RangeAreaLabelBoundary.midpoint ||
+            RangeAreaLabelBoundary.span => baseColor,
+          };
+          final labelColor = config.labelColor ?? boundaryColor;
+          final painterKey =
+              'range:$text:${labelColor.toARGB32()}:${config.fontSize}:${config.fontWeight.index}';
+          final painter = _labelPainterCache.putIfAbsent(painterKey, () {
+            final result = TextPainter(
+              text: TextSpan(
+                text: text,
+                style: TextStyle(
+                  color: labelColor,
+                  fontSize: config.fontSize,
+                  fontWeight: config.fontWeight,
+                  fontFamily: fontFamily,
+                ),
+              ),
+              textDirection: textDirection,
+            );
+            result.layout();
+            return result;
+          });
+          final labelSize = Size(
+            painter.width + horizontalPadding * 2,
+            painter.height + verticalPadding * 2,
+          );
+          final preferred = rangeConfig.value == RangeAreaLabelValue.both
+              ? entry.$2 == RangeAreaLabelBoundary.high
+                    ? DataPointLabelPosition.above
+                    : DataPointLabelPosition.below
+              : config.position;
+          final positions = _scatterLabelCandidatePositions(preferred);
+          final candidates = [
+            for (final position in positions)
+              _rangeAreaLabelRect(
+                entry.$1,
+                labelSize,
+                position,
+                config,
+                rangeConfig.boundaryGap,
+              ),
+          ];
+          final placement = coordinator.place(
+            candidates: candidates,
+            collisionPolicy: config.collisionPolicy,
+            collisionPadding: config.collisionPadding,
+            plotEdgeAware: config.plotEdgeAware,
+          );
+          if (placement == null) continue;
+          final rect = placement.rect;
+          if (config.background case final background?) {
+            canvas.drawRRect(
+              RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
+              Paint()
+                ..color = background.withValues(
+                  alpha: config.backgroundOpacity,
+                ),
+            );
+          }
+          painter.paint(
+            canvas,
+            rect.topLeft + const Offset(horizontalPadding, verticalPadding),
+          );
+        }
+      }
+    }
+  }
+
+  Rect _rangeAreaLabelRect(
+    Offset anchor,
+    Size labelSize,
+    DataPointLabelPosition position,
+    DataPointLabelConfig config,
+    double boundaryGap,
+  ) {
+    final shifted = anchor + Offset(config.offsetX, config.offsetY);
+    final gap = config.markerGap + boundaryGap;
+    return switch (position) {
+      DataPointLabelPosition.above => Rect.fromLTWH(
+        shifted.dx - labelSize.width / 2,
+        shifted.dy - gap - labelSize.height,
+        labelSize.width,
+        labelSize.height,
+      ),
+      DataPointLabelPosition.below => Rect.fromLTWH(
+        shifted.dx - labelSize.width / 2,
+        shifted.dy + gap,
+        labelSize.width,
+        labelSize.height,
+      ),
+      DataPointLabelPosition.left => Rect.fromLTWH(
+        shifted.dx - gap - labelSize.width,
+        shifted.dy - labelSize.height / 2,
+        labelSize.width,
+        labelSize.height,
+      ),
+      DataPointLabelPosition.right => Rect.fromLTWH(
+        shifted.dx + gap,
+        shifted.dy - labelSize.height / 2,
+        labelSize.width,
+        labelSize.height,
+      ),
+    };
+  }
+
+  Paint _rangeAreaFillPaint(
+    RangeAreaChartSeries rangeSeries,
+    Color baseColor,
+    Rect plotBounds,
+  ) {
+    final opacity = rangeSeries.fillOpacity;
+    final gradient = rangeSeries.fillGradient;
+    if (gradient == null) {
+      return Paint()
+        ..color = baseColor.withValues(alpha: opacity)
+        ..style = PaintingStyle.fill;
+    }
+    return Paint()
+      ..shader = LinearGradient(
+        colors: [
+          for (final color in gradient.colors)
+            color.withValues(alpha: color.a * opacity),
+        ],
+        stops: gradient.stops,
+        begin: gradient.begin,
+        end: gradient.end,
+      ).createShader(plotBounds)
+      ..style = PaintingStyle.fill;
+  }
+
+  void _paintRangeAreaBoundary(
+    Canvas canvas, {
+    required Path path,
+    required RangeAreaBoundaryStyle style,
+    required Color fallbackColor,
+  }) {
+    if (!style.visible || style.strokeWidth <= 0) return;
+    final color = (style.color ?? fallbackColor).withValues(
+      alpha: (style.color ?? fallbackColor).a * rangeAreaTheme.boundaryOpacity,
+    );
+    final strokePath = createDashedPath(path, style.dashPattern);
+    if (style.glowRadius > 0) {
+      canvas.drawPath(
+        strokePath,
+        Paint()
+          ..color = color.withValues(alpha: color.a * 0.42)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.strokeWidth + style.glowRadius * 2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.glowRadius),
+      );
+    }
+    canvas.drawPath(
+      strokePath,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = style.strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  void _paintLinkedRangeArea(Canvas canvas) {
+    _resolveRangeAreaGeometry();
+    void paintPoints(Set<int> indices, Color color, double radius) {
+      final fill = Paint()
+        ..color = rangeAreaTheme.markerFillColor
+        ..style = PaintingStyle.fill;
+      final stroke = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+      for (final index in indices) {
+        final point = _rangeAreaPointBySourceIndex[index];
+        if (point == null) continue;
+        canvas
+          ..drawCircle(point.upper, radius, fill)
+          ..drawCircle(point.upper, radius, stroke)
+          ..drawCircle(point.lower, radius, fill)
+          ..drawCircle(point.lower, radius, stroke);
+      }
+    }
+
+    paintPoints(
+      focusedPointIndices,
+      pointFocusColor ?? rangeAreaTheme.focusColor,
+      5,
+    );
+    paintPoints(
+      selectedPointIndices,
+      pointSelectionColor ?? rangeAreaTheme.selectionColor,
+      6,
+    );
   }
 
   void _paintLinkedScatter(Canvas canvas) {
@@ -5436,6 +6001,7 @@ class SeriesElement implements DataHitElement {
       isHovered: isHovered ?? this.isHovered,
       seriesTheme: seriesTheme,
       candlestickTheme: candlestickTheme,
+      rangeAreaTheme: rangeAreaTheme,
       seriesIndex: seriesIndex,
       coordinator: coordinator,
       barGroupInfo: barGroupInfo, // Preserve bar group info for grouped bars

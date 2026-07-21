@@ -24,6 +24,9 @@ import '../../models/candlestick_chart_style.dart';
 import '../../models/candlestick_interaction_details.dart';
 import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
+import '../../models/range_area_chart_series.dart';
+import '../../models/range_area_data_point.dart';
+import '../../models/range_area_interaction_details.dart';
 import '../../utils/interpolation_geometry.dart';
 
 /// Interpolation method for tracking values between data points.
@@ -245,6 +248,22 @@ abstract final class CrosshairTracker {
     return value?.y;
   }
 
+  /// Exact low/high Range Area values at [targetX].
+  ///
+  /// Uses the same interpolation descriptors as native painting and returns
+  /// null outside the series domain or inside a disconnected gap.
+  static RangeAreaInteractionDetails? interpolatedRangeAt({
+    required ChartSeries series,
+    required double targetX,
+  }) {
+    if (series is! RangeAreaChartSeries) return null;
+    return _calculateRangeAreaSeriesValue(
+      series,
+      targetX,
+      interpolate: true,
+    )?.rangeArea;
+  }
+
   /// Calculates the Y value for a single series at the target X position.
   ///
   /// Uses binary search to find the surrounding points, then optionally
@@ -266,6 +285,13 @@ abstract final class CrosshairTracker {
     // indexed candidates directly.
     if (series is ScatterChartSeries) {
       return _calculateScatterSeriesValue(series, targetX);
+    }
+    if (series is RangeAreaChartSeries) {
+      return _calculateRangeAreaSeriesValue(
+        series,
+        targetX,
+        interpolate: interpolate,
+      );
     }
     if (series is CandlestickChartSeries) {
       return _calculateCandlestickSeriesValue(
@@ -416,6 +442,171 @@ abstract final class CrosshairTracker {
         );
       }
     }
+  }
+
+  static CrosshairSeriesValue? _calculateRangeAreaSeriesValue(
+    RangeAreaChartSeries series,
+    double targetX, {
+    required bool interpolate,
+  }) {
+    final points = series.intervals;
+    if (points.isEmpty || targetX < points.first.x || targetX > points.last.x) {
+      return null;
+    }
+
+    final insertionPoint = _findInsertionPoint(points, targetX);
+    if (insertionPoint < points.length &&
+        (points[insertionPoint].x - targetX).abs() < 1e-10) {
+      final point = points[insertionPoint];
+      if (!point.isGap) {
+        return _rangeAreaSeriesValue(
+          series: series,
+          point: point,
+          pointIndex: insertionPoint,
+          x: point.x,
+          low: point.low!,
+          high: point.high!,
+          isInterpolated: false,
+        );
+      }
+      if (!series.connectGaps) return null;
+    }
+
+    if (!interpolate) {
+      final nearestIndex = _nearestValidRangeAreaIndex(
+        points,
+        insertionPoint,
+        targetX,
+      );
+      if (nearestIndex == null) return null;
+      final point = points[nearestIndex];
+      return _rangeAreaSeriesValue(
+        series: series,
+        point: point,
+        pointIndex: nearestIndex,
+        x: point.x,
+        low: point.low!,
+        high: point.high!,
+        isInterpolated: false,
+      );
+    }
+
+    var leftIndex = insertionPoint - 1;
+    var rightIndex = insertionPoint;
+    if (series.connectGaps) {
+      while (leftIndex >= 0 && points[leftIndex].isGap) {
+        leftIndex--;
+      }
+      while (rightIndex < points.length && points[rightIndex].isGap) {
+        rightIndex++;
+      }
+    }
+    if (leftIndex < 0 || rightIndex >= points.length) return null;
+    if (points[leftIndex].isGap || points[rightIndex].isGap) return null;
+
+    final List<RangeAreaDataPoint> run;
+    final int segmentIndex;
+    if (!series.hasGaps) {
+      run = points;
+      segmentIndex = leftIndex;
+    } else if (series.connectGaps) {
+      run = [
+        for (final point in points)
+          if (!point.isGap) point,
+      ];
+      segmentIndex = run.indexWhere(
+        (point) => identical(point, points[leftIndex]),
+      );
+    } else {
+      var start = leftIndex;
+      while (start > 0 && !points[start - 1].isGap) {
+        start--;
+      }
+      var endExclusive = rightIndex + 1;
+      while (endExclusive < points.length && !points[endExclusive].isGap) {
+        endExclusive++;
+      }
+      run = points.sublist(start, endExclusive);
+      segmentIndex = leftIndex - start;
+    }
+    if (segmentIndex < 0 || segmentIndex >= run.length - 1) return null;
+
+    final low = InterpolationGeometry.interpolateYForX(
+      points: run,
+      startIndex: segmentIndex,
+      targetX: targetX,
+      interpolation: series.interpolation,
+      getX: (point) => point.x,
+      getY: (point) => point.low!,
+      tension: series.tension,
+    );
+    final high = InterpolationGeometry.interpolateYForX(
+      points: run,
+      startIndex: segmentIndex,
+      targetX: targetX,
+      interpolation: series.interpolation,
+      getX: (point) => point.x,
+      getY: (point) => point.high!,
+      tension: series.tension,
+    );
+    if (low > high) return null;
+    return _rangeAreaSeriesValue(
+      series: series,
+      point: points[leftIndex],
+      pointIndex: leftIndex,
+      x: targetX,
+      low: low,
+      high: high,
+      isInterpolated: series.interpolation != LineInterpolation.stepped,
+    );
+  }
+
+  static int? _nearestValidRangeAreaIndex(
+    List<RangeAreaDataPoint> points,
+    int insertionPoint,
+    double targetX,
+  ) {
+    var left = insertionPoint - 1;
+    while (left >= 0 && points[left].isGap) {
+      left--;
+    }
+    var right = insertionPoint;
+    while (right < points.length && points[right].isGap) {
+      right++;
+    }
+    if (left < 0) return right < points.length ? right : null;
+    if (right >= points.length) return left;
+    return (targetX - points[left].x).abs() <= (points[right].x - targetX).abs()
+        ? left
+        : right;
+  }
+
+  static CrosshairSeriesValue _rangeAreaSeriesValue({
+    required RangeAreaChartSeries series,
+    required RangeAreaDataPoint point,
+    required int pointIndex,
+    required double x,
+    required double low,
+    required double high,
+    required bool isInterpolated,
+  }) {
+    final details = RangeAreaInteractionDetails.fromValues(
+      low: low,
+      high: high,
+      unit: series.unit,
+      timestamp: isInterpolated ? null : point.timestamp,
+    );
+    return CrosshairSeriesValue(
+      seriesId: series.id,
+      seriesName: series.displayName,
+      seriesColor: _trackedPointColor(series, pointIndex),
+      x: x,
+      y: details.midpoint,
+      dataPointIndex: pointIndex,
+      isInterpolated: isInterpolated,
+      pointLabel: point.label,
+      rangeArea: details,
+    );
   }
 
   static CrosshairSeriesValue? _calculateScatterSeriesValue(

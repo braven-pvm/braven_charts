@@ -56,6 +56,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     highlights: ['Layered fills', 'Baselines', 'Motion + data'],
   ),
   ShowcaseChartType(
+    type: ChartType.area,
+    label: 'Range Area',
+    slug: 'range-area-charts',
+    summary: 'Intervals and uncertainty',
+    bestFor: 'Low–high envelopes, confidence bands, and bounded ranges',
+    icon: Icons.water_outlined,
+    accent: Color(0xFF0EA5E9),
+    highlights: ['Paired low/high', 'Gradient bands', 'Line overlays'],
+  ),
+  ShowcaseChartType(
     type: ChartType.bar,
     label: 'Bar',
     slug: 'bar-charts',
@@ -547,6 +557,64 @@ List<ChartSeries> _previewSeries(
     ChartDataPoint(x: 6, y: 58),
     ChartDataPoint(x: 7, y: 52),
   ];
+
+  if (chartType.slug == 'range-area-charts') {
+    return [
+      RangeAreaChartSeries(
+        id: 'catalog-range-area-envelope',
+        name: 'Low–high interval',
+        points: [
+          RangeAreaDataPoint(x: 0, low: 13, high: 28),
+          RangeAreaDataPoint(x: 1, low: 16, high: 35),
+          RangeAreaDataPoint(x: 2, low: 19, high: 33),
+          RangeAreaDataPoint(x: 3, low: 22, high: 44),
+          RangeAreaDataPoint(x: 4, low: 27, high: 49),
+          RangeAreaDataPoint(x: 5, low: 25, high: 47),
+          RangeAreaDataPoint(x: 6, low: 32, high: 58),
+          RangeAreaDataPoint(x: 7, low: 36, high: 65),
+        ],
+        color: const Color(0xFF0EA5E9),
+        interpolation: LineInterpolation.monotone,
+        fillOpacity: 0.32,
+        fillGradient: const AreaGradient(
+          colors: [Color(0xFF7DD3FC), Color(0xFF0284C7)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        upperBoundaryStyle: const RangeAreaBoundaryStyle(
+          color: Color(0xFF0284C7),
+          strokeWidth: 1.8,
+        ),
+        lowerBoundaryStyle: const RangeAreaBoundaryStyle(
+          color: Color(0xFF38BDF8),
+          strokeWidth: 1.4,
+        ),
+        pathAnimation: const PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            duration: Duration(milliseconds: 560),
+          ),
+        ),
+      ),
+      const LineChartSeries(
+        id: 'catalog-range-area-observed',
+        name: 'Observed',
+        points: primary,
+        color: Color(0xFF2563EB),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 2.2,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 2.1,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 90),
+            duration: Duration(milliseconds: 500),
+          ),
+        ),
+      ),
+    ];
+  }
 
   return switch (chartType.type) {
     ChartType.line => const [

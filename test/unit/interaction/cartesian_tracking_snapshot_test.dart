@@ -244,6 +244,11 @@ void main() {
   group('CartesianTrackedSeriesValue.fromCrosshairValue', () {
     test('copies every CrosshairSeriesValue field and adds formatting', () {
       final candlestick = _candlestick();
+      final rangeArea = RangeAreaInteractionDetails.fromValues(
+        low: 300,
+        high: 336.5,
+        unit: 'W',
+      );
       final source = CrosshairSeriesValue(
         seriesId: 'watts',
         seriesName: 'Watts',
@@ -266,6 +271,7 @@ void main() {
         formattedOpacityValue: '40%',
         opacityLabel: 'Confidence',
         candlestick: candlestick,
+        rangeArea: rangeArea,
         categoryValue: 'Threshold',
         categoryLabel: 'Zone',
       );
@@ -311,12 +317,11 @@ void main() {
             expect(tracked.formattedColorValue, source.formattedColorValue),
         'colorLabel': () => expect(tracked.colorLabel, source.colorLabel),
         'opacityValue': () => expect(tracked.opacityValue, source.opacityValue),
-        'formattedOpacityValue': () => expect(
-          tracked.formattedOpacityValue,
-          source.formattedOpacityValue,
-        ),
+        'formattedOpacityValue': () =>
+            expect(tracked.formattedOpacityValue, source.formattedOpacityValue),
         'opacityLabel': () => expect(tracked.opacityLabel, source.opacityLabel),
         'candlestick': () => expect(tracked.candlestick, same(candlestick)),
+        'rangeArea': () => expect(tracked.rangeArea, same(rangeArea)),
         'categoryValue': () =>
             expect(tracked.categoryValue, source.categoryValue),
         'categoryLabel': () =>
@@ -338,7 +343,7 @@ void main() {
       // field to the exhaustive-copy test above, and only then bump
       // crosshairSeriesValueFieldCount (declared next to fromCrosshairValue
       // in cartesian_tracking_snapshot.dart).
-      expect(crosshairSeriesValueFieldCount, 23);
+      expect(crosshairSeriesValueFieldCount, 24);
     });
 
     test('preserves defaults for optional fields', () {

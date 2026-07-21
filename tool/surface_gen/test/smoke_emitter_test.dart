@@ -23,6 +23,7 @@ SurfaceParam _param(
   bool isRequired = false,
   bool isNullable = false,
   bool isNamed = true,
+  bool readsBackNullable = false,
   String? clearFlag,
   String? defaultCode,
   String? triStatePayloadType,
@@ -36,6 +37,7 @@ SurfaceParam _param(
       isRequired: isRequired,
       isNullable: isNullable,
       isNamed: isNamed,
+      readsBackNullable: readsBackNullable,
       defaultCode: defaultCode,
       clearFlag: clearFlag,
       triStatePayloadType: triStatePayloadType,
@@ -309,6 +311,29 @@ void main() {
       final source = emitter.emit(cls, SurfaceModel([cls]));
       expect(source, contains('subject.withRange(1.0, 2.0)'));
       expect(source, isNot(contains('subject.withMin(')));
+    });
+
+    test('a combined setter whose NON-NULLABLE members read back NULLABLE '
+        'probes instead of replaying — the RangeAreaDataPoint shape', () {
+      // RangeAreaDataPoint(low: double, high: double) stores `double? low` /
+      // `double? high` because `.gap()` leaves both null. Replaying
+      // `subject.low` emitted `withInterval(subject.low, subject.high)`,
+      // which does not compile: "The argument type 'double?' can't be
+      // assigned to the parameter type 'double'".
+      final cls = _cls(
+        'FixtureInterval',
+        [
+          _param('low', 'double', isRequired: true, readsBackNullable: true),
+          _param('high', 'double', isRequired: true, readsBackNullable: true),
+        ],
+        combinedSetters: [
+          const CombinedSetterModel('withInterval', ['low', 'high']),
+        ],
+      );
+      final source = emitter.emit(cls, SurfaceModel([cls]));
+      expect(source, contains('subject.withInterval(1.0, 2.0)'));
+      expect(source, isNot(contains('subject.low')));
+      expect(source, isNot(contains('subject.high')));
     });
 
     test('the `is` prefix is dropped exactly as the fluent emitter does', () {

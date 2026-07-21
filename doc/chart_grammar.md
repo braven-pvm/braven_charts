@@ -7,7 +7,7 @@ core API, and code that never imports them never sees them.
 
 | Layer | What it is | Where it lives | How you get it |
 | --- | --- | --- | --- |
-| **Fluent modifiers** | Chained `withX` / `withoutX` / `inheritX` / `clearX` / `updateX` verbs generated over the existing config classes | `lib/src/fluent/generated/` (93 extensions, ~1099 verbs) | `import 'package:braven_charts/braven_charts_fluent.dart';` |
+| **Fluent modifiers** | Chained `withX` / `withoutX` / `inheritX` / `clearX` / `updateX` verbs generated over the existing config classes | `lib/src/fluent/generated/` (98 extensions, ~1160 verbs) | `import 'package:braven_charts/braven_charts_fluent.dart';` |
 | **Chart grammar** | A typed grammar of graphics — data, marks, channels — that *lowers* onto those same config objects | `lib/src/grammar/` | already in `package:braven_charts/braven_charts.dart` |
 
 They are independent. The fluent layer edits configs; the grammar describes a
@@ -36,7 +36,7 @@ generated extension, so the one import is enough.
 
 **Why a separate barrel.** Dart extension methods are unconditional: an
 extension that is in scope adds its members to *every* instance of the
-extended type, including in autocomplete. Exporting ~1099 verbs from the core
+extended type, including in autocomplete. Exporting ~1160 verbs from the core
 barrel would push them onto every consumer of the package whether they wanted
 chained modifiers or not, and would bury the constructors — which remain the
 primary, complete way to build a config — under a wall of verbs. Keeping the
@@ -101,6 +101,17 @@ parameter at once and can assert across them; a mid-chain setter sees one.
   select one alternative and retire the other. Set the width at construction.
 - **`RangeAnnotation`'s four bounds.** Same OR shape: an `withBounds` that took
   all four silently converted an X-only band into a 2-D box.
+- **Ordered, typed point lists.** `CandlestickChartSeries.points`,
+  `RangeAreaChartSeries.points` and `PolarColumnChartSeries`' parallel
+  category arrays. `copyWith` widens the element type to `ChartDataPoint`
+  while the series requires its own point type *and* strictly increasing `x`,
+  so `withPoints([...])` could only throw for anything the series would have
+  rejected at construction.
+
+`RangeAreaDataPoint`'s `low`/`high` follow the OHLC pattern rather than being
+excluded: they are one value (`high >= low`) and move together through
+`withInterval(low, high)`, which also keeps the inherited `y` midpoint
+consistent. A gap has no verb — build one with `RangeAreaDataPoint.gap`.
 
 Preset factories get no fluent surface either — Dart factories already chain,
 because the extension applies to the factory's result:

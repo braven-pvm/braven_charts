@@ -55,6 +55,7 @@ class SurfaceParam {
     required this.isRequired,
     required this.isNullable,
     this.isNamed = true,
+    this.readsBackNullable = false,
     this.defaultCode,
     this.triStatePayloadType,
     this.clearFlag,
@@ -81,6 +82,24 @@ class SurfaceParam {
 
   /// Whether the parameter is named (as opposed to positional).
   final bool isNamed;
+
+  /// Whether the class's getter of the same name reads back NULLABLE while
+  /// this parameter is non-nullable.
+  ///
+  /// Normally a field's type and its constructor parameter's type agree, so
+  /// `subject.foo` can be handed straight back to `withFoo`. It is not
+  /// guaranteed: `RangeAreaDataPoint(low: double, high: double)` stores
+  /// `double? low` / `double? high`, because the `.gap()` constructor leaves
+  /// both null. Anything that replays a parameter's own value — the smoke
+  /// suite's combined-setter arguments — must consult this, or it emits
+  /// `withInterval(subject.low, subject.high)` and fails to compile with
+  /// "The argument type 'double?' can't be assigned to the parameter type
+  /// 'double'".
+  ///
+  /// `false` when the getter is missing, when both are nullable, or when
+  /// both are non-nullable — in every one of those cases the readback is
+  /// either unusable for other reasons or type-safe.
+  final bool readsBackNullable;
 
   /// The default value expression as SOURCE CODE, exactly as written in the
   /// constructor (never evaluated). `null` when the parameter has no default.

@@ -778,8 +778,15 @@ class _Synthesizer {
   /// satisfy whatever invariant the setter exists for. A nullable numeric
   /// member cannot (`double?` does not fit a `double` parameter), so it probes
   /// ascending values, which is what the `min`/`max` idiom needs.
+  ///
+  /// A non-nullable member whose FIELD reads back nullable cannot replay
+  /// either — `RangeAreaDataPoint.low` is `double?` because a gap has none,
+  /// while the constructor parameter is `double` — so it takes the same
+  /// ascending probe. See [SurfaceParam.readsBackNullable].
   String? combined(SurfaceParam param, {required int ascendingIndex}) {
-    if (!param.isNullable && !isExcludedParam(param)) {
+    if (!param.isNullable &&
+        !param.readsBackNullable &&
+        !isExcludedParam(param)) {
       return 'subject.${param.name}';
     }
     if (usesAscending(param)) {
@@ -793,7 +800,7 @@ class _Synthesizer {
 
   /// Whether [param] takes an ascending numeric probe in a combined setter.
   bool usesAscending(SurfaceParam param) {
-    if (!param.isNullable) return false;
+    if (!param.isNullable && !param.readsBackNullable) return false;
     return const {'double', 'int', 'num'}
         .contains(stripNullability(param.dartType));
   }

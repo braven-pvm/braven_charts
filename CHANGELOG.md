@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Opt-in fluent modifier surface behind a new barrel,
-  `package:braven_charts/braven_charts_fluent.dart`: 93 generated extensions
-  carrying ~1099 chained verbs over the existing config classes, with a
+  `package:braven_charts/braven_charts_fluent.dart`: 98 generated extensions
+  carrying ~1160 chained verbs over the existing config classes, with a
   vocabulary that keeps the two kinds of "unset" apart — `withX(v)` replaces,
   `withoutX()` suppresses a tri-state `ChartStyleValue` field, `inheritX()`
   defers it to the theme, `clearX()` unsets a nullable parameter back to its
@@ -26,7 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fluent extensions plus an executing smoke suite, with enforcement that fails
   when a barrel-reachable, `copyWith`-carrying config class is unannotated
   (`missing = 0`) and a CI regeneration gate that fails on any diff. Consumers
-  never run `build_runner`.
+  never run `build_runner`. The 0.11.0 Range Area family is covered by the
+  same gate: `RangeAreaChartSeries`, `RangeAreaDataPoint`,
+  `RangeAreaBoundaryStyle`, `RangeAreaLabelConfig` and `RangeAreaTheme` are
+  modelled, with `withInterval(low, high)` keeping the `high >= low`
+  invariant and `id`/`points` construction-only.
 - `ChartToolSchema.surfaceDefinitions`: structural surface definitions
   generated from the same annotated model that drives the fluent layer, so the
   AI tool schema and the config builder are derived from one source, guarded
@@ -44,6 +48,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   equality suites. Failures are fail-fast and carry a machine-readable
   `GrammarDiagnosticCode`; empty data is treated as a runtime state and
   renders the standard empty state instead of throwing from `build`.
+
+## 0.11.0 - 2026-07-21
+
+### Added
+- First-class Range Area charts through `RangeAreaDataPoint` and
+  `RangeAreaChartSeries`, including atomic low/high bounds, explicit gaps,
+  linear/Bezier/monotone/stepped interpolation, solid or gradient fills,
+  independently styled boundaries, markers, labels, hit policies, typed
+  low/high/midpoint/span tracking, paired axis values and intersections,
+  keyboard selection and semantics, invariant-preserving entrance/update
+  motion, nested bands and ordinary Line composition, viewport culling,
+  artifacts, hydration, native tables/CSV, generated Dart, Workbench modes,
+  and strict tool-driven configuration.
+- A complete Range Area publication surface across the ten-family Chart Types
+  catalog and Gallery, including a native interval preview, weather envelope,
+  nested forecast fan, financial volatility composition, dedicated route, and
+  property-testing Workbench.
+- Native pub.dev captures for the temperature envelope, nested forecast fan,
+  and volatility envelope, plus a regenerated ten-family chart-type strip.
+
+## 0.10.0 - 2026-07-21
+
+### Added
+- First-class typed OHLC charts through `CandlestickDataPoint`,
+  `CandlestickChartSeries`, and `CandlestickChartStyle`, including
+  rising/falling/doji presentation, elapsed and ordinal time spacing,
+  viewport culling, indexed hit testing, pointer and keyboard selection,
+  tracking, entrance and compatible data-update animation, live latest-candle
+  upsert, density grouping, mixed Line/Area/Scatter overlays, native tables,
+  CSV, artifacts, hydration, generated Dart, and Workbench integration.
+- A reusable, family-neutral `CartesianNavigator` for Line, Area, Bar,
+  Scatter, and Candlestick charts. It renders a full-domain Line or Area
+  overview and controls caller-owned synchronized viewports through pointer,
+  touch, keyboard, and semantic panning/resizing, interval or ordered-value
+  snapping, accessible controls, external-domain growth, and live retained-
+  history inspection.
+- Polar Column and Nightingale Rose charts with a numeric radial scale,
+  standard or area-correct radii, partial panes, layered/grouped/diverging
+  stacked composition, category target ticks, pane thresholds, absolute
+  uncertainty intervals, independent label and radial-axis placement,
+  deterministic density limits, gradients, elevation, corner-radius modes,
+  entrance animation, selection/tracking, portable artifacts, native data,
+  and generated Source.
+- Typed, host-extensible chart commands through `ChartContextAction`,
+  `ChartContextInvocation`, and renderer-neutral `ChartContextHit`, plus
+  `BravenChartWorkbench.contextActionsBuilder` and independently configurable
+  `ChartOverlayAction` buttons. Secondary-click, keyboard, and opt-in touch or
+  stylus long-press entry paths share accessible, theme-aware command styling.
+- Label-driven release automation: a merged PR carrying the `release` label
+  tags the package version, publishes to pub.dev with OIDC trusted publishing,
+  and deploys the release showcase to GitHub Pages.
 - Native Cartesian value summary for every Cartesian family through
   `InteractionConfig.valueSummary` and `CartesianValueSummaryConfig`: a
   persistent in-plot panel showing the current policy-resolved datum, fed by
@@ -105,7 +160,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   synchronized fanout, drag commit cadence) and a `doc/value_summary.md`
   feature guide.
 
+### Changed
+- Cartesian composition now accepts one Candlestick series with Line, Area,
+  and Scatter overlays while retaining explicit validation for unsupported
+  second-Candlestick and same-plot Bar combinations.
+- Representative Line, Area, Bar, Scatter, and Candlestick guides use the
+  public navigator contract instead of family-specific overview controls.
+- `LiveStreamController.manageViewport` can opt out of internal X-viewport
+  movement so a caller-owned interaction group and navigator remain the sole
+  viewport authority during ingest; `dataRevision` and O(1) `oldestPoint`
+  support efficient external synchronization.
+- Live Navigator snapshots and detail following are independently display-
+  frame-coalesced and revision-gated. The detail chart remains mounted while
+  telemetry, controls, and the retained-history overview update separately.
+  Diagnostics now report device-local frame/build/raster/jank/FPS metrics and
+  navigator synchronization cadence, gap, snapshot cost, and domain lag.
+- Browser context-menu suppression is reference-counted across mounted charts
+  and restores the previous application setting only after the final chart is
+  disposed.
+- The public showcase, chart-family catalog, Gallery, API guide, feature
+  matrix, README media, and release screenshots now cover all nine built-in
+  families plus the Cartesian navigator and value-summary surfaces.
+
 ### Fixed
+- Candlestick price, volume, and navigator panes now use identical global plot
+  bounds, keeping synchronized X values pixel-aligned despite independent Y
+  axes and side-slot widths.
+- Live Navigator historical inspection now starts only from explicit chart or
+  navigator gestures. Programmatic follow-latest writes no longer freeze the
+  detail view, reverse visual motion, or fight a second viewport owner.
+- `CartesianNavigatorBehavior.allowExternalDomainGrowth` preserves an
+  authoritative live viewport while a bounded overview snapshot catches up,
+  eliminating stale-domain clamp feedback and left/right oscillation.
+- Navigator panning and edge resizing publish synchronized viewports
+  continuously during pointer movement while remaining isolated from tracking
+  and cursor fanout.
+- Full-circle Polar Column grid, baseline, and threshold rings now use closed
+  geometry and remain visible at every start angle.
+- Annotation hosts can consume transient move and resize previews without
+  replacing controller-owned annotations during an active gesture; committed
+  callbacks remain pointer-up only.
 - `CrosshairConfig.showCoordinateLabels` is now honored by the crosshair
   renderer: clearing it removes the axis value labels in both standard and
   tracking display modes (previously the flag was serialized but never read

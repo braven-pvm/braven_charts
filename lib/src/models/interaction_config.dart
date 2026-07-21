@@ -12,6 +12,7 @@ import '../meta/chart_surface.dart';
 import 'cartesian_value_summary_config.dart';
 import 'interaction_callbacks.dart';
 import 'candlestick_interaction_details.dart';
+import 'range_area_interaction_details.dart';
 
 // ==============================================================================
 // Crosshair Configuration
@@ -68,6 +69,7 @@ class CrosshairSeriesValue {
     this.formattedOpacityValue,
     this.opacityLabel,
     this.candlestick,
+    this.rangeArea,
     this.categoryValue,
     this.categoryLabel,
   });
@@ -120,6 +122,9 @@ class CrosshairSeriesValue {
 
   /// Typed OHLC values when this tracked sample is a Candlestick.
   final CandlestickInteractionDetails? candlestick;
+
+  /// Typed low/high values when this tracked sample is a Range Area.
+  final RangeAreaInteractionDetails? rangeArea;
 
   /// Display-ready categorical Scatter value.
   final String? categoryValue;

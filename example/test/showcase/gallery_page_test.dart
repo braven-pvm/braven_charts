@@ -5,6 +5,7 @@ import 'package:braven_charts_example/showcase/widgets/donut_gallery_cards.dart'
 import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/polar_column_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/range_area_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/synchronized_cartesian_gallery_card.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +76,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Range Area Gallery cards keep intervals typed and composable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 620);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              Expanded(child: TemperatureEnvelopeGalleryCard()),
+              Expanded(child: ForecastFanGalleryCard()),
+              Expanded(child: VolatilityEnvelopeGalleryCard()),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    List<ChartSeries> seriesFor(Finder card) => tester
+        .widget<BravenChartPlus>(
+          find.descendant(of: card, matching: find.byType(BravenChartPlus)),
+        )
+        .series;
+
+    final temperature = seriesFor(find.byType(TemperatureEnvelopeGalleryCard));
+    expect(temperature.whereType<RangeAreaChartSeries>(), hasLength(1));
+    expect(temperature.whereType<LineChartSeries>(), hasLength(1));
+
+    final forecast = seriesFor(find.byType(ForecastFanGalleryCard));
+    expect(forecast.whereType<RangeAreaChartSeries>(), hasLength(2));
+    expect(forecast.whereType<LineChartSeries>(), hasLength(1));
+
+    final volatility = seriesFor(find.byType(VolatilityEnvelopeGalleryCard));
+    expect(volatility.whereType<RangeAreaChartSeries>(), hasLength(1));
+    expect(volatility.whereType<LineChartSeries>(), hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'gallery leads with chart families and mounts flagship analysis',
     (tester) async {
@@ -86,7 +129,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Eight chart guides, grouped by visual grammar'),
+        find.text('Ten chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -100,6 +143,10 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('chart-type-card-concentric-donut')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-range-area-charts')),
         findsOneWidget,
       );
 
@@ -170,7 +217,7 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-curated')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-curated'), 9);
+    expect(_gridCount(tester, 'gallery-advanced-curated'), 11);
     expect(_gridCount(tester, 'gallery-building-blocks-curated'), 6);
     final galleryScrollable = find
         .descendant(
@@ -178,6 +225,32 @@ void main() {
           matching: find.byType(Scrollable),
         )
         .first;
+
+    await tester.scrollUntilVisible(
+      find.text('Three interval stories, one atomic low–high model'),
+      800,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(
+      find.byKey(const ValueKey('gallery-range-area-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-range-area-compositions'), 3);
+    const rangeAreaGrid = 'gallery-range-area-compositions';
+    expect(
+      _gridContains<TemperatureEnvelopeGalleryCard>(tester, rangeAreaGrid),
+      isTrue,
+    );
+    expect(
+      _gridContains<ForecastFanGalleryCard>(tester, rangeAreaGrid),
+      isTrue,
+    );
+    expect(
+      _gridContains<VolatilityEnvelopeGalleryCard>(tester, rangeAreaGrid),
+      isTrue,
+    );
 
     await tester.scrollUntilVisible(
       find.text('Three independent visual channels, one point model'),
@@ -315,7 +388,7 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-full')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-full'), 12);
+    expect(_gridCount(tester, 'gallery-advanced-full'), 14);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 16);
   });
 

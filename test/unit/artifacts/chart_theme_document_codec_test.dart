@@ -49,6 +49,7 @@ void main() {
         'legendStyle',
         'pieChartTheme',
         'candlestickTheme',
+        'rangeAreaTheme',
         'focusBorderColor',
         'focusBorderWidth',
         'focusBorderRadius',
@@ -280,6 +281,11 @@ void _expectThemeFields(ChartTheme actual, ChartTheme expected, String reason) {
     actual.candlestickTheme,
     expected.candlestickTheme,
     reason: '$reason candlestick',
+  );
+  expect(
+    actual.rangeAreaTheme,
+    expected.rangeAreaTheme,
+    reason: '$reason range area',
   );
   expect(
     actual.focusBorderColor.toARGB32(),

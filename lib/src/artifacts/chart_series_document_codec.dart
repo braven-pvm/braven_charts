@@ -19,6 +19,9 @@ import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_data_point.dart';
+import '../models/range_area_style.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
@@ -80,6 +83,7 @@ abstract final class ChartSeriesDocumentCodec {
         LineChartSeries() => series.dataPointLabels,
         AreaChartSeries() => series.dataPointLabels,
         ScatterChartSeries() => series.dataPointLabels,
+        RangeAreaChartSeries() => series.labelConfig.labels,
         _ => null,
       };
       if (dataPointLabels?.formatter != null) {
@@ -92,6 +96,13 @@ abstract final class ChartSeriesDocumentCodec {
         throw const _RuntimeBindingException(
           'Bar label formatters must be represented by a runtime binding descriptor.',
           r'$.style.barLabels.formatter',
+        );
+      }
+      if (series is RangeAreaChartSeries &&
+          series.labelConfig.formatter != null) {
+        throw const _RuntimeBindingException(
+          'Range Area label formatters must be represented by a runtime binding descriptor.',
+          r'$.style.labelConfig.formatter',
         );
       }
       if (series case final RadialCategorySeries radial) {
@@ -155,6 +166,7 @@ abstract final class ChartSeriesDocumentCodec {
           },
           requiredCapabilities: {
             'series.${_typeOf(series)}',
+            if (series is RangeAreaChartSeries) 'series.rangeArea.interval.v1',
             if (series is CandlestickChartSeries) 'series.candlestick.ohlc.v1',
             if (series is CandlestickChartSeries &&
                 series.animation != const CandlestickAnimationStyle())
@@ -242,15 +254,23 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is RadialCategorySeries &&
                 series.dataLabels.secondaryContent != null)
               'series.radial.dual-labels.v1',
-            if ((series is LineChartSeries || series is AreaChartSeries) &&
+            if ((series is LineChartSeries ||
+                    series is AreaChartSeries ||
+                    series is RangeAreaChartSeries) &&
                 _pathAnimationFor(series) != const PathAnimationStyle())
               'series.path-motion.v1',
-            if ((series is LineChartSeries || series is AreaChartSeries) &&
+            if ((series is LineChartSeries ||
+                    series is AreaChartSeries ||
+                    series is RangeAreaChartSeries) &&
                 _hasNonDefaultPathTiming(_pathAnimationFor(series)!))
               'series.path-motion-timing.v1',
             if (series is AreaChartSeries && series.fillGradient != null)
               'series.area.gradient.v1',
-            if ((series is LineChartSeries || series is AreaChartSeries) &&
+            if (series is RangeAreaChartSeries && series.fillGradient != null)
+              'series.rangeArea.gradient.v1',
+            if ((series is LineChartSeries ||
+                    series is AreaChartSeries ||
+                    series is RangeAreaChartSeries) &&
                 _hasPathDashCapability(series))
               'series.path-dash.v1',
           },
@@ -320,11 +340,11 @@ abstract final class ChartSeriesDocumentCodec {
 
       final style = _objectMap(document.style);
       final points = payload.points
-          .map(
-            document.type == 'candlestick'
-                ? _decodeCandlestickPoint
-                : _decodePoint,
-          )
+          .map(switch (document.type) {
+            'candlestick' => _decodeCandlestickPoint,
+            'rangeArea' => _decodeRangeAreaPoint,
+            _ => _decodePoint,
+          })
           .toList(growable: false);
       final metadata = _dynamicMap(document.metadata);
       final axis = _decodeAxis(
@@ -495,6 +515,44 @@ abstract final class ChartSeriesDocumentCodec {
             r'$.style.belowBaselineFillColor',
           ),
           dashPattern: _decodeDashPattern(style['dashPattern']),
+          pathAnimation: _decodePathAnimation(
+            _optionalMap(style, 'pathAnimation'),
+          ),
+        ),
+        'rangeArea' => RangeAreaChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points.cast<RangeAreaDataPoint>(),
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          annotations: annotations,
+          yAxisId: document.axisId,
+          yAxisConfig: axis,
+          unit: document.unit,
+          interpolation: _enum(
+            style,
+            'interpolation',
+            LineInterpolation.values,
+          ),
+          tension: _double(style, 'tension'),
+          fillOpacity: _double(style, 'fillOpacity'),
+          fillGradient: _decodeAreaGradient(
+            _optionalMap(style, 'fillGradient'),
+          ),
+          borderMode: _enum(style, 'borderMode', RangeAreaBorderMode.values),
+          upperBoundaryStyle: _decodeRangeAreaBoundaryStyle(
+            _optionalMap(style, 'upperBoundaryStyle'),
+          ),
+          lowerBoundaryStyle: _decodeRangeAreaBoundaryStyle(
+            _optionalMap(style, 'lowerBoundaryStyle'),
+          ),
+          connectGaps: _bool(style, 'connectGaps'),
+          showBoundaryMarkers: _bool(style, 'showBoundaryMarkers'),
+          markerRadius: _double(style, 'markerRadius'),
+          labelConfig: _decodeRangeAreaLabelConfig(
+            _optionalMap(style, 'labelConfig'),
+          ),
+          hitTestMode: _enum(style, 'hitTestMode', RangeAreaHitTestMode.values),
           pathAnimation: _decodePathAnimation(
             _optionalMap(style, 'pathAnimation'),
           ),
@@ -750,6 +808,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   LineChartSeries() => 'line',
   ScatterChartSeries() => 'scatter',
   AreaChartSeries() => 'area',
+  RangeAreaChartSeries() => 'rangeArea',
   BarChartSeries() => 'bar',
   CandlestickChartSeries() => 'candlestick',
   PieChartSeries() => 'pie',
@@ -759,6 +818,7 @@ String _typeOf(ChartSeries series) => switch (series) {
 };
 
 const _candlestickPointExtensionKey = 'candlestick.ohlc.v1';
+const _rangeAreaPointExtensionKey = 'rangeArea.interval.v1';
 
 ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
     ChartPointDocument(
@@ -818,6 +878,14 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
             if (point.candlestickStyle case final style?)
               'style': _encodeCandlestickPointStyle(style),
           }, path: r'$.data.points[$index].extensions.candlestick'),
+        if (point is RangeAreaDataPoint)
+          _rangeAreaPointExtensionKey: _jsonObject({
+            'isGap': point.isGap,
+            if (!point.isGap) ...{
+              'low': _number(point.low!),
+              'high': _number(point.high!),
+            },
+          }, path: r'$.data.points[$index].extensions.rangeArea'),
       },
     );
 
@@ -901,10 +969,65 @@ CandlestickDataPoint _decodeCandlestickPoint(ChartPointDocument point) {
   );
 }
 
+RangeAreaDataPoint _decodeRangeAreaPoint(ChartPointDocument point) {
+  final extension = point.extensions[_rangeAreaPointExtensionKey];
+  if (extension is! JsonObjectValue) {
+    throw const FormatException(
+      'Range Area points require a rangeArea.interval.v1 object extension.',
+    );
+  }
+  final base = _decodePoint(point);
+  final isGapValue = extension.values['isGap']?.toJson();
+  if (isGapValue is! bool) {
+    throw const FormatException('Range Area point isGap must be boolean.');
+  }
+  if (isGapValue) {
+    if (extension.values.containsKey('low') ||
+        extension.values.containsKey('high')) {
+      throw const FormatException(
+        'Range Area gaps cannot include low or high values.',
+      );
+    }
+    if (base.y != 0) {
+      throw const FormatException(
+        'Range Area gap canonical y must use the zero placeholder.',
+      );
+    }
+    return RangeAreaDataPoint.gap(
+      x: base.x,
+      timestamp: base.timestamp,
+      label: base.label,
+      metadata: base.metadata,
+    );
+  }
+  final low = _requiredExtensionDouble(extension.values, 'low');
+  final high = _requiredExtensionDouble(extension.values, 'high');
+  final midpoint = (low + high) / 2;
+  if (base.y != midpoint) {
+    throw const FormatException(
+      'Range Area point midpoint must equal its canonical y value.',
+    );
+  }
+  return RangeAreaDataPoint(
+    x: base.x,
+    low: low,
+    high: high,
+    magnitude: base.magnitude,
+    colorValue: base.colorValue,
+    opacityValue: base.opacityValue,
+    categoryValue: base.categoryValue,
+    timestamp: base.timestamp,
+    label: base.label,
+    metadata: base.metadata,
+    segmentStyle: base.segmentStyle,
+    pointStyle: base.pointStyle,
+  );
+}
+
 double _requiredExtensionDouble(Map<String, JsonValue> values, String key) {
   final value = values[key]?.toJson();
   if (value is! num) {
-    throw FormatException('Candlestick point $key must be numeric.');
+    throw FormatException('Point extension $key must be numeric.');
   }
   return value.toDouble();
 }
@@ -1026,6 +1149,27 @@ Map<String, Object?> _encodeSeriesStyle(
             : _number(series.baselineValue!)
         ..['aboveBaselineFillColor'] = series.aboveBaselineFillColor?.toARGB32()
         ..['belowBaselineFillColor'] = series.belowBaselineFillColor?.toARGB32()
+        ..['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
+    case RangeAreaChartSeries():
+      result
+        ..['interpolation'] = series.interpolation.name
+        ..['tension'] = _number(series.tension)
+        ..['fillOpacity'] = _number(series.fillOpacity)
+        ..['fillGradient'] = series.fillGradient == null
+            ? null
+            : _encodeAreaGradient(series.fillGradient!)
+        ..['borderMode'] = series.borderMode.name
+        ..['upperBoundaryStyle'] = _encodeRangeAreaBoundaryStyle(
+          series.upperBoundaryStyle,
+        )
+        ..['lowerBoundaryStyle'] = _encodeRangeAreaBoundaryStyle(
+          series.lowerBoundaryStyle,
+        )
+        ..['connectGaps'] = series.connectGaps
+        ..['showBoundaryMarkers'] = series.showBoundaryMarkers
+        ..['markerRadius'] = _number(series.markerRadius)
+        ..['labelConfig'] = _encodeRangeAreaLabelConfig(series.labelConfig)
+        ..['hitTestMode'] = series.hitTestMode.name
         ..['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
     case BarChartSeries():
       result
@@ -1367,12 +1511,17 @@ CandlestickDensityGrouping _decodeCandlestickDensityGrouping(
 PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
   LineChartSeries() => series.pathAnimation,
   AreaChartSeries() => series.pathAnimation,
+  RangeAreaChartSeries() => series.pathAnimation,
   _ => null,
 };
 
 List<double> _dashPatternFor(ChartSeries series) => switch (series) {
   LineChartSeries() => series.dashPattern,
   AreaChartSeries() => series.dashPattern,
+  RangeAreaChartSeries() => [
+    ...series.upperBoundaryStyle.dashPattern,
+    ...series.lowerBoundaryStyle.dashPattern,
+  ],
   _ => const [],
 };
 
@@ -1400,6 +1549,55 @@ Map<String, Object?> _encodeAreaGradient(AreaGradient gradient) => {
   'begin': {'x': _number(gradient.begin.x), 'y': _number(gradient.begin.y)},
   'end': {'x': _number(gradient.end.x), 'y': _number(gradient.end.y)},
 };
+
+Map<String, Object?> _encodeRangeAreaBoundaryStyle(
+  RangeAreaBoundaryStyle style,
+) => {
+  'visible': style.visible,
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'strokeWidth': _number(style.strokeWidth),
+  'dashPattern': [for (final interval in style.dashPattern) _number(interval)],
+  'glowRadius': _number(style.glowRadius),
+};
+
+RangeAreaBoundaryStyle _decodeRangeAreaBoundaryStyle(
+  Map<String, Object?>? value,
+) {
+  if (value == null) return const RangeAreaBoundaryStyle();
+  return RangeAreaBoundaryStyle(
+    visible: _optionalBool(value['visible']) ?? true,
+    color: _optionalColor(value['color'], r'$.style.boundary.color'),
+    strokeWidth: _optionalDouble(value['strokeWidth']) ?? 1.5,
+    dashPattern: value['dashPattern'] == null
+        ? const []
+        : _decodeDashPattern(value['dashPattern']),
+    glowRadius: _optionalDouble(value['glowRadius']) ?? 0,
+  );
+}
+
+Map<String, Object?> _encodeRangeAreaLabelConfig(RangeAreaLabelConfig config) =>
+    {
+      'value': config.value.name,
+      'labels': _encodeDataPointLabels(config.labels),
+      'boundaryGap': _number(config.boundaryGap),
+    };
+
+RangeAreaLabelConfig _decodeRangeAreaLabelConfig(Map<String, Object?>? value) {
+  if (value == null) return const RangeAreaLabelConfig();
+  return RangeAreaLabelConfig(
+    value:
+        _optionalEnum(
+          value['value'],
+          RangeAreaLabelValue.values,
+          r'$.style.labelConfig.value',
+        ) ??
+        RangeAreaLabelValue.none,
+    labels:
+        _decodeDataPointLabels(_optionalMap(value, 'labels')) ??
+        const DataPointLabelConfig(),
+    boundaryGap: _optionalDouble(value['boundaryGap']) ?? 4,
+  );
+}
 
 AreaGradient? _decodeAreaGradient(Map<String, Object?>? value) {
   if (value == null) return null;

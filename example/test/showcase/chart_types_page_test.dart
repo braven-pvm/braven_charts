@@ -23,13 +23,26 @@ void main() {
       find.byKey(const ValueKey('chart-type-cartesian-grid')),
       findsOneWidget,
     );
-    expect(find.byType(BravenChartPlus), findsNWidgets(5));
-    for (final family in ['Line', 'Area', 'Bar', 'Scatter', 'Candlestick']) {
+    expect(find.byType(BravenChartPlus), findsNWidgets(6));
+    for (final family in [
+      'Line',
+      'Area',
+      'Range Area',
+      'Bar',
+      'Scatter',
+      'Candlestick',
+    ]) {
       expect(find.text(family), findsOneWidget);
     }
     expect(find.text('Motion'), findsOneWidget);
     expect(find.text('Chart Options'), findsNothing);
     expect(find.text('Regenerate Dataset'), findsNothing);
+    final rangeArea = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-range-area-charts')),
+    );
+    expect(rangeArea.series.whereType<RangeAreaChartSeries>(), hasLength(1));
+    expect(rangeArea.series.whereType<LineChartSeries>(), hasLength(1));
+    expect(rangeArea.series.whereType<AreaChartSeries>(), isEmpty);
     final lineWidth = tester
         .getSize(find.byKey(const ValueKey('chart-type-card-line')))
         .width;
@@ -44,7 +57,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(showcaseChartTypes, hasLength(9));
+    expect(showcaseChartTypes, hasLength(10));
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(3));
     for (final family in ['Pie', 'Donut', 'Concentric Donut']) {
       expect(find.text(family), findsOneWidget);
@@ -82,6 +95,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chart-type-card-bar')));
     await tester.pump();
     expect(selectedSlug, 'bar-charts');
+
+    await tester.tap(
+      find.byKey(const ValueKey('chart-type-card-range-area-charts')),
+    );
+    await tester.pump();
+    expect(selectedSlug, 'range-area-charts');
 
     await tester.tap(find.byKey(const ValueKey('chart-type-card-candlestick')));
     await tester.pump();
@@ -158,7 +177,7 @@ void main() {
     expect(concentricScale.transform.getMaxScaleOnAxis(), closeTo(1.12, 0.001));
     expect(
       tester.getSize(find.byKey(const ValueKey('chart-type-card-pie'))).width,
-      greaterThan(
+      greaterThanOrEqualTo(
         tester
             .getSize(find.byKey(const ValueKey('chart-type-card-line')))
             .width,
@@ -200,6 +219,18 @@ void main() {
           (series) => series.pathAnimation.entranceMode,
         ),
         everyElement(PathEntranceAnimationMode.reveal),
+      );
+
+      final rangeArea = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('chart-type-preview-range-area-charts')),
+      );
+      expect(
+        rangeArea.series
+            .whereType<RangeAreaChartSeries>()
+            .single
+            .pathAnimation
+            .entranceMode,
+        PathEntranceAnimationMode.reveal,
       );
 
       final scatter = tester.widget<BravenChartPlus>(

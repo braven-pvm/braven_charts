@@ -106,6 +106,76 @@ void main() {
     );
   });
 
+  test('dense Range Area artifact and source generation stay bounded', () {
+    const pointCount = 5000;
+    final extractionWatch = Stopwatch()..start();
+    final snapshot = _success(
+      ChartDocumentExtractor.extract(
+        source: _rangeAreaSource(pointCount),
+        options: const ChartDocumentExtractOptions(
+          documentId: 'range-area-portable-benchmark',
+          dataStorage: ChartDataStorage.inlineColumns,
+        ),
+        revision: 1,
+      ),
+    ).value;
+    extractionWatch.stop();
+
+    final artifact = ChartArtifact(
+      artifactId: 'range-area-portable-benchmark',
+      renderer: const ChartRendererInfo(
+        package: 'braven_charts',
+        version: 'benchmark',
+      ),
+      createdAt: DateTime.utc(2026, 7, 21),
+      document: snapshot.document,
+      viewState: snapshot.viewState,
+    );
+    final encodeWatch = Stopwatch()..start();
+    final encoded = _success(ChartArtifactJsonCodec.encode(artifact)).value;
+    encodeWatch.stop();
+
+    final hydrateWatch = Stopwatch()..start();
+    final hydrated = _success(ChartDocumentHydrator.hydrateJson(encoded)).value;
+    hydrateWatch.stop();
+
+    final sourceWatch = Stopwatch()..start();
+    final generated = _success(
+      ChartDartSourceGenerator.generate(
+        snapshot,
+        options: const ChartDartSourceOptions(
+          variableName: 'denseRangeAreaChart',
+          maxInlinePoints: pointCount,
+        ),
+      ),
+    ).value;
+    sourceWatch.stop();
+
+    expect(snapshot.document.pointCount, pointCount);
+    expect(hydrated.series.single, isA<RangeAreaChartSeries>());
+    expect(hydrated.series.single.points, hasLength(pointCount));
+    expect(generated.pointCount, pointCount);
+    expect(generated.omittedPointCount, 0);
+    expect(generated.source, contains('RangeAreaDataPoint('));
+    for (final duration in [
+      extractionWatch.elapsed,
+      encodeWatch.elapsed,
+      hydrateWatch.elapsed,
+      sourceWatch.elapsed,
+    ]) {
+      expect(duration, lessThan(const Duration(seconds: 5)));
+    }
+    // ignore: avoid_print
+    print(
+      'Range Area portable pipeline ($pointCount intervals): '
+      'extract ${_ms(extractionWatch.elapsed)}ms; '
+      'encode ${_ms(encodeWatch.elapsed)}ms; '
+      'hydrate ${_ms(hydrateWatch.elapsed)}ms; '
+      'source ${_ms(sourceWatch.elapsed)}ms; '
+      'JSON ${encoded.length} chars; Dart ${generated.source.length} chars',
+    );
+  });
+
   testWidgets('streaming snapshot reports bounded extraction impact', (
     tester,
   ) async {
@@ -300,6 +370,52 @@ ChartDocumentExtractionSource _source(int pointCount) {
         position: YAxisPosition.left,
         label: 'Power',
         unit: 'W',
+      ),
+    ],
+    theme: theme,
+    interaction: const InteractionConfig(),
+    legendVisible: true,
+    legendStyle: theme.legendStyle,
+    grid: const GridConfig(),
+    normalizationMode: NormalizationMode.none,
+    backgroundColor: Colors.white,
+    showToolbar: false,
+    interactiveAnnotations: true,
+    maxAxesPerSide: 3,
+    axisSwapMode: AxisSwapMode.sticky,
+    viewState: ChartViewState(),
+  );
+}
+
+ChartDocumentExtractionSource _rangeAreaSource(int pointCount) {
+  final series = RangeAreaChartSeries(
+    id: 'confidence-band',
+    name: 'Confidence band',
+    unit: '%',
+    color: const Color(0xFF7C3AED),
+    interpolation: LineInterpolation.monotone,
+    points: [
+      for (var index = 0; index < pointCount; index++)
+        RangeAreaDataPoint(
+          x: index.toDouble(),
+          low: 40 + (index % 120) * .2,
+          high: 52 + (index % 120) * .2,
+        ),
+    ],
+  );
+  final theme = ChartTheme.light;
+  return ChartDocumentExtractionSource(
+    allSeries: [series],
+    visibleSeries: [series],
+    declaredSeries: [series],
+    annotations: const [],
+    xAxis: const XAxisConfig(label: 'Sample'),
+    axes: [
+      YAxisConfig.withId(
+        id: 'y',
+        position: YAxisPosition.left,
+        label: 'Confidence',
+        unit: '%',
       ),
     ],
     theme: theme,

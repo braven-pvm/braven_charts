@@ -73,6 +73,8 @@ import 'models/polar_column_chart_series.dart';
 import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
+import 'models/range_area_chart_series.dart';
+import 'models/range_area_interaction_details.dart';
 import 'models/scatter_marker_style.dart';
 import 'models/scatter_render_config.dart';
 import 'models/streaming_config.dart';
@@ -194,6 +196,7 @@ class BravenChartPlus extends StatefulWidget {
     this.grid,
     this.width,
     this.height,
+    this.axislessPlotInsets = ChartRenderBox.axislessPlotInsets,
     this.backgroundColor = Colors.white,
     this.showDebugInfo = false,
     this.showXScrollbar = false,
@@ -854,6 +857,14 @@ class BravenChartPlus extends StatefulWidget {
   final GridConfig? grid;
   final double? width;
   final double? height;
+
+  /// Insets retained around a Cartesian plot when both axes are hidden.
+  ///
+  /// Defaults to 10 logical pixels on every edge so markers and strokes are
+  /// not clipped. Dense synchronized compositions can remove only the vertical
+  /// insets while preserving horizontal breathing room.
+  final EdgeInsets axislessPlotInsets;
+
   final Color backgroundColor;
   final bool showDebugInfo;
 
@@ -4005,6 +4016,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
     LineChartSeries() => series.pathAnimation,
     AreaChartSeries() => series.pathAnimation,
+    RangeAreaChartSeries() => series.pathAnimation,
     _ => null,
   };
 
@@ -6834,6 +6846,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (renderBox == null) return;
 
       if (_handleCandlestickPointKey(event.logicalKey)) return;
+      if (_handleRangeAreaPointKey(event.logicalKey)) return;
       if (_handleScatterPointKey(event.logicalKey)) return;
       if (_handleBarPointKey(event.logicalKey)) return;
 
@@ -7239,6 +7252,77 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           : pointIndex,
     );
     return true;
+  }
+
+  bool _handleRangeAreaPointKey(LogicalKeyboardKey key) {
+    final keyboard =
+        widget.interactionConfig?.keyboard ?? const KeyboardConfig();
+    if (!keyboard.enabled) return false;
+    final ranges = _effectiveDataSeries
+        .whereType<RangeAreaChartSeries>()
+        .toList(growable: false);
+    if (ranges.length != 1) return false;
+    final series = ranges.single;
+    final validIndices = [
+      for (final (index, point) in series.intervals.indexed)
+        if (!point.isGap) index,
+    ];
+    if (validIndices.isEmpty) return false;
+
+    if (key == LogicalKeyboardKey.escape) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current?.seriesId != series.id && _selectedPointRefs.isEmpty) {
+        return false;
+      }
+      _clearPointFocus();
+      _clearPointSelection();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current == null || current.seriesId != series.id) return false;
+      _selectCartesianPointRef(
+        current,
+        additive:
+            HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed,
+      );
+      final point = series.intervalAt(current.pointIndex);
+      widget.onPointTap?.call(point, series.id);
+      widget.interactionConfig?.onDataPointTap?.call(point, Offset.zero);
+      return true;
+    }
+    if (!keyboard.enableArrowKeys ||
+        HardwareKeyboard.instance.isAltPressed ||
+        (key != LogicalKeyboardKey.arrowLeft &&
+            key != LogicalKeyboardKey.arrowRight)) {
+      return false;
+    }
+
+    final current = _focusedPointRefs.firstOrNull;
+    final currentPosition = current?.seriesId == series.id
+        ? validIndices.indexOf(current!.pointIndex)
+        : -1;
+    final nextPosition = currentPosition < 0
+        ? key == LogicalKeyboardKey.arrowLeft
+              ? validIndices.length - 1
+              : 0
+        : (currentPosition + (key == LogicalKeyboardKey.arrowLeft ? -1 : 1))
+              .clamp(0, validIndices.length - 1);
+    _setKeyboardRangeAreaFocus(series, validIndices[nextPosition]);
+    return true;
+  }
+
+  void _setKeyboardRangeAreaFocus(RangeAreaChartSeries series, int pointIndex) {
+    final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
+    if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
+      return;
+    }
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   void _setKeyboardCandlestickFocus(
@@ -7906,6 +7990,86 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
+  ({String value, bool isSelected})? _focusedRangeAreaSemantics() {
+    final ref = _focusedPointRefs.firstOrNull;
+    if (ref == null) return null;
+    return _rangeAreaSemanticsForRef(ref);
+  }
+
+  ({String value, bool isSelected})? _rangeAreaSemanticsForRef(
+    ChartPointRef ref,
+  ) {
+    final series = _effectiveDataSeries
+        .whereType<RangeAreaChartSeries>()
+        .where((candidate) => candidate.id == ref.seriesId)
+        .firstOrNull;
+    if (series == null ||
+        ref.pointIndex < 0 ||
+        ref.pointIndex >= series.points.length) {
+      return null;
+    }
+    final point = series.intervalAt(ref.pointIndex);
+    if (point.isGap) return null;
+    final validIndices = [
+      for (final (index, candidate) in series.intervals.indexed)
+        if (!candidate.isGap) index,
+    ];
+    final ordinal = validIndices.indexOf(ref.pointIndex) + 1;
+    final details = RangeAreaInteractionDetails.fromPoint(
+      point,
+      unit: series.unit,
+      formattedTimestamp:
+          point.label ?? point.timestamp?.toUtc().toIso8601String(),
+    );
+    final selection = _selectedPointRefs.contains(ref)
+        ? 'selected'
+        : 'not selected';
+    return (
+      value:
+          '${series.displayName}, ${details.semanticLabel}, '
+          'interval $ordinal of ${validIndices.length}, $selection',
+      isSelected: _selectedPointRefs.contains(ref),
+    );
+  }
+
+  String? _adjacentRangeAreaSemanticsValue(int delta) {
+    final current = _focusedPointRefs.firstOrNull;
+    if (current == null) return null;
+    final series = _effectiveDataSeries
+        .whereType<RangeAreaChartSeries>()
+        .where((candidate) => candidate.id == current.seriesId)
+        .firstOrNull;
+    if (series == null) return null;
+    final validIndices = [
+      for (final (index, point) in series.intervals.indexed)
+        if (!point.isGap) index,
+    ];
+    if (validIndices.isEmpty) return null;
+    final currentPosition = validIndices.indexOf(current.pointIndex);
+    final nextPosition = (math.max(0, currentPosition) + delta).clamp(
+      0,
+      validIndices.length - 1,
+    );
+    return _rangeAreaSemanticsForRef(
+      ChartPointRef(
+        seriesId: series.id,
+        pointIndex: validIndices[nextPosition],
+      ),
+    )?.value;
+  }
+
+  void _moveSemanticRangeAreaFocus(int delta) {
+    _handleRangeAreaPointKey(
+      delta < 0 ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight,
+    );
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
+  void _activateSemanticRangeAreaFocus() {
+    _handleRangeAreaPointKey(LogicalKeyboardKey.enter);
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final workbenchActionScope = widget.chartActionButtonBuilder == null
@@ -8045,6 +8209,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           primaryYAxisConfig: isNonCartesian
                               ? null
                               : widget.yAxis,
+                          axislessPlotInsets: widget.axislessPlotInsets,
                           theme: widget.theme,
                           tooltipsEnabled:
                               (effectiveInteractionConfig?.enabled ?? true) &&
@@ -8257,6 +8422,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final focusedCandlestick = hasCandlesticks
         ? _focusedCandlestickSemantics()
         : null;
+    final hasRangeArea =
+        !isNonCartesian &&
+        !hasCandlesticks &&
+        _effectiveDataSeries.whereType<RangeAreaChartSeries>().length == 1;
+    final focusedRangeArea = hasRangeArea ? _focusedRangeAreaSemantics() : null;
     final hasOnlyScatter =
         !isNonCartesian &&
         _effectiveDataSeries.isNotEmpty &&
@@ -8287,6 +8457,31 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             selected: focusedCandlestick?.isSelected,
             onIncrease: () => _moveSemanticCandlestickFocus(1),
             onDecrease: () => _moveSemanticCandlestickFocus(-1),
+            child: focusChart,
+          )
+        : hasRangeArea
+        ? Semantics(
+            container: true,
+            focusable: true,
+            liveRegion: focusedRangeArea != null,
+            label: widget.title ?? 'Interactive range area chart',
+            value: focusedRangeArea?.value,
+            increasedValue: focusedRangeArea == null
+                ? null
+                : _adjacentRangeAreaSemanticsValue(1) ?? focusedRangeArea.value,
+            decreasedValue: focusedRangeArea == null
+                ? null
+                : _adjacentRangeAreaSemanticsValue(-1) ??
+                      focusedRangeArea.value,
+            hint: focusedRangeArea == null
+                ? 'Use left and right arrow keys to inspect intervals. Press Enter to select.'
+                : null,
+            selected: focusedRangeArea?.isSelected,
+            onIncrease: () => _moveSemanticRangeAreaFocus(1),
+            onDecrease: () => _moveSemanticRangeAreaFocus(-1),
+            onTap: focusedRangeArea == null
+                ? () => _moveSemanticRangeAreaFocus(1)
+                : _activateSemanticRangeAreaFocus,
             child: focusChart,
           )
         : hasOnlyBars
@@ -8726,6 +8921,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.xAxisConfig,
     this.yAxis,
     this.primaryYAxisConfig,
+    this.axislessPlotInsets = ChartRenderBox.axislessPlotInsets,
     this.theme,
     required this.tooltipsEnabled,
     this.selectedTooltipSeriesId,
@@ -8771,6 +8967,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   /// The NEW [YAxisConfig] type from the widget for multi-axis system integration.
   final YAxisConfig? primaryYAxisConfig;
+  final EdgeInsets axislessPlotInsets;
   final ChartTheme? theme;
 
   /// Grid configuration for controlling grid line visibility and styling.
@@ -8817,6 +9014,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         showYScrollbar: showYScrollbar,
         scrollbarTheme: scrollbarTheme,
         interactionConfig: interactionConfig,
+        axislessInsets: axislessPlotInsets,
         textScaleFactor: textScaleFactor,
         textDirection: textDirection,
         normalizationMode: normalizationMode,
@@ -8857,6 +9055,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
+      ..setAxislessPlotInsets(axislessPlotInsets)
       ..setTheme(theme)
       ..setTooltipsEnabled(tooltipsEnabled)
       ..setSelectedTooltipPoint(

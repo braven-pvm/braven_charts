@@ -47,9 +47,10 @@ GitHub publishing can be enabled on pub.dev after the package exists.
       to the exact Gallery or detail page that demonstrates it.
 - [ ] The README visual index uses three examples per row and includes every
       composition in the Gallery's curated tour without repeating an asset.
-- [ ] The remaining screenshot slots show varied individual examples,
-      including Pie, Donut, multi-axis, annotations, live data, themes, and
-      baseline fills; do not publish contact sheets or repeated composites.
+- [ ] The remaining screenshot slots prioritize the release's new public APIs,
+      then add varied interaction/live examples. Keep Pie, Donut, Concentric,
+      Polar, Cartesian, annotations, themes, and baseline fills represented in
+      the README visual index without repeating the pubspec assets needlessly.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
 - [ ] The interaction and live-stream animations show real behavior from the
   deployed showcase, remain below 4 MB each, and render from package-local
@@ -75,8 +76,10 @@ Capture browser media from a local release build with `--url
 http://127.0.0.1:<port>/` before the public site has the change.
 
 `--capture pie`, `--capture donut`, `--capture bar`, `--capture scatter`,
-`--capture synchronized`, `--capture polar`, `--capture hero`, and `--capture
-interaction-still` do not take browser screenshots. They mount the same Gallery
+`--capture range-area`, `--capture synchronized`, `--capture polar`,
+`--capture hero`, and `--capture interaction-still`, plus the release-specific
+`--capture cartesian-0.10`, do
+not take browser screenshots. They mount the same Gallery
 configurations in Flutter's deterministic test renderer, call the native
 preview API for individual charts, load Flutter's bundled Roboto font, and
 write the returned PNG bytes. Multi-chart compositions use a deterministic
@@ -96,6 +99,8 @@ GIFs.
 - [ ] The deployed Donut Charts route loads directly and after a browser refresh.
 - [ ] The deployed Concentric Donut route loads directly and after a browser refresh.
 - [ ] The deployed Polar Column route loads directly and after a browser refresh.
+- [ ] The deployed Candlestick route loads directly and after a browser refresh.
+- [ ] The deployed Tracking & Value Display route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.

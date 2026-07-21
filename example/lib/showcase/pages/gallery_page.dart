@@ -8,10 +8,12 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
 import '../widgets/bar_gallery_cards.dart';
+import '../widgets/cartesian_release_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
 import '../widgets/polar_column_gallery_cards.dart';
+import '../widgets/range_area_gallery_cards.dart';
 import '../widgets/scatter_gallery_cards.dart';
 import '../widgets/synchronized_cartesian_gallery_card.dart';
 import '../widgets/chart_type_catalog.dart';
@@ -52,6 +54,8 @@ class _GalleryPageState extends State<GalleryPage> {
       const LactateComparisonGalleryCard(),
       const LiveStreamGalleryCard(),
       const SynchronizedCartesianGalleryCard(),
+      const CandlestickMarketGalleryCard(),
+      const ValueSummaryGalleryCard(),
       _buildNormalizedCrosshairChart(isDark),
       _buildAnnotatedChart(isDark),
       _buildMultiLayerAnalyticsChart(isDark),
@@ -168,10 +172,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Eight chart guides, grouped by visual grammar',
+              title: 'Ten chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 8,
+              count: 10,
             ),
           ),
           SliverToBoxAdapter(
@@ -244,6 +248,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(buildingBlockCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'RANGE AREA COMPOSITIONS',
+              title: 'Three interval stories, one atomic low–high model',
+              subtitle:
+                  'Compare a weather envelope, nested forecast confidence, and a financial volatility band while keeping centre observations as independent Line series.',
+              count: 3,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-range-area-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 460,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(rangeAreaGalleryCards),
             ),
           ),
           const SliverToBoxAdapter(

@@ -139,6 +139,18 @@ extension ChartThemeFluent on ChartTheme {
     CandlestickTheme Function(CandlestickTheme current) update,
   ) => copyWith(candlestickTheme: update(candlestickTheme));
 
+  /// Replaces [ChartTheme.rangeAreaTheme] with [value].
+  ChartTheme withRangeAreaTheme(RangeAreaTheme value) =>
+      copyWith(rangeAreaTheme: value);
+
+  /// Rebuilds [ChartTheme.rangeAreaTheme] from its current value.
+  ///
+  /// `update` receives the current [RangeAreaTheme] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ChartTheme updateRangeAreaTheme(
+    RangeAreaTheme Function(RangeAreaTheme current) update,
+  ) => copyWith(rangeAreaTheme: update(rangeAreaTheme));
+
   /// Replaces [ChartTheme.cartesianValueSummaryTheme] with [value].
   ChartTheme withCartesianValueSummaryTheme(CartesianValueSummaryTheme value) =>
       copyWith(cartesianValueSummaryTheme: value);

@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 93 of 93 classes have a synthesizable subject: every verb they
+// 98 of 98 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1099 verbs total; 9 of them have an argument type with no
+// 1161 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 93;
+const int _executedClasses = 98;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
@@ -1578,7 +1578,7 @@ void _compileBarChartSeries(
   subject.withBulletStyle(a2);
 }
 
-/// Smoke coverage for [ChartTheme]'s 28 executable verb(s).
+/// Smoke coverage for [ChartTheme]'s 30 executable verb(s).
 void _smokeChartTheme(_Verb verb, ChartTheme subject) {
   verb(
     'ChartThemeFluent.withBackgroundColor',
@@ -1810,6 +1810,14 @@ void _smokeChartTheme(_Verb verb, ChartTheme subject) {
   verb(
     'ChartThemeFluent.updateCandlestickTheme',
     () => subject.updateCandlestickTheme((current) => current),
+  );
+  verb(
+    'ChartThemeFluent.withRangeAreaTheme',
+    () => subject.withRangeAreaTheme(RangeAreaTheme.light),
+  );
+  verb(
+    'ChartThemeFluent.updateRangeAreaTheme',
+    () => subject.updateRangeAreaTheme((current) => current),
   );
   verb(
     'ChartThemeFluent.withCartesianValueSummaryTheme',
@@ -3539,6 +3547,222 @@ void _smokeRadialSelectionStyle(_Verb verb, RadialSelectionStyle subject) {
   );
 }
 
+/// Smoke coverage for [RangeAreaChartSeries]'s 24 executable verb(s).
+void _smokeRangeAreaChartSeries(_Verb verb, RangeAreaChartSeries subject) {
+  verb('RangeAreaChartSeriesFluent.withName', () => subject.withName('y'));
+  verb(
+    'RangeAreaChartSeriesFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withMetadata',
+    () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withAnnotations',
+    () => subject.withAnnotations(const []),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withYAxisId',
+    () => subject.withYAxisId('y'),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withYAxisConfig',
+    () => subject.withYAxisConfig(
+      YAxisConfig(position: YAxisPosition.values.first),
+    ),
+  );
+  verb('RangeAreaChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb(
+    'RangeAreaChartSeriesFluent.withInterpolation',
+    () => subject.withInterpolation(LineInterpolation.linear),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withTension',
+    () => subject.withTension(0.25),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withFillOpacity',
+    () => subject.withFillOpacity(0.28),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.clearFillGradient',
+    () => subject.clearFillGradient(),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withBorderMode',
+    () => subject.withBorderMode(RangeAreaBorderMode.boundaries),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withUpperBoundaryStyle',
+    () => subject.withUpperBoundaryStyle(const RangeAreaBoundaryStyle()),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.updateUpperBoundaryStyle',
+    () => subject.updateUpperBoundaryStyle((current) => current),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withLowerBoundaryStyle',
+    () => subject.withLowerBoundaryStyle(const RangeAreaBoundaryStyle()),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.updateLowerBoundaryStyle',
+    () => subject.updateLowerBoundaryStyle((current) => current),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withConnectGaps',
+    () => subject.withConnectGaps(false),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withShowBoundaryMarkers',
+    () => subject.withShowBoundaryMarkers(false),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withMarkerRadius',
+    () => subject.withMarkerRadius(3),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withLabelConfig',
+    () => subject.withLabelConfig(const RangeAreaLabelConfig()),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.updateLabelConfig',
+    () => subject.updateLabelConfig((current) => current),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withHitTestMode',
+    () => subject.withHitTestMode(RangeAreaHitTestMode.band),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withPathAnimation',
+    () => subject.withPathAnimation(const PathAnimationStyle()),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.updatePathAnimation',
+    () => subject.updatePathAnimation((current) => current),
+  );
+}
+
+/// Compile-only coverage for [RangeAreaChartSeries]'s 1 verb(s)
+/// whose argument type has no synthesizable value.
+void _compileRangeAreaChartSeries(
+  RangeAreaChartSeries subject,
+  AreaGradient a0,
+) {
+  subject.withFillGradient(a0);
+}
+
+/// Smoke coverage for [RangeAreaDataPoint]'s 17 executable verb(s).
+void _smokeRangeAreaDataPoint(_Verb verb, RangeAreaDataPoint subject) {
+  verb('RangeAreaDataPointFluent.withX', () => subject.withX(1.0));
+  verb(
+    'RangeAreaDataPointFluent.withMagnitude',
+    () => subject.withMagnitude(1.0),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearMagnitude',
+    () => subject.clearMagnitude(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withColorValue',
+    () => subject.withColorValue(1.0),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearColorValue',
+    () => subject.clearColorValue(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withOpacityValue',
+    () => subject.withOpacityValue(1.0),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearOpacityValue',
+    () => subject.clearOpacityValue(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withCategoryValue',
+    () => subject.withCategoryValue('y'),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearCategoryValue',
+    () => subject.clearCategoryValue(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withTimestamp',
+    () => subject.withTimestamp(DateTime.utc(2026)),
+  );
+  verb('RangeAreaDataPointFluent.withLabel', () => subject.withLabel('y'));
+  verb(
+    'RangeAreaDataPointFluent.withMetadata',
+    () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withSegmentStyle',
+    () => subject.withSegmentStyle(SegmentStyle()),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearSegmentStyle',
+    () => subject.clearSegmentStyle(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withPointStyle',
+    () => subject.withPointStyle(PointStyle()),
+  );
+  verb(
+    'RangeAreaDataPointFluent.clearPointStyle',
+    () => subject.clearPointStyle(),
+  );
+  verb(
+    'RangeAreaDataPointFluent.withInterval',
+    () => subject.withInterval(1.0, 2.0),
+  );
+}
+
+/// Smoke coverage for [RangeAreaLabelConfig]'s 4 executable verb(s).
+void _smokeRangeAreaLabelConfig(_Verb verb, RangeAreaLabelConfig subject) {
+  verb(
+    'RangeAreaLabelConfigFluent.withValue',
+    () => subject.withValue(RangeAreaLabelValue.none),
+  );
+  verb(
+    'RangeAreaLabelConfigFluent.withLabels',
+    () => subject.withLabels(const DataPointLabelConfig()),
+  );
+  verb(
+    'RangeAreaLabelConfigFluent.updateLabels',
+    () => subject.updateLabels((current) => current),
+  );
+  verb(
+    'RangeAreaLabelConfigFluent.withBoundaryGap',
+    () => subject.withBoundaryGap(4),
+  );
+}
+
+/// Smoke coverage for [RangeAreaBoundaryStyle]'s 6 executable verb(s).
+void _smokeRangeAreaBoundaryStyle(_Verb verb, RangeAreaBoundaryStyle subject) {
+  verb(
+    'RangeAreaBoundaryStyleFluent.withVisible',
+    () => subject.withVisible(true),
+  );
+  verb(
+    'RangeAreaBoundaryStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('RangeAreaBoundaryStyleFluent.clearColor', () => subject.clearColor());
+  verb(
+    'RangeAreaBoundaryStyleFluent.withStrokeWidth',
+    () => subject.withStrokeWidth(1.5),
+  );
+  verb(
+    'RangeAreaBoundaryStyleFluent.withDashPattern',
+    () => subject.withDashPattern(const []),
+  );
+  verb(
+    'RangeAreaBoundaryStyleFluent.withGlowRadius',
+    () => subject.withGlowRadius(0),
+  );
+}
+
 /// Smoke coverage for [ScatterMarkerStyle]'s 14 executable verb(s).
 void _smokeScatterMarkerStyle(_Verb verb, ScatterMarkerStyle subject) {
   verb(
@@ -4577,6 +4801,42 @@ void _smokeInteractionTheme(_Verb verb, InteractionTheme subject) {
   );
 }
 
+/// Smoke coverage for [RangeAreaTheme]'s 8 executable verb(s).
+void _smokeRangeAreaTheme(_Verb verb, RangeAreaTheme subject) {
+  verb(
+    'RangeAreaThemeFluent.withFillOpacity',
+    () => subject.withFillOpacity(1.0),
+  );
+  verb(
+    'RangeAreaThemeFluent.withBoundaryOpacity',
+    () => subject.withBoundaryOpacity(1.0),
+  );
+  verb(
+    'RangeAreaThemeFluent.withBoundaryWidth',
+    () => subject.withBoundaryWidth(1.0),
+  );
+  verb(
+    'RangeAreaThemeFluent.withMarkerFillColor',
+    () => subject.withMarkerFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RangeAreaThemeFluent.withMarkerStrokeColor',
+    () => subject.withMarkerStrokeColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RangeAreaThemeFluent.withMarkerStrokeWidth',
+    () => subject.withMarkerStrokeWidth(1.0),
+  );
+  verb(
+    'RangeAreaThemeFluent.withSelectionColor',
+    () => subject.withSelectionColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RangeAreaThemeFluent.withFocusColor',
+    () => subject.withFocusColor(const Color(0xFF2196F3)),
+  );
+}
+
 /// Smoke coverage for [ScrollbarConfig]'s 23 executable verb(s).
 void _smokeScrollbarConfig(_Verb verb, ScrollbarConfig subject) {
   verb(
@@ -4758,6 +5018,7 @@ const List<Function> _compileOnlyCases = <Function>[
   _compileScatterChartSeries,
   _compileAreaChartSeries,
   _compileBarChartSeries,
+  _compileRangeAreaChartSeries,
 ];
 
 /// Verbs that cannot be executed, recorded rather than silently dropped.
@@ -4771,6 +5032,7 @@ const List<String> _compileOnlyVerbs = <String>[
   'BarChartSeriesFluent.withTrackStyle — no synthesizable value for BarTrackStyle',
   'BarChartSeriesFluent.withLollipopStyle — no synthesizable value for BarLollipopStyle',
   'BarChartSeriesFluent.withBulletStyle — no synthesizable value for BarBulletStyle',
+  'RangeAreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
 ];
 
 void main() {
@@ -5564,6 +5826,47 @@ void main() {
         reason: 'generated RadialSelectionStyleFluent verb(s) threw',
       );
     });
+    test('RangeAreaChartSeries', () {
+      final subject = _subject(
+        () =>
+            RangeAreaChartSeries(id: 'x', points: const <RangeAreaDataPoint>[]),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeRangeAreaChartSeries, subject),
+        isEmpty,
+        reason: 'generated RangeAreaChartSeriesFluent verb(s) threw',
+      );
+    });
+    test('RangeAreaDataPoint', () {
+      final subject = _subject(
+        () => RangeAreaDataPoint(x: 0.5, low: 0.5, high: 0.5),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeRangeAreaDataPoint, subject),
+        isEmpty,
+        reason: 'generated RangeAreaDataPointFluent verb(s) threw',
+      );
+    });
+    test('RangeAreaLabelConfig', () {
+      final subject = _subject(() => RangeAreaLabelConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRangeAreaLabelConfig, subject),
+        isEmpty,
+        reason: 'generated RangeAreaLabelConfigFluent verb(s) threw',
+      );
+    });
+    test('RangeAreaBoundaryStyle', () {
+      final subject = _subject(() => RangeAreaBoundaryStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRangeAreaBoundaryStyle, subject),
+        isEmpty,
+        reason: 'generated RangeAreaBoundaryStyleFluent verb(s) threw',
+      );
+    });
     test('ScatterMarkerStyle', () {
       final subject = _subject(() => ScatterMarkerStyle());
       if (subject == null) return;
@@ -5997,6 +6300,26 @@ void main() {
         reason: 'generated InteractionThemeFluent verb(s) threw',
       );
     });
+    test('RangeAreaTheme', () {
+      final subject = _subject(
+        () => RangeAreaTheme(
+          fillOpacity: 0.5,
+          boundaryOpacity: 0.5,
+          boundaryWidth: 0.5,
+          markerFillColor: const Color(0xFF2196F3),
+          markerStrokeColor: const Color(0xFF2196F3),
+          markerStrokeWidth: 0.5,
+          selectionColor: const Color(0xFF2196F3),
+          focusColor: const Color(0xFF2196F3),
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeRangeAreaTheme, subject),
+        isEmpty,
+        reason: 'generated RangeAreaThemeFluent verb(s) threw',
+      );
+    });
     test('ScrollbarConfig', () {
       final subject = _subject(() => ScrollbarConfig());
       if (subject == null) return;
@@ -6062,9 +6385,9 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 93);
+    expect(_executedClasses, 98);
     expect(_skippedClasses, 0);
-    expect(_compileOnlyCases, hasLength(4));
-    expect(_compileOnlyVerbs, hasLength(9));
+    expect(_compileOnlyCases, hasLength(5));
+    expect(_compileOnlyVerbs, hasLength(10));
   });
 }

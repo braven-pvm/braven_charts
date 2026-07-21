@@ -8,15 +8,16 @@ Braven Charts is a pure Dart charting library for Flutter applications. Chart
 rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
-`BravenChartPlus` supports line, area, bar, scatter, typed OHLC Candlestick,
-mixed Cartesian series, Pie, Donut, multi-ring Concentric Donut, and axis-based
-Polar Column/Rose charts; multiple independent axes
-and normalization; zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
-full-domain Cartesian navigators shared across Line, Area, Bar, Scatter, and
-Candlestick charts;
-frame-coalesced live data; configurable themes and state views; chart, table,
-split, and generated Dart source modes; and portable chart artifacts. Rendering,
-input handling, and streaming updates remain inside the Flutter rendering pipeline.
+`BravenChartPlus` supports line, area, typed low/high Range Area, bar, scatter,
+typed OHLC Candlestick, mixed Cartesian series, Pie, Donut, multi-ring
+Concentric Donut, and axis-based Polar Column/Rose charts; multiple independent
+axes and normalization; zoom, pan, scrollbars, tracking, tooltips, persistent
+value summaries, and editable
+annotations; full-domain Cartesian navigators shared across Line, Area, Bar,
+Scatter, and Candlestick charts; frame-coalesced live data; configurable themes
+and state views; chart, table, split, and generated Dart source modes; and
+portable chart artifacts. Rendering, input handling, and streaming updates
+remain inside the Flutter rendering pipeline.
 
 For update-heavy charts, the implementation uses cached series layers, a
 spatial hit-test index, frame-coalesced point delivery, and a direct render-box
@@ -24,28 +25,33 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
-## What's new in 0.9.0
+## Current highlights
 
-- **Expressive Scatter charts:** map independent point values to area-correct
-  marker size, continuous or threshold-based colour, and opacity. Configure
-  marker shape, fill, outline, dimensions, rotation, hover, press, selection,
-  and focus without giving up point-accurate tracking or unsorted data.
-- **Portable analytical channels:** Scatter encodings and resolved values flow
-  through quantitative legends, tooltips, tables, CSV, artifacts, hydration,
-  and deterministic generated Dart source.
-- **Synchronized Cartesian composition:** a caller-owned
-  `ChartInteractionGroupController` shares a semantic data-X cursor and X-only
-  viewport across independent charts while each chart retains its local Y
-  scale, tooltip, selection, annotations, and artifact boundary.
-- **Deeper public examples:** the Scatter guide now covers fixed markers,
-  styling, stress, unsorted data, interaction states, bubbles, colour scales,
-  risk bands, and opacity in the common Chart/Data/Split/Source Workbench. The
-  Gallery adds three production-shaped Scatter compositions and a synchronized
-  route profile.
+- **Typed Range Area charts:** keep low/high intervals atomic through bounds,
+  fill and boundary geometry, tracking, gaps, nested forecast fans, motion,
+  tables, artifacts, Workbench, and generated Source.
+- **Typed Candlestick charts:** render OHLC data with elapsed or ordinal time,
+  rising/falling/doji styles, live latest-candle revision, dense-data grouping,
+  mixed analytical overlays, tracking, native tables, artifacts, and Source.
+- **Polar Column and Rose:** compose linear-radius or area-correct radial
+  columns with layering, grouping, diverging stacks, targets, thresholds,
+  uncertainty intervals, density controls, gradients, elevation, and motion.
+- **One Cartesian navigator contract:** a reusable full-domain overview controls
+  synchronized Line, Area, Bar, Scatter, and Candlestick viewports. It supports
+  panning, edge resizing, snapping, keyboard and semantic actions, external
+  domain growth, and retained-history navigation during live ingest.
+- **Persistent Cartesian value summaries:** show the policy-resolved current
+  datum as a fixed or draggable in-chart panel, including mixed series,
+  multi-axis units, Scatter encodings, and Candlestick OHLC values.
+- **Host-extensible chart actions:** add typed context commands or a compact,
+  themeable in-chart action while using the same stable Workbench handle for
+  artifact capture and application workflows.
 
-[Open the Scatter guide](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bubble),
-[open the synchronized example](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized),
-or review the [0.9.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#090---2026-07-19)
+[Open the Range Area guide](https://braven-pvm.github.io/braven_charts/?page=range-area-charts),
+[open the Candlestick guide](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts),
+[open the Polar Column guide](https://braven-pvm.github.io/braven_charts/?page=polar-column),
+[inspect the value summary](https://braven-pvm.github.io/braven_charts/?page=value-summary),
+or review the [0.11.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0110---2026-07-21)
 for the complete API-level release notes.
 
 ## Rendered examples
@@ -56,11 +62,28 @@ package rather than treating a single composition as representative.
 
 ### Chart types
 
-| Line | Area | Bar |
+| Line | Area | Range Area |
 | --- | --- | --- |
-| [![Linear, Bezier, stepped, and monotone line interpolation](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_interpolation.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Positive and negative baseline area fill across independently scaled series](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_baseline.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Grouped bars with gradients, targets, uncertainty intervals, and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts&preset=targets) |
-| **Scatter** | **Pie** | **Donut** |
-| [![Scatter chart type with independent point markers](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_scatter.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+| [![Line chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_line.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Area chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_area.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Range Area chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_range_area.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts) |
+| **Bar** | **Scatter** | **Candlestick** |
+| [![Bar chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_bar.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts) | [![Scatter chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_scatter.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Candlestick chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_candlestick.png)](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts) |
+| **Pie** | **Donut** | **Concentric Donut** |
+| [![Pie chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_pie.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Donut chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_donut.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Concentric Donut chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_concentric.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) |
+| **Polar Column / Rose** |  |  |
+| [![Polar Column and Rose chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_polar_column.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |  |  |
+
+### Range Area compositions
+
+Range Area preserves one paired low/high interval at each X position. Use the
+[Temperature envelope](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=temperature),
+[nested Forecast fan](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=forecastFan),
+and [Gaps & steps](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=gapsAndSteps)
+presets to compare range-only, Range Area plus Line, nested bands, typed
+tracking, explicit gaps, styling, motion, and Chart/Data/Split/Source behavior.
+
+| Temperature envelope | Nested forecast fan | Volatility envelope |
+| --- | --- | --- |
+| [![Daily temperature Range Area with observed mean and typed low/high tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_temperature.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=temperature) | [![Nested 80% and 50% demand forecast intervals with a median line](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_forecast_fan.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=forecastFan) | [![Dark rolling volatility Range Area combined with a tracked close line](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_volatility.png)](https://braven-pvm.github.io/braven_charts/?page=technical-indicators) |
 
 ### Concentric Donut compositions
 
@@ -92,18 +115,28 @@ elevation, and baseline-grow, angular-sweep, or fade entrance motion.
 | --- | --- | --- |
 | [![Channel demand compared as linear-radius Polar Columns](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_channel_demand.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) | [![Monthly request volume shown as an area-correct Nightingale Rose](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_seasonal_rose.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) | [![Lifecycle conversion shown on a partial annular Polar pane](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_lifecycle_arc.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |
 
-### Cartesian composition and Scatter encodings
+### Candlestick and Cartesian interaction
+
+The same Cartesian infrastructure now serves typed OHLC charts, persistent
+value summaries, synchronized independent plots, and full-domain navigation.
+Each surface remains available through the package API, Workbench, artifacts,
+native data tables, and generated Dart source.
+
+| Candlestick market structure | Persistent value summary | Synchronized navigator |
+| --- | --- | --- |
+| [![Typed OHLC Candlesticks with a moving average, event range, threshold, and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/candlestick_market_structure.png)](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts) | [![Persistent value summary over a layered Line and Area chart](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/value_summary_panel.png)](https://braven-pvm.github.io/braven_charts/?page=value-summary) | [![Three independently scaled route metrics sharing one data-X cursor, viewport, and navigator](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/synchronized_route_profile.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized) |
+
+### Scatter encodings
 
 Scatter keeps X/Y position independent from marker area, colour, opacity, and
 shape. The same values remain inspectable in the chart, legend, tracking
-surface, table, artifact, and generated Source. Independent Cartesian charts
-can also share a data-X cursor and viewport without merging their local scales.
+surface, table, artifact, and generated Source.
 
-| Synchronized route profile | Bubble area and shape | Continuous colour |
+| Bubble area and shape | Continuous colour | Piecewise risk bands |
 | --- | --- | --- |
-| [![Three independently scaled route metrics sharing one data-X cursor and viewport](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/synchronized_route_profile.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized) | [![Market opportunity Scatter chart using area-correct bubbles and distinct marker shapes](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_market_opportunity.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bubble) | [![Athlete Scatter chart mapping recovery readiness to a continuous colour scale](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_athlete_readiness.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=color%20scale) |
-| **Piecewise risk bands** | **Line motion workbench** | **Area motion workbench** |
-| [![Dark equipment Scatter chart with named piecewise risk bands](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_equipment_risk.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bands) | [![Line motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split) | [![Area motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/area_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split) |
+| [![Market opportunity Scatter chart using area-correct bubbles and distinct marker shapes](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_market_opportunity.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bubble) | [![Athlete Scatter chart mapping recovery readiness to a continuous colour scale](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_athlete_readiness.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=color%20scale) | [![Dark equipment Scatter chart with named piecewise risk bands](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_equipment_risk.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bands) |
+| **Line motion workbench** | **Area motion workbench** | **Chart family overview** |
+| [![Line motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split) | [![Area motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/area_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split) | [![Built-in chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types) |
 
 ### Bar compositions
 
@@ -158,13 +191,13 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, opt-in data-X synchronization across independent Cartesian charts, and a native full-domain navigator for Line, Area, Bar, Scatter, and Candlestick charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories, a signed numeric radial scale, layered/grouped/diverging stacked comparisons, category targets, pane thresholds, absolute uncertainty/range intervals, independent label placement/style, gradients, elevation, entrance motion, and bounded visual density |
+| Data series | Line and Area with explicit per-series entrance/update timing; typed Range Area with atomic low/high intervals, explicit gaps, nested bands, independent boundaries, typed tracking, and motion; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; typed OHLC Candlestick with rising/falling/doji styling, density grouping, live revision, and analytical overlays; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories, a signed numeric radial scale, layered/grouped/diverging stacked comparisons, category targets, pane thresholds, absolute uncertainty/range intervals, independent label placement/style, gradients, elevation, entrance motion, and bounded visual density |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, visible-axis slots, and dedicated angular-category/radial-value Polar axes |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
-| Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split/Source workbenches, loading skeletons, progress indicators, and empty states |
+| Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, persistent fixed or draggable Cartesian value summaries, package-owned Chart/Data/Split/Source workbenches, loading skeletons, progress indicators, and empty states |
 | Developer tooling | Deterministic Dart generation from effective chart documents, selectable dark source viewport, bounded-data and runtime-callback diagnostics, exact copy, and configurable refresh policies |
-| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, synchronized Workbench presentation, synchronized Cartesian interaction, and serializable chart configuration |
+| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, synchronized Workbench presentation, synchronized Cartesian interaction, host-defined context and overlay actions, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X or category/share data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 | Document comparison | Explicit semantic series mapping, exact-X or timestamp alignment, safe units, missing values, deltas, and source-preserving CSV export |
 
@@ -175,6 +208,18 @@ for the feature-to-page map and local run instructions.
 [Open Chart Workbench directly](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
 to try the package-owned Chart/Data/Split/Source workflow, copy generated Dart,
 link point selection, capture artifacts, control freshness, and compare documents.
+[Open Candlestick Charts directly](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
+to inspect typed OHLC geometry, overlays, live revision, density grouping,
+synchronized panes, tables, artifacts, and generated Source.
+[Open Range Area Charts directly](https://braven-pvm.github.io/braven_charts/?page=range-area-charts)
+to compare temperature, seasonal, confidence, nested forecast, volatility, and
+stepped-gap intervals with live styling, tracking, motion, Data, and Source.
+[Open Tracking & Value Display directly](https://braven-pvm.github.io/braven_charts/?page=value-summary)
+to combine persistent summaries with independently configurable crosshair,
+tooltip, tracking, coordinate-label, selection, and pinning layers.
+[Open Polar Column directly](https://braven-pvm.github.io/braven_charts/?page=polar-column)
+to compare standard, Rose, partial, layered, grouped, stacked, target,
+threshold, uncertainty, density, styling, and animation configurations.
 [Open Pie Charts directly](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 to try category datasets, inside/outside labels, slice selection, native data
 tables, artifact capture, previews, and restored charts.
@@ -188,9 +233,6 @@ the resizable package-owned workbench.
 [Open Concentric Donut directly](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
 to compare independent totals across weighted rings, linked table rows,
 grouped legends, one shared center, and portable restoration.
-[Open Polar Column directly](https://braven-pvm.github.io/braven_charts/?page=polar-column)
-to compare linear-radius columns, an area-correct Nightingale rose, and a
-partial polar pane across Chart/Data/Split/Source views.
 
 ## Install
 
@@ -198,7 +240,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.9.0
+  braven_charts: ^0.11.0
 ```
 
 Then fetch dependencies:
@@ -207,7 +249,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.9.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.11.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
@@ -332,6 +374,35 @@ owner. The overview stays full-domain and opts out of cursor and viewport
 synchronization. See the [Cartesian navigator contract](https://github.com/braven-pvm/braven_charts/blob/master/doc/cartesian_navigator.md)
 for initialization precedence, accessibility, styling, snapping, and external
 viewport reconciliation.
+
+## Cartesian value summary
+
+`InteractionConfig.valueSummary` keeps the current policy-resolved datum in a
+persistent in-plot panel for Line, Area, Bar, Scatter, Candlestick, mixed, and
+multi-axis charts. The summary can be a pointer-transparent fixed overlay or a
+draggable annotation-style panel, and remains independent from crosshair lines,
+tooltips, axis labels, and the classic tracking panel.
+
+```dart
+BravenChartPlus(
+  series: series,
+  interactionConfig: InteractionConfig(
+    valueSummary: CartesianValueSummaryConfig(
+      enabled: true,
+      valuePolicy:
+          CartesianValueSummaryValuePolicy.selectionThenTrackingThenLatest,
+      presentation: CartesianValueSummaryPresentation.overlay(
+        placement: ChartOverlayPlacement.topLeft,
+      ),
+    ),
+  ),
+)
+```
+
+Automatic family-aware content includes regular values, Scatter encodings,
+grouped context, and Candlestick OHLC/change rows. Applications can instead
+provide custom content, styling, semantics, value policies, or programmatic
+pinning. See the [Cartesian value summary guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/value_summary.md).
 
 ## Pie charts
 
@@ -699,10 +770,10 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, Candlestick, Pie, Donut, Concentric Donut, and
-Polar Column charts, interaction, tracking, annotations, streaming, theming,
-performance, multi-axis layouts, scientific data, baseline fills, and state
-UX.
+focused pages for chart types, Range Area, Candlestick, Pie, Donut, Concentric
+Donut, and Polar Column charts, interaction, tracking, annotations, streaming,
+theming, performance, multi-axis layouts, scientific data, baseline fills, and
+state UX.
 
 ## Documentation
 
@@ -711,6 +782,7 @@ UX.
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Chart grammar and the fluent surface](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_grammar.md)
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
+- [Range Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/range_area_charts.md)
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
 - [Cartesian value summary](https://github.com/braven-pvm/braven_charts/blob/master/doc/value_summary.md)
 - [Cartesian navigator](https://github.com/braven-pvm/braven_charts/blob/master/doc/cartesian_navigator.md)

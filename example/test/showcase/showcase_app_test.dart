@@ -28,6 +28,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Technical Indicators route mounts the financial stack', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1600 * pixelRatio, 1000 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'technical-indicators'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Technical Indicators'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('financial-technical-stack')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('financial-price-chart')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('direct Range Area route attaches the native review surface', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'range-area-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Range Area Charts'), findsWidgets);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('range-area-chart-temperature')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow showcase uses a drawer for the complete feature list', (
     tester,
   ) async {
@@ -79,6 +125,8 @@ void main() {
     expect(find.text('Bar Charts'), findsOneWidget);
     expect(find.text('Scatter Charts'), findsOneWidget);
     expect(find.text('Candlestick Charts'), findsOneWidget);
+    expect(find.text('FINANCIAL'), findsOneWidget);
+    expect(find.text('Technical Indicators'), findsOneWidget);
     expect(find.text('Pie Charts'), findsOneWidget);
     expect(find.text('Donut Charts'), findsOneWidget);
     expect(find.text('Concentric Donut Charts'), findsOneWidget);
@@ -124,6 +172,11 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.tap(find.text('Technical Indicators'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('financial-price-chart')), findsOneWidget);
+
     await tester.tap(find.text('Pie Charts'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
@@ -159,6 +212,8 @@ void main() {
     expect(find.text('Streaming'), findsNothing);
     expect(find.text('Live Stream'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Live Stream'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Live Stream'));
     await tester.pump(const Duration(milliseconds: 300));
 

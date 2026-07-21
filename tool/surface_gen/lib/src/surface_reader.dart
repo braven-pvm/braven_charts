@@ -236,6 +236,8 @@ class AnalyzerSurfaceReader implements SurfaceReader {
           if (parameter.name != null) parameter.name!: parameter.type,
     };
 
+    final readbackNullability = _readbackNullability(cls);
+
     final params = [
       for (final parameter in constructor?.formalParameters ?? const [])
         _readParam(
@@ -244,6 +246,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
           clearFlagOverrides: clearFlagOverrides,
           copyWithParams: copyWithParams,
           hasCopyWith: copyWith != null,
+          readbackNullability: readbackNullability,
         ),
     ];
 
@@ -288,6 +291,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
         clearFlagOverrides: clearFlagOverrides,
         copyWithParams: copyWithParams,
         hasCopyWith: copyWith != null,
+        readbackNullability: readbackNullability,
       ),
       params: params,
       sealedVariants: sealedVariants,
@@ -308,6 +312,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     required Map<String, String> clearFlagOverrides,
     required Map<String, DartType> copyWithParams,
     required bool hasCopyWith,
+    required Map<String, bool> readbackNullability,
   }) {
     for (final constructor in cls.constructors) {
       if (!constructor.isGenerative) continue;
@@ -321,6 +326,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
             clearFlagOverrides: clearFlagOverrides,
             copyWithParams: copyWithParams,
             hasCopyWith: hasCopyWith,
+            readbackNullability: readbackNullability,
           ),
       ];
     }
@@ -409,6 +415,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     required Map<String, String> clearFlagOverrides,
     required Map<String, DartType> copyWithParams,
     required bool hasCopyWith,
+    required Map<String, bool> readbackNullability,
   }) {
     final name = parameter.name!;
     final type = parameter.type;
@@ -455,6 +462,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       isRequired: parameter.isRequired,
       isNullable: isNullable,
       isNamed: parameter.isNamed,
+      readsBackNullable: !isNullable && (readbackNullability[name] ?? false),
       defaultCode: parameter.defaultValueCode,
       triStatePayloadType: triStatePayloadType,
       clearFlag: clearFlagOverrides[name] ??
@@ -531,6 +539,35 @@ class AnalyzerSurfaceReader implements SurfaceReader {
   }
 
   /// The instance `copyWith` [cls] declares or inherits, or `null`.
+  /// Public instance getter name -> whether it reads back a NULLABLE type,
+  /// for [cls] and everything it inherits.
+  ///
+  /// See [SurfaceParam.readsBackNullable]: a parameter's own field is not
+  /// guaranteed to have the parameter's type, so anything replaying
+  /// `subject.foo` into `withFoo` needs the getter's nullability, not the
+  /// parameter's.
+  Map<String, bool> _readbackNullability(ClassElement cls) {
+    final nullability = <String, bool>{};
+    void collect(InterfaceElement element) {
+      for (final getter in element.getters) {
+        final name = getter.name;
+        if (name == null || name.startsWith('_') || getter.isStatic) continue;
+        // Nearest declaration wins: a subclass may narrow the type.
+        nullability.putIfAbsent(
+          name,
+          () =>
+              getter.returnType.nullabilitySuffix == NullabilitySuffix.question,
+        );
+      }
+    }
+
+    collect(cls);
+    for (final supertype in cls.allSupertypes) {
+      collect(supertype.element);
+    }
+    return nullability;
+  }
+
   MethodElement? _findCopyWith(ClassElement cls) {
     MethodElement? declared(InterfaceElement element) {
       for (final method in element.methods) {

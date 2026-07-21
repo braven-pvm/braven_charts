@@ -24,6 +24,7 @@ import '../core/cartesian_tracking_snapshot.dart';
 /// no series-type discriminator:
 ///
 /// - a value with a candlestick payload renders OHLC rows;
+/// - a value with a Range Area payload renders low/high/midpoint/span rows;
 /// - a value with any scatter detail (point label or size/color/opacity/
 ///   category encoding) renders X/Y plus one row per present encoding,
 ///   mirroring the tracking tooltip's detection and fallback labels;
@@ -151,6 +152,19 @@ abstract final class ValueSummaryAdapter {
             label: 'Grouped',
             value: '${candle.sourceCount} candles',
           ),
+      ];
+    }
+
+    final range = value.rangeArea;
+    if (range != null) {
+      return [
+        CartesianValueSummaryRow(label: 'Low', value: range.formattedLow),
+        CartesianValueSummaryRow(label: 'High', value: range.formattedHigh),
+        CartesianValueSummaryRow(
+          label: 'Midpoint',
+          value: range.formattedMidpoint,
+        ),
+        CartesianValueSummaryRow(label: 'Span', value: range.formattedSpan),
       ];
     }
 
