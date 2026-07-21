@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
 import '../widgets/bar_gallery_cards.dart';
+import '../widgets/cartesian_release_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
@@ -52,6 +53,8 @@ class _GalleryPageState extends State<GalleryPage> {
       const LactateComparisonGalleryCard(),
       const LiveStreamGalleryCard(),
       const SynchronizedCartesianGalleryCard(),
+      const CandlestickMarketGalleryCard(),
+      const ValueSummaryGalleryCard(),
       _buildNormalizedCrosshairChart(isDark),
       _buildAnnotatedChart(isDark),
       _buildMultiLayerAnalyticsChart(isDark),
@@ -168,10 +171,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Eight chart guides, grouped by visual grammar',
+              title: 'Nine chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 8,
+              count: 9,
             ),
           ),
           SliverToBoxAdapter(

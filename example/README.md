@@ -11,6 +11,10 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open the chart-family overview →**](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
+[**Open Candlestick Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
+
+[**Open Tracking & Value Display directly →**](https://braven-pvm.github.io/braven_charts/?page=value-summary)
+
 [**Open Donut Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
 
 [**Open Concentric Donut directly →**](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
@@ -100,8 +104,9 @@ bar.
 ## Screenshot routes
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
-also be captured from Line Charts, Area Charts, Pie Charts, Donut Charts,
-Polar Column, Bar Charts, Multi-Axis, Live Stream, Annotations, and Loading
+also be captured from Line Charts, Area Charts, Bar Charts, Scatter Charts,
+Candlestick Charts, Pie Charts, Donut Charts, Concentric Donut, Polar Column,
+Tracking & Value Display, Multi-Axis, Live Stream, Annotations, and Loading
 States to show path motion, workbench composition, radial rendering,
 categorical composition, the interaction engine, and application states in
 more detail.

@@ -1,9 +1,9 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter line, area, bar, scatter, Pie, Donut, and Concentric Donut
-  charts with custom rendering, synchronized interaction, live data,
-  annotations, and Dart source.
-version: 0.10.0-dev.1
+  Pure Dart Flutter Line, Area, Bar, Scatter, Candlestick, Pie, Donut,
+  Concentric Donut, and Polar Column charts with custom rendering and live
+  interaction.
+version: 0.10.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -22,29 +22,29 @@ screenshots:
       stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
+      Typed OHLC Candlestick chart with rising, falling, and doji bodies,
+      a moving average, event range, threshold, tracking, and dark theme.
+    path: doc/screenshots/candlestick_market_structure.png
+  - description: >-
+      Persistent Cartesian value summary resolving the active datum for a
+      layered Line and Area chart without requiring hover state.
+    path: doc/screenshots/value_summary_panel.png
+  - description: >-
+      Three independently scaled Cartesian charts sharing a data-X cursor,
+      synchronized X viewport, and reusable full-domain navigator.
+    path: doc/screenshots/synchronized_route_profile.png
+  - description: >-
+      Nightingale Rose composition using area-correct radial values, direct
+      labels, a numeric radial axis, gradients, and elevation.
+    path: doc/screenshots/polar_seasonal_rose.png
+  - description: >-
       Bubble Scatter chart combining position, area-correct size encoding,
       distinct marker shapes, a quantitative size legend, and tracking.
     path: doc/screenshots/scatter_market_opportunity.png
   - description: >-
-      Three independently scaled Cartesian charts sharing a data-X cursor and
-      synchronized X viewport while retaining local Y axes.
-    path: doc/screenshots/synchronized_route_profile.png
-  - description: >-
       Grouped Bar chart with gradients, targets, uncertainty intervals,
       tracking tooltip, and durable point interaction.
     path: doc/screenshots/bar_targets_interaction.png
-  - description: >-
-      Dark Concentric Donut comparing three independent portfolio mandates with
-      weighted rings, a shared center, radial gradients, and stable categories.
-    path: doc/screenshots/concentric_portfolio.png
-  - description: >-
-      Pie allocation chart with radial gradients, rounded separated slices,
-      elevation, inside percentages, and a positioned legend.
-    path: doc/screenshots/pie_portfolio_allocation.png
-  - description: >-
-      Dark partial-sweep Donut with center content, compact labels, gradients,
-      rounded slices, and a release-readiness status treatment.
-    path: doc/screenshots/donut_release_progress.png
   - description: >-
       Multi-series crosshair tracking across independently scaled line and
       area series.

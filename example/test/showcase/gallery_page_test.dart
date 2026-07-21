@@ -86,7 +86,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Eight chart guides, grouped by visual grammar'),
+        find.text('Nine chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -170,7 +170,7 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-curated')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-curated'), 9);
+    expect(_gridCount(tester, 'gallery-advanced-curated'), 11);
     expect(_gridCount(tester, 'gallery-building-blocks-curated'), 6);
     final galleryScrollable = find
         .descendant(
@@ -315,7 +315,7 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-full')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-full'), 12);
+    expect(_gridCount(tester, 'gallery-advanced-full'), 14);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 16);
   });
 

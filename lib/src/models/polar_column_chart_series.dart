@@ -61,7 +61,7 @@ enum PolarColumnAnimationMode {
 
   /// Reveal final mark geometry continuously around the configured pane.
   ///
-  /// The reveal begins at [PolarPane.startAngleDegrees] and follows the
+  /// The reveal begins at [PolarPaneConfig.startAngleDegrees] and follows the
   /// pane's clockwise or counter-clockwise direction through its configured
   /// sweep. Grid lines and axis labels remain stable during the entrance.
   sweep,
