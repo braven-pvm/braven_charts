@@ -464,4 +464,112 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  // ==========================================================================
+  // Per-preset fidelity: the page's central claim, asserted
+  // ==========================================================================
+  //
+  // The page claims the spec-built chart and the hand-built chart are
+  // INDISTINGUISHABLE. This asserts it on both halves of what a
+  // `BravenChartPlus` render is made of:
+  //
+  //  1. The chart DOCUMENT — series, points, annotations and axis configs —
+  //     compared as `toJson()` deep equality, exactly the way the package's
+  //     `test/widgets/braven_plot_artifact_parity_test.dart` does it.
+  //  2. The widget-level inputs a document does NOT carry: `theme`,
+  //     `xAxisConfig` and `interactionConfig`. A null theme resolves to a
+  //     DIFFERENT axis label style than `ChartTheme.light` (the fallback
+  //     `TextStyle` names no font family), which measures to a different
+  //     Y-axis strip width — the visible "the axis moves when I toggle"
+  //     defect. Nothing in the document would have caught it.
+  //
+  // Both sides mount under the same `ValueKey('chart-grammar-stage-chart')`
+  // and share the page's chart controller, so configuration is the only thing
+  // that can differ.
+  //
+  // The hand-built side is deliberately hand-written config, NOT built from
+  // `LoweredPlot` — deriving it from the lowering would make this comparison
+  // tautological and destroy the demo's claim that a human could type it.
+  testWidgets(
+    'every preset is indistinguishable from its hand-built equivalent',
+    (tester) async {
+      await pumpPage(tester);
+
+      final toggle = find.byKey(const ValueKey('chart-grammar-compare'));
+
+      ({
+        Map<String, Object?> document,
+        ChartTheme? theme,
+        XAxisConfig? xAxis,
+        InteractionConfig? interaction,
+      })
+      stage() {
+        expect(
+          find.byKey(const ValueKey('chart-grammar-stage-chart')),
+          findsOneWidget,
+        );
+        final chart = tester.widget<BravenChartPlus>(
+          find.byType(BravenChartPlus),
+        );
+        final workbench = tester.widget<BravenChartWorkbench>(
+          find.byType(BravenChartWorkbench),
+        );
+        final result = workbench.chartController!.extractDocument();
+        expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+        return (
+          document: (result as ChartArtifactSuccess<ChartDocumentSnapshot>)
+              .value
+              .document
+              .toJson(),
+          theme: chart.theme,
+          xAxis: chart.xAxisConfig,
+          interaction: chart.interactionConfig,
+        );
+      }
+
+      for (final preset in presets) {
+        await selectPreset(tester, preset);
+        await tester.pumpAndSettle();
+
+        final fromSpec = stage();
+
+        await revealOption(tester, toggle);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(find.byType(BravenPlot<GrammarSample>), findsNothing);
+
+        final fromHand = stage();
+
+        expect(
+          fromHand.document,
+          fromSpec.document,
+          reason:
+              '$preset: the hand-built chart document must equal the '
+              'spec-built one',
+        );
+        expect(
+          fromHand.theme,
+          fromSpec.theme,
+          reason:
+              '$preset: a differing theme changes the axis label style and '
+              'therefore the Y-axis strip width',
+        );
+        expect(
+          fromHand.xAxis,
+          fromSpec.xAxis,
+          reason: '$preset: the X-axis config must match',
+        );
+        expect(
+          fromHand.interaction,
+          fromSpec.interaction,
+          reason: '$preset: the interaction config must match',
+        );
+
+        await revealOption(tester, toggle);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

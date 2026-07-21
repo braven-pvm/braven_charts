@@ -269,7 +269,15 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     super.dispose();
   }
 
-  ChartTheme? get _theme => _optionsController.options.theme;
+  /// The theme BOTH sides of the comparison use.
+  ///
+  /// The options panel's theme is nullable, and null is NOT the same input as
+  /// `ChartTheme.light`: `BravenChartPlus` falls back to a bare `TextStyle`
+  /// that names no font family for axis labels, which measures to a different
+  /// Y-axis strip width than the light theme's Roboto. Resolving the fallback
+  /// ONCE, here, is what keeps the spec chain and the hand-built chart from
+  /// silently rendering their axes at different widths.
+  ChartTheme get _theme => _optionsController.options.theme ?? ChartTheme.light;
 
   InteractionConfig get _interaction {
     final options = _optionsController.options;
@@ -314,7 +322,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         showConfidenceBand: _confidenceBand,
         dashPattern: const <double>[6, 4],
       )
-      .theme(_theme ?? ChartTheme.light)
+      .theme(_theme)
       .interaction(_interaction);
 
   /// Two independently scaled measures on two declared axis slots.
@@ -353,7 +361,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         color: const Color(0xFFDC2626),
         strokeWidth: 2.2,
       )
-      .theme(_theme ?? ChartTheme.light)
+      .theme(_theme)
       .interaction(_interaction);
 
   /// Scatter, the only V1 geometry with scale-driven channels.
@@ -378,7 +386,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             ? zoneStyles
             : const <ScatterCategoryStyle>[],
       )
-      .theme(_theme ?? ChartTheme.light)
+      .theme(_theme)
       .interaction(_interaction);
 
   /// Open-high-low-close as ONE mark.
@@ -402,7 +410,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         name: 'Price',
         yAxisId: 'price',
       )
-      .theme(_theme ?? ChartTheme.light)
+      .theme(_theme)
       .interaction(_interaction);
 
   /// Bars with the plane transposed.
@@ -419,7 +427,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           color: const Color(0xFF7C3AED),
           barWidthPercent: _barWidthPercent,
         )
-        .theme(_theme ?? ChartTheme.light)
+        .theme(_theme)
         .interaction(_interaction);
     return _transposed ? chart.transposed() : chart;
   }
@@ -436,8 +444,15 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   // Hand-built equivalents — what the spec above lowers to
   // ==========================================================================
 
-  /// The axis the lowering synthesizes when a chain declares none: a left
-  /// axis carrying the `.y` label, with the default `axis-0` id.
+  /// The axis a chain that declares none ends up with.
+  ///
+  /// Two library steps produce it and this helper spells out BOTH, which is
+  /// why it is worth having rather than inlining: `BravenChart.toSpec()`
+  /// turns the `.y(label:)` into a left `YAxisConfig` carrying that label
+  /// (an explicit `.yAxis()` would have won instead), and the lowering then
+  /// numbers the id-less axis `axis-0`. Verified by
+  /// `test/unit/grammar/chart_builder_test.dart`
+  /// ("the .y label survives lowering onto the synthesized axis").
   YAxisConfig _defaultAxis(String label) => YAxisConfig(
     position: YAxisPosition.left,
     label: label,
