@@ -97,34 +97,28 @@ List<ChartDataPoint> xyPoints() => <ChartDataPoint>[
   for (final row in rows) ChartDataPoint(x: row.time, y: row.power),
 ];
 
-Matcher throwsGrammarCode(GrammarDiagnosticCode code) => throwsA(
-  isA<GrammarSpecException>().having((e) => e.code, 'code', code),
-);
+Matcher throwsGrammarCode(GrammarDiagnosticCode code) =>
+    throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
 
 void main() {
   group('parity: one mark per family', () {
     test('line mark solo lowers to a plain LineChartSeries', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
-      expect(
-        lowered.series,
-        <ChartSeries>[
-          LineChartSeries(
-            id: 'mark-0',
-            points: xyPoints(),
-            yAxisId: 'axis-0',
-            yAxisConfig: axis,
-          ),
-        ],
-      );
+      expect(lowered.series, <ChartSeries>[
+        LineChartSeries(
+          id: 'mark-0',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+        ),
+      ]);
       expect(lowered.annotations, isEmpty);
       expect(lowered.yAxes, <YAxisConfig>[axis]);
       expect(lowered.xAxis, isNull);
@@ -133,23 +127,21 @@ void main() {
     });
 
     test('line mark styling reaches the series verbatim', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              id: 'power',
-              name: 'Power',
-              color: Color(0xFF2196F3),
-              strokeWidth: 3.5,
-              dashPattern: <double>[4, 2],
-              interpolation: LineInterpolation.monotone,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'power',
+            name: 'Power',
+            color: Color(0xFF2196F3),
+            strokeWidth: 3.5,
+            dashPattern: <double>[4, 2],
+            interpolation: LineInterpolation.monotone,
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -169,21 +161,19 @@ void main() {
     });
 
     test('area mark solo lowers to an AreaChartSeries', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            AreaMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              id: 'load',
-              baseline: 100,
-              fillOpacity: 0.55,
-              interpolation: LineInterpolation.bezier,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          AreaMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'load',
+            baseline: 100,
+            fillOpacity: 0.55,
+            interpolation: LineInterpolation.bezier,
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -201,14 +191,12 @@ void main() {
     });
 
     test('bar mark solo lowers with the package default width percent', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            BarMark<Sample>(x: sampleTime, y: samplePower),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -224,22 +212,20 @@ void main() {
     });
 
     test('bar mark honors an explicit pixel width and layout hints', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            BarMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              barWidthPixels: 18,
-              barGap: 6,
-              layoutMode: BarLayoutMode.stacked,
-              groupId: 'load',
-              baselineValue: 50,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            barWidthPixels: 18,
+            barGap: 6,
+            layoutMode: BarLayoutMode.stacked,
+            groupId: 'load',
+            baselineValue: 50,
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -259,19 +245,17 @@ void main() {
     });
 
     test('scatter mark solo lowers to a plain ScatterChartSeries', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            ScatterMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              markerRadius: 7,
-              markerShape: SeriesMarkerShape.triangle,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          ScatterMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            markerRadius: 7,
+            markerShape: SeriesMarkerShape.triangle,
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -304,22 +288,20 @@ void main() {
           ),
       ];
 
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: stamped,
-          marks: const <Mark<Sample>>[
-            CandlestickMark<Sample>(
-              x: sampleTime,
-              open: sampleOpen,
-              high: sampleHigh,
-              low: sampleLow,
-              close: sampleClose,
-              timestamp: sampleStamp,
-              id: 'ohlc',
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: stamped,
+        marks: const <Mark<Sample>>[
+          CandlestickMark<Sample>(
+            x: sampleTime,
+            open: sampleOpen,
+            high: sampleHigh,
+            low: sampleLow,
+            close: sampleClose,
+            timestamp: sampleStamp,
+            id: 'ohlc',
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -346,47 +328,42 @@ void main() {
 
   group('parity: composition', () {
     test('multi-mark specs number unlabelled marks mark-<index>', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            BarMark<Sample>(x: sampleTime, y: samplePower),
-            LineMark<Sample>(x: sampleTime, y: sampleHeartRate),
-            ScatterMark<Sample>(x: sampleTime, y: sampleEffort),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(x: sampleTime, y: samplePower),
+          LineMark<Sample>(x: sampleTime, y: sampleHeartRate),
+          ScatterMark<Sample>(x: sampleTime, y: sampleEffort),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
-      expect(
-        lowered.series,
-        <ChartSeries>[
-          BarChartSeries(
-            id: 'mark-0',
-            points: xyPoints(),
-            yAxisId: 'axis-0',
-            yAxisConfig: axis,
-            barWidthPercent: 0.8,
-          ),
-          LineChartSeries(
-            id: 'mark-1',
-            points: <ChartDataPoint>[
-              for (final row in rows)
-                ChartDataPoint(x: row.time, y: row.heartRate),
-            ],
-            yAxisId: 'axis-0',
-            yAxisConfig: axis,
-          ),
-          ScatterChartSeries(
-            id: 'mark-2',
-            points: <ChartDataPoint>[
-              for (final row in rows) ChartDataPoint(x: row.time, y: row.effort),
-            ],
-            yAxisId: 'axis-0',
-            yAxisConfig: axis,
-          ),
-        ],
-      );
+      expect(lowered.series, <ChartSeries>[
+        BarChartSeries(
+          id: 'mark-0',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          barWidthPercent: 0.8,
+        ),
+        LineChartSeries(
+          id: 'mark-1',
+          points: <ChartDataPoint>[
+            for (final row in rows)
+              ChartDataPoint(x: row.time, y: row.heartRate),
+          ],
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+        ),
+        ScatterChartSeries(
+          id: 'mark-2',
+          points: <ChartDataPoint>[
+            for (final row in rows) ChartDataPoint(x: row.time, y: row.effort),
+          ],
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+        ),
+      ]);
       expect(lowered.yAxes, <YAxisConfig>[axis]);
     });
 
@@ -404,79 +381,70 @@ void main() {
         unit: 'bpm',
       );
 
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'power'),
-            LineMark<Sample>(x: sampleTime, y: sampleHeartRate, yAxisId: 'hr'),
-          ],
-          yAxes: <YAxisConfig>[powerAxis, hrAxis],
-        ),
-      );
-
-      expect(
-        lowered.series,
-        <ChartSeries>[
-          LineChartSeries(
-            id: 'mark-0',
-            points: xyPoints(),
-            yAxisId: 'power',
-            yAxisConfig: powerAxis,
-          ),
-          LineChartSeries(
-            id: 'mark-1',
-            points: <ChartDataPoint>[
-              for (final row in rows)
-                ChartDataPoint(x: row.time, y: row.heartRate),
-            ],
-            yAxisId: 'hr',
-            yAxisConfig: hrAxis,
-          ),
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'power'),
+          LineMark<Sample>(x: sampleTime, y: sampleHeartRate, yAxisId: 'hr'),
         ],
-      );
+        yAxes: <YAxisConfig>[powerAxis, hrAxis],
+      )).lower();
+
+      expect(lowered.series, <ChartSeries>[
+        LineChartSeries(
+          id: 'mark-0',
+          points: xyPoints(),
+          yAxisId: 'power',
+          yAxisConfig: powerAxis,
+        ),
+        LineChartSeries(
+          id: 'mark-1',
+          points: <ChartDataPoint>[
+            for (final row in rows)
+              ChartDataPoint(x: row.time, y: row.heartRate),
+          ],
+          yAxisId: 'hr',
+          yAxisConfig: hrAxis,
+        ),
+      ]);
       expect(lowered.yAxes, <YAxisConfig>[powerAxis, hrAxis]);
     });
 
     test('an id-less declared axis is numbered axis-<index>', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'axis-0'),
-            LineMark<Sample>(
-              x: sampleTime,
-              y: sampleHeartRate,
-              yAxisId: 'axis-1',
-            ),
-          ],
-          yAxes: <YAxisConfig>[
-            YAxisConfig(position: YAxisPosition.left),
-            YAxisConfig(position: YAxisPosition.right),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'axis-0'),
+          LineMark<Sample>(
+            x: sampleTime,
+            y: sampleHeartRate,
+            yAxisId: 'axis-1',
+          ),
+        ],
+        yAxes: <YAxisConfig>[
+          YAxisConfig(position: YAxisPosition.left),
+          YAxisConfig(position: YAxisPosition.right),
+        ],
+      )).lower();
 
-      expect(
-        lowered.yAxes.map((axis) => axis.id),
-        <String>['axis-0', 'axis-1'],
-      );
-      expect(
-        lowered.series.map((series) => series.yAxisId),
-        <String>['axis-0', 'axis-1'],
-      );
+      expect(lowered.yAxes.map((axis) => axis.id), <String>[
+        'axis-0',
+        'axis-1',
+      ]);
+      expect(lowered.series.map((series) => series.yAxisId), <String>[
+        'axis-0',
+        'axis-1',
+      ]);
     });
 
     test('transposed bars lower to horizontal orientation', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            BarMark<Sample>(x: sampleTime, y: samplePower),
-          ],
-          transposed: true,
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+        transposed: true,
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -497,17 +465,15 @@ void main() {
       const interaction = InteractionConfig(enableZoom: false);
       const xAxis = XAxisConfig(label: 'Time', unit: 's');
 
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower),
-          ],
-          theme: theme,
-          interaction: interaction,
-          xAxis: xAxis,
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+        theme: theme,
+        interaction: interaction,
+        xAxis: xAxis,
+      )).lower();
 
       expect(lowered.theme, same(theme));
       expect(lowered.interaction, interaction);
@@ -527,24 +493,22 @@ void main() {
         ScatterCategoryStyle(key: 'hard', color: Color(0xFFF44336)),
       ];
 
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            ScatterMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              id: 'effort',
-              size: Channel<Sample>(sampleEffort, label: 'Effort'),
-              colorBy: Channel<Sample>(sampleHeartRate),
-              colorEncoding: colorRamp,
-              opacityBy: Channel<Sample>(sampleEffort, label: 'Confidence'),
-              categoryBy: CategoryChannel<Sample>(sampleZone, label: 'Zone'),
-              categories: categories,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          ScatterMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'effort',
+            size: Channel<Sample>(sampleEffort, label: 'Effort'),
+            colorBy: Channel<Sample>(sampleHeartRate),
+            colorEncoding: colorRamp,
+            opacityBy: Channel<Sample>(sampleEffort, label: 'Confidence'),
+            categoryBy: CategoryChannel<Sample>(sampleZone, label: 'Zone'),
+            categories: categories,
+          ),
+        ],
+      )).lower();
 
       final axis = defaultAxis();
       expect(
@@ -576,18 +540,16 @@ void main() {
     });
 
     test('a size channel without a template uses the default encoding', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            ScatterMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              size: Channel<Sample>(sampleEffort),
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          ScatterMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            size: Channel<Sample>(sampleEffort),
+          ),
+        ],
+      )).lower();
 
       final series = lowered.series.single as ScatterChartSeries;
       expect(series.sizeEncoding, const ScatterSizeEncoding());
@@ -601,24 +563,22 @@ void main() {
     });
 
     test('a channel label overrides the template label', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            ScatterMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              size: Channel<Sample>(sampleEffort, label: 'Channel label'),
-              sizeEncoding: ScatterSizeEncoding(
-                minimumRadius: 2,
-                maximumRadius: 30,
-                label: 'Template label',
-                unit: 'N',
-              ),
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          ScatterMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            size: Channel<Sample>(sampleEffort, label: 'Channel label'),
+            sizeEncoding: ScatterSizeEncoding(
+              minimumRadius: 2,
+              maximumRadius: 30,
+              label: 'Template label',
+              unit: 'N',
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      )).lower();
 
       final series = lowered.series.single as ScatterChartSeries;
       expect(
@@ -633,22 +593,20 @@ void main() {
     });
 
     test('native channel scales are accepted and change nothing', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            ScatterMark<Sample>(
-              x: sampleTime,
-              y: samplePower,
-              size: Channel<Sample>(sampleEffort, scale: ChannelScale.sqrt),
-              opacityBy: Channel<Sample>(
-                sampleEffort,
-                scale: ChannelScale.linear,
-              ),
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          ScatterMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            size: Channel<Sample>(sampleEffort, scale: ChannelScale.sqrt),
+            opacityBy: Channel<Sample>(
+              sampleEffort,
+              scale: ChannelScale.linear,
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      )).lower();
 
       final series = lowered.series.single as ScatterChartSeries;
       expect(series.sizeEncoding, const ScatterSizeEncoding());
@@ -658,23 +616,21 @@ void main() {
 
   group('parity: trend', () {
     test('a trend mark lowers to a TrendAnnotation on its source series', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
-            TrendMark<Sample>(
-              sourceMarkId: 'power',
-              id: 'power-trend',
-              name: 'Power trend',
-              color: Color(0xFFFF9800),
-              lineWidth: 1.5,
-              dashPattern: <double>[6, 3],
-              showConfidenceBand: true,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          TrendMark<Sample>(
+            sourceMarkId: 'power',
+            id: 'power-trend',
+            name: 'Power trend',
+            color: Color(0xFFFF9800),
+            lineWidth: 1.5,
+            dashPattern: <double>[6, 3],
+            showConfidenceBand: true,
+          ),
+        ],
+      )).lower();
 
       expect(lowered.series, hasLength(1));
       expect(lowered.annotations, hasLength(1));
@@ -700,15 +656,13 @@ void main() {
     });
 
     test('an unlabelled trend mark is numbered like any other mark', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower),
-            TrendMark<Sample>(sourceMarkId: 'mark-0'),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+          TrendMark<Sample>(sourceMarkId: 'mark-0'),
+        ],
+      )).lower();
 
       expect(lowered.series.single.id, 'mark-0');
       expect(lowered.annotations.single.id, 'mark-1');
@@ -719,20 +673,18 @@ void main() {
     });
 
     test('a moving-average trend carries its window size', () {
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: rows,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
-            TrendMark<Sample>(
-              sourceMarkId: 'power',
-              id: 'ma',
-              trendType: TrendType.movingAverage,
-              windowSize: 2,
-            ),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          TrendMark<Sample>(
+            sourceMarkId: 'power',
+            id: 'ma',
+            trendType: TrendType.movingAverage,
+            windowSize: 2,
+          ),
+        ],
+      )).lower();
 
       expect(
         (lowered.annotations.single as TrendAnnotation).toJson(),
@@ -750,24 +702,16 @@ void main() {
     test('Cartesian point families carry non-finite values through', () {
       const gapped = <Sample>[
         Sample(time: 0, power: 180, heartRate: 1, effort: 1, zone: 'a'),
-        Sample(
-          time: 1,
-          power: double.nan,
-          heartRate: 1,
-          effort: 1,
-          zone: 'a',
-        ),
+        Sample(time: 1, power: double.nan, heartRate: 1, effort: 1, zone: 'a'),
         Sample(time: 2, power: 260, heartRate: 1, effort: 1, zone: 'a'),
       ];
 
-      final lowered = lower(
-        PlotSpec<Sample>(
-          data: gapped,
-          marks: const <Mark<Sample>>[
-            LineMark<Sample>(x: sampleTime, y: samplePower),
-          ],
-        ),
-      );
+      final lowered = (PlotSpec<Sample>(
+        data: gapped,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+      )).lower();
 
       final points = lowered.series.single.points;
       expect(points, hasLength(3));
@@ -791,20 +735,18 @@ void main() {
       ];
 
       expect(
-        () => lower(
-          PlotSpec<Sample>(
-            data: broken,
-            marks: const <Mark<Sample>>[
-              CandlestickMark<Sample>(
-                x: sampleTime,
-                open: sampleOpen,
-                high: sampleHigh,
-                low: sampleLow,
-                close: sampleClose,
-              ),
-            ],
-          ),
-        ),
+        () => (PlotSpec<Sample>(
+          data: broken,
+          marks: const <Mark<Sample>>[
+            CandlestickMark<Sample>(
+              x: sampleTime,
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.invalidCandlestickRow),
       );
     });
@@ -825,20 +767,18 @@ void main() {
       ];
 
       expect(
-        () => lower(
-          PlotSpec<Sample>(
-            data: broken,
-            marks: const <Mark<Sample>>[
-              CandlestickMark<Sample>(
-                x: sampleTime,
-                open: sampleOpen,
-                high: sampleHigh,
-                low: sampleLow,
-                close: sampleClose,
-              ),
-            ],
-          ),
-        ),
+        () => (PlotSpec<Sample>(
+          data: broken,
+          marks: const <Mark<Sample>>[
+            CandlestickMark<Sample>(
+              x: sampleTime,
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.invalidCandlestickRow),
       );
     });
@@ -847,229 +787,200 @@ void main() {
   group('validation', () {
     test('an empty mark list is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(data: rows, marks: <Mark<Sample>>[]),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.emptyMarks),
       );
     });
 
     test('an empty data list is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: <Sample>[],
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: <Sample>[],
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.emptyData),
       );
     });
 
     test('duplicate mark ids are rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, id: 'same'),
-              LineMark<Sample>(x: sampleTime, y: sampleHeartRate, id: 'same'),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'same'),
+            LineMark<Sample>(x: sampleTime, y: sampleHeartRate, id: 'same'),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.duplicateMarkId),
       );
     });
 
     test('a trend over an unknown mark id is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
-              TrendMark<Sample>(sourceMarkId: 'cadence'),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+            TrendMark<Sample>(sourceMarkId: 'cadence'),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unknownTrendSource),
       );
     });
 
     test('a trend over another trend is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
-              TrendMark<Sample>(sourceMarkId: 'power', id: 'first'),
-              TrendMark<Sample>(sourceMarkId: 'first'),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+            TrendMark<Sample>(sourceMarkId: 'power', id: 'first'),
+            TrendMark<Sample>(sourceMarkId: 'first'),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unknownTrendSource),
       );
     });
 
     test('a moving-average trend without a window size is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
-              TrendMark<Sample>(
-                sourceMarkId: 'power',
-                trendType: TrendType.movingAverage,
-              ),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+            TrendMark<Sample>(
+              sourceMarkId: 'power',
+              trendType: TrendType.movingAverage,
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.invalidTrendWindow),
       );
     });
 
     test('a mark bound to an unknown axis id is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              LineMark<Sample>(
-                x: sampleTime,
-                y: samplePower,
-                yAxisId: 'nowhere',
-              ),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'nowhere'),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unknownAxisId),
       );
     });
 
     test('duplicate axis ids are rejected', () {
       expect(
-        () => lower(
-          PlotSpec<Sample>(
-            data: rows,
-            marks: const <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'a'),
-            ],
-            yAxes: <YAxisConfig>[
-              YAxisConfig.withId(id: 'a', position: YAxisPosition.left),
-              YAxisConfig.withId(id: 'a', position: YAxisPosition.right),
-            ],
-          ),
-        ),
+        () => (PlotSpec<Sample>(
+          data: rows,
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'a'),
+          ],
+          yAxes: <YAxisConfig>[
+            YAxisConfig.withId(id: 'a', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'a', position: YAxisPosition.right),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.duplicateAxisId),
       );
     });
 
     test('an axis no mark measures against is rejected', () {
       expect(
-        () => lower(
-          PlotSpec<Sample>(
-            data: rows,
-            marks: const <Mark<Sample>>[
-              LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'a'),
-            ],
-            yAxes: <YAxisConfig>[
-              YAxisConfig.withId(id: 'a', position: YAxisPosition.left),
-              YAxisConfig.withId(id: 'b', position: YAxisPosition.right),
-            ],
-          ),
-        ),
+        () => (PlotSpec<Sample>(
+          data: rows,
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'a'),
+          ],
+          yAxes: <YAxisConfig>[
+            YAxisConfig.withId(id: 'a', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'b', position: YAxisPosition.right),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unboundAxis),
       );
     });
 
     test('a color channel without a ramp is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              ScatterMark<Sample>(
-                x: sampleTime,
-                y: samplePower,
-                colorBy: Channel<Sample>(sampleHeartRate),
-              ),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              colorBy: Channel<Sample>(sampleHeartRate),
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.missingChannelEncoding),
       );
     });
 
     test('a category channel without category styles is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              ScatterMark<Sample>(
-                x: sampleTime,
-                y: samplePower,
-                categoryBy: CategoryChannel<Sample>(sampleZone),
-              ),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              categoryBy: CategoryChannel<Sample>(sampleZone),
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.missingChannelEncoding),
       );
     });
 
     test('a non-native channel scale is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              ScatterMark<Sample>(
-                x: sampleTime,
-                y: samplePower,
-                size: Channel<Sample>(sampleEffort, scale: ChannelScale.linear),
-              ),
-            ],
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              size: Channel<Sample>(sampleEffort, scale: ChannelScale.linear),
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unsupportedChannelScale),
       );
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              ScatterMark<Sample>(
-                x: sampleTime,
-                y: samplePower,
-                opacityBy: Channel<Sample>(
-                  sampleEffort,
-                  scale: ChannelScale.sqrt,
-                ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              opacityBy: Channel<Sample>(
+                sampleEffort,
+                scale: ChannelScale.sqrt,
               ),
-            ],
-          ),
-        ),
+            ),
+          ],
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unsupportedChannelScale),
       );
     });
 
     test('transposing a non-bar geometry is rejected', () {
       expect(
-        () => lower(
-          const PlotSpec<Sample>(
-            data: rows,
-            marks: <Mark<Sample>>[
-              BarMark<Sample>(x: sampleTime, y: samplePower),
-              LineMark<Sample>(x: sampleTime, y: sampleHeartRate),
-            ],
-            transposed: true,
-          ),
-        ),
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            BarMark<Sample>(x: sampleTime, y: samplePower),
+            LineMark<Sample>(x: sampleTime, y: sampleHeartRate),
+          ],
+          transposed: true,
+        )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.unsupportedTransposition),
       );
     });

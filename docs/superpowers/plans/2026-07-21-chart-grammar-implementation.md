@@ -388,7 +388,7 @@ class PlotSpec<T> { const PlotSpec({required this.data, required this.marks, thi
 
 ### Task 10: Lowering + config-equality parity
 
-**Files:** Create `lib/src/grammar/plot_lowering.dart` (`LoweredPlot lower<T>(PlotSpec<T> spec)` where `LoweredPlot{List<ChartSeries> series; List<ChartAnnotation> annotations; XAxisConfig? xAxis; List<YAxisConfig> yAxes; InteractionConfig interaction; ChartTheme? theme}`), diagnostics `lib/src/grammar/grammar_diagnostics.dart` (`GrammarSpecException` with named codes, fail-fast style matching `ChartConfigBuilder`). Test `test/unit/grammar/plot_lowering_parity_test.dart`.
+**Files:** Create `lib/src/grammar/plot_lowering.dart` (`extension PlotSpecLowering<T> on PlotSpec<T> { LoweredPlot lower(); }`, called as `spec.lower()`, where `LoweredPlot{List<ChartSeries> series; List<ChartAnnotation> annotations; XAxisConfig? xAxis; List<YAxisConfig> yAxes; InteractionConfig interaction; ChartTheme? theme}`), diagnostics `lib/src/grammar/grammar_diagnostics.dart` (`GrammarSpecException` with named codes, fail-fast style matching `ChartConfigBuilder`). Test `test/unit/grammar/plot_lowering_parity_test.dart`.
 
 Lowering rules (each parity-tested against a hand-built equivalent): mark → family series with materialized `ChartDataPoint`s (scatter channels → magnitude/colorValue/opacityValue/categoryValue + encodings constructed with matching scale types; candlestick accessors → CandlestickDataPoint); mark ids default `mark-<index>`; multi-mark → multi-series with multi-axis path ONLY (never the legacy single-axis path — every lowered chart supplies explicit `yAxes`, defaulting to one `YAxisConfig` when unspecified); TrendMark → trend annotation referencing the lowered source series id; validation: TrendMark unknown sourceMarkId, duplicate mark ids, empty marks, empty data → named GrammarSpecException codes.
 
@@ -396,7 +396,7 @@ Lowering rules (each parity-tested against a hand-built equivalent): mark → fa
 
 ### Task 11: BravenPlot widget + artifact-equality + Workbench/Source proof
 
-**Files:** Create `lib/src/grammar/braven_plot.dart` (`class BravenPlot<T> extends StatelessWidget` building `BravenChartPlus` from `lower(spec)`; passes through controller/workbench-relevant params it must expose: `bravenChartController`, `interactionGroupController`, key). Tests `test/widgets/braven_plot_test.dart` + artifact-equality additions to the parity suite (extract artifact document from a spec-built chart and a hand-built chart via the existing extractor; assert document equality) + one Workbench mode round-trip and one generated-Source compile case reusing existing harnesses.
+**Files:** Create `lib/src/grammar/braven_plot.dart` (`class BravenPlot<T> extends StatelessWidget` building `BravenChartPlus` from `spec.lower()`; passes through controller/workbench-relevant params it must expose: `bravenChartController`, `interactionGroupController`, key). Tests `test/widgets/braven_plot_test.dart` + artifact-equality additions to the parity suite (extract artifact document from a spec-built chart and a hand-built chart via the existing extractor; assert document equality) + one Workbench mode round-trip and one generated-Source compile case reusing existing harnesses.
 
 - [ ] Steps: failing widget/parity tests → implement → green + full suite → commit `feat(grammar): BravenPlot widget with artifact parity`
 

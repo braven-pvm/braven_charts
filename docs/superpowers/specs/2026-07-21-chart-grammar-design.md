@@ -224,7 +224,10 @@ becomes the single source of truth the hand-written mirrors converge on.
   targeted). Each mark accepts `axis:`/`yAxisId:` hints that lower onto
   `YAxisConfig` slots.
 - **Lowering contract (Task 10, `lib/src/grammar/plot_lowering.dart`).**
-  `LoweredPlot lower<T>(PlotSpec<T> spec)` is total and fail-fast; the
+  `extension PlotSpecLowering<T> on PlotSpec<T> { LoweredPlot lower(); }`
+  (called as `spec.lower()` — an extension, not a top-level `lower<T>`, so
+  the package never exports a bare generic verb into a host's namespace) is
+  total and fail-fast; the
   validation order is fixed (empty marks → empty data → mark ids → axis ids →
   transposition → each mark in spec order → unbound axes) so a spec with
   several problems always reports the same one first.

@@ -97,7 +97,13 @@ final TrendAnnotation _trendDefaults = TrendAnnotation(
   trendType: TrendType.linear,
 );
 
-/// Compiles [spec] into the config objects the chart pipeline consumes.
+/// Compiles a [PlotSpec] into the config objects the chart pipeline consumes.
+///
+/// This is an EXTENSION rather than a top-level `lower<T>(spec)` function on
+/// purpose: `lower` is a generic English verb, and a package-level export of
+/// that name would collide with every host that already has one. Written as
+/// `spec.lower()`, the verb is scoped to the receiver it means something for
+/// and never enters a host's global namespace.
 ///
 /// ## Guarantees
 ///
@@ -133,7 +139,12 @@ final TrendAnnotation _trendDefaults = TrendAnnotation(
 /// Deterministic, so a spec with several problems always reports the same one
 /// first: empty marks, empty data, mark ids, axis ids, transposition, then
 /// each mark in spec order, then unbound axes.
-LoweredPlot lower<T>(PlotSpec<T> spec) {
+extension PlotSpecLowering<T> on PlotSpec<T> {
+  /// Lowers this spec onto ordinary chart config objects.
+  LoweredPlot lower() => _lower<T>(this);
+}
+
+LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
   if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
 
@@ -164,11 +175,7 @@ LoweredPlot lower<T>(PlotSpec<T> spec) {
     final axisId = mark.yAxisId ?? axes.first.id;
     final axis = axesById[axisId];
     if (axis == null) {
-      throw GrammarSpecException.unknownAxisId(
-        markId,
-        axisId,
-        axesById.keys,
-      );
+      throw GrammarSpecException.unknownAxisId(markId, axisId, axesById.keys);
     }
     boundAxisIds.add(axisId);
     return axis;
@@ -310,8 +317,8 @@ BarChartSeries _lowerBar<T>(
     color: mark.color,
     yAxisId: axis.id,
     yAxisConfig: axis,
-    barWidthPercent: widthPercent ??
-        (widthPixels == null ? _defaultBarWidthPercent : null),
+    barWidthPercent:
+        widthPercent ?? (widthPixels == null ? _defaultBarWidthPercent : null),
     barWidthPixels: widthPixels,
     barGap: mark.barGap ?? _barDefaults.barGap,
     layoutMode: mark.layoutMode ?? _barDefaults.layoutMode,
