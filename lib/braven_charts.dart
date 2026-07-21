@@ -177,6 +177,7 @@ export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
 // Generated Dart source
 export 'src/source/chart_dart_source_generator.dart';
+export 'src/source/chart_grammar_source_generator.dart';
 export 'src/source/chart_source_models.dart';
 export 'src/source/chart_source_view.dart';
 // The themed Dart renderer the Source tab is built from — reusable anywhere a
