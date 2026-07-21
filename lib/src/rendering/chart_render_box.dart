@@ -896,6 +896,20 @@ class ChartRenderBox extends RenderBox {
   int get debugTrackingComputeCount =>
       _trackingSnapshotResolver.debugComputeCount;
 
+  /// Intersection markers painted by the most recent crosshair paint, in
+  /// chart-local screen coordinates.
+  ///
+  /// Empty when the last paint drew no tracking-mode intersection markers.
+  /// Widget tests use this probe to assert exact marker placement — in
+  /// particular that interpolated markers follow the live cursor X even
+  /// while snapshot identity suppression retains the published snapshot.
+  @visibleForTesting
+  List<PaintedIntersectionMarker> get debugPaintedIntersectionMarkers =>
+      List.unmodifiable(_paintedIntersectionMarkers);
+
+  final List<PaintedIntersectionMarker> _paintedIntersectionMarkers =
+      <PaintedIntersectionMarker>[];
+
   // ==========================================================================
   // Cartesian value summary pipeline
   // ==========================================================================
@@ -3323,6 +3337,9 @@ class ChartRenderBox extends RenderBox {
       );
     }
     final crosshairEnabled = crosshairConfig.enabled;
+    // The painted-marker probe reflects only the current frame: cleared here
+    // so a frame that paints no tracking markers leaves it empty.
+    _paintedIntersectionMarkers.clear();
     if (crosshairEnabled &&
         cursorPos != null &&
         _plotArea.contains(cursorPos) &&
@@ -3392,6 +3409,8 @@ class ChartRenderBox extends RenderBox {
             coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
         trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
+        trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
+        paintedMarkerSink: _paintedIntersectionMarkers,
       );
     } else if (!_valueSummaryTrackingActive) {
       // The crosshair gate is off (disabled, cursor gone or outside the

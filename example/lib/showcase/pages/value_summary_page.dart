@@ -27,7 +27,11 @@ class ValueSummaryPage extends StatefulWidget {
 }
 
 class _ValueSummaryPageState extends State<ValueSummaryPage> {
-  final ChartOptionsController _optionsController = ChartOptionsController();
+  /// Markers default on so the datum the summary describes is visible on the
+  /// curve; the Chart Options toggle hides them on every preset.
+  final ChartOptionsController _optionsController = ChartOptionsController(
+    const ChartOptions(showDataMarkers: true),
+  );
 
   /// One concrete controller drives every preset: pin/clear-pin for the
   /// pinned workflow and the resetPlacement handshake for the draggable
@@ -403,10 +407,14 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         enabled: _crosshairEnabled,
         mode: crosshairMode,
         displayMode: CrosshairDisplayMode.tracking,
-        // The crosshair interpolates so the summary's Value mode option has
-        // a visible effect: Interpolated rides the curve between samples,
-        // Data points snaps to the real samples.
-        interpolateValues: true,
+        // The Value mode toggle drives the visual tracking too: pairing the
+        // summary's valueMode with the crosshair's interpolateValues keeps
+        // marker, crosshair, and panel on one resolution — all riding the
+        // curve in Interpolated mode, all snapping to real samples in Data
+        // points mode. The package keeps the two options orthogonal for
+        // advanced cases; the showcase couples them for a coherent visual.
+        interpolateValues:
+            _valueMode == CartesianValueSummaryValueMode.interpolated,
         showTrackingTooltip: false,
         showCoordinateLabels: false,
         showIntersectionMarkers: true,
@@ -452,18 +460,23 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
+  /// Whether every preset series shows its datapoint markers — driven by the
+  /// standard "Show Data Markers" toggle.
+  bool get _showMarkers => _optionsController.options.showDataMarkers;
+
   Widget _buildLineChart() {
     return _chart(
       key: const ValueKey('value-summary-stage-line'),
-      series: const [
+      series: [
         LineChartSeries(
           id: 'summary-speed',
           name: 'Speed',
           unit: 'km/h',
           points: _speedPoints,
-          color: Color(0xFF0891B2),
+          color: const Color(0xFF0891B2),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.5,
+          showDataPointMarkers: _showMarkers,
         ),
       ],
       xAxisConfig: const XAxisConfig(label: 'Distance', unit: 'km'),
@@ -478,34 +491,37 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   Widget _buildMultiSeriesChart() {
     return _chart(
       key: const ValueKey('value-summary-stage-multi-series'),
-      series: const [
+      series: [
         LineChartSeries(
           id: 'rider-a',
           name: 'Rider A',
           unit: 'W',
           points: _riderAPoints,
-          color: Color(0xFF4F46E5),
+          color: const Color(0xFF4F46E5),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.4,
+          showDataPointMarkers: _showMarkers,
         ),
         AreaChartSeries(
           id: 'rider-b',
           name: 'Rider B',
           unit: 'W',
           points: _riderBPoints,
-          color: Color(0xFF10B981),
+          color: const Color(0xFF10B981),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2,
           fillOpacity: 0.18,
+          showDataPointMarkers: _showMarkers,
         ),
         LineChartSeries(
           id: 'rider-c',
           name: 'Rider C',
           unit: 'W',
           points: _riderCPoints,
-          color: Color(0xFFF59E0B),
+          color: const Color(0xFFF59E0B),
           interpolation: LineInterpolation.bezier,
           strokeWidth: 2.4,
+          showDataPointMarkers: _showMarkers,
         ),
       ],
       xAxisConfig: const XAxisConfig(label: 'Time', unit: 'min'),
@@ -529,6 +545,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           color: const Color(0xFF1565C0),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.4,
+          showDataPointMarkers: _showMarkers,
           yAxisConfig: YAxisConfig(
             position: YAxisPosition.left,
             label: 'VO₂',
@@ -544,6 +561,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           color: const Color(0xFFE53935),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.2,
+          showDataPointMarkers: _showMarkers,
           yAxisConfig: YAxisConfig(
             position: YAxisPosition.right,
             label: 'Heart rate',
@@ -591,15 +609,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             groupController: _syncGroup,
             withController: false,
             showLegend: false,
-            series: const [
+            series: [
               LineChartSeries(
                 id: 'sync-speed',
                 name: 'Speed',
                 unit: 'km/h',
                 points: _syncSpeedPoints,
-                color: Color(0xFF0891B2),
+                color: const Color(0xFF0891B2),
                 interpolation: LineInterpolation.monotone,
                 strokeWidth: 2.5,
+                showDataPointMarkers: _showMarkers,
               ),
             ],
             xAxisConfig: const XAxisConfig(visible: false, minHeight: 0),
@@ -619,15 +638,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             groupController: _syncGroup,
             withController: false,
             showLegend: false,
-            series: const [
+            series: [
               LineChartSeries(
                 id: 'sync-heart-rate',
                 name: 'Heart rate',
                 unit: 'bpm',
                 points: _syncHeartRatePoints,
-                color: Color(0xFFE11D48),
+                color: const Color(0xFFE11D48),
                 interpolation: LineInterpolation.monotone,
                 strokeWidth: 2.5,
+                showDataPointMarkers: _showMarkers,
               ),
             ],
             xAxisConfig: const XAxisConfig(label: 'Distance', unit: 'km'),
@@ -647,16 +667,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   Widget _buildPinnedChart() {
     return _chart(
       key: const ValueKey('value-summary-stage-pinned'),
-      series: const [
+      series: [
         LineChartSeries(
           id: 'summary-lactate',
           name: 'Lactate',
           unit: 'mmol/L',
           points: _lactatePoints,
-          color: Color(0xFF2E7D32),
+          color: const Color(0xFF2E7D32),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.5,
-          showDataPointMarkers: true,
+          showDataPointMarkers: _showMarkers,
           dataPointMarkerRadius: 4,
         ),
       ],
@@ -672,34 +692,37 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   Widget _buildDraggableChart() {
     return _chart(
       key: const ValueKey('value-summary-stage-draggable'),
-      series: const [
+      series: [
         AreaChartSeries(
           id: 'drag-target',
           name: 'Target',
           unit: 'W',
           points: _dragTargetPoints,
-          color: Color(0xFF10B981),
+          color: const Color(0xFF10B981),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 1.6,
           fillOpacity: 0.14,
+          showDataPointMarkers: _showMarkers,
         ),
         LineChartSeries(
           id: 'drag-smoothed',
           name: 'Smoothed',
           unit: 'W',
           points: _dragSmoothedPoints,
-          color: Color(0xFFF59E0B),
+          color: const Color(0xFFF59E0B),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2,
+          showDataPointMarkers: _showMarkers,
         ),
         LineChartSeries(
           id: 'drag-power',
           name: 'Power',
           unit: 'W',
           points: _dragPowerPoints,
-          color: Color(0xFF4F46E5),
+          color: const Color(0xFF4F46E5),
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2.4,
+          showDataPointMarkers: _showMarkers,
         ),
       ],
       xAxisConfig: const XAxisConfig(label: 'Time', unit: 'min'),
@@ -835,10 +858,11 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
           Text(
             _valueMode == CartesianValueSummaryValueMode.interpolated
-                ? 'Rows follow the interpolated curve at the cursor X — '
-                      'values exist between samples.'
-                : 'Rows snap to the nearest real data point — exactly what '
-                      'was measured, even between samples.',
+                ? 'Marker, crosshair, and rows follow the interpolated curve '
+                      'at the cursor X — values exist between samples.'
+                : 'Marker, crosshair, and rows snap to the nearest real data '
+                      'point — exactly what was measured, even between '
+                      'samples.',
             style: TextStyle(
               fontSize: 10,
               color: Theme.of(context).hintColor.withValues(alpha: 0.7),
@@ -1102,7 +1126,6 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       StandardChartOptions(
         controller: _optionsController,
         showLineStyleOption: false,
-        showMarkerOption: false,
         showScrollbarOptions: false,
       ),
       OptionSection(

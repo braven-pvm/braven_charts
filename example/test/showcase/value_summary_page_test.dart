@@ -168,8 +168,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('value mode toggle flows into the config and survives preset '
-      'switches', (tester) async {
+  testWidgets('value mode toggle flows into the config, drives the crosshair '
+      'interpolation with it, and survives preset switches', (tester) async {
     await pumpPage(tester);
 
     CartesianValueSummaryValueMode valueMode() => tester
@@ -178,17 +178,17 @@ void main() {
         .valueSummary
         .valueMode;
 
+    bool crosshairInterpolates() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+        .interactionConfig!
+        .crosshair
+        .interpolateValues;
+
     // Default: interpolated — the pre-existing curve-tracking behavior, with
-    // the showcase crosshair interpolating so the difference is visible.
+    // the crosshair interpolation paired so marker, crosshair, and panel all
+    // ride the curve together.
     expect(valueMode(), CartesianValueSummaryValueMode.interpolated);
-    expect(
-      tester
-          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
-          .interactionConfig!
-          .crosshair
-          .interpolateValues,
-      isTrue,
-    );
+    expect(crosshairInterpolates(), isTrue);
 
     final segmented = find.byKey(const ValueKey('value-summary-value-mode'));
     await revealOption(tester, segmented);
@@ -199,6 +199,9 @@ void main() {
     await tester.tap(dataPointsSegment);
     await tester.pumpAndSettle();
     expect(valueMode(), CartesianValueSummaryValueMode.dataPoints);
+    // The showcase couples the visual tracking to the mode: Data points
+    // turns crosshair interpolation off so the marker snaps with the rows.
+    expect(crosshairInterpolates(), isFalse);
 
     // The choice is preset-independent: it survives switching presets and
     // applies to every chart of the synchronized pair.
@@ -207,6 +210,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(valueMode(), CartesianValueSummaryValueMode.dataPoints);
+    expect(crosshairInterpolates(), isFalse);
 
     await tester.tap(
       find.byKey(const ValueKey('value-summary-preset-synchronized')),
@@ -221,9 +225,10 @@ void main() {
         chart.interactionConfig?.valueSummary.valueMode,
         CartesianValueSummaryValueMode.dataPoints,
       );
+      expect(chart.interactionConfig?.crosshair.interpolateValues, isFalse);
     }
 
-    // Back to the default segment.
+    // Back to the default segment: both settings return together.
     await revealOption(tester, segmented);
     final interpolatedSegment = find.descendant(
       of: segmented,
@@ -232,8 +237,155 @@ void main() {
     await tester.tap(interpolatedSegment);
     await tester.pumpAndSettle();
     expect(valueMode(), CartesianValueSummaryValueMode.interpolated);
+    expect(crosshairInterpolates(), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('data markers toggle flows into every preset series', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    List<List<ChartSeries>> allSeries() => [
+      for (final chart in tester.widgetList<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      ))
+        chart.series,
+    ];
+
+    bool markerFlag(ChartSeries series) => switch (series) {
+      LineChartSeries(:final showDataPointMarkers) => showDataPointMarkers,
+      AreaChartSeries(:final showDataPointMarkers) => showDataPointMarkers,
+      _ => throw StateError('unexpected series type: ${series.runtimeType}'),
+    };
+
+    // Markers default on so the tracked datum is visible on the curve.
+    expect(markerFlag(allSeries().single.single), isTrue);
+
+    final markerToggle = find.text('Show Data Markers');
+    await revealOption(tester, markerToggle);
+    await tester.tap(markerToggle);
+    await tester.pumpAndSettle();
+    expect(markerFlag(allSeries().single.single), isFalse);
+
+    // The pinned preset no longer hardcodes markers on — it follows the
+    // toggle like every other preset.
+    await tester.tap(find.byKey(const ValueKey('value-summary-preset-pinned')));
+    await tester.pumpAndSettle();
+    expect(markerFlag(allSeries().single.single), isFalse);
+
+    await revealOption(tester, markerToggle);
+    await tester.tap(markerToggle);
+    await tester.pumpAndSettle();
+    expect(markerFlag(allSeries().single.single), isTrue);
+
+    // Multi-series: the toggle reaches every series, area included.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-multiSeries')),
+    );
+    await tester.pumpAndSettle();
+    expect(allSeries().single, hasLength(3));
+    for (final series in allSeries().single) {
+      expect(markerFlag(series), isTrue);
+    }
+
+    // Synchronized: both charts of the pair follow the toggle.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-synchronized')),
+    );
+    await tester.pumpAndSettle();
+    expect(allSeries(), hasLength(2));
+    for (final series in allSeries()) {
+      expect(markerFlag(series.single), isTrue);
+    }
+    await revealOption(tester, markerToggle);
+    await tester.tap(markerToggle);
+    await tester.pumpAndSettle();
+    for (final series in allSeries()) {
+      expect(markerFlag(series.single), isFalse);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Data points mode paints the tracking marker at the real datum and every '
+    'combination stays on the shared resolution',
+    (tester) async {
+      await pumpPage(tester);
+
+      var renderBox = _renderBox(tester);
+      var transform = renderBox.transform!;
+      var plotArea = renderBox.debugPlotArea;
+
+      Offset cursorFor(double dataX, double dataY) =>
+          tester.getTopLeft(find.byType(BravenChartPlus)) +
+          renderBox.plotToWidget(transform.dataToPlot(dataX, dataY));
+
+      final pointer = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(cursorFor(4.6, 30));
+      await tester.pump();
+
+      // Interpolated default: the marker rides the curve at the cursor X.
+      expect(renderBox.debugPaintedIntersectionMarkers, hasLength(1));
+      expect(
+        renderBox.debugPaintedIntersectionMarkers.single.center.dx,
+        closeTo(plotArea.left + transform.dataToPlot(4.6, 30).dx, 0.5),
+      );
+
+      // Switch to Data points: marker, crosshair, and panel snap together.
+      final segmented = find.byKey(const ValueKey('value-summary-value-mode'));
+      await revealOption(tester, segmented);
+      await tester.tap(
+        find.descendant(of: segmented, matching: find.text('Data points')),
+      );
+      await tester.pumpAndSettle();
+
+      await pointer.moveTo(cursorFor(4.7, 30));
+      await tester.pump();
+
+      // The nearest real sample to x=4.7 is (4, 31): the marker pins to it
+      // instead of following the cursor.
+      final marker = renderBox.debugPaintedIntersectionMarkers.single;
+      final datum = plotArea.topLeft + transform.dataToPlot(4, 31);
+      expect(marker.center.dx, closeTo(datum.dx, 0.5));
+      expect(marker.center.dy, closeTo(datum.dy, 0.5));
+
+      // Coupling the crosshair interpolation to the mode keeps every
+      // combination on the chart's single shared tracking resolution: the
+      // summary's divergent-mode resolver is never consulted.
+      expect(renderBox.debugSummaryTrackingResolveCount, 0);
+
+      // Multi-series preset: the crosshair is disabled, yet the panel still
+      // snaps to real samples through the summary-owned shared resolve.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-multiSeries')),
+      );
+      await tester.pumpAndSettle();
+      renderBox = _renderBox(tester);
+      transform = renderBox.transform!;
+      plotArea = renderBox.debugPlotArea;
+
+      await pointer.moveTo(cursorFor(4.6, 250));
+      await tester.pump();
+
+      // No crosshair — no painted markers.
+      expect(renderBox.debugPaintedIntersectionMarkers, isEmpty);
+      final snapshot = renderBox.debugValueSummarySnapshot;
+      expect(snapshot, isNotNull);
+      expect(snapshot!.origin, CartesianTrackingOrigin.pointer);
+      expect(snapshot.values, hasLength(3));
+      for (final value in snapshot.values) {
+        expect(value.isInterpolated, isFalse);
+        expect(value.x, closeTo(4, 1e-6));
+      }
+      expect(renderBox.debugSummaryTrackingResolveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('color palette clear affordance drives the tri-state style', (
     tester,

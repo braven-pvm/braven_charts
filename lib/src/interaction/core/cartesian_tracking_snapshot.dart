@@ -274,15 +274,19 @@ class CartesianTrackingSnapshot {
   /// and [origin] are deliberately excluded so sub-pixel cursor movement over
   /// the same snapped datum suppresses re-publication.
   ///
-  /// **Accepted marker quantization** (Slice-0 decision D10, hot-path
-  /// contract): the raw interpolated `y` is also excluded, so cursor movement
-  /// that changes an interpolated intersection Y without changing its
-  /// `formattedY` keeps the previously published snapshot — consumers reusing
-  /// its marker position render the *prior* interpolated Y until the
-  /// formatted value ticks over. Marker placement is thereby quantized to the
-  /// display precision of `formattedY`; that sub-precision drift is invisible
-  /// at tooltip precision and is the accepted cost of suppressing per-pixel
-  /// republication.
+  /// **Content-only suppression** (Slice-0 decision D10, hot-path contract):
+  /// the raw interpolated `y` is also excluded, so cursor movement that
+  /// changes an interpolated intersection Y without changing its `formattedY`
+  /// keeps the previously published snapshot — retained raw values are
+  /// quantized to the display precision of `formattedY`. This no longer
+  /// affects the painted intersection marker: the crosshair paint path
+  /// recomputes the interpolated curve Y from the live cursor X on every
+  /// paint (`CrosshairTracker.interpolatedYAt`, mirroring how the tracking X
+  /// label re-derives its data X), so the marker follows the curve
+  /// continuously while snapshot-driven *content* — tooltip and value
+  /// summary strings — updates only when the formatted value ticks over.
+  /// Consumers must therefore treat retained `y` values as display-precision
+  /// content, never as continuous positions.
   bool sameIdentityAs(CartesianTrackingSnapshot other) {
     if (identical(this, other)) return true;
     if (values.length != other.values.length) return false;

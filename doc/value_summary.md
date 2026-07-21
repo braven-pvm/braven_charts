@@ -103,6 +103,17 @@ CartesianValueSummaryConfig(
 The mode governs only live tracking; the pinned, selection, and
 latest/first-visible fallback stages always report actual data points.
 
+`valueMode` and `CrosshairConfig.interpolateValues` are deliberately
+independent options. For a visually consistent chart, pair them: use
+`interpolateValues: true` with the interpolated mode and `false` with
+`dataPoints`, so the crosshair's intersection marker, its labels, and the
+summary rows all resolve the same way — everything follows the curve, or
+everything snaps to the same real sample (this pairing also keeps every
+combination on the chart's single shared tracking resolution). Opposing them
+remains supported for advanced cases — for example a marker riding the curve
+while the panel reports the nearest measured sample: the visual tracking
+follows the crosshair's setting and the summary rows follow `valueMode`.
+
 Cost: the summary keeps reusing the chart's single shared per-frame tracking
 resolution whenever the mode is compatible with it — interpolated mode
 always, and dataPoints mode while the crosshair does not interpolate (or is
