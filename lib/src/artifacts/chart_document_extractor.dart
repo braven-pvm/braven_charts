@@ -293,7 +293,7 @@ abstract final class ChartDocumentExtractor {
           reference:
               options.themeReference ??
               source.themeReference ??
-              _builtInThemeReference(source.theme),
+              ChartThemeDocumentCodec.builtInReference(source.theme),
         ),
         warnings,
       );
@@ -493,15 +493,3 @@ T _recordSuccess<T>(
   return result.value;
 }
 
-String? _builtInThemeReference(ChartTheme theme) {
-  if (identical(theme, ChartTheme.light)) return 'light';
-  if (identical(theme, ChartTheme.dark)) return 'dark';
-  if (identical(theme, ChartTheme.corporateBlue)) return 'corporateBlue';
-  if (identical(theme, ChartTheme.vibrant)) return 'vibrant';
-  if (identical(theme, ChartTheme.minimal)) return 'minimal';
-  if (identical(theme, ChartTheme.highContrast)) return 'highContrast';
-  if (identical(theme, ChartTheme.colorblindFriendly)) {
-    return 'colorblindFriendly';
-  }
-  return null;
-}

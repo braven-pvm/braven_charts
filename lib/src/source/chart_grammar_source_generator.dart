@@ -59,6 +59,7 @@ import '../artifacts/chart_artifact_diagnostics.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_document_hydrator.dart';
 import '../artifacts/chart_runtime_bindings.dart';
+import '../artifacts/chart_theme_document_codec.dart';
 import '../grammar/channel.dart';
 import '../grammar/grammar_diagnostics.dart';
 import '../grammar/mark.dart';
@@ -1307,32 +1308,9 @@ class _GrammarChainEmitter {
     writer.writeLine(')');
   }
 
-  /// `ChartTheme.<name>` for a built-in theme reference.
-  ///
-  /// Both spellings the package produces are accepted: a document EXTRACTED
-  /// from a live chart carries the bare name (`light`), while one written by
-  /// `ChartThemeDocumentCodec` carries the namespaced one (`braven.light`).
-  static String? _builtInThemeExpression(String? reference) {
-    if (reference == null) return null;
-    final name = reference.startsWith('braven.')
-        ? reference.substring('braven.'.length)
-        : reference;
-    return const <String>{
-          'light',
-          'dark',
-          'corporateBlue',
-          'vibrant',
-          'minimal',
-          'highContrast',
-          'colorblindFriendly',
-        }.contains(name)
-        ? 'ChartTheme.$name'
-        : null;
-  }
-
   void _emitTheme(DartSourceWriter writer) {
     final reference = snapshot.document.theme.reference;
-    final expression = _builtInThemeExpression(reference);
+    final expression = ChartThemeDocumentCodec.builtInThemeMember(reference);
     if (expression != null) {
       writer.writeLine('.theme($expression)');
       return;

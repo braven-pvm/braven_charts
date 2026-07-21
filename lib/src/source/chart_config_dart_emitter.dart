@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../artifacts/chart_document_hydrator.dart';
+import '../artifacts/chart_theme_document_codec.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/annotation_style.dart';
@@ -3274,16 +3275,9 @@ class ChartConfigDartEmitter {
   /// null when the reference is absent (the theme is emitted resolved) or
   /// host-owned (it cannot be emitted at all).
   String? get _themeReferenceExpression =>
-      switch (snapshot.document.theme.reference) {
-        'braven.light' => 'ChartTheme.light',
-        'braven.dark' => 'ChartTheme.dark',
-        'braven.corporateBlue' => 'ChartTheme.corporateBlue',
-        'braven.vibrant' => 'ChartTheme.vibrant',
-        'braven.minimal' => 'ChartTheme.minimal',
-        'braven.highContrast' => 'ChartTheme.highContrast',
-        'braven.colorblindFriendly' => 'ChartTheme.colorblindFriendly',
-        _ => null,
-      };
+      ChartThemeDocumentCodec.builtInThemeMember(
+        snapshot.document.theme.reference,
+      );
 
   void _emitThemeReference(DartSourceWriter writer) {
     final reference = snapshot.document.theme.reference;
