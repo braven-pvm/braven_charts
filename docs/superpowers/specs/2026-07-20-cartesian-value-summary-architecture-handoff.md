@@ -1,10 +1,10 @@
 # Native Cartesian Value Summary — Architecture, Feature, and Lane Handoff
 
-**Date:** 2026-07-20  
-**Status:** Architecture ready; both presentations proven in the Candlestick showcase; native package implementation not started  
-**Recommended lane:** `feature/cartesian-value-summary`  
-**Depends on:** the Candlestick family and its typed interaction payload landing on `master`  
-**Prototype:** `example/lib/showcase/pages/candlestick_charts_page.dart`  
+**Date:** 2026-07-20
+**Status:** Architecture ready; both presentations proven in the Candlestick showcase; native package implementation not started
+**Recommended lane:** `feature/cartesian-value-summary`
+**Depends on:** the Candlestick family and its typed interaction payload landing on `master`
+**Prototype:** `example/lib/showcase/pages/candlestick_charts_page.dart`
 **Owning surface:** every built-in Cartesian family rendered by `BravenChartPlus`
 
 ## Executive decision
@@ -329,6 +329,13 @@ Built-in automatic adapters:
 Formatting must use the existing axis/series formatter registry. Financial
 defaults may use two decimals, but the package feature must not impose two
 decimals on non-financial series.
+
+The active X is continuous even when a series is discrete. Candlestick summary
+resolution partitions that continuum at the midpoint between ordered sessions
+and returns the nearest complete OHLC sample; exact ties resolve to the earlier
+session. It must never interpolate open, high, low, or close into a synthetic
+candle. Continuous Line/Area companions may independently interpolate at the
+same X.
 
 A runtime row-builder may be offered, but it is deliberately non-portable.
 Artifacts and Source must either use a registered formatter/content descriptor
@@ -788,4 +795,3 @@ The handoff lane is complete when:
 - the Candlestick showcase uses the native API and retains both approved visual
   presentations; and
 - full package and showcase release verification is green.
-

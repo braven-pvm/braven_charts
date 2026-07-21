@@ -37,6 +37,8 @@ class PolarColumnSeriesElement implements DataHitElement {
     Set<int> focusedPointIndices = const <int>{},
     Set<int> selectedPointIndices = const <int>{},
     double revealProgress = 1,
+    double fadeProgress = 1,
+    double sweepProgress = 1,
     double textScaleFactor = 1,
     bool isSelected = false,
     bool isHovered = false,
@@ -46,6 +48,20 @@ class PolarColumnSeriesElement implements DataHitElement {
         textScaleFactor,
         'textScaleFactor',
         'Value must be finite and positive',
+      );
+    }
+    if (!fadeProgress.isFinite || fadeProgress < 0 || fadeProgress > 1) {
+      throw ArgumentError.value(
+        fadeProgress,
+        'fadeProgress',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+    if (!sweepProgress.isFinite || sweepProgress < 0 || sweepProgress > 1) {
+      throw ArgumentError.value(
+        sweepProgress,
+        'sweepProgress',
+        'Value must be finite and in [0, 1]',
       );
     }
     final layout = _resolveLayout(
@@ -86,6 +102,8 @@ class PolarColumnSeriesElement implements DataHitElement {
       focusedPointIndices: focusedPointIndices,
       selectedPointIndices: selectedPointIndices,
       revealProgress: revealProgress,
+      fadeProgress: fadeProgress,
+      sweepProgress: sweepProgress,
       textScaleFactor: textScaleFactor,
       layout: layout,
       visibleDataLabelIndices: visibleDataLabelIndices,
@@ -111,6 +129,8 @@ class PolarColumnSeriesElement implements DataHitElement {
     required this.focusedPointIndices,
     required this.selectedPointIndices,
     required this.revealProgress,
+    required this.fadeProgress,
+    required this.sweepProgress,
     required this.textScaleFactor,
     required _PolarColumnResolvedLayout layout,
     required List<int> visibleDataLabelIndices,
@@ -168,6 +188,8 @@ class PolarColumnSeriesElement implements DataHitElement {
   final Set<int> focusedPointIndices;
   final Set<int> selectedPointIndices;
   final double revealProgress;
+  final double fadeProgress;
+  final double sweepProgress;
   final double textScaleFactor;
   final _PolarColumnResolvedLayout _layout;
 
@@ -197,6 +219,55 @@ class PolarColumnSeriesElement implements DataHitElement {
   /// Direct value labels with enough tangential and radial room to remain
   /// legible. Hidden values remain available through interaction and semantics.
   List<int> get visibleDataLabelIndices => _visibleDataLabelIndices;
+
+  /// Resolved value-label anchor before selection transforms.
+  ///
+  /// Exposed for deterministic renderer regression tests.
+  @visibleForTesting
+  Offset dataLabelAnchorForPoint(int pointIndex) {
+    RangeError.checkValidIndex(pointIndex, geometry.marks, 'pointIndex');
+    return _dataLabelAnchor(geometry.marks[pointIndex]);
+  }
+
+  /// Resolved category-label anchor before viewport clamping.
+  ///
+  /// Exposed for deterministic renderer regression tests.
+  @visibleForTesting
+  Offset categoryLabelAnchorForPoint(int pointIndex) {
+    RangeError.checkValidIndex(pointIndex, geometry.marks, 'pointIndex');
+    final band = _layout.categoryScale.bands[pointIndex];
+    return pane.center +
+        Offset.fromDirection(
+          band.centerAngle,
+          pane.outerRadius +
+              _angularLabelOffset(size, textScaleFactor) +
+              config.angularAxis.labelOffset,
+        );
+  }
+
+  /// Resolved angular ray for radial-axis labels.
+  ///
+  /// Exposed for deterministic renderer regression tests.
+  @visibleForTesting
+  double get resolvedRadialLabelAngle => _radialLabelAngle();
+
+  /// Resolves one grid contour through the active theme's dash pattern.
+  ///
+  /// Exposed for deterministic renderer tests so a non-empty
+  /// [GridStyle.majorDashPattern] cannot silently regress to a solid stroke.
+  @visibleForTesting
+  Path gridStrokePathForTesting(Path source) => _gridStrokePath(source);
+
+  /// Whether the angular entrance has reached the center of [pointIndex].
+  ///
+  /// Exposed for deterministic full-, partial-, and counter-clockwise sweep
+  /// regression tests. It also gates direct labels so text never appears as a
+  /// partially clipped glyph at the moving reveal frontier.
+  @visibleForTesting
+  bool isPointRevealedForAnimation(int pointIndex) {
+    RangeError.checkValidIndex(pointIndex, geometry.marks, 'pointIndex');
+    return _isAngleRevealed(geometry.marks[pointIndex].band.centerAngle);
+  }
 
   final List<int> _visibleDataLabelIndices;
   final Set<int> _visibleDataLabelIndexSet;
@@ -249,7 +320,7 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   @override
   Iterable<ChartDataHit> get semanticDataHits =>
-      geometry.marks.where((mark) => mark.isVisible).map(_dataHitForMark);
+      geometry.marks.map(_dataHitForMark);
 
   /// Effective fill colors in stable category order.
   List<Color> get resolvedMarkColors => List<Color>.unmodifiable([
@@ -265,7 +336,7 @@ class PolarColumnSeriesElement implements DataHitElement {
     if (paintGrid) {
       paintCompositionGrid(canvas);
     }
-    _paintMarks(canvas);
+    _paintMarksWithSweep(canvas);
     if (paintDataLabels) paintCompositionDataLabels(canvas);
     if (paintAxisLabels) paintCompositionAxisLabels(canvas);
   }
@@ -296,17 +367,58 @@ class PolarColumnSeriesElement implements DataHitElement {
     for (final mark in geometry.marks) {
       if (!mark.isVisible ||
           !series.polarStyle.showDataLabels ||
+          !_isAngleRevealed(mark.band.centerAngle) ||
           !_visibleDataLabelIndexSet.contains(mark.index)) {
         continue;
       }
       _paintText(
         canvas,
         _dataLabelText(mark),
-        _displayPoint(mark, mark.labelAnchor),
+        _displayPoint(mark, _dataLabelAnchor(mark)),
         _dataLabelStyle(colors[mark.index]),
         center: true,
       );
     }
+  }
+
+  void _paintMarksWithSweep(Canvas canvas) {
+    if (sweepProgress <= 0) return;
+    if (sweepProgress >= 1 - 1e-9) {
+      _paintMarks(canvas);
+      return;
+    }
+
+    final clipRadius =
+        math.sqrt(size.width * size.width + size.height * size.height) + 64;
+    final clipBounds = Rect.fromCircle(center: pane.center, radius: clipRadius);
+    final clipPath = Path()
+      ..moveTo(pane.center.dx, pane.center.dy)
+      ..arcTo(
+        clipBounds,
+        pane.startAngle,
+        pane.signedSweepAngle * sweepProgress,
+        false,
+      )
+      ..close();
+    canvas.save();
+    canvas.clipPath(clipPath);
+    _paintMarks(canvas);
+    canvas.restore();
+  }
+
+  bool _isAngleRevealed(double angle) {
+    if (sweepProgress <= 0) return false;
+    if (sweepProgress >= 1 - 1e-9) return true;
+    final directedDistance = pane.clockwise
+        ? _normalizedAngle(angle - pane.startAngle)
+        : _normalizedAngle(pane.startAngle - angle);
+    return directedDistance <= pane.sweepAngle * sweepProgress + 1e-9;
+  }
+
+  double _normalizedAngle(double angle) {
+    const fullTurn = math.pi * 2;
+    final normalized = angle % fullTurn;
+    return normalized < 0 ? normalized + fullTurn : normalized;
   }
 
   /// Paints angular and radial labels above the full composition.
@@ -361,6 +473,9 @@ class PolarColumnSeriesElement implements DataHitElement {
     final gridPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = theme.gridStyle.majorWidth
+      ..strokeCap = theme.gridStyle.majorDashPattern.isEmpty
+          ? StrokeCap.butt
+          : StrokeCap.round
       ..color = theme.gridStyle.majorColor.withValues(
         alpha: theme.gridStyle.majorColor.a * gridOpacity,
       );
@@ -376,11 +491,12 @@ class PolarColumnSeriesElement implements DataHitElement {
         final fraction = tick / (config.radialAxis.tickCount - 1);
         final value = numericScale.minimum + numericScale.domainSpan * fraction;
         final radius = numericScale.valueToRadius(value);
+        final source = _radialArcPath(radius);
+        final isAxisBoundary =
+            tick == 0 || tick == config.radialAxis.tickCount - 1;
         canvas.drawPath(
-          _radialArcPath(radius),
-          tick == 0 || tick == config.radialAxis.tickCount - 1
-              ? axisPaint
-              : gridPaint,
+          isAxisBoundary ? source : _gridStrokePath(source),
+          isAxisBoundary ? axisPaint : gridPaint,
         );
       }
     }
@@ -415,17 +531,36 @@ class PolarColumnSeriesElement implements DataHitElement {
         final end =
             pane.center +
             Offset.fromDirection(band.startAngle, pane.outerRadius);
-        canvas.drawLine(start, end, gridPaint);
+        canvas.drawPath(
+          _gridStrokePath(
+            Path()
+              ..moveTo(start.dx, start.dy)
+              ..lineTo(end.dx, end.dy),
+          ),
+          gridPaint,
+        );
       }
       if (pane.sweepAngle < math.pi * 2 - 1e-9) {
         final end = pane.endAngle;
-        canvas.drawLine(
-          pane.center + Offset.fromDirection(end, pane.innerRadius),
-          pane.center + Offset.fromDirection(end, pane.outerRadius),
+        final startPoint =
+            pane.center + Offset.fromDirection(end, pane.innerRadius);
+        final endPoint =
+            pane.center + Offset.fromDirection(end, pane.outerRadius);
+        canvas.drawPath(
+          _gridStrokePath(
+            Path()
+              ..moveTo(startPoint.dx, startPoint.dy)
+              ..lineTo(endPoint.dx, endPoint.dy),
+          ),
           gridPaint,
         );
       }
     }
+  }
+
+  Path _gridStrokePath(Path source) {
+    final pattern = theme.gridStyle.majorDashPattern;
+    return pattern.isEmpty ? source : createDashedPath(source, pattern);
   }
 
   bool get _isFullSweep => pane.sweepAngle >= math.pi * 2 - 1e-9;
@@ -481,12 +616,16 @@ class PolarColumnSeriesElement implements DataHitElement {
     final focused = focusedPointIndices.contains(mark.index);
     final path = _displayPath(mark);
 
+    if (mark.isVisible && series.polarStyle.shadow.isVisible) {
+      _paintShadow(canvas, path, color);
+    }
+
     if (selected && mark.isVisible) {
       canvas.drawPath(
         path,
         Paint()
           ..style = PaintingStyle.fill
-          ..color = color.withValues(alpha: 0.36)
+          ..color = color.withValues(alpha: 0.36 * fadeProgress)
           ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8),
       );
     }
@@ -497,10 +636,14 @@ class PolarColumnSeriesElement implements DataHitElement {
           ..style = PaintingStyle.fill
           ..isAntiAlias = true
           ..color = color.withValues(
-            alpha: color.a * series.polarStyle.opacity,
-          ),
+            alpha: color.a * series.polarStyle.opacity * fadeProgress,
+          )
+          ..shader = _markGradient(mark, color),
       );
       if (series.polarStyle.borderWidth > 0 || selected || focused) {
+        final borderColor = selected || focused
+            ? theme.focusBorderColor
+            : (series.polarStyle.borderColor ?? theme.axisStyle.lineColor);
         canvas.drawPath(
           path,
           Paint()
@@ -509,9 +652,9 @@ class PolarColumnSeriesElement implements DataHitElement {
             ..strokeWidth = selected || focused
                 ? math.max(2, series.polarStyle.borderWidth)
                 : series.polarStyle.borderWidth
-            ..color = selected || focused
-                ? theme.focusBorderColor
-                : (series.polarStyle.borderColor ?? theme.axisStyle.lineColor),
+            ..color = borderColor.withValues(
+              alpha: borderColor.a * fadeProgress,
+            ),
         );
       }
     }
@@ -602,10 +745,31 @@ class PolarColumnSeriesElement implements DataHitElement {
   String _dataLabelText(PolarColumnMarkGeometry mark) =>
       MultiAxisValueFormatter.format(value: mark.value);
 
-  TextStyle _dataLabelStyle(Color color) => theme.axisStyle.labelStyle.copyWith(
-    color: _contrastingTextColor(color),
-    fontWeight: FontWeight.w600,
-  );
+  TextStyle _dataLabelStyle(Color color) {
+    final style = _resolveLabelStyle(
+      series.polarStyle.dataLabelStyle,
+      fallback: theme.axisStyle.labelStyle,
+      fallbackColor: _contrastingTextColor(color),
+      fallbackWeight: FontWeight.w600,
+    );
+    final resolvedColor = style.color;
+    return resolvedColor == null
+        ? style
+        : style.copyWith(
+            color: resolvedColor.withValues(
+              alpha: resolvedColor.a * fadeProgress,
+            ),
+          );
+  }
+
+  Offset _dataLabelAnchor(PolarColumnMarkGeometry mark) {
+    final innerRadius = math.min(mark.baselineRadius, mark.valueRadius);
+    final outerRadius = math.max(mark.baselineRadius, mark.valueRadius);
+    final radius =
+        innerRadius +
+        (outerRadius - innerRadius) * series.polarStyle.dataLabelRadialPosition;
+    return pane.center + Offset.fromDirection(mark.band.centerAngle, radius);
+  }
 
   void _paintAxisLabels(Canvas canvas) {
     if (config.angularAxis.showLabels) {
@@ -615,33 +779,134 @@ class PolarColumnSeriesElement implements DataHitElement {
             pane.center +
             Offset.fromDirection(
               band.centerAngle,
-              pane.outerRadius + _angularLabelOffset(size, textScaleFactor),
+              pane.outerRadius +
+                  _angularLabelOffset(size, textScaleFactor) +
+                  config.angularAxis.labelOffset,
             );
         _paintText(
           canvas,
           band.category,
           anchor,
-          theme.axisStyle.labelStyle,
+          _resolveLabelStyle(
+            config.angularAxis.labelStyle,
+            fallback: theme.axisStyle.labelStyle,
+          ),
           center: true,
         );
       }
     }
 
     if (config.radialAxis.showLabels) {
+      final labelAngle = _radialLabelAngle();
+      final labelStyle = _resolveLabelStyle(
+        config.radialAxis.labelStyle,
+        fallback: theme.axisStyle.labelStyle,
+      );
       for (var tick = 0; tick < config.radialAxis.tickCount; tick++) {
         final fraction = tick / (config.radialAxis.tickCount - 1);
         final value = numericScale.minimum + numericScale.domainSpan * fraction;
         final radius = numericScale.valueToRadius(value);
         final anchor =
-            pane.center + Offset.fromDirection(pane.startAngle, radius);
+            pane.center +
+            Offset.fromDirection(
+              labelAngle,
+              radius + config.radialAxis.labelOffset,
+            );
         _paintText(
           canvas,
           MultiAxisValueFormatter.format(value: value),
-          anchor + Offset(4 * textScaleFactor, 2 * textScaleFactor),
-          theme.axisStyle.labelStyle.copyWith(fontSize: 10),
+          anchor,
+          labelStyle,
+          center: true,
         );
       }
     }
+  }
+
+  double _radialLabelAngle() {
+    final base = switch (config.radialAxis.labelPosition) {
+      PolarRadialLabelPosition.start => pane.startAngle,
+      PolarRadialLabelPosition.middle =>
+        pane.startAngle + pane.signedSweepAngle * 0.5,
+      PolarRadialLabelPosition.end => pane.endAngle,
+    };
+    return base + config.radialAxis.labelAngleOffsetDegrees * math.pi / 180;
+  }
+
+  TextStyle _resolveLabelStyle(
+    PolarLabelStyle style, {
+    required TextStyle fallback,
+    Color? fallbackColor,
+    FontWeight? fallbackWeight,
+  }) => _resolvePolarTextStyle(
+    style,
+    fallback: fallback,
+    fallbackColor: fallbackColor,
+    fallbackWeight: fallbackWeight,
+  );
+
+  ui.Shader? _markGradient(PolarColumnMarkGeometry mark, Color color) {
+    final gradient = series.polarStyle.gradient;
+    if (gradient == null || !gradient.enabled) return null;
+    final startColor =
+        (gradient.startColor ??
+                _shiftLightness(color, gradient.startLightnessShift))
+            .withValues(
+              alpha:
+                  (gradient.startColor ?? color).a *
+                  series.polarStyle.opacity *
+                  fadeProgress,
+            );
+    final endColor =
+        (gradient.endColor ??
+                _shiftLightness(color, gradient.endLightnessShift))
+            .withValues(
+              alpha:
+                  (gradient.endColor ?? color).a *
+                  series.polarStyle.opacity *
+                  fadeProgress,
+            );
+    final start =
+        pane.center +
+        Offset.fromDirection(mark.band.centerAngle, mark.baselineRadius);
+    var end =
+        pane.center +
+        Offset.fromDirection(mark.band.centerAngle, mark.valueRadius);
+    if ((end - start).distanceSquared < 1e-6) {
+      end = start + Offset.fromDirection(mark.band.centerAngle, 1);
+    }
+    return ui.Gradient.linear(start, end, <Color>[startColor, endColor]);
+  }
+
+  void _paintShadow(Canvas canvas, Path path, Color color) {
+    final style = series.polarStyle.shadow;
+    final shadowColor = (style.color ?? _shiftLightness(color, -0.32))
+        .withValues(
+          alpha: (style.color ?? color).a * style.opacity * fadeProgress,
+        );
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true
+      ..color = shadowColor
+      ..maskFilter = style.blurRadius <= 0
+          ? null
+          : ui.MaskFilter.blur(ui.BlurStyle.normal, style.blurRadius);
+    canvas.save();
+    canvas.translate(style.offset.dx, style.offset.dy);
+    canvas.drawPath(path, paint);
+    if (style.spreadRadius > 0) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.spreadRadius * 2
+          ..strokeJoin = StrokeJoin.round
+          ..isAntiAlias = true
+          ..color = shadowColor
+          ..maskFilter = paint.maskFilter,
+      );
+    }
+    canvas.restore();
   }
 
   void _paintText(
@@ -677,6 +942,13 @@ class PolarColumnSeriesElement implements DataHitElement {
   ChartDataHit _dataHitForMark(PolarColumnMarkGeometry mark) {
     final point = series.points[mark.index];
     final path = _displayPath(mark);
+    final pathBounds = path.getBounds();
+    final semanticBounds = pathBounds.isEmpty
+        ? Rect.fromCircle(
+            center: _displayPoint(mark, mark.labelAnchor),
+            radius: 8,
+          )
+        : pathBounds;
     final value = MultiAxisValueFormatter.format(
       value: point.y,
       unit: series.unit,
@@ -692,7 +964,7 @@ class PolarColumnSeriesElement implements DataHitElement {
       seriesId: series.id,
       pointIndex: mark.index,
       plotPosition: _displayPoint(mark, mark.tooltipAnchor),
-      semanticBounds: path.getBounds(),
+      semanticBounds: semanticBounds,
       point: point,
       category: mark.category,
       formattedValue: '$value$target$interval',
@@ -780,6 +1052,8 @@ class PolarColumnSeriesElement implements DataHitElement {
         focusedPointIndices: focusedPointIndices,
         selectedPointIndices: selectedPointIndices,
         revealProgress: revealProgress,
+        fadeProgress: fadeProgress,
+        sweepProgress: sweepProgress,
         textScaleFactor: textScaleFactor,
         isHovered: isHovered ?? this.isHovered,
         isSelected: isSelected ?? this.isSelected,
@@ -924,7 +1198,7 @@ _PolarColumnResolvedLayout _resolveLayout({
 
   final paneConfig = config.pane;
   final reservedLabelInset = math.min(
-    34 * textScaleFactor,
+    34 * textScaleFactor + math.max(0, config.angularAxis.labelOffset),
     size.shortestSide * 0.28,
   );
   final pane = RadialPaneGeometry.resolve(
@@ -999,7 +1273,11 @@ _PolarColumnResolvedLayout _resolveLayout({
           categoryScale: categoryScale,
           pane: pane,
           size: size,
-          style: theme.axisStyle.labelStyle,
+          style: _resolvePolarTextStyle(
+            config.angularAxis.labelStyle,
+            fallback: theme.axisStyle.labelStyle,
+          ),
+          labelOffset: config.angularAxis.labelOffset,
           textScaleFactor: textScaleFactor,
           maximumVisible: config.angularAxis.maximumVisibleLabels,
         )
@@ -1037,6 +1315,7 @@ List<int> _resolveVisibleAngularLabelIndices({
   required RadialPaneGeometry pane,
   required Size size,
   required TextStyle style,
+  required double labelOffset,
   required double textScaleFactor,
   required int maximumVisible,
 }) {
@@ -1053,7 +1332,9 @@ List<int> _resolveVisibleAngularLabelIndices({
     return math.max(maximum, measured.width);
   });
   final labelRadius =
-      pane.outerRadius + _angularLabelOffset(size, textScaleFactor);
+      pane.outerRadius +
+      _angularLabelOffset(size, textScaleFactor) +
+      labelOffset;
   final availableArcLength = pane.sweepAngle.abs() * labelRadius;
   final minimumSpacing = math.max(
     24 * textScaleFactor,
@@ -1100,8 +1381,10 @@ List<int> _resolveVisibleDataLabelIndices({
   required double textScaleFactor,
 }) {
   if (!series.polarStyle.showDataLabels) return const <int>[];
-  final style = theme.axisStyle.labelStyle.copyWith(
-    fontWeight: FontWeight.w600,
+  final style = _resolvePolarTextStyle(
+    series.polarStyle.dataLabelStyle,
+    fallback: theme.axisStyle.labelStyle,
+    fallbackWeight: FontWeight.w600,
   );
   final candidates = <int>[];
   for (final mark in geometry.marks) {
@@ -1160,3 +1443,19 @@ Size _measureText(
 
 Color _contrastingTextColor(Color background) =>
     background.computeLuminance() > 0.46 ? Colors.black : Colors.white;
+
+TextStyle _resolvePolarTextStyle(
+  PolarLabelStyle style, {
+  required TextStyle fallback,
+  Color? fallbackColor,
+  FontWeight? fallbackWeight,
+}) => fallback.copyWith(
+  color: style.color ?? fallbackColor ?? fallback.color,
+  fontSize: style.fontSize ?? fallback.fontSize,
+  fontWeight: style.fontWeight ?? fallbackWeight ?? fallback.fontWeight,
+);
+
+Color _shiftLightness(Color color, double shift) {
+  final hsl = HSLColor.fromColor(color);
+  return hsl.withLightness((hsl.lightness + shift).clamp(0.0, 1.0)).toColor();
+}

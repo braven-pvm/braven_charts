@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Interaction Page
 // SPDX-License-Identifier: MIT
 
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +21,8 @@ class InteractionPage extends StatefulWidget {
 
 class _InteractionPageState extends State<InteractionPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
+  final ChartInteractionGroupController _navigatorController =
+      ChartInteractionGroupController();
 
   _InteractionMode _mode = _InteractionMode.explore;
   _CurveStudy _curveStudy = _CurveStudy.interpolation;
@@ -31,11 +35,26 @@ class _InteractionPageState extends State<InteractionPage> {
   ChartDataPoint? _hoveredPoint;
   ChartDataPoint? _tappedPoint;
   late List<ChartDataPoint> _interactionData;
+  late List<ChartDataPoint> _navigatorData;
+  int _navigatorPointCount = 160;
+  double _navigatorCycles = 4;
+  int _navigatorRevision = 0;
 
   @override
   void initState() {
     super.initState();
     _regenerateInteractionData();
+    _regenerateNavigatorData();
+    _navigatorController.viewportListenable.addListener(
+      _handleNavigatorViewportChanged,
+    );
+    final requestedMode = Uri.base.queryParameters['mode'];
+    for (final mode in _InteractionMode.values) {
+      if (mode.name == requestedMode) {
+        _mode = mode;
+        break;
+      }
+    }
   }
 
   void _regenerateInteractionData() {
@@ -46,6 +65,61 @@ class _InteractionPageState extends State<InteractionPage> {
     );
   }
 
+  void _regenerateNavigatorData() {
+    final phase = _navigatorRevision * 0.37;
+    _navigatorData = List<ChartDataPoint>.generate(_navigatorPointCount, (
+      index,
+    ) {
+      final progress = index / (_navigatorPointCount - 1);
+      final primary = math.sin(
+        progress * math.pi * 2 * _navigatorCycles + phase,
+      );
+      final detail = math.sin(
+        progress * math.pi * 2 * (_navigatorCycles * 2.35) + phase * 0.7,
+      );
+      final pulse = math.cos(progress * math.pi * 2 * 1.5 - phase * 0.45);
+      return ChartDataPoint(
+        x: index.toDouble(),
+        y: 52 + primary * 11 + detail * 3.8 + pulse * 2.2 + progress * 8,
+      );
+    }, growable: false);
+  }
+
+  void _handleNavigatorViewportChanged() {
+    if (!mounted || _mode != _InteractionMode.navigator) return;
+    setState(() {});
+  }
+
+  void _setNavigatorPointCount(int value) {
+    if (value == _navigatorPointCount) return;
+    setState(() {
+      _navigatorPointCount = value;
+      _regenerateNavigatorData();
+    });
+  }
+
+  void _setNavigatorCycles(double value) {
+    if (value == _navigatorCycles) return;
+    setState(() {
+      _navigatorCycles = value;
+      _regenerateNavigatorData();
+    });
+  }
+
+  void _reseedNavigatorData() {
+    setState(() {
+      _navigatorRevision++;
+      _regenerateNavigatorData();
+    });
+  }
+
+  void _showNavigatorWindow(double startFraction, double endFraction) {
+    final domainMax = (_navigatorPointCount - 1).toDouble();
+    final min = (domainMax * startFraction).roundToDouble();
+    final max = (domainMax * endFraction).roundToDouble();
+    _navigatorController.setViewport(ChartXViewport(min: min, max: max));
+  }
+
   void _selectMode(_InteractionMode mode) {
     if (_mode == mode) return;
     setState(() => _mode = mode);
@@ -53,6 +127,10 @@ class _InteractionPageState extends State<InteractionPage> {
 
   @override
   void dispose() {
+    _navigatorController.viewportListenable.removeListener(
+      _handleNavigatorViewportChanged,
+    );
+    _navigatorController.dispose();
     _optionsController.dispose();
     super.dispose();
   }
@@ -107,7 +185,8 @@ class _InteractionPageState extends State<InteractionPage> {
             ),
           ],
         ),
-      if (_mode != _InteractionMode.explore)
+      if (_mode != _InteractionMode.explore &&
+          _mode != _InteractionMode.navigator)
         OptionSection(
           title: 'Tracking Overlay',
           icon: Icons.track_changes,
@@ -126,6 +205,51 @@ class _InteractionPageState extends State<InteractionPage> {
             ),
           ],
         ),
+      if (_mode == _InteractionMode.navigator) ...[
+        OptionSection(
+          title: 'Navigator Data',
+          icon: Icons.dataset_outlined,
+          children: [
+            IntSliderOption(
+              label: 'Data Points',
+              value: _navigatorPointCount,
+              min: 24,
+              max: 400,
+              suffix: 'points',
+              onChanged: _setNavigatorPointCount,
+            ),
+            SliderOption(
+              label: 'Signal Cycles',
+              value: _navigatorCycles,
+              min: 1,
+              max: 8,
+              divisions: 14,
+              suffix: 'cycles',
+              onChanged: _setNavigatorCycles,
+            ),
+            ActionButton(
+              label: 'Regenerate Signal',
+              icon: Icons.auto_graph_outlined,
+              onPressed: _reseedNavigatorData,
+            ),
+          ],
+        ),
+        OptionSection(
+          title: 'Viewport Controller',
+          icon: Icons.settings_ethernet,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _navigatorViewportSummary(),
+                key: const ValueKey('navigator-viewport-summary'),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+            _buildNavigatorControllerActions(),
+          ],
+        ),
+      ],
       if (_mode == _InteractionMode.normalize)
         OptionSection(
           title: 'Layout',
@@ -166,17 +290,18 @@ class _InteractionPageState extends State<InteractionPage> {
         icon: Icons.info_outline,
         children: [InfoBox(message: _modeGuide())],
       ),
-      OptionSection(
-        title: 'Dataset',
-        icon: Icons.refresh,
-        children: [
-          ActionButton(
-            label: 'Refresh Example Data',
-            icon: Icons.refresh,
-            onPressed: () => setState(_regenerateInteractionData),
-          ),
-        ],
-      ),
+      if (_mode != _InteractionMode.navigator)
+        OptionSection(
+          title: 'Dataset',
+          icon: Icons.refresh,
+          children: [
+            ActionButton(
+              label: 'Refresh Example Data',
+              icon: Icons.refresh,
+              onPressed: () => setState(_regenerateInteractionData),
+            ),
+          ],
+        ),
     ];
   }
 
@@ -316,6 +441,18 @@ class _InteractionPageState extends State<InteractionPage> {
         return _interpolationSeries;
       case _InteractionMode.stress:
         return _stressSeries;
+      case _InteractionMode.navigator:
+        return [
+          AreaChartSeries(
+            id: 'preview-navigator',
+            name: 'Navigator',
+            points: _navigatorData,
+            color: const Color(0xFF0F766E),
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 1.8,
+            fillOpacity: 0.28,
+          ),
+        ];
     }
   }
 
@@ -365,8 +502,156 @@ class _InteractionPageState extends State<InteractionPage> {
           series: _stressSeries,
           yAxisLabel: 'Stress path',
         ),
+        _InteractionMode.navigator => _buildNavigatorExample(),
       },
     );
+  }
+
+  Widget _buildNavigatorExample() {
+    final domainMax = (_navigatorPointCount - 1).toDouble();
+    final initialMin = (domainMax * 0.12).roundToDouble();
+    final initialMax = (domainMax * 0.52).roundToDouble();
+    final chartTheme = _optionsController.theme ?? ChartTheme.light;
+    return Column(
+      key: const ValueKey('interaction-navigator-composition'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: BravenChartPlus(
+            key: const ValueKey('interaction-navigator-chart'),
+            interactionGroupController: _navigatorController,
+            series: [
+              LineChartSeries(
+                id: 'navigator-signal',
+                name: 'Signal',
+                points: _navigatorData,
+                color: const Color(0xFF0F766E),
+                interpolation: LineInterpolation.monotone,
+                strokeWidth: 2.4,
+                showDataPointMarkers: _optionsController.showDataMarkers,
+              ),
+            ],
+            theme: chartTheme,
+            showLegend: _optionsController.showLegend,
+            grid: GridConfig(
+              horizontal: _optionsController.showGrid,
+              vertical: _optionsController.showGrid,
+            ),
+            xAxisConfig: XAxisConfig(
+              label: 'Sample',
+              showAxisLine: _optionsController.showAxisLines,
+            ),
+            yAxis: YAxisConfig(
+              position: YAxisPosition.left,
+              label: 'Signal',
+              showAxisLine: _optionsController.showAxisLines,
+            ),
+            interactionConfig: InteractionConfig(
+              enableZoom: _optionsController.enableZoom,
+              enablePan: _optionsController.enablePan,
+              crosshair: CrosshairConfig.tracking(
+                interpolate: true,
+                showTooltip: true,
+                showMarkers: true,
+              ),
+              tooltip: const TooltipConfig(enabled: false),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 88,
+          child: CartesianNavigator(
+            key: const ValueKey('interaction-cartesian-navigator'),
+            interactionGroupController: _navigatorController,
+            overviewSeries: AreaChartSeries(
+              id: 'navigator-overview',
+              name: 'Full signal',
+              points: _navigatorData,
+              color: const Color(0xFF0F766E),
+              interpolation: LineInterpolation.monotone,
+              strokeWidth: 1.5,
+              fillOpacity: 0.24,
+              showDataPointMarkers: false,
+            ),
+            fullDomain: ChartXViewport(min: 0, max: domainMax),
+            initialViewport: ChartXViewport(min: initialMin, max: initialMax),
+            behavior: CartesianNavigatorBehavior(
+              minimumSpan: math.max(4, domainMax / 24),
+            ),
+            snapPolicy: CartesianNavigatorSnapPolicy.interval(1),
+            theme: chartTheme,
+            height: 88,
+            semanticLabel: 'Signal sample viewport',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavigatorControllerActions() {
+    Widget action({
+      required String label,
+      required IconData icon,
+      required VoidCallback onPressed,
+    }) => Expanded(
+      child: SizedBox(
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 17),
+          label: Text(label, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+    );
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            action(
+              label: 'Show first',
+              icon: Icons.first_page,
+              onPressed: () => _showNavigatorWindow(0, 0.3),
+            ),
+            const SizedBox(width: 8),
+            action(
+              label: 'Show middle',
+              icon: Icons.align_horizontal_center,
+              onPressed: () => _showNavigatorWindow(0.35, 0.65),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            action(
+              label: 'Show latest',
+              icon: Icons.last_page,
+              onPressed: () => _showNavigatorWindow(0.7, 1),
+            ),
+            const SizedBox(width: 8),
+            action(
+              label: 'Show all',
+              icon: Icons.fit_screen,
+              onPressed: () => _showNavigatorWindow(0, 1),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _navigatorViewportSummary() {
+    final viewport = _navigatorController.viewport;
+    final domainMax = (_navigatorPointCount - 1).toDouble();
+    final effective =
+        viewport ??
+        ChartXViewport(
+          min: (domainMax * 0.12).roundToDouble(),
+          max: (domainMax * 0.52).roundToDouble(),
+        );
+    return 'Visible samples ${effective.min.toStringAsFixed(0)}–${effective.max.toStringAsFixed(0)} of ${domainMax.toStringAsFixed(0)}';
   }
 
   Widget _buildExploreChart() {
@@ -781,6 +1066,7 @@ class _InteractionPageState extends State<InteractionPage> {
           ? 'Interpolation-aware tracking'
           : 'Bezier tension tracking',
     _InteractionMode.stress => 'Sharp-reversal tracking',
+    _InteractionMode.navigator => 'Navigator and viewport controller',
   };
 
   String _mainSubtitle() {
@@ -798,6 +1084,8 @@ class _InteractionPageState extends State<InteractionPage> {
             : 'The same anchors rendered with three Bezier tension values',
       _InteractionMode.stress =>
         'Markers stay aligned through reversals, plateaus, and strong curvature',
+      _InteractionMode.navigator =>
+        '${_navigatorData.length} points · drag the overview window or call the shared controller',
     };
   }
 
@@ -827,6 +1115,7 @@ class _InteractionPageState extends State<InteractionPage> {
     _InteractionMode.normalize => 'Normalize',
     _InteractionMode.curves => 'Compare curves',
     _InteractionMode.stress => 'Stress paths',
+    _InteractionMode.navigator => 'Navigator',
   };
 
   String _modeDescription(_InteractionMode mode) => switch (mode) {
@@ -835,6 +1124,7 @@ class _InteractionPageState extends State<InteractionPage> {
     _InteractionMode.normalize => 'Mixed scales + axes',
     _InteractionMode.curves => 'Interpolation-aware',
     _InteractionMode.stress => 'Reversals + plateaus',
+    _InteractionMode.navigator => 'Overview + controller',
   };
 
   String _modeGuide() => switch (_mode) {
@@ -848,6 +1138,8 @@ class _InteractionPageState extends State<InteractionPage> {
       'Move across the curves to verify that each tracking marker remains centered on its rendered interpolation.',
     _InteractionMode.stress =>
       'Track across abrupt direction changes and plateaus to inspect marker alignment under difficult geometry.',
+    _InteractionMode.navigator =>
+      'Change the data-point count, drag or resize the overview window, then use the viewport buttons. Every path writes to the same ChartInteractionGroupController.',
   };
 
   List<ChartAnnotation> get _trackingBoundaryAnnotations => [
@@ -933,7 +1225,7 @@ class _InteractionPageState extends State<InteractionPage> {
   ];
 }
 
-enum _InteractionMode { explore, track, normalize, curves, stress }
+enum _InteractionMode { explore, track, normalize, curves, stress, navigator }
 
 enum _CurveStudy { interpolation, tension }
 

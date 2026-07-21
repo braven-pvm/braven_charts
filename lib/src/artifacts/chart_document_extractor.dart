@@ -341,6 +341,8 @@ abstract final class ChartDocumentExtractor {
         if (source.polarChartConfig != null) 'chart.polar.config.v1',
         if (source.polarChartConfig?.thresholds.isNotEmpty == true)
           'chart.polar.thresholds.v1',
+        if (source.polarChartConfig?.hasCustomLabelAppearance == true)
+          PolarChartConfig.labelAppearanceCapability,
         if (source.polarChartConfig != null &&
             seriesDocuments
                     .where((series) => series.type == 'polarColumn')

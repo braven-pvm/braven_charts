@@ -214,7 +214,14 @@ void main() {
       expect(find.text('Pulse'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
 
-      await tester.tap(find.text('Baseline'));
+      final picker = find.byKey(const ValueKey('area-preset-picker'));
+      final baseline = find.descendant(
+        of: picker,
+        matching: find.text('Baseline'),
+      );
+      await tester.ensureVisible(baseline);
+      await tester.pumpAndSettle();
+      await tester.tap(baseline);
       await tester.pump(const Duration(milliseconds: 200));
 
       final chart = tester.widget<BravenChartPlus>(
@@ -223,6 +230,19 @@ void main() {
       final series = chart.series.first as AreaChartSeries;
       expect(series.aboveBaselineFillColor, isNotNull);
       expect(series.belowBaselineFillColor, isNotNull);
+
+      final forecast = find.descendant(
+        of: picker,
+        matching: find.text('Forecast'),
+      );
+      await tester.ensureVisible(forecast);
+      await tester.pumpAndSettle();
+      await tester.tap(forecast);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('area-guide-navigator')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -269,9 +289,13 @@ void main() {
     await pumpPage(tester, const AreaChartsPage());
     final picker = find.byKey(const ValueKey('area-preset-picker'));
 
-    await tester.tap(
-      find.descendant(of: picker, matching: find.text('Gradient')),
+    final gradient = find.descendant(
+      of: picker,
+      matching: find.text('Gradient'),
     );
+    await tester.ensureVisible(gradient);
+    await tester.pumpAndSettle();
+    await tester.tap(gradient);
     await tester.pumpAndSettle();
     var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
     expect(chart.series, hasLength(1));
@@ -374,6 +398,10 @@ void main() {
         find.byKey(const ValueKey('synchronized-cartesian-stack')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('synchronized-cartesian-navigator')),
+        findsOneWidget,
+      );
       expect(find.text('Speed'), findsOneWidget);
       expect(find.text('Elevation'), findsOneWidget);
       expect(find.text('Heart rate'), findsOneWidget);
@@ -434,7 +462,8 @@ void main() {
       await tester.ensureVisible(firstFinder);
       await tester.pumpAndSettle();
       final first = renderBoxes.first;
-      const dataX = 0.2;
+      final viewport = charts.first.interactionGroupController!.viewport!;
+      final dataX = (viewport.min + viewport.max) / 2;
       final local = first.plotToWidget(
         first.transform!.dataToPlot(
           dataX,
@@ -1203,6 +1232,10 @@ void main() {
       'Base block',
       'Build block',
     ]);
+    expect(
+      find.byKey(const ValueKey('scatter-guide-navigator')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('scatter Cohorts presents a representative athlete dataset', (
@@ -1313,7 +1346,7 @@ void main() {
     );
     expect(
       find.descendant(of: picker, matching: find.byType(ChoiceChip)),
-      findsNWidgets(26),
+      findsNWidgets(27),
     );
     expect(
       tester.getTopLeft(lasso).dy,
@@ -2999,12 +3032,13 @@ void main() {
     tester,
   ) async {
     await pumpPage(tester, const LineChartsPage());
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey('line-preset-picker')),
-        matching: find.text('Motion'),
-      ),
+    final motion = find.descendant(
+      of: find.byKey(const ValueKey('line-preset-picker')),
+      matching: find.text('Motion'),
     );
+    await tester.ensureVisible(motion);
+    await tester.pumpAndSettle();
+    await tester.tap(motion);
     await tester.pumpAndSettle();
 
     var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
@@ -3848,6 +3882,9 @@ void main() {
   });
 }
 
-Finder _chartRenderFinder() => find.byWidgetPredicate(
-  (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+Finder _chartRenderFinder() => find.descendant(
+  of: find.byType(BravenChartPlus),
+  matching: find.byWidgetPredicate(
+    (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+  ),
 );

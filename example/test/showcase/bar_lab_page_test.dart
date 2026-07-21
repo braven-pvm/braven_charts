@@ -51,7 +51,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('bar-lab-preset-categories')));
     await tester.pumpAndSettle();
 
-    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      find.byKey(const ValueKey('bar-categories-navigator')),
+      findsOneWidget,
+    );
     expect(chart.showXScrollbar, isTrue);
     expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(24));
     expect(chart.xAxisConfig?.labelFormatter, isNull);

@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/polar_column_series_element.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +28,12 @@ void main() {
           showGridLines: false,
           maximumVisibleLabels: 11,
           maximumVisibleGridLines: 17,
+          labelOffset: 16,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF334155),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 0,
@@ -32,6 +42,14 @@ void main() {
           tickCount: 6,
           showLabels: false,
           showGridLines: true,
+          labelPosition: PolarRadialLabelPosition.end,
+          labelAngleOffsetDegrees: -20,
+          labelOffset: 7,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF0D9488),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       );
       final sourceSeries = PolarColumnChartSeries.rose(
@@ -49,6 +67,26 @@ void main() {
           borderWidth: 2,
           showDataLabels: false,
           maximumVisibleDataLabels: 7,
+          dataLabelRadialPosition: 0.68,
+          dataLabelStyle: PolarLabelStyle(
+            color: Color(0xFFFFFFFF),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+          gradient: PolarColumnGradientStyle(
+            startColor: Color(0xFF22D3EE),
+            endColor: Color(0xFF4338CA),
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.16,
+          ),
+          shadow: PolarColumnShadowStyle(
+            color: Color(0xFF0F172A),
+            blurRadius: 11,
+            spreadRadius: 1.5,
+            offset: Offset(1, 4),
+            opacity: 0.32,
+          ),
+          animationMode: PolarColumnAnimationMode.sweep,
         ),
         selectionStyle: const RadialSelectionStyle(
           effect: RadialSelectionEffect.lift,
@@ -92,6 +130,8 @@ void main() {
           'series.polar.column.v1',
           'chart.polar.config.v1',
           PolarColumnChartSeries.cornerRadiusModeCapability,
+          PolarColumnChartSeries.appearanceCapability,
+          PolarChartConfig.labelAppearanceCapability,
         }),
       );
       expect(
@@ -141,6 +181,8 @@ void main() {
       final secondJson = _json(ChartArtifactJsonCodec.encode(artifact));
       expect(secondJson, firstJson);
       expect(firstJson, contains('"cornerRadiusMode":"stackExterior"'));
+      expect(firstJson, contains('"animationMode":"sweep"'));
+      expect(firstJson, contains('"dataLabelRadialPosition":0.68'));
 
       final hydrated = _configuration(
         ChartDocumentHydrator.hydrateJson(firstJson),
@@ -175,6 +217,28 @@ void main() {
             .message,
         contains(PolarColumnChartSeries.cornerRadiusModeCapability),
       );
+
+      for (final missingCapability in <String>[
+        PolarColumnChartSeries.appearanceCapability,
+        PolarChartConfig.labelAppearanceCapability,
+      ]) {
+        final invalidJson = snapshot.document.toJson();
+        invalidJson['requiredCapabilities'] = snapshot
+            .document
+            .requiredCapabilities
+            .where((capability) => capability != missingCapability)
+            .toList();
+        final result = ChartDocumentHydrator.hydrateDocument(
+          ChartDocument.fromJson(invalidJson),
+        );
+        expect(result, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+        expect(
+          (result as ChartArtifactFailure<HydratedChartConfiguration>)
+              .error
+              .message,
+          contains(missingCapability),
+        );
+      }
 
       final restoredController = BravenChartController();
       addTearDown(restoredController.dispose);
@@ -237,6 +301,12 @@ void main() {
       expect(
         snapshot.document.requiredCapabilities,
         contains('chart.polar.multiple-series.v1'),
+      );
+      expect(
+        snapshot.document.requiredCapabilities,
+        isNot(contains(PolarColumnChartSeries.appearanceCapability)),
+        reason:
+            'legacy opacity and data-label visibility must not require the new appearance capability',
       );
 
       final table = ChartTableModel.fromDocument(snapshot.document);
@@ -339,7 +409,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final initial = _snapshot(controller.extractDocument());
+    const selectedRef = ChartPointRef(seriesId: 'west', pointIndex: 1);
+    expect(
+      controller.selectPoint(selectedRef, revision: initial.revision),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pumpAndSettle();
+
     final snapshot = _snapshot(controller.extractDocument());
+    expect(snapshot.viewState?.selectedPointRefs, const [selectedRef]);
     expect(
       snapshot.document.requiredCapabilities,
       containsAll({
@@ -354,12 +433,47 @@ void main() {
       'South',
       'West',
     });
+    final selectedRow = table.polarRows.singleWhere(
+      (row) =>
+          row.reference.seriesId == selectedRef.seriesId &&
+          row.reference.pointIndex == selectedRef.pointIndex,
+    );
+    expect(selectedRow.category, 'Social');
+    expect(selectedRow.valueRaw, 35);
 
     final hydrated = _configuration(
-      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      ChartDocumentHydrator.hydrateDocument(
+        _jsonRoundTripDocument(snapshot.document),
+        viewState: _jsonRoundTripViewState(snapshot.viewState!),
+      ),
     );
     expect(hydrated.polarChartConfig, config);
     expect(hydrated.series.map((item) => item.id), ['north', 'south', 'west']);
+    expect(hydrated.viewState?.selectedPointRefs, const [selectedRef]);
+
+    final restoredController = BravenChartController();
+    addTearDown(restoredController.dispose);
+    await tester.pumpWidget(
+      _host(hydrated.build(bravenChartController: restoredController)),
+    );
+    await tester.pumpAndSettle();
+    expect(restoredController.selectedPointRefs, {selectedRef});
+    final restoredElements = _renderBox(
+      tester,
+    ).debugElements.whereType<PolarColumnSeriesElement>().toList();
+    final restoredWest = restoredElements.singleWhere(
+      (element) => element.series.id == 'west',
+    );
+    expect(restoredWest.selectedPointIndices, const {1});
+    expect(
+      restoredWest.priority,
+      greaterThan(
+        restoredElements
+            .where((element) => element.series.id != 'west')
+            .first
+            .priority,
+      ),
+    );
 
     final generated = ChartDartSourceGenerator.generate(snapshot);
     expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
@@ -428,7 +542,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final initial = _snapshot(controller.extractDocument());
+    const selectedRef = ChartPointRef(seriesId: 'new', pointIndex: 0);
+    expect(
+      controller.selectPoint(selectedRef, revision: initial.revision),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pumpAndSettle();
+
     final snapshot = _snapshot(controller.extractDocument());
+    expect(snapshot.viewState?.selectedPointRefs, const [selectedRef]);
     expect(
       snapshot.document.requiredCapabilities,
       containsAll({
@@ -446,9 +569,19 @@ void main() {
       -15,
       -24,
     ]);
+    final selectedRow = table.polarRows.singleWhere(
+      (row) =>
+          row.reference.seriesId == selectedRef.seriesId &&
+          row.reference.pointIndex == selectedRef.pointIndex,
+    );
+    expect(selectedRow.category, 'Search');
+    expect(selectedRow.valueRaw, 30);
 
     final hydrated = _configuration(
-      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      ChartDocumentHydrator.hydrateDocument(
+        _jsonRoundTripDocument(snapshot.document),
+        viewState: _jsonRoundTripViewState(snapshot.viewState!),
+      ),
     );
     expect(hydrated.polarChartConfig, config);
     expect(hydrated.series.map((item) => item.id), [
@@ -456,6 +589,26 @@ void main() {
       'expansion',
       'churn',
     ]);
+    expect(hydrated.viewState?.selectedPointRefs, const [selectedRef]);
+
+    final restoredController = BravenChartController();
+    addTearDown(restoredController.dispose);
+    await tester.pumpWidget(
+      _host(hydrated.build(bravenChartController: restoredController)),
+    );
+    await tester.pumpAndSettle();
+    expect(restoredController.selectedPointRefs, {selectedRef});
+    final restoredElements = _renderBox(
+      tester,
+    ).debugElements.whereType<PolarColumnSeriesElement>().toList();
+    final restoredBase = restoredElements.singleWhere(
+      (element) => element.series.id == 'new',
+    );
+    final restoredPositiveCap = restoredElements.singleWhere(
+      (element) => element.series.id == 'expansion',
+    );
+    expect(restoredBase.selectedPointIndices, const {0});
+    expect(restoredBase.priority, greaterThan(restoredPositiveCap.priority));
 
     final generated = ChartDartSourceGenerator.generate(snapshot);
     expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
@@ -726,3 +879,28 @@ Future<ChartArtifactResult<ChartArtifact>> _capture(
     () => future.timeout(const Duration(seconds: 10)),
   ))!;
 }
+
+ChartDocument _jsonRoundTripDocument(ChartDocument document) {
+  final firstJson = jsonEncode(document.toJson());
+  final secondJson = jsonEncode(document.toJson());
+  expect(secondJson, firstJson);
+  return ChartDocument.fromJson(
+    Map<String, Object?>.from(jsonDecode(firstJson) as Map),
+  );
+}
+
+ChartViewState _jsonRoundTripViewState(ChartViewState viewState) {
+  final firstJson = jsonEncode(viewState.toJson());
+  final secondJson = jsonEncode(viewState.toJson());
+  expect(secondJson, firstJson);
+  return ChartViewState.fromJson(
+    Map<String, Object?>.from(jsonDecode(firstJson) as Map),
+  );
+}
+
+ChartRenderBox _renderBox(WidgetTester tester) =>
+    tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );

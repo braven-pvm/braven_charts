@@ -37,20 +37,21 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Start with a native-rendered eight-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
-| Chart Types | Choose between line, area, bar, scatter, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
-| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
-| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
-| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source |
-| Scatter Charts | Compare fixed and point-styled marks, unsorted and stress datasets, interaction states, area-correct bubbles, continuous and piecewise colour scales, and opacity encodings; inspect the same values in Chart/Data/Split/Source modes |
+| Gallery | Start with a native-rendered nine-family sampler, then compare a readable multi-axis session profile, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
+| Chart Types | Choose between line, area, bar, scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
+| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; use Synchronized's full-distance navigator across three independent plots; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
+| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; use Forecast's full-time-domain navigator; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
+| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source; use Categories' snapped navigator across a dense categorical domain |
+| Scatter Charts | Compare fixed and point-styled marks, unsorted and stress datasets, interaction states, area-correct bubbles, continuous and piecewise colour scales, and opacity encodings; use Correlation's binned-distribution navigator without reordering its raw points; inspect the same values in Chart/Data/Split/Source modes |
+| Candlestick Charts | Explore typed OHLC rendering, elapsed and ordinal spacing, mixed analytical overlays, live latest-candle revision, dense-data grouping, and synchronized price/volume panes controlled by the public Cartesian navigator |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; inspect generated source; and capture or restore a portable artifact |
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
 | Polar Column | Compare standard linear-radius columns, an area-correct Nightingale rose, and a partial annular sweep; tune both Polar axes; then inspect the value-only native table, generated Source, and portable document |
-| Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
+| Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips; use the Navigator pattern to change point density and drive one shared viewport through either direct manipulation or `ChartInteractionGroupController` commands |
 | Tracking & Value Display | Compose every tracking feedback layer independently — crosshair lines, the classic tracking panel, point tooltips, axis value labels, intersection markers, and data point markers — around the flagship value summary: a persistent policy-resolved panel with latest-value fallback, multi-axis units, candlestick OHLC rows, a synchronized pair resolving locally at a shared X, programmatic pinning, and tri-state styling with truly transparent clears |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
-| Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
+| Live Stream | Compare follow-latest, pause/buffer, expand, and high-frequency strategies; use Live Navigator to keep frame-coalesced ingest active while inspecting retained history and return explicitly to the newest samples |
 | Theming | Light, dark, accessible, and custom chart themes |
 | Axes | Labels, formatting, minor ticks, explicit ranges, spacing, and render bounds |
 | Multi-Axis | Independent Y units, shared axes, normalization, visible slots, overflow, and runtime series selection |
@@ -77,6 +78,9 @@ the mode or show/hide the selector for the entire application.
 - Move across a tracking chart to inspect synchronized series values.
 - Drag to pan; hold Shift while using the wheel to zoom around the pointer.
 - Use scrollbars where enabled to inspect a constrained viewport.
+- Drag a Cartesian navigator window or resize either edge and confirm every
+  attached chart follows the same data-X viewport while the overview stays
+  full-domain.
 - On Chart Workbench, right-click a chart or press Shift+F10 to run native host
   actions, or use its compact top-left chart action. Long press is enabled on
   its focused examples for touch review.

@@ -219,7 +219,24 @@ void main() {
             opacity: 0.3,
             borderColor: Color(0xFF102030),
             borderWidth: 2,
-            showDataLabels: false,
+            dataLabelRadialPosition: 0.68,
+            dataLabelStyle: PolarLabelStyle(
+              color: Color(0xFFFFFFFF),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+            gradient: PolarColumnGradientStyle(
+              startColor: Color(0xFF38BDF8),
+              endColor: Color(0xFF1D4ED8),
+            ),
+            shadow: PolarColumnShadowStyle(
+              color: Color(0xFF172554),
+              blurRadius: 8,
+              spreadRadius: 1,
+              offset: Offset(0, 3),
+              opacity: 0.28,
+            ),
+            animationMode: PolarColumnAnimationMode.sweep,
           ),
         ),
         PolarColumnChartSeries.fromMap(
@@ -242,11 +259,23 @@ void main() {
           innerRadiusFactor: 0.2,
           outerRadiusFactor: 0.9,
         ),
+        angularAxis: PolarCategoryAxisConfig(
+          labelOffset: 12,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF475569),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         radialAxis: PolarNumericAxisConfig(
           minimum: -40,
           maximum: 80,
           scaleMode: PolarRadialScaleMode.linear,
           tickCount: 6,
+          labelPosition: PolarRadialLabelPosition.end,
+          labelAngleOffsetDegrees: 20,
+          labelOffset: 6,
+          labelStyle: PolarLabelStyle(color: Color(0xFF0F766E), fontSize: 10),
         ),
         composition: PolarColumnCompositionConfig(
           mode: PolarColumnCompositionMode.stacked,
@@ -284,6 +313,8 @@ void main() {
             'chart.polar.config.v1',
             'chart.polar.multiple-series.v1',
             'chart.polar.stacked-series.v1',
+            PolarChartConfig.labelAppearanceCapability,
+            PolarColumnChartSeries.appearanceCapability,
           },
         ),
       );

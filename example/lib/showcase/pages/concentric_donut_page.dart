@@ -10,6 +10,7 @@ import '../data/radial_demo_data.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// First public review surface for independent multi-ring Donut composition.
@@ -26,9 +27,13 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       ChartWorkbenchController();
   final BravenChartController _restoredController = BravenChartController();
   final math.Random _random = math.Random();
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
 
   _ConcentricShowcasePreset _showcasePreset =
       _ConcentricShowcasePreset.comparison;
+  _ConcentricShowcasePreset _authoredPreset =
+      _ConcentricShowcasePreset.comparison;
+  bool _playgroundActive = false;
   double _innerRadiusFactor = 0.28;
   double _outerRadiusFactor = 0.94;
   double _ringGap = 6;
@@ -312,6 +317,11 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 503,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _currentValues = Map<String, num>.of(_baseCurrentValues);
     _previousValues = Map<String, num>.of(_basePreviousValues);
     final labels = radialDemoLabels(
@@ -330,6 +340,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _workbenchController.dispose();
     _restoredController.dispose();
     _chartController.dispose();
@@ -343,6 +354,12 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       subtitle:
           'Compare several independent part-to-whole distributions in one shared radial pane',
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'concentric-randomizer',
       chart: _buildWorkspace(),
     );
   }
@@ -419,108 +436,31 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   }
 
   Widget _buildPresentationSelector() {
-    const spacing = 8.0;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 900) {
-          return SizedBox(
-            height: 126,
-            child: ListView.separated(
-              key: const ValueKey('concentric-presentation-selector'),
-              scrollDirection: Axis.horizontal,
-              itemCount: _ConcentricShowcasePreset.values.length,
-              separatorBuilder: (_, _) => const SizedBox(width: spacing),
-              itemBuilder: (context, index) => SizedBox(
-                width: 220,
-                child: _presentationCard(
-                  _ConcentricShowcasePreset.values[index],
-                ),
-              ),
-            ),
-          );
-        }
-        return Row(
-          key: const ValueKey('concentric-presentation-selector'),
-          children: [
-            for (final (index, preset)
-                in _ConcentricShowcasePreset.values.indexed) ...[
-              if (index > 0) const SizedBox(width: spacing),
-              Expanded(child: _presentationCard(preset)),
-            ],
-          ],
-        );
-      },
+    return ShowcaseExampleGrid(
+      key: const ValueKey('concentric-presentation-selector'),
+      children: [
+        for (final preset in _ConcentricShowcasePreset.values)
+          _presentationCard(preset),
+        PlaygroundExampleCard(
+          key: const ValueKey('concentric-playground'),
+          selected: _playgroundActive,
+          onTap: () => _setPlaygroundActive(true),
+        ),
+      ],
     );
   }
 
   Widget _presentationCard(_ConcentricShowcasePreset preset) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final selected = preset == _showcasePreset;
-    return Semantics(
-      button: true,
+    final selected = !_playgroundActive && preset == _showcasePreset;
+    return ShowcaseExampleCard(
+      key: ValueKey('concentric-preset-${preset.name}'),
+      title: _presentationName(preset),
+      description: _presentationDescription(preset),
+      icon: _presentationIcon(preset),
       selected: selected,
-      label: 'Apply ${_presentationName(preset)} Concentric Donut presentation',
-      child: Material(
-        color: selected
-            ? colors.primaryContainer.withValues(alpha: 0.42)
-            : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: ValueKey('concentric-preset-${preset.name}'),
-          onTap: () => _applyShowcasePreset(preset),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _presentationIcon(preset),
-                      size: 18,
-                      color: selected
-                          ? colors.primary
-                          : colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _presentationName(preset),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (selected)
-                      Icon(Icons.check_circle, size: 16, color: colors.primary),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _presentationDescription(preset),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      onTap: () => _applyShowcasePreset(preset),
+      semanticsLabel:
+          'Apply ${_presentationName(preset)} Concentric Donut presentation',
     );
   }
 
@@ -1580,6 +1520,156 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     });
   }
 
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    final categoryCount = radialDemoMinimumDataPoints + random.nextInt(8);
+    final ringCount = 2 + random.nextInt(4);
+    final labels = List<String>.generate(
+      categoryCount,
+      (index) => 'Category ${index + 1}',
+      growable: false,
+    );
+    setState(() {
+      _categoryCount = categoryCount;
+      _ringCount = ringCount;
+      _currentValues = randomRadialDistribution(
+        labels: labels,
+        total: 100,
+        random: random,
+      );
+      _previousValues = randomRadialDistribution(
+        labels: labels,
+        total: 100,
+        random: random,
+      );
+      _additionalRingValues.clear();
+      for (final ring in _ringDescriptors.skip(2)) {
+        _additionalRingValues[ring.id] = randomRadialDistribution(
+          labels: labels,
+          total: ring.generatedTotal,
+          random: random,
+        );
+      }
+      for (final ring in _ringDescriptors) {
+        _ringWeights[ring.id] = 0.7 + random.nextDouble() * 1.2;
+      }
+      _innerRadiusFactor = 0.18 + random.nextDouble() * 0.34;
+      _outerRadiusFactor = 0.78 + random.nextDouble() * 0.2;
+      _ringGap = 1 + random.nextDouble() * 9;
+      _sweepAngleDegrees = 220 + random.nextDouble() * 140;
+      _startAngleDegrees = -180 + random.nextDouble() * 360;
+      _sliceGap = random.nextDouble() * 6;
+      _borderWidth = random.nextDouble() * 3;
+      _cornerRadius = random.nextDouble() * 12;
+      _sliceOpacity = 0.58 + random.nextDouble() * 0.42;
+      _clockwise = random.nextBool();
+      _cornerTreatment = PieCornerTreatment
+          .values[random.nextInt(PieCornerTreatment.values.length)];
+      _animationMode = PieAnimationMode
+          .values[random.nextInt(PieAnimationMode.values.length)];
+      _order = ConcentricRingOrder
+          .values[random.nextInt(ConcentricRingOrder.values.length)];
+      _legendMode = ConcentricDonutLegendMode
+          .values[random.nextInt(ConcentricDonutLegendMode.values.length)];
+      _showLabels = random.nextBool();
+      _labelPosition = PieDataLabelPosition
+          .values[random.nextInt(PieDataLabelPosition.values.length)];
+      _labelContent = PieDataLabelContent
+          .values[random.nextInt(PieDataLabelContent.values.length)];
+      _labelCollisionStrategy = PieDataLabelCollisionStrategy
+          .values[random.nextInt(PieDataLabelCollisionStrategy.values.length)];
+      _showLegend = random.nextBool();
+      _legendPosition =
+          LegendPosition.values[random.nextInt(LegendPosition.values.length)];
+      _legendMarkerShape = LegendMarkerShape
+          .values[random.nextInt(LegendMarkerShape.values.length)];
+      _showTooltips = random.nextBool();
+      _tooltipPosition =
+          TooltipPosition.values[random.nextInt(TooltipPosition.values.length)];
+      _themePreset = _ConcentricThemePreset
+          .values[random.nextInt(_ConcentricThemePreset.values.length)];
+      _palette = _ConcentricPalette
+          .values[random.nextInt(_ConcentricPalette.values.length)];
+      _showCenter = random.nextBool();
+      _centerValueMode = DonutCenterValueMode
+          .values[random.nextInt(DonutCenterValueMode.values.length)];
+      _groupSmallCategories = random.nextBool();
+      _groupingMinimumShare = 0.04 + random.nextDouble() * 0.12;
+      _selectionEffect = RadialSelectionEffect
+          .values[random.nextInt(RadialSelectionEffect.values.length)];
+      _selectionExplodeOffset = random.nextDouble() * 18;
+      _selectionLiftScale = 1 + random.nextDouble() * 0.3;
+      _selectionLiftOffset = random.nextDouble() * 14;
+      _selectionBackdropBlur = random.nextDouble() * 3;
+      _dataTransitionMode = RadialDataTransitionMode
+          .values[random.nextInt(RadialDataTransitionMode.values.length)];
+      _labelLayout = _ConcentricLabelLayout
+          .values[random.nextInt(_ConcentricLabelLayout.values.length)];
+      _labelMinimumShare = random.nextDouble() * 0.1;
+      _labelMinimumSweepDegrees = random.nextDouble() * 16;
+      _labelPadding = random.nextDouble() * 14;
+      _insideLabelOffset = -8 + random.nextDouble() * 16;
+      _outsideLabelOffset = random.nextDouble() * 14;
+      _connectorLength = 6 + random.nextDouble() * 24;
+      _connectorWidth = 0.5 + random.nextDouble() * 2.5;
+      _useCustomConnectorColor = random.nextBool();
+      _connectorColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _calloutPreset = _ConcentricCalloutPreset
+          .values[random.nextInt(_ConcentricCalloutPreset.values.length)];
+      _insideShareStyle = _ConcentricInsideShareStyle
+          .values[random.nextInt(_ConcentricInsideShareStyle.values.length)];
+      _borderPreset = _ConcentricBorderPreset
+          .values[random.nextInt(_ConcentricBorderPreset.values.length)];
+      _fixedBorderColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientPreset = _ConcentricGradientPreset
+          .values[random.nextInt(_ConcentricGradientPreset.values.length)];
+      _useFixedGradientColors = random.nextBool();
+      _gradientStartColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientEndColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientStartLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientEndLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientAngleDegrees = -180 + random.nextDouble() * 360;
+      _showShadow = random.nextBool();
+      _showSelectedGlow = random.nextBool();
+      _selectedGlowColor = _ConcentricGlowColor
+          .values[random.nextInt(_ConcentricGlowColor.values.length)];
+      _selectedGlowBlur = random.nextDouble() * 24;
+      _selectedGlowSpread = random.nextDouble() * 8;
+      _selectedGlowOpacity = 0.15 + random.nextDouble() * 0.8;
+      _selectedGlowOffsetY = -8 + random.nextDouble() * 16;
+      _legendPreset = _ConcentricLegendPreset
+          .values[random.nextInt(_ConcentricLegendPreset.values.length)];
+      _legendContent = _ConcentricLegendContent
+          .values[random.nextInt(_ConcentricLegendContent.values.length)];
+      _legendOrientation = LegendOrientation
+          .values[random.nextInt(LegendOrientation.values.length)];
+      _legendMarkerSize = 6 + random.nextDouble() * 12;
+      _legendFontSize = 8 + random.nextDouble() * 8;
+      _legendOpacity = 0.35 + random.nextDouble() * 0.65;
+      _tooltipPreset = _ConcentricTooltipPreset
+          .values[random.nextInt(_ConcentricTooltipPreset.values.length)];
+      _tooltipFollowsCursor = random.nextBool();
+      _tooltipOffset = 2 + random.nextDouble() * 18;
+      _useRuntimeCenter = random.nextBool();
+      _centerLabel = random.nextBool() ? '' : 'Generated';
+      _centerCustomValue = '${2 + random.nextInt(9)} rings';
+      _centerLabelFontSize = 8 + random.nextDouble() * 10;
+      _centerValueFontSize = 14 + random.nextDouble() * 20;
+      _centerLabelFontWeight =
+          FontWeight.values[random.nextInt(FontWeight.values.length)];
+      _centerValueFontWeight =
+          FontWeight.values[random.nextInt(FontWeight.values.length)];
+      _useChartThemeCenterColors = random.nextBool();
+      _centerLabelColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _centerValueColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _centerSurface = _ConcentricCenterSurface
+          .values[random.nextInt(_ConcentricCenterSurface.values.length)];
+      _selectedSummary = null;
+    });
+    _chartController.clearPointSelection();
+  }
+
   void _setCategoryCount(int count) {
     if (_categoryCount == count) return;
     _chartController.clearPointSelection();
@@ -1665,9 +1755,20 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     _ => 'Weight ${value.value}',
   };
 
-  void _applyShowcasePreset(_ConcentricShowcasePreset preset) {
+  void _applyShowcasePreset(
+    _ConcentricShowcasePreset preset, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     _chartController.clearPointSelection();
     setState(() {
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredPreset = preset;
+      }
       _resetPresentationDefaults();
       _showcasePreset = preset;
       switch (preset) {
@@ -1910,6 +2011,21 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       _artifactMessage = null;
     });
   }
+
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredPreset = _showcasePreset;
+      setState(() => _playgroundActive = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _applyShowcasePreset(_authoredPreset);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
   void _resetPresentationDefaults() {
     _ringCount = 2;
@@ -2279,7 +2395,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             },
             onChanged: (value) => setState(() => _gradientPreset = value),
           ),
-          if (_gradientPreset != _ConcentricGradientPreset.solid) ...[
+          if (_playgroundActive ||
+              _gradientPreset != _ConcentricGradientPreset.solid) ...[
             BoolOption(
               key: const ValueKey('concentric-fixed-gradient-colors'),
               label: 'Use fixed gradient colors',
@@ -2288,7 +2405,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                   setState(() => _useFixedGradientColors = value),
               subtitle: 'Off derives both stops from each category color',
             ),
-            if (_useFixedGradientColors) ...[
+            if (_playgroundActive || _useFixedGradientColors) ...[
               ColorOption(
                 key: const ValueKey('concentric-gradient-start-color'),
                 label: 'Gradient start',
@@ -2330,7 +2447,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                     setState(() => _gradientEndLightnessShift = value / 100),
               ),
             ],
-            if (_gradientPreset == _ConcentricGradientPreset.linear)
+            if (_playgroundActive ||
+                _gradientPreset == _ConcentricGradientPreset.linear)
               SliderOption(
                 key: const ValueKey('concentric-gradient-angle'),
                 label: 'Gradient angle',
@@ -2377,7 +2495,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             decimalPlaces: 1,
             onChanged: (value) => setState(() => _borderWidth = value),
           ),
-          if (_borderWidth > 0) ...[
+          if (_playgroundActive || _borderWidth > 0) ...[
             EnumOption<_ConcentricBorderPreset>(
               key: const ValueKey('concentric-border-color'),
               label: 'Border color',
@@ -2391,7 +2509,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               },
               onChanged: (value) => setState(() => _borderPreset = value),
             ),
-            if (_borderPreset == _ConcentricBorderPreset.fixed)
+            if (_playgroundActive ||
+                _borderPreset == _ConcentricBorderPreset.fixed)
               ColorOption(
                 key: const ValueKey('concentric-fixed-border-color'),
                 label: 'Fixed border',
@@ -2411,7 +2530,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _cornerRadius = value),
           ),
-          if (_cornerRadius > 0)
+          if (_playgroundActive || _cornerRadius > 0)
             EnumOption<PieCornerTreatment>(
               key: const ValueKey('concentric-corner-treatment'),
               label: 'Corner treatment',
@@ -2436,7 +2555,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             value: _showSelectedGlow,
             onChanged: (value) => setState(() => _showSelectedGlow = value),
           ),
-          if (_showSelectedGlow) ...[
+          if (_playgroundActive || _showSelectedGlow) ...[
             EnumOption<_ConcentricGlowColor>(
               key: const ValueKey('concentric-glow-color'),
               label: 'Glow color',
@@ -2516,7 +2635,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             },
             onChanged: (value) => setState(() => _selectionEffect = value),
           ),
-          if (_selectionEffect == RadialSelectionEffect.explode)
+          if (_playgroundActive ||
+              _selectionEffect == RadialSelectionEffect.explode)
             SliderOption(
               key: const ValueKey('concentric-selection-offset'),
               label: 'Selected slice offset',
@@ -2628,7 +2748,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             value: _showLabels,
             onChanged: (value) => setState(() => _showLabels = value),
           ),
-          if (_showLabels) ...[
+          if (_playgroundActive || _showLabels) ...[
             EnumOption<_ConcentricLabelLayout>(
               key: const ValueKey('concentric-label-layout'),
               label: 'Layout',
@@ -2643,7 +2763,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               },
               onChanged: (value) => setState(() => _labelLayout = value),
             ),
-            if (_labelLayout == _ConcentricLabelLayout.uniform) ...[
+            if (_playgroundActive ||
+                _labelLayout == _ConcentricLabelLayout.uniform) ...[
               EnumOption<PieDataLabelPosition>(
                 key: const ValueKey('concentric-label-position'),
                 label: 'Position',
@@ -2679,7 +2800,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               },
               onChanged: (value) => setState(() => _calloutPreset = value),
             ),
-            if (_labelLayout == _ConcentricLabelLayout.split)
+            if (_playgroundActive ||
+                _labelLayout == _ConcentricLabelLayout.split)
               EnumOption<_ConcentricInsideShareStyle>(
                 key: const ValueKey('concentric-inside-share-style'),
                 label: 'Inside share style',
@@ -2729,7 +2851,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _labelPadding = value),
             ),
-            if (_labelLayout != _ConcentricLabelLayout.uniform ||
+            if (_playgroundActive ||
+                _labelLayout != _ConcentricLabelLayout.uniform ||
                 _labelPosition == PieDataLabelPosition.inside)
               SliderOption(
                 key: const ValueKey('concentric-label-inside-offset'),
@@ -2743,7 +2866,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                 onChanged: (value) =>
                     setState(() => _insideLabelOffset = value),
               ),
-            if (_labelLayout != _ConcentricLabelLayout.uniform ||
+            if (_playgroundActive ||
+                _labelLayout != _ConcentricLabelLayout.uniform ||
                 _labelPosition == PieDataLabelPosition.outside) ...[
               EnumOption<PieDataLabelCollisionStrategy>(
                 key: const ValueKey('concentric-label-collision'),
@@ -2800,7 +2924,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                 onChanged: (value) =>
                     setState(() => _useCustomConnectorColor = value),
               ),
-              if (_useCustomConnectorColor)
+              if (_playgroundActive || _useCustomConnectorColor)
                 ColorOption(
                   key: const ValueKey('concentric-connector-color'),
                   label: 'Connector color',
@@ -2826,7 +2950,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             value: _showCenter,
             onChanged: (value) => setState(() => _showCenter = value),
           ),
-          if (_showCenter) ...[
+          if (_playgroundActive || _showCenter) ...[
             EnumOption<DonutCenterValueMode>(
               key: const ValueKey('concentric-center-value-mode'),
               label: 'Value source',
@@ -2847,7 +2971,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               hint: 'Automatic ring or selected category',
               onChanged: (value) => setState(() => _centerLabel = value),
             ),
-            if (_centerValueMode == DonutCenterValueMode.custom)
+            if (_playgroundActive ||
+                _centerValueMode == DonutCenterValueMode.custom)
               TextOption(
                 key: const ValueKey('concentric-center-custom-value'),
                 label: 'Custom value',
@@ -2918,7 +3043,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               onChanged: (value) =>
                   setState(() => _useChartThemeCenterColors = value),
             ),
-            if (!_useChartThemeCenterColors) ...[
+            if (_playgroundActive || !_useChartThemeCenterColors) ...[
               ColorOption(
                 key: const ValueKey('concentric-center-label-color'),
                 label: 'Label color',
@@ -2942,7 +3067,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               value: _useRuntimeCenter,
               onChanged: (value) => setState(() => _useRuntimeCenter = value),
             ),
-            if (_useRuntimeCenter)
+            if (_playgroundActive || _useRuntimeCenter)
               EnumOption<_ConcentricCenterSurface>(
                 key: const ValueKey('concentric-center-surface'),
                 label: 'Runtime surface',
@@ -2979,7 +3104,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               _chartController.clearPointSelection();
             }),
           ),
-          if (_groupSmallCategories)
+          if (_playgroundActive || _groupSmallCategories)
             SliderOption(
               key: const ValueKey('concentric-grouping-threshold'),
               label: 'Share threshold',
@@ -3016,7 +3141,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             value: _showLegend,
             onChanged: (value) => setState(() => _showLegend = value),
           ),
-          if (_showLegend) ...[
+          if (_playgroundActive || _showLegend) ...[
             EnumOption<ConcentricDonutLegendMode>(
               key: const ValueKey('concentric-legend-mode'),
               label: 'Ring identity',
@@ -3145,7 +3270,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             subtitle:
                 'Hover, tap, legend, and table selection share one tooltip',
           ),
-          if (_showTooltips) ...[
+          if (_playgroundActive || _showTooltips) ...[
             EnumOption<_ConcentricTooltipPreset>(
               key: const ValueKey('concentric-tooltip-style'),
               label: 'Tooltip style',

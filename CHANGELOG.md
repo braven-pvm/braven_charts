@@ -86,6 +86,26 @@ release-candidate material for 0.10.0.
 - Label-driven release automation: merging a PR carrying the `release` label
   tags the version, publishes to pub.dev via OIDC trusted publishing, and
   deploys the showcase to GitHub Pages (see `docs/releasing.md`).
+- A native, family-neutral `CartesianNavigator` that renders one full-domain
+  Line or Area overview and controls synchronized Line, Area, Bar, Scatter, and
+  Candlestick viewports through a caller-owned
+  `ChartInteractionGroupController`.
+- Shared pointer, keyboard, and semantic viewport reduction; independent start
+  and end resizing; span-preserving panning; configurable minimum span and live
+  preview; fixed-interval and ordered-value snapping; and reconciliation of
+  external controller writes during active gestures.
+- Theme-aware `CartesianNavigatorStyle` states with compact visual handles,
+  48-pixel default pointer/touch targets, focus treatment, disabled rendering,
+  and three explicit accessible controls.
+- A focused Interaction-page Navigator laboratory with deterministic point
+  count and signal controls, draggable overview selection, live viewport
+  feedback, and host buttons that exercise the same public
+  `ChartInteractionGroupController` as direct chart gestures.
+- A dedicated Live Stream Navigator strategy that keeps frame-coalesced ingest
+  active while users inspect retained history, reports incoming samples without
+  moving the historical viewport, and provides an explicit Return to live path.
+- `LiveStreamController.dataRevision` plus the O(1) `oldestPoint` endpoint so
+  external viewport owners can follow live data without copying snapshots.
 - First-class typed OHLC charts through `CandlestickDataPoint`,
   `CandlestickChartSeries`, `CandlestickChartStyle`, theme-resolved rising,
   falling, and doji presentation, viewport-aware wick/body geometry, indexed
@@ -121,8 +141,44 @@ release-candidate material for 0.10.0.
   long-press entry paths with deterministic command grouping, accessible
   keyboard navigation, 48-pixel rows, theme-derived styling, viewport
   clamping, focus restoration, and safe async callback cleanup.
+- Polar Column baseline-to-value gradients, configurable mark elevation, and
+  grow/sweep/fade/instant entrance modes with controller replay and reduced-motion
+  compliance.
+- Independent category-label outward offset/style, direct value-label radial
+  position/style, and radial-axis label ray/angle/offset/style controls. The
+  appearance additions round-trip through artifacts, hydration, and generated
+  Dart with explicit capability negotiation.
+- Polar radial rings and angular spokes honor the chart theme's solid, dashed,
+  or dotted grid pattern. The seeded showcase now varies contrast-safe label
+  and axis colors together with grid colors, stroke widths, and patterns.
 
 ### Changed
+- The Live Navigator showcase now revision-gates retained-history snapshots and
+  rebuilds only its telemetry, controls, and overview subtree, keeping the main
+  live chart mounted during high-frequency ingest and navigator interaction.
+- Every Live Stream strategy now exposes rolling device-local frame, build,
+  raster, jank, presented-FPS, and frame-gap diagnostics; Live Navigator also
+  reports its retained-history synchronization cost, navigator update rate,
+  navigator gap p95, and live-domain lag separately.
+- Live Navigator detail following is now display-frame-coalesced independently
+  with its bounded retained-history overview snapshot, removing the former
+  200 ms overview presentation gap.
+- Live Navigator now enters historical inspection only from explicit chart or
+  navigator gestures (or its switch), preventing programmatic follow-latest
+  viewport commands from freezing the detail view or reversing visual motion.
+- `CartesianNavigatorBehavior.allowExternalDomainGrowth` keeps a live external
+  viewport authoritative while a throttled overview snapshot catches up,
+  preventing stale-domain clamp feedback and left/right viewport oscillation.
+- `LiveStreamController.manageViewport` can now opt out of built-in X-viewport
+  movement so a caller-owned `ChartInteractionGroupController` and
+  `CartesianNavigator` remain the single viewport authority during live ingest.
+- The Candlestick stock showcase now uses the public Cartesian navigator rather
+  than a local draggable `RangeAnnotation`; the Gallery proves the same control
+  against a non-financial synchronized Line/Area composition.
+- Representative Cartesian guides now expose the same reusable navigator in
+  Line Synchronized, Area Forecast, Bar Categories, and Scatter Correlation,
+  demonstrating one viewport contract across continuous, categorical, and
+  unsorted data without turning navigation into global chart chrome.
 - Cartesian composition accepts one Candlestick series with Line, Area, and
   Scatter overlays. A second Candlestick or same-plot Bar series fails closed;
   volume remains a separate synchronized chart with its own scale.

@@ -6,7 +6,9 @@ import 'dart:math' as math;
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
+import '../data/polar_showcase_randomizer.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// Public, renderer-backed guide for axis-based Polar Column charts.
@@ -23,6 +25,10 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       ChartWorkbenchController();
   final math.Random _random = math.Random(47);
 
+  late final ShowcaseRandomizerController<PolarShowcaseRandomization>
+  _showcaseRandomizer;
+  bool _randomizedShowcaseSelected = false;
+  _PolarPresentation _authoredPresentation = _PolarPresentation.standard;
   _PolarPresentation _presentation = _PolarPresentation.standard;
   late Map<String, num> _values;
   late Map<String, num> _comparisonValues;
@@ -35,6 +41,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _outerRadius = 0.84;
   double _innerPadding = 0.12;
   double _outerPadding = 0.04;
+
+  int? get _appliedRandomizerSeed => _showcaseRandomizer.appliedSeed;
   PolarColumnCompositionMode _compositionMode =
       PolarColumnCompositionMode.layered;
   double _groupInnerPadding = 0.12;
@@ -48,10 +56,38 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   bool _showRadialGrid = true;
   bool _showValues = true;
   int _maximumDataLabels = 24;
+  double _categoryLabelOffset = 0;
+  Color? _categoryLabelColor;
+  double _categoryLabelSize = 12;
+  FontWeight _categoryLabelWeight = FontWeight.w400;
+  double _valueLabelRadialPosition = 0.5;
+  Color? _valueLabelColor;
+  double _valueLabelSize = 11;
+  FontWeight _valueLabelWeight = FontWeight.w600;
+  PolarRadialLabelPosition _radialLabelPosition =
+      PolarRadialLabelPosition.start;
+  double _radialLabelAngleOffset = 0;
+  double _radialLabelOffset = 4;
+  Color? _radialLabelColor;
+  double _radialLabelSize = 10;
+  FontWeight _radialLabelWeight = FontWeight.w500;
   double _cornerRadius = 4;
   PolarColumnCornerRadiusMode _cornerRadiusMode =
       PolarColumnCornerRadiusMode.outerEnd;
   double _opacity = 0.94;
+  bool _showGradient = false;
+  Color? _gradientStartColor;
+  Color? _gradientEndColor;
+  double _gradientStartLightness = 0.16;
+  double _gradientEndLightness = -0.12;
+  bool _showColumnShadow = false;
+  Color? _columnShadowColor;
+  double _columnShadowBlur = 8;
+  double _columnShadowSpread = 0;
+  double _columnShadowOffsetX = 0;
+  double _columnShadowOffsetY = 4;
+  double _columnShadowOpacity = 0.28;
+  PolarColumnAnimationMode _animationMode = PolarColumnAnimationMode.sweep;
   bool _showTargets = true;
   bool _showThreshold = true;
   double _thresholdValue = 80;
@@ -98,6 +134,13 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   Color? _selectionColor;
   String? _selectedCategory;
   String? _selectedSeries;
+
+  static const _labelWeights = <FontWeight>[
+    FontWeight.w400,
+    FontWeight.w500,
+    FontWeight.w600,
+    FontWeight.w700,
+  ];
 
   static const _standardValues = <String, num>{
     'Search': 86,
@@ -273,6 +316,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer =
+        ShowcaseRandomizerController<PolarShowcaseRandomization>(
+          generate: PolarShowcaseRandomizer.generate,
+          apply: _applyGeneratedRandomization,
+        );
     _values = Map<String, num>.of(_standardValues);
     _comparisonValues = const {};
     _tertiaryValues = const {};
@@ -280,6 +328,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
@@ -291,15 +340,23 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       title: 'Polar Column',
       subtitle:
           'Compare category magnitudes on angular categories and a numeric radial axis',
-      actions: [
-        OutlinedButton.icon(
-          key: const ValueKey('polar-column-regenerate'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-          onPressed: _regenerateValues,
-          icon: const Icon(Icons.casino_outlined, size: 18),
-          label: const Text('Regenerate values'),
-        ),
-      ],
+      actions: _randomizedShowcaseSelected
+          ? [
+              OutlinedButton.icon(
+                key: const ValueKey('polar-column-regenerate'),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _regenerateValues,
+                icon: const Icon(Icons.casino_outlined, size: 18),
+                label: const Text('Regenerate values'),
+              ),
+            ]
+          : null,
+      playground: ChartPlaygroundConfig(
+        active: _randomizedShowcaseSelected,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'polar-randomizer',
       optionsChildren: _buildOptions(),
       chart: _buildWorkspace(),
     );
@@ -313,7 +370,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPresentationSelector(constraints.maxWidth),
+              _buildPresentationSelector(),
               const SizedBox(height: 16),
               _buildInteractionNotice(),
               const SizedBox(height: 16),
@@ -330,29 +387,25 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     );
   }
 
-  Widget _buildPresentationSelector(double availableWidth) {
-    final columns = availableWidth < 720
-        ? 1
-        : availableWidth < 900
-        ? 2
-        : 4;
-    final cardWidth = (availableWidth - (columns - 1) * 8) / columns;
+  Widget _buildPresentationSelector() {
     return Semantics(
       container: true,
-      label: 'Choose a Polar Column presentation',
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      label: 'Choose a Polar Column example',
+      child: ShowcaseExampleGrid(
+        key: const ValueKey('polar-presentation-selector'),
         children: [
           for (final presentation in _PolarPresentation.values)
-            SizedBox(
-              width: cardWidth,
-              child: _PresentationCard(
-                presentation: presentation,
-                selected: presentation == _presentation,
-                onPressed: () => _applyPresentation(presentation),
-              ),
+            _PresentationCard(
+              presentation: presentation,
+              selected:
+                  !_randomizedShowcaseSelected && presentation == _presentation,
+              onPressed: () => _applyPresentation(presentation),
             ),
+          PlaygroundExampleCard(
+            key: const ValueKey('polar-playground'),
+            selected: _randomizedShowcaseSelected,
+            onTap: () => _setPlaygroundActive(true),
+          ),
         ],
       ),
     );
@@ -427,14 +480,18 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _presentation.chartTitle,
+                        _randomizedShowcaseSelected
+                            ? 'Polar Column playground'
+                            : _presentation.chartTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        _presentation.chartSubtitle,
+                        _randomizedShowcaseSelected
+                            ? 'Generated data and every compatible Polar Column property.'
+                            : _presentation.chartSubtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -443,37 +500,50 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                _MetricChip(label: '${_values.length} categories'),
-                const SizedBox(width: 8),
-                _MetricChip(
-                  label: _scaleMode == PolarRadialScaleMode.areaCorrect
-                      ? 'Area-correct'
-                      : 'Linear radius',
+                Flexible(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_appliedRandomizerSeed case final seed?)
+                        _MetricChip(label: 'Generated seed $seed'),
+                      _MetricChip(label: '${_values.length} categories'),
+                      _MetricChip(
+                        label: _scaleMode == PolarRadialScaleMode.areaCorrect
+                            ? 'Area-correct'
+                            : 'Linear radius',
+                      ),
+                      if (chartSeries.length > 1)
+                        _MetricChip(
+                          label:
+                              '${chartSeries.length} ${switch (_compositionMode) {
+                                PolarColumnCompositionMode.layered => 'layered',
+                                PolarColumnCompositionMode.grouped => 'grouped',
+                                PolarColumnCompositionMode.stacked => 'stacked',
+                              }} series',
+                        ),
+                      if (_presentation == _PolarPresentation.references)
+                        _MetricChip(
+                          label: switch ((_showTargets, _showThreshold)) {
+                            (true, true) => 'Targets + threshold',
+                            (true, false) => 'Category targets',
+                            (false, true) => 'Capacity threshold',
+                            (false, false) => 'References hidden',
+                          },
+                        ),
+                      if (_presentation == _PolarPresentation.intervals)
+                        _MetricChip(
+                          label: !_showIntervals
+                              ? 'Intervals hidden'
+                              : _intervalDisplay ==
+                                    PolarColumnIntervalDisplay.whisker
+                              ? 'Uncertainty whiskers'
+                              : 'Range bands',
+                        ),
+                    ],
+                  ),
                 ),
-                if (chartSeries.length > 1) ...[
-                  const SizedBox(width: 8),
-                  _MetricChip(
-                    label:
-                        '${chartSeries.length} ${switch (_compositionMode) {
-                          PolarColumnCompositionMode.layered => 'layered',
-                          PolarColumnCompositionMode.grouped => 'grouped',
-                          PolarColumnCompositionMode.stacked => 'stacked',
-                        }} series',
-                  ),
-                ],
-                if (_presentation == _PolarPresentation.references) ...[
-                  const SizedBox(width: 8),
-                  const _MetricChip(label: 'Targets + threshold'),
-                ],
-                if (_presentation == _PolarPresentation.intervals) ...[
-                  const SizedBox(width: 8),
-                  _MetricChip(
-                    label:
-                        _intervalDisplay == PolarColumnIntervalDisplay.whisker
-                        ? 'Uncertainty whiskers'
-                        : 'Range bands',
-                  ),
-                ],
               ],
             ),
             if (chartSeries.length > 1) ...[
@@ -574,12 +644,26 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       showGridLines: _showAngularGrid,
       maximumVisibleLabels: _maximumAngularLabels,
       maximumVisibleGridLines: _maximumAngularGridLines,
+      labelOffset: _categoryLabelOffset,
+      labelStyle: PolarLabelStyle(
+        color: _categoryLabelColor,
+        fontSize: _categoryLabelSize,
+        fontWeight: _categoryLabelWeight,
+      ),
     ),
     radialAxis: PolarNumericAxisConfig(
       scaleMode: _scaleMode,
       tickCount: _tickCount,
       showLabels: _showRadialLabels,
       showGridLines: _showRadialGrid,
+      labelPosition: _radialLabelPosition,
+      labelAngleOffsetDegrees: _radialLabelAngleOffset,
+      labelOffset: _radialLabelOffset,
+      labelStyle: PolarLabelStyle(
+        color: _radialLabelColor,
+        fontSize: _radialLabelSize,
+        fontWeight: _radialLabelWeight,
+      ),
     ),
     composition: PolarColumnCompositionConfig(
       mode: _compositionMode,
@@ -671,6 +755,30 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       borderWidth: _columnBorderWidth,
       showDataLabels: _showValues,
       maximumVisibleDataLabels: _maximumDataLabels,
+      dataLabelRadialPosition: _valueLabelRadialPosition,
+      dataLabelStyle: PolarLabelStyle(
+        color: _valueLabelColor,
+        fontSize: _valueLabelSize,
+        fontWeight: _valueLabelWeight,
+      ),
+      gradient: _showGradient
+          ? PolarColumnGradientStyle(
+              startColor: _gradientStartColor,
+              endColor: _gradientEndColor,
+              startLightnessShift: _gradientStartLightness,
+              endLightnessShift: _gradientEndLightness,
+            )
+          : null,
+      shadow: _showColumnShadow
+          ? PolarColumnShadowStyle(
+              color: _columnShadowColor,
+              blurRadius: _columnShadowBlur,
+              spreadRadius: _columnShadowSpread,
+              offset: Offset(_columnShadowOffsetX, _columnShadowOffsetY),
+              opacity: _columnShadowOpacity,
+            )
+          : const PolarColumnShadowStyle(),
+      animationMode: _animationMode,
     );
     final selectionStyle = RadialSelectionStyle(
       effect: _selectionEffect,
@@ -686,12 +794,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           values: _comparisonValues,
           color: palette[1 % palette.length],
           unit: 'orders',
-          polarStyle: PolarColumnStyle(
-            cornerRadius: _cornerRadius,
-            cornerRadiusMode: _cornerRadiusMode,
+          polarStyle: style.copyWith(
             opacity: math.min(_opacity, 0.32),
-            borderColor: _effectiveColumnBorderColor,
-            borderWidth: _columnBorderWidth,
             showDataLabels: false,
           ),
           selectionStyle: selectionStyle,
@@ -979,6 +1083,165 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     });
   }
 
+  void _applyGeneratedRandomization(PolarShowcaseRandomization generated) {
+    if (!mounted) return;
+    _chartController.clearPointFocus();
+    _chartController.clearPointSelection();
+    setState(() {
+      _randomizedShowcaseSelected = true;
+      _presentation = _presentationFor(generated.presentation);
+      _themePreset = _themePresetFor(generated.theme);
+      _palette = _paletteFor(generated.palette);
+      _values = Map<String, num>.of(generated.primaryValues);
+      _comparisonValues = Map<String, num>.of(generated.secondaryValues);
+      _tertiaryValues = Map<String, num>.of(generated.tertiaryValues);
+      _categoryCount = generated.categoryCount;
+      _startAngle = generated.startAngle;
+      _sweepAngle = generated.sweepAngle;
+      _clockwise = generated.clockwise;
+      _innerRadius = generated.innerRadius;
+      _outerRadius = generated.outerRadius;
+      _innerPadding = generated.innerPadding;
+      _outerPadding = generated.outerPadding;
+      _compositionMode = generated.compositionMode;
+      _groupInnerPadding = generated.groupInnerPadding;
+      _scaleMode = generated.scaleMode;
+      _tickCount = generated.tickCount;
+      _showAngularLabels = generated.showAngularLabels;
+      _showAngularGrid = generated.showAngularGrid;
+      _maximumAngularLabels = generated.maximumAngularLabels;
+      _maximumAngularGridLines = generated.maximumAngularGridLines;
+      _showRadialLabels = generated.showRadialLabels;
+      _showRadialGrid = generated.showRadialGrid;
+      _showValues = generated.showValues;
+      _maximumDataLabels = generated.maximumDataLabels;
+      _categoryLabelOffset = generated.categoryLabelOffset;
+      _categoryLabelColor = generated.categoryLabelColor;
+      _categoryLabelSize = generated.categoryLabelSize;
+      _categoryLabelWeight = generated.categoryLabelWeight;
+      _valueLabelRadialPosition = generated.dataLabelRadialPosition;
+      _valueLabelColor = generated.dataLabelColor;
+      _valueLabelSize = generated.dataLabelSize;
+      _valueLabelWeight = generated.dataLabelWeight;
+      _radialLabelPosition = generated.radialLabelPosition;
+      _radialLabelAngleOffset = generated.radialLabelAngleOffset;
+      _radialLabelOffset = generated.radialLabelOffset;
+      _radialLabelColor = generated.radialLabelColor;
+      _radialLabelSize = generated.radialLabelSize;
+      _radialLabelWeight = generated.radialLabelWeight;
+      _cornerRadius = generated.cornerRadius;
+      _cornerRadiusMode = generated.cornerRadiusMode;
+      _opacity = generated.opacity;
+      _showGradient = generated.showGradient;
+      _gradientStartColor = generated.gradientStartColor;
+      _gradientEndColor = generated.gradientEndColor;
+      _gradientStartLightness = generated.gradientStartLightness;
+      _gradientEndLightness = generated.gradientEndLightness;
+      _showColumnShadow = generated.showColumnShadow;
+      _columnShadowColor = generated.columnShadowColor;
+      _columnShadowBlur = generated.columnShadowBlur;
+      _columnShadowSpread = generated.columnShadowSpread;
+      _columnShadowOffsetX = generated.columnShadowOffsetX;
+      _columnShadowOffsetY = generated.columnShadowOffsetY;
+      _columnShadowOpacity = generated.columnShadowOpacity;
+      _animationMode = generated.animationMode;
+      _showTargets = generated.showTargets;
+      _showThreshold = generated.showThreshold;
+      _thresholdValue = generated.thresholdValue;
+      _targetMarkerWidth = generated.targetMarkerWidth;
+      _targetMarkerLength = generated.targetMarkerLength;
+      _targetOpacity = generated.targetOpacity;
+      _showIntervals = generated.showIntervals;
+      _intervalDisplay = generated.intervalDisplay;
+      _intervalWidth = generated.intervalWidth;
+      _intervalCapLength = generated.intervalCapLength;
+      _intervalBandLength = generated.intervalBandLength;
+      _intervalOpacity = generated.intervalOpacity;
+      _canvasColor = generated.canvasColor;
+      _axisLineColor = generated.axisLineColor;
+      _axisLabelColor = generated.axisLabelColor;
+      _axisLineWidth = generated.axisLineWidth;
+      _axisLabelSize = generated.axisLabelSize;
+      _gridLineColor = generated.gridLineColor;
+      _gridLineWidth = generated.gridLineWidth;
+      _gridLinePattern = _linePatternFor(generated.gridLinePattern);
+      _columnBorderColor = generated.columnBorderColor;
+      _columnBorderWidth = generated.columnBorderWidth;
+      _targetColor = generated.targetColor;
+      _thresholdColor = generated.thresholdColor;
+      _thresholdWidth = generated.thresholdWidth;
+      _thresholdPattern = _linePatternFor(generated.thresholdPattern);
+      _intervalColor = generated.intervalColor;
+      _showTooltip = generated.showTooltip;
+      _tooltipTrigger = generated.tooltipTrigger;
+      _tooltipPosition = generated.tooltipPosition;
+      _tooltipOffset = generated.tooltipOffset;
+      _tooltipBackgroundColor = generated.tooltipBackgroundColor;
+      _tooltipTextColor = generated.tooltipTextColor;
+      _tooltipBorderColor = generated.tooltipBorderColor;
+      _tooltipBorderWidth = generated.tooltipBorderWidth;
+      _tooltipCornerRadius = generated.tooltipCornerRadius;
+      _selectionEffect = generated.selectionEffect;
+      _selectionScale = generated.selectionScale;
+      _selectionOffset = generated.selectionOffset;
+      _selectionBackdropBlur = generated.selectionBackdropBlur;
+      _selectionColor = generated.selectionColor;
+      _selectedCategory = null;
+      _selectedSeries = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _chartController.replayRadialEntrance();
+    });
+  }
+
+  _PolarPresentation _presentationFor(
+    PolarShowcasePresentationKind presentation,
+  ) => switch (presentation) {
+    PolarShowcasePresentationKind.standard => _PolarPresentation.standard,
+    PolarShowcasePresentationKind.rose => _PolarPresentation.rose,
+    PolarShowcasePresentationKind.partial => _PolarPresentation.partial,
+    PolarShowcasePresentationKind.layered => _PolarPresentation.layered,
+    PolarShowcasePresentationKind.grouped => _PolarPresentation.grouped,
+    PolarShowcasePresentationKind.stacked => _PolarPresentation.stacked,
+    PolarShowcasePresentationKind.references => _PolarPresentation.references,
+    PolarShowcasePresentationKind.intervals => _PolarPresentation.intervals,
+  };
+
+  _PolarThemePreset _themePresetFor(PolarShowcaseThemeKind theme) =>
+      switch (theme) {
+        PolarShowcaseThemeKind.light => _PolarThemePreset.light,
+        PolarShowcaseThemeKind.dark => _PolarThemePreset.dark,
+        PolarShowcaseThemeKind.corporate => _PolarThemePreset.corporate,
+        PolarShowcaseThemeKind.vibrant => _PolarThemePreset.vibrant,
+        PolarShowcaseThemeKind.minimal => _PolarThemePreset.minimal,
+        PolarShowcaseThemeKind.highContrast => _PolarThemePreset.highContrast,
+        PolarShowcaseThemeKind.colorblind => _PolarThemePreset.colorblind,
+      };
+
+  _PolarPalette _paletteFor(PolarShowcasePaletteKind palette) =>
+      switch (palette) {
+        PolarShowcasePaletteKind.theme => _PolarPalette.theme,
+        PolarShowcasePaletteKind.ocean => _PolarPalette.ocean,
+        PolarShowcasePaletteKind.sunset => _PolarPalette.sunset,
+        PolarShowcasePaletteKind.earth => _PolarPalette.earth,
+        PolarShowcasePaletteKind.monochrome => _PolarPalette.monochrome,
+      };
+
+  _PolarLinePattern _linePatternFor(PolarShowcaseLinePatternKind pattern) =>
+      switch (pattern) {
+        PolarShowcaseLinePatternKind.solid => _PolarLinePattern.solid,
+        PolarShowcaseLinePatternKind.dashed => _PolarLinePattern.dashed,
+        PolarShowcaseLinePatternKind.dotted => _PolarLinePattern.dotted,
+      };
+
+  String _fontWeightLabel(FontWeight weight) => switch (weight) {
+    FontWeight.w400 => 'Regular',
+    FontWeight.w500 => 'Medium',
+    FontWeight.w600 => 'Semi-bold',
+    FontWeight.w700 => 'Bold',
+    _ => 'Weight ${weight.value}',
+  };
+
   List<Widget> _buildOptions() => [
     OptionSection(
       title: 'Chart appearance',
@@ -1039,31 +1302,48 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       ],
     ),
     OptionSection(
-      title: 'Labels',
+      title: 'Category labels',
       icon: Icons.label_outline,
       children: [
-        _PolarColorOption(
-          label: 'Label color',
-          value: _axisLabelColor,
-          colors: _colorChoices,
-          onChanged: (value) => setState(() => _axisLabelColor = value),
-        ),
-        SliderOption(
-          label: 'Label size',
-          value: _axisLabelSize,
-          min: 8,
-          max: 20,
-          divisions: 12,
-          suffix: 'px',
-          decimalPlaces: 0,
-          onChanged: (value) => setState(() => _axisLabelSize = value),
-        ),
         BoolOption(
           label: 'Show category labels',
           value: _showAngularLabels,
           onChanged: (value) => setState(() => _showAngularLabels = value),
         ),
-        if (_showAngularLabels)
+        _PolarColorOption(
+          label: 'Text color',
+          value: _categoryLabelColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _categoryLabelColor = value),
+        ),
+        SliderOption(
+          label: 'Text size',
+          value: _categoryLabelSize,
+          min: 8,
+          max: 20,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _categoryLabelSize = value),
+        ),
+        EnumOption<FontWeight>(
+          label: 'Text weight',
+          value: _categoryLabelWeight,
+          values: _labelWeights,
+          labelBuilder: _fontWeightLabel,
+          onChanged: (value) => setState(() => _categoryLabelWeight = value),
+        ),
+        SliderOption(
+          label: 'Outer offset',
+          value: _categoryLabelOffset,
+          min: -12,
+          max: 48,
+          divisions: 30,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _categoryLabelOffset = value),
+        ),
+        if (_randomizedShowcaseSelected || _showAngularLabels)
           IntSliderOption(
             label: 'Maximum category labels',
             value: _maximumAngularLabels,
@@ -1072,17 +1352,52 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             suffix: 'labels',
             onChanged: (value) => setState(() => _maximumAngularLabels = value),
           ),
+      ],
+    ),
+    OptionSection(
+      title: 'Inside value labels',
+      icon: Icons.pin_outlined,
+      children: [
         BoolOption(
-          label: 'Show radial labels',
-          value: _showRadialLabels,
-          onChanged: (value) => setState(() => _showRadialLabels = value),
-        ),
-        BoolOption(
-          label: 'Show values inside columns',
+          label: 'Show values',
           value: _showValues,
           onChanged: (value) => setState(() => _showValues = value),
         ),
-        if (_showValues)
+        _PolarColorOption(
+          label: 'Text color (auto contrast)',
+          value: _valueLabelColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _valueLabelColor = value),
+        ),
+        SliderOption(
+          label: 'Text size',
+          value: _valueLabelSize,
+          min: 8,
+          max: 20,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _valueLabelSize = value),
+        ),
+        EnumOption<FontWeight>(
+          label: 'Text weight',
+          value: _valueLabelWeight,
+          values: _labelWeights,
+          labelBuilder: _fontWeightLabel,
+          onChanged: (value) => setState(() => _valueLabelWeight = value),
+        ),
+        SliderOption(
+          label: 'Radial position',
+          value: _valueLabelRadialPosition * 100,
+          min: 10,
+          max: 90,
+          divisions: 16,
+          suffix: '% through column',
+          decimalPlaces: 0,
+          onChanged: (value) =>
+              setState(() => _valueLabelRadialPosition = value / 100),
+        ),
+        if (_randomizedShowcaseSelected || _showValues)
           IntSliderOption(
             label: 'Maximum value labels',
             value: _maximumDataLabels,
@@ -1091,6 +1406,71 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             suffix: 'labels',
             onChanged: (value) => setState(() => _maximumDataLabels = value),
           ),
+      ],
+    ),
+    OptionSection(
+      title: 'Radial axis labels',
+      icon: Icons.track_changes_outlined,
+      children: [
+        BoolOption(
+          label: 'Show radial labels',
+          value: _showRadialLabels,
+          onChanged: (value) => setState(() => _showRadialLabels = value),
+        ),
+        _PolarColorOption(
+          label: 'Text color',
+          value: _radialLabelColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _radialLabelColor = value),
+        ),
+        SliderOption(
+          label: 'Text size',
+          value: _radialLabelSize,
+          min: 8,
+          max: 20,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _radialLabelSize = value),
+        ),
+        EnumOption<FontWeight>(
+          label: 'Text weight',
+          value: _radialLabelWeight,
+          values: _labelWeights,
+          labelBuilder: _fontWeightLabel,
+          onChanged: (value) => setState(() => _radialLabelWeight = value),
+        ),
+        EnumOption<PolarRadialLabelPosition>(
+          label: 'Sweep anchor',
+          value: _radialLabelPosition,
+          values: PolarRadialLabelPosition.values,
+          labelBuilder: (value) => switch (value) {
+            PolarRadialLabelPosition.start => 'Start ray',
+            PolarRadialLabelPosition.middle => 'Middle ray',
+            PolarRadialLabelPosition.end => 'End ray',
+          },
+          onChanged: (value) => setState(() => _radialLabelPosition = value),
+        ),
+        SliderOption(
+          label: 'Angular adjustment',
+          value: _radialLabelAngleOffset,
+          min: -45,
+          max: 45,
+          divisions: 18,
+          suffix: '°',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _radialLabelAngleOffset = value),
+        ),
+        SliderOption(
+          label: 'Ray offset',
+          value: _radialLabelOffset,
+          min: -16,
+          max: 24,
+          divisions: 20,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _radialLabelOffset = value),
+        ),
       ],
     ),
     OptionSection(
@@ -1118,7 +1498,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showAngularGrid,
           onChanged: (value) => setState(() => _showAngularGrid = value),
         ),
-        if (_showAngularGrid)
+        if (_randomizedShowcaseSelected || _showAngularGrid)
           IntSliderOption(
             label: 'Maximum grid spokes',
             value: _maximumAngularGridLines,
@@ -1150,6 +1530,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           onChanged: (value) => setState(() => _gridLineWidth = value),
         ),
         EnumOption<_PolarLinePattern>(
+          key: const ValueKey('polar-grid-line-pattern'),
           label: 'Grid line pattern',
           value: _gridLinePattern,
           values: _PolarLinePattern.values,
@@ -1158,7 +1539,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ],
     ),
-    if (_presentation == _PolarPresentation.layered ||
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.layered ||
         _presentation == _PolarPresentation.grouped ||
         _presentation == _PolarPresentation.stacked)
       OptionSection(
@@ -1176,7 +1558,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             },
             onChanged: (value) => setState(() => _compositionMode = value),
           ),
-          if (_compositionMode == PolarColumnCompositionMode.grouped)
+          if (_randomizedShowcaseSelected ||
+              _compositionMode == PolarColumnCompositionMode.grouped)
             SliderOption(
               label: 'Gap between series',
               value: _groupInnerPadding,
@@ -1188,7 +1571,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             ),
         ],
       ),
-    if (_presentation == _PolarPresentation.references)
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.references)
       OptionSection(
         title: 'Reference marks',
         icon: Icons.flag_outlined,
@@ -1198,7 +1582,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showTargets,
             onChanged: (value) => setState(() => _showTargets = value),
           ),
-          if (_showTargets) ...[
+          if (_randomizedShowcaseSelected || _showTargets) ...[
             _PolarColorOption(
               label: 'Target color',
               value: _targetColor,
@@ -1243,7 +1627,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showThreshold,
             onChanged: (value) => setState(() => _showThreshold = value),
           ),
-          if (_showThreshold) ...[
+          if (_randomizedShowcaseSelected || _showThreshold) ...[
             _PolarColorOption(
               label: 'Threshold color',
               value: _thresholdColor,
@@ -1280,7 +1664,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           ],
         ],
       ),
-    if (_presentation == _PolarPresentation.intervals)
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.intervals)
       OptionSection(
         title: 'Uncertainty & ranges',
         icon: Icons.vertical_align_center_outlined,
@@ -1290,7 +1675,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showIntervals,
             onChanged: (value) => setState(() => _showIntervals = value),
           ),
-          if (_showIntervals) ...[
+          if (_randomizedShowcaseSelected || _showIntervals) ...[
             EnumOption<PolarColumnIntervalDisplay>(
               label: 'Presentation',
               value: _intervalDisplay,
@@ -1317,7 +1702,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _intervalWidth = value),
             ),
-            if (_intervalDisplay == PolarColumnIntervalDisplay.whisker)
+            if (_randomizedShowcaseSelected ||
+                _intervalDisplay == PolarColumnIntervalDisplay.whisker)
               SliderOption(
                 label: 'Cap length',
                 value: _intervalCapLength * 100,
@@ -1375,7 +1761,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           colors: _colorChoices,
           onChanged: (value) => setState(() => _selectionColor = value),
         ),
-        if (_selectionEffect == RadialSelectionEffect.lift) ...[
+        if (_randomizedShowcaseSelected ||
+            _selectionEffect == RadialSelectionEffect.lift) ...[
           SliderOption(
             label: 'Lift scale',
             value: _selectionScale * 100,
@@ -1429,7 +1816,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showTooltip,
           onChanged: (value) => setState(() => _showTooltip = value),
         ),
-        if (_showTooltip) ...[
+        if (_randomizedShowcaseSelected || _showTooltip) ...[
           EnumOption<TooltipTriggerMode>(
             label: 'Trigger',
             value: _tooltipTrigger,
@@ -1571,6 +1958,146 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           min: 2,
           max: 8,
           onChanged: (value) => setState(() => _tickCount = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Column fill & elevation',
+      icon: Icons.gradient_outlined,
+      children: [
+        BoolOption(
+          label: 'Gradient fill',
+          value: _showGradient,
+          onChanged: (value) => setState(() => _showGradient = value),
+        ),
+        if (_showGradient) ...[
+          _PolarColorOption(
+            label: 'Gradient start (derived)',
+            value: _gradientStartColor,
+            colors: _colorChoices,
+            onChanged: (value) => setState(() => _gradientStartColor = value),
+          ),
+          _PolarColorOption(
+            label: 'Gradient end (derived)',
+            value: _gradientEndColor,
+            colors: _colorChoices,
+            onChanged: (value) => setState(() => _gradientEndColor = value),
+          ),
+          SliderOption(
+            label: 'Derived start lightness',
+            value: _gradientStartLightness * 100,
+            min: -40,
+            max: 40,
+            divisions: 16,
+            suffix: '%',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _gradientStartLightness = value / 100),
+          ),
+          SliderOption(
+            label: 'Derived end lightness',
+            value: _gradientEndLightness * 100,
+            min: -40,
+            max: 40,
+            divisions: 16,
+            suffix: '%',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _gradientEndLightness = value / 100),
+          ),
+        ],
+        BoolOption(
+          label: 'Column shadow',
+          value: _showColumnShadow,
+          onChanged: (value) => setState(() => _showColumnShadow = value),
+        ),
+        if (_showColumnShadow) ...[
+          _PolarColorOption(
+            label: 'Shadow color (derived)',
+            value: _columnShadowColor,
+            colors: _colorChoices,
+            onChanged: (value) => setState(() => _columnShadowColor = value),
+          ),
+          SliderOption(
+            label: 'Shadow blur',
+            value: _columnShadowBlur,
+            min: 0,
+            max: 24,
+            divisions: 24,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _columnShadowBlur = value),
+          ),
+          SliderOption(
+            label: 'Shadow spread',
+            value: _columnShadowSpread,
+            min: 0,
+            max: 8,
+            divisions: 16,
+            suffix: 'px',
+            decimalPlaces: 1,
+            onChanged: (value) => setState(() => _columnShadowSpread = value),
+          ),
+          SliderOption(
+            label: 'Horizontal offset',
+            value: _columnShadowOffsetX,
+            min: -16,
+            max: 16,
+            divisions: 32,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _columnShadowOffsetX = value),
+          ),
+          SliderOption(
+            label: 'Vertical offset',
+            value: _columnShadowOffsetY,
+            min: -16,
+            max: 16,
+            divisions: 32,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _columnShadowOffsetY = value),
+          ),
+          SliderOption(
+            label: 'Shadow opacity',
+            value: _columnShadowOpacity * 100,
+            min: 0,
+            max: 80,
+            divisions: 16,
+            suffix: '%',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _columnShadowOpacity = value / 100),
+          ),
+        ],
+      ],
+    ),
+    OptionSection(
+      title: 'Motion',
+      icon: Icons.animation_outlined,
+      children: [
+        EnumOption<PolarColumnAnimationMode>(
+          label: 'Entrance',
+          value: _animationMode,
+          values: PolarColumnAnimationMode.values,
+          labelBuilder: (value) => switch (value) {
+            PolarColumnAnimationMode.none => 'None',
+            PolarColumnAnimationMode.grow => 'Grow from baseline',
+            PolarColumnAnimationMode.fade => 'Fade in',
+            PolarColumnAnimationMode.sweep => 'Sweep around pane',
+          },
+          onChanged: (value) {
+            setState(() => _animationMode = value);
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _chartController.replayRadialEntrance(),
+            );
+          },
+        ),
+        ActionButton(
+          key: const ValueKey('polar-replay-entrance'),
+          label: 'Replay entrance',
+          icon: Icons.replay_outlined,
+          onPressed: _chartController.replayRadialEntrance,
         ),
       ],
     ),
@@ -1733,14 +2260,31 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     display: PolarColumnIntervalDisplay.whisker,
     width: 2,
   ),
+  polarStyle: const PolarColumnStyle(
+    dataLabelRadialPosition: 0.65,
+    gradient: PolarColumnGradientStyle(),
+    shadow: PolarColumnShadowStyle(
+      blurRadius: 8,
+      offset: Offset(0, 4),
+    ),
+    animationMode: PolarColumnAnimationMode.sweep,
+  ),
 );
 
 BravenChartPlus(
   series: [volume],
   polarChartConfig: const PolarChartConfig(
     pane: PolarPaneConfig(startAngleDegrees: -90),
-    angularAxis: PolarCategoryAxisConfig(innerPadding: 0.12),
-    radialAxis: PolarNumericAxisConfig(tickCount: 5),
+    angularAxis: PolarCategoryAxisConfig(
+      innerPadding: 0.12,
+      labelOffset: 8,
+      labelStyle: PolarLabelStyle(fontSize: 12),
+    ),
+    radialAxis: PolarNumericAxisConfig(
+      tickCount: 5,
+      labelPosition: PolarRadialLabelPosition.end,
+      labelOffset: 6,
+    ),
     thresholds: [
       PolarThreshold(
         value: 80,
@@ -1753,8 +2297,19 @@ BravenChartPlus(
     ),
   );
 
-  void _applyPresentation(_PolarPresentation presentation) {
+  void _applyPresentation(
+    _PolarPresentation presentation, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     setState(() {
+      if (authoredSelection) {
+        _randomizedShowcaseSelected = false;
+        _authoredPresentation = presentation;
+      }
       _presentation = presentation;
       _selectedCategory = null;
       _selectedSeries = null;
@@ -1897,6 +2452,21 @@ BravenChartPlus(
       }
     });
   }
+
+  void _setPlaygroundActive(bool active) {
+    if (active == _randomizedShowcaseSelected) return;
+    if (active) {
+      _authoredPresentation = _presentation;
+      setState(() => _randomizedShowcaseSelected = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _applyPresentation(_authoredPresentation);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
   void _setCategoryCount(int count) {
     setState(() {
@@ -2154,66 +2724,14 @@ class _PresentationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Material(
-      color: selected
-          ? scheme.secondaryContainer
-          : scheme.surfaceContainerLowest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: selected ? scheme.primary : scheme.outlineVariant,
-          width: selected ? 1.5 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('polar-presentation-${presentation.name}'),
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 104),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  presentation.icon,
-                  size: 22,
-                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        presentation.label,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        presentation.description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.check_circle, size: 18, color: scheme.primary),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return ShowcaseExampleCard(
+      key: ValueKey('polar-presentation-${presentation.name}'),
+      title: presentation.label,
+      description: presentation.description,
+      icon: presentation.icon,
+      selected: selected,
+      onTap: onPressed,
+      semanticsLabel: 'Apply ${presentation.label} Polar Column example',
     );
   }
 }

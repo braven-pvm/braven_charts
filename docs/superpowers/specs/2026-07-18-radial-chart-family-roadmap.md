@@ -4,18 +4,40 @@
 
 Approved on 2026-07-18. The six decisions in this document are the governing
 boundaries for the radial chart-family programme. Phase 0 and Concentric Donut
-Phase 1 are complete and merged. Phase 2 is complete on its review branch
-through its V1 public series, renderer, controller selection, native table,
+Phase 1 are complete and merged. Phase 2 is complete and merged through its V1
+public series, renderer, controller selection, native table,
 portable artifact/hydration, Workbench, generated source, and public showcase
 surfaces, including Chart Types, three Gallery compositions, deterministic
 pub.dev media, and public documentation. Package and showcase regressions, the
 release-web build, native media capture, and the pub archive dry-run are green.
 Compact, constrained, high-contrast, large-text, reduced-motion, and
 deterministic label-density hardening is complete. Final visual acceptance was
-recorded on 2026-07-19 after rebasing onto the published `0.9.0` mainline. The
-branch is ready for PR review and is not yet merged or released.
-Delivery remains phase-gated, and later families are not authorized by the
-start of Phase 2.
+recorded on 2026-07-19 after rebasing onto the published `0.9.0` mainline.
+Phase 3 is complete and merged through PR #63 after green package CI. A
+dependent cross-family regression-hardening branch now guards the shared
+annular seam,
+selection depth/paint order, partial sweeps, constrained sizing, dark and
+high-contrast themes, large text, and reduced motion across Pie, Donut,
+Concentric Donut, and stacked Polar Column. Delivery remains phase-gated.
+The Polar-specific 2026-07-20 regression pass additionally protects exact
+multi-series selection identity through JSON, hydration, remount, table rows,
+and renderer paint order; zero-valued semantic categories; automatic-axis
+bound reset; safe target lookup; and a layered/grouped/stacked/Rose resize
+matrix. Local verification is complete; final user visual acceptance remains
+the gate before PR handoff.
+A deterministic seeded property generator now supplements those fixed presets
+with reproducible variation across all eight Polar presentations, their data,
+pane geometry, composition, labels, grids, themes, palettes, reference marks,
+tooltips, and selection effects. This is a showcase verification surface, not
+a package-level random chart API.
+The eight authored examples remain unchanged. A ninth randomized showcase mode
+can generate one seed on demand or play a pausable sequence at a configurable
+interval, making broad visual review possible without replacing the deliberate
+feature demonstrations.
+The seeded mode now exercises contrast-safe category/radial/axis label colors,
+axis and grid colors, wider stroke ranges, and solid/dashed/dotted grid styles.
+Polar rings and spokes honor the generated grid pattern in the renderer while
+pane and axis boundaries remain solid.
 
 ## Executive decision
 
@@ -446,9 +468,10 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
-Status: implementation-complete on the review branch; visual acceptance was
-reopened on 2026-07-20 for full showcase styling exposure and feature-guide
-density. Slices 3.1 through 3.6 implement declaration-order layered comparison,
+Status: implementation-complete and merged through PR #63 after green package
+CI. Post-merge visual acceptance and shared-family regression hardening
+continued on 2026-07-20. Slices 3.1 through 3.6 implement declaration-order
+layered comparison,
 grouped angular sub-bands, diverging stacks, per-category target
 ticks, pane-wide threshold arcs, and absolute lower/upper intervals for multiple
 compatible Polar Column series. Compatible series share category
@@ -462,7 +485,38 @@ hydration, and generated source. A 512-category benchmark guards the warm-paint
 frame budget. The hardening pass now exposes the renderer's theme, palette,
 label, grid, axis, column, reference, interval, tooltip, and selection controls
 in one live Options surface, and replaces fixed-aspect feature cards with
-content-driven compact cards. Final visual acceptance remains pending.
+content-driven compact cards. A dependent hardening branch adds shared
+real-renderer goldens for selected depth and z-order, partial sweeps at
+non-default start angles, compact high-contrast layout, large text, and reduced
+motion across all four radial families. Final visual acceptance remains
+pending.
+
+The 2026-07-20 Polar-specific audit closes the remaining API and integration
+gaps found after Phase 3: negative target indices return no target instead of
+throwing, explicit radial-axis bounds can be cleared back to automatic,
+zero-valued columns remain available to semantic navigation without becoming
+physical hit targets, and selected grouped/stacked point identity survives
+deterministic document/view-state JSON, hydration, remount, table projection,
+and paint-priority restoration. A real-renderer matrix now combines full and
+partial sweeps, clockwise and counter-clockwise panes, layered references,
+grouped columns, diverging stacks, both selection effects, area-correct Rose,
+high contrast, and constrained resize.
+A 2026-07-20 showcase follow-up adds a bounded seed generator and a
+real-renderer seed matrix across every Polar presentation. Seeds preserve
+presentation invariants while exposing substantially more visual combinations
+for manual hardening; the generated configuration remains editable through the
+same complete Options surface.
+The same surface now includes a dedicated randomized example with deterministic
+Play/Pause sequencing. Selecting any authored example stops playback and
+restores its fixed, documented configuration.
+The Polar-specific polish slice now completes the family appearance contract:
+marks support baseline-to-value gradients, configurable elevation, and
+grow/sweep/fade/instant entrance modes; category, direct-value, and radial-axis
+labels have independent styles and radial/angular placement controls. These
+properties survive artifacts, hydration, generated Dart, and the randomized
+showcase. Public API documentation and capability negotiation use
+`series.polar.column.appearance.v1` and `chart.polar.labels.v1`. Local visual
+acceptance remains the gate before this slice is promoted.
 
 Deliver in small slices:
 

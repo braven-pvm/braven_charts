@@ -1,6 +1,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/controllers/chart_interaction_group_controller.dart'
     show ChartInteractionGroupParticipant;
+import 'package:braven_charts/src/navigator/cartesian_navigator_reducer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _frameBudget = Duration(microseconds: 16667);
@@ -50,6 +51,96 @@ void main() {
     // ignore: avoid_print
     print(
       'Synchronized cursor fanout (12 charts, 1000 moves): '
+      'p95 ${(p95.inMicroseconds / 1000).toStringAsFixed(2)}ms',
+    );
+  });
+
+  test('12-chart navigator viewport fanout stays within one frame', () {
+    final group = ChartInteractionGroupController();
+    addTearDown(group.dispose);
+    var callbackCount = 0;
+    final participants = <ChartInteractionGroupParticipant>[
+      for (var index = 0; index < 12; index++)
+        group.attachChart(
+          attachment: Object(),
+          onCursorChanged: (_) {},
+          onViewportChanged: (_) => callbackCount++,
+        ),
+    ];
+    addTearDown(() {
+      for (final participant in participants) {
+        participant.dispose();
+      }
+    });
+
+    for (var index = 0; index < 200; index++) {
+      group.setViewport(
+        ChartXViewport(min: index.toDouble(), max: index + 1000.0),
+      );
+    }
+    callbackCount = 0;
+
+    final batches = <Duration>[];
+    for (var batch = 0; batch < 20; batch++) {
+      final stopwatch = Stopwatch()..start();
+      for (var index = 0; index < 1000; index++) {
+        final min = (batch * 1000 + index).toDouble();
+        group.setViewport(ChartXViewport(min: min, max: min + 1000));
+      }
+      stopwatch.stop();
+      batches.add(stopwatch.elapsed);
+    }
+    batches.sort();
+    final p95 = batches[((batches.length - 1) * 0.95).ceil()];
+
+    expect(p95, lessThan(_frameBudget));
+    expect(callbackCount, 20 * 1000 * participants.length);
+    // ignore: avoid_print
+    print(
+      'Navigator viewport fanout (12 charts, 1000 moves): '
+      'p95 ${(p95.inMicroseconds / 1000).toStringAsFixed(2)}ms',
+    );
+  });
+
+  test('ordered-value navigator reduction avoids per-move data scans', () {
+    final reducer = CartesianNavigatorReducer(
+      fullDomain: const ChartXViewport(min: 0, max: 49999),
+      behavior: const CartesianNavigatorBehavior(minimumSpan: 100),
+      snapPolicy: CartesianNavigatorSnapPolicy.values(
+        List<double>.generate(50000, (index) => index.toDouble()),
+      ),
+    );
+    var viewport = const ChartXViewport(min: 1000, max: 6000);
+
+    for (var index = 0; index < 200; index++) {
+      viewport = reducer.reduce(
+        viewport: viewport,
+        target: CartesianNavigatorTarget.window,
+        delta: index.isEven ? 1 : -1,
+      );
+    }
+
+    final batches = <Duration>[];
+    for (var batch = 0; batch < 20; batch++) {
+      final stopwatch = Stopwatch()..start();
+      for (var index = 0; index < 1000; index++) {
+        viewport = reducer.reduce(
+          viewport: viewport,
+          target: CartesianNavigatorTarget.window,
+          delta: index.isEven ? 1 : -1,
+        );
+      }
+      stopwatch.stop();
+      batches.add(stopwatch.elapsed);
+    }
+    batches.sort();
+    final p95 = batches[((batches.length - 1) * 0.95).ceil()];
+
+    expect(p95, lessThan(_frameBudget));
+    expect(viewport, const ChartXViewport(min: 1000, max: 6000));
+    // ignore: avoid_print
+    print(
+      'Ordered navigator reduction (50,000 snap values, 1000 moves): '
       'p95 ${(p95.inMicroseconds / 1000).toStringAsFixed(2)}ms',
     );
   });

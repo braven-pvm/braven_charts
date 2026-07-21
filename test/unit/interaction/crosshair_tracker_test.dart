@@ -214,6 +214,39 @@ void main() {
       expect(value.candlestick!.semanticLabel, contains('3 grouped candles'));
     });
 
+    test('candlestick raw tracking bypasses density groups for callbacks', () {
+      final series = CandlestickChartSeries(
+        id: 'price',
+        unit: 'USD',
+        densityGrouping: const CandlestickDensityGrouping(enabled: true),
+        points: [
+          CandlestickDataPoint(x: 0, open: 10, high: 12, low: 8, close: 11),
+          CandlestickDataPoint(x: 1, open: 11, high: 15, low: 9, close: 14),
+          CandlestickDataPoint(x: 2, open: 14, high: 16, low: 7, close: 8),
+          CandlestickDataPoint(x: 3, open: 8, high: 13, low: 6, close: 12),
+          CandlestickDataPoint(x: 4, open: 12, high: 17, low: 10, close: 16),
+          CandlestickDataPoint(x: 5, open: 16, high: 18, low: 11, close: 13),
+        ],
+      );
+
+      final state = CrosshairTracker.calculateTrackingState(
+        screenX: 4.8,
+        chartBounds: const Rect.fromLTWH(0, 0, 10, 100),
+        xMin: 0,
+        xMax: 5,
+        seriesList: [series],
+        useCandlestickDensityGrouping: false,
+      );
+
+      final value = state!.seriesValues.single;
+      expect(value.dataPointIndex, 2);
+      expect(value.sourcePointIndices, isEmpty);
+      expect(value.candlestick!.open, 14);
+      expect(value.candlestick!.high, 16);
+      expect(value.candlestick!.low, 7);
+      expect(value.candlestick!.close, 8);
+    });
+
     test('scatter tracking supports unordered X values', () {
       const series = ScatterChartSeries(
         id: 'scatter',

@@ -2857,7 +2857,6 @@ class ChartRenderBox extends RenderBox {
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     _eventHandlerManager.handleEvent(event);
-    if (onDataXCursorChanged == null) return;
     final publishesPosition =
         event is PointerHoverEvent ||
         event is PointerDownEvent ||
@@ -2866,22 +2865,78 @@ class ChartRenderBox extends RenderBox {
       final position = event.localPosition;
       final transform = _transform;
       if (transform != null && _plotArea.contains(position)) {
+        _publishCrosshairChange(position);
         final plotPosition = widgetToPlot(position);
         onDataXCursorChanged?.call(
           transform.plotToData(plotPosition.dx, plotPosition.dy).dx,
         );
       } else {
+        _publishCrosshairChange(null);
         onDataXCursorChanged?.call(null);
       }
     } else if ((event is PointerUpEvent || event is PointerCancelEvent) &&
         event.kind != PointerDeviceKind.mouse) {
+      _publishCrosshairChange(null);
       onDataXCursorChanged?.call(null);
     }
+  }
+
+  void _publishCrosshairChange(Offset? position) {
+    final callback = _interactionConfig?.onCrosshairChanged;
+    if (callback == null) return;
+    final transform = _transform;
+    if (position == null ||
+        transform == null ||
+        !_plotArea.contains(position) ||
+        !(_interactionConfig?.enabled ?? true) ||
+        coordinator.isPanningOrZooming ||
+        coordinator.isDragging) {
+      callback(null, const []);
+      return;
+    }
+
+    final categoryScreenPosition = transform.transposed
+        ? position.dy
+        : position.dx;
+    final trackingBounds = transform.transposed
+        ? Rect.fromLTWH(_plotArea.top, 0, _plotArea.height, 1)
+        : _plotArea;
+    final seriesElements = _elements.whereType<SeriesElement>().toList(
+      growable: false,
+    );
+    final trackingState = CrosshairTracker.calculateTrackingState(
+      screenX: categoryScreenPosition,
+      chartBounds: trackingBounds,
+      xMin: transform.dataXMin,
+      xMax: transform.dataXMax,
+      seriesList: seriesElements
+          .map((element) => element.series)
+          .toList(growable: false),
+      interpolate: false,
+      useCandlestickDensityGrouping: false,
+    );
+    if (trackingState == null) {
+      callback(position, const []);
+      return;
+    }
+
+    final elementsById = {
+      for (final element in seriesElements) element.series.id: element,
+    };
+    final snapPoints = [
+      for (final value in trackingState.seriesValues)
+        if (elementsById[value.seriesId] case final element?
+            when value.dataPointIndex >= 0 &&
+                value.dataPointIndex < element.series.points.length)
+          element.series.points[value.dataPointIndex],
+    ];
+    callback(position, List.unmodifiable(snapPoints));
   }
 
   /// Clears crosshair state when the pointer leaves the chart widget.
   void clearCursorPosition() {
     _eventHandlerManager.clearCursorPosition();
+    _publishCrosshairChange(null);
     onDataXCursorChanged?.call(null);
   }
 

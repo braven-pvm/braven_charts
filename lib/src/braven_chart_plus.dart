@@ -229,6 +229,7 @@ class BravenChartPlus extends StatefulWidget {
     this.autoScrollConfig,
     this.onPointTap,
     this.onPointHover,
+    this.onDataXCursorChanged,
     this.onBackgroundTap,
     this.onSeriesSelected,
     this.onAnnotationTap,
@@ -284,6 +285,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -384,6 +386,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -440,6 +443,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -547,6 +551,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -601,6 +606,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -698,6 +704,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -1092,6 +1099,14 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Called when a data point is hovered (desktop/web).
   final void Function(ChartDataPoint? point, String? seriesId)? onPointHover;
+
+  /// Called with the active Cartesian data-X cursor across the plot continuum.
+  ///
+  /// This is a runtime-only observation hook. It reports null when the pointer
+  /// leaves the plot and is not serialized into chart artifacts. Use
+  /// [InteractionConfig.onCrosshairChanged] when the nearest source points are
+  /// also required.
+  final ValueChanged<double?>? onDataXCursorChanged;
 
   /// Called when the chart background is tapped.
   final void Function(Offset position)? onBackgroundTap;
@@ -2042,6 +2057,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleLocalDataXCursorChanged(double? dataX) {
+    widget.onDataXCursorChanged?.call(dataX);
     final participant = _interactionGroupParticipant;
     if (participant == null) return;
     if (dataX == null) {
@@ -3429,6 +3445,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         threshold.value,
     ];
     final theme = widget.theme ?? ChartTheme.light;
+    final revealProgress = _radialRevealProgress;
     final seriesElements = <PolarColumnSeriesElement>[
       for (final (index, series) in polarSeries.indexed)
         PolarColumnSeriesElement(
@@ -3446,6 +3463,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           paintAxisLabels: false,
           paintDataLabels: false,
           preferSeriesColor: polarSeries.length > 1,
+          revealProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.grow
+              ? revealProgress
+              : 1,
+          fadeProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.fade
+              ? revealProgress
+              : 1,
+          sweepProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.sweep
+              ? revealProgress
+              : 1,
           textScaleFactor: _textScaleFactor,
           focusedPointIndices: {
             for (final ref in _focusedPointRefs)
@@ -3888,7 +3917,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleRadialAnimationTick() {
-    if (!mounted || _layoutKind != ChartLayoutKind.partitionRadial) return;
+    if (!mounted ||
+        (_layoutKind != ChartLayoutKind.partitionRadial &&
+            _layoutKind != ChartLayoutKind.polarAxis)) {
+      return;
+    }
     setState(() => _elementGeneratorVersion++);
   }
 
@@ -4418,6 +4451,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required ChartTheme previousTheme,
     required ChartTheme nextTheme,
   }) {
+    final previousPolar = previous.whereType<PolarColumnChartSeries>().toList(
+      growable: false,
+    );
+    final nextPolar = next.whereType<PolarColumnChartSeries>().toList(
+      growable: false,
+    );
+    if (previousPolar.isNotEmpty || nextPolar.isNotEmpty) {
+      if (previousPolar.length != nextPolar.length) return true;
+      return !listEquals(
+        [for (final series in previousPolar) series.polarStyle.animationMode],
+        [for (final series in nextPolar) series.polarStyle.animationMode],
+      );
+    }
     if (previous.length != 1 || next.length != 1) return false;
     final previousSeries = previous.single;
     final nextSeries = next.single;
@@ -4443,9 +4489,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       duration > Duration.zero &&
       _effectiveRadialAnimationMode(series) != PieAnimationMode.none;
 
+  bool _canAnimatePolar(Duration duration) =>
+      !_disableAnimations &&
+      duration > Duration.zero &&
+      _effectiveRenderSeries.whereType<PolarColumnChartSeries>().any(
+        (series) =>
+            series.polarStyle.animationMode != PolarColumnAnimationMode.none,
+      );
+
   void _startRadialRevealAnimation() {
     final series = _effectiveRadialSeries;
-    if (series == null) {
+    final hasPolarSeries = _effectiveRenderSeries.any(
+      (series) => series is PolarColumnChartSeries,
+    );
+    if (series == null && !hasPolarSeries) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -4456,7 +4513,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       animationTheme.dataUpdateCurve,
     );
     final duration = animationTheme.dataUpdateDuration;
-    if (!_canAnimateRadial(series, duration)) {
+    final canAnimate = series == null
+        ? _canAnimatePolar(duration)
+        : _canAnimateRadial(series, duration);
+    if (!canAnimate) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -4467,7 +4527,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ..stop()
       ..value = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _effectiveRadialSeries == null) return;
+      if (!mounted ||
+          (_effectiveRadialSeries == null &&
+              !_effectiveRenderSeries.any(
+                (series) => series is PolarColumnChartSeries,
+              ))) {
+        return;
+      }
       _radialRevealAnimationController.forward();
     });
   }
@@ -8039,10 +8105,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               : null,
                           onDataXCursorChanged:
                               !isNonCartesian &&
-                                  widget.interactionGroupController != null &&
-                                  widget
-                                      .interactionGroupOptions
-                                      .synchronizeCursor
+                                  (widget.onDataXCursorChanged != null ||
+                                      (widget.interactionGroupController !=
+                                              null &&
+                                          widget
+                                              .interactionGroupOptions
+                                              .synchronizeCursor))
                               ? _handleLocalDataXCursorChanged
                               : null,
                           gridConfig: isNonCartesian ? null : widget.grid,

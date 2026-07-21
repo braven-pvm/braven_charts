@@ -1,6 +1,7 @@
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show FontWeight;
 
 /// Pane-wide reference threshold on a Polar Column radial numeric axis.
 @immutable
@@ -257,6 +258,71 @@ class PolarPaneConfig {
   );
 }
 
+/// Reusable text appearance for Polar Column labels.
+///
+/// Null values inherit the corresponding property from the chart theme. This
+/// keeps Polar labels theme-aware while allowing category, value, and radial
+/// axis labels to be styled independently.
+@immutable
+class PolarLabelStyle {
+  const PolarLabelStyle({this.color, this.fontSize, this.fontWeight});
+
+  /// Explicit text color. Null inherits the chart theme or automatic contrast.
+  final Color? color;
+
+  /// Explicit logical-pixel text size. Null inherits the chart theme.
+  final double? fontSize;
+
+  /// Explicit text weight. Null inherits the chart theme or renderer default.
+  final FontWeight? fontWeight;
+
+  void validate({String argumentName = 'labelStyle'}) {
+    if (fontSize case final value? when !value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        '$argumentName.fontSize',
+        'Value must be finite and positive',
+      );
+    }
+  }
+
+  PolarLabelStyle copyWith({
+    Color? color,
+    bool clearColor = false,
+    double? fontSize,
+    bool clearFontSize = false,
+    FontWeight? fontWeight,
+    bool clearFontWeight = false,
+  }) => PolarLabelStyle(
+    color: clearColor ? null : (color ?? this.color),
+    fontSize: clearFontSize ? null : (fontSize ?? this.fontSize),
+    fontWeight: clearFontWeight ? null : (fontWeight ?? this.fontWeight),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarLabelStyle &&
+          color == other.color &&
+          fontSize == other.fontSize &&
+          fontWeight == other.fontWeight;
+
+  @override
+  int get hashCode => Object.hash(color, fontSize, fontWeight);
+}
+
+/// Angular anchor used for radial numeric-axis labels.
+enum PolarRadialLabelPosition {
+  /// Place labels on the pane's configured start-angle ray.
+  start,
+
+  /// Place labels halfway through the configured angular sweep.
+  middle,
+
+  /// Place labels on the pane's configured end-angle ray.
+  end,
+}
+
 /// Angular category-axis behavior for Polar Column V1.
 @immutable
 class PolarCategoryAxisConfig {
@@ -267,6 +333,8 @@ class PolarCategoryAxisConfig {
     this.showGridLines = true,
     this.maximumVisibleLabels = 24,
     this.maximumVisibleGridLines = 72,
+    this.labelOffset = 0,
+    this.labelStyle = const PolarLabelStyle(),
   });
 
   /// Gap between adjacent marks as a fraction of one category step.
@@ -290,6 +358,15 @@ class PolarCategoryAxisConfig {
   /// This limits visual and paint density only. Every category retains its
   /// exact angular band and interaction identity.
   final int maximumVisibleGridLines;
+
+  /// Additional logical-pixel distance beyond the compact default label ring.
+  ///
+  /// Zero keeps labels tight to the plot. Positive values move them away from
+  /// the columns; negative values move them inward while remaining in-bounds.
+  final double labelOffset;
+
+  /// Category-label appearance independent from radial and value labels.
+  final PolarLabelStyle labelStyle;
 
   void validate() {
     _requireRange(
@@ -319,6 +396,14 @@ class PolarCategoryAxisConfig {
         'Value must be positive',
       );
     }
+    if (!labelOffset.isFinite) {
+      throw ArgumentError.value(
+        labelOffset,
+        'angularAxis.labelOffset',
+        'Value must be finite',
+      );
+    }
+    labelStyle.validate(argumentName: 'angularAxis.labelStyle');
   }
 
   PolarCategoryAxisConfig copyWith({
@@ -328,6 +413,8 @@ class PolarCategoryAxisConfig {
     bool? showGridLines,
     int? maximumVisibleLabels,
     int? maximumVisibleGridLines,
+    double? labelOffset,
+    PolarLabelStyle? labelStyle,
   }) => PolarCategoryAxisConfig(
     innerPadding: innerPadding ?? this.innerPadding,
     outerPadding: outerPadding ?? this.outerPadding,
@@ -336,6 +423,8 @@ class PolarCategoryAxisConfig {
     maximumVisibleLabels: maximumVisibleLabels ?? this.maximumVisibleLabels,
     maximumVisibleGridLines:
         maximumVisibleGridLines ?? this.maximumVisibleGridLines,
+    labelOffset: labelOffset ?? this.labelOffset,
+    labelStyle: labelStyle ?? this.labelStyle,
   );
 
   @override
@@ -347,7 +436,9 @@ class PolarCategoryAxisConfig {
           showLabels == other.showLabels &&
           showGridLines == other.showGridLines &&
           maximumVisibleLabels == other.maximumVisibleLabels &&
-          maximumVisibleGridLines == other.maximumVisibleGridLines;
+          maximumVisibleGridLines == other.maximumVisibleGridLines &&
+          labelOffset == other.labelOffset &&
+          labelStyle == other.labelStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -357,6 +448,8 @@ class PolarCategoryAxisConfig {
     showGridLines,
     maximumVisibleLabels,
     maximumVisibleGridLines,
+    labelOffset,
+    labelStyle,
   );
 }
 
@@ -370,6 +463,10 @@ class PolarNumericAxisConfig {
     this.tickCount = 5,
     this.showLabels = true,
     this.showGridLines = true,
+    this.labelPosition = PolarRadialLabelPosition.start,
+    this.labelAngleOffsetDegrees = 0,
+    this.labelOffset = 4,
+    this.labelStyle = const PolarLabelStyle(fontSize: 10),
   });
 
   final double? minimum;
@@ -382,6 +479,18 @@ class PolarNumericAxisConfig {
   final int tickCount;
   final bool showLabels;
   final bool showGridLines;
+
+  /// Named sweep anchor for the ring-value labels.
+  final PolarRadialLabelPosition labelPosition;
+
+  /// Fine angular adjustment applied after [labelPosition] is resolved.
+  final double labelAngleOffsetDegrees;
+
+  /// Logical-pixel displacement along the resolved label ray.
+  final double labelOffset;
+
+  /// Radial-axis label appearance independent from category and value labels.
+  final PolarLabelStyle labelStyle;
 
   void validate() {
     if (minimum case final value?) {
@@ -404,23 +513,49 @@ class PolarNumericAxisConfig {
         'Tick count must be between 2 and 12',
       );
     }
+    if (!labelAngleOffsetDegrees.isFinite) {
+      throw ArgumentError.value(
+        labelAngleOffsetDegrees,
+        'radialAxis.labelAngleOffsetDegrees',
+        'Value must be finite',
+      );
+    }
+    if (!labelOffset.isFinite) {
+      throw ArgumentError.value(
+        labelOffset,
+        'radialAxis.labelOffset',
+        'Value must be finite',
+      );
+    }
+    labelStyle.validate(argumentName: 'radialAxis.labelStyle');
   }
 
   PolarNumericAxisConfig copyWith({
     double? minimum,
+    bool clearMinimum = false,
     double? maximum,
+    bool clearMaximum = false,
     PolarRadialScaleMode? scaleMode,
     bool clearScaleMode = false,
     int? tickCount,
     bool? showLabels,
     bool? showGridLines,
+    PolarRadialLabelPosition? labelPosition,
+    double? labelAngleOffsetDegrees,
+    double? labelOffset,
+    PolarLabelStyle? labelStyle,
   }) => PolarNumericAxisConfig(
-    minimum: minimum ?? this.minimum,
-    maximum: maximum ?? this.maximum,
+    minimum: clearMinimum ? null : (minimum ?? this.minimum),
+    maximum: clearMaximum ? null : (maximum ?? this.maximum),
     scaleMode: clearScaleMode ? null : (scaleMode ?? this.scaleMode),
     tickCount: tickCount ?? this.tickCount,
     showLabels: showLabels ?? this.showLabels,
     showGridLines: showGridLines ?? this.showGridLines,
+    labelPosition: labelPosition ?? this.labelPosition,
+    labelAngleOffsetDegrees:
+        labelAngleOffsetDegrees ?? this.labelAngleOffsetDegrees,
+    labelOffset: labelOffset ?? this.labelOffset,
+    labelStyle: labelStyle ?? this.labelStyle,
   );
 
   @override
@@ -432,7 +567,11 @@ class PolarNumericAxisConfig {
           scaleMode == other.scaleMode &&
           tickCount == other.tickCount &&
           showLabels == other.showLabels &&
-          showGridLines == other.showGridLines;
+          showGridLines == other.showGridLines &&
+          labelPosition == other.labelPosition &&
+          labelAngleOffsetDegrees == other.labelAngleOffsetDegrees &&
+          labelOffset == other.labelOffset &&
+          labelStyle == other.labelStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -442,12 +581,19 @@ class PolarNumericAxisConfig {
     tickCount,
     showLabels,
     showGridLines,
+    labelPosition,
+    labelAngleOffsetDegrees,
+    labelOffset,
+    labelStyle,
   );
 }
 
 /// Plot-level configuration for axis-based polar charts.
 @immutable
 class PolarChartConfig {
+  /// Artifact capability required by non-default Polar label presentation.
+  static const labelAppearanceCapability = 'chart.polar.labels.v1';
+
   const PolarChartConfig({
     this.pane = const PolarPaneConfig(),
     this.angularAxis = const PolarCategoryAxisConfig(),
@@ -465,6 +611,15 @@ class PolarChartConfig {
 
   /// Pane-wide radial references drawn behind every Polar Column series.
   final List<PolarThreshold> thresholds;
+
+  /// Whether this config uses label presentation beyond V1 defaults.
+  bool get hasCustomLabelAppearance =>
+      angularAxis.labelOffset != 0 ||
+      angularAxis.labelStyle != const PolarLabelStyle() ||
+      radialAxis.labelPosition != PolarRadialLabelPosition.start ||
+      radialAxis.labelAngleOffsetDegrees != 0 ||
+      radialAxis.labelOffset != 4 ||
+      radialAxis.labelStyle != const PolarLabelStyle(fontSize: 10);
 
   void validate() {
     pane.validate();

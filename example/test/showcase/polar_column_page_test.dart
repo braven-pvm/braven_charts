@@ -1,6 +1,8 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts_example/showcase/data/polar_showcase_randomizer.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
+import 'package:braven_charts_example/showcase/widgets/showcase_randomizer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +28,8 @@ void main() {
     expect(find.text('Stacked comparison'), findsOneWidget);
     expect(find.text('Targets & thresholds'), findsOneWidget);
     expect(find.text('Ranges & uncertainty'), findsOneWidget);
+    expect(find.byKey(const ValueKey('polar-playground')), findsOneWidget);
+    expect(find.byKey(const ValueKey('polar-randomizer-next')), findsNothing);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -100,14 +104,34 @@ void main() {
       containsAll(['Column gap', 'Outer padding']),
     );
 
-    final labels = section('Labels');
+    final categoryLabels = section('Category labels');
     expect(
-      labels.children.whereType<BoolOption>().map((item) => item.label),
-      containsAll([
-        'Show category labels',
-        'Show radial labels',
-        'Show values inside columns',
-      ]),
+      categoryLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show category labels'),
+    );
+    expect(
+      categoryLabels.children.whereType<SliderOption>().map(
+        (item) => item.label,
+      ),
+      containsAll(['Text size', 'Outer offset']),
+    );
+    final valueLabels = section('Inside value labels');
+    expect(
+      valueLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show values'),
+    );
+    expect(
+      valueLabels.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Text size', 'Radial position']),
+    );
+    final radialLabels = section('Radial axis labels');
+    expect(
+      radialLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show radial labels'),
+    );
+    expect(
+      radialLabels.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Text size', 'Angular adjustment', 'Ray offset']),
     );
     final gridAndAxes = section('Grid & axes');
     expect(
@@ -142,7 +166,184 @@ void main() {
         .whereType<EnumOption<PolarColumnCornerRadiusMode>>()
         .singleWhere((item) => item.label == 'Corner placement');
     expect(cornerPlacement.values, PolarColumnCornerRadiusMode.values);
+
+    final fillAndElevation = section('Column fill & elevation');
+    expect(
+      fillAndElevation.children.whereType<BoolOption>().map(
+        (item) => item.label,
+      ),
+      containsAll(['Gradient fill', 'Column shadow']),
+    );
+    final motion = section('Motion');
+    expect(
+      motion.children.whereType<EnumOption>().map((item) => item.label),
+      contains('Entrance'),
+    );
+
+    expect(panel.headerEditor, isNull);
+    await _enterPlayground(tester);
+    final playgroundPanel = tester.widget<OptionsPanel>(
+      find.byType(OptionsPanel),
+    );
+    expect(playgroundPanel.headerEditor, isA<PropertyRandomizerSection>());
+    await _openRandomizerEditor(tester);
+    expect(find.byKey(const ValueKey('polar-randomizer-seed')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('polar-randomizer-playback-interval')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'seeded randomizer applies a complete reproducible configuration',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await _enterPlayground(tester);
+      expect(find.text('Randomize all'), findsOneWidget);
+      await _openRandomizerEditor(tester);
+      final seedOption = tester.widget<IntSliderOption>(
+        find.byKey(const ValueKey('polar-randomizer-seed')),
+      );
+      seedOption.onChanged(317);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('polar-randomizer-generate')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
+
+      final generated = PolarShowcaseRandomizer.generate(317);
+      expect(find.text('Generated seed 317'), findsOneWidget);
+      _expectGeneratedChart(tester, generated);
+
+      await tester.tap(find.byKey(const ValueKey('polar-randomizer-next')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Generated seed 318'), findsOneWidget);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(318));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'randomized example plays on schedule, pauses, and yields to authored presets',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await _enterPlayground(tester);
+      await _openRandomizerEditor(tester);
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('polar-randomizer-playback-interval')),
+          )
+          .onChanged(2);
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Generated seed 48'), findsOneWidget);
+      expect(find.text('Pause sequence'), findsWidgets);
+      expect(find.text('Playing seed 48'), findsNothing);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(48));
+
+      await tester.pump(const Duration(milliseconds: 1800));
+      expect(find.text('Generated seed 48'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Generated seed 49'), findsOneWidget);
+      _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(49));
+
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
+      );
+      await tester.pump();
+      expect(find.text('Play sequence'), findsWidgets);
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.text('Generated seed 49'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
+      );
+      await tester.pump();
+      expect(find.text('Generated seed 50'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('polar-presentation-standard')),
+      );
+      await tester.pump();
+      expect(find.text('Generated seed 50'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
+        findsNothing,
+      );
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.text('Generated seed 51'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('seed matrix renders every Polar presentation without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await _enterPlayground(tester);
+    final randomizer =
+        (tester.widget<OptionsPanel>(find.byType(OptionsPanel)).headerEditor!
+                as PropertyRandomizerSection)
+            .controller;
+
+    final seeds = _firstSeedForEveryPresentation();
+    expect(seeds.keys, PolarShowcasePresentationKind.values.toSet());
+    for (final presentation in PolarShowcasePresentationKind.values) {
+      final seed = seeds[presentation]!;
+      randomizer.seed = seed;
+      randomizer.generateCurrent();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      expect(
+        chart.series,
+        hasLength(switch (presentation) {
+          PolarShowcasePresentationKind.layered => 2,
+          PolarShowcasePresentationKind.grouped ||
+          PolarShowcasePresentationKind.stacked => 3,
+          _ => 1,
+        }),
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'seed $seed: $presentation',
+      );
+    }
   });
 
   testWidgets('appearance controls drive public chart styling', (tester) async {
@@ -175,6 +376,13 @@ void main() {
       const Color(0xFF2196F3),
     );
 
+    await tester.tap(find.byKey(const ValueKey('options-panel-search-toggle')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('options-panel-search')),
+      'Category colors',
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Theme colors'));
     await tester.pumpAndSettle();
     expect(find.text('Ocean'), findsOneWidget);
@@ -198,6 +406,58 @@ void main() {
           ?.color,
       const Color(0xFF2563EB),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('grid line pattern reaches the public chart theme', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final optionsList = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(ListView),
+    );
+    final control = find.byKey(const ValueKey('polar-grid-line-pattern'));
+    for (
+      var attempt = 0;
+      attempt < 16 && control.evaluate().isEmpty;
+      attempt++
+    ) {
+      await tester.drag(optionsList, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+    expect(control, findsOneWidget);
+    await tester.ensureVisible(control);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: control,
+        matching: find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString().startsWith(
+            'DropdownButtonFormField<',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dotted').last);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.theme?.gridStyle.majorDashPattern, const <double>[2, 3]);
     expect(tester.takeException(), isNull);
   });
 
@@ -666,8 +926,162 @@ void main() {
   });
 }
 
+Future<void> _enterPlayground(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('polar-playground')));
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.byKey(const ValueKey('polar-randomizer-next')), findsOneWidget);
+}
+
+Future<void> _openRandomizerEditor(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('polar-randomizer-editor')));
+  await tester.pumpAndSettle();
+  expect(find.text('Property randomizer'), findsWidgets);
+}
+
 Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {
   for (var attempt = 0; attempt < 20 && !condition(); attempt++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+void _expectGeneratedChart(
+  WidgetTester tester,
+  PolarShowcaseRandomization generated,
+) {
+  final chart = tester.widget<BravenChartPlus>(
+    find.descendant(
+      of: find.byKey(const ValueKey('polar-column-live-chart')),
+      matching: find.byType(BravenChartPlus),
+    ),
+  );
+  final config = chart.polarChartConfig;
+  expect(config.pane.startAngleDegrees, generated.startAngle);
+  expect(config.pane.sweepAngleDegrees, generated.sweepAngle);
+  expect(config.pane.clockwise, generated.clockwise);
+  expect(config.pane.innerRadiusFactor, generated.innerRadius);
+  expect(config.pane.outerRadiusFactor, generated.outerRadius);
+  expect(config.angularAxis.innerPadding, generated.innerPadding);
+  expect(config.angularAxis.outerPadding, generated.outerPadding);
+  expect(config.angularAxis.showLabels, generated.showAngularLabels);
+  expect(config.angularAxis.showGridLines, generated.showAngularGrid);
+  expect(config.angularAxis.labelOffset, generated.categoryLabelOffset);
+  expect(config.angularAxis.labelStyle.color, generated.categoryLabelColor);
+  expect(config.angularAxis.labelStyle.fontSize, generated.categoryLabelSize);
+  expect(
+    config.angularAxis.labelStyle.fontWeight,
+    generated.categoryLabelWeight,
+  );
+  expect(config.radialAxis.scaleMode, generated.scaleMode);
+  expect(config.radialAxis.tickCount, generated.tickCount);
+  expect(config.radialAxis.labelPosition, generated.radialLabelPosition);
+  expect(
+    config.radialAxis.labelAngleOffsetDegrees,
+    generated.radialLabelAngleOffset,
+  );
+  expect(config.radialAxis.labelOffset, generated.radialLabelOffset);
+  expect(config.radialAxis.labelStyle.color, generated.radialLabelColor);
+  expect(config.radialAxis.labelStyle.fontSize, generated.radialLabelSize);
+  expect(config.radialAxis.labelStyle.fontWeight, generated.radialLabelWeight);
+  expect(config.composition.mode, generated.compositionMode);
+
+  final primaryId = switch (generated.presentation) {
+    PolarShowcasePresentationKind.layered => 'showcase-polar-observed',
+    PolarShowcasePresentationKind.grouped => 'showcase-polar-north',
+    PolarShowcasePresentationKind.stacked => 'showcase-polar-new',
+    PolarShowcasePresentationKind.references => 'showcase-polar-actual-targets',
+    PolarShowcasePresentationKind.intervals =>
+      'showcase-polar-forecast-intervals',
+    _ => 'showcase-polar-column',
+  };
+  final primary = chart.series.whereType<PolarColumnChartSeries>().singleWhere(
+    (series) => series.id == primaryId,
+  );
+  expect(
+    primary.points.map((point) => point.label),
+    generated.primaryValues.keys,
+  );
+  expect(
+    primary.points.map((point) => point.y),
+    generated.primaryValues.values,
+  );
+  expect(primary.polarStyle.cornerRadius, generated.cornerRadius);
+  expect(primary.polarStyle.cornerRadiusMode, generated.cornerRadiusMode);
+  expect(primary.polarStyle.opacity, generated.opacity);
+  expect(
+    primary.polarStyle.dataLabelRadialPosition,
+    generated.dataLabelRadialPosition,
+  );
+  expect(primary.polarStyle.dataLabelStyle.color, generated.dataLabelColor);
+  expect(primary.polarStyle.dataLabelStyle.fontSize, generated.dataLabelSize);
+  expect(
+    primary.polarStyle.dataLabelStyle.fontWeight,
+    generated.dataLabelWeight,
+  );
+  expect(primary.polarStyle.gradient != null, generated.showGradient);
+  if (generated.showGradient) {
+    expect(
+      primary.polarStyle.gradient?.startColor,
+      generated.gradientStartColor,
+    );
+    expect(primary.polarStyle.gradient?.endColor, generated.gradientEndColor);
+  }
+  expect(primary.polarStyle.shadow.isVisible, generated.showColumnShadow);
+  expect(primary.polarStyle.animationMode, generated.animationMode);
+  expect(primary.selectionStyle.effect, generated.selectionEffect);
+  expect(primary.selectionStyle.liftScale, generated.selectionScale);
+  expect(primary.selectionStyle.liftOffset, generated.selectionOffset);
+
+  final baseTheme = switch (generated.theme) {
+    PolarShowcaseThemeKind.light => ChartTheme.light,
+    PolarShowcaseThemeKind.dark => ChartTheme.dark,
+    PolarShowcaseThemeKind.corporate => ChartTheme.corporateBlue,
+    PolarShowcaseThemeKind.vibrant => ChartTheme.vibrant,
+    PolarShowcaseThemeKind.minimal => ChartTheme.minimal,
+    PolarShowcaseThemeKind.highContrast => ChartTheme.highContrast,
+    PolarShowcaseThemeKind.colorblind => ChartTheme.colorblindFriendly,
+  };
+  expect(
+    chart.theme?.backgroundColor,
+    generated.canvasColor ?? baseTheme.backgroundColor,
+  );
+  expect(
+    chart.theme?.axisStyle.lineColor,
+    generated.axisLineColor ?? baseTheme.axisStyle.lineColor,
+  );
+  expect(chart.theme?.axisStyle.lineWidth, generated.axisLineWidth);
+  expect(
+    chart.theme?.axisStyle.labelStyle.color,
+    generated.axisLabelColor ?? baseTheme.axisStyle.labelStyle.color,
+  );
+  expect(
+    chart.theme?.gridStyle.majorColor,
+    generated.gridLineColor ?? baseTheme.gridStyle.majorColor,
+  );
+  expect(chart.theme?.gridStyle.majorWidth, generated.gridLineWidth);
+  expect(
+    chart.theme?.gridStyle.majorDashPattern,
+    _dashPatternFor(generated.gridLinePattern),
+  );
+  expect(chart.interactionConfig!.tooltip.enabled, generated.showTooltip);
+  expect(
+    chart.interactionConfig!.tooltip.triggerMode,
+    generated.tooltipTrigger,
+  );
+}
+
+List<double> _dashPatternFor(PolarShowcaseLinePatternKind pattern) =>
+    switch (pattern) {
+      PolarShowcaseLinePatternKind.solid => const <double>[],
+      PolarShowcaseLinePatternKind.dashed => const <double>[7, 4],
+      PolarShowcaseLinePatternKind.dotted => const <double>[2, 3],
+    };
+
+Map<PolarShowcasePresentationKind, int> _firstSeedForEveryPresentation() {
+  final seeds = <PolarShowcasePresentationKind, int>{};
+  for (var seed = 0; seed < 1000; seed++) {
+    final presentation = PolarShowcaseRandomizer.generate(seed).presentation;
+    seeds.putIfAbsent(presentation, () => seed);
+    if (seeds.length == PolarShowcasePresentationKind.values.length) break;
+  }
+  return seeds;
 }

@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// First-class Candlestick chart-family Workbench surface.
@@ -22,13 +23,29 @@ class CandlestickChartsPage extends StatefulWidget {
 }
 
 class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
+  // Synchronized panes map shared data X independently, so visual crosshair
+  // continuity additionally requires identical horizontal plot bounds. The
+  // axisless renderer keeps 10 px per side; compensate it to the fixed 64 px
+  // financial-axis gutter used by the price and volume panes.
+  static const double _stockAxisGutter = 64;
+  static const double _stockAxislessInset = 10;
+  static const double _stockOppositeGutter =
+      _stockAxisGutter - _stockAxislessInset;
+
+  static final JsonObjectValue _twoDecimalFormatter = ChartFormatterDescriptor(
+    id: 'braven.number.fixed',
+    arguments: {'decimals': JsonNumberValue(2)},
+  ).toDocument();
+
   final ChartOptionsController _optionsController = ChartOptionsController(
     const ChartOptions(showLegend: true),
   );
   final BravenChartController _chartController = BravenChartController();
+  final ValueNotifier<CandlestickDataPoint?> _pinnedSummaryCandle =
+      ValueNotifier(null);
   final ChartInteractionGroupController _stockGroupController =
       ChartInteractionGroupController();
-  late final AnnotationController _stockNavigatorAnnotationController;
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
   late List<CandlestickDataPoint> _candles;
   late FinancialTimeDomain _timeDomain;
   late final List<CandlestickDataPoint> _densityCandles;
@@ -67,7 +84,24 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   Color? _highlightWickColor = const Color(0xFFA16207);
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
-  bool _showPointTooltip = true;
+  bool _showPointTooltip = false;
+  bool _showPinnedSummary = false;
+  _PinnedSummaryPresentation _pinnedSummaryPresentation =
+      _PinnedSummaryPresentation.overlay;
+  _PinnedSummaryCorner _pinnedSummaryCorner = _PinnedSummaryCorner.topLeft;
+  bool _pinnedSummaryDraggable = true;
+  Offset _pinnedSummaryAnnotationPosition = const Offset(96, 48);
+  bool _pinnedSummaryBackgroundVisible = true;
+  bool _pinnedSummaryBorderVisible = true;
+  Color? _pinnedSummaryBackgroundColor;
+  Color? _pinnedSummaryBorderColor;
+  Color? _pinnedSummaryTextColor;
+  Color? _pinnedSummaryAccentColor;
+  double _pinnedSummaryBackgroundOpacity = .96;
+  double _pinnedSummaryBorderWidth = 1;
+  double _pinnedSummaryCornerRadius = 8;
+  double _pinnedSummaryPadding = 8;
+  double _pinnedSummaryFontSize = 11;
   bool _showCoordinateLabels = true;
   bool _showIntersectionMarkers = true;
   double _intersectionMarkerRadius = 4;
@@ -80,6 +114,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   Color? _tooltipBackgroundColor = const Color(0xF2FFFFFF);
   Color? _tooltipBorderColor = const Color(0xFF94A3B8);
   Color? _tooltipTextColor = const Color(0xFF1F2937);
+  Color? _selectionColor = const Color(0xFF2563EB);
+  Color? _focusColor = const Color(0xFF475569);
   double _tooltipBorderWidth = 1;
   double _tooltipCornerRadius = 6;
   double _tooltipFontSize = 12;
@@ -87,7 +123,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   bool _tooltipFollowsCursor = false;
   bool _selectionEnabled = true;
   bool _keyboardEnabled = true;
-  bool _showFocusBorder = true;
+  bool _showFocusBorder = false;
   CandlestickDataUpdateAnimationMode _dataUpdateAnimation =
       CandlestickDataUpdateAnimationMode.interpolate;
   CandlestickAnimationMode _entranceAnimation = CandlestickAnimationMode.reveal;
@@ -101,6 +137,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   int _minimumPointsPerGroup = 2;
   FinancialTimeSpacing _timeSpacing = FinancialTimeSpacing.ordinal;
   _CandlestickExample _selectedExample = _CandlestickExample.priceAction;
+  _CandlestickExample _authoredExample = _CandlestickExample.priceAction;
+  bool _playgroundActive = false;
   _CandlestickPalette _candlePalette = _CandlestickPalette.theme;
   _CandlestickStyleRecipe _styleRecipe = _CandlestickStyleRecipe.balanced;
   _GapFrequency _gapFrequency = _GapFrequency.occasional;
@@ -113,17 +151,27 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   int _xTickCount = 8;
   bool _showXAxisLabels = true;
   bool _showYAxisLabels = true;
+  bool _showMarketContext = false;
+  Color? _contextThresholdColor = const Color(0xFFF59E0B);
+  Color? _contextWindowColor = const Color(0xFF3B82F6);
+  Color? _contextEventColor = const Color(0xFF7C3AED);
+  double _contextLineWidth = 1.5;
+  bool _contextLineDashed = true;
   int _revisionStep = 0;
   int? _activeCandleIndex;
   _CandlestickShowcaseMode _showcaseMode = _CandlestickShowcaseMode.workbench;
   _StockRangePreset _stockRange = _StockRangePreset.threeMonths;
   FinancialTimeSpacing _stockTimeSpacing = FinancialTimeSpacing.ordinal;
   bool _showVolumePane = true;
-  bool _applyingStockNavigatorPreview = false;
 
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 211,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _candles = _buildCandles();
     _timeDomain = FinancialTimeDomain(
       _candles.map((point) => point.timestamp!),
@@ -137,21 +185,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _stockCandles.map((point) => point.timestamp!),
     );
     final initialStockViewport = _stockViewportFor(_stockRange);
-    _stockNavigatorAnnotationController = AnnotationController(
-      initialAnnotations: [_stockNavigatorWindow(initialStockViewport)],
-    )..selectAnnotation(_stockNavigatorWindowId);
-    _stockGroupController.viewportListenable.addListener(
-      _syncStockNavigatorWindow,
-    );
     _stockGroupController.setViewport(initialStockViewport);
   }
 
   @override
   void dispose() {
-    _stockGroupController.viewportListenable.removeListener(
-      _syncStockNavigatorWindow,
-    );
-    _stockNavigatorAnnotationController.dispose();
+    _pinnedSummaryCandle.dispose();
+    _showcaseRandomizer.dispose();
     _optionsController.dispose();
     _chartController.dispose();
     _stockGroupController.dispose();
@@ -188,14 +228,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
       ],
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'candlestick-randomizer',
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
           final contentHeight = math.max(
             constraints.maxHeight,
             _showcaseMode == _CandlestickShowcaseMode.stock
-                ? (compact ? 2060.0 : 1360.0)
-                : (compact ? 1320.0 : 960.0),
+                ? (compact ? 2160.0 : 1360.0)
+                : (compact ? 1420.0 : 960.0),
           );
           final content = SizedBox(
             height: contentHeight,
@@ -275,13 +321,18 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               runSpacing: 8,
               children: [
                 for (final example in _CandlestickExample.values)
-                  ChoiceChip(
+                  ShowcaseExampleChoiceChip(
                     key: ValueKey('candlestick-example-${example.name}'),
-                    avatar: Icon(_exampleIcon(example), size: 18),
-                    label: Text(_exampleLabel(example)),
-                    selected: _selectedExample == example,
-                    onSelected: (_) => _applyExample(example),
+                    label: _exampleLabel(example),
+                    icon: _exampleIcon(example),
+                    selected: !_playgroundActive && _selectedExample == example,
+                    onSelected: () => _applyExample(example),
                   ),
+                PlaygroundChoiceChip(
+                  key: const ValueKey('candlestick-playground'),
+                  selected: _playgroundActive,
+                  onSelected: () => _setPlaygroundActive(true),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -346,19 +397,33 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             const SizedBox(height: 8),
             Expanded(
               flex: 5,
-              child: _buildStockPriceChart(displayCandles, compact: compact),
+              child: _buildStockAxisAlignedPane(
+                key: const ValueKey('candlestick-stock-price-frame'),
+                axisPosition: _yAxisPosition,
+                child: _buildStockPriceChart(displayCandles, compact: compact),
+              ),
             ),
             if (_showVolumePane) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: compact ? 156 : 138,
-                child: _buildStockVolumeChart(displayCandles, compact: compact),
+                child: _buildStockAxisAlignedPane(
+                  key: const ValueKey('candlestick-stock-volume-frame'),
+                  axisPosition: YAxisPosition.right,
+                  child: _buildStockVolumeChart(
+                    displayCandles,
+                    compact: compact,
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 8),
             SizedBox(
-              height: compact ? 230 : 190,
-              child: _buildStockNavigator(displayCandles, compact: compact),
+              height: compact ? 168 : 128,
+              child: _buildStockAxisAlignedPane(
+                key: const ValueKey('candlestick-stock-navigator-frame'),
+                child: _buildStockNavigator(displayCandles, compact: compact),
+              ),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -461,67 +526,92 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   Widget _buildStockPriceChart(
     List<CandlestickDataPoint> candles, {
     required bool compact,
-  }) => BravenChartPlus(
-    key: const ValueKey('candlestick-stock-price-chart'),
-    interactionGroupController: _stockGroupController,
-    interactionGroupOptions: const ChartInteractionGroupOptions(),
-    series: [
-      CandlestickChartSeries(
-        id: 'market-price',
-        name: 'Price',
-        unit: 'USD',
-        points: _styledCandles(candles),
-        candlestickStyle: _candlestickStyle,
-        animation: _candlestickAnimation,
-        densityGrouping: _densityGrouping,
-      ),
-      if (_showCloseAverage)
-        LineChartSeries(
-          id: 'market-average',
-          name: '$_averageWindow-session average',
-          points: _movingAverage(candles, _averageWindow),
-          color: _averageColor,
-          interpolation: LineInterpolation.monotone,
-          strokeWidth: _averageStrokeWidth,
+  }) => _buildPinnedSummaryLayer(
+    candles: candles,
+    title: 'Market price',
+    chart: BravenChartPlus(
+      key: const ValueKey('candlestick-stock-price-chart'),
+      onPointHover: _handlePinnedPointHover,
+      onPointTap: _handlePinnedPointTap,
+      onDataXCursorChanged: (dataX) =>
+          _handlePinnedDataXCursorChanged(dataX, candles),
+      onAnnotationDragged: _handlePinnedSummaryAnnotationDragged,
+      interactionGroupController: _stockGroupController,
+      interactionGroupOptions: const ChartInteractionGroupOptions(),
+      series: [
+        CandlestickChartSeries(
+          id: 'market-price',
+          name: 'Price',
+          unit: 'USD',
+          points: _styledCandles(candles),
+          candlestickStyle: _candlestickStyle,
+          animation: _candlestickAnimation,
+          densityGrouping: _densityGrouping,
         ),
-    ],
-    theme: _effectiveChartTheme(),
-    showLegend: _optionsController.options.showLegend,
-    legendStyle: _effectiveChartTheme().legendStyle,
-    showXScrollbar: _optionsController.options.showXScrollbar,
-    showYScrollbar: _optionsController.options.showYScrollbar,
-    grid: GridConfig(
-      horizontal: _optionsController.options.showGrid,
-      vertical: false,
-    ),
-    xAxisConfig: XAxisConfig(
-      showAxisLine: _optionsController.options.showAxisLines,
-      tickCount: compact ? 4 : 8,
-      labelFormatter: (value) => _formatStockSession(value, candles),
-    ),
-    yAxis: YAxisConfig(
-      position: YAxisPosition.right,
-      label: 'Price',
-      unit: 'USD',
-    ),
-    interactionConfig: InteractionConfig(
-      enableZoom: _optionsController.options.enableZoom,
-      enablePan: _optionsController.options.enablePan,
+        if (_showCloseAverage)
+          LineChartSeries(
+            id: 'market-average',
+            name: '$_averageWindow-session average',
+            points: _movingAverage(candles, _averageWindow),
+            color: _averageColor,
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: _averageStrokeWidth,
+          ),
+      ],
+      annotations: _buildPinnedSummaryAnnotations(
+        candles,
+        title: 'Market price',
+      ),
+      theme: _effectiveChartTheme(),
+      showLegend: _optionsController.options.showLegend,
+      legendStyle: _effectiveChartTheme().legendStyle.copyWith(
+        position: _legendPosition,
+        allowDragging: _legendDraggable,
+      ),
       showXScrollbar: _optionsController.options.showXScrollbar,
       showYScrollbar: _optionsController.options.showYScrollbar,
-      crosshair: CrosshairConfig(
-        enabled: _trackingEnabled,
-        mode: CrosshairMode.vertical,
-        displayMode: CrosshairDisplayMode.tracking,
-        interpolateValues: false,
-        showTrackingTooltip: _showTrackingTooltip,
-        showIntersectionMarkers: _showIntersectionMarkers,
-        intersectionMarkerRadius: _intersectionMarkerRadius,
-        showCoordinateLabels: _showCoordinateLabels,
-        style: _crosshairStyle,
+      grid: GridConfig(
+        horizontal: _optionsController.options.showGrid,
+        vertical: false,
       ),
-      tooltip: _tooltipConfig,
-      keyboard: KeyboardConfig(enabled: _keyboardEnabled),
+      xAxisConfig: XAxisConfig(
+        showAxisLine: _optionsController.options.showAxisLines,
+        tickCount: compact ? math.min(4, _xTickCount) : _xTickCount,
+        showTickLabels: _showXAxisLabels,
+        labelFormatter: (value) => _formatStockSession(value, candles),
+      ),
+      yAxis: YAxisConfig(
+        position: _yAxisPosition,
+        label: 'Price',
+        unit: 'USD',
+        minWidth: _stockAxisGutter,
+        maxWidth: _stockAxisGutter,
+        labelFormatter: _formatTwoDecimals,
+        showAxisLine: _optionsController.options.showAxisLines,
+        showTickLabels: _showYAxisLabels,
+      ),
+      interactionConfig: InteractionConfig(
+        enableZoom: _optionsController.options.enableZoom,
+        enablePan: _optionsController.options.enablePan,
+        enableSelection: _selectionEnabled,
+        showFocusBorder: _showFocusBorder,
+        enableFocusOnHover: false,
+        showXScrollbar: _optionsController.options.showXScrollbar,
+        showYScrollbar: _optionsController.options.showYScrollbar,
+        crosshair: CrosshairConfig(
+          enabled: _trackingEnabled,
+          mode: CrosshairMode.vertical,
+          displayMode: CrosshairDisplayMode.tracking,
+          interpolateValues: false,
+          showTrackingTooltip: _showTrackingTooltip,
+          showIntersectionMarkers: _showIntersectionMarkers,
+          intersectionMarkerRadius: _intersectionMarkerRadius,
+          showCoordinateLabels: _showCoordinateLabels,
+          style: _crosshairStyle,
+        ),
+        tooltip: _tooltipConfig,
+        keyboard: KeyboardConfig(enabled: _keyboardEnabled),
+      ),
     ),
   );
 
@@ -571,11 +661,19 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       position: YAxisPosition.right,
       label: 'Volume',
       unit: 'M',
+      minWidth: _stockAxisGutter,
+      maxWidth: _stockAxisGutter,
+      labelFormatter: _formatTwoDecimals,
       tickCount: 3,
+      showAxisLine: _optionsController.options.showAxisLines,
+      showTickLabels: _showYAxisLabels,
     ),
     interactionConfig: InteractionConfig(
       enableZoom: _optionsController.options.enableZoom,
       enablePan: _optionsController.options.enablePan,
+      enableSelection: _selectionEnabled,
+      showFocusBorder: _showFocusBorder,
+      enableFocusOnHover: false,
       crosshair: CrosshairConfig(
         enabled: _trackingEnabled,
         mode: CrosshairMode.vertical,
@@ -587,8 +685,22 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         style: _crosshairStyle,
       ),
       tooltip: _tooltipConfig,
+      keyboard: KeyboardConfig(enabled: _keyboardEnabled),
     ),
   );
+
+  Widget _buildStockAxisAlignedPane({
+    required Key key,
+    required Widget child,
+    YAxisPosition? axisPosition,
+  }) {
+    final padding = switch (axisPosition) {
+      null => const EdgeInsets.symmetric(horizontal: _stockOppositeGutter),
+      YAxisPosition.right => const EdgeInsets.only(left: _stockOppositeGutter),
+      _ => const EdgeInsets.only(right: _stockOppositeGutter),
+    };
+    return Padding(key: key, padding: padding, child: child);
+  }
 
   Widget _buildStockNavigator(
     List<CandlestickDataPoint> candles, {
@@ -597,57 +709,43 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Expanded(
-        child: BravenChartPlus(
+        child: CartesianNavigator(
           key: const ValueKey('candlestick-stock-navigator'),
           interactionGroupController: _stockGroupController,
-          interactionGroupOptions: const ChartInteractionGroupOptions(
-            synchronizeCursor: false,
-            synchronizeViewport: false,
+          fullDomain: ChartXViewport(min: candles.first.x, max: candles.last.x),
+          behavior: CartesianNavigatorBehavior(
+            minimumSpan: _stockNavigatorMinimumSpan(candles),
           ),
-          annotationController: _stockNavigatorAnnotationController,
-          persistentRangeAnnotationHandles: true,
-          onAnnotationDragUpdate: _handleStockNavigatorWindowPreview,
-          onAnnotationDragged: _handleStockNavigatorWindowChanged,
-          series: [
-            AreaChartSeries(
-              id: 'market-navigator',
-              name: 'Close',
-              points: [
-                for (final candle in candles)
-                  ChartDataPoint(
-                    x: candle.x,
-                    y: candle.close,
-                    timestamp: candle.timestamp,
-                  ),
-              ],
-              color: const Color(0xFF0EA5E9),
-              interpolation: LineInterpolation.monotone,
-              strokeWidth: 1.25,
-              fillOpacity: .12,
-            ),
-          ],
+          snapPolicy: CartesianNavigatorSnapPolicy.values(
+            candles.map((candle) => candle.x),
+          ),
+          overviewSeries: AreaChartSeries(
+            id: 'market-navigator',
+            name: 'Close',
+            points: [
+              for (final candle in candles)
+                ChartDataPoint(
+                  x: candle.x,
+                  y: candle.close,
+                  timestamp: candle.timestamp,
+                ),
+            ],
+            color: const Color(0xFF0EA5E9),
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 1.25,
+            fillOpacity: .12,
+          ),
           theme: _effectiveChartTheme(),
-          showLegend: false,
-          grid: const GridConfig(horizontal: false, vertical: false),
-          xAxisConfig: XAxisConfig(
-            showAxisLine: _optionsController.options.showAxisLines,
-            tickCount: compact ? 3 : 7,
-            labelFormatter: (value) => _formatStockSession(value, candles),
+          style: CartesianNavigatorStyle(
+            borderRadius: 6,
+            handleVisualHeight: compact ? 28 : 24,
           ),
-          yAxis: YAxisConfig(
-            position: YAxisPosition.right,
-            visible: false,
-            showAxisLine: false,
-            showTicks: false,
-            showTickLabels: false,
-            showCrosshairLabel: false,
-          ),
-          interactionConfig: const InteractionConfig(
-            enableZoom: false,
-            enablePan: false,
-            crosshair: CrosshairConfig(enabled: false),
-            tooltip: TooltipConfig(enabled: false),
-          ),
+          semanticLabel: 'Market session range',
+          onViewportChanged: (_) {
+            if (_stockRange != _StockRangePreset.custom) {
+              setState(() => _stockRange = _StockRangePreset.custom);
+            }
+          },
         ),
       ),
       const SizedBox(height: 4),
@@ -662,6 +760,14 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       ),
     ],
   );
+
+  double _stockNavigatorMinimumSpan(List<CandlestickDataPoint> candles) {
+    var minimum = double.infinity;
+    for (var index = 1; index < candles.length; index += 1) {
+      minimum = math.min(minimum, candles[index].x - candles[index - 1].x);
+    }
+    return minimum.isFinite && minimum > 0 ? minimum : 1;
+  }
 
   Widget _buildStockCodeReference() {
     final theme = Theme.of(context);
@@ -746,123 +852,6 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _stockGroupController.setViewport(_stockViewportFor(preset));
   }
 
-  RangeAnnotation _stockNavigatorWindow(ChartXViewport viewport) =>
-      RangeAnnotation(
-        id: _stockNavigatorWindowId,
-        startX: viewport.min,
-        endX: viewport.max,
-        fillColor: const Color(0x243B82F6),
-        borderColor: const Color(0xCC3B82F6),
-        allowDragging: true,
-        allowEditing: false,
-        snapToValue: true,
-        snapTolerance: .02,
-      );
-
-  void _syncStockNavigatorWindow() {
-    if (_applyingStockNavigatorPreview) return;
-    final viewport = _stockGroupController.viewport;
-    if (viewport == null) return;
-    final current = _stockNavigatorAnnotationController.getAnnotation(
-      _stockNavigatorWindowId,
-    );
-    if (current is RangeAnnotation &&
-        current.startX == viewport.min &&
-        current.endX == viewport.max) {
-      return;
-    }
-    _stockNavigatorAnnotationController.updateAnnotation(
-      _stockNavigatorWindowId,
-      _stockNavigatorWindow(viewport),
-    );
-    if (_stockNavigatorAnnotationController.selectedAnnotationId !=
-        _stockNavigatorWindowId) {
-      _stockNavigatorAnnotationController.selectAnnotation(
-        _stockNavigatorWindowId,
-      );
-    }
-  }
-
-  void _handleStockNavigatorWindowChanged(
-    ChartAnnotation annotation,
-    Offset _,
-  ) {
-    _applyStockNavigatorWindow(annotation, commitPresetState: true);
-    // The final snapped viewport can equal the latest live preview, in which
-    // case the group does not notify its listeners again. Commit the window
-    // annotation explicitly once the gesture ends.
-    _syncStockNavigatorWindow();
-  }
-
-  void _handleStockNavigatorWindowPreview(
-    ChartAnnotation annotation,
-    Offset _,
-  ) {
-    _applyingStockNavigatorPreview = true;
-    try {
-      _applyStockNavigatorWindow(annotation, commitPresetState: false);
-    } finally {
-      _applyingStockNavigatorPreview = false;
-    }
-  }
-
-  void _applyStockNavigatorWindow(
-    ChartAnnotation annotation, {
-    required bool commitPresetState,
-  }) {
-    if (annotation is! RangeAnnotation ||
-        annotation.id != _stockNavigatorWindowId ||
-        annotation.startX == null ||
-        annotation.endX == null) {
-      return;
-    }
-    final domainMin = _stockTimeDomain.xAt(0, _stockTimeSpacing);
-    final domainMax = _stockTimeDomain.xAt(
-      _stockCandles.length - 1,
-      _stockTimeSpacing,
-    );
-    var proposedMin = annotation.startX!.clamp(domainMin, domainMax).toDouble();
-    var proposedMax = annotation.endX!.clamp(domainMin, domainMax).toDouble();
-    final current = _stockGroupController.viewport;
-    if (current != null) {
-      final currentWidth = current.max - current.min;
-      final proposedWidth = annotation.endX! - annotation.startX!;
-      final isWindowMove =
-          (proposedWidth - currentWidth).abs() <= currentWidth * .01;
-      if (isWindowMove && annotation.startX! < domainMin) {
-        proposedMin = domainMin;
-        proposedMax = math.min(domainMax, domainMin + currentWidth);
-      } else if (isWindowMove && annotation.endX! > domainMax) {
-        proposedMax = domainMax;
-        proposedMin = math.max(domainMin, domainMax - currentWidth);
-      }
-    }
-    var start = _stockTimeDomain.nearestIndex(
-      math.min(proposedMin, proposedMax),
-      _stockTimeSpacing,
-    );
-    var end = _stockTimeDomain.nearestIndex(
-      math.max(proposedMin, proposedMax),
-      _stockTimeSpacing,
-    );
-    if (start == end) {
-      if (end < _stockCandles.length - 1) {
-        end++;
-      } else {
-        start--;
-      }
-    }
-    if (commitPresetState && _stockRange != _StockRangePreset.custom) {
-      setState(() => _stockRange = _StockRangePreset.custom);
-    }
-    _stockGroupController.setViewport(
-      ChartXViewport(
-        min: _stockTimeDomain.xAt(start, _stockTimeSpacing),
-        max: _stockTimeDomain.xAt(end, _stockTimeSpacing),
-      ),
-    );
-  }
-
   void _toggleStockTimeSpacing() {
     final current = _stockGroupController.viewport;
     final start = current == null
@@ -915,6 +904,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         final active = _activeCandleIndex == null
             ? null
             : _candles[_activeCandleIndex!];
+        final formatterRegistry = ChartFormatterRegistry(
+          customFormatters: {
+            'showcase.candlestick.session': (value, _) =>
+                _formatSession(value, displayCandles),
+          },
+        );
         return ChartCard(
           key: const ValueKey('candlestick-reference-card'),
           title: _useDensityStressData
@@ -945,19 +940,16 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               includeViewState: true,
               dataStorage: ChartDataStorage.inlineColumns,
               xAxisFormatterDescriptor: _sessionFormatterDescriptor,
+              yAxisFormatterDescriptors: {'y': _twoDecimalFormatter},
             ),
             tableOptions: ChartTableOptions(
               includeMetadata: true,
-              formatters: ChartFormatterRegistry(
-                customFormatters: {
-                  'showcase.candlestick.session': (value, _) =>
-                      _formatSession(value, displayCandles),
-                },
-              ),
+              formatters: formatterRegistry,
             ),
             tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
-            sourceOptions: const ChartDartSourceOptions(
+            sourceOptions: ChartDartSourceOptions(
               variableName: 'candlestickChart',
+              formatters: formatterRegistry,
             ),
             splitBreakpoint: 1,
             splitAxis: compact ? Axis.vertical : Axis.horizontal,
@@ -989,56 +981,73 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     ChartOptions options,
     List<CandlestickDataPoint> displayCandles, {
     required bool compact,
-  }) => BravenChartPlus(
-    key: const ValueKey('candlestick-reference-chart'),
-    bravenChartController: controller,
-    series: _buildSeries(displayCandles),
-    theme: _effectiveChartTheme(options),
-    showLegend: options.showLegend,
-    legendStyle: _effectiveChartTheme(options).legendStyle.copyWith(
-      position: _legendPosition,
-      allowDragging: _legendDraggable,
-    ),
-    showXScrollbar: options.showXScrollbar,
-    showYScrollbar: options.showYScrollbar,
-    grid: GridConfig(horizontal: options.showGrid, vertical: options.showGrid),
-    xAxisConfig: XAxisConfig(
-      label: _timeSpacing == FinancialTimeSpacing.ordinal
-          ? 'Trading session'
-          : 'Elapsed date',
-      showAxisLine: options.showAxisLines,
-      tickCount: compact ? math.min(5, _xTickCount) : _xTickCount,
-      showTickLabels: _showXAxisLabels,
-      labelFormatter: (value) => _formatSession(value, displayCandles),
-    ),
-    yAxis: YAxisConfig(
-      position: _yAxisPosition,
-      label: 'Price',
-      unit: 'USD',
-      showAxisLine: options.showAxisLines,
-      showTickLabels: _showYAxisLabels,
-    ),
-    interactionConfig: InteractionConfig(
-      enableZoom: options.enableZoom,
-      enablePan: options.enablePan,
-      enableSelection: _selectionEnabled,
-      showFocusBorder: _showFocusBorder,
-      enableFocusOnHover: false,
+  }) => _buildPinnedSummaryLayer(
+    candles: displayCandles,
+    title: 'Price',
+    chart: BravenChartPlus(
+      key: const ValueKey('candlestick-reference-chart'),
+      onPointHover: _handlePinnedPointHover,
+      onPointTap: _handlePinnedPointTap,
+      onDataXCursorChanged: (dataX) =>
+          _handlePinnedDataXCursorChanged(dataX, displayCandles),
+      onAnnotationDragged: _handlePinnedSummaryAnnotationDragged,
+      bravenChartController: controller,
+      series: _buildSeries(displayCandles),
+      annotations: [
+        ..._buildMarketContextAnnotations(displayCandles),
+        ..._buildPinnedSummaryAnnotations(displayCandles, title: 'Price'),
+      ],
+      theme: _effectiveChartTheme(options),
+      showLegend: options.showLegend,
+      legendStyle: _effectiveChartTheme(options).legendStyle.copyWith(
+        position: _legendPosition,
+        allowDragging: _legendDraggable,
+      ),
       showXScrollbar: options.showXScrollbar,
       showYScrollbar: options.showYScrollbar,
-      crosshair: CrosshairConfig(
-        enabled: _trackingEnabled,
-        mode: CrosshairMode.vertical,
-        displayMode: CrosshairDisplayMode.tracking,
-        interpolateValues: false,
-        showTrackingTooltip: _showTrackingTooltip,
-        showIntersectionMarkers: _showIntersectionMarkers,
-        intersectionMarkerRadius: _intersectionMarkerRadius,
-        showCoordinateLabels: _showCoordinateLabels,
-        style: _crosshairStyle,
+      grid: GridConfig(
+        horizontal: options.showGrid,
+        vertical: options.showGrid,
       ),
-      tooltip: _tooltipConfig,
-      keyboard: KeyboardConfig(enabled: _keyboardEnabled),
+      xAxisConfig: XAxisConfig(
+        label: _timeSpacing == FinancialTimeSpacing.ordinal
+            ? 'Trading session'
+            : 'Elapsed date',
+        showAxisLine: options.showAxisLines,
+        tickCount: compact ? math.min(5, _xTickCount) : _xTickCount,
+        showTickLabels: _showXAxisLabels,
+        labelFormatter: (value) => _formatSession(value, displayCandles),
+      ),
+      yAxis: YAxisConfig(
+        position: _yAxisPosition,
+        label: 'Price',
+        unit: 'USD',
+        labelFormatter: _formatTwoDecimals,
+        showAxisLine: options.showAxisLines,
+        showTickLabels: _showYAxisLabels,
+      ),
+      interactionConfig: InteractionConfig(
+        enableZoom: options.enableZoom,
+        enablePan: options.enablePan,
+        enableSelection: _selectionEnabled,
+        showFocusBorder: _showFocusBorder,
+        enableFocusOnHover: false,
+        showXScrollbar: options.showXScrollbar,
+        showYScrollbar: options.showYScrollbar,
+        crosshair: CrosshairConfig(
+          enabled: _trackingEnabled,
+          mode: CrosshairMode.vertical,
+          displayMode: CrosshairDisplayMode.tracking,
+          interpolateValues: false,
+          showTrackingTooltip: _showTrackingTooltip,
+          showIntersectionMarkers: _showIntersectionMarkers,
+          intersectionMarkerRadius: _intersectionMarkerRadius,
+          showCoordinateLabels: _showCoordinateLabels,
+          style: _crosshairStyle,
+        ),
+        tooltip: _tooltipConfig,
+        keyboard: KeyboardConfig(enabled: _keyboardEnabled),
+      ),
     ),
   );
 
@@ -1069,6 +1078,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         : candlestickTheme;
     return base.copyWith(
       candlestickTheme: effectiveCandlestickTheme,
+      interactionTheme: _customTrackingTheme
+          ? base.interactionTheme.copyWith(
+              crosshairColor: _focusColor,
+              selectionColor: _selectionColor,
+            )
+          : base.interactionTheme,
       animationTheme: base.animationTheme.copyWith(
         dataUpdateDuration: Duration(milliseconds: _animationDurationMs),
         dataUpdateCurve: _motionCurve.curve,
@@ -1122,6 +1137,122 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
     ];
   }
+
+  List<ChartAnnotation> _buildMarketContextAnnotations(
+    List<CandlestickDataPoint> candles,
+  ) {
+    if (!_showMarketContext || candles.length < 8 || _useDensityStressData) {
+      return const [];
+    }
+    final windowStart = math.max(1, candles.length ~/ 4);
+    final windowEnd = math.min(candles.length - 2, windowStart + 5);
+    final eventIndex = math.min(candles.length - 2, windowEnd + 3);
+    final visibleHigh = candles.map((point) => point.high).reduce(math.max);
+    final visibleLow = candles.map((point) => point.low).reduce(math.min);
+    final threshold = visibleLow + (visibleHigh - visibleLow) * .72;
+    final thresholdColor = _contextThresholdColor ?? const Color(0xFFF59E0B);
+    final windowColor = _contextWindowColor ?? const Color(0xFF3B82F6);
+    final eventColor = _contextEventColor ?? const Color(0xFF7C3AED);
+    return [
+      RangeAnnotation(
+        id: 'candlestick-event-window',
+        startX: candles[windowStart].x,
+        endX: candles[windowEnd].x,
+        label: 'Event window',
+        fillColor: windowColor.withValues(alpha: .10),
+        borderColor: windowColor.withValues(alpha: .48),
+        style: AnnotationStyle(borderWidth: _contextLineWidth),
+        allowDragging: false,
+        allowEditing: false,
+      ),
+      ThresholdAnnotation(
+        id: 'candlestick-risk-level',
+        axis: AnnotationAxis.y,
+        value: threshold,
+        label: 'Reference level',
+        lineColor: thresholdColor,
+        lineWidth: _contextLineWidth,
+        dashPattern: _contextLineDashed ? const [6, 4] : null,
+        allowDragging: false,
+        allowEditing: false,
+      ),
+      PointAnnotation(
+        id: 'candlestick-market-event',
+        seriesId: 'reference-ohlc',
+        dataPointIndex: eventIndex,
+        label: 'Market event',
+        markerShape: MarkerShape.star,
+        markerColor: eventColor,
+        markerSize: 12,
+        allowDragging: false,
+        allowEditing: false,
+      ),
+    ];
+  }
+
+  List<ChartAnnotation> _buildPinnedSummaryAnnotations(
+    List<CandlestickDataPoint> candles, {
+    required String title,
+  }) {
+    if (!_showPinnedSummary ||
+        _pinnedSummaryPresentation != _PinnedSummaryPresentation.annotation ||
+        candles.isEmpty) {
+      return const [];
+    }
+    final candle = _summaryCandleFor(candles);
+    final textColor = _effectiveSummaryTextColor;
+    return [
+      TextAnnotation.rich(
+        id: _pinnedSummaryAnnotationId,
+        label: 'Pinned OHLC summary',
+        position: _pinnedSummaryAnnotationPosition,
+        anchor: AnnotationAnchor.topLeft,
+        allowDragging: _pinnedSummaryDraggable,
+        allowEditing: false,
+        zIndex: 100,
+        richTextDelta: [
+          {
+            'insert': '● ',
+            'attributes': {
+              'fg': _effectiveSummaryAccentColor(candle).toARGB32(),
+            },
+          },
+          {
+            'insert': '$title\n',
+            'attributes': {'b': true, 'fg': textColor.toARGB32()},
+          },
+          if (candle.label case final label?)
+            {
+              'insert': '$label\n',
+              'attributes': {'fg': textColor.toARGB32()},
+            },
+          {
+            'insert': _formattedOhlcRows(candle),
+            'attributes': {'fg': textColor.toARGB32()},
+          },
+        ],
+        style: AnnotationStyle(
+          textStyle: TextStyle(
+            color: textColor,
+            fontSize: _pinnedSummaryFontSize,
+            fontFamily: 'monospace',
+            height: 1.35,
+          ),
+          backgroundColor: _paintedSummaryBackgroundColor,
+          borderColor: _effectiveSummaryBorderColor,
+          borderWidth: _pinnedSummaryBorderWidth,
+          borderRadius: BorderRadius.circular(_pinnedSummaryCornerRadius),
+          padding: EdgeInsets.all(_pinnedSummaryPadding),
+        ),
+      ),
+    ];
+  }
+
+  String _formattedOhlcRows(CandlestickDataPoint candle) =>
+      'Open   \$${candle.open.toStringAsFixed(2)}\n'
+      'High   \$${candle.high.toStringAsFixed(2)}\n'
+      'Low    \$${candle.low.toStringAsFixed(2)}\n'
+      'Close  \$${candle.close.toStringAsFixed(2)}';
 
   CandlestickChartStyle get _candlestickStyle => CandlestickChartStyle(
     risingBodyFillColor: _customDirectionColors ? _risingBodyColor : null,
@@ -1200,13 +1331,196 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         : const TooltipStyle(),
   );
 
+  String _formatTwoDecimals(double value) => value.toStringAsFixed(2);
+
+  bool get _summaryUsesDarkSurface =>
+      _effectiveChartTheme().backgroundColor.computeLuminance() < .35;
+
+  Color get _effectiveSummaryBackgroundColor {
+    if (!_pinnedSummaryBackgroundVisible) return Colors.transparent;
+    return _pinnedSummaryBackgroundColor ??
+        (_summaryUsesDarkSurface
+            ? const Color(0xFF111827)
+            : const Color(0xFFFFFFFF));
+  }
+
+  Color get _paintedSummaryBackgroundColor => _pinnedSummaryBackgroundVisible
+      ? _effectiveSummaryBackgroundColor.withValues(
+          alpha: _pinnedSummaryBackgroundOpacity,
+        )
+      : Colors.transparent;
+
+  Color get _effectiveSummaryBorderColor {
+    if (!_pinnedSummaryBorderVisible) return Colors.transparent;
+    return _pinnedSummaryBorderColor ??
+        (_summaryUsesDarkSurface
+            ? const Color(0xFF475569)
+            : const Color(0xFFCBD5E1));
+  }
+
+  Color get _effectiveSummaryTextColor =>
+      _pinnedSummaryTextColor ??
+      (_summaryUsesDarkSurface
+          ? const Color(0xFFF8FAFC)
+          : const Color(0xFF1F2937));
+
+  Color _effectiveSummaryAccentColor(CandlestickDataPoint candle) =>
+      _pinnedSummaryAccentColor ??
+      switch (candle.direction) {
+        CandlestickDirection.rising => const Color(0xFF0F766E),
+        CandlestickDirection.falling => const Color(0xFFB91C1C),
+        CandlestickDirection.doji => const Color(0xFF475569),
+      };
+
+  CandlestickDataPoint _summaryCandleFor(List<CandlestickDataPoint> candles) {
+    final active = _pinnedSummaryCandle.value;
+    if (active != null &&
+        candles.any(
+          (candidate) =>
+              candidate.x == active.x &&
+              candidate.timestamp == active.timestamp,
+        )) {
+      return active;
+    }
+    return candles.last;
+  }
+
+  void _setPinnedSummaryCandle(CandlestickDataPoint? candle) {
+    final previous = _pinnedSummaryCandle.value;
+    if (previous?.x == candle?.x && previous?.timestamp == candle?.timestamp) {
+      return;
+    }
+    _pinnedSummaryCandle.value = candle;
+    if (mounted &&
+        _showPinnedSummary &&
+        _pinnedSummaryPresentation == _PinnedSummaryPresentation.annotation) {
+      setState(() {});
+    }
+  }
+
+  void _handlePinnedPointHover(ChartDataPoint? point, String? _) {
+    if (point is CandlestickDataPoint) {
+      _setPinnedSummaryCandle(point);
+    }
+  }
+
+  void _handlePinnedDataXCursorChanged(
+    double? dataX,
+    List<CandlestickDataPoint> candles,
+  ) {
+    if (dataX == null || candles.isEmpty) {
+      _setPinnedSummaryCandle(null);
+      return;
+    }
+    var low = 0;
+    var high = candles.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (candles[middle].x < dataX) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    final index = switch (low) {
+      <= 0 => 0,
+      _ when low >= candles.length => candles.length - 1,
+      _ =>
+        (dataX - candles[low - 1].x).abs() <= (candles[low].x - dataX).abs()
+            ? low - 1
+            : low,
+    };
+    _setPinnedSummaryCandle(candles[index]);
+  }
+
+  void _handlePinnedPointTap(ChartDataPoint point, String _) {
+    if (point is CandlestickDataPoint) {
+      _setPinnedSummaryCandle(point);
+    }
+  }
+
+  void _handlePinnedSummaryAnnotationDragged(
+    ChartAnnotation annotation,
+    Offset position,
+  ) {
+    if (annotation.id != _pinnedSummaryAnnotationId ||
+        annotation is! TextAnnotation) {
+      return;
+    }
+    setState(() => _pinnedSummaryAnnotationPosition = position);
+  }
+
+  Widget _buildPinnedSummaryLayer({
+    required Widget chart,
+    required List<CandlestickDataPoint> candles,
+    required String title,
+  }) {
+    if (!_showPinnedSummary ||
+        _pinnedSummaryPresentation != _PinnedSummaryPresentation.overlay ||
+        candles.isEmpty) {
+      return chart;
+    }
+    final top = switch (_pinnedSummaryCorner) {
+      _PinnedSummaryCorner.topLeft || _PinnedSummaryCorner.topRight => 12.0,
+      _ => null,
+    };
+    final bottom = switch (_pinnedSummaryCorner) {
+      _PinnedSummaryCorner.bottomLeft ||
+      _PinnedSummaryCorner.bottomRight => 12.0,
+      _ => null,
+    };
+    final left = switch (_pinnedSummaryCorner) {
+      _PinnedSummaryCorner.topLeft || _PinnedSummaryCorner.bottomLeft => 12.0,
+      _ => null,
+    };
+    final right = switch (_pinnedSummaryCorner) {
+      _PinnedSummaryCorner.topRight || _PinnedSummaryCorner.bottomRight => 12.0,
+      _ => null,
+    };
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        chart,
+        Positioned(
+          key: const ValueKey('candlestick-pinned-summary-position'),
+          top: top,
+          right: right,
+          bottom: bottom,
+          left: left,
+          child: IgnorePointer(
+            child: ValueListenableBuilder<CandlestickDataPoint?>(
+              valueListenable: _pinnedSummaryCandle,
+              builder: (context, hovered, _) {
+                final candle = _summaryCandleFor(candles);
+                return _PinnedOhlcSummaryCard(
+                  title: title,
+                  candle: candle,
+                  backgroundColor: _paintedSummaryBackgroundColor,
+                  showShadow: _pinnedSummaryBackgroundVisible,
+                  borderColor: _effectiveSummaryBorderColor,
+                  textColor: _effectiveSummaryTextColor,
+                  accentColor: _effectiveSummaryAccentColor(candle),
+                  borderWidth: _pinnedSummaryBorderWidth,
+                  cornerRadius: _pinnedSummaryCornerRadius,
+                  padding: _pinnedSummaryPadding,
+                  fontSize: _pinnedSummaryFontSize,
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   List<Widget> _buildOptions() => [
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Example data',
         icon: Icons.dataset_outlined,
         children: [
-          if (!_useDensityStressData) ...[
+          if (_playgroundActive || !_useDensityStressData) ...[
             IntSliderOption(
               key: const ValueKey('candlestick-session-count'),
               label: 'Visible sessions',
@@ -1271,10 +1585,64 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           ),
         ],
       ),
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
+      OptionSection(
+        title: 'Annotations and events',
+        icon: Icons.event_note_outlined,
+        children: [
+          BoolOption(
+            key: const ValueKey('candlestick-market-context'),
+            label: 'Show market context',
+            subtitle:
+                'Combine a session range, price level, and candle-linked event',
+            value: _showMarketContext,
+            onChanged: (value) => setState(() => _showMarketContext = value),
+          ),
+          if (_playgroundActive || _showMarketContext) ...[
+            _AnnotationPaletteOption(
+              key: const ValueKey('candlestick-context-threshold-color'),
+              label: 'Price level colour',
+              value: _contextThresholdColor,
+              onChanged: (value) =>
+                  setState(() => _contextThresholdColor = value),
+            ),
+            _AnnotationPaletteOption(
+              key: const ValueKey('candlestick-context-window-color'),
+              label: 'Session window colour',
+              value: _contextWindowColor,
+              onChanged: (value) => setState(() => _contextWindowColor = value),
+            ),
+            _AnnotationPaletteOption(
+              key: const ValueKey('candlestick-context-event-color'),
+              label: 'Event marker colour',
+              value: _contextEventColor,
+              onChanged: (value) => setState(() => _contextEventColor = value),
+            ),
+            SliderOption(
+              key: const ValueKey('candlestick-context-line-width'),
+              label: 'Annotation stroke width',
+              value: _contextLineWidth,
+              min: .5,
+              max: 4,
+              divisions: 14,
+              suffix: 'px',
+              onChanged: (value) => setState(() => _contextLineWidth = value),
+            ),
+            BoolOption(
+              key: const ValueKey('candlestick-context-dashed'),
+              label: 'Dash price level',
+              value: _contextLineDashed,
+              onChanged: (value) => setState(() => _contextLineDashed = value),
+            ),
+          ],
+        ],
+      ),
     OptionSection(
-      title: 'Tracking and time',
+      title: 'Tracking and tooltips',
       icon: Icons.track_changes,
       children: [
+        const _OptionGroupLabel('Crosshair tracking'),
         BoolOption(
           key: const ValueKey('candlestick-tracking-enabled'),
           label: 'Track OHLC samples',
@@ -1283,22 +1651,245 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _trackingEnabled,
           onChanged: (value) => setState(() => _trackingEnabled = value),
         ),
-        if (_trackingEnabled)
+        if (_playgroundActive || _trackingEnabled)
           BoolOption(
             key: const ValueKey('candlestick-tracking-tooltip'),
-            label: 'Show OHLC tooltip',
-            subtitle: 'Open, high, low, close, change, and direction',
+            label: 'Show crosshair OHLC panel',
+            subtitle: 'All tracked series at the crosshair X position',
             value: _showTrackingTooltip,
             onChanged: (value) => setState(() => _showTrackingTooltip = value),
           ),
+        if (_playgroundActive || _trackingEnabled) ...[
+          BoolOption(
+            key: const ValueKey('candlestick-coordinate-labels'),
+            label: 'Show crosshair axis values',
+            subtitle: 'Small X and Y value labels attached to the axes',
+            value: _showCoordinateLabels,
+            onChanged: (value) => setState(() => _showCoordinateLabels = value),
+          ),
+          BoolOption(
+            key: const ValueKey('candlestick-intersection-markers'),
+            label: 'Show crosshair intersection dot',
+            subtitle: 'A marker only; it does not render another value label',
+            value: _showIntersectionMarkers,
+            onChanged: (value) =>
+                setState(() => _showIntersectionMarkers = value),
+          ),
+          if (_playgroundActive || _showIntersectionMarkers)
+            SliderOption(
+              key: const ValueKey('candlestick-marker-radius'),
+              label: 'Intersection dot radius',
+              value: _intersectionMarkerRadius,
+              min: 2,
+              max: 10,
+              divisions: 8,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _intersectionMarkerRadius = value),
+            ),
+          SliderOption(
+            key: const ValueKey('candlestick-crosshair-width'),
+            label: 'Crosshair width',
+            value: _crosshairLineWidth,
+            min: .5,
+            max: 4,
+            divisions: 14,
+            suffix: 'px',
+            onChanged: (value) => setState(() => _crosshairLineWidth = value),
+          ),
+          BoolOption(
+            key: const ValueKey('candlestick-crosshair-dashed'),
+            label: 'Use dashed crosshair',
+            value: _crosshairDashed,
+            onChanged: (value) => setState(() => _crosshairDashed = value),
+          ),
+        ],
+        const _OptionGroupLabel('Candle hover'),
         BoolOption(
           key: const ValueKey('candlestick-point-tooltip'),
-          label: 'Show point tooltip',
-          subtitle: 'Display one candle tooltip on hover or selection',
+          label: 'Show candle hover card',
+          subtitle:
+              'One directly hit candle; independent of the crosshair panel',
           value: _showPointTooltip,
           onChanged: (value) => setState(() => _showPointTooltip = value),
         ),
-        if (_showcaseMode == _CandlestickShowcaseMode.workbench) ...[
+        if (_playgroundActive || _showPointTooltip) ...[
+          EnumOption<TooltipPosition>(
+            key: const ValueKey('candlestick-tooltip-position'),
+            label: 'Hover card position',
+            value: _tooltipPosition,
+            values: TooltipPosition.values,
+            labelBuilder: (value) => value.name,
+            onChanged: (value) => setState(() => _tooltipPosition = value),
+          ),
+          BoolOption(
+            key: const ValueKey('candlestick-tooltip-follow-cursor'),
+            label: 'Hover card follows cursor',
+            value: _tooltipFollowsCursor,
+            onChanged: (value) => setState(() => _tooltipFollowsCursor = value),
+          ),
+        ],
+        const _OptionGroupLabel('Pinned summary'),
+        BoolOption(
+          key: const ValueKey('candlestick-pinned-summary'),
+          label: 'Show pinned OHLC summary',
+          subtitle:
+              'Keep the active candle visible as an overlay or chart annotation',
+          value: _showPinnedSummary,
+          onChanged: (value) => setState(() => _showPinnedSummary = value),
+        ),
+        if (_playgroundActive || _showPinnedSummary) ...[
+          EnumOption<_PinnedSummaryPresentation>(
+            key: const ValueKey('candlestick-pinned-summary-presentation'),
+            label: 'Presentation',
+            value: _pinnedSummaryPresentation,
+            values: _PinnedSummaryPresentation.values,
+            labelBuilder: (value) => switch (value) {
+              _PinnedSummaryPresentation.overlay => 'Overlay card',
+              _PinnedSummaryPresentation.annotation => 'Chart text annotation',
+            },
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryPresentation = value),
+          ),
+          if (_playgroundActive ||
+              _pinnedSummaryPresentation == _PinnedSummaryPresentation.overlay)
+            EnumOption<_PinnedSummaryCorner>(
+              key: const ValueKey('candlestick-pinned-summary-corner'),
+              label: 'Overlay position',
+              value: _pinnedSummaryCorner,
+              values: _PinnedSummaryCorner.values,
+              labelBuilder: (value) => switch (value) {
+                _PinnedSummaryCorner.topLeft => 'Top left',
+                _PinnedSummaryCorner.topRight => 'Top right',
+                _PinnedSummaryCorner.bottomLeft => 'Bottom left',
+                _PinnedSummaryCorner.bottomRight => 'Bottom right',
+              },
+              onChanged: (value) =>
+                  setState(() => _pinnedSummaryCorner = value),
+            ),
+          if (_playgroundActive ||
+              _pinnedSummaryPresentation ==
+                  _PinnedSummaryPresentation.annotation) ...[
+            BoolOption(
+              key: const ValueKey('candlestick-pinned-summary-draggable'),
+              label: 'Allow annotation dragging',
+              subtitle: 'Move the native TextAnnotation on the chart canvas',
+              value: _pinnedSummaryDraggable,
+              onChanged: (value) =>
+                  setState(() => _pinnedSummaryDraggable = value),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const ValueKey(
+                  'candlestick-pinned-summary-reset-position',
+                ),
+                onPressed: () => setState(
+                  () => _pinnedSummaryAnnotationPosition = const Offset(96, 48),
+                ),
+                icon: const Icon(Icons.center_focus_strong, size: 16),
+                label: const Text('Reset annotation position'),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          const _OptionGroupLabel('Summary appearance'),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-summary-background'),
+            label: 'Background colour',
+            value: _pinnedSummaryBackgroundVisible
+                ? _pinnedSummaryBackgroundColor ??
+                      _effectiveSummaryBackgroundColor
+                : null,
+            onChanged: (value) => setState(() {
+              _pinnedSummaryBackgroundVisible = value != null;
+              _pinnedSummaryBackgroundColor = value;
+            }),
+          ),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-summary-border'),
+            label: 'Border colour',
+            value: _pinnedSummaryBorderVisible
+                ? _pinnedSummaryBorderColor ?? _effectiveSummaryBorderColor
+                : null,
+            onChanged: (value) => setState(() {
+              _pinnedSummaryBorderVisible = value != null;
+              _pinnedSummaryBorderColor = value;
+            }),
+          ),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-summary-text'),
+            label: 'Text colour',
+            value: _pinnedSummaryTextColor,
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryTextColor = value),
+          ),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-summary-accent'),
+            label: 'Accent colour',
+            value: _pinnedSummaryAccentColor,
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryAccentColor = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-summary-opacity'),
+            label: 'Background opacity',
+            value: _pinnedSummaryBackgroundOpacity,
+            min: .2,
+            max: 1,
+            divisions: 16,
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryBackgroundOpacity = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-summary-border-width'),
+            label: 'Border width',
+            value: _pinnedSummaryBorderWidth,
+            min: 0,
+            max: 4,
+            divisions: 16,
+            suffix: 'px',
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryBorderWidth = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-summary-corner-radius'),
+            label: 'Corner radius',
+            value: _pinnedSummaryCornerRadius,
+            min: 0,
+            max: 20,
+            divisions: 20,
+            suffix: 'px',
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryCornerRadius = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-summary-padding'),
+            label: 'Inner padding',
+            value: _pinnedSummaryPadding,
+            min: 4,
+            max: 24,
+            divisions: 20,
+            suffix: 'px',
+            onChanged: (value) => setState(() => _pinnedSummaryPadding = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-summary-font-size'),
+            label: 'Text size',
+            value: _pinnedSummaryFontSize,
+            min: 10,
+            max: 18,
+            divisions: 8,
+            suffix: 'px',
+            onChanged: (value) =>
+                setState(() => _pinnedSummaryFontSize = value),
+          ),
+        ],
+        if (_playgroundActive ||
+            _showcaseMode == _CandlestickShowcaseMode.workbench) ...[
+          const _OptionGroupLabel('Time scale'),
           EnumOption<FinancialTimeSpacing>(
             key: const ValueKey('candlestick-time-spacing'),
             label: 'Time spacing',
@@ -1318,7 +1909,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ],
       ],
     ),
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Motion and revisions',
         icon: Icons.animation_outlined,
@@ -1334,7 +1926,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             },
             onChanged: (value) => setState(() => _entranceAnimation = value),
           ),
-          if (_entranceAnimation == CandlestickAnimationMode.reveal)
+          if (_playgroundActive ||
+              _entranceAnimation == CandlestickAnimationMode.reveal)
             SliderOption(
               key: const ValueKey('candlestick-entrance-stagger'),
               label: 'Entrance stagger',
@@ -1410,62 +2003,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       title: 'Interaction detail',
       icon: Icons.ads_click_outlined,
       children: [
-        BoolOption(
-          key: const ValueKey('candlestick-coordinate-labels'),
-          label: 'Show axis values',
-          value: _showCoordinateLabels,
-          onChanged: (value) => setState(() => _showCoordinateLabels = value),
-        ),
-        BoolOption(
-          key: const ValueKey('candlestick-intersection-markers'),
-          label: 'Show tracking marker',
-          value: _showIntersectionMarkers,
-          onChanged: (value) =>
-              setState(() => _showIntersectionMarkers = value),
-        ),
-        if (_showIntersectionMarkers)
-          SliderOption(
-            key: const ValueKey('candlestick-marker-radius'),
-            label: 'Tracking marker radius',
-            value: _intersectionMarkerRadius,
-            min: 2,
-            max: 10,
-            divisions: 8,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) =>
-                setState(() => _intersectionMarkerRadius = value),
-          ),
-        SliderOption(
-          key: const ValueKey('candlestick-crosshair-width'),
-          label: 'Crosshair width',
-          value: _crosshairLineWidth,
-          min: .5,
-          max: 4,
-          divisions: 14,
-          suffix: 'px',
-          onChanged: (value) => setState(() => _crosshairLineWidth = value),
-        ),
-        BoolOption(
-          key: const ValueKey('candlestick-crosshair-dashed'),
-          label: 'Use dashed crosshair',
-          value: _crosshairDashed,
-          onChanged: (value) => setState(() => _crosshairDashed = value),
-        ),
-        EnumOption<TooltipPosition>(
-          key: const ValueKey('candlestick-tooltip-position'),
-          label: 'Point tooltip position',
-          value: _tooltipPosition,
-          values: TooltipPosition.values,
-          labelBuilder: (value) => value.name,
-          onChanged: (value) => setState(() => _tooltipPosition = value),
-        ),
-        BoolOption(
-          key: const ValueKey('candlestick-tooltip-follow-cursor'),
-          label: 'Tooltip follows cursor',
-          value: _tooltipFollowsCursor,
-          onChanged: (value) => setState(() => _tooltipFollowsCursor = value),
-        ),
+        const _OptionGroupLabel('Selection'),
         BoolOption(
           key: const ValueKey('candlestick-selection-enabled'),
           label: 'Enable candle selection',
@@ -1480,7 +2018,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
         BoolOption(
           key: const ValueKey('candlestick-focus-border'),
-          label: 'Show keyboard focus border',
+          label: 'Show chart focus outline',
+          subtitle:
+              'Optional plot boundary after click or keyboard focus; off by default',
           value: _showFocusBorder,
           onChanged: (value) => setState(() => _showFocusBorder = value),
         ),
@@ -1493,11 +2033,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         BoolOption(
           key: const ValueKey('candlestick-custom-tracking-theme'),
           label: 'Override tracking colours',
-          subtitle: 'Style the crosshair, coordinate labels, and both tooltips',
+          subtitle: 'Style tracking, candle selection/focus, and both tooltips',
           value: _customTrackingTheme,
           onChanged: (value) => setState(() => _customTrackingTheme = value),
         ),
-        if (_customTrackingTheme) ...[
+        if (_playgroundActive || _customTrackingTheme) ...[
+          const _OptionGroupLabel('Tracking lines'),
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-crosshair-color'),
             label: 'Crosshair colour',
@@ -1518,6 +2059,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             onChanged: (value) =>
                 setState(() => _coordinateLabelTextColor = value),
           ),
+          const _OptionGroupLabel('Candle states'),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-selection-color'),
+            label: 'Selected candle',
+            value: _selectionColor,
+            onChanged: (value) => setState(() => _selectionColor = value),
+          ),
+          _AnnotationPaletteOption(
+            key: const ValueKey('candlestick-focus-color'),
+            label: 'Focused candle',
+            value: _focusColor,
+            onChanged: (value) => setState(() => _focusColor = value),
+          ),
+          const _OptionGroupLabel('Tooltips'),
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-tooltip-background'),
             label: 'Tooltip background',
@@ -1572,7 +2127,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ],
       ],
     ),
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Data density',
         icon: Icons.density_medium,
@@ -1585,7 +2141,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             onChanged: (value) =>
                 setState(() => _densityGroupingEnabled = value),
           ),
-          if (_densityGroupingEnabled) ...[
+          if (_playgroundActive || _densityGroupingEnabled) ...[
             SliderOption(
               key: const ValueKey('candlestick-target-group-width'),
               label: 'Target group width',
@@ -1709,7 +2265,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _customDirectionColors,
           onChanged: (value) => setState(() => _customDirectionColors = value),
         ),
-        if (_customDirectionColors) ...[
+        if (_playgroundActive || _customDirectionColors) ...[
           const _OptionGroupLabel('Body fills'),
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-rising-body-color'),
@@ -1729,7 +2285,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _dojiBodyColor,
             onChanged: (value) => setState(() => _dojiBodyColor = value),
           ),
-          if (_showBodyBorder) ...[
+          if (_playgroundActive || _showBodyBorder) ...[
             const _OptionGroupLabel('Body borders'),
             _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-border-color'),
@@ -1750,7 +2306,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               onChanged: (value) => setState(() => _dojiBorderColor = value),
             ),
           ],
-          if (_showWicks) ...[
+          if (_playgroundActive || _showWicks) ...[
             const _OptionGroupLabel('Wicks'),
             _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-wick-color'),
@@ -1779,7 +2335,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _highlightLatestCandle,
           onChanged: (value) => setState(() => _highlightLatestCandle = value),
         ),
-        if (_highlightLatestCandle) ...[
+        if (_playgroundActive || _highlightLatestCandle) ...[
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-highlight-body-color'),
             label: 'Highlight body',
@@ -1854,7 +2410,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showBodyBorder,
           onChanged: (value) => setState(() => _showBodyBorder = value),
         ),
-        if (_showBodyBorder)
+        if (_playgroundActive || _showBodyBorder)
           SliderOption(
             key: const ValueKey('candlestick-border-width'),
             label: 'Border width',
@@ -1871,7 +2427,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showWicks,
           onChanged: (value) => setState(() => _showWicks = value),
         ),
-        if (_showWicks)
+        if (_playgroundActive || _showWicks)
           SliderOption(
             key: const ValueKey('candlestick-wick-width'),
             label: 'Wick width',
@@ -1889,7 +2445,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showCloseAverage,
           onChanged: (value) => setState(() => _showCloseAverage = value),
         ),
-        if (_showCloseAverage) ...[
+        if (_playgroundActive || _showCloseAverage) ...[
           SliderOption(
             key: const ValueKey('candlestick-average-window'),
             label: 'Average window',
@@ -1935,13 +2491,15 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             setState(() {});
           },
         ),
-        BoolOption(
-          key: const ValueKey('candlestick-direction-key'),
-          label: 'Show direction key',
-          subtitle: 'Explain rising, falling, doji, and overlay marks',
-          value: _showDirectionLegend,
-          onChanged: (value) => setState(() => _showDirectionLegend = value),
-        ),
+        if (_playgroundActive ||
+            _showcaseMode == _CandlestickShowcaseMode.workbench)
+          BoolOption(
+            key: const ValueKey('candlestick-direction-key'),
+            label: 'Show direction key',
+            subtitle: 'Explain rising, falling, doji, and overlay marks',
+            value: _showDirectionLegend,
+            onChanged: (value) => setState(() => _showDirectionLegend = value),
+          ),
         EnumOption<LegendPosition>(
           key: const ValueKey('candlestick-legend-position'),
           label: 'Series legend position',
@@ -2059,6 +2617,148 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     });
   }
 
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    const colors = <Color>[
+      Color(0xFF2563EB),
+      Color(0xFF0D9488),
+      Color(0xFFF59E0B),
+      Color(0xFF7C3AED),
+      Color(0xFFEF4444),
+      Color(0xFF334155),
+      Color(0xFFF8FAFC),
+    ];
+    Color randomColor() => colors[random.nextInt(colors.length)];
+    final dataProfile = _CandlestickDataProfile
+        .values[random.nextInt(_CandlestickDataProfile.values.length)];
+    final recipe = _CandlestickStyleRecipe
+        .values[random.nextInt(_CandlestickStyleRecipe.values.length)];
+    _applyStyleRecipe(recipe);
+    setState(() {
+      _showcaseMode = _CandlestickShowcaseMode.workbench;
+      _sessionCount = 18 + random.nextInt(83);
+      _rangeScale = 0.55 + random.nextDouble() * 2.2;
+      _trendBias = -0.65 + random.nextDouble() * 1.3;
+      _gapFrequency =
+          _GapFrequency.values[random.nextInt(_GapFrequency.values.length)];
+      _useDensityStressData = false;
+      _densityGroupingEnabled = false;
+      _candles = _buildScenarioCandles(
+        profile: dataProfile,
+        count: _sessionCount,
+        rangeScale: _rangeScale,
+        trendBias: _trendBias,
+        gapFrequency: _gapFrequency,
+      );
+      _timeDomain = FinancialTimeDomain(
+        _candles.map((point) => point.timestamp!),
+      );
+      _bodyFillMode = CandlestickBodyFillMode
+          .values[random.nextInt(CandlestickBodyFillMode.values.length)];
+      _bodyWidthFactor = 0.42 + random.nextDouble() * 0.5;
+      _minBodyWidth = 1 + random.nextDouble() * 3;
+      _maxBodyWidth = 10 + random.nextDouble() * 16;
+      _bodyBorderWidth = 0.5 + random.nextDouble() * 2.5;
+      _wickWidth = 0.5 + random.nextDouble() * 2.5;
+      _cornerRadius = random.nextDouble() * 5;
+      _minimumBodyHeight = 0.5 + random.nextDouble() * 3.5;
+      _showBodyBorder = random.nextBool();
+      _showWicks = random.nextBool();
+      _showCloseAverage = random.nextBool();
+      _showDirectionLegend = random.nextBool();
+      _averageWindow = 3 + random.nextInt(18);
+      _averageStrokeWidth = 1 + random.nextDouble() * 3;
+      _averageColor = randomColor();
+      _customDirectionColors = random.nextBool();
+      _risingBodyColor = randomColor();
+      _fallingBodyColor = randomColor();
+      _dojiBodyColor = randomColor();
+      _risingBorderColor = randomColor();
+      _fallingBorderColor = randomColor();
+      _dojiBorderColor = randomColor();
+      _risingWickColor = randomColor();
+      _fallingWickColor = randomColor();
+      _dojiWickColor = randomColor();
+      _highlightLatestCandle = random.nextBool();
+      _highlightBodyColor = randomColor();
+      _highlightBorderColor = randomColor();
+      _highlightWickColor = randomColor();
+      _trackingEnabled = random.nextBool();
+      _showTrackingTooltip = random.nextBool();
+      _showPointTooltip = random.nextBool();
+      _showPinnedSummary = random.nextBool();
+      _pinnedSummaryPresentation = _PinnedSummaryPresentation
+          .values[random.nextInt(_PinnedSummaryPresentation.values.length)];
+      _pinnedSummaryCorner = _PinnedSummaryCorner
+          .values[random.nextInt(_PinnedSummaryCorner.values.length)];
+      _pinnedSummaryDraggable = random.nextBool();
+      _pinnedSummaryBackgroundVisible = random.nextBool();
+      _pinnedSummaryBorderVisible = random.nextBool();
+      _pinnedSummaryBackgroundColor = randomColor();
+      _pinnedSummaryBorderColor = randomColor();
+      _pinnedSummaryTextColor = randomColor();
+      _pinnedSummaryAccentColor = randomColor();
+      _pinnedSummaryBackgroundOpacity = 0.35 + random.nextDouble() * 0.65;
+      _pinnedSummaryBorderWidth = random.nextDouble() * 3;
+      _pinnedSummaryCornerRadius = random.nextDouble() * 16;
+      _pinnedSummaryPadding = 4 + random.nextDouble() * 12;
+      _pinnedSummaryFontSize = 8 + random.nextDouble() * 10;
+      _showCoordinateLabels = random.nextBool();
+      _showIntersectionMarkers = random.nextBool();
+      _intersectionMarkerRadius = 2 + random.nextDouble() * 6;
+      _crosshairLineWidth = 0.5 + random.nextDouble() * 2.5;
+      _crosshairDashed = random.nextBool();
+      _customTrackingTheme = random.nextBool();
+      _crosshairColor = randomColor();
+      _coordinateLabelBackgroundColor = randomColor();
+      _coordinateLabelTextColor = randomColor();
+      _tooltipBackgroundColor = randomColor();
+      _tooltipBorderColor = randomColor();
+      _tooltipTextColor = randomColor();
+      _selectionColor = randomColor();
+      _focusColor = randomColor();
+      _tooltipBorderWidth = random.nextDouble() * 3;
+      _tooltipCornerRadius = random.nextDouble() * 14;
+      _tooltipFontSize = 8 + random.nextDouble() * 10;
+      _tooltipPosition =
+          TooltipPosition.values[random.nextInt(TooltipPosition.values.length)];
+      _tooltipFollowsCursor = random.nextBool();
+      _selectionEnabled = random.nextBool();
+      _keyboardEnabled = random.nextBool();
+      _showFocusBorder = random.nextBool();
+      _entranceAnimation = CandlestickAnimationMode
+          .values[random.nextInt(CandlestickAnimationMode.values.length)];
+      _dataUpdateAnimation =
+          CandlestickDataUpdateAnimationMode.values[random.nextInt(
+            CandlestickDataUpdateAnimationMode.values.length,
+          )];
+      _animationDurationMs = 180 + random.nextInt(1021);
+      _entranceStagger = random.nextDouble();
+      _motionCurve = _CandlestickMotionCurve
+          .values[random.nextInt(_CandlestickMotionCurve.values.length)];
+      _revisionMagnitude = 1 + random.nextDouble() * 10;
+      _targetGroupWidth = 2 + random.nextDouble() * 10;
+      _minimumPointsPerGroup = 2 + random.nextInt(8);
+      _timeSpacing = FinancialTimeSpacing
+          .values[random.nextInt(FinancialTimeSpacing.values.length)];
+      _legendPosition =
+          LegendPosition.values[random.nextInt(LegendPosition.values.length)];
+      _yAxisPosition =
+          YAxisPosition.values[random.nextInt(YAxisPosition.values.length)];
+      _xTickCount = 4 + random.nextInt(9);
+      _showXAxisLabels = random.nextBool();
+      _showYAxisLabels = random.nextBool();
+      _legendDraggable = random.nextBool();
+      _showMarketContext = random.nextBool();
+      _contextThresholdColor = randomColor();
+      _contextWindowColor = randomColor();
+      _contextEventColor = randomColor();
+      _contextLineWidth = 0.5 + random.nextDouble() * 3;
+      _contextLineDashed = random.nextBool();
+    });
+  }
+
   void _applyStyleRecipe(_CandlestickStyleRecipe recipe) {
     setState(() {
       _styleRecipe = recipe;
@@ -2115,13 +2815,26 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     });
   }
 
-  void _applyExample(_CandlestickExample example) {
+  void _applyExample(
+    _CandlestickExample example, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
+    _pinnedSummaryCandle.value = null;
     setState(() {
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredExample = example;
+      }
       _selectedExample = example;
       _showcaseMode = example == _CandlestickExample.stockComposition
           ? _CandlestickShowcaseMode.stock
           : _CandlestickShowcaseMode.workbench;
       _activeCandleIndex = null;
+      _showMarketContext = example == _CandlestickExample.events;
 
       switch (example) {
         case _CandlestickExample.priceAction:
@@ -2163,6 +2876,18 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           _densityGroupingEnabled = false;
           _showCloseAverage = false;
           break;
+        case _CandlestickExample.events:
+          _sessionCount = 56;
+          _rangeScale = 1.35;
+          _trendBias = .12;
+          _gapFrequency = _GapFrequency.occasional;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _showCloseAverage = true;
+          _averageWindow = 10;
+          _showMarketContext = true;
+          _showDirectionLegend = true;
+          break;
         case _CandlestickExample.accessible:
           _sessionCount = 40;
           _rangeScale = 1.15;
@@ -2199,11 +2924,32 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     }
   }
 
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredExample = _selectedExample;
+      setState(() {
+        _playgroundActive = true;
+        _showcaseMode = _CandlestickShowcaseMode.workbench;
+      });
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _reset();
+    _applyExample(_authoredExample);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
+
   void _regenerateWorkbenchData() {
     final dataProfile = switch (_selectedExample) {
       _CandlestickExample.trend => _CandlestickDataProfile.trend,
       _CandlestickExample.volatility => _CandlestickDataProfile.volatility,
       _CandlestickExample.gapsAndDoji => _CandlestickDataProfile.gapsAndDoji,
+      _CandlestickExample.events => _CandlestickDataProfile.priceAction,
       _ => _CandlestickDataProfile.priceAction,
     };
     _candles = _buildScenarioCandles(
@@ -2217,39 +2963,48 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _candles.map((point) => point.timestamp!),
     );
     _activeCandleIndex = null;
+    _pinnedSummaryCandle.value = null;
   }
 
-  String get _exampleDescription => switch (_selectedExample) {
-    _CandlestickExample.priceAction =>
-      'Balanced market action with rising, falling, and doji candles.',
-    _CandlestickExample.trend =>
-      'A sustained advance tests dense bodies and a longer moving average.',
-    _CandlestickExample.volatility =>
-      'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
-    _CandlestickExample.gapsAndDoji =>
-      'Discontinuous opens and repeated doji make direction cues explicit.',
-    _CandlestickExample.accessible =>
-      'Blue/orange hues, hollow rising bodies, stronger strokes, and a direction key avoid colour-only meaning.',
-    _CandlestickExample.density =>
-      '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
-    _CandlestickExample.stockComposition =>
-      'Price, volume, and navigator charts share one financial time viewport.',
-  };
+  String get _exampleDescription => _playgroundActive
+      ? 'Generated OHLC data and every compatible candlestick property. Seeded playback is available in Options.'
+      : switch (_selectedExample) {
+          _CandlestickExample.priceAction =>
+            'Balanced market action with rising, falling, and doji candles.',
+          _CandlestickExample.trend =>
+            'A sustained advance tests dense bodies and a longer moving average.',
+          _CandlestickExample.volatility =>
+            'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
+          _CandlestickExample.gapsAndDoji =>
+            'Discontinuous opens and repeated doji make direction cues explicit.',
+          _CandlestickExample.events =>
+            'A session band, price level, and candle-linked event demonstrate native Cartesian annotations.',
+          _CandlestickExample.accessible =>
+            'Blue/orange hues, hollow rising bodies, stronger strokes, and a direction key avoid colour-only meaning.',
+          _CandlestickExample.density =>
+            '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
+          _CandlestickExample.stockComposition =>
+            'Price, volume, and navigator charts share one financial time viewport.',
+        };
 
-  String get _exampleChartTitle => switch (_selectedExample) {
-    _CandlestickExample.priceAction => 'Balanced price action',
-    _CandlestickExample.trend => 'Advancing market trend',
-    _CandlestickExample.volatility => 'High-volatility sessions',
-    _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
-    _CandlestickExample.accessible => 'Accessible direction cues',
-    _ => 'Candlestick price action',
-  };
+  String get _exampleChartTitle => _playgroundActive
+      ? 'Candlestick playground'
+      : switch (_selectedExample) {
+          _CandlestickExample.priceAction => 'Balanced price action',
+          _CandlestickExample.trend => 'Advancing market trend',
+          _CandlestickExample.volatility => 'High-volatility sessions',
+          _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
+          _CandlestickExample.events => 'Events and price levels',
+          _CandlestickExample.accessible => 'Accessible direction cues',
+          _ => 'Candlestick price action',
+        };
 
   String _exampleLabel(_CandlestickExample example) => switch (example) {
     _CandlestickExample.priceAction => 'Price action',
     _CandlestickExample.trend => 'Trend',
     _CandlestickExample.volatility => 'Volatility',
     _CandlestickExample.gapsAndDoji => 'Gaps & doji',
+    _CandlestickExample.events => 'Events & levels',
     _CandlestickExample.accessible => 'Accessible',
     _CandlestickExample.density => 'Density',
     _CandlestickExample.stockComposition => 'Stock composition',
@@ -2260,6 +3015,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _CandlestickExample.trend => Icons.trending_up,
     _CandlestickExample.volatility => Icons.show_chart,
     _CandlestickExample.gapsAndDoji => Icons.space_bar,
+    _CandlestickExample.events => Icons.event_note_outlined,
     _CandlestickExample.accessible => Icons.accessibility_new,
     _CandlestickExample.density => Icons.density_medium,
     _CandlestickExample.stockComposition => Icons.monitor_heart_outlined,
@@ -2310,7 +3066,23 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _highlightWickColor = const Color(0xFFA16207);
       _trackingEnabled = true;
       _showTrackingTooltip = true;
-      _showPointTooltip = true;
+      _showPointTooltip = false;
+      _showPinnedSummary = false;
+      _pinnedSummaryPresentation = _PinnedSummaryPresentation.overlay;
+      _pinnedSummaryCorner = _PinnedSummaryCorner.topLeft;
+      _pinnedSummaryDraggable = true;
+      _pinnedSummaryAnnotationPosition = const Offset(96, 48);
+      _pinnedSummaryBackgroundVisible = true;
+      _pinnedSummaryBorderVisible = true;
+      _pinnedSummaryBackgroundColor = null;
+      _pinnedSummaryBorderColor = null;
+      _pinnedSummaryTextColor = null;
+      _pinnedSummaryAccentColor = null;
+      _pinnedSummaryBackgroundOpacity = .96;
+      _pinnedSummaryBorderWidth = 1;
+      _pinnedSummaryCornerRadius = 8;
+      _pinnedSummaryPadding = 8;
+      _pinnedSummaryFontSize = 11;
       _showCoordinateLabels = true;
       _showIntersectionMarkers = true;
       _intersectionMarkerRadius = 4;
@@ -2323,6 +3095,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _tooltipBackgroundColor = const Color(0xF2FFFFFF);
       _tooltipBorderColor = const Color(0xFF94A3B8);
       _tooltipTextColor = const Color(0xFF1F2937);
+      _selectionColor = const Color(0xFF2563EB);
+      _focusColor = const Color(0xFF475569);
       _tooltipBorderWidth = 1;
       _tooltipCornerRadius = 6;
       _tooltipFontSize = 12;
@@ -2330,7 +3104,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _tooltipFollowsCursor = false;
       _selectionEnabled = true;
       _keyboardEnabled = true;
-      _showFocusBorder = true;
+      _showFocusBorder = false;
       _dataUpdateAnimation = CandlestickDataUpdateAnimationMode.interpolate;
       _entranceAnimation = CandlestickAnimationMode.reveal;
       _entranceStagger = .85;
@@ -2355,6 +3129,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _xTickCount = 8;
       _showXAxisLabels = true;
       _showYAxisLabels = true;
+      _showMarketContext = false;
+      _contextThresholdColor = const Color(0xFFF59E0B);
+      _contextWindowColor = const Color(0xFF3B82F6);
+      _contextEventColor = const Color(0xFF7C3AED);
+      _contextLineWidth = 1.5;
+      _contextLineDashed = true;
       _showcaseMode = _CandlestickShowcaseMode.workbench;
       _stockTimeSpacing = FinancialTimeSpacing.ordinal;
       _stockRange = _StockRangePreset.threeMonths;
@@ -2363,6 +3143,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _revisionStep = 0;
       _activeCandleIndex = null;
     });
+    _pinnedSummaryCandle.value = null;
     _stockGroupController.setViewport(_stockViewportFor(_stockRange));
     _optionsController.update(const ChartOptions(showLegend: true));
   }
@@ -2439,6 +3220,171 @@ class _OptionGroupLabel extends StatelessWidget {
       style: Theme.of(
         context,
       ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+    ),
+  );
+}
+
+class _PinnedOhlcSummaryCard extends StatelessWidget {
+  const _PinnedOhlcSummaryCard({
+    required this.title,
+    required this.candle,
+    required this.backgroundColor,
+    required this.showShadow,
+    required this.borderColor,
+    required this.textColor,
+    required this.accentColor,
+    required this.borderWidth,
+    required this.cornerRadius,
+    required this.padding,
+    required this.fontSize,
+  });
+
+  final String title;
+  final CandlestickDataPoint candle;
+  final Color backgroundColor;
+  final bool showShadow;
+  final Color borderColor;
+  final Color textColor;
+  final Color accentColor;
+  final double borderWidth;
+  final double cornerRadius;
+  final double padding;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      label:
+          '$title, open ${candle.open.toStringAsFixed(2)}, high ${candle.high.toStringAsFixed(2)}, low ${candle.low.toStringAsFixed(2)}, close ${candle.close.toStringAsFixed(2)}',
+      child: Container(
+        key: const ValueKey('candlestick-pinned-summary-card'),
+        width: 168 + ((fontSize - 11).clamp(0, 5) * 5),
+        padding: EdgeInsets.all(padding),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border.all(color: borderColor, width: borderWidth),
+          borderRadius: BorderRadius.circular(cornerRadius),
+          boxShadow: showShadow
+              ? const [
+                  BoxShadow(
+                    color: Color(0x1F000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : const [],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: accentColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: textColor,
+                      fontSize: fontSize + 1,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (candle.label case final label?) ...[
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: textColor.withValues(alpha: .72),
+                  fontSize: fontSize,
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            _PinnedSummaryValue(
+              label: 'Open',
+              value: candle.open,
+              color: textColor,
+              fontSize: fontSize,
+            ),
+            _PinnedSummaryValue(
+              label: 'High',
+              value: candle.high,
+              color: textColor,
+              fontSize: fontSize,
+            ),
+            _PinnedSummaryValue(
+              label: 'Low',
+              value: candle.low,
+              color: textColor,
+              fontSize: fontSize,
+            ),
+            _PinnedSummaryValue(
+              label: 'Close',
+              value: candle.close,
+              color: textColor,
+              fontSize: fontSize,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PinnedSummaryValue extends StatelessWidget {
+  const _PinnedSummaryValue({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.fontSize,
+  });
+
+  final String label;
+  final double value;
+  final Color color;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 1),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 38,
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color, fontSize: fontSize),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            '\$${value.toStringAsFixed(2)}',
+            textAlign: TextAlign.right,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -2787,6 +3733,12 @@ class _DirectionLegendPainter extends CustomPainter {
       oldDelegate.fillBody != fillBody;
 }
 
+const _pinnedSummaryAnnotationId = 'candlestick-pinned-ohlc-summary';
+
+enum _PinnedSummaryPresentation { overlay, annotation }
+
+enum _PinnedSummaryCorner { topLeft, topRight, bottomLeft, bottomRight }
+
 enum _CandlestickShowcaseMode { workbench, stock }
 
 enum _CandlestickExample {
@@ -2794,6 +3746,7 @@ enum _CandlestickExample {
   trend,
   volatility,
   gapsAndDoji,
+  events,
   accessible,
   density,
   stockComposition,
@@ -3014,27 +3967,8 @@ const _monthNames = [
 
 const _stockCompositionSnippet = '''
 final viewport = ChartInteractionGroupController();
-final navigatorWindow = AnnotationController(
-  initialAnnotations: [
-    RangeAnnotation(id: 'navigator-window', startX: rangeStart, endX: rangeEnd),
-  ],
-)..selectAnnotation('navigator-window');
 
-// Period buttons and main-chart pan/zoom update the same selected window.
-viewport.viewportListenable.addListener(() {
-  final visible = viewport.viewport;
-  if (visible == null) return;
-  navigatorWindow.updateAnnotation(
-    'navigator-window',
-    RangeAnnotation(
-      id: 'navigator-window',
-      startX: visible.min,
-      endX: visible.max,
-    ),
-  );
-});
-
-// Period buttons and navigator handles issue one host-owned command.
+// Period buttons and every attached chart use the same viewport authority.
 viewport.setViewport(ChartXViewport(min: rangeStart, max: rangeEnd));
 
 BravenChartPlus(
@@ -3048,28 +3982,11 @@ BravenChartPlus(
   ],
 );
 
-BravenChartPlus(
+CartesianNavigator(
   interactionGroupController: viewport,
-  interactionGroupOptions: const ChartInteractionGroupOptions(
-    synchronizeCursor: false,
-    synchronizeViewport: false,
-  ),
-  annotationController: navigatorWindow,
-  persistentRangeAnnotationHandles: true,
-  onAnnotationDragUpdate: (annotation, _) {
-    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
-      // Preview the shared viewport continuously without replacing the
-      // controller-owned annotation during the active pointer gesture.
-      viewport.setViewport(ChartXViewport(min: min, max: max));
-    }
-  },
-  onAnnotationDragged: (annotation, _) {
-    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
-      viewport.setViewport(ChartXViewport(min: min, max: max));
-    }
-  },
-  series: [AreaChartSeries(id: 'navigator', points: closes)],
+  fullDomain: ChartXViewport(min: domainStart, max: domainEnd),
+  initialViewport: ChartXViewport(min: rangeStart, max: rangeEnd),
+  snapPolicy: CartesianNavigatorSnapPolicy.values(sessionXValues),
+  overviewSeries: AreaChartSeries(id: 'navigator', points: closes),
 );
 ''';
-
-const _stockNavigatorWindowId = 'navigator-window';

@@ -12,6 +12,8 @@ package does not embed a JavaScript charting engine.
 mixed Cartesian series, Pie, Donut, multi-ring Concentric Donut, and axis-based
 Polar Column/Rose charts; multiple independent axes
 and normalization; zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
+full-domain Cartesian navigators shared across Line, Area, Bar, Scatter, and
+Candlestick charts;
 frame-coalesced live data; configurable themes and state views; chart, table,
 split, and generated Dart source modes; and portable chart artifacts. Rendering,
 input handling, and streaming updates remain inside the Flutter rendering pipeline.
@@ -82,6 +84,9 @@ changing source values into shares. Absolute lower/upper intervals can render
 as radial whiskers or compact annular range bands. Deterministic label, value,
 and grid-spoke limits keep dense panes readable without removing marks from
 interaction, accessibility, tables, exports, artifacts, or generated source.
+Category, value, and radial-axis labels can be positioned and styled
+independently; columns support palette-derived or fixed gradients, configurable
+elevation, and baseline-grow, angular-sweep, or fade entrance motion.
 
 | Channel demand | Seasonal Rose | Lifecycle arc |
 | --- | --- | --- |
@@ -152,8 +157,8 @@ workflows, styling treatments, business charts, and radial presentations.
 | Area | API and behavior |
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
-| Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories, a signed numeric radial scale, layered/grouped/diverging stacked comparisons, category targets, pane thresholds, absolute uncertainty/range intervals, and bounded visual density |
+| Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, opt-in data-X synchronization across independent Cartesian charts, and a native full-domain navigator for Line, Area, Bar, Scatter, and Candlestick charts |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories, a signed numeric radial scale, layered/grouped/diverging stacked comparisons, category targets, pane thresholds, absolute uncertainty/range intervals, independent label placement/style, gradients, elevation, entrance motion, and bounded visual density |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, visible-axis slots, and dedicated angular-category/radial-value Polar axes |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
@@ -287,6 +292,46 @@ BravenChartPlus(
   ],
 )
 ```
+
+## Cartesian navigator
+
+`CartesianNavigator` renders a compact Line or Area overview over the complete
+X domain and controls every Cartesian chart attached to the same caller-owned
+`ChartInteractionGroupController`. Drag the window to pan, resize either edge,
+or use keyboard and semantic actions. Fixed-interval and ordered-value snapping
+support regular samples and irregular timestamps without adding chart-family
+logic to the navigator.
+
+```dart
+final interactionGroup = ChartInteractionGroupController();
+
+Column(
+  children: [
+    Expanded(
+      child: BravenChartPlus(
+        series: [detailSeries],
+        interactionGroupController: interactionGroup,
+      ),
+    ),
+    CartesianNavigator(
+      interactionGroupController: interactionGroup,
+      overviewSeries: AreaChartSeries(
+        id: 'overview',
+        points: overviewPoints,
+      ),
+      fullDomain: const ChartXViewport(min: 0, max: 240),
+      initialViewport: const ChartXViewport(min: 60, max: 120),
+      snapPolicy: CartesianNavigatorSnapPolicy.interval(5),
+    ),
+  ],
+)
+```
+
+The controller is the sole viewport authority and must be disposed by its
+owner. The overview stays full-domain and opts out of cursor and viewport
+synchronization. See the [Cartesian navigator contract](https://github.com/braven-pvm/braven_charts/blob/master/doc/cartesian_navigator.md)
+for initialization precedence, accessibility, styling, snapping, and external
+viewport reconciliation.
 
 ## Pie charts
 
@@ -475,6 +520,15 @@ BravenChartPlus(
 
 Dispose controllers you create when the owning widget is disposed.
 
+For a live chart with a full-domain navigator, set
+`LiveStreamController.manageViewport` to `false` and attach both the detail
+chart and `CartesianNavigator` to one `ChartInteractionGroupController`. The
+stream retains its direct, frame-coalesced render path while the host decides
+when to follow the newest samples or preserve a historical viewport. See the
+[Cartesian navigator guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/cartesian_navigator.md#live-ingestion).
+External viewport hosts can observe `dataRevision` and read `oldestPoint`,
+`latestPoint`, and `pointCount` without allocating a full point snapshot.
+
 ## Programmatic control
 
 The package provides focused controller APIs rather than requiring access to
@@ -658,6 +712,7 @@ UX.
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
 - [Cartesian value summary](https://github.com/braven-pvm/braven_charts/blob/master/doc/value_summary.md)
+- [Cartesian navigator](https://github.com/braven-pvm/braven_charts/blob/master/doc/cartesian_navigator.md)
 - [Candlestick charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/candlestick_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)

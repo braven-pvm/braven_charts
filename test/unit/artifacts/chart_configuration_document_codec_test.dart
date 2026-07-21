@@ -342,6 +342,40 @@ void main() {
       expect(decoded, source);
     });
 
+    test('round-trips Polar Column label placement and styling', () {
+      const source = PolarChartConfig(
+        angularAxis: PolarCategoryAxisConfig(
+          labelOffset: 20,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF2563EB),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        radialAxis: PolarNumericAxisConfig(
+          labelPosition: PolarRadialLabelPosition.middle,
+          labelAngleOffsetDegrees: 15,
+          labelOffset: 9,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF0F766E),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
     test('defaults legacy Polar Column documents to layered composition', () {
       final encoded = _success(
         ChartConfigurationDocumentCodec.encodePolarChart(

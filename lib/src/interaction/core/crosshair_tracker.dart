@@ -162,6 +162,7 @@ abstract final class CrosshairTracker {
     required List<ChartSeries> seriesList,
     bool interpolate = true,
     bool includeScatterXFallback = true,
+    bool useCandlestickDensityGrouping = true,
   }) {
     // Early exit if outside chart bounds
     if (screenX < chartBounds.left || screenX > chartBounds.right) {
@@ -194,6 +195,7 @@ abstract final class CrosshairTracker {
         visibleXMin: xMin,
         visibleXMax: xMax,
         plotWidth: chartWidth,
+        useCandlestickDensityGrouping: useCandlestickDensityGrouping,
       );
 
       if (value != null) {
@@ -233,11 +235,12 @@ abstract final class CrosshairTracker {
       series: series,
       targetX: targetX,
       interpolate: true,
-      // The visible-range and plot-width inputs steer candlestick density
-      // grouping only; Line/Area resolution never reads them.
+      // The visible-range, plot-width, and density-grouping inputs steer
+      // candlestick resolution only; Line/Area resolution never reads them.
       visibleXMin: double.negativeInfinity,
       visibleXMax: double.infinity,
       plotWidth: 0,
+      useCandlestickDensityGrouping: false,
     );
     return value?.y;
   }
@@ -253,6 +256,7 @@ abstract final class CrosshairTracker {
     required double visibleXMin,
     required double visibleXMax,
     required double plotWidth,
+    required bool useCandlestickDensityGrouping,
   }) {
     final points = series.points;
     if (points.isEmpty) return null;
@@ -270,6 +274,7 @@ abstract final class CrosshairTracker {
         visibleXMin: visibleXMin,
         visibleXMax: visibleXMax,
         plotWidth: plotWidth,
+        useDensityGrouping: useCandlestickDensityGrouping,
       );
     }
 
@@ -448,6 +453,7 @@ abstract final class CrosshairTracker {
     required double visibleXMin,
     required double visibleXMax,
     required double plotWidth,
+    required bool useDensityGrouping,
   }) {
     final points = series.points;
     if (points.isEmpty) return null;
@@ -462,7 +468,8 @@ abstract final class CrosshairTracker {
         ? 1
         : (visibleCount / maximumGroupCount).ceil();
 
-    if (grouping.enabled &&
+    if (useDensityGrouping &&
+        grouping.enabled &&
         proposedGroupSize >= grouping.minimumPointsPerGroup) {
       final groupSize = math.max(
         grouping.minimumPointsPerGroup,

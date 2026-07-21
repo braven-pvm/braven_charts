@@ -8,6 +8,21 @@ import 'package:flutter/material.dart';
 
 import 'chart_options.dart';
 import 'options_panel.dart';
+import 'showcase_randomizer.dart';
+
+/// Separates stable authored examples from the exhaustive generated sandbox.
+@immutable
+class ChartPlaygroundConfig {
+  const ChartPlaygroundConfig({
+    required this.active,
+    required this.optionsChildren,
+    required this.randomizer,
+  });
+
+  final bool active;
+  final List<Widget> optionsChildren;
+  final ShowcaseRandomizerHandle randomizer;
+}
 
 /// Standard options section that can be added to any chart demo.
 ///
@@ -20,7 +35,8 @@ import 'options_panel.dart';
 /// - Legend
 /// - Zoom/Pan
 /// - Line style
-class StandardChartOptions extends StatelessWidget {
+class StandardChartOptions extends StatelessWidget
+    implements ShowcaseInspectorEntry {
   const StandardChartOptions({
     super.key,
     required this.controller,
@@ -59,6 +75,24 @@ class StandardChartOptions extends StatelessWidget {
   final List<Widget>? additionalOptions;
 
   @override
+  ShowcasePropertyMetadata get inspectorMetadata => ShowcasePropertyMetadata(
+    label: sectionTitle,
+    description:
+        'Controls the common theme, plotting guides, markers, navigation, legend, and line appearance.',
+    aliases: <String>[
+      if (showThemeOption) 'theme preset appearance',
+      if (showGridOption) 'grid lines guides',
+      if (showAxisOption) 'axis lines axes',
+      if (showMarkerOption) 'data markers points',
+      if (showXScrollbarOption) 'x scrollbar horizontal navigation',
+      if (showYScrollbarOption) 'y scrollbar vertical navigation',
+      if (showLegendOption) 'legend series key',
+      if (showInteractionOptions) 'zoom pan interaction navigation',
+      if (showLineStyleOption) 'line style stroke pattern',
+    ],
+  );
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: controller,
@@ -66,6 +100,8 @@ class StandardChartOptions extends StatelessWidget {
         return OptionSection(
           title: sectionTitle,
           icon: sectionIcon,
+          description: inspectorMetadata.description,
+          aliases: inspectorMetadata.aliases,
           children: [
             // Theme Selection
             if (showThemeOption)
@@ -251,6 +287,8 @@ class ChartPageLayout extends StatelessWidget {
     this.optionsChildren = const [],
     this.bottomPanel,
     this.actions,
+    this.playground,
+    this.randomizerKeyPrefix = 'showcase-randomizer',
   });
 
   final String title;
@@ -260,25 +298,43 @@ class ChartPageLayout extends StatelessWidget {
   final List<Widget> optionsChildren;
   final Widget? bottomPanel;
   final List<Widget>? actions;
+  final ChartPlaygroundConfig? playground;
+  final String randomizerKeyPrefix;
+
+  bool get _playgroundActive => playground?.active ?? false;
+
+  ShowcaseRandomizerHandle? get _activeRandomizer =>
+      _playgroundActive ? playground!.randomizer : null;
+
+  List<Widget> get _effectiveOptionsChildren =>
+      _playgroundActive ? playground!.optionsChildren : optionsChildren;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useOptionsSheet =
-            optionsChildren.isNotEmpty && constraints.maxWidth < 900;
+        final effectiveOptions = _effectiveOptionsChildren;
+        final hasOptions =
+            effectiveOptions.isNotEmpty || _activeRandomizer != null;
+        final useOptionsSheet = hasOptions && constraints.maxWidth < 900;
         final mainContent = _buildMainContent(
           context,
           showOptionsButton: useOptionsSheet,
         );
 
-        if (optionsChildren.isEmpty) return mainContent;
+        if (!hasOptions) return mainContent;
 
         return Row(
           children: [
             Expanded(child: mainContent),
             if (!useOptionsSheet)
-              OptionsPanel(width: optionsPanelWidth, children: optionsChildren),
+              OptionsPanel(
+                width: optionsPanelWidth,
+                headerEditor: _randomizerEditor,
+                headerEditorLabel: 'Property randomizer',
+                headerEditorKey: '$randomizerKeyPrefix-editor',
+                children: effectiveOptions,
+              ),
           ],
         );
       },
@@ -292,6 +348,13 @@ class ChartPageLayout extends StatelessWidget {
     final theme = Theme.of(context);
     final headerActions = <Widget>[
       ...?actions,
+      // Compact pages expose the same action inside the options sheet. Keeping
+      // it out of the already-constrained page header preserves chart height.
+      if (_activeRandomizer != null && !showOptionsButton)
+        ShowcaseRandomizerActions(
+          controller: _activeRandomizer!,
+          keyPrefix: randomizerKeyPrefix,
+        ),
       if (showOptionsButton)
         OutlinedButton.icon(
           key: const ValueKey('chart-page-options-button'),
@@ -337,7 +400,9 @@ class ChartPageLayout extends StatelessWidget {
                 children: headerActions,
               );
 
-              if (constraints.maxWidth < 520) {
+              final stackActions =
+                  constraints.maxWidth < 760 && headerActions.isNotEmpty;
+              if (stackActions) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -362,7 +427,14 @@ class ChartPageLayout extends StatelessWidget {
                   Expanded(child: titleBlock),
                   if (headerActions.isNotEmpty) ...[
                     const SizedBox(width: 16),
-                    actionGroup,
+                    Flexible(
+                      flex: 2,
+                      fit: FlexFit.loose,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: actionGroup,
+                      ),
+                    ),
                   ],
                 ],
               );
@@ -388,8 +460,274 @@ class ChartPageLayout extends StatelessWidget {
       builder: (sheetContext) => SizedBox(
         width: double.infinity,
         height: MediaQuery.sizeOf(sheetContext).height * 0.85,
-        child: OptionsPanel(title: 'Chart options', children: optionsChildren),
+        child: OptionsPanel(
+          title: 'Chart options',
+          headerEditor: _randomizerEditor,
+          headerEditorLabel: 'Property randomizer',
+          headerEditorKey: '$randomizerKeyPrefix-editor',
+          children: _effectiveOptionsChildren,
+        ),
       ),
+    );
+  }
+
+  Widget? get _randomizerEditor => _activeRandomizer == null
+      ? null
+      : PropertyRandomizerSection(
+          controller: _activeRandomizer!,
+          keyPrefix: randomizerKeyPrefix,
+          initiallyExpanded: true,
+        );
+}
+
+/// The first, explicit sample in every chart-family selector.
+///
+/// Unlike authored samples this mounts generated data and the exhaustive
+/// family inspector. It deliberately shares the host selector's visual
+/// language instead of introducing a second page-level mode control.
+class ShowcaseExampleChoiceChip extends StatelessWidget {
+  const ShowcaseExampleChoiceChip({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onSelected,
+    this.playground = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onSelected;
+  final bool playground;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final foreground = playground
+        ? colors.onTertiaryContainer
+        : selected
+        ? colors.onSecondaryContainer
+        : colors.onSurfaceVariant;
+    return ChoiceChip(
+      showCheckmark: false,
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      avatar: Icon(icon, size: 17, color: foreground),
+      label: Text(label),
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: foreground,
+        fontWeight: playground || selected ? FontWeight.w700 : FontWeight.w400,
+      ),
+      selectedColor: playground
+          ? colors.tertiaryContainer
+          : colors.secondaryContainer,
+      backgroundColor: playground
+          ? colors.tertiaryContainer.withValues(alpha: 0.52)
+          : colors.surface,
+      side: BorderSide(
+        color: playground
+            ? colors.tertiary
+            : selected
+            ? colors.primary
+            : colors.outlineVariant,
+        width: playground ? (selected ? 2 : 1.4) : (selected ? 1.5 : 1),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class PlaygroundChoiceChip extends StatelessWidget {
+  const PlaygroundChoiceChip({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+    this.label = 'Playground',
+  });
+
+  final bool selected;
+  final VoidCallback onSelected;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShowcaseExampleChoiceChip(
+      label: label,
+      icon: Icons.science_outlined,
+      selected: selected,
+      onSelected: onSelected,
+      playground: true,
+    );
+  }
+}
+
+class ShowcaseExampleGrid extends StatelessWidget {
+  const ShowcaseExampleGrid({
+    super.key,
+    required this.children,
+    this.minimumCardWidth = 190,
+    this.maximumColumns = 6,
+    this.cardHeight = 92,
+    this.spacing = 8,
+  });
+
+  final List<Widget> children;
+  final double minimumCardWidth;
+  final int maximumColumns;
+  final double cardHeight;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final availableWidth = constraints.maxWidth;
+      final fittingColumns =
+          ((availableWidth + spacing) / (minimumCardWidth + spacing)).floor();
+      final columns = fittingColumns.clamp(1, maximumColumns);
+      final cardWidth = (availableWidth - spacing * (columns - 1)) / columns;
+      return Wrap(
+        spacing: spacing,
+        runSpacing: spacing,
+        children: [
+          for (final child in children)
+            SizedBox(width: cardWidth, height: cardHeight, child: child),
+        ],
+      );
+    },
+  );
+}
+
+class ShowcaseExampleCard extends StatelessWidget {
+  const ShowcaseExampleCard({
+    super.key,
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.playground = false,
+    this.semanticsLabel,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool playground;
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final background = playground
+        ? selected
+              ? colors.tertiaryContainer
+              : colors.tertiaryContainer.withValues(alpha: 0.52)
+        : selected
+        ? colors.primaryContainer.withValues(alpha: 0.42)
+        : colors.surface;
+    final accent = playground ? colors.tertiary : colors.primary;
+    final foreground = playground
+        ? colors.onTertiaryContainer
+        : selected
+        ? colors.primary
+        : colors.onSurfaceVariant;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel ?? 'Open $title example',
+      child: Material(
+        color: background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: playground
+                ? accent
+                : selected
+                ? accent
+                : colors.outlineVariant,
+            width: playground ? (selected ? 2.4 : 1.4) : (selected ? 2 : 1),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: foreground),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: playground ? colors.onTertiaryContainer : null,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(Icons.check_circle, size: 17, color: accent),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: playground
+                        ? colors.onTertiaryContainer.withValues(alpha: 0.82)
+                        : colors.onSurfaceVariant,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PlaygroundExampleCard extends StatelessWidget {
+  const PlaygroundExampleCard({
+    super.key,
+    required this.selected,
+    required this.onTap,
+    this.title = 'Playground',
+    this.description = 'Generate data and every compatible property.',
+  });
+
+  final bool selected;
+  final VoidCallback onTap;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShowcaseExampleCard(
+      title: title,
+      description: description,
+      icon: Icons.science_outlined,
+      selected: selected,
+      onTap: onTap,
+      playground: true,
+      semanticsLabel: 'Open $title',
     );
   }
 }
