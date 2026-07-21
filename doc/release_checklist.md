@@ -76,8 +76,9 @@ Capture browser media from a local release build with `--url
 http://127.0.0.1:<port>/` before the public site has the change.
 
 `--capture pie`, `--capture donut`, `--capture bar`, `--capture scatter`,
-`--capture synchronized`, `--capture polar`, `--capture hero`, and `--capture
-interaction-still`, plus the release-specific `--capture cartesian-0.10`, do
+`--capture range-area`, `--capture synchronized`, `--capture polar`,
+`--capture hero`, and `--capture interaction-still`, plus the release-specific
+`--capture cartesian-0.10`, do
 not take browser screenshots. They mount the same Gallery
 configurations in Flutter's deterministic test renderer, call the native
 preview API for individual charts, load Flutter's bundled Roboto font, and

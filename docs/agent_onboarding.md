@@ -40,9 +40,11 @@ shared implementation contract.
 
 **Key capabilities:**
 
-- Line, area, bar, scatter, Pie, and Donut charts; Cartesian lines and areas
-  support bezier/monotone/stepped interpolation, while radial category charts
-  support variable radii, partial sweeps, labels, and portable selection
+- Line, area, Range Area, bar, scatter, Candlestick, Pie, Donut, Concentric
+  Donut, and Polar Column/Rose charts. Cartesian lines, areas, and paired
+  low/high intervals support Bezier/monotone/stepped interpolation, while
+  radial families support variable radii, partial sweeps, labels, axes, and
+  portable selection.
 - Multi-axis support with independent Y-axis scales and per-series normalization
 - Interactive annotations: point, range, text, threshold, trend, pin, legend
 - Crosshair with standard and tracking modes, per-axis labels

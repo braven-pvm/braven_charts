@@ -22,6 +22,8 @@ import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/polar_column_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/range_area_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/scatter_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/synchronized_cartesian_gallery_card.dart';
@@ -243,6 +245,34 @@ void main() {
       (
         fileName: 'scatter_equipment_risk.png',
         widget: EquipmentRiskScatterCard(),
+      ),
+    ]) {
+      await _captureInteraction(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: source.fileName,
+        source: source.widget,
+      );
+    }
+  });
+
+  testWidgets('capture pub.dev Range Area media', (tester) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    for (final source in const [
+      (
+        fileName: 'range_area_temperature.png',
+        widget: TemperatureEnvelopeGalleryCard(),
+      ),
+      (
+        fileName: 'range_area_forecast_fan.png',
+        widget: ForecastFanGalleryCard(),
+      ),
+      (
+        fileName: 'range_area_volatility.png',
+        widget: VolatilityEnvelopeGalleryCard(),
       ),
     ]) {
       await _captureInteraction(
@@ -956,6 +986,9 @@ List<_ChartTypeAsset> _chartTypeAssets() {
   final areaTheme = ChartTheme.dark.copyWith(
     backgroundColor: const Color(0xFF101827),
   );
+  final rangeAreaTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFFAF8FF),
+  );
   final scatterTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFFFFBF4),
   );
@@ -1091,6 +1124,57 @@ List<_ChartTypeAsset> _chartTypeAssets() {
           strokeWidth: 2.5,
           fillOpacity: 0.24,
           lineGlow: 3,
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
+      label: 'Range Area',
+      fileName: 'chart_type_range_area.png',
+      theme: rangeAreaTheme,
+      headerColor: const Color(0xFFEDE9FE),
+      headerTextColor: const Color(0xFF4C1D95),
+      series: [
+        RangeAreaChartSeries(
+          id: 'range-area',
+          name: 'Forecast interval',
+          color: const Color(0xFF7C3AED),
+          interpolation: LineInterpolation.monotone,
+          fillOpacity: 0.28,
+          upperBoundaryStyle: const RangeAreaBoundaryStyle(
+            color: Color(0xFF6D28D9),
+            strokeWidth: 2,
+          ),
+          lowerBoundaryStyle: const RangeAreaBoundaryStyle(
+            color: Color(0xFFA78BFA),
+            strokeWidth: 1.5,
+          ),
+          points: [
+            RangeAreaDataPoint(x: 0, low: 20, high: 31),
+            RangeAreaDataPoint(x: 1, low: 24, high: 37),
+            RangeAreaDataPoint(x: 2, low: 27, high: 43),
+            RangeAreaDataPoint(x: 3, low: 29, high: 48),
+            RangeAreaDataPoint(x: 4, low: 34, high: 55),
+            RangeAreaDataPoint(x: 5, low: 38, high: 63),
+            RangeAreaDataPoint(x: 6, low: 42, high: 70),
+            RangeAreaDataPoint(x: 7, low: 47, high: 78),
+          ],
+        ),
+        const LineChartSeries(
+          id: 'range-area-median',
+          name: 'Median',
+          color: Color(0xFF312E81),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 2.4,
+          points: [
+            ChartDataPoint(x: 0, y: 25),
+            ChartDataPoint(x: 1, y: 30),
+            ChartDataPoint(x: 2, y: 35),
+            ChartDataPoint(x: 3, y: 39),
+            ChartDataPoint(x: 4, y: 44),
+            ChartDataPoint(x: 5, y: 50),
+            ChartDataPoint(x: 6, y: 56),
+            ChartDataPoint(x: 7, y: 63),
+          ],
         ),
       ],
     ),

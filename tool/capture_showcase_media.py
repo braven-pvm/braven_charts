@@ -573,6 +573,8 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command.extend(["--plain-name", "capture pub.dev Bar media"])
     elif group == "scatter":
         command.extend(["--plain-name", "capture pub.dev Scatter media"])
+    elif group == "range-area":
+        command.extend(["--plain-name", "capture pub.dev Range Area media"])
     elif group == "synchronized":
         command.extend(
             ["--plain-name", "capture pub.dev synchronized Cartesian composition"]
@@ -992,6 +994,7 @@ def main() -> None:
             "pie",
             "bar",
             "scatter",
+            "range-area",
             "synchronized",
             "interaction-still",
             "type-strip",
@@ -1015,6 +1018,9 @@ def main() -> None:
         return
     if args.capture == "scatter":
         _native_stills(args.output_dir, "scatter")
+        return
+    if args.capture == "range-area":
+        _native_stills(args.output_dir, "range-area")
         return
     if args.capture == "synchronized":
         _native_stills(args.output_dir, "synchronized")
