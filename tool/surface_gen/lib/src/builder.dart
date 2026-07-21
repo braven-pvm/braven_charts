@@ -5,6 +5,8 @@ import 'package:glob/glob.dart';
 import 'emitter.dart';
 import 'enforcement.dart';
 import 'fluent_emitter.dart';
+import 'smoke_emitter.dart';
+import 'surface_model.dart';
 import 'surface_reader.dart';
 
 /// Reads `@chartSurface` annotations from the braven_charts config surface
@@ -163,5 +165,79 @@ class FluentBarrelBuilder implements Builder {
       buildStep.allowedOutputs.single,
       buffer.toString(),
     );
+  }
+}
+
+/// Generates `test/fluent/fluent_smoke_generated_test.dart` — exhaustive
+/// breadth coverage for the fluent surface.
+///
+/// Aggregating: the smoke library is ONE file covering every modelled class,
+/// so it cannot be produced by the per-source-file [SurfaceGenBuilder]. It
+/// re-reads the annotated libraries into a single merged [SurfaceModel] and
+/// hands that to [SmokeEmitter] through the same [SurfaceEmitter] seam.
+///
+/// Candidate inputs are filtered TEXTUALLY on `@chartSurface` /
+/// `@ChartSurface` before being resolved: resolving all ~260 libraries of
+/// `lib/src/**` to find the ~35 annotated ones would dominate the build.
+///
+/// Output lives under `test/`, so the CI regenerate-and-diff gate lists that
+/// path alongside `lib/src/fluent/generated`.
+class SmokeTestBuilder implements Builder {
+  const SmokeTestBuilder();
+
+  static const String _output = 'test/fluent/fluent_smoke_generated_test.dart';
+
+  static const String _generatedPrefix = 'lib/src/fluent/generated/';
+
+  @override
+  Map<String, List<String>> get buildExtensions => const {
+        r'$package$': [_output],
+      };
+
+  @override
+  Future<void> build(BuildStep buildStep) async {
+    final barrel = await _barrelLibrary(buildStep);
+    if (barrel == null) return;
+    final reachable = reachableClasses([barrel]);
+
+    final assets = await buildStep
+        .findAssets(Glob('lib/src/**.dart'))
+        .where((asset) => !asset.path.startsWith(_generatedPrefix))
+        .toList();
+    assets.sort((a, b) => a.path.compareTo(b.path));
+
+    final classes = <SurfaceClass>[];
+    for (final asset in assets) {
+      final source = await buildStep.readAsString(asset);
+      if (!source.contains('@chartSurface') &&
+          !source.contains('@ChartSurface')) {
+        continue;
+      }
+      if (!await buildStep.resolver.isLibrary(asset)) continue;
+      final library = await buildStep.resolver.libraryFor(asset);
+      final model = await const AnalyzerSurfaceReader().read(
+        library,
+        reachable: reachable,
+      );
+      classes.addAll(model.classes);
+    }
+    if (classes.isEmpty) return;
+
+    final SurfaceEmitter emitter = SmokeEmitter(
+      exportedNames: barrel.exportNamespace.definedNames2.keys.toSet(),
+    );
+    final source = emitter.emitLibrary(SurfaceModel(classes));
+    if (source == null) return;
+
+    await buildStep.writeAsString(buildStep.allowedOutputs.single, source);
+  }
+
+  Future<LibraryElement?> _barrelLibrary(BuildStep buildStep) async {
+    final barrelId = AssetId(
+      buildStep.inputId.package,
+      'lib/${buildStep.inputId.package}.dart',
+    );
+    if (!await buildStep.canRead(barrelId)) return null;
+    return buildStep.resolver.libraryFor(barrelId);
   }
 }

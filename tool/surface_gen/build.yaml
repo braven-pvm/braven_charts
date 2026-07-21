@@ -34,3 +34,16 @@ builders:
     required_inputs: ["_fluent.dart"]
     auto_apply: none
     build_to: source
+  # Generates test/fluent/fluent_smoke_generated_test.dart: every generated
+  # verb invoked once so that compilation is the assertion. Aggregating, so it
+  # takes the synthetic `$package$` input and runs in a later phase than
+  # `surface_gen`.
+  smoke_test:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["smokeTestBuilder"]
+    build_extensions:
+      $package$:
+        - "test/fluent/fluent_smoke_generated_test.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source

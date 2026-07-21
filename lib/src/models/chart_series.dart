@@ -46,10 +46,13 @@ enum SeriesStyle {
 /// Supports optional Y-axis binding via [yAxisId] and value formatting
 /// via [unit].
 @ChartSurfaceExempt(
-  'slicing base copyWith; use the concrete series types. ChartSeries.copyWith '
-  'is declared to return ChartSeries, so a generated ChartSeriesFluent.withX '
-  'would be typed to the base and drop subclass state wherever the static '
-  'type is ChartSeries — which is exactly how series lists are typed.',
+  'Base of the series family; the concrete series types are modelled '
+  'individually. ChartSeries.copyWith returns ChartSeries, so every '
+  'ChartSeriesFluent verb would hand back a statically bare ChartSeries and '
+  'end the chain — no line-, bar- or scatter-specific verb could follow, '
+  'which is exactly how series values are usually typed. The runtime value '
+  'would survive (every concrete series overrides copyWith), so this is an '
+  'API-quality exemption, not a data-loss one.',
 )
 class ChartSeries {
   const ChartSeries({

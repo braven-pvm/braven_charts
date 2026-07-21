@@ -21,22 +21,18 @@ import 'package:surface_gen/src/enforcement.dart';
 ///
 /// Resolving the entrypoints takes ~15s, hence the 5-minute file timeout.
 ///
-/// ## Slice 1 = REPORT MODE
+/// ## HARD MODE (promoted in Task 6)
 ///
-/// There is exactly ONE test here that the fleet annotation work has to flip:
 /// 'every barrel-reachable config-shaped class carries @chartSurface or
-/// @ChartSurfaceExempt'. It is `skip`ped while Tasks 5 and 6 annotate the
-/// fleet incrementally, and its failure `reason` IS the backlog report. The
-/// same report is printed from `setUpAll` on every run — skipped or not — so
-/// the remaining work stays visible in every CI log.
+/// @ChartSurfaceExempt' is a hard assertion: a new instantiable public class
+/// with a `copyWith` fails this test until it is modelled or deliberately
+/// exempted. That is the whole promise of the surface model — a future
+/// feature cannot bypass it — and it is only real now that the assertion is
+/// no longer skipped.
 ///
-/// No test in this file asserts that anything is still un-annotated, so the
-/// file is correct in BOTH states: report mode today, hard gate after the
-/// promotion below.
-///
-/// >>> TASK 6 PROMOTION POINT: delete the single line `skip: _reportModeSkip,`
-/// >>> from that test (and the now-unused `_reportModeSkip` constant).
-/// >>> Nothing else changes. <<<
+/// The backlog report is still printed from `setUpAll` on every run, so a
+/// regression names the offending classes in the CI log instead of only in a
+/// matcher failure.
 
 /// The Slice 1 pilots. These must never regress to unannotated.
 const _pilots = <String>[
@@ -65,10 +61,6 @@ const _generatedDirectories = <String>[
   'lib/src/fluent/generated',
   'lib/src/ai/generated',
 ];
-
-const _reportModeSkip =
-    'REPORT MODE (Slice 1). Task 6 annotates the fleet and deletes '
-    'this skip, turning the surface model into a hard gate.';
 
 String get _separator => Platform.pathSeparator;
 
@@ -237,5 +229,5 @@ void main() {
   test('every barrel-reachable config-shaped class carries @chartSurface or '
       '@ChartSurfaceExempt', () {
     expect(result.isClean, isTrue, reason: report);
-  }, skip: _reportModeSkip);
+  });
 }

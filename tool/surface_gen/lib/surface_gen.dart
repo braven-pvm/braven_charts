@@ -17,3 +17,10 @@ Builder surfaceGenBuilder(BuilderOptions options) => const SurfaceGenBuilder();
 /// regenerates `lib/braven_charts_fluent.dart` from the generated file set.
 Builder fluentBarrelBuilder(BuilderOptions options) =>
     const FluentBarrelBuilder();
+
+/// Aggregating smoke-test builder, declared in `build.yaml` as `smoke_test`.
+///
+/// Runs after [surfaceGenBuilder] (`required_inputs: ['_fluent.dart']`) and
+/// regenerates `test/fluent/fluent_smoke_generated_test.dart`, which invokes
+/// every generated verb once so that compilation is the assertion.
+Builder smokeTestBuilder(BuilderOptions options) => const SmokeTestBuilder();

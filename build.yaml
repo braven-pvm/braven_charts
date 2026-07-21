@@ -22,5 +22,10 @@ targets:
       # (a later build phase; see tool/surface_gen/build.yaml).
       surface_gen|fluent_barrel:
         enabled: true
+      # Regenerates test/fluent/fluent_smoke_generated_test.dart from the
+      # whole surface model (a later build phase; see
+      # tool/surface_gen/build.yaml).
+      surface_gen|smoke_test:
+        enabled: true
       mockito|mockBuilder:
         enabled: false

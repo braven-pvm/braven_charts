@@ -43,10 +43,10 @@ jobs:
       # files; any output at all is a failure.
       - name: Verify generated surface is committed
         run: |
-          DIRTY=$(git status --porcelain --untracked-files=all -- lib/src/fluent/generated lib/src/ai/generated lib/braven_charts_fluent.dart)
+          DIRTY=$(git status --porcelain --untracked-files=all -- lib/src/fluent/generated lib/src/ai/generated lib/braven_charts_fluent.dart test/fluent/fluent_smoke_generated_test.dart)
           if [ -n "$DIRTY" ]; then
             echo "$DIRTY"
-            echo "::error::Generated surface is stale or uncommitted. The files under lib/src/fluent/generated (and lib/src/ai/generated), plus the generated opt-in barrel lib/braven_charts_fluent.dart, do not match what surface_gen produces from the current @chartSurface annotations. Run 'dart run build_runner build' locally and commit the result (including any NEW generated files)."
+            echo "::error::Generated surface is stale or uncommitted. The files under lib/src/fluent/generated (and lib/src/ai/generated), the generated opt-in barrel lib/braven_charts_fluent.dart, and the generated smoke test test/fluent/fluent_smoke_generated_test.dart do not match what surface_gen produces from the current @chartSurface annotations. Run 'dart run build_runner build' locally and commit the result (including any NEW generated files)."
             exit 1
           fi
 

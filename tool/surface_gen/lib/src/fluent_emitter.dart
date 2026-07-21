@@ -442,16 +442,8 @@ $gap$self ${setter.name}($signature) => copyWith($arguments);
   }
 
   /// The sealed surface class behind [param], when it has variant factories.
-  SurfaceClass? _sealedOwner(SurfaceParam param, SurfaceModel model) {
-    if (param.kind != SurfaceParamKind.nestedConfig) return null;
-    if (param.isNullable) return null;
-    final name = _stripNullability(param.dartType);
-    final owner = model.tryByName(name);
-    if (owner == null) return null;
-    if (!owner.isSealed) return null;
-    if (owner.sealedVariants.isEmpty || owner.factories.isEmpty) return null;
-    return owner;
-  }
+  SurfaceClass? _sealedOwner(SurfaceParam param, SurfaceModel model) =>
+      sealedOwnerFor(param, model);
 
   SurfaceParam _paramByName(SurfaceClass cls, String name) {
     for (final param in cls.params) {
@@ -474,36 +466,54 @@ $gap$self ${setter.name}($signature) => copyWith($arguments);
         '${items.last}';
   }
 
-  Set<String> _combinedMemberNames(SurfaceClass cls) => {
-        for (final setter in cls.combinedSetters) ...setter.paramNames,
-      };
+  Set<String> _combinedMemberNames(SurfaceClass cls) =>
+      combinedMemberNames(cls);
 
-  String _stripNullability(String type) =>
-      type.endsWith('?') ? type.substring(0, type.length - 1) : type;
+  String _stripNullability(String type) => stripNullability(type);
 
-  /// `withX` from `x`, but `withXOrdered` from `isXOrdered`: an `is` prefix
-  /// on a bool reads as noise once the verb supplies the grammar.
-  String _verb(String prefix, String name) => '$prefix${_cap(_deIs(name))}';
+  String _verb(String prefix, String name) => fluentVerb(prefix, name);
 
-  String _deIs(String name) {
-    if (name.length > 2 &&
-        name.startsWith('is') &&
-        name[2] == name[2].toUpperCase() &&
-        name[2] != name[2].toLowerCase()) {
-      return name.substring(2);
-    }
-    return name;
-  }
+  String _cap(String name) => capitalize(name);
 
-  String _cap(String name) =>
-      name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
-
-  String _format(String source) => DartFormatter(
-        languageVersion: DartFormatter.latestLanguageVersion,
-      ).format(source);
+  String _format(String source) => formatGenerated(source);
 }
 
-bool _isExcluded(SurfaceParam param) => switch (param.kind) {
+/// Drops a trailing `?` from a type string.
+///
+/// Shared with `smoke_emitter.dart` so the two emitters can never disagree
+/// about a signature.
+String stripNullability(String type) =>
+    type.endsWith('?') ? type.substring(0, type.length - 1) : type;
+
+/// `withX` from `x`, but `withXOrdered` from `isXOrdered`: an `is` prefix on a
+/// bool reads as noise once the verb supplies the grammar.
+///
+/// This is THE definition of a generated verb name; the smoke emitter calls it
+/// rather than re-deriving names that could drift.
+String fluentVerb(String prefix, String name) =>
+    '$prefix${capitalize(_deIs(name))}';
+
+String _deIs(String name) {
+  if (name.length > 2 &&
+      name.startsWith('is') &&
+      name[2] == name[2].toUpperCase() &&
+      name[2] != name[2].toLowerCase()) {
+    return name.substring(2);
+  }
+  return name;
+}
+
+/// Upper-cases the first character.
+String capitalize(String name) =>
+    name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
+
+/// Formats generated source the one way every emitter formats it.
+String formatGenerated(String source) => DartFormatter(
+      languageVersion: DartFormatter.latestLanguageVersion,
+    ).format(source);
+
+/// Whether the emitters skip [param] entirely.
+bool isExcludedParam(SurfaceParam param) => switch (param.kind) {
       SurfaceParamKind.excludedFunction ||
       SurfaceParamKind.excludedController ||
       SurfaceParamKind.excludedByAnnotation ||
@@ -511,4 +521,25 @@ bool _isExcluded(SurfaceParam param) => switch (param.kind) {
       SurfaceParamKind.excludedNoCopyWithParam =>
         true,
       _ => false,
+    };
+
+bool _isExcluded(SurfaceParam param) => isExcludedParam(param);
+
+/// The sealed surface class behind [param], when it has variant factories.
+///
+/// Shared with `smoke_emitter.dart`.
+SurfaceClass? sealedOwnerFor(SurfaceParam param, SurfaceModel model) {
+  if (param.kind != SurfaceParamKind.nestedConfig) return null;
+  if (param.isNullable) return null;
+  final name = stripNullability(param.dartType);
+  final owner = model.tryByName(name);
+  if (owner == null) return null;
+  if (!owner.isSealed) return null;
+  if (owner.sealedVariants.isEmpty || owner.factories.isEmpty) return null;
+  return owner;
+}
+
+/// The parameter names a class's combined setters consume.
+Set<String> combinedMemberNames(SurfaceClass cls) => {
+      for (final setter in cls.combinedSetters) ...setter.paramNames,
     };
