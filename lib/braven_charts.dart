@@ -92,7 +92,9 @@ export 'src/comparison/chart_comparison_model.dart';
 export 'src/formatting/multi_axis_value_formatter.dart';
 // Grammar
 export 'src/grammar/channel.dart';
+export 'src/grammar/grammar_diagnostics.dart';
 export 'src/grammar/mark.dart';
+export 'src/grammar/plot_lowering.dart';
 export 'src/grammar/plot_spec.dart';
 // Interaction
 export 'src/interaction/core/cartesian_tracking_snapshot.dart';

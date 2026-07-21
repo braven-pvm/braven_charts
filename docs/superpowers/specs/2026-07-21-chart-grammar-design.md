@@ -223,6 +223,36 @@ becomes the single source of truth the hand-written mirrors converge on.
   multi-axis path exclusively (the legacy single-axis path is never
   targeted). Each mark accepts `axis:`/`yAxisId:` hints that lower onto
   `YAxisConfig` slots.
+- **Lowering contract (Task 10, `lib/src/grammar/plot_lowering.dart`).**
+  `LoweredPlot lower<T>(PlotSpec<T> spec)` is total and fail-fast; the
+  validation order is fixed (empty marks → empty data → mark ids → axis ids →
+  transposition → each mark in spec order → unbound axes) so a spec with
+  several problems always reports the same one first.
+  - Mark ids default to `mark-<index>`, counting trend marks. Axis ids default
+    to `axis-<index>`; an empty `yAxes` becomes one left axis, `axis-0`.
+    Every series carries BOTH `yAxisId` and the matching `yAxisConfig` — that
+    pair is what activates the multi-axis path.
+  - **Non-finite values pass through** for line/area/bar/scatter.
+    `ChartDataPoint` documents NaN/infinite coordinates and exposes `isValid`;
+    the whole pipeline already skips invalid points, and that IS how a gap in
+    a line is expressed. Rejecting them would make the grammar stricter than
+    the API it lowers onto. Candlesticks are the exception because
+    `CandlestickDataPoint` rejects them itself: those rows raise
+    `invalidCandlestickRow` with the row index instead of leaking an
+    `ArgumentError`.
+  - **`transposed: true` requires an all-`BarMark` spec.** Transposition is
+    implemented in this package by horizontal bar geometry, which transposes
+    the whole plane; a mixed spec would render some geometries rotated and
+    others not, so it raises `unsupportedTransposition`.
+  - **Channel scales are checked, not coerced.** Each channel has exactly one
+    scale the renderer implements (`size` → area/`sqrt`, `colorBy` and
+    `opacityBy` → `linear`). Null selects it; the other one raises
+    `unsupportedChannelScale`.
+  - **Channel encodings that cannot be defaulted are required.** `colorBy`
+    needs a `ScatterColorEncoding` (no default ramp exists) and `categoryBy`
+    needs `categories` (no categorical palette exists); `size` and `opacityBy`
+    default to their all-default encodings. A channel `label`, when set, wins
+    over the template's own label.
 - **Parity is load-bearing:** a test suite builds charts both ways
   (spec-lowered vs hand-built configs) and asserts config equality and
   artifact-document equality. The GoG layer cannot silently drift from the

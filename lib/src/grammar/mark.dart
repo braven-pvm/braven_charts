@@ -480,6 +480,10 @@ final class CandlestickMark<T> extends Mark<T> {
 /// Unlike the other variants this mark produces no geometry of its own: it
 /// lowers to a `TrendAnnotation` bound to [sourceMarkId]. The inherited
 /// [Mark.color] is the trend line's color.
+///
+/// [Mark.yAxisId] is deliberately NOT a constructor parameter here: a trend is
+/// drawn in its source series' coordinate space, so it follows that series'
+/// axis and cannot be bound to a different one.
 final class TrendMark<T> extends Mark<T> {
   /// Creates a trend statistic over the mark identified by [sourceMarkId].
   const TrendMark({
@@ -487,7 +491,6 @@ final class TrendMark<T> extends Mark<T> {
     super.id,
     super.name,
     super.color,
-    super.yAxisId,
     this.trendType = TrendType.linear,
     this.windowSize,
     this.showConfidenceBand = false,
