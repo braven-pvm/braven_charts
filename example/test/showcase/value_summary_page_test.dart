@@ -643,7 +643,9 @@ void main() {
     );
 
     // Tapping the selected swatch again toggles it off — back to none, never
-    // to a stale explicit color.
+    // to a stale explicit color. (The subtitle length changes with the
+    // tri-state, so the swatch may have shifted since the last reveal.)
+    await revealOption(tester, blueSwatch);
     await tester.tap(blueSwatch);
     await tester.pumpAndSettle();
     expect(style().backgroundColor.isNone, isTrue);
@@ -1227,6 +1229,314 @@ void main() {
       await tester.pumpAndSettle();
       expect(renderBox.debugValueSummaryBounds.topLeft, const Offset(12, 12));
       expect(find.textContaining('No committed placement'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'style controls skin both the summary and the shared tracking-panel '
+    'TooltipStyle across presets, and cleared returns the panel to its '
+    'default',
+    (tester) async {
+      await pumpPage(tester);
+
+      CartesianValueSummaryStyle summaryStyle() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+          .interactionConfig!
+          .valueSummary
+          .style;
+      TooltipStyle panelStyle() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+          .interactionConfig!
+          .tooltip
+          .style;
+
+      // Untouched: the page emits a style equal to the library default, so
+      // the tracking panel keeps its default look and the point tooltip's
+      // resolver still treats it as "no override" (theme resolution).
+      expect(panelStyle(), const TooltipStyle());
+
+      // Background color skins both surfaces: the summary gets the explicit
+      // tri-state override, the panel gets the plain color.
+      final blueSwatch = find.byKey(
+        ValueKey('value-summary-background-color-${Colors.blue.toARGB32()}'),
+      );
+      await revealOption(tester, blueSwatch);
+      await tester.tap(blueSwatch);
+      await tester.pumpAndSettle();
+      expect(summaryStyle().backgroundColor, isA<ChartStyleExplicit<Color>>());
+      expect(panelStyle().backgroundColor.toARGB32(), Colors.blue.toARGB32());
+
+      // Background opacity composes into the color's alpha on the panel side
+      // — TooltipStyle takes a single color, not a separate opacity.
+      final opacitySlider = find.byKey(
+        const ValueKey('value-summary-background-opacity'),
+      );
+      await revealOption(tester, opacitySlider);
+      tester.widget<SliderOption>(opacitySlider).onChanged(0.5);
+      await tester.pumpAndSettle();
+      expect(
+        summaryStyle().backgroundOpacity,
+        const ChartStyleValue<double>.value(0.5),
+      );
+      expect(panelStyle().backgroundColor.a, closeTo(0.5, 0.01));
+      expect(
+        panelStyle().backgroundColor.toARGB32() & 0x00FFFFFF,
+        Colors.blue.toARGB32() & 0x00FFFFFF,
+      );
+
+      // Border color, corner radius, padding, text color, and text size map
+      // onto their exact TooltipStyle equivalents.
+      final borderTeal = find.byKey(
+        ValueKey('value-summary-border-color-${Colors.teal.toARGB32()}'),
+      );
+      await revealOption(tester, borderTeal);
+      await tester.tap(borderTeal);
+      await tester.pumpAndSettle();
+      expect(panelStyle().borderColor.toARGB32(), Colors.teal.toARGB32());
+
+      final radiusSlider = find.byKey(
+        const ValueKey('value-summary-corner-radius'),
+      );
+      await revealOption(tester, radiusSlider);
+      tester.widget<SliderOption>(radiusSlider).onChanged(16);
+      await tester.pumpAndSettle();
+      expect(
+        summaryStyle().borderRadius,
+        ChartStyleValue<BorderRadius>.value(BorderRadius.circular(16)),
+      );
+      expect(panelStyle().borderRadius, 16);
+
+      final paddingSlider = find.byKey(
+        const ValueKey('value-summary-panel-padding'),
+      );
+      await revealOption(tester, paddingSlider);
+      tester.widget<SliderOption>(paddingSlider).onChanged(12);
+      await tester.pumpAndSettle();
+      expect(
+        summaryStyle().padding,
+        const ChartStyleValue<EdgeInsets>.value(EdgeInsets.all(12)),
+      );
+      expect(panelStyle().padding, 12);
+
+      final textTeal = find.byKey(
+        ValueKey('value-summary-text-color-${Colors.teal.toARGB32()}'),
+      );
+      await revealOption(tester, textTeal);
+      await tester.tap(textTeal);
+      await tester.pumpAndSettle();
+      expect(panelStyle().textColor.toARGB32(), Colors.teal.toARGB32());
+
+      final sizeSlider = find.byKey(const ValueKey('value-summary-text-size'));
+      await revealOption(tester, sizeSlider);
+      tester.widget<SliderOption>(sizeSlider).onChanged(14);
+      await tester.pumpAndSettle();
+      expect(panelStyle().fontSize, 14);
+
+      // Text weight is summary-only — TooltipStyle has no weight field, so
+      // a weight choice leaves the panel style untouched.
+      final beforeWeight = panelStyle();
+      final bold = find.byKey(const ValueKey('value-summary-text-weight-700'));
+      await revealOption(tester, bold);
+      await tester.tap(bold);
+      await tester.pumpAndSettle();
+      expect(panelStyle(), beforeWeight);
+
+      // The composed panel style persists onto a second preset...
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-candlestick')),
+      );
+      await tester.pumpAndSettle();
+      expect(panelStyle().borderRadius, 16);
+      expect(panelStyle().padding, 12);
+      expect(panelStyle().fontSize, 14);
+      expect(panelStyle().textColor.toARGB32(), Colors.teal.toARGB32());
+      expect(panelStyle().backgroundColor.a, closeTo(0.5, 0.01));
+
+      // ...and reaches BOTH charts of the synchronized pair.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+      final charts = tester.widgetList<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      expect(charts, hasLength(2));
+      for (final chart in charts) {
+        expect(chart.interactionConfig!.tooltip.style.borderRadius, 16);
+        expect(chart.interactionConfig!.tooltip.style.padding, 12);
+      }
+
+      // Clearing the background color drops only that override — the panel
+      // returns to its default background while the still-active opacity
+      // override keeps composing onto it.
+      await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
+      await tester.pumpAndSettle();
+      final backgroundClear = find.byKey(
+        const ValueKey('value-summary-background-color-clear'),
+      );
+      await revealOption(tester, backgroundClear);
+      await tester.tap(backgroundClear);
+      await tester.pumpAndSettle();
+      expect(summaryStyle().backgroundColor.isNone, isTrue);
+      expect(
+        panelStyle().backgroundColor.toARGB32() & 0x00FFFFFF,
+        const TooltipStyle().backgroundColor.toARGB32() & 0x00FFFFFF,
+      );
+      expect(panelStyle().backgroundColor.a, closeTo(0.5, 0.01));
+
+      // Reset Style to Theme: the summary returns to full inheritance and
+      // the tracking panel to its exact default style.
+      final reset = find.byKey(const ValueKey('value-summary-reset-style'));
+      await revealOption(tester, reset);
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(panelStyle(), const TooltipStyle());
+      expect(summaryStyle().backgroundColor.isInherit, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'workbench chrome wraps every single-chart preset; the synchronized '
+    'pair skips it, following the cartesian precedent',
+    (tester) async {
+      await pumpPage(tester);
+
+      const workbenchPresets = [
+        'line',
+        'multiSeries',
+        'multiAxis',
+        'candlestick',
+        'pinned',
+        'draggable',
+      ];
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      for (final preset in workbenchPresets) {
+        await tester.tap(find.byKey(ValueKey('value-summary-preset-$preset')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('value-summary-workbench')),
+          findsOneWidget,
+          reason: '$preset preset should render inside the workbench',
+        );
+        expect(switcher, findsOneWidget);
+        for (final mode in ['Chart', 'Data', 'Split', 'Source']) {
+          expect(
+            find.descendant(of: switcher, matching: find.text(mode)),
+            findsOneWidget,
+            reason: '$preset preset should offer the $mode chip',
+          );
+        }
+        // Chart mode keeps exactly one mounted chart inside the chrome.
+        expect(find.byType(BravenChartPlus), findsOneWidget);
+      }
+
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenChartWorkbench), findsNothing);
+      expect(switcher, findsNothing);
+      expect(find.byType(BravenChartPlus), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'workbench modes: Data shows the table, Source emits the summary '
+    'config, and the summary survives a mode round-trip',
+    (tester) async {
+      await pumpPage(tester);
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+
+      // Data: the table replaces the chart pane with one row per sample.
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ChartDataTable), findsOneWidget);
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      expect(workbench.workbenchController!.tableModel?.rowCount, 11);
+
+      // Split: chart and table side by side — the summary stays painted on
+      // the single mounted chart.
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Split')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenChartPlus), findsOneWidget);
+      expect(find.byType(ChartDataTable), findsOneWidget);
+      expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
+
+      // Back to Chart: the summary pipeline is intact after the round-trip,
+      // still resolving the latest-datum fallback.
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Chart')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenChartPlus), findsOneWidget);
+      expect(find.byType(ChartDataTable), findsNothing);
+      final renderBox = _renderBox(tester);
+      expect(renderBox.debugValueSummaryModel, isNotNull);
+      expect(renderBox.debugValueSummaryBounds, isNot(Rect.zero));
+      expect(
+        renderBox.debugValueSummarySnapshot?.origin,
+        CartesianTrackingOrigin.fallback,
+      );
+
+      // The candlestick preset's document works in Data mode too — the
+      // table models OHLC rows without any extra options.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-candlestick')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ChartDataTable), findsOneWidget);
+      expect(workbench.workbenchController!.tableModel?.rowCount, 28);
+
+      // Source last, back on the line preset: the generated Dart names the
+      // page variable and carries the enabled value summary configuration.
+      // (Deliberately no preset switch after this visit: a captured Source
+      // snapshot invalidated by a later chart change leaves the offstage
+      // source pane's indeterminate progress ticker running forever — a
+      // pre-existing workbench behavior the master cartesian pages share.)
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Chart')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ChartSourceView), findsOneWidget);
+      expect(
+        workbench.workbenchController!.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      final source = workbench.workbenchController!.generatedSource!.source;
+      expect(source, contains('final valueSummaryChart = BravenChartPlus('));
+      expect(source, contains('valueSummary: CartesianValueSummaryConfig('));
+
+      // Chart once more: the summary is alive after the full mode tour.
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Chart')),
+      );
+      await tester.pumpAndSettle();
+      expect(_renderBox(tester).debugValueSummaryModel, isNotNull);
+      expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
       expect(tester.takeException(), isNull);
     },
   );

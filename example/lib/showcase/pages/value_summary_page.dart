@@ -23,7 +23,11 @@ import '../widgets/standard_options.dart';
 /// candlestick OHLC rows, a synchronized chart pair, a programmatic pinning
 /// workflow, and a draggable annotation-style panel; the options panel
 /// exercises presentation, placement, value policy, and the tri-state style
-/// model live.
+/// model live. The Style section's surface and text controls are universal:
+/// they skin the summary AND the classic tracking panel (whose TooltipStyle
+/// the point tooltip shares). Every single-chart preset renders inside the
+/// Chart / Data / Split / Source workbench chrome of the cartesian pages;
+/// the synchronized pair skips it, following the cartesian precedent.
 class ValueSummaryPage extends StatefulWidget {
   const ValueSummaryPage({super.key});
 
@@ -49,6 +53,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       DefaultCartesianValueSummaryController();
   final ChartInteractionGroupController _syncGroup =
       ChartInteractionGroupController();
+
+  /// One workbench pair for every single-chart preset: the same controllers
+  /// survive preset switches so the chosen display mode (Chart / Data /
+  /// Split / Source) persists, exactly like the cartesian type pages. The
+  /// synchronized pair renders without the workbench — the cartesian line
+  /// page's synchronized preset sets that precedent (two coordinated charts
+  /// have no single chart document to table or source).
+  final BravenChartController _chartController = BravenChartController();
+  final ChartWorkbenchController _workbenchController =
+      ChartWorkbenchController();
   late final List<CandlestickDataPoint> _candles = _buildSummaryCandles();
 
   _SummaryPreset _preset = _SummaryPreset.line;
@@ -127,6 +141,8 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     _optionsController.dispose();
     _summaryController.dispose();
     _syncGroup.dispose();
+    _chartController.dispose();
+    _workbenchController.dispose();
     super.dispose();
   }
 
@@ -232,6 +248,35 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     textStyle: _rowTextOverride(_summaryTheme.valueStyle),
     labelStyle: _rowTextOverride(_summaryTheme.labelStyle),
   );
+
+  /// The Style controls projected onto the classic tracking panel.
+  ///
+  /// The crosshair tracking panel and the point tooltip share one style
+  /// surface — [TooltipConfig.style], a [TooltipStyle] — so the section's
+  /// universal controls skin both alongside the summary. The surface has no
+  /// tri-state: a field either carries an override or keeps the
+  /// [TooltipStyle] default, so cleared (⊘) and inherit both map to "omit
+  /// the override" and the panel returns to its default look. Background
+  /// opacity composes into the color's alpha because the surface takes a
+  /// single color. Accent, text weight, label-value gap, and min/max width
+  /// have no tracking-panel equivalent and stay summary-only.
+  TooltipStyle get _trackingPanelStyle {
+    const defaults = TooltipStyle();
+    final background =
+        _explicitColor(_backgroundColor) ?? defaults.backgroundColor;
+    return TooltipStyle(
+      backgroundColor: _backgroundOpacityOverridden
+          ? background.withValues(alpha: _backgroundOpacity)
+          : background,
+      borderColor: _explicitColor(_borderColor) ?? defaults.borderColor,
+      borderRadius: _cornerRadiusOverridden
+          ? _cornerRadius
+          : defaults.borderRadius,
+      padding: _panelPaddingOverridden ? _panelPadding : defaults.padding,
+      textColor: _textColor ?? defaults.textColor,
+      fontSize: _textSizeOverridden ? _textSize : defaults.fontSize,
+    );
+  }
 
   CartesianValueSummaryConfig _summaryConfig({bool withController = true}) {
     final placement = ChartOverlayPlacement(
@@ -345,11 +390,15 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   static String _styleSubtitle(
     ChartStyleValue<Color> value, {
     required String whenNone,
-  }) => value.isInherit
-      ? 'ChartStyleValue.inherit() — the theme resolves it'
-      : value.isNone
-      ? whenNone
-      : 'ChartStyleValue.value() — explicit override';
+    String? scope,
+  }) {
+    final subtitle = value.isInherit
+        ? 'ChartStyleValue.inherit() — the theme resolves it'
+        : value.isNone
+        ? whenNone
+        : 'ChartStyleValue.value() — explicit override';
+    return scope == null ? subtitle : '$subtitle · $scope';
+  }
 
   static String _anchorLabel(Alignment anchor) => switch (anchor) {
     Alignment.topLeft => 'topLeft',
@@ -466,16 +515,73 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           title: _preset.stageTitle,
           subtitle: _preset.stageSubtitle,
           padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
-          child: switch (_preset) {
-            _SummaryPreset.line => _buildLineChart(),
-            _SummaryPreset.multiSeries => _buildMultiSeriesChart(),
-            _SummaryPreset.multiAxis => _buildMultiAxisChart(),
-            _SummaryPreset.candlestick => _buildCandlestickChart(),
-            _SummaryPreset.synchronized => _buildSynchronizedPair(),
-            _SummaryPreset.pinned => _buildPinnedChart(),
-            _SummaryPreset.draggable => _buildDraggableChart(),
-          },
+          // Single-chart presets run inside the workbench chrome; the
+          // synchronized pair skips it, following the cartesian line page's
+          // synchronized-preset precedent.
+          child: _preset == _SummaryPreset.synchronized
+              ? _buildSynchronizedPair()
+              : _buildWorkbench(),
         );
+      },
+    );
+  }
+
+  /// The Chart / Data / Split / Source workbench every single-chart preset
+  /// renders through — the same chrome as the cartesian type pages. One
+  /// mounted chart in every mode keeps the value summary pipeline (and its
+  /// controller attachment) alive across mode switches.
+  ///
+  /// Every preset chart shares one constant widget key (the cartesian pages'
+  /// pattern): a preset switch must UPDATE the mounted chart, not remount
+  /// it, because a fresh chart attaching to [_chartController] mid-build
+  /// would notify the workbench listeners while the framework is building.
+  Widget _buildWorkbench() {
+    return BravenChartWorkbench(
+      key: const ValueKey('value-summary-workbench'),
+      chartController: _chartController,
+      workbenchController: _workbenchController,
+      availableDisplayModes: const {
+        ChartDisplayMode.chart,
+        ChartDisplayMode.data,
+        ChartDisplayMode.split,
+        ChartDisplayMode.source,
+      },
+      // Every preset wires valueSummary.onPlacementChanged, and executable
+      // callbacks only cross the document boundary as explicit runtime
+      // binding descriptors — without one, table and source extraction fail
+      // (the cartesian scatter-marginals preset sets this precedent for its
+      // viewport callback).
+      documentOptions: ChartDocumentExtractOptions(
+        documentId: 'value-summary-showcase',
+        includeViewState: true,
+        interactionBindingDescriptors: {
+          ChartInteractionDocumentCodec.valueSummaryPlacementChangedBinding:
+              JsonObjectValue(const {
+                'id': JsonStringValue(
+                  'showcase.valueSummary.placementChanged',
+                ),
+              }),
+        },
+      ),
+      sourceOptions: const ChartDartSourceOptions(
+        variableName: 'valueSummaryChart',
+      ),
+      tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+      splitBreakpoint: 760,
+      autoFitTablePane: true,
+      minimumChartPaneExtent: 360,
+      minimumTablePaneExtent: 360,
+      maximumAutoTablePaneExtent: 520,
+      chartBuilder: (context, controller) => switch (_preset) {
+        _SummaryPreset.line => _buildLineChart(controller),
+        _SummaryPreset.multiSeries => _buildMultiSeriesChart(controller),
+        _SummaryPreset.multiAxis => _buildMultiAxisChart(controller),
+        _SummaryPreset.candlestick => _buildCandlestickChart(controller),
+        _SummaryPreset.pinned => _buildPinnedChart(controller),
+        _SummaryPreset.draggable => _buildDraggableChart(controller),
+        // Unreachable: the stage routes the synchronized preset around the
+        // workbench. The branch keeps the switch exhaustive.
+        _SummaryPreset.synchronized => _buildSynchronizedPair(),
       },
     );
   }
@@ -511,7 +617,11 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         showIntersectionMarkers: _intersectionMarkers,
         intersectionMarkerRadius: 3.5,
       ),
-      tooltip: TooltipConfig(enabled: _pointTooltip),
+      // The Style section's universal controls flow into TooltipConfig.style
+      // even while the point tooltip is disabled: the crosshair renderer
+      // reads the same style object for the tracking panel regardless of
+      // [TooltipConfig.enabled].
+      tooltip: TooltipConfig(enabled: _pointTooltip, style: _trackingPanelStyle),
       valueSummary: _summaryConfig(withController: withController),
     );
   }
@@ -524,11 +634,13 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     bool withController = true,
     bool showLegend = true,
     ChartInteractionGroupController? groupController,
+    BravenChartController? bravenChartController,
     Key? key,
   }) {
     final options = _optionsController.options;
     return BravenChartPlus(
       key: key,
+      bravenChartController: bravenChartController,
       series: series,
       theme: options.theme,
       showLegend: showLegend && options.showLegend,
@@ -555,9 +667,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   /// standard "Show Data Markers" toggle.
   bool get _showMarkers => _optionsController.options.showDataMarkers;
 
-  Widget _buildLineChart() {
+  Widget _buildLineChart(BravenChartController controller) {
     return _chart(
-      key: const ValueKey('value-summary-stage-line'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         LineChartSeries(
           id: 'summary-speed',
@@ -579,9 +692,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
-  Widget _buildMultiSeriesChart() {
+  Widget _buildMultiSeriesChart(BravenChartController controller) {
     return _chart(
-      key: const ValueKey('value-summary-stage-multi-series'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         LineChartSeries(
           id: 'rider-a',
@@ -624,13 +738,14 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
-  Widget _buildMultiAxisChart() {
+  Widget _buildMultiAxisChart(BravenChartController controller) {
     // The per-series axis configs bypass the shared `yAxis` parameter of
     // [_chart], so the standard "Show Axis Lines" toggle must be wired into
     // each of them explicitly.
     final showAxisLines = _optionsController.options.showAxisLines;
     return _chart(
-      key: const ValueKey('value-summary-stage-multi-axis'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         LineChartSeries(
           id: 'summary-vo2',
@@ -676,9 +791,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
-  Widget _buildCandlestickChart() {
+  Widget _buildCandlestickChart(BravenChartController controller) {
     return _chart(
-      key: const ValueKey('value-summary-stage-candlestick'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         CandlestickChartSeries(
           id: 'summary-ohlc',
@@ -761,9 +877,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
-  Widget _buildPinnedChart() {
+  Widget _buildPinnedChart(BravenChartController controller) {
     return _chart(
-      key: const ValueKey('value-summary-stage-pinned'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         LineChartSeries(
           id: 'summary-lactate',
@@ -786,9 +903,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
-  Widget _buildDraggableChart() {
+  Widget _buildDraggableChart(BravenChartController controller) {
     return _chart(
-      key: const ValueKey('value-summary-stage-draggable'),
+      key: const ValueKey('value-summary-stage-chart'),
+      bravenChartController: controller,
       series: [
         AreaChartSeries(
           id: 'drag-target',
@@ -1136,11 +1254,25 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         title: 'Style',
         icon: Icons.format_paint_outlined,
         children: [
+          const InfoBox(
+            key: ValueKey('value-summary-style-scope'),
+            message:
+                'Background color and opacity, border color, corner radius, '
+                'padding, and text color/size are universal on this page: '
+                'they skin the value summary AND the classic tracking panel '
+                '(the point tooltip shares the tracking panel\'s '
+                'TooltipStyle). Accent, text weight, label-value gap, and '
+                'min/max width are summary-only. Cleared (⊘) returns the '
+                'tracking panel to its default look.',
+          ),
+          const SizedBox(height: 8),
           PaletteColorOption(
             label: 'Background color',
             subtitle: _styleSubtitle(
               _backgroundColor,
-              whenNone: 'ChartStyleValue.none() — truly transparent',
+              whenNone:
+                  'ChartStyleValue.none() — transparent summary; the '
+                  'tracking panel returns to its default',
             ),
             keyPrefix: 'value-summary-background-color',
             value: _explicitColor(_backgroundColor),
@@ -1152,7 +1284,9 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             label: 'Border color',
             subtitle: _styleSubtitle(
               _borderColor,
-              whenNone: 'ChartStyleValue.none() — no stroke',
+              whenNone:
+                  'ChartStyleValue.none() — no summary stroke; the tracking '
+                  'panel returns to its default',
             ),
             keyPrefix: 'value-summary-border-color',
             value: _explicitColor(_borderColor),
@@ -1165,6 +1299,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             subtitle: _styleSubtitle(
               _accentColor,
               whenNone: 'ChartStyleValue.none() — hides the accent marks',
+              scope: 'summary only',
             ),
             keyPrefix: 'value-summary-accent-color',
             value: _explicitColor(_accentColor),
@@ -1197,7 +1332,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             }),
           ),
           Text(
-            'Text weight',
+            'Text weight (summary only)',
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
           ),
           const SizedBox(height: 4),
@@ -1243,6 +1378,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
           const SizedBox(height: 4),
           SliderOption(
+            key: const ValueKey('value-summary-background-opacity'),
             label: 'Background opacity',
             value: _backgroundOpacity,
             min: 0,
@@ -1254,6 +1390,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             }),
           ),
           SliderOption(
+            key: const ValueKey('value-summary-corner-radius'),
             label: 'Corner radius',
             value: _cornerRadius,
             min: 0,
@@ -1266,6 +1403,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             }),
           ),
           SliderOption(
+            key: const ValueKey('value-summary-panel-padding'),
             label: 'Panel padding',
             value: _panelPadding,
             min: 0,
