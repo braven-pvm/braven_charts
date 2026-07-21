@@ -213,11 +213,14 @@ void main() {
   ) async {
     await pumpPage(tester);
 
+    // The card renders through the package's ChartCodeBlock — the same
+    // renderer the workbench Source tab uses — so the code is read off that
+    // widget rather than off a bare SelectableText.
     String code() => tester
-        .widget<SelectableText>(
+        .widget<ChartCodeBlock>(
           find.byKey(const ValueKey('chart-grammar-authoring-code')),
         )
-        .data!;
+        .code;
 
     const expected = <String, String>{
       'lineTrend': '.geomLine(',
@@ -227,6 +230,17 @@ void main() {
       'barTransposed': '.geomBar(',
     };
 
+    // The preamble is the point of the card: it names the author's OWN typed
+    // rows the chain consumes, so `BravenChart.of(candleRows)` is not read as
+    // some chart-specific row type.
+    const preamble = <String, String>{
+      'lineTrend': '// rideRows — List<GrammarSample>, 13 rows',
+      'multiAxis': '// rideRows — List<GrammarSample>, 13 rows',
+      'scatterChannels': '// rideRows — List<GrammarSample>, 13 rows',
+      'candlestick': '// candleRows — List<GrammarSample>, 10 OHLC sessions',
+      'barTransposed': '// zoneRows — List<GrammarSample>, 5 training zones',
+    };
+
     for (final preset in presets) {
       await selectPreset(tester, preset);
       expect(
@@ -234,7 +248,17 @@ void main() {
         findsOneWidget,
       );
       final source = code();
-      expect(source, startsWith('BravenChart.of('));
+      expect(
+        source,
+        startsWith(preamble[preset]!),
+        reason: '$preset card should name the data constant it consumes',
+      );
+      expect(
+        source,
+        contains('(GrammarSample r) =>'),
+        reason: '$preset card should show the accessor tear-offs',
+      );
+      expect(source, contains('BravenChart.of('));
       expect(
         source,
         contains(expected[preset]),

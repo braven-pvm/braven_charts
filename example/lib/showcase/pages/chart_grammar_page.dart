@@ -770,6 +770,12 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   /// as paired with this card; they show each chain at its DEFAULT knob
   /// values, and the note under the card names the parameters the options
   /// panel is currently driving.
+  ///
+  /// Each string opens with a preamble naming the data constant, its row type
+  /// and its length, plus the accessor tear-offs the chain reads — without it
+  /// `BravenChart.of(candleRows)` hides the whole point of the layer, which is
+  /// that the rows are the AUTHOR'S own typed objects read through accessors,
+  /// not a chart-specific row type.
   Widget _buildAuthoringCard() {
     final theme = Theme.of(context);
     return ChartCard(
@@ -781,27 +787,16 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // The same renderer the workbench Source tab uses, so the chain a
+          // reader writes and the Dart it lowers to are presented identically.
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: SingleChildScrollView(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SelectableText(
-                    _preset.authoringCode,
-                    key: const ValueKey('chart-grammar-authoring-code'),
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ChartCodeBlock(
+                key: const ValueKey('chart-grammar-authoring-code'),
+                code: _preset.authoringCode,
+                semanticLabel: 'Authoring code for the '
+                    '${_preset.label} preset',
               ),
             ),
           ),
@@ -1124,7 +1119,8 @@ extension on _GrammarPreset {
           'than render half the chart rotated.',
   };
 
-  /// The exact chain that builds this preset.
+  /// The exact chain that builds this preset, under a preamble naming the
+  /// data constant and the accessors it reads.
   String get authoringCode => switch (this) {
     _GrammarPreset.lineTrend => _lineTrendChain,
     _GrammarPreset.multiAxis => _multiAxisChain,
@@ -1137,6 +1133,10 @@ extension on _GrammarPreset {
 // SHOWCASE CHAIN — kept in sync with the authoring-code card
 // (_ChartGrammarPageState._lineTrendChart).
 const String _lineTrendChain = '''
+// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
+// The accessors are top-level tear-offs over it:
+//   double sampleMinute(GrammarSample r) => r.minute;
+//   double samplePower(GrammarSample r) => r.power;
 BravenChart.of(rideRows)
     .x(sampleMinute, label: 'Elapsed (min)')
     .y(samplePower, label: 'Power')
@@ -1161,6 +1161,10 @@ BravenChart.of(rideRows)
 // SHOWCASE CHAIN — kept in sync with the authoring-code card
 // (_ChartGrammarPageState._multiAxisChart).
 const String _multiAxisChain = '''
+// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
+// The accessors are top-level tear-offs over it:
+//   double sampleMinute(GrammarSample r) => r.minute;
+//   ...and samplePower / sampleHeartRate, one per measure.
 BravenChart.of(rideRows)
     .x(sampleMinute, label: 'Elapsed (min)')
     .yAxis(YAxisConfig(
@@ -1196,6 +1200,10 @@ BravenChart.of(rideRows)
 // SHOWCASE CHAIN — kept in sync with the authoring-code card
 // (_ChartGrammarPageState._scatterChannelsChart).
 const String _scatterChannelsChain = '''
+// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
+// The accessors are top-level tear-offs over it:
+//   double samplePower(GrammarSample r) => r.power;
+//   ...and sampleHeartRate, sampleEffort, Object sampleZone(r) => r.zone.
 BravenChart.of(rideRows)
     .x(samplePower, label: 'Power (W)')
     .y(sampleHeartRate, label: 'Heart rate (bpm)')
@@ -1219,6 +1227,10 @@ BravenChart.of(rideRows)
 // SHOWCASE CHAIN — kept in sync with the authoring-code card
 // (_ChartGrammarPageState._candlestickChart).
 const String _candlestickChain = '''
+// candleRows — List<GrammarSample>, 10 OHLC sessions of YOUR type.
+// The accessors are top-level tear-offs over it:
+//   double sampleMinute(GrammarSample r) => r.minute;
+//   ...and sampleOpen / sampleHigh / sampleLow / sampleClose, one per field.
 BravenChart.of(candleRows)
     .x(sampleMinute, label: 'Session')
     .yAxis(YAxisConfig(
@@ -1241,6 +1253,10 @@ BravenChart.of(candleRows)
 // SHOWCASE CHAIN — kept in sync with the authoring-code card
 // (_ChartGrammarPageState._barTransposedChart).
 const String _barTransposedChain = '''
+// zoneRows — List<GrammarSample>, 5 training zones of YOUR type.
+// The accessors are top-level tear-offs over it:
+//   double sampleMinute(GrammarSample r) => r.minute;
+//   double sampleMinutes(GrammarSample r) => r.minutes;
 BravenChart.of(zoneRows)
     .x(sampleMinute, label: 'Zone')
     .y(sampleMinutes, label: 'Minutes')
