@@ -76,11 +76,14 @@
 ///
 /// ## Named diagnostics (hard failures)
 ///
-/// - **slicing copyWith** — an annotated class whose `copyWith` returns the
-///   class itself while a SUBCLASS overrides `copyWith`. Generated `withX`
-///   verbs would be typed to the base and silently discard subclass state
-///   (`ChartSeries` is exactly this shape). Fix by annotating
-///   `@ChartSurfaceExempt(reason)` or making `copyWith` abstract.
+/// - **slicing copyWith** — an annotated class whose `copyWith` returns AND
+///   constructs the class itself, while a REACHABLE subclass inherits that
+///   `copyWith` instead of overriding it covariantly. Generated `withX` verbs
+///   would hand back a bare base and discard the subclass's state. The scan
+///   is over the whole reachable class set (`enforcement.dart`'s
+///   `reachableClasses`), because a subclass almost never shares a file with
+///   its base. Fix by giving the subclass a covariant `copyWith`, annotating
+///   `@ChartSurfaceExempt(reason)`, or making `copyWith` abstract.
 /// - **assert-coupled parameters** — a multi-parameter constructor assert not
 ///   covered by a `CombinedSetter`. Individual setters would let a chain step
 ///   construct a value the assert rejects (`BarChartSeries(...).withMinWidth(200)`
@@ -103,7 +106,17 @@ import 'surface_model.dart';
 /// Reads a resolved library into a [SurfaceModel].
 abstract interface class SurfaceReader {
   /// Reads every `@chartSurface`-annotated class of [library].
-  Future<SurfaceModel> read(LibraryElement library);
+  ///
+  /// [reachable] is the public-entrypoint class set (see
+  /// `enforcement.dart`'s `reachableClasses`). The slicing diagnostic is
+  /// defined over the whole reachable surface, not over [library] alone: a
+  /// subclass usually lives in a DIFFERENT file from the base it slices.
+  /// Callers that leave it empty get the single-library scan, which is
+  /// strictly weaker.
+  Future<SurfaceModel> read(
+    LibraryElement library, {
+    Iterable<ClassElement> reachable,
+  });
 }
 
 /// The names a `ChartSurface`-shaped constant must expose to match.
@@ -120,20 +133,39 @@ class AnalyzerSurfaceReader implements SurfaceReader {
   const AnalyzerSurfaceReader();
 
   @override
-  Future<SurfaceModel> read(LibraryElement library) async {
+  Future<SurfaceModel> read(
+    LibraryElement library, {
+    Iterable<ClassElement> reachable = const [],
+  }) async {
+    final scope = _scope(library, reachable);
     final classes = <SurfaceClass>[];
     for (final cls in library.classes) {
       final annotation = _chartSurfaceAnnotation(cls);
       if (annotation == null) continue;
-      classes.add(_readClass(cls, annotation, library));
+      classes.add(_readClass(cls, annotation, library, scope));
     }
     return SurfaceModel(classes);
+  }
+
+  /// The classes the slicing diagnostic looks at: this library's own plus the
+  /// reachable set, de-duplicated by identity.
+  List<ClassElement> _scope(
+    LibraryElement library,
+    Iterable<ClassElement> reachable,
+  ) {
+    final scope = <ClassElement>[...library.classes];
+    for (final cls in reachable) {
+      if (scope.any((existing) => identical(existing, cls))) continue;
+      scope.add(cls);
+    }
+    return scope;
   }
 
   SurfaceClass _readClass(
     ClassElement cls,
     DartObject annotation,
     LibraryElement library,
+    List<ClassElement> scope,
   ) {
     final excluded = _stringList(annotation.getField('excluded')).toSet();
     final clearFlagOverrides = _stringMap(annotation.getField('clearFlags'));
@@ -142,7 +174,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     final isConstConstructible = constructor?.isConst ??
         cls.constructors.any((c) => c.isGenerative && c.isConst);
 
-    _checkSlicingCopyWith(cls, copyWith, library);
+    _checkSlicingCopyWith(cls, copyWith, scope);
 
     final copyWithParams = <String, DartType>{
       if (copyWith != null)
@@ -407,33 +439,54 @@ class AnalyzerSurfaceReader implements SurfaceReader {
   }
 
   /// Named diagnostic: slicing copyWith.
+  ///
+  /// [scope] is the reachable class set, not one library: a subclass almost
+  /// never shares a file with the base it slices.
+  ///
+  /// A base whose `copyWith` returns the base and CONSTRUCTS a base is only
+  /// dangerous for subclasses that inherit it. When a subclass overrides
+  /// `copyWith` with its own return type, the generated `withX` still
+  /// dispatches virtually, so no field is lost — the `chart_annotation.dart`
+  /// / `candlestick_data_point.dart` shape is safe and is pinned by
+  /// `test/fluent/fluent_behavior_matrix_test.dart` ('a base-typed verb keeps
+  /// the subclass'). What IS lost is state on a subclass whose effective
+  /// `copyWith` hands back something other than itself — it inherits the
+  /// base's constructor call verbatim. That is the condition checked here.
+  ///
+  /// Subclasses that are themselves `@chartSurface` are skipped: the emitter
+  /// already fails them loudly, and with a better message, through
+  /// `FluentEmitter._checkCopyWithReturnType`.
   void _checkSlicingCopyWith(
     ClassElement cls,
     MethodElement? copyWith,
-    LibraryElement library,
+    List<ClassElement> scope,
   ) {
     if (copyWith == null || copyWith.isAbstract) return;
     if (copyWith.enclosingElement != cls) return;
     if (copyWith.returnType.getDisplayString() != cls.name) return;
 
-    final overriding = <String>[];
-    for (final candidate in library.classes) {
+    final sliced = <String>[];
+    for (final candidate in scope) {
       if (identical(candidate, cls)) continue;
+      if (candidate.isAbstract || candidate.isSealed) continue;
       final inherits =
           candidate.allSupertypes.any((supertype) => supertype.element == cls);
       if (!inherits) continue;
-      final own = candidate.methods
-          .any((method) => method.name == 'copyWith' && !method.isStatic);
-      if (own) overriding.add(candidate.name ?? '<unnamed>');
+      if (_chartSurfaceAnnotation(candidate) != null) continue;
+      final effective = _findCopyWith(candidate);
+      if (effective == null) continue;
+      if (effective.returnType.getDisplayString() == candidate.name) continue;
+      sliced.add(candidate.name ?? '<unnamed>');
     }
-    if (overriding.isEmpty) return;
+    if (sliced.isEmpty) return;
 
     throw StateError(
-      'surface_gen: slicing copyWith — ${cls.name}.copyWith returns '
-      '${cls.name} while ${overriding.join(', ')} override copyWith. '
-      'Generated ${cls.name}Fluent verbs would be typed to ${cls.name} and '
-      'silently discard subclass state whenever the static type is '
-      '${cls.name}. Annotate @ChartSurfaceExempt(reason) on ${cls.name} and '
+      'surface_gen: slicing copyWith — ${cls.name}.copyWith returns and '
+      'constructs a ${cls.name}, and ${sliced.join(', ')} inherit it without '
+      'overriding it. Every generated ${cls.name}Fluent verb would hand back '
+      'a bare ${cls.name} and silently discard their state whenever the '
+      'static type is ${cls.name}. Give ${sliced.join(', ')} a covariant '
+      'copyWith, annotate @ChartSurfaceExempt(reason) on ${cls.name} and '
       'model the concrete subtypes instead, or make ${cls.name}.copyWith '
       'abstract.',
     );

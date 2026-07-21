@@ -181,6 +181,40 @@ class EnforcementResult {
   }
 }
 
+/// Every element in the export namespace of [barrels], de-duplicated by
+/// defining library plus name.
+///
+/// This is THE definition of "reachable" in surface_gen: the names a consumer
+/// can write after importing a public entrypoint. Both the enforcement rule
+/// and `surface_reader.dart`'s slicing diagnostic are defined over it, so the
+/// two can never disagree about what the surface contains.
+List<Element> exportedElements(Iterable<LibraryElement> barrels) {
+  final elements = <Element>[];
+  final seen = <String>{};
+  for (final barrel in barrels) {
+    for (final element in barrel.exportNamespace.definedNames2.values) {
+      final name = element.name;
+      if (name == null || name.isEmpty) continue;
+      final library = element.library;
+      if (library == null) continue;
+      if (!seen.add('${library.uri}#$name')) continue;
+      elements.add(element);
+    }
+  }
+  return elements;
+}
+
+/// The reachable CLASS set — [exportedElements] narrowed to classes.
+///
+/// `surface_reader.dart` scans this instead of a single library, so a
+/// subclass that lives in ANOTHER library can no longer slip past the slicing
+/// diagnostic (`CandlestickDataPoint` vs `ChartDataPoint`,
+/// `DonutChartStyle` vs `PieChartStyle`).
+List<ClassElement> reachableClasses(Iterable<LibraryElement> barrels) => [
+      for (final element in exportedElements(barrels))
+        if (element is ClassElement) element,
+    ];
+
 /// The names a `ChartSurface`-shaped constant must expose to match.
 const List<String> _chartSurfaceFields = [
   'presetFactories',
@@ -209,10 +243,7 @@ class SurfaceEnforcement {
     final missing = <EnforcementEntry>[];
     final seen = <String>{};
 
-    final elements = <Element>[];
-    for (final barrel in barrels) {
-      elements.addAll(barrel.exportNamespace.definedNames2.values);
-    }
+    final elements = exportedElements(barrels);
     final extensionCopyWithTargets = _extensionCopyWithTargets(elements);
 
     for (final element in elements) {

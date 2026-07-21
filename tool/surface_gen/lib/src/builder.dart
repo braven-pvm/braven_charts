@@ -1,7 +1,9 @@
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
 import 'emitter.dart';
+import 'enforcement.dart';
 import 'fluent_emitter.dart';
 import 'surface_reader.dart';
 
@@ -49,11 +51,15 @@ class SurfaceGenBuilder implements Builder {
     if (!await buildStep.resolver.isLibrary(inputId)) return;
 
     final library = await buildStep.resolver.libraryFor(inputId);
-    final model = await const AnalyzerSurfaceReader().read(library);
+    final barrel = await _barrel(buildStep);
+    final model = await const AnalyzerSurfaceReader().read(
+      library,
+      reachable: barrel == null ? const [] : reachableClasses([barrel]),
+    );
     if (model.classes.isEmpty) return;
 
     final SurfaceEmitter emitter = FluentEmitter(
-      exportedNames: await _exportedNames(buildStep),
+      exportedNames: barrel?.exportNamespace.definedNames2.keys.toSet(),
     );
     final source = emitter.emitLibrary(model);
     if (source == null) return;
@@ -70,14 +76,19 @@ class SurfaceGenBuilder implements Builder {
     await buildStep.writeAsString(buildStep.allowedOutputs.single, source);
   }
 
-  /// The public barrel's export namespace, or `null` when there is no barrel
-  /// (the emitter then skips the reachability guard).
-  Future<Set<String>?> _exportedNames(BuildStep buildStep) async {
-    final barrelId =
-        AssetId(buildStep.inputId.package, 'lib/${buildStep.inputId.package}.dart');
+  /// The public barrel library, or `null` when there is none.
+  ///
+  /// It supplies BOTH halves of "reachable": the name set the emitter's
+  /// export guard needs, and the class set the reader's slicing diagnostic
+  /// scans. The generated fluent barrel re-exports this one and defines no
+  /// classes of its own, so the core barrel is the whole reachable surface.
+  Future<LibraryElement?> _barrel(BuildStep buildStep) async {
+    final barrelId = AssetId(
+      buildStep.inputId.package,
+      'lib/${buildStep.inputId.package}.dart',
+    );
     if (!await buildStep.canRead(barrelId)) return null;
-    final barrel = await buildStep.resolver.libraryFor(barrelId);
-    return barrel.exportNamespace.definedNames2.keys.toSet();
+    return buildStep.resolver.libraryFor(barrelId);
   }
 }
 

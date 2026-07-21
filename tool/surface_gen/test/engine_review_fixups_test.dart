@@ -233,9 +233,51 @@ class FixtureTheme {
   // =========================================================================
 
   group('E3 slicing copyWith guard', () {
-    test('an annotated base whose subclass overrides copyWith fails', () async {
+    // Task 6 correction. The guard used to fire on the OPPOSITE condition —
+    // "a subclass overrides copyWith" — which is the SAFE shape: a generated
+    // `withX` calls `copyWith` VIRTUALLY, so an override with a covariant
+    // return hands back the subclass with every field intact. That is proved
+    // at runtime against the real fleet by
+    // `test/fluent/fluent_behavior_matrix_test.dart` ('a base-typed verb
+    // keeps the subclass and its fields'). The dangerous shape is a subclass
+    // that INHERITS a base `copyWith` which returns and constructs the base.
+
+    test('a subclass that inherits the base copyWith fails', () async {
       await _expectReadThrows(
         '''
+@chartSurface
+class FixtureStyle {
+  const FixtureStyle({this.opacity = 1.0});
+  final double opacity;
+  FixtureStyle copyWith({double? opacity}) =>
+      FixtureStyle(opacity: opacity ?? this.opacity);
+}
+
+class FixtureTintedStyle extends FixtureStyle {
+  const FixtureTintedStyle({super.opacity, this.tint = 0});
+  final int tint;
+}
+''',
+        throwsA(
+          isA<StateError>()
+              .having((e) => e.message, 'message', contains('slicing copyWith'))
+              .having((e) => e.message, 'message', contains('FixtureStyle'))
+              .having(
+                (e) => e.message,
+                'message',
+                contains('FixtureTintedStyle'),
+              )
+              .having(
+                (e) => e.message,
+                'message',
+                contains('ChartSurfaceExempt'),
+              ),
+        ),
+      );
+    });
+
+    test('a subclass with a covariant copyWith override is fine', () async {
+      final model = await _read('''
 @chartSurface
 class FixtureSeries {
   const FixtureSeries({this.id = ''});
@@ -250,22 +292,69 @@ class FixtureLine extends FixtureSeries {
   FixtureLine copyWith({String? id, double? width}) =>
       FixtureLine(id: id ?? this.id, width: width ?? this.width);
 }
-''',
-        throwsA(
-          isA<StateError>()
-              .having((e) => e.message, 'message', contains('slicing copyWith'))
-              .having((e) => e.message, 'message', contains('FixtureSeries'))
-              .having((e) => e.message, 'message', contains('FixtureLine'))
-              .having(
-                (e) => e.message,
-                'message',
-                contains('ChartSurfaceExempt'),
-              ),
-        ),
-      );
+''');
+      expect(model.byName('FixtureSeries').copyWithReturnType, 'FixtureSeries');
     });
 
-    test('a subclass that does not override copyWith is fine', () async {
+    test('a slicing subclass in ANOTHER library is caught through the '
+        'reachable set', () async {
+      // The whole point of the widening: `CandlestickDataPoint` /
+      // `DonutChartStyle` live in different files from the bases they extend,
+      // so a single-library scan never sees them.
+      const baseAsset = 'surface_gen|test/fixtures/inline_base.dart';
+      const subAsset = 'surface_gen|test/fixtures/inline_sub.dart';
+      await resolveSources({
+        baseAsset: '''
+$_preamble
+@chartSurface
+class FixtureStyle {
+  const FixtureStyle({this.opacity = 1.0});
+  final double opacity;
+  FixtureStyle copyWith({double? opacity}) =>
+      FixtureStyle(opacity: opacity ?? this.opacity);
+}
+''',
+        subAsset: '''
+import 'inline_base.dart';
+
+class FixtureTintedStyle extends FixtureStyle {
+  const FixtureTintedStyle({super.opacity, this.tint = 0});
+  final int tint;
+}
+''',
+      }, (resolver) async {
+        final base = await resolver.libraryFor(AssetId.parse(baseAsset));
+        final sub = await resolver.libraryFor(AssetId.parse(subAsset));
+
+        // The single-library scan is blind to it...
+        await expectLater(
+          const AnalyzerSurfaceReader().read(base),
+          completes,
+        );
+        // ...and the reachable set is not.
+        await expectLater(
+          const AnalyzerSurfaceReader().read(base, reachable: sub.classes),
+          throwsA(
+            isA<StateError>()
+                .having(
+                  (e) => e.message,
+                  'message',
+                  contains('slicing copyWith'),
+                )
+                .having(
+                  (e) => e.message,
+                  'message',
+                  contains('FixtureTintedStyle'),
+                ),
+          ),
+        );
+      });
+    });
+
+    test('a subclass that is itself modelled is left to the emitter', () async {
+      // Both halves annotated: the reader stays quiet and
+      // `FluentEmitter._checkCopyWithReturnType` owns the failure (E16), with
+      // a message aimed at the subclass rather than the base.
       final model = await _read('''
 @chartSurface
 class FixtureStyle {
@@ -275,11 +364,14 @@ class FixtureStyle {
       FixtureStyle(opacity: opacity ?? this.opacity);
 }
 
+@chartSurface
 class FixtureTintedStyle extends FixtureStyle {
-  const FixtureTintedStyle() : super(opacity: 0.5);
+  const FixtureTintedStyle({super.opacity, this.tint = 0});
+  final int tint;
 }
 ''');
-      expect(model.byName('FixtureStyle').copyWithReturnType, 'FixtureStyle');
+      expect(model.byName('FixtureTintedStyle').copyWithReturnType,
+          'FixtureStyle');
     });
   });
 
