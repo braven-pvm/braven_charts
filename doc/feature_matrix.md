@@ -38,6 +38,7 @@ is added to package marketing.
 | Reusable chart workbench | `BravenChartWorkbench`, resizable Split view, revision-safe linked point identity, nestable shared mode and selector scope | Chart Workbench; all chart-family guides |
 | Generated Dart source | `ChartDartSourceGenerator`, `ChartDartSourceOptions`, `ChartDisplayMode.source`, `ChartWorkbenchSourceState` | Chart Workbench; Line, Area, Bar, Scatter, Pie, Donut, Concentric Donut, and Polar Column guides |
 | Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
+| Chart grammar and fluent surface | sealed `Mark` hierarchy (`LineMark`, `AreaMark`, `BarMark`, `ScatterMark`, `CandlestickMark`, `TrendMark`), typed `Channel`/`CategoryChannel` encodings, `PlotSpec`, `PlotSpecLowering.lower()`, the `BravenPlot` widget, the chained `BravenChart` facade, coded `GrammarDiagnosticCode` failures, and the opt-in `package:braven_charts/braven_charts_fluent.dart` barrel of generated `withX`/`withoutX`/`inheritX`/`clearX`/`updateX` modifiers | Chart Grammar |
 | Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including complete advanced `bar`, `pie`, and `donut` contracts | Bar Lab, Pie Charts, API documentation |
 | Dense-data performance | bounded buffers, viewport culling, render caches, Scatter spatial indexing and geometry-aware hit testing, Polar Column cached label eligibility and deterministic visual-density caps | Performance, Scatter Charts, Polar Column, Live Stream |
 

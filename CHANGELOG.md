@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- Opt-in fluent modifier surface behind a new barrel,
+  `package:braven_charts/braven_charts_fluent.dart`: 93 generated extensions
+  carrying ~1099 chained verbs over the existing config classes, with a
+  vocabulary that keeps the two kinds of "unset" apart — `withX(v)` replaces,
+  `withoutX()` suppresses a tri-state `ChartStyleValue` field, `inheritX()`
+  defers it to the theme, `clearX()` unsets a nullable parameter back to its
+  default, and `updateX(fn)` edits a nested config in place. The barrel
+  re-exports the core barrel, so one import is enough; the core barrel is
+  untouched, so consumers who never import it never see the verbs. Assert
+  coupled parameters are only reachable through combined setters
+  (`withOhlc(open:, high:, low:, close:)`, `withRange(min, max)`), and
+  cross-object join keys (`id`), OR-coupled bar widths and `RangeAnnotation`
+  bounds are deliberately construction-only.
+- `@chartSurface` surface model and the `tool/surface_gen` build_runner engine
+  that reads it: an analyzer-based, dev-only generator emitting checked-in
+  fluent extensions plus an executing smoke suite, with enforcement that fails
+  when a barrel-reachable, `copyWith`-carrying config class is unannotated
+  (`missing = 0`) and a CI regeneration gate that fails on any diff. Consumers
+  never run `build_runner`.
+- `ChartToolSchema.surfaceDefinitions`: structural surface definitions
+  generated from the same annotated model that drives the fluent layer, so the
+  AI tool schema and the config builder are derived from one source, guarded
+  by a bidirectional drift gate in both directions.
+- Typed grammar-of-graphics authoring layer in the core barrel: `PlotSpec<T>`,
+  the sealed `Mark<T>` hierarchy (`LineMark`, `AreaMark`, `BarMark`,
+  `ScatterMark`, `CandlestickMark`, `TrendMark`), `Channel<T>` and
+  `CategoryChannel<T>` encodings, the `PlotSpecLowering.lower()` extension, the
+  `BravenPlot<T>` widget, and the chained `BravenChart.of(rows)` facade with
+  `x`/`y`/`geomLine`/`geomArea`/`geomBar`/`geomPoint`/`geomCandlestick`/
+  `trend`/`transposed`/`theme`/`interaction`/`xAxis`/`yAxis`/`build`. A spec
+  lowers onto ordinary `ChartSeries`, `ChartAnnotation` and axis configs, so
+  the render pipeline, artifact codecs, generated Source and the Workbench are
+  untouched — parity is locked by config-equality and artifact-document
+  equality suites. Failures are fail-fast and carry a machine-readable
+  `GrammarDiagnosticCode`; empty data is treated as a runtime state and
+  renders the standard empty state instead of throwing from `build`.
 - Native Cartesian value summary for every Cartesian family through
   `InteractionConfig.valueSummary` and `CartesianValueSummaryConfig`: a
   persistent in-plot panel showing the current policy-resolved datum, fed by

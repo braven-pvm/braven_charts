@@ -194,7 +194,7 @@ void main() {
       expect(chart.series.single.yAxisId, 'axis-0');
       expect(chart.series.single.yAxisConfig?.id, 'axis-0');
       expect(chart.annotations, hasLength(1));
-      expect((chart.annotations!.single as TrendAnnotation).seriesId, 'mark-0');
+      expect((chart.annotations.single as TrendAnnotation).seriesId, 'mark-0');
 
       // Multi-axis: explicit ids on both slots, one series each.
       await selectPreset(tester, 'multiAxis');
