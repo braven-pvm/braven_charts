@@ -2079,6 +2079,148 @@ void main() {
     expect(workbenchController.tableIsStale, isFalse);
     expect(workbenchController.tableSnapshot, isNot(same(firstSnapshot)));
   });
+
+  testWidgets(
+    'keeps one value summary pipeline across Chart, Split, Data, and Source',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      final summaryController = _CountingSummaryController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+      addTearDown(summaryController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          width: 1200,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          splitBreakpoint: 600,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.data,
+            ChartDisplayMode.split,
+            ChartDisplayMode.source,
+          },
+          chartBuilder: (context, controller) =>
+              _summaryChart(controller, controller: summaryController),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Chart mode: the enabled summary renders its latest-datum fallback.
+      ChartRenderBox renderBox() =>
+          tester.allRenderObjects.whereType<ChartRenderBox>().single;
+      expect(renderBox().debugValueSummaryModel, isNotNull);
+      expect(renderBox().debugValueSummaryBounds, isNot(Rect.zero));
+      expect(
+        renderBox().debugValueSummarySnapshot?.origin,
+        CartesianTrackingOrigin.fallback,
+      );
+      expect(summaryController.attachedListenerCount, 1);
+
+      // Split mode: one mounted chart, one summary pipeline, one controller
+      // attachment — never a duplicate.
+      workbenchController.setDisplayMode(ChartDisplayMode.split);
+      await tester.pumpAndSettle();
+      expect(
+        tester.allRenderObjects.whereType<ChartRenderBox>(),
+        hasLength(1),
+      );
+      expect(renderBox().debugValueSummaryModel, isNotNull);
+      expect(summaryController.attachedListenerCount, 1);
+      expect(workbenchController.effectiveMode, ChartDisplayMode.split);
+      expect(workbenchController.tableModel?.rowCount, 3);
+
+      // Data mode: the table is unaffected by the enabled summary.
+      workbenchController.setDisplayMode(ChartDisplayMode.data);
+      await tester.pumpAndSettle();
+      expect(workbenchController.tableModel?.rowCount, 3);
+      expect(summaryController.attachedListenerCount, 1);
+
+      // Source mode: the generated Dart emits the summary configuration.
+      workbenchController.setDisplayMode(ChartDisplayMode.source);
+      await tester.pumpAndSettle();
+      expect(
+        workbenchController.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      expect(
+        workbenchController.generatedSource?.source,
+        contains('valueSummary: CartesianValueSummaryConfig('),
+      );
+      expect(
+        workbenchController.generatedSource?.source,
+        contains('enabled: true,'),
+      );
+
+      // Returning to Chart keeps the same pipeline alive.
+      workbenchController.setDisplayMode(ChartDisplayMode.chart);
+      await tester.pumpAndSettle();
+      expect(renderBox().debugValueSummaryModel, isNotNull);
+      expect(summaryController.attachedListenerCount, 1);
+    },
+  );
+
+  testWidgets(
+    'Split mode drags the annotation summary with a single placement commit',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      final placements = <ChartOverlayPlacement>[];
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _host(
+          width: 1200,
+          height: 700,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.split,
+          splitBreakpoint: 600,
+          chartBuilder: (context, controller) => _summaryChart(
+            controller,
+            presentation: const CartesianValueSummaryPresentation.annotation(
+              draggable: true,
+            ),
+            onPlacementChanged: placements.add,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      final bounds = renderBox.debugValueSummaryBounds;
+      expect(bounds, isNot(Rect.zero));
+
+      final panelCenter =
+          tester.getTopLeft(find.byType(BravenChartPlus)) +
+          renderBox.plotToWidget(bounds.center);
+      final gesture = await tester.startGesture(
+        panelCenter,
+        kind: PointerDeviceKind.mouse,
+      );
+      await gesture.moveBy(const Offset(24, 18));
+      await tester.pump();
+      expect(placements, isEmpty);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Exactly one committed placement — Split never double-fires the
+      // callback because only one chart instance is mounted.
+      expect(placements, hasLength(1));
+      expect(
+        renderBox.debugValueSummaryBounds.topLeft,
+        bounds.topLeft + const Offset(24, 18),
+      );
+    },
+  );
 }
 
 Widget _host({
@@ -2167,6 +2309,56 @@ Widget _chart(
     ),
   ],
 );
+
+Widget _summaryChart(
+  BravenChartController chartController, {
+  CartesianValueSummaryController? controller,
+  CartesianValueSummaryPresentation presentation =
+      const CartesianValueSummaryPresentation.overlay(),
+  ValueChanged<ChartOverlayPlacement>? onPlacementChanged,
+}) => BravenChartPlus(
+  bravenChartController: chartController,
+  showLegend: false,
+  interactionConfig: InteractionConfig(
+    valueSummary: CartesianValueSummaryConfig(
+      enabled: true,
+      presentation: presentation,
+      controller: controller,
+      onPlacementChanged: onPlacementChanged,
+    ),
+  ),
+  series: const [
+    LineChartSeries(
+      id: 'signal',
+      name: 'Signal',
+      points: [
+        ChartDataPoint(x: 0, y: 10),
+        ChartDataPoint(x: 1, y: 12),
+        ChartDataPoint(x: 2, y: 11),
+      ],
+    ),
+  ],
+);
+
+class _CountingSummaryController extends DefaultCartesianValueSummaryController {
+  int _addListenerCount = 0;
+  int _removeListenerCount = 0;
+
+  /// Currently attached chart-side listeners.
+  int get attachedListenerCount => _addListenerCount - _removeListenerCount;
+
+  @override
+  void addListener(VoidCallback listener) {
+    _addListenerCount++;
+    super.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    _removeListenerCount++;
+    super.removeListener(listener);
+  }
+}
 
 Future<ChartArtifactResult<ChartArtifact>> _capture(
   WidgetTester tester,

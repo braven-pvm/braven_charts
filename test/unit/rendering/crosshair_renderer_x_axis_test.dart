@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
+import 'package:braven_charts/src/interaction/core/cartesian_tracking_snapshot.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_theme.dart';
@@ -518,6 +519,27 @@ void main() {
           plotArea.left + transform.plotWidth * 0.125,
           plotArea.top + 100,
         );
+        // Tracking paint consumes the render box's resolved snapshot; a
+        // direct renderer test supplies the snapped datum the resolver
+        // would publish for this cursor (nearest sample x=2, snap mode).
+        final trackingSnapshot = CartesianTrackingSnapshot(
+          dataX: 2,
+          plotX: cursorOffset.dx - plotArea.left,
+          origin: CartesianTrackingOrigin.pointer,
+          values: const [
+            CartesianTrackedSeriesValue(
+              seriesId: 'discrete-series',
+              seriesName: 'discrete-series',
+              seriesColor: Color(0xFF2196F3),
+              x: 2,
+              y: 40,
+              dataPointIndex: 1,
+              isInterpolated: false,
+              formattedX: '2',
+              formattedY: '40',
+            ),
+          ],
+        );
 
         renderer.paint(
           canvas: mockCanvas,
@@ -536,6 +558,7 @@ void main() {
           seriesElements: [seriesElement],
           isRangeCreationMode: false,
           xAxisConfig: xAxisConfig,
+          trackingSnapshot: trackingSnapshot,
         );
 
         expect(formattedValues, hasLength(2));

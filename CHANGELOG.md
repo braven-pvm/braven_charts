@@ -5,6 +5,78 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Native Cartesian value summary for every Cartesian family through
+  `InteractionConfig.valueSummary` and `CartesianValueSummaryConfig`: a
+  persistent in-plot panel showing the current policy-resolved datum, fed by
+  the chart's shared immutable tracking snapshot with one resolution per
+  interaction frame.
+- Two presentations sharing content, style, semantics, and formatting:
+  `CartesianValueSummaryPresentation.overlay` (fixed, pointer-transparent,
+  anchored via `ChartOverlayPlacement`) and
+  `CartesianValueSummaryPresentation.annotation` (optionally draggable and
+  keyboard-movable with plot clamping, continuous drag preview, and exactly
+  one committed placement per gesture through `onPlacementChanged`).
+- Deterministic `CartesianValueSummaryValuePolicy` precedence chains over
+  tracking, selection, pinning, and latest/first visible fallbacks, with
+  automatic invalid-pin clearing.
+- `CartesianValueSummaryConfig.valueMode`
+  (`interpolated` default / `dataPoints`): tracked summary rows can snap to
+  the nearest actual data point instead of following the interpolated curve,
+  independent of the crosshair's own interpolation setting. The summary
+  keeps reusing the shared per-frame tracking resolution in every compatible
+  combination; only crosshair interpolation and summary `dataPoints`
+  simultaneously active add one extra memoized resolution per frame.
+  Serialized in artifacts and generated Source when non-default, with a
+  'Value mode' toggle on the showcase page.
+- Family-aware `CartesianValueSummaryContent.automatic()` rows (Line/Area/Bar
+  values with grouped context, Scatter encodings, Candlestick OHLC/change/
+  direction, per-series sections for mixed charts, optional trend rows) and
+  portable `CartesianValueSummaryContent.builder()` rows over the published
+  snapshot.
+- Tri-state `CartesianValueSummaryStyle` (`inherit`/`value`/`none` per field,
+  with genuinely transparent clears) resolved against the new
+  `CartesianValueSummaryTheme` component, including `light`, `dark`,
+  `highContrast`, and `colorblindFriendly` presets.
+- Packed row layout through `CartesianValueSummaryStyle.labelValueGap` (and
+  the matching nullable `CartesianValueSummaryTheme.labelValueGap` default):
+  an explicit gap left-aligns values in a shared column right after the
+  widest row label and tightens the panel's intrinsic width — clamped by
+  `minWidth`/`maxWidth`, long values still ellipsizing — while inherited or
+  cleared keeps the spread layout with right-aligned values.
+- `CartesianValueSummaryController` /
+  `DefaultCartesianValueSummaryController` for programmatic pinning by stable
+  `ChartPointRef` identity and placement reset.
+- Accessibility: one grouped semantic region per visible summary with title,
+  context, and unit-carrying rows in source order; opt-in `announceChanges`
+  screen-reader announcements debounced by resolved datum identity;
+  focusability and `Move`/`Reset position` custom actions for the draggable
+  panel; `Pin value`/`Clear pin` actions when a controller and pin policy are
+  active.
+- Full portability: value summary configuration in chart artifacts and
+  hydration, deterministic generated Dart Source, runtime-binding
+  diagnostics for unregistered builder content, and Workbench integration.
+- A first-class Tracking & Value Display showcase page with presets for
+  single-series fallback, multi-series, multi-axis units, Candlestick OHLC,
+  synchronized charts, and the draggable panel, plus independent toggles for
+  every tracking feedback layer (crosshair lines, tracking panel, point
+  tooltip, axis value labels, intersection markers, data point markers, and
+  the value summary) alongside appearance, policy, and pin controls.
+- A permanent value summary benchmark matrix (50k-point overlay updates,
+  candlestick zero-invalidation tracking, dense Scatter single-scan proof,
+  synchronized fanout, drag commit cadence) and a `doc/value_summary.md`
+  feature guide.
+
+### Fixed
+- `CrosshairConfig.showCoordinateLabels` is now honored by the crosshair
+  renderer: clearing it removes the axis value labels in both standard and
+  tracking display modes (previously the flag was serialized but never read
+  during painting). The labels are their own feedback layer — with
+  `CrosshairMode.none` they can now paint without any crosshair lines,
+  matching the layer-independence contract of the tracking feedback stack.
+
 ## 0.10.0-dev.1
 
 Prerelease validating the new automated release pipeline; content below is

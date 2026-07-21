@@ -10,7 +10,16 @@ import 'package:flutter/gestures.dart'
     show PointerDeviceKind, PointerHoverEvent;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart'
+    show
+        HardwareKeyboard,
+        KeyDownEvent,
+        KeyEvent,
+        KeyRepeatEvent,
+        KeyUpEvent,
+        LogicalKeyboardKey;
 
+import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../axis/axis.dart' as chart_axis;
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
@@ -18,14 +27,19 @@ import '../elements/pie_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
+import '../elements/value_summary_annotation_element.dart';
+import '../interaction/core/cartesian_tracking_snapshot.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/crosshair_tracker.dart';
+import '../interaction/core/tracking_snapshot_resolver.dart';
 import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../interaction/summary/value_summary_coordinator.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/bar_chart_style.dart';
+import '../models/cartesian_value_summary_config.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
@@ -36,6 +50,7 @@ import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
+import '../theming/components/cartesian_value_summary_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
 import 'bar_label_layout.dart';
@@ -138,6 +153,16 @@ class ChartRenderBox extends RenderBox {
     _initAnnotationDragHandler();
     _initEventHandlerManager();
     _initMultiAxisManager(normalizationMode, series);
+    _valueSummaryCoordinator = ValueSummaryCoordinator(
+      onNeedsRepaint: markNeedsPaint,
+    );
+    _valueSummaryCoordinator.onAnnounce = _announceValueSummary;
+    // Controllers are excluded from config equality; attach by reference.
+    _valueSummaryCoordinator.attachController(
+      interactionConfig?.valueSummary.controller,
+    );
+    _valueSummaryCoordinator.onPlacementChanged =
+        interactionConfig?.valueSummary.onPlacementChanged;
   }
 
   /// Initializes the MultiAxisManager with normalization mode and series.
@@ -463,6 +488,56 @@ class ChartRenderBox extends RenderBox {
   /// - Tracking mode with intersection markers and tooltip
   static const CrosshairRenderer _crosshairRenderer = CrosshairRenderer();
 
+  /// Single per-chart tracking resolution point.
+  ///
+  /// Resolves the crosshair tracking snapshot once per interaction frame with
+  /// input memoization and identity-based publish suppression. The paint
+  /// path, the synchronized-cursor path, and the debug hooks all consume its
+  /// published [CartesianTrackingSnapshot] instead of re-running
+  /// [CrosshairTracker.calculateTrackingState].
+  final CartesianTrackingSnapshotResolver _trackingSnapshotResolver =
+      CartesianTrackingSnapshotResolver();
+
+  /// Monotonic revision of tracked series data and axis bindings.
+  ///
+  /// Element instances and axis info are deliberately not part of the
+  /// resolver's cache key, so every path that rebuilds elements or changes
+  /// series/axis configuration bumps this revision to force re-resolution.
+  int _trackingDataRevision = 0;
+
+  /// Value summary pipeline state (policy reduction, adaptation, overlay
+  /// element feeding). Owned per chart; near-free while the summary is
+  /// disabled.
+  late final ValueSummaryCoordinator _valueSummaryCoordinator;
+
+  /// Dedicated resolver for the value summary's divergent live-tracking
+  /// resolution: used only while the crosshair actively resolves the shared
+  /// pointer-path snapshot WITH interpolation and the summary's `valueMode`
+  /// wants snapped data points. Keeping the divergent preference on its own
+  /// instance preserves the shared resolver's input memo — one computation
+  /// per consumer per cursor change, no memo thrash, no publish ping-pong.
+  /// In every compatible combination this resolver is never touched.
+  final CartesianTrackingSnapshotResolver _summaryTrackingResolver =
+      CartesianTrackingSnapshotResolver();
+
+  /// Whether the current frame's summary tracking resolution went through
+  /// the shared pointer-path resolver (compatible path) rather than the
+  /// dedicated [_summaryTrackingResolver] (divergent path). Written by
+  /// [_resolveSummaryTracking] each frame.
+  bool _valueSummaryUsedSharedResolver = false;
+
+  /// Whether the value summary consumed a live pointer/synchronized tracking
+  /// resolution from the SHARED resolver during the current paint frame.
+  ///
+  /// While true, the crosshair path's gate-off `clear()` calls are skipped so
+  /// they cannot wipe the resolver state (and its input memo) the summary
+  /// resolved this frame — the summary is a legitimate consumer of tracking
+  /// even when the crosshair itself is disabled. A divergent-mode summary
+  /// resolution (dedicated resolver) leaves this false: the shared state
+  /// belongs to the crosshair that frame. With the summary disabled this
+  /// flag is always false and every clear behaves exactly as before.
+  bool _valueSummaryTrackingActive = false;
+
   /// Tooltip renderer module.
   ///
   /// Handles all tooltip-related rendering:
@@ -580,28 +655,79 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
+  // Memoized synchronized cursor position. The getter is consulted several
+  // times per paint frame (overlay activity check, effective config, paint
+  // guard, debug hooks); memoizing on its inputs collapses those repeated
+  // evaluations into a single computation per cursor/viewport/data change.
+  bool _syncPositionCacheValid = false;
+  double? _syncPositionCacheDataX;
+  ChartTransform? _syncPositionCacheTransform;
+  Rect? _syncPositionCachePlotArea;
+  List<ChartElement>? _syncPositionCacheElements;
+  CrosshairConfig? _syncPositionCacheCrosshair;
+  Offset? _syncPositionCacheValue;
+
+  // The tracking snapshot resolved while computing the synchronized cursor
+  // position (Y adjustment), retained so the same frame's paint and debug
+  // reads share one resolution instead of resolving again at the adjusted
+  // cursor. Valid only while it is identical to the resolver's current
+  // snapshot; cleared with the position cache.
+  CartesianTrackingSnapshot? _syncPositionSnapshot;
+
   Offset? get _synchronizedCursorPosition {
     final transform = _transform;
     final dataX = _synchronizedCursorX;
     if (transform == null || dataX == null || _plotArea.isEmpty) return null;
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    if (_syncPositionCacheValid &&
+        _syncPositionCacheDataX == dataX &&
+        _syncPositionCacheTransform == transform &&
+        _syncPositionCachePlotArea == _plotArea &&
+        identical(_syncPositionCacheElements, _elements) &&
+        _syncPositionCacheCrosshair == crosshair) {
+      return _syncPositionCacheValue;
+    }
+    final position = _computeSynchronizedCursorPosition(
+      transform: transform,
+      dataX: dataX,
+      crosshair: crosshair,
+    );
+    _syncPositionCacheValid = true;
+    _syncPositionCacheDataX = dataX;
+    _syncPositionCacheTransform = transform;
+    _syncPositionCachePlotArea = _plotArea;
+    _syncPositionCacheElements = _elements;
+    _syncPositionCacheCrosshair = crosshair;
+    _syncPositionCacheValue = position;
+    return position;
+  }
+
+  Offset? _computeSynchronizedCursorPosition({
+    required ChartTransform transform,
+    required double dataX,
+    required CrosshairConfig crosshair,
+  }) {
     final plotPosition = transform.dataToPlot(dataX, transform.dataYMin);
     var widgetPosition = plotToWidget(
       transform.transposed
           ? Offset(_plotArea.width / 2, plotPosition.dy)
           : Offset(plotPosition.dx, _plotArea.height / 2),
     );
-    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
     final needsLocalY =
         crosshair.enabled &&
         (crosshair.mode == CrosshairMode.horizontal ||
             crosshair.mode == CrosshairMode.both) &&
         !transform.transposed;
+    _syncPositionSnapshot = null;
     if (needsLocalY) {
-      final trackingState = _calculateSynchronizedTrackingState(
-        widgetPosition.dx,
+      final snapshot = _resolveTrackingSnapshot(
+        cursorPosition: widgetPosition,
+        origin: CartesianTrackingOrigin.synchronized,
+        interpolateValues: crosshair.interpolateValues,
       );
-      if (trackingState != null && trackingState.seriesValues.isNotEmpty) {
-        final value = trackingState.seriesValues.first;
+      _syncPositionSnapshot = snapshot;
+      if (snapshot != null && snapshot.values.isNotEmpty) {
+        final value = snapshot.values.first;
         SeriesElement? seriesElement;
         for (final candidate in _elements.whereType<SeriesElement>()) {
           if (candidate.id == value.axisSeriesId) {
@@ -638,20 +764,43 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
-  CrosshairTrackingState? _calculateSynchronizedTrackingState(double screenX) {
+  /// Resolves the tracking snapshot for a widget-space cursor position
+  /// through the chart's single [CartesianTrackingSnapshotResolver].
+  ///
+  /// [axisInfo] lets the paint path reuse its already-built [MultiAxisInfo];
+  /// other callers build one on demand.
+  CartesianTrackingSnapshot? _resolveTrackingSnapshot({
+    required Offset cursorPosition,
+    required CartesianTrackingOrigin origin,
+    required bool interpolateValues,
+    MultiAxisInfo? axisInfo,
+  }) {
     final transform = _transform;
-    if (transform == null || _plotArea.isEmpty) return null;
-    return CrosshairTracker.calculateTrackingState(
-      screenX: screenX,
-      chartBounds: _plotArea,
-      xMin: transform.dataXMin,
-      xMax: transform.dataXMax,
-      seriesList: _elements
-          .whereType<SeriesElement>()
-          .map((element) => element.series)
-          .toList(growable: false),
-      interpolate: _interactionConfig?.crosshair.interpolateValues ?? true,
+    if (transform == null || _plotArea.isEmpty) {
+      // Resolution prerequisites are gone; publish the null snapshot so
+      // consumers of the resolver never observe stale tracking state.
+      _trackingSnapshotResolver.clear();
+      return null;
+    }
+    return _trackingSnapshotResolver.resolve(
+      cursorPlotPosition: cursorPosition - _plotArea.topLeft,
+      plotArea: _plotArea,
+      transform: transform,
+      elements: _elements,
+      axisInfo: axisInfo ?? _buildMultiAxisInfo(),
+      origin: origin,
+      includeTrends: true,
+      interpolateValues: interpolateValues,
+      dataRevision: _trackingDataRevision,
     );
+  }
+
+  /// Signals that tracked series data or axis bindings changed, forcing the
+  /// next tracking resolution to recompute.
+  void _invalidateTrackingResolution() {
+    _trackingDataRevision++;
+    _syncPositionCacheValid = false;
+    _syncPositionSnapshot = null;
   }
 
   /// Current synchronized data X for render-path verification.
@@ -663,11 +812,456 @@ class ChartRenderBox extends RenderBox {
   Offset? get debugSynchronizedCursorPosition => _synchronizedCursorPosition;
 
   /// Local rendered-path intersections used by synchronized tracking.
+  ///
+  /// Reads the shared tracking resolver (a cache hit when paint already
+  /// resolved this frame) and adapts the snapshot to the legacy
+  /// [CrosshairTrackingState] contract expected by existing tests.
   @visibleForTesting
   CrosshairTrackingState? get debugSynchronizedTrackingState {
     final cursor = _synchronizedCursorPosition;
     if (cursor == null) return null;
-    return _calculateSynchronizedTrackingState(cursor.dx);
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    // Share the resolution retained by the synchronized-position computation
+    // (the same one paint reuses) instead of resolving again at the
+    // Y-adjusted cursor.
+    final retained = _syncPositionSnapshot;
+    final snapshot =
+        (retained != null &&
+            identical(retained, _trackingSnapshotResolver.current))
+        ? retained
+        : _resolveTrackingSnapshot(
+            cursorPosition: cursor,
+            origin: CartesianTrackingOrigin.synchronized,
+            interpolateValues: crosshair.interpolateValues,
+          );
+    if (snapshot == null) return null;
+    final transposed = _transform?.transposed ?? false;
+    return CrosshairTrackingState(
+      dataX: snapshot.dataX,
+      screenX: transposed ? cursor.dy : cursor.dx,
+      seriesValues: [
+        for (final value in snapshot.values) _toCrosshairSeriesValue(value),
+      ],
+    );
+  }
+
+  static CrosshairSeriesValue _toCrosshairSeriesValue(
+    CartesianTrackedSeriesValue value,
+  ) {
+    return CrosshairSeriesValue(
+      seriesId: value.seriesId,
+      seriesName: value.seriesName,
+      seriesColor: value.seriesColor,
+      x: value.x,
+      y: value.y,
+      dataPointIndex: value.dataPointIndex,
+      sourcePointIndices: value.sourcePointIndices,
+      isInterpolated: value.isInterpolated,
+      linkedSeriesId: value.linkedSeriesId,
+      isTrend: value.isTrend,
+      pointLabel: value.pointLabel,
+      magnitudeValue: value.magnitudeValue,
+      formattedMagnitudeValue: value.formattedMagnitudeValue,
+      magnitudeLabel: value.magnitudeLabel,
+      colorValue: value.colorValue,
+      formattedColorValue: value.formattedColorValue,
+      colorLabel: value.colorLabel,
+      opacityValue: value.opacityValue,
+      formattedOpacityValue: value.formattedOpacityValue,
+      opacityLabel: value.opacityLabel,
+      candlestick: value.candlestick,
+      categoryValue: value.categoryValue,
+      categoryLabel: value.categoryLabel,
+    );
+  }
+
+  /// Latest published tracking snapshot, without triggering a resolution.
+  @visibleForTesting
+  CartesianTrackingSnapshot? get debugTrackingSnapshot =>
+      _trackingSnapshotResolver.current;
+
+  /// Total [CartesianTrackingSnapshotResolver.resolve] calls on this chart.
+  @visibleForTesting
+  int get debugTrackingResolveCount =>
+      _trackingSnapshotResolver.debugResolveCount;
+
+  /// Total published tracking snapshot changes on this chart.
+  @visibleForTesting
+  int get debugTrackingPublishCount =>
+      _trackingSnapshotResolver.debugPublishCount;
+
+  /// Total actual tracking snapshot computations (input-cache misses) on
+  /// this chart. Stationary repaints must not increment this.
+  @visibleForTesting
+  int get debugTrackingComputeCount =>
+      _trackingSnapshotResolver.debugComputeCount;
+
+  /// Intersection markers painted by the most recent crosshair paint, in
+  /// chart-local screen coordinates.
+  ///
+  /// Empty when the last paint drew no tracking-mode intersection markers.
+  /// Widget tests use this probe to assert exact marker placement — in
+  /// particular that interpolated markers follow the live cursor X even
+  /// while snapshot identity suppression retains the published snapshot.
+  @visibleForTesting
+  List<PaintedIntersectionMarker> get debugPaintedIntersectionMarkers =>
+      List.unmodifiable(_paintedIntersectionMarkers);
+
+  final List<PaintedIntersectionMarker> _paintedIntersectionMarkers =
+      <PaintedIntersectionMarker>[];
+
+  // ==========================================================================
+  // Cartesian value summary pipeline
+  // ==========================================================================
+
+  /// Runs the value summary pipeline for the current paint frame.
+  ///
+  /// Called once per paint before the foreground element pass so the overlay
+  /// element paints this frame's policy-resolved content. Honors both the
+  /// outer [InteractionConfig.enabled] gate and the nested
+  /// `valueSummary.enabled` flag (`InteractionConfig.none()` therefore
+  /// disables the summary even when the nested config is enabled), and
+  /// suspends transient tracking during drags and pan/zoom.
+  void _updateValueSummary() {
+    final interaction = _interactionConfig;
+    final summaryConfig =
+        interaction != null &&
+            interaction.enabled &&
+            interaction.valueSummary.enabled
+        ? interaction.valueSummary
+        : null;
+    final suspended =
+        coordinator.isDragging || coordinator.isPanningOrZooming;
+
+    // Live tracking feeds every policy chain except explicitOnly. The
+    // resolution goes through the chart's shared pointer-path resolver
+    // whenever the summary's value mode is compatible with it, so when the
+    // crosshair also tracks this frame its own resolve call is an input-memo
+    // hit — one computation per frame either way. Only the genuinely
+    // divergent combination (crosshair interpolating while the summary wants
+    // data points) resolves through the dedicated summary resolver.
+    CartesianTrackingSnapshot? tracking;
+    _valueSummaryUsedSharedResolver = false;
+    if (summaryConfig != null &&
+        summaryConfig.valuePolicy !=
+            CartesianValueSummaryValuePolicy.explicitOnly &&
+        !suspended) {
+      tracking = _resolveSummaryTracking(summaryConfig);
+    }
+    _valueSummaryTrackingActive =
+        tracking != null && _valueSummaryUsedSharedResolver;
+
+    ChartPointRef? selection;
+    if (summaryConfig?.valuePolicy ==
+            CartesianValueSummaryValuePolicy.selectionThenTrackingThenLatest &&
+        _selectedTooltipSeriesId != null &&
+        _selectedTooltipPointIndex != null) {
+      selection = ChartPointRef(
+        seriesId: _selectedTooltipSeriesId!,
+        pointIndex: _selectedTooltipPointIndex!,
+      );
+    }
+
+    _valueSummaryCoordinator.update(
+      config: summaryConfig,
+      theme:
+          _theme?.cartesianValueSummaryTheme ?? CartesianValueSummaryTheme.light,
+      tracking: tracking,
+      suspended: suspended,
+      plotArea: _plotArea,
+      transform: _transform,
+      elements: _elements,
+      axisInfoBuilder: _buildMultiAxisInfo,
+      dataRevision: _trackingDataRevision,
+      textDirection: _textDirection,
+      textScale: _textScaleFactor,
+      selection: selection,
+    );
+  }
+
+  /// Resolves the summary's live tracking snapshot for this frame, or null
+  /// when no live tracking source exists (no cursor, cursor outside the
+  /// plot).
+  ///
+  /// Mirrors the crosshair paint path's source selection — the synchronized
+  /// cursor takes precedence over the local pointer, and a snapshot already
+  /// retained by the synchronized-position computation is reused instead of
+  /// re-resolving at the Y-adjusted cursor.
+  ///
+  /// The summary's `valueMode` decides how the resolution is sourced:
+  ///
+  /// - **Compatible with the shared resolution** (interpolated mode; or
+  ///   dataPoints mode while the crosshair's interpolation is off; or the
+  ///   crosshair not consuming the shared tracking resolution at all, in
+  ///   which case the summary owns the resolve and passes the interpolation
+  ///   flag its mode implies): reuse the shared pointer-path resolver —
+  ///   zero extra resolutions per frame.
+  /// - **Divergent** (crosshair actively tracking WITH interpolation while
+  ///   the summary wants data points): resolve once through the dedicated
+  ///   [_summaryTrackingResolver] with the same memo discipline, leaving the
+  ///   shared resolver's input memo to the crosshair.
+  CartesianTrackingSnapshot? _resolveSummaryTracking(
+    CartesianValueSummaryConfig summaryConfig,
+  ) {
+    final cursorPos = _effectiveCrosshairCursorPosition;
+    if (cursorPos == null || !_plotArea.contains(cursorPos)) return null;
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final origin = _synchronizedCursorPosition != null
+        ? CartesianTrackingOrigin.synchronized
+        : CartesianTrackingOrigin.pointer;
+    final wantsDataPoints =
+        summaryConfig.valueMode == CartesianValueSummaryValueMode.dataPoints;
+
+    if (wantsDataPoints &&
+        crosshair.interpolateValues &&
+        _crosshairConsumesSharedTracking(crosshair)) {
+      // Divergent path. Sharing the pointer-path resolver here would flip
+      // its interpolateValues memo key every frame (two computations plus
+      // publish ping-pong), so the summary resolves on its own instance:
+      // one extra memoized computation per cursor change, none per repaint.
+      final transform = _transform;
+      if (transform == null || _plotArea.isEmpty) {
+        _summaryTrackingResolver.clear();
+        return null;
+      }
+      return _summaryTrackingResolver.resolve(
+        cursorPlotPosition: cursorPos - _plotArea.topLeft,
+        plotArea: _plotArea,
+        transform: transform,
+        elements: _elements,
+        axisInfo: _buildMultiAxisInfo(),
+        origin: origin,
+        includeTrends: true,
+        interpolateValues: false,
+        dataRevision: _trackingDataRevision,
+      );
+    }
+
+    _valueSummaryUsedSharedResolver = true;
+    // The synchronized-position snapshot was resolved with the crosshair's
+    // interpolation preference; reuse it unless the summary wants data
+    // points while that preference interpolates (in which case the divergent
+    // branch above already ran — a retained sync snapshot here is always
+    // compatible, but keep the guard explicit).
+    final syncSnapshot = _syncPositionSnapshot;
+    if ((!wantsDataPoints || !crosshair.interpolateValues) &&
+        _synchronizedCursorPosition != null &&
+        syncSnapshot != null &&
+        identical(syncSnapshot, _trackingSnapshotResolver.current)) {
+      return syncSnapshot;
+    }
+    return _resolveTrackingSnapshot(
+      cursorPosition: cursorPos,
+      origin: origin,
+      interpolateValues: wantsDataPoints ? false : crosshair.interpolateValues,
+    );
+  }
+
+  /// Whether the crosshair itself resolves the shared pointer-path tracking
+  /// snapshot this frame: enabled and in tracking mode for the current data
+  /// density, including the synchronized-cursor override that forces
+  /// tracking mode.
+  bool _crosshairConsumesSharedTracking(CrosshairConfig crosshair) {
+    final effective = _effectiveCrosshairConfig(crosshair);
+    if (!effective.enabled) return false;
+    return effective.shouldUseTrackingMode(
+      CrosshairTracker.getTotalPointCount([
+        for (final element in _elements)
+          if (element is SeriesElement) element.series,
+      ]),
+    );
+  }
+
+  /// The value summary's policy-resolved snapshot behind the displayed
+  /// content (its origin distinguishes tracking, pinned, and fallback).
+  @visibleForTesting
+  CartesianTrackingSnapshot? get debugValueSummarySnapshot =>
+      _valueSummaryCoordinator.debugReducedSnapshot;
+
+  /// The value summary's displayed content model, or null while hidden.
+  @visibleForTesting
+  CartesianValueSummaryContentModel? get debugValueSummaryModel =>
+      _valueSummaryCoordinator.debugModel;
+
+  /// Number of value summary reduce+adapt executions. Repaints with
+  /// unchanged inputs must not increment this.
+  @visibleForTesting
+  int get debugValueSummaryReduceCount =>
+      _valueSummaryCoordinator.debugReduceCount;
+
+  /// The summary panel's last painted bounds ([Rect.zero] while hidden).
+  @visibleForTesting
+  Rect get debugValueSummaryBounds =>
+      _valueSummaryCoordinator.debugOverlayBounds;
+
+  /// Total resolve calls on the summary's dedicated divergent-mode tracking
+  /// resolver. Stays zero while every configuration is compatible with the
+  /// shared pointer-path resolution.
+  @visibleForTesting
+  int get debugSummaryTrackingResolveCount =>
+      _summaryTrackingResolver.debugResolveCount;
+
+  /// Actual computations on the dedicated divergent-mode resolver
+  /// (input-cache misses). Stationary repaints must not increment this.
+  @visibleForTesting
+  int get debugSummaryTrackingComputeCount =>
+      _summaryTrackingResolver.debugComputeCount;
+
+  /// Published snapshot changes on the dedicated divergent-mode resolver —
+  /// one per snapped-datum change, never per cursor pixel or repaint.
+  @visibleForTesting
+  int get debugSummaryTrackingPublishCount =>
+      _summaryTrackingResolver.debugPublishCount;
+
+  /// The current plot area rectangle, for widget tests.
+  @visibleForTesting
+  Rect get debugPlotArea => _plotArea;
+
+  // ==========================================================================
+  // Value summary annotation drag + keyboard surface
+  // ==========================================================================
+
+  /// The draggable annotation-style summary panel, or null when inactive.
+  ValueSummaryAnnotationElement? get valueSummaryDragTarget =>
+      _valueSummaryCoordinator.annotationDragTarget;
+
+  /// Captures pre-drag state when `EventHandlerManager` engages a drag.
+  void beginValueSummaryDrag() =>
+      _valueSummaryCoordinator.beginAnnotationDrag();
+
+  /// Live drag preview for the panel top-left (plot-local); repaints the
+  /// feedback layer only.
+  void updateValueSummaryDrag(Offset panelOriginPlot) =>
+      _valueSummaryCoordinator.updateAnnotationDragOrigin(panelOriginPlot);
+
+  /// Commits an engaged drag: clamp (when configured) and exactly one
+  /// `onPlacementChanged`.
+  void commitValueSummaryDrag() =>
+      _valueSummaryCoordinator.commitAnnotationDrag();
+
+  /// Abandons an engaged drag without committing.
+  void cancelValueSummaryDrag() =>
+      _valueSummaryCoordinator.cancelAnnotationDrag();
+
+  /// Grants or clears the summary panel's keyboard focus.
+  ///
+  /// Returns whether the focus state actually changed. The semantics tree
+  /// is only re-flushed on real transitions, so the per-pointer-down calls
+  /// from `EventHandlerManager` stay free while focus is steady.
+  bool setValueSummaryFocus(bool focused) {
+    final changed = _valueSummaryCoordinator.setAnnotationFocus(focused);
+    if (changed) markNeedsSemanticsUpdate();
+    return changed;
+  }
+
+  /// Handles a key event for the focused, draggable summary panel.
+  ///
+  /// Called by the chart widget's `Focus.onKeyEvent` chain before any other
+  /// keyboard handling. Arrow keys move the panel by 1 logical pixel (10
+  /// with Shift) on key-down/repeat; the accumulated movement is committed
+  /// through `onPlacementChanged` exactly once on the arrow's key-up. Escape
+  /// restores the configured placement (emitting it) and releases focus.
+  ///
+  /// Returns true when the event was consumed.
+  bool handleValueSummaryKeyEvent(KeyEvent event) {
+    final coordinator = _valueSummaryCoordinator;
+    if (!coordinator.annotationFocused ||
+        coordinator.annotationDragTarget == null) {
+      return false;
+    }
+
+    final key = event.logicalKey;
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+
+    if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      if (key == LogicalKeyboardKey.escape) {
+        coordinator.resetAnnotationPlacement(emit: true);
+        setValueSummaryFocus(false);
+        return true;
+      }
+      if (!isArrow) return false;
+      final step = HardwareKeyboard.instance.isShiftPressed ? 10.0 : 1.0;
+      final delta = switch (key) {
+        LogicalKeyboardKey.arrowLeft => Offset(-step, 0),
+        LogicalKeyboardKey.arrowRight => Offset(step, 0),
+        LogicalKeyboardKey.arrowUp => Offset(0, -step),
+        _ => Offset(0, step),
+      };
+      coordinator.nudgeAnnotation(delta);
+      return true;
+    }
+
+    if (event is KeyUpEvent && isArrow) {
+      coordinator.commitKeyboardNudge();
+      return true;
+    }
+
+    return false;
+  }
+
+  /// The cached series-layer picture, for zero-invalidation proofs: the
+  /// instance must stay identical across hover/tracking frames.
+  @visibleForTesting
+  ui.Picture? get debugSeriesCachePicture => _seriesCacheManager.cachedPicture;
+
+  // ==========================================================================
+  // Value summary semantics
+  // ==========================================================================
+
+  /// Semantic move step for one custom move action, matching the
+  /// Shift+arrow keyboard step.
+  static const double _valueSummarySemanticMoveStep = 10;
+
+  static const CustomSemanticsAction _valueSummaryMoveLeftAction =
+      CustomSemanticsAction(label: 'Move left');
+  static const CustomSemanticsAction _valueSummaryMoveRightAction =
+      CustomSemanticsAction(label: 'Move right');
+  static const CustomSemanticsAction _valueSummaryMoveUpAction =
+      CustomSemanticsAction(label: 'Move up');
+  static const CustomSemanticsAction _valueSummaryMoveDownAction =
+      CustomSemanticsAction(label: 'Move down');
+  static const CustomSemanticsAction _valueSummaryResetPositionAction =
+      CustomSemanticsAction(label: 'Reset position');
+  static const CustomSemanticsAction _valueSummaryPinAction =
+      CustomSemanticsAction(label: 'Pin value');
+  static const CustomSemanticsAction _valueSummaryClearPinAction =
+      CustomSemanticsAction(label: 'Clear pin');
+
+  /// The semantics surface last observed at the end of a paint frame.
+  ///
+  /// Compared per paint (record value equality over cached references) so
+  /// content, bounds, focus, or capability changes re-flush semantics at
+  /// paint cadence without any per-frame string building.
+  ValueSummarySemanticsInfo? _lastValueSummarySemantics;
+
+  /// Re-flushes semantics when the summary's assistive surface changed.
+  ///
+  /// Called at the end of [paint], after the foreground element pass has
+  /// finalized the panel bounds for this frame. Marking during paint is
+  /// safe: the semantics flush runs after the paint flush in the same
+  /// frame.
+  void _updateValueSummarySemanticsDirty() {
+    final info = _valueSummaryCoordinator.summarySemanticsInfo;
+    if (info == _lastValueSummarySemantics) return;
+    _lastValueSummarySemantics = info;
+    markNeedsSemanticsUpdate();
+  }
+
+  /// Sends one debounced summary announcement (config `announceChanges`).
+  ///
+  /// Skipped entirely while no assistive technology has enabled semantics.
+  void _announceValueSummary(String message) {
+    if (owner?.semanticsOwner == null) return;
+    RenderObject node = this;
+    while (node.parent != null) {
+      node = node.parent!;
+    }
+    if (node is! RenderView) return;
+    SemanticsService.sendAnnouncement(node.flutterView, message, _textDirection);
   }
 
   // ==========================================================================
@@ -690,6 +1284,7 @@ class ChartRenderBox extends RenderBox {
     _streamingManager.dispose();
     _annotationDragHandler.dispose();
     _eventHandlerManager.dispose();
+    _valueSummaryCoordinator.dispose();
     super.dispose();
   }
 
@@ -915,6 +1510,7 @@ class ChartRenderBox extends RenderBox {
     if (_primaryYAxisConfig == config) return;
     _primaryYAxisConfig = config;
     _multiAxisManager.setPrimaryYAxisConfig(config);
+    _invalidateTrackingResolution(); // Axis units feed snapshot formatting
     markNeedsLayout();
   }
 
@@ -942,6 +1538,7 @@ class ChartRenderBox extends RenderBox {
     if (_theme == theme) return;
     _theme = theme;
     _seriesCacheManager.invalidate(); // Invalidate cache - theme changed
+    _invalidateTrackingResolution(); // Tracked colors may resolve differently
     markNeedsPaint();
   }
 
@@ -1001,9 +1598,20 @@ class ChartRenderBox extends RenderBox {
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
+    // The value summary controller and placement callback are excluded from
+    // config equality, so they must be (re)attached by reference before the
+    // equality early-return below.
+    _valueSummaryCoordinator.attachController(
+      config?.valueSummary.controller,
+    );
+    _valueSummaryCoordinator.onPlacementChanged =
+        config?.valueSummary.onPlacementChanged;
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
+    // The value summary annotation panel contributes a semantics node whose
+    // presence depends on this config.
+    markNeedsSemanticsUpdate();
   }
 
   /// Updates canvas text scaling for tooltip content.
@@ -1031,6 +1639,7 @@ class ChartRenderBox extends RenderBox {
   void setNormalizationMode(NormalizationMode? mode) {
     if (_multiAxisManager.setNormalizationMode(mode)) {
       _seriesCacheManager.invalidate();
+      _invalidateTrackingResolution();
       markNeedsLayout();
       markNeedsPaint();
     }
@@ -1042,6 +1651,7 @@ class ChartRenderBox extends RenderBox {
   void setSeries(List<ChartSeries>? series) {
     if (_multiAxisManager.setSeries(series)) {
       _seriesCacheManager.invalidate();
+      _invalidateTrackingResolution();
       markNeedsLayout();
       markNeedsPaint();
     }
@@ -1635,6 +2245,9 @@ class ChartRenderBox extends RenderBox {
   ///
   /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
   void _rebuildSpatialIndex() {
+    // Elements are being replaced; tracked series data may have changed.
+    _invalidateTrackingResolution();
+
     if (!hasSize || _plotArea.isEmpty) {
       return;
     }
@@ -2032,6 +2645,16 @@ class ChartRenderBox extends RenderBox {
   /// - Filter to elements that pass precise hitTest()
   /// - Return highest priority element
   ChartElement? hitTestElements(Offset widgetPosition) {
+    // The draggable value summary annotation panel never enters _elements or
+    // the spatial index; consult it explicitly first so it wins the hit
+    // within its painted bounds (bounds-only hitTest) and can never steal a
+    // hit anywhere else.
+    final summaryPanel = _valueSummaryCoordinator.annotationDragTarget;
+    if (summaryPanel != null &&
+        summaryPanel.hitTest(widgetToPlot(widgetPosition))) {
+      return summaryPanel;
+    }
+
     // Lazily rebuild spatial index if marked dirty (deferred from click handlers)
     if (_spatialIndexDirty) {
       _rebuildSpatialIndex();
@@ -2769,6 +3392,9 @@ class ChartRenderBox extends RenderBox {
       );
     }
     final crosshairEnabled = crosshairConfig.enabled;
+    // The painted-marker probe reflects only the current frame: cleared here
+    // so a frame that paints no tracking markers leaves it empty.
+    _paintedIntersectionMarkers.clear();
     if (crosshairEnabled &&
         cursorPos != null &&
         _plotArea.contains(cursorPos) &&
@@ -2782,6 +3408,46 @@ class ChartRenderBox extends RenderBox {
       // Use widget-provided XAxisConfig directly
       final xAxisConfig = _xAxisConfig ?? const XAxisConfig();
 
+      final seriesElements = _elements.whereType<SeriesElement>().toList();
+
+      // Resolve the frame's tracking snapshot once before painting, honoring
+      // the same tracking-mode gate the renderer applies. The resolver
+      // memoizes unchanged inputs and suppresses identity-equal publication,
+      // so stationary repaints reuse the cached snapshot.
+      CartesianTrackingSnapshot? trackingSnapshot;
+      final totalDataPoints = CrosshairTracker.getTotalPointCount([
+        for (final element in seriesElements) element.series,
+      ]);
+      if (crosshairConfig.shouldUseTrackingMode(totalDataPoints)) {
+        final syncSnapshot = _syncPositionSnapshot;
+        if (_synchronizedCursorPosition != null &&
+            syncSnapshot != null &&
+            identical(syncSnapshot, _trackingSnapshotResolver.current)) {
+          // The synchronized-position computation already resolved this
+          // frame's snapshot: the effective cursor derives from the same
+          // sync data-X and transform, only its Y was adjusted afterwards.
+          // Reuse that resolution instead of resolving again at the
+          // Y-adjusted cursor, which would double-compute every sync frame
+          // and could ping-pong publication with Y-sensitive scatter hits.
+          trackingSnapshot = syncSnapshot;
+        } else {
+          trackingSnapshot = _resolveTrackingSnapshot(
+            cursorPosition: cursorPos,
+            origin: _synchronizedCursorPosition != null
+                ? CartesianTrackingOrigin.synchronized
+                : CartesianTrackingOrigin.pointer,
+            interpolateValues: crosshairConfig.interpolateValues,
+            axisInfo: multiAxisInfo,
+          );
+        }
+      } else if (!_valueSummaryTrackingActive) {
+        // Tracking-mode gate is off: publish the null snapshot so consumers
+        // of the resolver never observe stale tracking state. Skipped while
+        // the value summary consumed this frame's tracking resolution — the
+        // summary is a live consumer of the resolver state.
+        _trackingSnapshotResolver.clear();
+      }
+
       // Delegate to CrosshairRenderer module
       _crosshairRenderer.paint(
         canvas: canvas,
@@ -2793,12 +3459,21 @@ class ChartRenderBox extends RenderBox {
         interactionConfig: _interactionConfig,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
-        seriesElements: _elements.whereType<SeriesElement>().toList(),
+        seriesElements: seriesElements,
         isRangeCreationMode:
             coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
-        trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
+        trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
+        trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
+        paintedMarkerSink: _paintedIntersectionMarkers,
       );
+    } else if (!_valueSummaryTrackingActive) {
+      // The crosshair gate is off (disabled, cursor gone or outside the
+      // plot, or a drag in progress): publish the null snapshot so future
+      // consumers of the resolver never observe the stale hover state.
+      // Skipped while the value summary consumed this frame's tracking
+      // resolution — the summary is a live consumer of the resolver state.
+      _trackingSnapshotResolver.clear();
     }
 
     // Draw tooltip for hovered/tapped marker (if any)
@@ -3031,6 +3706,13 @@ class ChartRenderBox extends RenderBox {
     // Performance: 17ms → <5ms hover latency (17x speedup!)
     // ==========================================================================
 
+    // Run the value summary pipeline before the element passes so the
+    // overlay panel paints this frame's policy-resolved content. This also
+    // performs the frame's tracking resolution when the summary consumes it,
+    // which the crosshair path below then reuses through the resolver's
+    // input memo.
+    _updateValueSummary();
+
     // Clip canvas to plot area to prevent elements from rendering over axes
     canvas.save();
     canvas.translate(_plotArea.left, _plotArea.top);
@@ -3118,15 +3800,21 @@ class ChartRenderBox extends RenderBox {
     // Only paint elements with renderOrder >= series (already painted background in Layer 0)
     // Sort by renderOrder (lower = paint first/back, higher = paint last/front)
     // NOTE: renderOrder is SEPARATE from hit test priority!
-    final foregroundElements =
-        _elements
-            .where(
-              (e) =>
-                  e is! DataSeriesElement &&
-                  e.renderOrder >= RenderOrder.series,
-            )
-            .toList()
-          ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
+    final foregroundElements = _elements
+        .where(
+          (e) =>
+              e is! DataSeriesElement && e.renderOrder >= RenderOrder.series,
+        )
+        .toList();
+    // The value summary overlay joins the foreground pass for paint ordering
+    // only (RenderOrder.valueSummary); it never enters _elements, the
+    // spatial index, or any hit-testing/selection flow.
+    final valueSummaryElement =
+        _valueSummaryCoordinator.overlayElementForPaint;
+    if (valueSummaryElement != null) {
+      foregroundElements.add(valueSummaryElement);
+    }
+    foregroundElements.sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
     // Compute series bounds for annotations in perSeries mode
     // This ensures threshold lines and range annotations are positioned correctly
@@ -3229,12 +3917,24 @@ class ChartRenderBox extends RenderBox {
       canvas.saveLayer(overlayBounds, Paint());
       _paintOverlayLayer(canvas, size);
       canvas.restore(); // Restore from saveLayer
+    } else if (!_valueSummaryTrackingActive) {
+      // No overlay content means no tracking source either (cursor gone or
+      // crosshair gated off): publish the null snapshot so future consumers
+      // of the resolver never observe the stale hover state. Skipped while
+      // the value summary consumed this frame's tracking resolution — the
+      // summary is a live consumer of the resolver state.
+      _trackingSnapshotResolver.clear();
     }
 
     // Paint scrollbars if enabled (outside plot area clipping)
     _scrollbarManager.paint(canvas, size);
 
     canvas.restore(); // Final restore (removes initial offset translation)
+
+    // The value summary's assistive surface (content, bounds, focus,
+    // capabilities) is final for this frame now that the foreground element
+    // pass has painted the panel; re-flush semantics only when it changed.
+    _updateValueSummarySemanticsDirty();
   }
 
   // ==========================================================================
@@ -3359,18 +4059,22 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .length;
+    final valueSummaryPanel = _valueSummaryCoordinator.summarySemanticsInfo;
+    if (hitCount == 0 && summaryCount == 0 && valueSummaryPanel == null) {
+      return;
+    }
+    config
+      ..isSemanticBoundary = true
+      ..explicitChildNodes = true
+      ..textDirection = _textDirection;
     if (hitCount == 0 && summaryCount == 0) return;
     int? groupCount;
     for (final hit in hits) {
       groupCount ??= hit.groupCount;
     }
-    config
-      ..isSemanticBoundary = true
-      ..explicitChildNodes = true
-      ..textDirection = _textDirection
-      ..label = groupCount == null
-          ? 'Radial chart with $hitCount slices'
-          : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
+    config.label = groupCount == null
+        ? 'Radial chart with $hitCount slices'
+        : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
   }
 
   @override
@@ -3387,7 +4091,8 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .toList();
-    if (hits.isEmpty && summaries.isEmpty) {
+    final valueSummaryPanel = _valueSummaryCoordinator.summarySemanticsInfo;
+    if (hits.isEmpty && summaries.isEmpty && valueSummaryPanel == null) {
       _dataSemanticsNodes.clear();
       super.assembleSemanticsNode(node, config, children);
       return;
@@ -3395,6 +4100,68 @@ class ChartRenderBox extends RenderBox {
 
     final nextNodes = <String, SemanticsNode>{};
     final orderedNodes = <SemanticsNode>[];
+    if (valueSummaryPanel != null) {
+      // One grouped region per visible summary, shared by both
+      // presentations: the label carries the `Value summary` prefix plus
+      // title/context, the value the unit-carrying rows in source order. A
+      // panel dragged fully outside the chart (clampToPlot false)
+      // contributes no node: invisible semantics nodes are forbidden.
+      final panelRect = valueSummaryPanel.bounds
+          .shift(_plotArea.topLeft)
+          .intersect(Offset.zero & size);
+      if (!panelRect.isEmpty) {
+        const identity = 'value-summary';
+        final semanticConfig = SemanticsConfiguration()
+          ..sortKey = const OrdinalSortKey(0)
+          ..textDirection = _textDirection
+          ..identifier = identity
+          ..label = valueSummaryPanel.label
+          ..value = valueSummaryPanel.value;
+        if (valueSummaryPanel.focusable) {
+          semanticConfig
+            ..isFocusable = true
+            ..isFocused = valueSummaryPanel.focused;
+        }
+        final coordinator = _valueSummaryCoordinator;
+        final actions = <CustomSemanticsAction, VoidCallback>{
+          // Movable (draggable annotation) panels get explicit move actions
+          // regardless of the internal pointer-focus flag, so assistive
+          // users who never click can still reposition the panel; each
+          // action moves by one Shift+arrow step and commits once.
+          if (valueSummaryPanel.movable) ...{
+            _valueSummaryMoveLeftAction: () => coordinator.performSemanticMove(
+              const Offset(-_valueSummarySemanticMoveStep, 0),
+            ),
+            _valueSummaryMoveRightAction: () => coordinator.performSemanticMove(
+              const Offset(_valueSummarySemanticMoveStep, 0),
+            ),
+            _valueSummaryMoveUpAction: () => coordinator.performSemanticMove(
+              const Offset(0, -_valueSummarySemanticMoveStep),
+            ),
+            _valueSummaryMoveDownAction: () => coordinator.performSemanticMove(
+              const Offset(0, _valueSummarySemanticMoveStep),
+            ),
+            _valueSummaryResetPositionAction: () =>
+                coordinator.resetAnnotationPlacement(emit: true),
+          },
+          if (valueSummaryPanel.canPin)
+            _valueSummaryPinAction: coordinator.performSemanticPin,
+          if (valueSummaryPanel.canClearPin)
+            _valueSummaryClearPinAction: coordinator.performSemanticClearPin,
+        };
+        if (actions.isNotEmpty) {
+          semanticConfig.customSemanticsActions = actions;
+        }
+        final semanticNode =
+            _dataSemanticsNodes[identity] ??
+            SemanticsNode(key: const ValueKey(identity));
+        semanticNode
+          ..rect = panelRect
+          ..updateWith(config: semanticConfig);
+        nextNodes[identity] = semanticNode;
+        orderedNodes.add(semanticNode);
+      }
+    }
     for (final summary in summaries) {
       final identity = 'summary:${summary.id}';
       final semanticConfig = SemanticsConfiguration()
@@ -3580,6 +4347,7 @@ class _StreamingDelegateImpl implements StreamingDelegate {
   @override
   void invalidateSeriesCache() {
     _renderBox._seriesCacheManager.invalidate();
+    _renderBox._invalidateTrackingResolution();
   }
 
   @override
@@ -3803,6 +4571,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   void invalidateSeriesCache() {
     _renderBox._seriesCacheManager.invalidate();
+    _renderBox._invalidateTrackingResolution();
   }
 
   // ============================================================================
@@ -3847,6 +4616,31 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   void markNeedsPaint() {
     _renderBox.markNeedsPaint();
   }
+
+  // ============================================================================
+  // Value summary annotation drag
+  // ============================================================================
+
+  @override
+  ValueSummaryAnnotationElement? get valueSummaryDragTarget =>
+      _renderBox.valueSummaryDragTarget;
+
+  @override
+  void beginValueSummaryDrag() => _renderBox.beginValueSummaryDrag();
+
+  @override
+  void updateValueSummaryDrag(Offset panelOriginPlot) =>
+      _renderBox.updateValueSummaryDrag(panelOriginPlot);
+
+  @override
+  void commitValueSummaryDrag() => _renderBox.commitValueSummaryDrag();
+
+  @override
+  void cancelValueSummaryDrag() => _renderBox.cancelValueSummaryDrag();
+
+  @override
+  bool setValueSummaryFocus(bool focused) =>
+      _renderBox.setValueSummaryFocus(focused);
 
   // ============================================================================
   // Per-series normalization support

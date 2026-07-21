@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
+import '../models/cartesian_value_summary_config.dart';
+import '../models/cartesian_value_summary_style.dart';
+import '../models/chart_overlay_placement.dart';
+import '../models/chart_style_value.dart';
 import '../models/interaction_config.dart';
 import '../models/interaction_callbacks.dart';
 import 'chart_artifact_diagnostics.dart';
@@ -26,11 +30,14 @@ abstract final class ChartInteractionDocumentCodec {
   static const crosshairChangedBinding = 'onCrosshairChanged';
   static const tooltipChangedBinding = 'onTooltipChanged';
   static const keyboardActionBinding = 'onKeyboardAction';
+  static const valueSummaryPlacementChangedBinding =
+      'valueSummary.onPlacementChanged';
 
   static ChartArtifactResult<ChartInteractionDocument> encode(
     InteractionConfig config, {
     Map<String, JsonObjectValue> runtimeBindingDescriptors = const {},
   }) {
+    final warnings = <ChartArtifactWarning>[];
     try {
       final callbacks = <String, Object?>{};
       final requiredBindings = <String>{};
@@ -60,6 +67,10 @@ abstract final class ChartInteractionDocumentCodec {
       capture(crosshairChangedBinding, config.onCrosshairChanged != null);
       capture(tooltipChangedBinding, config.onTooltipChanged != null);
       capture(keyboardActionBinding, config.onKeyboardAction != null);
+      capture(
+        valueSummaryPlacementChangedBinding,
+        config.valueSummary.onPlacementChanged != null,
+      );
 
       return ChartArtifactSuccess(
         value: ChartInteractionDocument(
@@ -74,6 +85,12 @@ abstract final class ChartInteractionDocumentCodec {
             'enableSelection': config.enableSelection,
             if (config.selection != const ChartSelectionConfig())
               'selection': _encodeSelection(config.selection),
+            if (config.valueSummary != const CartesianValueSummaryConfig())
+              'valueSummary': _encodeValueSummary(
+                config.valueSummary,
+                requiredBindings,
+                warnings,
+              ),
             'showFocusBorder': config.showFocusBorder,
             'enableFocusOnHover': config.enableFocusOnHover,
             'showXScrollbar': config.showXScrollbar,
@@ -83,6 +100,7 @@ abstract final class ChartInteractionDocumentCodec {
           }),
           requiredBindings: requiredBindings,
         ),
+        warnings: warnings,
       );
     } on _BindingException catch (error) {
       return ChartArtifactFailure(
@@ -91,6 +109,7 @@ abstract final class ChartInteractionDocumentCodec {
           message: error.message,
           path: error.path,
         ),
+        warnings: warnings,
       );
     } on UnsupportedError catch (error) {
       return ChartArtifactFailure(
@@ -100,6 +119,7 @@ abstract final class ChartInteractionDocumentCodec {
               error.message?.toString() ?? 'Unsupported interaction style.',
           path: r'$.interaction.configuration',
         ),
+        warnings: warnings,
       );
     } on Object catch (error) {
       return _invalidFailure(error);
@@ -194,6 +214,24 @@ abstract final class ChartInteractionDocumentCodec {
       final onKeyboardAction = resolveCallback<KeyboardActionCallback>(
         keyboardActionBinding,
       );
+      final onPlacementChanged =
+          resolveCallback<ValueChanged<ChartOverlayPlacement>>(
+            valueSummaryPlacementChangedBinding,
+          );
+      var valueSummary = map['valueSummary'] == null
+          ? const CartesianValueSummaryConfig()
+          : _decodeValueSummary(
+              _requiredMap(map, 'valueSummary'),
+              document: document,
+              bindings: bindings,
+              warnings: warnings,
+              describedBindingIds: describedBindingIds,
+            );
+      if (onPlacementChanged != null) {
+        valueSummary = valueSummary.copyWith(
+          onPlacementChanged: onPlacementChanged,
+        );
+      }
       for (final id in document.requiredBindings.difference(
         describedBindingIds,
       )) {
@@ -223,6 +261,7 @@ abstract final class ChartInteractionDocumentCodec {
           selection: map['selection'] == null
               ? const ChartSelectionConfig()
               : _decodeSelection(_requiredMap(map, 'selection')),
+          valueSummary: valueSummary,
           showFocusBorder: _bool(map, 'showFocusBorder'),
           enableFocusOnHover: _bool(map, 'enableFocusOnHover'),
           showXScrollbar: _bool(map, 'showXScrollbar'),
@@ -410,6 +449,341 @@ KeyboardConfig _decodeKeyboard(Map<String, Object?> map) => KeyboardConfig(
   enablePlusMinusKeys: _bool(map, 'enablePlusMinusKeys'),
   enableHomeEndKeys: _bool(map, 'enableHomeEndKeys'),
 );
+
+Map<String, Object?> _encodeValueSummary(
+  CartesianValueSummaryConfig value,
+  Set<String> requiredBindings,
+  List<ChartArtifactWarning> warnings,
+) => {
+  'enabled': value.enabled,
+  'valuePolicy': value.valuePolicy.name,
+  if (value.valueMode != CartesianValueSummaryValueMode.interpolated)
+    'valueMode': value.valueMode.name,
+  'presentation': _encodeValueSummaryPresentation(value.presentation),
+  'content': _encodeValueSummaryContent(
+    value.content,
+    requiredBindings,
+    warnings,
+  ),
+  'showSeriesAccent': value.showSeriesAccent,
+  'announceChanges': value.announceChanges,
+  if (value.style != const CartesianValueSummaryStyle())
+    'style': _encodeValueSummaryStyle(value.style),
+};
+
+CartesianValueSummaryConfig _decodeValueSummary(
+  Map<String, Object?> map, {
+  required ChartInteractionDocument document,
+  required ChartRuntimeBindings bindings,
+  required List<ChartArtifactWarning> warnings,
+  required Set<String> describedBindingIds,
+}) => CartesianValueSummaryConfig(
+  enabled: _bool(map, 'enabled'),
+  valuePolicy: _enum(
+    map,
+    'valuePolicy',
+    CartesianValueSummaryValuePolicy.values,
+  ),
+  // Absent means the default: only non-default modes are encoded.
+  valueMode: map['valueMode'] == null
+      ? CartesianValueSummaryValueMode.interpolated
+      : _enum(map, 'valueMode', CartesianValueSummaryValueMode.values),
+  presentation: _decodeValueSummaryPresentation(
+    _requiredMap(map, 'presentation'),
+  ),
+  content: _decodeValueSummaryContent(
+    _requiredMap(map, 'content'),
+    document: document,
+    bindings: bindings,
+    warnings: warnings,
+    describedBindingIds: describedBindingIds,
+  ),
+  showSeriesAccent: _bool(map, 'showSeriesAccent'),
+  announceChanges: _bool(map, 'announceChanges'),
+  style: map['style'] == null
+      ? const CartesianValueSummaryStyle()
+      : _decodeValueSummaryStyle(_requiredMap(map, 'style')),
+);
+
+Map<String, Object?> _encodeValueSummaryPresentation(
+  CartesianValueSummaryPresentation value,
+) => switch (value) {
+  CartesianValueSummaryOverlay(:final placement) => {
+    'kind': 'overlay',
+    'placement': _encodeOverlayPlacement(placement),
+  },
+  CartesianValueSummaryAnnotation(
+    :final placement,
+    :final draggable,
+    :final clampToPlot,
+  ) =>
+    {
+      'kind': 'annotation',
+      'placement': _encodeOverlayPlacement(placement),
+      'draggable': draggable,
+      'clampToPlot': clampToPlot,
+    },
+};
+
+CartesianValueSummaryPresentation _decodeValueSummaryPresentation(
+  Map<String, Object?> map,
+) {
+  final kind = _string(map, 'kind');
+  return switch (kind) {
+    'overlay' => CartesianValueSummaryOverlay(
+      placement: _decodeOverlayPlacement(_requiredMap(map, 'placement')),
+    ),
+    'annotation' => CartesianValueSummaryAnnotation(
+      placement: _decodeOverlayPlacement(_requiredMap(map, 'placement')),
+      draggable: _bool(map, 'draggable'),
+      clampToPlot: _bool(map, 'clampToPlot'),
+    ),
+    _ => throw FormatException(
+      'Unknown value summary presentation kind "$kind".',
+    ),
+  };
+}
+
+Map<String, Object?> _encodeOverlayPlacement(ChartOverlayPlacement value) => {
+  'anchor': {'x': _n(value.anchor.x), 'y': _n(value.anchor.y)},
+  'offset': {'dx': _n(value.offset.dx), 'dy': _n(value.offset.dy)},
+};
+
+ChartOverlayPlacement _decodeOverlayPlacement(Map<String, Object?> map) {
+  final anchor = _requiredMap(map, 'anchor');
+  final offset = _requiredMap(map, 'offset');
+  return ChartOverlayPlacement(
+    anchor: Alignment(_double(anchor, 'x'), _double(anchor, 'y')),
+    offset: Offset(_double(offset, 'dx'), _double(offset, 'dy')),
+  );
+}
+
+Map<String, Object?> _encodeValueSummaryContent(
+  CartesianValueSummaryContent value,
+  Set<String> requiredBindings,
+  List<ChartArtifactWarning> warnings,
+) {
+  switch (value) {
+    case CartesianValueSummaryAutomaticContent(
+      :final includeTrends,
+      :final includeHiddenSeries,
+    ):
+      return {
+        'kind': 'automatic',
+        'includeTrends': includeTrends,
+        'includeHiddenSeries': includeHiddenSeries,
+      };
+    case CartesianValueSummaryBuilderContent(:final descriptorId):
+      if (descriptorId == null) {
+        warnings.add(
+          const ChartArtifactWarning(
+            code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+            message:
+                'Value summary builder content has no descriptorId; the '
+                'runtime builder is an omitted dependency and automatic '
+                'content was encoded instead.',
+            path: r'$.interaction.configuration.valueSummary.content',
+          ),
+        );
+        return const {
+          'kind': 'automatic',
+          'includeTrends': false,
+          'includeHiddenSeries': false,
+        };
+      }
+      requiredBindings.add(descriptorId);
+      return {'kind': 'builder', 'descriptorId': descriptorId};
+  }
+}
+
+CartesianValueSummaryContent _decodeValueSummaryContent(
+  Map<String, Object?> map, {
+  required ChartInteractionDocument document,
+  required ChartRuntimeBindings bindings,
+  required List<ChartArtifactWarning> warnings,
+  required Set<String> describedBindingIds,
+}) {
+  final kind = _string(map, 'kind');
+  switch (kind) {
+    case 'automatic':
+      return CartesianValueSummaryAutomaticContent(
+        includeTrends: _bool(map, 'includeTrends'),
+        includeHiddenSeries: _bool(map, 'includeHiddenSeries'),
+      );
+    case 'builder':
+      final id = _string(map, 'descriptorId');
+      if (!document.requiredBindings.contains(id)) {
+        throw FormatException(
+          'Value summary content descriptor must declare $id in '
+          'requiredBindings.',
+        );
+      }
+      describedBindingIds.add(id);
+      final builder = bindings.callbacks
+          .resolve<CartesianValueSummaryRowBuilder>(id);
+      if (builder == null) {
+        warnings.add(
+          ChartArtifactWarning(
+            code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+            message:
+                'Optional value summary content binding "$id" is unavailable; '
+                'automatic content is active.',
+            path: r'$.interaction.configuration.valueSummary.content',
+          ),
+        );
+        return const CartesianValueSummaryContent.automatic();
+      }
+      return CartesianValueSummaryContent.builder(builder, descriptorId: id);
+    default:
+      throw FormatException('Unknown value summary content kind "$kind".');
+  }
+}
+
+Map<String, Object?> _encodeValueSummaryStyle(
+  CartesianValueSummaryStyle value,
+) => {
+  ..._styleEntry('backgroundColor', value.backgroundColor, _colorJson),
+  ..._styleEntry('backgroundOpacity', value.backgroundOpacity, _n),
+  ..._styleEntry('borderColor', value.borderColor, _colorJson),
+  ..._styleEntry('borderWidth', value.borderWidth, _n),
+  ..._styleEntry('borderRadius', value.borderRadius, _borderRadiusJson),
+  ..._styleEntry('padding', value.padding, _insetsJson),
+  ..._styleEntry('textStyle', value.textStyle, _textStyleJson),
+  ..._styleEntry('labelStyle', value.labelStyle, _textStyleJson),
+  ..._styleEntry('accentColor', value.accentColor, _colorJson),
+  ..._styleEntry('shadow', value.shadow, _boxShadowJson),
+  ..._styleEntry('minWidth', value.minWidth, _n),
+  ..._styleEntry('maxWidth', value.maxWidth, _n),
+  ..._styleEntry('rowGap', value.rowGap, _n),
+  ..._styleEntry('labelValueGap', value.labelValueGap, _n),
+};
+
+CartesianValueSummaryStyle _decodeValueSummaryStyle(
+  Map<String, Object?> map,
+) => CartesianValueSummaryStyle(
+  backgroundColor: _styleValue(map, 'backgroundColor', _colorPayload),
+  backgroundOpacity: _styleValue(map, 'backgroundOpacity', _doublePayload),
+  borderColor: _styleValue(map, 'borderColor', _colorPayload),
+  borderWidth: _styleValue(map, 'borderWidth', _doublePayload),
+  borderRadius: _styleValue(map, 'borderRadius', _borderRadiusPayload),
+  padding: _styleValue(map, 'padding', _insetsPayload),
+  textStyle: _styleValue(map, 'textStyle', _textStylePayload),
+  labelStyle: _styleValue(map, 'labelStyle', _textStylePayload),
+  accentColor: _styleValue(map, 'accentColor', _colorPayload),
+  shadow: _styleValue(map, 'shadow', _boxShadowPayload),
+  minWidth: _styleValue(map, 'minWidth', _doublePayload),
+  maxWidth: _styleValue(map, 'maxWidth', _doublePayload),
+  rowGap: _styleValue(map, 'rowGap', _doublePayload),
+  labelValueGap: _styleValue(map, 'labelValueGap', _doublePayload),
+);
+
+/// Tri-state artifact form: an absent key is [ChartStyleValue.inherit], the
+/// explicit `"none"` token is [ChartStyleValue.none], anything else is the
+/// typed payload of [ChartStyleValue.value].
+Map<String, Object?> _styleEntry<T>(
+  String key,
+  ChartStyleValue<T> value,
+  Object Function(T payload) encodePayload,
+) => switch (value) {
+  ChartStyleInherit<T>() => const {},
+  ChartStyleNone<T>() => {key: 'none'},
+  ChartStyleExplicit<T>(:final value) => {key: encodePayload(value)},
+};
+
+ChartStyleValue<T> _styleValue<T>(
+  Map<String, Object?> map,
+  String key,
+  T Function(Object? raw) decodePayload,
+) {
+  final raw = map[key];
+  if (raw == null) return ChartStyleValue<T>.inherit();
+  if (raw == 'none') return ChartStyleValue<T>.none();
+  return ChartStyleValue<T>.value(decodePayload(raw));
+}
+
+Object _colorJson(Color value) => value.toARGB32();
+
+Color _colorPayload(Object? value) {
+  if (value is int) return Color(value);
+  throw const FormatException('Expected ARGB color integer style value.');
+}
+
+double _doublePayload(Object? value) =>
+    ChartNumberDocument.fromJson(value).asDouble;
+
+Object _textStyleJson(TextStyle value) =>
+    ChartStyleDocumentCodec.encodeTextStyle(value).toJson();
+
+TextStyle _textStylePayload(Object? value) =>
+    ChartStyleDocumentCodec.decodeTextStyle(_object(_asMap(value)));
+
+Object _insetsJson(EdgeInsets value) => {
+  'left': _n(value.left),
+  'top': _n(value.top),
+  'right': _n(value.right),
+  'bottom': _n(value.bottom),
+};
+
+EdgeInsets _insetsPayload(Object? value) {
+  final map = _asMap(value);
+  return EdgeInsets.fromLTRB(
+    _double(map, 'left'),
+    _double(map, 'top'),
+    _double(map, 'right'),
+    _double(map, 'bottom'),
+  );
+}
+
+Object _borderRadiusJson(BorderRadius value) => {
+  'topLeft': _radiusJson(value.topLeft),
+  'topRight': _radiusJson(value.topRight),
+  'bottomLeft': _radiusJson(value.bottomLeft),
+  'bottomRight': _radiusJson(value.bottomRight),
+};
+
+BorderRadius _borderRadiusPayload(Object? value) {
+  final map = _asMap(value);
+  return BorderRadius.only(
+    topLeft: _radiusPayload(_requiredMap(map, 'topLeft')),
+    topRight: _radiusPayload(_requiredMap(map, 'topRight')),
+    bottomLeft: _radiusPayload(_requiredMap(map, 'bottomLeft')),
+    bottomRight: _radiusPayload(_requiredMap(map, 'bottomRight')),
+  );
+}
+
+Map<String, Object?> _radiusJson(Radius value) => {
+  'x': _n(value.x),
+  'y': _n(value.y),
+};
+
+Radius _radiusPayload(Map<String, Object?> map) =>
+    Radius.elliptical(_double(map, 'x'), _double(map, 'y'));
+
+Object _boxShadowJson(BoxShadow value) => {
+  'color': value.color.toARGB32(),
+  'offset': {'dx': _n(value.offset.dx), 'dy': _n(value.offset.dy)},
+  'blurRadius': _n(value.blurRadius),
+  'spreadRadius': _n(value.spreadRadius),
+  'blurStyle': value.blurStyle.name,
+};
+
+BoxShadow _boxShadowPayload(Object? value) {
+  final map = _asMap(value);
+  final offset = _requiredMap(map, 'offset');
+  return BoxShadow(
+    color: _color(map, 'color'),
+    offset: Offset(_double(offset, 'dx'), _double(offset, 'dy')),
+    blurRadius: _double(map, 'blurRadius'),
+    spreadRadius: _double(map, 'spreadRadius'),
+    blurStyle: _enum(map, 'blurStyle', BlurStyle.values),
+  );
+}
+
+Map<String, Object?> _asMap(Object? value) {
+  if (value is Map<String, Object?>) return value;
+  if (value is Map) return Map<String, Object?>.from(value);
+  throw const FormatException('Expected object style value.');
+}
 
 Object _n(double value) => ChartNumberDocument.fromDouble(value).toJson();
 

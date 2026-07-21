@@ -11,6 +11,7 @@ import '../../coordinates/chart_transform.dart';
 import '../../elements/annotation_elements.dart';
 import '../../elements/resize_handle_element.dart';
 import '../../elements/series_element.dart';
+import '../../elements/value_summary_annotation_element.dart';
 import '../../interaction/core/chart_element.dart';
 import '../../interaction/core/coordinator.dart';
 import '../../interaction/core/data_hit.dart';
@@ -192,6 +193,30 @@ abstract class EventHandlerDelegate {
 
   /// Whether perSeries normalization mode is active.
   bool get isPerSeriesMode;
+
+  // ==================== Value Summary Annotation Drag ====================
+
+  /// The draggable annotation-style value summary panel, or null when the
+  /// annotation presentation is inactive, non-draggable, or hidden.
+  ValueSummaryAnnotationElement? get valueSummaryDragTarget;
+
+  /// Captures pre-drag state when a summary panel drag engages.
+  void beginValueSummaryDrag();
+
+  /// Live drag preview for the summary panel top-left (plot-local).
+  void updateValueSummaryDrag(Offset panelOriginPlot);
+
+  /// Commits an engaged summary panel drag (clamp + exactly one
+  /// `onPlacementChanged`).
+  void commitValueSummaryDrag();
+
+  /// Abandons an engaged summary panel drag without committing.
+  void cancelValueSummaryDrag();
+
+  /// Grants or clears the summary panel's keyboard focus.
+  ///
+  /// Returns whether the focus state actually changed.
+  bool setValueSummaryFocus(bool focused);
 }
 
 /// Manages all pointer event handling for the chart.
@@ -316,6 +341,23 @@ class EventHandlerManager {
   /// Potential PinAnnotation drag.
   PinAnnotationElement? _potentialDragPinAnnotation;
   Offset? _potentialDragPinStartPosition;
+
+  // ==========================================================================
+  // Value Summary Annotation Move State
+  // ==========================================================================
+
+  /// Value summary panel being moved.
+  ValueSummaryAnnotationElement? _movingValueSummary;
+
+  /// Starting pointer position for the summary panel move.
+  Offset? _moveValueSummaryStartPosition;
+
+  /// Panel top-left (plot-local) at drag engagement.
+  Offset? _moveValueSummaryStartOrigin;
+
+  /// Potential value summary panel drag.
+  ValueSummaryAnnotationElement? _potentialDragValueSummary;
+  Offset? _potentialDragValueSummaryStart;
 
   // ==========================================================================
   // LegendAnnotation Move State
@@ -471,6 +513,29 @@ class EventHandlerManager {
   void _handlePointerDown(PointerDownEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
     coordinator.setPressedMarker(null);
+
+    // Value summary annotation panel: within its painted bounds the
+    // draggable panel wins the PRIMARY pointer (spec: drag begins only from
+    // the summary bounds), and a primary press on it must never resolve,
+    // hover, select, or tooltip the data beneath. Secondary (context menu)
+    // and middle (pan) presses are not panel gestures — they fall through
+    // to the exclusive per-button handlers below. Any press that is not a
+    // primary press on the panel makes the panel give up keyboard focus.
+    final summaryTarget = _delegate.valueSummaryDragTarget;
+    final onSummaryPanel =
+        summaryTarget != null &&
+        summaryTarget.hitTest(_delegate.widgetToPlot(position));
+    final primaryOnSummaryPanel =
+        onSummaryPanel && event.buttons == kPrimaryMouseButton;
+    if (summaryTarget != null) {
+      _delegate.setValueSummaryFocus(primaryOnSummaryPanel);
+    }
+    if (primaryOnSummaryPanel) {
+      coordinator.startInteraction(position, element: summaryTarget);
+      _potentialDragValueSummary = summaryTarget;
+      _potentialDragValueSummaryStart = position;
+      return;
+    }
 
     // Touch and stylus input do not produce a preceding hover event. Resolve
     // the datum on pointer-down so tap selection and tap tooltips use the same
@@ -671,6 +736,42 @@ class EventHandlerManager {
   /// Checks and handles potential drag thresholds.
   /// Returns true if a potential drag was being checked (handled).
   bool _checkPotentialDrags(PointerMoveEvent event, Offset position) {
+    // Value summary panel potential drag. Engaging claims the shared
+    // annotation-drag mode (coordinator.isDragging suspends tracking), shows
+    // the platform move cursor, and — deliberately — never selects the
+    // element: the drag must not disturb selection state.
+    if (_potentialDragValueSummary != null &&
+        _potentialDragValueSummaryStart != null) {
+      final dragDistance =
+          (position - _potentialDragValueSummaryStart!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        final hitElement = _potentialDragValueSummary!;
+        _movingValueSummary = hitElement;
+        _moveValueSummaryStartPosition = _potentialDragValueSummaryStart;
+        _moveValueSummaryStartOrigin = hitElement.bounds.topLeft;
+
+        _delegate.coordinator.startInteraction(
+          _potentialDragValueSummaryStart!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
+        _delegate.beginValueSummaryDrag();
+        _delegate.onCursorChange?.call(SystemMouseCursors.move);
+
+        _potentialDragValueSummary = null;
+        _potentialDragValueSummaryStart = null;
+
+        _performValueSummaryMove(position);
+        _delegate.markNeedsPaint();
+        return true;
+      }
+      return true; // Still within threshold
+    }
+
     // TextAnnotation potential drag
     if (_potentialDragTextAnnotation != null &&
         _potentialDragTextStartPosition != null) {
@@ -869,6 +970,15 @@ class EventHandlerManager {
     Offset startPos,
   ) {
     final coordinator = _delegate.coordinator;
+
+    // Handle value summary panel move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingValueSummary != null &&
+        _moveValueSummaryStartPosition != null) {
+      _performValueSummaryMove(position);
+      _delegate.markNeedsPaint();
+      return true;
+    }
 
     // Handle resize dragging
     if (coordinator.currentMode == InteractionMode.resizingAnnotation &&
@@ -1086,6 +1196,31 @@ class EventHandlerManager {
       _completeRangeAnnotationMove();
     }
 
+    // Complete or release the value summary panel interaction. A press on
+    // the panel must never tap-tooltip or select the data beneath it.
+    bool valueSummaryHandled = false;
+    if (_movingValueSummary != null) {
+      final target = _movingValueSummary!;
+      _delegate.commitValueSummaryDrag();
+      _movingValueSummary = null;
+      _moveValueSummaryStartPosition = null;
+      _moveValueSummaryStartOrigin = null;
+      valueSummaryHandled = true;
+      // Keep the move cursor while the pointer is still over the (possibly
+      // clamped) panel; the next hover hit test takes over from here.
+      _delegate.onCursorChange?.call(
+        target.hitTest(_delegate.widgetToPlot(position))
+            ? SystemMouseCursors.move
+            : SystemMouseCursors.basic,
+      );
+    }
+    if (_potentialDragValueSummary != null) {
+      // Click without a drag: keyboard focus was granted on pointer-down.
+      _potentialDragValueSummary = null;
+      _potentialDragValueSummaryStart = null;
+      valueSummaryHandled = true;
+    }
+
     // Handle potential drags that never exceeded threshold
     _handlePotentialDragReleases(event, completedResizeOrMove);
 
@@ -1096,7 +1231,9 @@ class EventHandlerManager {
     _completePan();
 
     // Handle tap on marker for tap-triggered tooltips
-    _handleTapForTooltip();
+    if (!valueSummaryHandled) {
+      _handleTapForTooltip();
+    }
 
     // Clear cursor position
     _cursorPosition = null;
@@ -1108,6 +1245,14 @@ class EventHandlerManager {
   }
 
   void _handlePointerCancel() {
+    if (_movingValueSummary != null) {
+      _delegate.cancelValueSummaryDrag();
+      _movingValueSummary = null;
+      _moveValueSummaryStartPosition = null;
+      _moveValueSummaryStartOrigin = null;
+    }
+    _potentialDragValueSummary = null;
+    _potentialDragValueSummaryStart = null;
     _delegate.coordinator.setPressedMarker(null);
     _delegate.coordinator.endInteraction();
     _delegate.coordinator.releaseMode(force: true);
@@ -1768,44 +1913,56 @@ class EventHandlerManager {
     HoveredMarkerInfo? nearestMarker;
     double minDistance = snapRadius;
 
-    final seriesElements = _delegate.elements
-        .whereType<SeriesElement>()
-        .toList();
+    // The draggable summary panel owns the pointer within its painted
+    // bounds: data beneath it must not marker-highlight or tooltip under
+    // the panel's move cursor, matching the press path's suppression. The
+    // fixed overlay and a non-draggable panel never hit-test, so hover
+    // keeps resolving through them (spec).
+    final summaryTarget = _delegate.valueSummaryDragTarget;
+    final overSummaryPanel =
+        summaryTarget != null && summaryTarget.hitTest(plotPosition);
 
-    // Bars own their complete rectangle, not only the value-end marker. Prefer
-    // later-painted series so overlaid front layers receive interaction first.
-    for (final element in seriesElements.reversed) {
-      if (element.series is! BarChartSeries) continue;
-      final geometry = element.barGeometryAt(plotPosition);
-      if (geometry == null) continue;
-      nearestMarker = HoveredMarkerInfo(
-        seriesId: element.id,
-        markerIndex: geometry.pointIndex,
-        plotPosition: geometry.valueEndPoint,
-        dataHit: element.dataHitForPointIndex(geometry.pointIndex),
-      );
-      minDistance = 0;
-      break;
-    }
+    if (!overSummaryPanel) {
+      final seriesElements = _delegate.elements
+          .whereType<SeriesElement>()
+          .toList();
 
-    final dataHitElements =
-        _delegate.elements.whereType<DataHitElement>().toList()
-          ..sort((a, b) => b.priority.compareTo(a.priority));
-    for (final element in dataHitElements) {
-      if (minDistance == 0) break;
-      final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
-      if (hit == null) continue;
-      final distance = hit.share == null
-          ? (plotPosition - hit.plotPosition).distance
-          : 0.0;
-      if (distance < minDistance) {
-        minDistance = distance;
+      // Bars own their complete rectangle, not only the value-end marker.
+      // Prefer later-painted series so overlaid front layers receive
+      // interaction first.
+      for (final element in seriesElements.reversed) {
+        if (element.series is! BarChartSeries) continue;
+        final geometry = element.barGeometryAt(plotPosition);
+        if (geometry == null) continue;
         nearestMarker = HoveredMarkerInfo(
-          seriesId: hit.seriesId,
-          markerIndex: hit.pointIndex,
-          plotPosition: hit.plotPosition,
-          dataHit: hit,
+          seriesId: element.id,
+          markerIndex: geometry.pointIndex,
+          plotPosition: geometry.valueEndPoint,
+          dataHit: element.dataHitForPointIndex(geometry.pointIndex),
         );
+        minDistance = 0;
+        break;
+      }
+
+      final dataHitElements =
+          _delegate.elements.whereType<DataHitElement>().toList()
+            ..sort((a, b) => b.priority.compareTo(a.priority));
+      for (final element in dataHitElements) {
+        if (minDistance == 0) break;
+        final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
+        if (hit == null) continue;
+        final distance = hit.share == null
+            ? (plotPosition - hit.plotPosition).distance
+            : 0.0;
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestMarker = HoveredMarkerInfo(
+            seriesId: hit.seriesId,
+            markerIndex: hit.pointIndex,
+            plotPosition: hit.plotPosition,
+            dataHit: hit,
+          );
+        }
       }
     }
 
@@ -2144,6 +2301,21 @@ class EventHandlerManager {
     }
   }
 
+  void _performValueSummaryMove(Offset currentPosition) {
+    final startPosition = _moveValueSummaryStartPosition;
+    final startOrigin = _moveValueSummaryStartOrigin;
+    if (_movingValueSummary == null ||
+        startPosition == null ||
+        startOrigin == null) {
+      return;
+    }
+
+    final delta =
+        _delegate.widgetToPlot(currentPosition) -
+        _delegate.widgetToPlot(startPosition);
+    _delegate.updateValueSummaryDrag(startOrigin + delta);
+  }
+
   void _performTextAnnotationMove(Offset currentPosition) {
     if (_movingTextAnnotation == null || _moveTextStartPosition == null) return;
 
@@ -2279,6 +2451,11 @@ class EventHandlerManager {
   }
 
   MouseCursor _cursorForHoveredElement(ChartElement? element) {
+    if (element is ValueSummaryAnnotationElement && element.isDraggable) {
+      // The spec asks for the platform move cursor over the draggable
+      // summary panel (unlike the grab/grabbing pair used by annotations).
+      return SystemMouseCursors.move;
+    }
     if (element is RangeAnnotationElement && element.isDraggable) {
       return SystemMouseCursors.grab;
     }

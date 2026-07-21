@@ -7,9 +7,10 @@ import 'package:flutter/painting.dart';
 
 import '../../axis/series_axis_resolver.dart';
 import '../../coordinates/chart_transform.dart';
-import '../../elements/annotation_elements.dart';
+import '../../elements/annotation_elements.dart' show TrendAnnotationElement;
 import '../../elements/series_element.dart';
 import '../../formatting/multi_axis_value_formatter.dart';
+import '../../interaction/core/cartesian_tracking_snapshot.dart';
 import '../../interaction/core/crosshair_tracker.dart';
 import '../../layout/axis_layout_manager.dart';
 import '../../models/chart_series.dart';
@@ -26,6 +27,19 @@ import '../transposed_bar_axis_layout.dart';
 
 // Re-export DataRange for use by callers
 export '../../models/data_range.dart' show DataRange;
+
+/// One intersection marker painted during a tracking-mode crosshair paint,
+/// in chart-local screen coordinates.
+///
+/// Recorded into the optional paint sink ([CrosshairRenderer.paint]'s
+/// `paintedMarkerSink`) so widget tests can assert exact marker placement —
+/// including the continuous curve-following contract under snapshot identity
+/// suppression — without golden comparisons.
+typedef PaintedIntersectionMarker = ({
+  String seriesId,
+  bool isTrend,
+  Offset center,
+});
 
 /// Information about multi-axis configuration for crosshair rendering.
 ///
@@ -162,6 +176,18 @@ class CrosshairRenderer {
   ///
   /// This is the main entry point for crosshair rendering. It determines
   /// whether to use standard mode or tracking mode based on data point count.
+  ///
+  /// [trackingSnapshot] is the frame's resolved tracking snapshot, produced
+  /// once per interaction frame by the render box's
+  /// `CartesianTrackingSnapshotResolver`. Tracking mode consumes it for
+  /// intersection markers, the tracking tooltip, and axis labels; a null
+  /// snapshot paints crosshair lines only (matching the legacy behavior when
+  /// no tracking state resolved).
+  ///
+  /// [trendElements] supplies the trend annotations backing any trend values
+  /// on the snapshot, so their marker Y can be re-evaluated at the live
+  /// cursor X. [paintedMarkerSink], when provided, is cleared and then filled
+  /// with every intersection marker painted this frame (test probe).
   void paint({
     required Canvas canvas,
     required Size size,
@@ -174,9 +200,12 @@ class CrosshairRenderer {
     required List<SeriesElement> seriesElements,
     required bool isRangeCreationMode,
     InteractionConfig? interactionConfig,
-    List<TrendAnnotationElement> trendElements = const [],
+    CartesianTrackingSnapshot? trackingSnapshot,
     XAxisConfig? xAxisConfig,
+    List<TrendAnnotationElement> trendElements = const [],
+    List<PaintedIntersectionMarker>? paintedMarkerSink,
   }) {
+    paintedMarkerSink?.clear();
     // Check if tracking mode should be used
     final seriesList = seriesElements.map((e) => e.series).toList();
     final totalDataPoints = CrosshairTracker.getTotalPointCount(seriesList);
@@ -196,8 +225,10 @@ class CrosshairRenderer {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: seriesElements,
-        trendElements: trendElements,
+        trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
+        trendElements: trendElements,
+        paintedMarkerSink: paintedMarkerSink,
       );
     } else {
       _paintStandardMode(
@@ -303,18 +334,22 @@ class CrosshairRenderer {
       );
     }
 
-    // Draw coordinate labels
-    _paintCrosshairLabels(
-      canvas: canvas,
-      size: size,
-      cursorPosition: cursorPosition,
-      plotArea: plotArea,
-      transform: transform,
-      theme: theme,
-      multiAxisInfo: multiAxisInfo,
-      seriesElements: seriesElements,
-      xAxisConfig: xAxisConfig,
-    );
+    // Draw coordinate labels. The axis value labels are their own feedback
+    // layer, gated by [CrosshairConfig.showCoordinateLabels] independently of
+    // the crosshair lines.
+    if (crosshairConfig.showCoordinateLabels) {
+      _paintCrosshairLabels(
+        canvas: canvas,
+        size: size,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        transform: transform,
+        theme: theme,
+        multiAxisInfo: multiAxisInfo,
+        seriesElements: seriesElements,
+        xAxisConfig: xAxisConfig,
+      );
+    }
   }
 
   /// Paints tracking mode overlay (vertical line + intersection markers + tooltip).
@@ -329,8 +364,10 @@ class CrosshairRenderer {
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
     InteractionConfig? interactionConfig,
-    List<TrendAnnotationElement> trendElements = const [],
+    CartesianTrackingSnapshot? trackingSnapshot,
     XAxisConfig? xAxisConfig,
+    List<TrendAnnotationElement> trendElements = const [],
+    List<PaintedIntersectionMarker>? paintedMarkerSink,
   }) {
     final interactionTheme = theme?.interactionTheme;
     final crosshairColor =
@@ -398,102 +435,28 @@ class CrosshairRenderer {
       );
     }
 
-    // Calculate tracking state
-    final seriesList = seriesElements.map((e) => e.series).toList();
+    // Consume the frame's resolved tracking snapshot. Null mirrors the
+    // legacy null tracking state: crosshair lines paint, everything that
+    // requires resolved values is skipped.
+    if (trackingSnapshot == null) return;
+    final trackedValues = trackingSnapshot.values;
+
+    // The tracked data X for axis labels follows the live cursor
+    // continuously (identity suppression may retain the previous snapshot
+    // instance while the cursor moves within the same snapped datum), so it
+    // is derived from the cursor with the tracker's exact formula rather
+    // than read from the snapshot.
     final categoryScreenPosition = transform.transposed
         ? cursorPosition.dy
         : cursorPosition.dx;
     final trackingBounds = transform.transposed
         ? Rect.fromLTWH(plotArea.top, 0, plotArea.height, 1)
         : plotArea;
-    final trackingState = CrosshairTracker.calculateTrackingState(
-      screenX: categoryScreenPosition,
-      chartBounds: trackingBounds,
-      xMin: transform.dataXMin,
-      xMax: transform.dataXMax,
-      seriesList: seriesList,
-      interpolate: crosshairConfig.interpolateValues,
-      includeScatterXFallback: false,
-    );
-
-    if (trackingState == null) return;
-
-    // Line and Area tracking is X-oriented, while Scatter is an unordered
-    // two-dimensional sample. Replace the fallback nearest-X Scatter values
-    // with plot-space nearest points using each element's effective transform
-    // (including per-series multi-axis normalization).
-    final pointerInPlot = Offset(
-      cursorPosition.dx - plotArea.left,
-      cursorPosition.dy - plotArea.top,
-    );
-    for (final element in seriesElements) {
-      final scatter = element.series;
-      if (scatter is! ScatterChartSeries) continue;
-      final hit = element.dataHitAt(
-        pointerInPlot,
-        maxDistance: double.infinity,
-      );
-      final nearest = hit == null
-          ? null
-          : CrosshairSeriesValue(
-              seriesId: scatter.id,
-              seriesName: scatter.displayName,
-              seriesColor: hit.markerColor ?? element.themeColor,
-              x: hit.point.x,
-              y: hit.point.y,
-              dataPointIndex: hit.pointIndex,
-              isInterpolated: false,
-              pointLabel: hit.point.label,
-              magnitudeValue: hit.radiusValue,
-              formattedMagnitudeValue: hit.formattedRadiusValue,
-              magnitudeLabel: hit.radiusLabel,
-              colorValue: hit.colorValue,
-              formattedColorValue: hit.formattedColorValue,
-              colorLabel: hit.colorLabel,
-              opacityValue: hit.opacityValue,
-              formattedOpacityValue: hit.formattedOpacityValue,
-              opacityLabel: hit.opacityLabel,
-              categoryValue: hit.categoryValue,
-              categoryLabel: hit.categoryLabel,
-            );
-      final existingIndex = trackingState.seriesValues.indexWhere(
-        (value) => value.seriesId == scatter.id,
-      );
-      if (nearest == null) {
-        if (existingIndex >= 0) {
-          trackingState.seriesValues.removeAt(existingIndex);
-        }
-      } else if (existingIndex >= 0) {
-        trackingState.seriesValues[existingIndex] = nearest;
-      } else {
-        trackingState.seriesValues.add(nearest);
-      }
-    }
-
-    // Append trend annotation values to tracking state
-    for (final trendEl in trendElements) {
-      final trendY = trendEl.evaluateAt(trackingState.dataX);
-      if (trendY == null) continue;
-
-      final label = trendEl.annotation.label;
-      final displayName = (label != null && label.isNotEmpty)
-          ? label
-          : '${trendEl.annotation.trendType.name} trend';
-
-      trackingState.seriesValues.add(
-        CrosshairSeriesValue(
-          seriesId: trendEl.annotation.id,
-          seriesName: displayName,
-          seriesColor: trendEl.annotation.lineColor,
-          x: trackingState.dataX,
-          y: trendY,
-          dataPointIndex: -1,
-          isInterpolated: true,
-          linkedSeriesId: trendEl.annotation.seriesId,
-          isTrend: true,
-        ),
-      );
-    }
+    final normalizedX =
+        (categoryScreenPosition - trackingBounds.left) / trackingBounds.width;
+    final dataX =
+        transform.dataXMin +
+        normalizedX * (transform.dataXMax - transform.dataXMin);
 
     // Draw intersection markers
     if (crosshairConfig.showIntersectionMarkers) {
@@ -502,77 +465,86 @@ class CrosshairRenderer {
         cursorPosition: cursorPosition,
         plotArea: plotArea,
         transform: transform,
-        trackingState: trackingState,
+        dataX: dataX,
+        values: trackedValues,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: seriesElements,
+        trendElements: trendElements,
+        paintedMarkerSink: paintedMarkerSink,
       );
     }
 
     // Draw tracking tooltip
-    if (crosshairConfig.showTrackingTooltip &&
-        trackingState.seriesValues.isNotEmpty) {
+    if (crosshairConfig.showTrackingTooltip && trackedValues.isNotEmpty) {
       _paintTrackingTooltip(
         canvas: canvas,
         cursorPosition: cursorPosition,
         plotArea: plotArea,
         theme: theme,
         interactionConfig: interactionConfig,
-        trackingState: trackingState,
-        multiAxisInfo: multiAxisInfo,
+        values: trackedValues,
       );
     }
 
     if (transform.transposed) {
-      _paintTransposedTrackingCategoryLabel(
-        canvas: canvas,
-        cursorPosition: cursorPosition,
-        plotArea: plotArea,
-        theme: theme,
-        dataX: trackingState.dataX,
-        fallbackDataX: _nearestDiscreteTrackingX(trackingState),
-        seriesElements: seriesElements,
-        xAxisConfig: xAxisConfig,
-      );
-      final isPerSeries =
-          multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
-      final value = isPerSeries
-          ? (cursorPosition.dx - plotArea.left) / plotArea.width
-          : transform
-                .plotToData(
-                  cursorPosition.dx - plotArea.left,
-                  cursorPosition.dy - plotArea.top,
-                )
-                .dy;
-      _paintTransposedValueLabels(
-        canvas: canvas,
-        size: size,
-        cursorPosition: cursorPosition,
-        plotArea: plotArea,
-        theme: theme,
-        value: value,
-        isNormalized: isPerSeries,
-        multiAxisInfo: multiAxisInfo,
-      );
+      if (crosshairConfig.showCoordinateLabels) {
+        _paintTransposedTrackingCategoryLabel(
+          canvas: canvas,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          dataX: dataX,
+          fallbackDataX: _nearestDiscreteTrackingX(trackedValues),
+          seriesElements: seriesElements,
+          xAxisConfig: xAxisConfig,
+        );
+        final isPerSeries =
+            multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+        final value = isPerSeries
+            ? (cursorPosition.dx - plotArea.left) / plotArea.width
+            : transform
+                  .plotToData(
+                    cursorPosition.dx - plotArea.left,
+                    cursorPosition.dy - plotArea.top,
+                  )
+                  .dy;
+        _paintTransposedValueLabels(
+          canvas: canvas,
+          size: size,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          value: value,
+          isNormalized: isPerSeries,
+          multiAxisInfo: multiAxisInfo,
+        );
+      }
       return;
     }
 
-    // Draw X label
-    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+    // Draw X label. Axis value labels form their own feedback layer behind
+    // [CrosshairConfig.showCoordinateLabels]; the mode filter is retained so
+    // a horizontal-only crosshair keeps its Y-only labels, while
+    // [CrosshairMode.none] (no lines) still allows the label layer —
+    // matching standard mode, where labels never depended on the lines.
+    if (crosshairConfig.showCoordinateLabels &&
+        mode != CrosshairMode.horizontal) {
       _paintTrackingXLabel(
         canvas: canvas,
         cursorPosition: cursorPosition,
         plotArea: plotArea,
         theme: theme,
-        dataX: trackingState.dataX,
-        fallbackDataX: _nearestDiscreteTrackingX(trackingState),
+        dataX: dataX,
+        fallbackDataX: _nearestDiscreteTrackingX(trackedValues),
         seriesElements: seriesElements,
         xAxisConfig: xAxisConfig,
       );
     }
 
     // Draw Y label (per-axis if any axis has showCrosshairLabel)
-    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+    if (crosshairConfig.showCoordinateLabels &&
+        mode != CrosshairMode.vertical) {
       // Check if any axis wants a styled crosshair label
       final hasAxisWithCrosshairLabel = multiAxisInfo.effectiveAxes.any(
         (a) => a.showCrosshairLabel && a.visible,
@@ -1023,22 +995,33 @@ class CrosshairRenderer {
   }
 
   /// Paints intersection markers at series intersections.
+  ///
+  /// [dataX] is the tracked data X derived from the live cursor. Snapshot
+  /// identity suppression keys on formatted values, so the retained
+  /// snapshot's raw `y` may lag the cursor by up to one formatting quantum;
+  /// tracker-interpolated marker positions are therefore recomputed from
+  /// [dataX] on every paint — mirroring the tracking X label — while
+  /// snapshot-driven content (tooltip and value summary strings) stays
+  /// suppression-governed.
   void _paintIntersectionMarkers({
     required Canvas canvas,
     required Offset cursorPosition,
     required Rect plotArea,
     required ChartTransform transform,
-    required CrosshairTrackingState trackingState,
+    required double dataX,
+    required List<CartesianTrackedSeriesValue> values,
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
+    List<TrendAnnotationElement> trendElements = const [],
+    List<PaintedIntersectionMarker>? paintedMarkerSink,
   }) {
     // Save canvas state and clip to plot area to prevent markers from
     // rendering outside the plot boundaries
     canvas.save();
     canvas.clipRect(plotArea);
 
-    for (final value in trackingState.seriesValues) {
+    for (final value in values) {
       var screenX = cursorPosition.dx;
       double screenY;
 
@@ -1058,6 +1041,31 @@ class CrosshairRenderer {
           ? seriesElement?.dataHitForPointIndex(value.dataPointIndex)
           : null;
 
+      // Live curve Y at the cursor's data X. Only tracker-interpolated
+      // resolutions recompute: with interpolation off the tracked value IS
+      // the snapped datum and must stay put. At an unchanged cursor the
+      // recomputation reproduces the snapshot's own resolution bit-for-bit
+      // (identical formula and inputs), so static hovers paint identically.
+      double? liveY;
+      var liveX = false;
+      if (crosshairConfig.interpolateValues) {
+        if (value.isTrend) {
+          for (final trend in trendElements) {
+            if (trend.annotation.id == value.seriesId) {
+              liveY = trend.evaluateAt(dataX);
+              break;
+            }
+          }
+        } else if (seriesElement != null && scatterHit == null) {
+          liveY = CrosshairTracker.interpolatedYAt(
+            series: seriesElement.series,
+            targetX: dataX,
+          );
+          liveX = liveY != null;
+        }
+      }
+      final markerY = liveY ?? value.y;
+
       if (scatterHit != null) {
         screenX = plotArea.left + scatterHit.plotPosition.dx;
         screenY = plotArea.top + scatterHit.plotPosition.dy;
@@ -1068,7 +1076,13 @@ class CrosshairRenderer {
           seriesElement != null &&
           (seriesElement.series is LineChartSeries ||
               seriesElement.series is AreaChartSeries)) {
-        final point = seriesElement.dataToCurrentPlot(value.x, value.y);
+        // Non-interpolated values reach here from snap mode (liveX false —
+        // pin to the datum) or from stepped interpolation (liveX true —
+        // ride the step at the live cursor X).
+        final point = seriesElement.dataToCurrentPlot(
+          liveX ? dataX : value.x,
+          markerY,
+        );
         screenX = plotArea.left + point.dx;
         screenY = plotArea.top + point.dy;
       } else if (multiAxisInfo.effectiveAxes.length > 1) {
@@ -1084,14 +1098,14 @@ class CrosshairRenderer {
 
         if (seriesAxisBounds != null) {
           screenY = CrosshairTracker.dataToScreenYForAxis(
-            dataY: value.y,
+            dataY: markerY,
             chartBounds: plotArea,
             axisMin: seriesAxisBounds.min,
             axisMax: seriesAxisBounds.max,
           );
         } else {
           screenY = CrosshairTracker.dataToScreenY(
-            dataY: value.y,
+            dataY: markerY,
             chartBounds: plotArea,
             yMin: transform.dataYMin,
             yMax: transform.dataYMax,
@@ -1099,7 +1113,7 @@ class CrosshairRenderer {
         }
       } else {
         screenY = CrosshairTracker.dataToScreenY(
-          dataY: value.y,
+          dataY: markerY,
           chartBounds: plotArea,
           yMin: transform.dataYMin,
           yMax: transform.dataYMax,
@@ -1126,6 +1140,12 @@ class CrosshairRenderer {
         crosshairConfig.intersectionMarkerRadius,
         borderPaint,
       );
+
+      paintedMarkerSink?.add((
+        seriesId: value.seriesId,
+        isTrend: value.isTrend,
+        center: Offset(screenX, screenY),
+      ));
     }
 
     // Restore canvas state after drawing markers
@@ -1173,8 +1193,7 @@ class CrosshairRenderer {
     required Offset cursorPosition,
     required Rect plotArea,
     required ChartTheme? theme,
-    required CrosshairTrackingState trackingState,
-    required MultiAxisInfo multiAxisInfo,
+    required List<CartesianTrackedSeriesValue> values,
     InteractionConfig? interactionConfig,
   }) {
     final style = _getEffectiveTrackingTooltipStyle(interactionConfig, theme);
@@ -1199,22 +1218,10 @@ class CrosshairRenderer {
     const markerSize = 8.0;
     const dividerSpacing = 6.0;
 
-    for (final value in trackingState.seriesValues) {
-      // Get unit from axis config for multi-axis mode
-      String? yUnit;
-      if (multiAxisInfo.effectiveAxes.length > 1) {
-        final axisConfig = SeriesAxisResolver.resolveAxis(
-          value.axisSeriesId,
-          multiAxisInfo.effectiveBindings,
-          multiAxisInfo.effectiveAxes,
-        );
-        yUnit = axisConfig?.unit;
-      }
-
-      final displayY = MultiAxisValueFormatter.format(
-        value: value.y,
-        unit: yUnit,
-      );
+    for (final value in values) {
+      // Display formatting is resolved on the snapshot: formattedY carries
+      // the multi-axis unit exactly as the legacy per-paint resolution did.
+      final displayY = value.formattedY;
       final candle = value.candlestick;
       final hasScatterDetail =
           value.pointLabel != null ||
@@ -1229,7 +1236,7 @@ class CrosshairRenderer {
                 '${candle.formattedChange} · ${candle.direction.name}'
           : hasScatterDetail
           ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
-                'X: ${_formatDataValue(value.x)} · Y: $displayY'
+                'X: ${value.formattedX} · Y: $displayY'
                 '${value.formattedMagnitudeValue == null ? '' : '\n${value.magnitudeLabel ?? 'Magnitude'}: ${value.formattedMagnitudeValue}'}'
                 '${value.formattedColorValue == null ? '' : '\n${value.colorLabel ?? 'Color value'}: ${value.formattedColorValue}'}'
                 '${value.formattedOpacityValue == null ? '' : '\n${value.opacityLabel ?? 'Opacity value'}: ${value.formattedOpacityValue}'}'
@@ -1520,8 +1527,8 @@ class CrosshairRenderer {
     return const Color(0xFF333333);
   }
 
-  double? _nearestDiscreteTrackingX(CrosshairTrackingState trackingState) {
-    for (final value in trackingState.seriesValues) {
+  double? _nearestDiscreteTrackingX(List<CartesianTrackedSeriesValue> values) {
+    for (final value in values) {
       if (!value.isTrend &&
           !value.isInterpolated &&
           value.dataPointIndex >= 0) {

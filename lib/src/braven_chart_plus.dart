@@ -6816,7 +6816,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    // Removed excessive debugPrint (key event)
+    // The focused, draggable value summary panel owns arrow/Escape keys
+    // (arrows move it 1px, Shift 10px; Escape resets placement) before any
+    // chart-level keyboard handling such as arrow-key panning.
+    final summaryRenderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (summaryRenderBox != null &&
+        summaryRenderBox.handleValueSummaryKeyEvent(event)) {
+      return;
+    }
 
     if (event is KeyDownEvent) {
       final renderBox =

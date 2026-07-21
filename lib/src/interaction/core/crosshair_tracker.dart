@@ -212,6 +212,39 @@ abstract final class CrosshairTracker {
     );
   }
 
+  /// Continuous curve Y for a Line or Area [series] at [targetX], using the
+  /// exact interpolation resolution [calculateTrackingState] applies (linear,
+  /// bezier, and monotone follow the rendered curve geometry; stepped
+  /// returns the segment's left Y).
+  ///
+  /// Tracking snapshots are published with identity suppression keyed on the
+  /// formatted display value: cursor movement within one formatting quantum
+  /// retains the previously published snapshot and its raw `y`. Paint-time
+  /// consumers that must follow the cursor continuously — the crosshair
+  /// intersection marker — recompute the curve Y through this helper from
+  /// the live cursor X instead of reading the retained value.
+  ///
+  /// Returns null for non Line/Area series, an empty series, or a [targetX]
+  /// outside the series' X range.
+  static double? interpolatedYAt({
+    required ChartSeries series,
+    required double targetX,
+  }) {
+    if (series is! LineChartSeries && series is! AreaChartSeries) return null;
+    final value = _calculateSeriesValue(
+      series: series,
+      targetX: targetX,
+      interpolate: true,
+      // The visible-range, plot-width, and density-grouping inputs steer
+      // candlestick resolution only; Line/Area resolution never reads them.
+      visibleXMin: double.negativeInfinity,
+      visibleXMax: double.infinity,
+      plotWidth: 0,
+      useCandlestickDensityGrouping: false,
+    );
+    return value?.y;
+  }
+
   /// Calculates the Y value for a single series at the target X position.
   ///
   /// Uses binary search to find the surrounding points, then optionally

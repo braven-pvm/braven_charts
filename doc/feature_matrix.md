@@ -10,6 +10,7 @@ is added to package marketing.
 | X/Y viewport scrolling | `showXScrollbar`, `showYScrollbar`, `ScrollbarConfig` | Interaction, Render Range |
 | Tooltips | `TooltipConfig`, `TooltipStyle`, callbacks | Gallery, Interaction, Tracking Lab |
 | Crosshair tracking | `CrosshairConfig`, `CrosshairMode`, `CrosshairDisplayMode` | Tracking Lab, Gallery |
+| Cartesian value summary | `CartesianValueSummaryConfig`, fixed overlay and draggable annotation `CartesianValueSummaryPresentation`, deterministic `CartesianValueSummaryValuePolicy` chains, family-aware automatic and builder `CartesianValueSummaryContent`, tri-state `CartesianValueSummaryStyle` clears, `CartesianValueSummaryTheme` presets, anchor-relative `ChartOverlayPlacement`, `CartesianValueSummaryController` pinning, grouped semantics with debounced `announceChanges`, portable artifacts and generated Source | Value Summary |
 | Synchronized Cartesian interaction | `ChartInteractionGroupController`, `ChartInteractionGroupOptions`, `ChartXViewport` | Line Charts — Synchronized |
 | Full-domain Cartesian navigation | `CartesianNavigator`, `CartesianNavigatorBehavior`, `CartesianNavigatorSnapPolicy`, `CartesianNavigatorStyle` | Interaction — Navigator; Live Stream — Live Navigator; Gallery — Synchronized Cartesian; Line — Synchronized; Area — Forecast; Bar — Categories; Scatter — Correlation; Candlestick — Stock |
 | Annotations | `ChartAnnotation` subtypes, `AnnotationController`, editing dialogs | Annotations, Lactate Threshold, Gallery |

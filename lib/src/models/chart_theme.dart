@@ -1,12 +1,15 @@
 // Copyright 2025 Braven Charts - Comprehensive Theming System
 // SPDX-License-Identifier: MIT
 
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
 import '../theming/components/candlestick_theme.dart';
+import '../theming/components/cartesian_value_summary_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -57,6 +60,7 @@ class ChartTheme {
     required this.legendStyle,
     this.pieChartTheme = const PieChartTheme(),
     this.candlestickTheme = CandlestickTheme.light,
+    this.cartesianValueSummaryTheme = CartesianValueSummaryTheme.light,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
     this.focusBorderRadius = 0.0,
@@ -106,6 +110,10 @@ class ChartTheme {
 
   /// Candlestick-specific direction and interaction defaults.
   final CandlestickTheme candlestickTheme;
+
+  /// Cartesian value summary panel defaults resolved beneath
+  /// `CartesianValueSummaryStyle` overrides.
+  final CartesianValueSummaryTheme cartesianValueSummaryTheme;
 
   /// Focus border color when chart has keyboard focus.
   final Color focusBorderColor;
@@ -163,6 +171,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultDark,
     legendStyle: LegendStyle.dark,
     candlestickTheme: CandlestickTheme.dark,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.dark,
   );
 
   static final ChartTheme corporateBlue = ChartTheme(
@@ -177,6 +186,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.light,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.light,
   );
 
   static final ChartTheme vibrant = ChartTheme(
@@ -191,6 +201,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.light,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.light,
   );
 
   static final ChartTheme minimal = ChartTheme(
@@ -205,6 +216,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.light,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.light,
   );
 
   static final ChartTheme highContrast = ChartTheme(
@@ -219,6 +231,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.highContrast,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.highContrast,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.highContrast,
   );
 
   static final ChartTheme colorblindFriendly = ChartTheme(
@@ -233,6 +246,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.colorblindFriendly,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.colorblindFriendly,
   );
 
   // ========== Customization ==========
@@ -250,6 +264,7 @@ class ChartTheme {
     LegendStyle? legendStyle,
     PieChartTheme? pieChartTheme,
     CandlestickTheme? candlestickTheme,
+    CartesianValueSummaryTheme? cartesianValueSummaryTheme,
     Color? focusBorderColor,
     double? focusBorderWidth,
     double? focusBorderRadius,
@@ -267,6 +282,8 @@ class ChartTheme {
       legendStyle: legendStyle ?? this.legendStyle,
       pieChartTheme: pieChartTheme ?? this.pieChartTheme,
       candlestickTheme: candlestickTheme ?? this.candlestickTheme,
+      cartesianValueSummaryTheme:
+          cartesianValueSummaryTheme ?? this.cartesianValueSummaryTheme,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
       focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
       focusBorderRadius: focusBorderRadius ?? this.focusBorderRadius,
@@ -294,6 +311,7 @@ class ChartTheme {
         legendStyle == other.legendStyle &&
         pieChartTheme == other.pieChartTheme &&
         candlestickTheme == other.candlestickTheme &&
+        cartesianValueSummaryTheme == other.cartesianValueSummaryTheme &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
         focusBorderRadius == other.focusBorderRadius;
@@ -313,8 +331,46 @@ class ChartTheme {
     legendStyle,
     pieChartTheme,
     candlestickTheme,
+    cartesianValueSummaryTheme,
     focusBorderColor,
     focusBorderWidth,
     focusBorderRadius,
   );
+
+  // ========== Interpolation ==========
+
+  /// Linearly interpolates between two themes for animated transitions.
+  ///
+  /// Continuous values — [backgroundColor], the focus border fields, and
+  /// [cartesianValueSummaryTheme] — interpolate smoothly. Component themes
+  /// without interpolation support switch from [a] to [b] at the midpoint,
+  /// following the [ThemeData.lerp] convention for non-lerpable values.
+  static ChartTheme lerp(ChartTheme a, ChartTheme b, double t) {
+    if (identical(a, b)) {
+      return a;
+    }
+    return ChartTheme(
+      backgroundColor: Color.lerp(a.backgroundColor, b.backgroundColor, t)!,
+      gridStyle: t < 0.5 ? a.gridStyle : b.gridStyle,
+      axisStyle: t < 0.5 ? a.axisStyle : b.axisStyle,
+      seriesTheme: t < 0.5 ? a.seriesTheme : b.seriesTheme,
+      interactionTheme: t < 0.5 ? a.interactionTheme : b.interactionTheme,
+      typographyTheme: t < 0.5 ? a.typographyTheme : b.typographyTheme,
+      animationTheme: t < 0.5 ? a.animationTheme : b.animationTheme,
+      annotationTheme: t < 0.5 ? a.annotationTheme : b.annotationTheme,
+      scrollbarConfig: t < 0.5 ? a.scrollbarConfig : b.scrollbarConfig,
+      legendStyle: t < 0.5 ? a.legendStyle : b.legendStyle,
+      pieChartTheme: t < 0.5 ? a.pieChartTheme : b.pieChartTheme,
+      candlestickTheme: t < 0.5 ? a.candlestickTheme : b.candlestickTheme,
+      cartesianValueSummaryTheme: CartesianValueSummaryTheme.lerp(
+        a.cartesianValueSummaryTheme,
+        b.cartesianValueSummaryTheme,
+        t,
+      ),
+      focusBorderColor: Color.lerp(a.focusBorderColor, b.focusBorderColor, t)!,
+      focusBorderWidth: lerpDouble(a.focusBorderWidth, b.focusBorderWidth, t)!,
+      focusBorderRadius:
+          lerpDouble(a.focusBorderRadius, b.focusBorderRadius, t)!,
+    );
+  }
 }

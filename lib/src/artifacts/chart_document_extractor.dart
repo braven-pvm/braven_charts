@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/axis_swap_mode.dart';
+import '../models/cartesian_value_summary_config.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -356,6 +357,9 @@ abstract final class ChartDocumentExtractor {
           PolarColumnComposition.stackedSeriesCapability,
         if (options.concentricCenterFormatterDescriptor != null)
           'series.radial.formatters.v1',
+        if (source.interaction.valueSummary !=
+            const CartesianValueSummaryConfig())
+          'chart.cartesian.value-summary.v1',
       };
       final viewState = options.includeViewState ? source.viewState : null;
 

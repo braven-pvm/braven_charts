@@ -359,6 +359,141 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+  test(
+    'generated value summary Dart formats, analyzes, and reconstructs a '
+    'value-equal config',
+    () async {
+      const valueSummary = CartesianValueSummaryConfig(
+        enabled: true,
+        presentation: CartesianValueSummaryPresentation.annotation(
+          placement: ChartOverlayPlacement(
+            anchor: Alignment.bottomLeft,
+            offset: Offset(18, -30),
+          ),
+          draggable: true,
+        ),
+        valuePolicy:
+            CartesianValueSummaryValuePolicy.selectionThenTrackingThenLatest,
+        content: CartesianValueSummaryContent.automatic(
+          includeTrends: true,
+          includeHiddenSeries: true,
+        ),
+        style: CartesianValueSummaryStyle(
+          backgroundColor: ChartStyleValue.none(),
+          borderColor: ChartStyleValue.value(Color(0xFF334155)),
+          borderWidth: ChartStyleValue.value(1.5),
+          padding: ChartStyleValue.value(EdgeInsets.fromLTRB(12, 8, 12, 8)),
+          textStyle: ChartStyleValue.value(
+            TextStyle(color: Color(0xFF0F172A), fontSize: 12),
+          ),
+          shadow: ChartStyleValue.none(),
+          maxWidth: ChartStyleValue.value(240),
+        ),
+        showSeriesAccent: false,
+        announceChanges: true,
+      );
+      final interactionDocument = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(valueSummary: valueSummary),
+        ),
+      ).value;
+      final snapshot = ChartDocumentSnapshot(
+        document: ChartDocument(
+          documentId: 'generated-value-summary-compile',
+          revision: 1,
+          series: [
+            _success(
+              ChartSeriesDocumentCodec.encode(
+                const LineChartSeries(
+                  id: 'power',
+                  name: 'Power',
+                  points: [
+                    ChartDataPoint(x: 0, y: 148),
+                    ChartDataPoint(x: 1, y: 162),
+                  ],
+                ),
+              ),
+            ).value,
+          ],
+          xAxis: _success(
+            ChartAxisDocumentCodec.encodeXAxis(
+              const XAxisConfig(label: 'Elapsed interval'),
+            ),
+          ).value,
+          axes: [
+            _success(
+              ChartAxisDocumentCodec.encodeYAxis(
+                YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+              ),
+            ).value,
+          ],
+          theme: _success(
+            ChartThemeDocumentCodec.encode(ChartTheme.light),
+          ).value,
+          interaction: interactionDocument,
+          requiredCapabilities: const {'chart.cartesian.value-summary.v1'},
+        ),
+      );
+      final generated = _success(
+        ChartDartSourceGenerator.generate(snapshot),
+      ).value;
+      expect(generated.source, contains('CartesianValueSummaryConfig('));
+      expect(
+        generated.source,
+        contains('backgroundColor: ChartStyleValue<Color>.none(),'),
+      );
+      expect(
+        generated.source,
+        contains('shadow: ChartStyleValue<BoxShadow>.none(),'),
+      );
+      expect(generated.warnings, isEmpty);
+
+      // The consumed document reconstructs a value-equal config, including
+      // the explicit .none() fields.
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(interactionDocument),
+      ).value;
+      expect(decoded.valueSummary, valueSummary);
+      expect(decoded.valueSummary.style.backgroundColor.isNone, isTrue);
+      expect(decoded.valueSummary.style.shadow.isNone, isTrue);
+
+      final fixture = File(
+        '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
+        '${Platform.pathSeparator}value_summary_generated_source_compile_test.dart',
+      );
+      await fixture.writeAsString(
+        '// ignore_for_file: prefer_const_constructors\n${generated.source}',
+      );
+      try {
+        final format = await Process.run(
+          'dart',
+          ['format', '--output=none', fixture.path],
+          workingDirectory: Directory.current.path,
+          runInShell: Platform.isWindows,
+        );
+        expect(
+          format.exitCode,
+          0,
+          reason: '${format.stdout}\n${format.stderr}',
+        );
+
+        final analyze = await Process.run(
+          'dart',
+          ['analyze', '--no-fatal-warnings', fixture.path],
+          workingDirectory: Directory.current.path,
+          runInShell: Platform.isWindows,
+        );
+        expect(
+          analyze.exitCode,
+          0,
+          reason: '${analyze.stdout}\n${analyze.stderr}',
+        );
+      } finally {
+        if (await fixture.exists()) await fixture.delete();
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }
 
 ChartArtifactSuccess<T> _success<T>(ChartArtifactResult<T> result) {
