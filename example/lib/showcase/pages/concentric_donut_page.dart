@@ -436,122 +436,31 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   }
 
   Widget _buildPresentationSelector() {
-    const spacing = 8.0;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 900) {
-          return SizedBox(
-            height: 126,
-            child: ListView.separated(
-              key: const ValueKey('concentric-presentation-selector'),
-              scrollDirection: Axis.horizontal,
-              itemCount: _ConcentricShowcasePreset.values.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(width: spacing),
-              itemBuilder: (context, index) => SizedBox(
-                width: 220,
-                child: index == _ConcentricShowcasePreset.values.length
-                    ? PlaygroundExampleCard(
-                        key: const ValueKey('concentric-playground'),
-                        selected: _playgroundActive,
-                        onTap: () => _setPlaygroundActive(true),
-                      )
-                    : _presentationCard(
-                        _ConcentricShowcasePreset.values[index],
-                      ),
-              ),
-            ),
-          );
-        }
-        return Row(
-          key: const ValueKey('concentric-presentation-selector'),
-          children: [
-            for (final (index, preset)
-                in _ConcentricShowcasePreset.values.indexed) ...[
-              if (index > 0) const SizedBox(width: spacing),
-              Expanded(child: _presentationCard(preset)),
-            ],
-            const SizedBox(width: spacing),
-            Expanded(
-              child: PlaygroundExampleCard(
-                key: const ValueKey('concentric-playground'),
-                selected: _playgroundActive,
-                onTap: () => _setPlaygroundActive(true),
-              ),
-            ),
-          ],
-        );
-      },
+    return ShowcaseExampleGrid(
+      key: const ValueKey('concentric-presentation-selector'),
+      children: [
+        for (final preset in _ConcentricShowcasePreset.values)
+          _presentationCard(preset),
+        PlaygroundExampleCard(
+          key: const ValueKey('concentric-playground'),
+          selected: _playgroundActive,
+          onTap: () => _setPlaygroundActive(true),
+        ),
+      ],
     );
   }
 
   Widget _presentationCard(_ConcentricShowcasePreset preset) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final selected = !_playgroundActive && preset == _showcasePreset;
-    return Semantics(
-      button: true,
+    return ShowcaseExampleCard(
+      key: ValueKey('concentric-preset-${preset.name}'),
+      title: _presentationName(preset),
+      description: _presentationDescription(preset),
+      icon: _presentationIcon(preset),
       selected: selected,
-      label: 'Apply ${_presentationName(preset)} Concentric Donut presentation',
-      child: Material(
-        color: selected
-            ? colors.primaryContainer.withValues(alpha: 0.42)
-            : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: ValueKey('concentric-preset-${preset.name}'),
-          onTap: () => _applyShowcasePreset(preset),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _presentationIcon(preset),
-                      size: 18,
-                      color: selected
-                          ? colors.primary
-                          : colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _presentationName(preset),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (selected)
-                      Icon(Icons.check_circle, size: 16, color: colors.primary),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _presentationDescription(preset),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      onTap: () => _applyShowcasePreset(preset),
+      semanticsLabel:
+          'Apply ${_presentationName(preset)} Concentric Donut presentation',
     );
   }
 

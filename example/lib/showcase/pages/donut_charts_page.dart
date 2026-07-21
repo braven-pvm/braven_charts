@@ -198,84 +198,26 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   }
 
   Widget _buildStorySelector({required bool compact}) {
-    final theme = Theme.of(context);
-    final availableWidth = MediaQuery.sizeOf(context).width;
-    final cardWidth = compact ? availableWidth : 220.0;
     return Semantics(
       container: true,
       label: 'Choose a Donut geometry story',
-      child: Wrap(
+      child: ShowcaseExampleGrid(
         key: const ValueKey('donut-story-selector'),
-        spacing: 8,
-        runSpacing: 8,
         children: [
           for (final story in _DonutStory.values)
-            SizedBox(
-              width: cardWidth,
-              child: Material(
-                color: !_playgroundActive && story == _story
-                    ? theme.colorScheme.secondaryContainer
-                    : theme.colorScheme.surfaceContainerLowest,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(
-                    color: !_playgroundActive && story == _story
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outlineVariant,
-                  ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  key: ValueKey('donut-story-${story.name}'),
-                  onTap: () => _selectStory(story),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 76),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(story.icon, size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  story.label,
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  story.description,
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!_playgroundActive && story == _story)
-                            Icon(
-                              Icons.check_circle,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            ShowcaseExampleCard(
+              key: ValueKey('donut-story-${story.name}'),
+              title: story.label,
+              description: story.description,
+              icon: story.icon,
+              selected: !_playgroundActive && story == _story,
+              onTap: () => _selectStory(story),
+              semanticsLabel: 'Show ${story.label} donut example',
             ),
-          SizedBox(
-            width: cardWidth,
-            height: 104,
-            child: PlaygroundExampleCard(
-              key: const ValueKey('donut-playground'),
-              selected: _playgroundActive,
-              onTap: () => _setPlaygroundActive(true),
-            ),
+          PlaygroundExampleCard(
+            key: const ValueKey('donut-playground'),
+            selected: _playgroundActive,
+            onTap: () => _setPlaygroundActive(true),
           ),
         ],
       ),

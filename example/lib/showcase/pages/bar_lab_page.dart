@@ -575,13 +575,31 @@ class _BarLabPageState extends State<BarLabPage> {
         randomizer: _showcaseRandomizer,
       ),
       randomizerKeyPrefix: 'bar-randomizer',
-      chart: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildPresetPicker(),
-          const SizedBox(height: 16),
-          Expanded(child: _buildChartCard()),
-        ],
+      chart: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 600;
+          final contentHeight = math.max(
+            constraints.maxHeight,
+            compact ? 1040.0 : 860.0,
+          );
+          final content = SizedBox(
+            height: contentHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildPresetPicker(),
+                const SizedBox(height: 16),
+                Expanded(child: _buildChartCard()),
+              ],
+            ),
+          );
+          if (contentHeight <= constraints.maxHeight) return content;
+          return SingleChildScrollView(
+            key: const ValueKey('bar-showcase-scroll'),
+            primary: false,
+            child: content,
+          );
+        },
       ),
     );
   }
@@ -595,60 +613,25 @@ class _BarLabPageState extends State<BarLabPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final chips = <Widget>[
-                  for (final preset in _BarLabPreset.values)
-                    ChoiceChip(
-                      key: ValueKey('bar-lab-preset-${preset.name}'),
-                      showCheckmark: false,
-                      selected: !_playgroundActive && preset == _preset,
-                      onSelected: (_) => _applyPreset(preset),
-                      avatar: Icon(
-                        preset.icon,
-                        size: 17,
-                        color: !_playgroundActive && preset == _preset
-                            ? theme.colorScheme.onSecondaryContainer
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      label: Text(preset.label),
-                      labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: !_playgroundActive && preset == _preset
-                            ? theme.colorScheme.onSecondaryContainer
-                            : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: !_playgroundActive && preset == _preset
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                      selectedColor: theme.colorScheme.secondaryContainer,
-                      backgroundColor: theme.colorScheme.surface,
-                      side: BorderSide(color: theme.colorScheme.outlineVariant),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  PlaygroundChoiceChip(
-                    key: const ValueKey('bar-playground'),
-                    selected: _playgroundActive,
-                    onSelected: () => _setPlaygroundActive(true),
+            Wrap(
+              key: const ValueKey('bar-lab-preset-wrap'),
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final preset in _BarLabPreset.values)
+                  ShowcaseExampleChoiceChip(
+                    key: ValueKey('bar-lab-preset-${preset.name}'),
+                    label: preset.label,
+                    icon: preset.icon,
+                    selected: !_playgroundActive && preset == _preset,
+                    onSelected: () => _applyPreset(preset),
                   ),
-                ];
-                if (constraints.maxWidth < 900) {
-                  return SingleChildScrollView(
-                    key: const ValueKey('bar-lab-preset-scroll'),
-                    scrollDirection: Axis.horizontal,
-                    child: Row(spacing: 6, children: chips),
-                  );
-                }
-                return Wrap(
-                  key: const ValueKey('bar-lab-preset-wrap'),
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: chips,
-                );
-              },
+                PlaygroundChoiceChip(
+                  key: const ValueKey('bar-playground'),
+                  selected: _playgroundActive,
+                  onSelected: () => _setPlaygroundActive(true),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(

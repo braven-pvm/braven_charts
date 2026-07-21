@@ -2123,115 +2123,30 @@ class _PieChartsPageState extends State<PieChartsPage> {
   }
 
   Widget _buildPresentationSelector({required bool compact}) {
-    const spacing = 12.0;
-    if (compact) {
-      return SizedBox(
-        height: 132,
-        child: ListView.separated(
-          key: const ValueKey('pie-presentation-selector'),
-          scrollDirection: Axis.horizontal,
-          itemCount: _PieShowcasePreset.values.length + 1,
-          separatorBuilder: (_, _) => const SizedBox(width: spacing),
-          itemBuilder: (context, index) => SizedBox(
-            width: 220,
-            child: index == _PieShowcasePreset.values.length
-                ? PlaygroundExampleCard(
-                    key: const ValueKey('pie-playground'),
-                    selected: _playgroundActive,
-                    onTap: () => _setPlaygroundActive(true),
-                  )
-                : _presentationCard(_PieShowcasePreset.values[index]),
-          ),
-        ),
-      );
-    }
-
-    return Row(
+    return ShowcaseExampleGrid(
       key: const ValueKey('pie-presentation-selector'),
       children: [
-        for (final (index, preset) in _PieShowcasePreset.values.indexed) ...[
-          if (index > 0) const SizedBox(width: spacing),
-          Expanded(child: _presentationCard(preset)),
-        ],
-        const SizedBox(width: spacing),
-        Expanded(
-          child: PlaygroundExampleCard(
-            key: const ValueKey('pie-playground'),
-            selected: _playgroundActive,
-            onTap: () => _setPlaygroundActive(true),
-          ),
+        for (final preset in _PieShowcasePreset.values)
+          _presentationCard(preset),
+        PlaygroundExampleCard(
+          key: const ValueKey('pie-playground'),
+          selected: _playgroundActive,
+          onTap: () => _setPlaygroundActive(true),
         ),
       ],
     );
   }
 
   Widget _presentationCard(_PieShowcasePreset preset) {
-    final colors = Theme.of(context).colorScheme;
     final selected = !_playgroundActive && preset == _showcasePreset;
-    return Semantics(
-      button: true,
+    return ShowcaseExampleCard(
+      key: ValueKey('pie-preset-${preset.name}'),
+      title: _presentationName(preset),
+      description: _presentationDescription(preset),
+      icon: _presentationIcon(preset),
       selected: selected,
-      label: 'Apply ${_presentationName(preset)} pie presentation',
-      child: Material(
-        color: selected
-            ? colors.primaryContainer.withValues(alpha: 0.42)
-            : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: ValueKey('pie-preset-${preset.name}'),
-          onTap: () => _applyShowcasePreset(preset),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _presentationIcon(preset),
-                      size: 19,
-                      color: selected
-                          ? colors.primary
-                          : colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _presentationName(preset),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (selected)
-                      Icon(Icons.check_circle, size: 18, color: colors.primary),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _presentationDescription(preset),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      onTap: () => _applyShowcasePreset(preset),
+      semanticsLabel: 'Apply ${_presentationName(preset)} pie presentation',
     );
   }
 
