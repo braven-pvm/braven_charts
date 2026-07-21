@@ -45,6 +45,12 @@ enum SeriesStyle {
 /// Now concrete to support generic usage like in BravenChart.
 /// Supports optional Y-axis binding via [yAxisId] and value formatting
 /// via [unit].
+@ChartSurfaceExempt(
+  'slicing base copyWith; use the concrete series types. ChartSeries.copyWith '
+  'is declared to return ChartSeries, so a generated ChartSeriesFluent.withX '
+  'would be typed to the base and drop subclass state wherever the static '
+  'type is ChartSeries — which is exactly how series lists are typed.',
+)
 class ChartSeries {
   const ChartSeries({
     required this.id,

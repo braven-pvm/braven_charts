@@ -5,7 +5,13 @@ library;
 
 import 'surface_model.dart';
 
-/// Emits generated Dart source for one surface class.
+/// Emits generated Dart source for one surface class or one whole library.
+///
+/// Both entry points live on the interface: the builder — the only production
+/// caller — emits WHOLE LIBRARIES, and an interface that only described
+/// per-class emission would be bypassed in production, which is exactly the
+/// insurance the "swappable emitter" is supposed to buy. Slice 3's
+/// `AiSchemaEmitter` is whole-library by nature.
 abstract interface class SurfaceEmitter {
   /// Suffix of the generated file this emitter targets (e.g. `_fluent.dart`).
   String get outputSuffix;
@@ -15,4 +21,9 @@ abstract interface class SurfaceEmitter {
   ///
   /// [model] carries the whole read surface for cross-class lookups.
   String emit(SurfaceClass cls, SurfaceModel model);
+
+  /// Returns the complete generated library for [model] — header, derived
+  /// imports and every emittable class — or `null` when nothing is emittable
+  /// (the builder then writes no file at all).
+  String? emitLibrary(SurfaceModel model);
 }

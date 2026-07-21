@@ -5,7 +5,8 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart'
+    show BorderRadius, BoxShadow, Color, EdgeInsets, TextStyle;
 
 /// Generated fluent modifiers for [CartesianValueSummaryStyle].
 extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
@@ -13,8 +14,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withBackgroundColor(Color value) =>
       copyWith(backgroundColor: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.backgroundColor].
-  CartesianValueSummaryStyle clearBackgroundColor() =>
+  /// Suppresses [CartesianValueSummaryStyle.backgroundColor] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutBackgroundColor() =>
       copyWith(backgroundColor: const ChartStyleValue<Color>.none());
 
   /// Resets [CartesianValueSummaryStyle.backgroundColor] to theme inheritance.
@@ -25,8 +27,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withBackgroundOpacity(double value) =>
       copyWith(backgroundOpacity: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.backgroundOpacity].
-  CartesianValueSummaryStyle clearBackgroundOpacity() =>
+  /// Suppresses [CartesianValueSummaryStyle.backgroundOpacity] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutBackgroundOpacity() =>
       copyWith(backgroundOpacity: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.backgroundOpacity] to theme inheritance.
@@ -37,8 +40,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withBorderColor(Color value) =>
       copyWith(borderColor: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.borderColor].
-  CartesianValueSummaryStyle clearBorderColor() =>
+  /// Suppresses [CartesianValueSummaryStyle.borderColor] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutBorderColor() =>
       copyWith(borderColor: const ChartStyleValue<Color>.none());
 
   /// Resets [CartesianValueSummaryStyle.borderColor] to theme inheritance.
@@ -49,8 +53,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withBorderWidth(double value) =>
       copyWith(borderWidth: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.borderWidth].
-  CartesianValueSummaryStyle clearBorderWidth() =>
+  /// Suppresses [CartesianValueSummaryStyle.borderWidth] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutBorderWidth() =>
       copyWith(borderWidth: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.borderWidth] to theme inheritance.
@@ -61,8 +66,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withBorderRadius(BorderRadius value) =>
       copyWith(borderRadius: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.borderRadius].
-  CartesianValueSummaryStyle clearBorderRadius() =>
+  /// Suppresses [CartesianValueSummaryStyle.borderRadius] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutBorderRadius() =>
       copyWith(borderRadius: const ChartStyleValue<BorderRadius>.none());
 
   /// Resets [CartesianValueSummaryStyle.borderRadius] to theme inheritance.
@@ -73,8 +79,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withPadding(EdgeInsets value) =>
       copyWith(padding: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.padding].
-  CartesianValueSummaryStyle clearPadding() =>
+  /// Suppresses [CartesianValueSummaryStyle.padding] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutPadding() =>
       copyWith(padding: const ChartStyleValue<EdgeInsets>.none());
 
   /// Resets [CartesianValueSummaryStyle.padding] to theme inheritance.
@@ -85,8 +92,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withTextStyle(TextStyle value) =>
       copyWith(textStyle: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.textStyle].
-  CartesianValueSummaryStyle clearTextStyle() =>
+  /// Suppresses [CartesianValueSummaryStyle.textStyle] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutTextStyle() =>
       copyWith(textStyle: const ChartStyleValue<TextStyle>.none());
 
   /// Resets [CartesianValueSummaryStyle.textStyle] to theme inheritance.
@@ -97,8 +105,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withLabelStyle(TextStyle value) =>
       copyWith(labelStyle: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.labelStyle].
-  CartesianValueSummaryStyle clearLabelStyle() =>
+  /// Suppresses [CartesianValueSummaryStyle.labelStyle] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutLabelStyle() =>
       copyWith(labelStyle: const ChartStyleValue<TextStyle>.none());
 
   /// Resets [CartesianValueSummaryStyle.labelStyle] to theme inheritance.
@@ -109,8 +118,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withAccentColor(Color value) =>
       copyWith(accentColor: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.accentColor].
-  CartesianValueSummaryStyle clearAccentColor() =>
+  /// Suppresses [CartesianValueSummaryStyle.accentColor] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutAccentColor() =>
       copyWith(accentColor: const ChartStyleValue<Color>.none());
 
   /// Resets [CartesianValueSummaryStyle.accentColor] to theme inheritance.
@@ -121,8 +131,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withShadow(BoxShadow value) =>
       copyWith(shadow: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.shadow].
-  CartesianValueSummaryStyle clearShadow() =>
+  /// Suppresses [CartesianValueSummaryStyle.shadow] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutShadow() =>
       copyWith(shadow: const ChartStyleValue<BoxShadow>.none());
 
   /// Resets [CartesianValueSummaryStyle.shadow] to theme inheritance.
@@ -133,8 +144,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withMinWidth(double value) =>
       copyWith(minWidth: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.minWidth].
-  CartesianValueSummaryStyle clearMinWidth() =>
+  /// Suppresses [CartesianValueSummaryStyle.minWidth] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutMinWidth() =>
       copyWith(minWidth: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.minWidth] to theme inheritance.
@@ -145,8 +157,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withMaxWidth(double value) =>
       copyWith(maxWidth: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.maxWidth].
-  CartesianValueSummaryStyle clearMaxWidth() =>
+  /// Suppresses [CartesianValueSummaryStyle.maxWidth] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutMaxWidth() =>
       copyWith(maxWidth: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.maxWidth] to theme inheritance.
@@ -157,8 +170,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withRowGap(double value) =>
       copyWith(rowGap: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.rowGap].
-  CartesianValueSummaryStyle clearRowGap() =>
+  /// Suppresses [CartesianValueSummaryStyle.rowGap] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutRowGap() =>
       copyWith(rowGap: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.rowGap] to theme inheritance.
@@ -169,8 +183,9 @@ extension CartesianValueSummaryStyleFluent on CartesianValueSummaryStyle {
   CartesianValueSummaryStyle withLabelValueGap(double value) =>
       copyWith(labelValueGap: ChartStyleValue.value(value));
 
-  /// Explicitly clears [CartesianValueSummaryStyle.labelValueGap].
-  CartesianValueSummaryStyle clearLabelValueGap() =>
+  /// Suppresses [CartesianValueSummaryStyle.labelValueGap] —
+  /// renders nothing and does not inherit the theme value.
+  CartesianValueSummaryStyle withoutLabelValueGap() =>
       copyWith(labelValueGap: const ChartStyleValue<double>.none());
 
   /// Resets [CartesianValueSummaryStyle.labelValueGap] to theme inheritance.

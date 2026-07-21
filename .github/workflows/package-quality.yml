@@ -29,8 +29,8 @@ jobs:
 
       - name: Verify generated surface is committed
         run: |
-          if ! git diff --exit-code -- lib/src/fluent/generated lib/src/ai/generated; then
-            echo "::error::Generated surface is stale. The checked-in files under lib/src/fluent/generated (and lib/src/ai/generated) do not match what surface_gen produces from the current @chartSurface annotations. Run 'dart run build_runner build' locally and commit the result."
+          if ! git diff --exit-code -- lib/src/fluent/generated lib/src/ai/generated lib/braven_charts_fluent.dart; then
+            echo "::error::Generated surface is stale. The checked-in files under lib/src/fluent/generated (and lib/src/ai/generated), plus the generated opt-in barrel lib/braven_charts_fluent.dart, do not match what surface_gen produces from the current @chartSurface annotations. Run 'dart run build_runner build' locally and commit the result."
             exit 1
           fi
 

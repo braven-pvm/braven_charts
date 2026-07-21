@@ -5,7 +5,7 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' show TextStyle;
 
 /// Generated fluent modifiers for [CrosshairConfig].
 extension CrosshairConfigFluent on CrosshairConfig {
@@ -27,6 +27,9 @@ extension CrosshairConfigFluent on CrosshairConfig {
       copyWith(showCoordinateLabels: value);
 
   /// Replaces [CrosshairConfig.coordinateLabelStyle] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [CrosshairConfig.coordinateLabelStyle]; construct a new instance to reset it.
   CrosshairConfig withCoordinateLabelStyle(TextStyle value) =>
       copyWith(coordinateLabelStyle: value);
 

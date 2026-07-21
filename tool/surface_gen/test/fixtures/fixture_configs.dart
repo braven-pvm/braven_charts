@@ -18,7 +18,9 @@
 /// - preset factories
 /// - a YAxisConfig-shaped class (non-const public ctor + private const
 ///   `_internal`) and a non-const class without an `_internal` pathway
-/// - super-parameter forwarding (LineChartSeries shape)
+/// - super-parameter forwarding (LineChartSeries shape) over a NON-annotated
+///   slicing base
+/// - a subclass that inherits `copyWith` without redeclaring it
 library;
 
 // ---------------------------------------------------------------------------
@@ -110,6 +112,19 @@ class FixtureNestedStyle {
 
   FixtureNestedStyle copyWith({double? opacity}) =>
       FixtureNestedStyle(opacity: opacity ?? this.opacity);
+}
+
+/// Subclass that INHERITS `copyWith` without redeclaring it.
+///
+/// Exercises the reader's inherited-copyWith branch, which used to be a
+/// SILENT failure mode: `hasCopyWith` came back `false`, no file was written
+/// and nothing complained. The reader must now report `hasCopyWith: true`
+/// with the BASE return type so the emitter can refuse loudly.
+@chartSurface
+class FixtureInheritedStyle extends FixtureNestedStyle {
+  const FixtureInheritedStyle({super.opacity, this.tint = 0});
+
+  final int tint;
 }
 
 // ---------------------------------------------------------------------------
@@ -362,9 +377,14 @@ class FixtureMutableConfig {
 
 // ---------------------------------------------------------------------------
 // Super-parameter forwarding (ChartSeries/LineChartSeries shape)
+//
+// The BASE is deliberately NOT annotated: its `copyWith` returns the base
+// type while the subclass overrides `copyWith`, which is the "slicing
+// copyWith" shape the reader now rejects. Real `ChartSeries` carries
+// `@ChartSurfaceExempt` for the same reason; only the concrete series types
+// are modelled.
 // ---------------------------------------------------------------------------
 
-@chartSurface
 class FixtureSeriesBase {
   const FixtureSeriesBase({
     required this.id,

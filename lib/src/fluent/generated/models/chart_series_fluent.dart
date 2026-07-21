@@ -5,7 +5,7 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [LineChartSeries].
 extension LineChartSeriesFluent on LineChartSeries {
@@ -13,6 +13,9 @@ extension LineChartSeriesFluent on LineChartSeries {
   LineChartSeries withId(String value) => copyWith(id: value);
 
   /// Replaces [LineChartSeries.name] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.name]; construct a new instance to reset it.
   LineChartSeries withName(String value) => copyWith(name: value);
 
   /// Replaces [LineChartSeries.points] with [value].
@@ -20,16 +23,25 @@ extension LineChartSeriesFluent on LineChartSeries {
       copyWith(points: value);
 
   /// Replaces [LineChartSeries.color] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.color]; construct a new instance to reset it.
   LineChartSeries withColor(Color value) => copyWith(color: value);
 
   /// Replaces [LineChartSeries.isXOrdered] with [value].
-  LineChartSeries withIsXOrdered(bool value) => copyWith(isXOrdered: value);
+  LineChartSeries withXOrdered(bool value) => copyWith(isXOrdered: value);
 
   /// Replaces [LineChartSeries.metadata] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.metadata]; construct a new instance to reset it.
   LineChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
 
   /// Replaces [LineChartSeries.style] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.style]; construct a new instance to reset it.
   LineChartSeries withStyle(SeriesStyle value) => copyWith(style: value);
 
   /// Replaces [LineChartSeries.annotations] with [value].
@@ -37,13 +49,22 @@ extension LineChartSeriesFluent on LineChartSeries {
       copyWith(annotations: value);
 
   /// Replaces [LineChartSeries.yAxisId] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.yAxisId]; construct a new instance to reset it.
   LineChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
 
   /// Replaces [LineChartSeries.yAxisConfig] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.yAxisConfig]; construct a new instance to reset it.
   LineChartSeries withYAxisConfig(YAxisConfig value) =>
       copyWith(yAxisConfig: value);
 
   /// Replaces [LineChartSeries.unit] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.unit]; construct a new instance to reset it.
   LineChartSeries withUnit(String value) => copyWith(unit: value);
 
   /// Replaces [LineChartSeries.interpolation] with [value].
@@ -76,10 +97,16 @@ extension LineChartSeriesFluent on LineChartSeries {
   LineChartSeries withLineGlow(double value) => copyWith(lineGlow: value);
 
   /// Replaces [LineChartSeries.dataPointLabels] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.dataPointLabels]; construct a new instance to reset it.
   LineChartSeries withDataPointLabels(DataPointLabelConfig value) =>
       copyWith(dataPointLabels: value);
 
   /// Replaces [LineChartSeries.inlineLabel] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [LineChartSeries.inlineLabel]; construct a new instance to reset it.
   LineChartSeries withInlineLabel(SeriesInlineLabelConfig value) =>
       copyWith(inlineLabel: value);
 

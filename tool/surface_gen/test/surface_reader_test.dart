@@ -233,30 +233,20 @@ const mutableConfigParams = <ParamExpectation>[
   ),
 ];
 
-const seriesBaseParams = <ParamExpectation>[
+/// `tint` has no counterpart on the INHERITED `copyWith`, so it is dropped
+/// and recorded rather than emitted as an `undefined_named_parameter`.
+const inheritedStyleParams = <ParamExpectation>[
   ParamExpectation(
-    'id',
-    dartType: 'String',
+    'opacity',
+    dartType: 'double',
     kind: SurfaceParamKind.value,
-    isRequired: true,
+    defaultCode: '1.0', // inherited through the super parameter
   ),
   ParamExpectation(
-    'name',
-    dartType: 'String?',
-    kind: SurfaceParamKind.value,
-    isNullable: true,
-  ),
-  ParamExpectation(
-    'unit',
-    dartType: 'String?',
-    kind: SurfaceParamKind.value,
-    isNullable: true,
-  ),
-  ParamExpectation(
-    'ordered',
-    dartType: 'bool',
-    kind: SurfaceParamKind.value,
-    defaultCode: 'false',
+    'tint',
+    dartType: 'int',
+    kind: SurfaceParamKind.excludedNoCopyWithParam,
+    defaultCode: '0',
   ),
 ];
 
@@ -326,11 +316,11 @@ void main() {
       model.classes.map((c) => c.name),
       unorderedEquals([
         'FixtureNestedStyle',
+        'FixtureInheritedStyle',
         'FixturePresentation',
         'FixtureCrosshairConfig',
         'FixtureAxisConfig',
         'FixtureMutableConfig',
-        'FixtureSeriesBase',
         'FixtureLineSeries',
       ]),
     );
@@ -415,14 +405,15 @@ void main() {
 
   _classGroup(
     () => model,
-    name: 'FixtureSeriesBase',
+    name: 'FixtureInheritedStyle',
     isConstConstructible: true,
-    hasCopyWith: true,
+    hasCopyWith: true, // inherited from FixtureNestedStyle
+    copyWithReturnType: 'FixtureNestedStyle',
     isSealed: false,
     presetFactories: [],
     sealedVariants: [],
     combinedSetters: {},
-    params: seriesBaseParams,
+    params: inheritedStyleParams,
   );
 
   _classGroup(
@@ -492,6 +483,7 @@ void _classGroup(
   required List<String> sealedVariants,
   required Map<String, List<String>> combinedSetters,
   required List<ParamExpectation> params,
+  String? copyWithReturnType,
 }) {
   group(name, () {
     late SurfaceClass cls;
@@ -503,6 +495,11 @@ void _classGroup(
       expect(cls.isConstConstructible, isConstConstructible,
           reason: 'isConstConstructible');
       expect(cls.hasCopyWith, hasCopyWith, reason: 'hasCopyWith');
+      expect(
+        cls.copyWithReturnType,
+        hasCopyWith ? (copyWithReturnType ?? name) : isNull,
+        reason: 'copyWithReturnType',
+      );
       expect(cls.isSealed, isSealed, reason: 'isSealed');
       expect(cls.presetFactories, presetFactories, reason: 'presetFactories');
       expect(cls.sealedVariants, sealedVariants, reason: 'sealedVariants');

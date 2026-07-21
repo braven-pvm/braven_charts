@@ -60,8 +60,27 @@ becomes the single source of truth the hand-written mirrors converge on.
   but carries neither `@chartSurface` nor `@chartSurfaceExempt`. New features
   therefore cannot bypass the model.
 - Generated files are checked in under `lib/src/fluent/generated/` (and the
-  schema location below). CI regenerates and fails on diff. `build_runner`
-  remains a dev dependency; pub consumers see plain Dart.
+  schema location below), and the opt-in barrel `lib/braven_charts_fluent.dart`
+  is GENERATED from that file set by a second, aggregating builder — a
+  hand-written barrel cannot survive ~40 files and an unexported generated
+  file is invisible dead code. CI regenerates and fails on diff.
+  `build_runner` remains a dev dependency; pub consumers see plain Dart.
+- **Imports are derived, never curated.** The analyzer records each type's
+  defining library; the emitter maps `dart:ui`/`package:flutter/**` origins
+  onto one `package:flutter/widgets.dart` import with a `show` clause naming
+  exactly the types the file uses. A bare Flutter import made
+  `TooltipTriggerMode` — defined by BOTH braven_charts and
+  `flutter/src/widgets/raw_tooltip.dart` — an `ambiguous_import`, and a
+  curated name list turns every miss into a build failure only the generator
+  author can fix.
+- **Named diagnostics stop bad surfaces at generation time**, not at
+  `flutter analyze`: a parameter with no matching `copyWith` parameter is
+  dropped and recorded (ChartTheme's four deprecated private-field-backed
+  parameters); parameter-level `@Deprecated` is skipped; a "slicing copyWith"
+  (base-typed `copyWith` with `copyWith`-overriding subclasses — `ChartSeries`)
+  fails and must be `@ChartSurfaceExempt`; assert-coupled parameters without a
+  `CombinedSetter` fail; a class the public barrel does not export fails; a
+  class whose only `copyWith` is inherited and base-typed fails.
 - Emitters are isolated behind one interface so output can migrate to Dart
   `augment` declarations when they ship (macros were discontinued 2025-01;
   nothing has replaced them through Dart 3.12).
@@ -72,15 +91,42 @@ becomes the single source of truth the hand-written mirrors converge on.
 - One namespaced extension per surface class, generated into
   `lib/src/fluent/generated/`, exported ONLY via a new opt-in barrel
   `lib/braven_charts_fluent.dart`. The core barrel is untouched.
-- Per property: `withX(value)` lowering to `copyWith`. Where clearing is
-  meaningful: `clearX()` — tri-state fields lower to `ChartStyleValue.none()`,
-  nullable-with-clear-flag fields use the class's `clear*` copyWith flags.
-  This gives the null-vs-absent distinction a uniform public verb.
+- **Verb vocabulary (owner decision, 2026-07-21).** Two distinct families of
+  "unset" exist on this surface and a single `clear` meant opposite things in
+  each, so they get distinct verbs:
+
+  | verb | family | lowering |
+  |---|---|---|
+  | `withX(v)` | every parameter | `copyWith(x: v)` |
+  | `withoutX()` | tri-state SUPPRESS ("render nothing, do not inherit") | `copyWith(x: const ChartStyleValue<T>.none())` |
+  | `inheritX()` | tri-state INHERIT | `copyWith(x: const ChartStyleValue<T>.inherit())` |
+  | `clearX()` | nullable UNSET ("back to the default") | `copyWith(clearX: true)` |
+  | `updateX(fn)` | non-nullable nested config | `copyWith(x: fn(x))` |
+
+  The 91-field nullable family owns the intuitive meaning of `clear`;
+  tri-state suppression is `without`. `withX` signatures always strip
+  nullability (a `null` through a `??`-style copyWith is a silent no-op), and
+  the ~70% of nullable parameters whose `copyWith` cannot unset them say so in
+  their generated dartdoc rather than shipping a null-accepting verb.
+- **Nested updaters.** Every non-nullable nested-config parameter also gets
+  `updateX(X Function(X current))`. This is what makes the layer worth
+  importing at fleet scale: `InteractionConfig` has 6 nested configs,
+  `ChartTheme` 12+, `chart_series.dart` 26 nested-typed fields — editing one
+  leaf without re-stating the enclosing config is the common case.
 - Assert-coupled parameters are only generated as combined setters
   (`withVisibleRange(min, max)`) per the class's `combinedSetters` metadata;
-  no chain step can construct an invalid intermediate config.
-- Sealed hierarchies get variant helpers on the owner (e.g.
-  `withOverlayPresentation(...)`, `withAnnotationPresentation(...)`).
+  no chain step can construct an invalid intermediate config. The generator
+  DETECTS assert coupling from the constructor's initializer list and REFUSES
+  to model a class whose coupled parameters lack a `CombinedSetter`.
+- **Sealed hierarchies** get one constructor helper per sealed FACTORY on the
+  owning parameter, named `with<Factory><Param>` (`.overlay` on
+  `presentation` → `withOverlayPresentation`), mirroring the factory
+  signature verbatim including default expressions, plus the `updateX` escape
+  hatch. Nothing is emitted on the sealed base itself.
+- **`presetFactories` get NO fluent surface.** Dart factories already chain:
+  `CrosshairConfig.tracking(...).withSnapRadius(12)` works today because the
+  extension applies to the factory's result. The metadata stays in the model
+  for the Slice 3 AI schema.
 - Configs stay const-canonical: the fluent layer allocates only when used,
   affects no artifact/Source path, and every chain result is an ordinary
   config instance.
@@ -145,8 +191,9 @@ becomes the single source of truth the hand-written mirrors converge on.
 ## Success criteria
 
 1. Adding a property to an annotated config class and running the generator
-   yields the fluent `withX`/`clearX` methods and updated AI schema with no
-   hand edits; forgetting the annotation on a new config class fails CI.
+   yields the fluent `withX`/`withoutX`/`inheritX`/`clearX`/`updateX` methods
+   and updated AI schema with no hand edits; forgetting the annotation on a
+   new config class fails CI.
 2. The chained facade authors every showcase-representative Cartesian chart
    (line/area/bar/scatter/candlestick, multi-series, multi-axis, styled,
    with interaction config) and the result is config-equal to hand-built.
@@ -190,8 +237,9 @@ becomes the single source of truth the hand-written mirrors converge on.
 
 - Generator: unit tests on fixture classes (every irregular shape) +
   emitted-code snapshot tests + enforcement-check tests.
-- Fluent: per-kind behavior tests (withX equality vs copyWith, clearX vs
-  tri-state/none and clear-flags, combined setters, sealed helpers) sampled
+- Fluent: per-kind behavior tests (withX equality vs copyWith, withoutX vs
+  tri-state/none, clearX vs clear-flags, combined setters, sealed helpers,
+  nested updaters) sampled
   across families + an exhaustive generated smoke test (every generated
   method invoked once, type-checked by compilation).
 - GoG: lowering parity matrix (marks × single/multi-series × multi-axis ×

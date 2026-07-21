@@ -21,3 +21,16 @@ builders:
         - "lib/src/fluent/generated/{{}}_fluent.dart"
     auto_apply: none
     build_to: source
+  # Aggregates the generated `*_fluent.dart` files into the opt-in barrel
+  # `lib/braven_charts_fluent.dart`. `required_inputs` puts this builder in a
+  # later phase than `surface_gen`, so `findAssets` sees the freshly written
+  # extensions and an unexported generated file becomes impossible.
+  fluent_barrel:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["fluentBarrelBuilder"]
+    build_extensions:
+      $lib$:
+        - "braven_charts_fluent.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source

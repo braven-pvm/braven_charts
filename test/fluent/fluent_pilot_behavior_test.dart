@@ -72,10 +72,10 @@ void main() {
       expect(style.backgroundColor.resolve(const Color(0xFF000000)), accent);
     });
 
-    test('clearBackgroundColor resolves to none', () {
+    test('withoutBackgroundColor resolves to none', () {
       final style = const CartesianValueSummaryStyle()
           .withBackgroundColor(accent)
-          .clearBackgroundColor();
+          .withoutBackgroundColor();
       expect(style.backgroundColor.isNone, isTrue);
       expect(style.backgroundColor.resolve(const Color(0xFF000000)), isNull);
     });
@@ -83,7 +83,7 @@ void main() {
     test('inheritBackgroundColor restores theme inheritance', () {
       final style = const CartesianValueSummaryStyle()
           .withBackgroundColor(accent)
-          .clearBackgroundColor()
+          .withoutBackgroundColor()
           .inheritBackgroundColor();
       expect(style.backgroundColor.isInherit, isTrue);
       // The full three-verb round-trip lands back on the default style.
@@ -97,7 +97,7 @@ void main() {
         base.copyWith(rowGap: const ChartStyleValue<double>.value(8)),
       );
       expect(
-        base.clearShadow(),
+        base.withoutShadow(),
         base.copyWith(shadow: const ChartStyleValue<BoxShadow>.none()),
       );
       expect(
@@ -108,7 +108,7 @@ void main() {
 
     test('chains do not mutate the receiver', () {
       const base = CartesianValueSummaryStyle();
-      final modified = base.withBorderWidth(2).clearBorderColor();
+      final modified = base.withBorderWidth(2).withoutBorderColor();
       expect(base, const CartesianValueSummaryStyle());
       expect(modified, isNot(equals(base)));
     });
@@ -134,6 +134,10 @@ void main() {
           dashPattern: const [2, 6],
         ),
       );
+    });
+
+    test('an `is`-prefixed bool drops the prefix from the verb', () {
+      expect(base.withXOrdered(true), base.copyWith(isXOrdered: true));
     });
 
     test('modifiers preserve unrelated state', () {

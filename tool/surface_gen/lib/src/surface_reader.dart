@@ -39,23 +39,59 @@
 /// order (first match wins):
 ///
 /// 1. named in `ChartSurface(excluded: [...])` → [SurfaceParamKind.excludedByAnnotation]
-/// 2. function-typed (including typedef aliases) → [SurfaceParamKind.excludedFunction]
-/// 3. `*Controller`-named type, `Listenable`, or any type whose supertype
+/// 2. carries a parameter-level `@Deprecated` → [SurfaceParamKind.excludedDeprecated]
+/// 3. no same-named parameter on the class's `copyWith` →
+///    [SurfaceParamKind.excludedNoCopyWithParam] (the ChartTheme case: four
+///    deprecated constructor parameters back PRIVATE fields and never reach
+///    `copyWith`; emitting `withGridColor` produced an
+///    `undefined_named_parameter` and the generated library did not compile)
+/// 4. function-typed (including typedef aliases) → [SurfaceParamKind.excludedFunction]
+/// 5. `*Controller`-named type, `Listenable`, or any type whose supertype
 ///    walk contains a type named `Listenable` → [SurfaceParamKind.excludedController]
-/// 4. `ChartStyleValue<X>` → [SurfaceParamKind.triState] (payload `X`)
-/// 5. enum type → [SurfaceParamKind.enumType] with member names
-/// 6. type annotated `@chartSurface` (anywhere) → [SurfaceParamKind.nestedConfig]
-/// 7. `List<...>` / `Map<...>` → [SurfaceParamKind.listValue] / [SurfaceParamKind.mapValue]
-/// 8. otherwise → [SurfaceParamKind.value]
+/// 6. `ChartStyleValue<X>` → [SurfaceParamKind.triState] (payload `X`)
+/// 7. enum type → [SurfaceParamKind.enumType] with member names
+/// 8. type annotated `@chartSurface` (anywhere) → [SurfaceParamKind.nestedConfig]
+/// 9. `List<...>` / `Map<...>` → [SurfaceParamKind.listValue] / [SurfaceParamKind.mapValue]
+/// 10. otherwise → [SurfaceParamKind.value]
 ///
 /// Notably: an annotated config class whose name ends in `Controller` is
-/// still excluded (rule 3 precedes rule 6) — explicit exclusion semantics
+/// still excluded (rule 5 precedes rule 8) — explicit exclusion semantics
 /// beat nesting.
 ///
 /// Default expressions are captured as SOURCE STRINGS from
 /// `defaultValueCode`, never evaluated.
+///
+/// ## Derived metadata
+///
+/// - **Clear flags** (`SurfaceParam.clearFlag`): for every NULLABLE parameter
+///   `foo`, a `bool clearFoo` parameter on `copyWith` is discovered
+///   automatically. `ChartSurface(clearFlags: {...})` is now an OVERRIDE, not
+///   a transcription obligation.
+/// - **Type origins** (`SurfaceParam.typeOrigins`): the defining library URI
+///   of every type named in the parameter's type, so the emitter derives its
+///   imports instead of consulting a curated allowlist.
+/// - **Assert groups** (`SurfaceClass.assertGroups`): constructor-initializer
+///   `assert`s naming two or more parameters. Coupled parameters MUST be
+///   covered by a `CombinedSetter`; see the diagnostics below.
+///
+/// ## Named diagnostics (hard failures)
+///
+/// - **slicing copyWith** — an annotated class whose `copyWith` returns the
+///   class itself while a SUBCLASS overrides `copyWith`. Generated `withX`
+///   verbs would be typed to the base and silently discard subclass state
+///   (`ChartSeries` is exactly this shape). Fix by annotating
+///   `@ChartSurfaceExempt(reason)` or making `copyWith` abstract.
+/// - **assert-coupled parameters** — a multi-parameter constructor assert not
+///   covered by a `CombinedSetter`. Individual setters would let a chain step
+///   construct a value the assert rejects (`BarChartSeries(...).withMinWidth(200)`
+///   throws today).
 library;
 
+// ignore: implementation_imports
+import 'package:analyzer/src/dart/element/element.dart'
+    show ConstructorElementImpl;
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
@@ -88,33 +124,73 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     for (final cls in library.classes) {
       final annotation = _chartSurfaceAnnotation(cls);
       if (annotation == null) continue;
-      classes.add(_readClass(cls, annotation));
+      classes.add(_readClass(cls, annotation, library));
     }
     return SurfaceModel(classes);
   }
 
-  SurfaceClass _readClass(ClassElement cls, DartObject annotation) {
+  SurfaceClass _readClass(
+    ClassElement cls,
+    DartObject annotation,
+    LibraryElement library,
+  ) {
     final excluded = _stringList(annotation.getField('excluded')).toSet();
-    final clearFlags = _stringMap(annotation.getField('clearFlags'));
+    final clearFlagOverrides = _stringMap(annotation.getField('clearFlags'));
     final constructor = _selectConstructor(cls);
+    final copyWith = _findCopyWith(cls);
+    final isConstConstructible = constructor?.isConst ??
+        cls.constructors.any((c) => c.isGenerative && c.isConst);
+
+    _checkSlicingCopyWith(cls, copyWith, library);
+
+    final copyWithParams = <String, DartType>{
+      if (copyWith != null)
+        for (final parameter in copyWith.formalParameters)
+          if (parameter.name != null) parameter.name!: parameter.type,
+    };
+
+    final params = [
+      for (final parameter in constructor?.formalParameters ?? const [])
+        _readParam(
+          parameter,
+          excluded: excluded,
+          clearFlagOverrides: clearFlagOverrides,
+          copyWithParams: copyWithParams,
+          hasCopyWith: copyWith != null,
+        ),
+    ];
+
+    final combinedSetters =
+        _combinedSetters(annotation.getField('combinedSetters'));
+    final assertGroups = _assertGroups(constructor, params);
+    _checkAssertCoverage(cls, assertGroups, combinedSetters, params);
+
+    final sealedVariants = _stringList(annotation.getField('sealedVariants'));
+
     return SurfaceClass(
       name: cls.name!,
       libraryUri: cls.library.uri.toString(),
-      isConstConstructible: constructor.isConst,
-      hasCopyWith: _hasInstanceCopyWith(cls),
-      params: [
-        for (final parameter in constructor.formalParameters)
-          _readParam(parameter, excluded: excluded, clearFlags: clearFlags),
-      ],
-      sealedVariants: _stringList(annotation.getField('sealedVariants')),
+      isConstConstructible: isConstConstructible,
+      hasCopyWith: copyWith != null,
+      copyWithReturnType: copyWith?.returnType.getDisplayString(),
+      typeParameters: _typeParameters(cls),
+      factories: sealedVariants.isEmpty ? const [] : _factories(cls),
+      assertGroups: assertGroups,
+      params: params,
+      sealedVariants: sealedVariants,
       presetFactories: _stringList(annotation.getField('presetFactories')),
-      combinedSetters: _combinedSetters(annotation.getField('combinedSetters')),
+      combinedSetters: combinedSetters,
       isSealed: cls.isSealed,
     );
   }
 
   /// Selects the constructor to read, per the library-level dartdoc.
-  ConstructorElement _selectConstructor(ClassElement cls) {
+  ///
+  /// Returns `null` for a SEALED owner whose only generative constructor is
+  /// private (`const Presentation._()`, the repo's sealed-hierarchy shape):
+  /// a sealed base is never constructed directly and contributes no
+  /// parameters — its surface is the variant factories.
+  ConstructorElement? _selectConstructor(ClassElement cls) {
     ConstructorElement? unnamed;
     ConstructorElement? internalConst;
     for (final constructor in cls.constructors) {
@@ -129,6 +205,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     if (unnamed != null && unnamed.isConst) return unnamed;
     if (internalConst != null) return internalConst;
     if (unnamed != null) return unnamed;
+    if (cls.isSealed) return null;
     throw StateError(
       'surface_gen: class ${cls.name} is annotated @chartSurface but exposes '
       'no readable constructor. Expected a const unnamed constructor, a '
@@ -137,13 +214,62 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     );
   }
 
+  /// Type parameter declarations with bounds, e.g. `['T extends num']`.
+  List<String> _typeParameters(ClassElement cls) => [
+        for (final parameter in cls.typeParameters)
+          parameter.bound == null
+              ? parameter.name!
+              : '${parameter.name} extends '
+                  '${parameter.bound!.getDisplayString()}',
+      ];
+
+  /// Factory constructors of a sealed owner, with defaults resolved through
+  /// the redirect target (Dart forbids defaults on redirecting factories).
+  List<SurfaceFactoryModel> _factories(ClassElement cls) {
+    final factories = <SurfaceFactoryModel>[];
+    for (final constructor in cls.constructors) {
+      if (!constructor.isFactory) continue;
+      final name = constructor.name;
+      if (name == null || name.isEmpty || name == 'new') continue;
+      if (name.startsWith('_')) continue;
+      final target = constructor.redirectedConstructor;
+      final targetDefaults = <String, String>{
+        if (target != null)
+          for (final parameter in target.formalParameters)
+            if (parameter.name != null && parameter.defaultValueCode != null)
+              parameter.name!: parameter.defaultValueCode!,
+      };
+      factories.add(
+        SurfaceFactoryModel(name, [
+          for (final parameter in constructor.formalParameters)
+            SurfaceParam(
+              name: parameter.name!,
+              dartType: parameter.type.getDisplayString(),
+              kind: _classifyType(parameter.type),
+              isRequired: parameter.isRequired,
+              isNullable:
+                  parameter.type.nullabilitySuffix == NullabilitySuffix.question,
+              isNamed: parameter.isNamed,
+              defaultCode: parameter.defaultValueCode ??
+                  targetDefaults[parameter.name],
+              typeOrigins: _typeOrigins(parameter.type),
+            ),
+        ]),
+      );
+    }
+    return factories;
+  }
+
   SurfaceParam _readParam(
     FormalParameterElement parameter, {
     required Set<String> excluded,
-    required Map<String, String> clearFlags,
+    required Map<String, String> clearFlagOverrides,
+    required Map<String, DartType> copyWithParams,
+    required bool hasCopyWith,
   }) {
     final name = parameter.name!;
     final type = parameter.type;
+    final isNullable = type.nullabilitySuffix == NullabilitySuffix.question;
 
     var kind = SurfaceParamKind.value;
     String? triStatePayloadType;
@@ -151,6 +277,10 @@ class AnalyzerSurfaceReader implements SurfaceReader {
 
     if (excluded.contains(name)) {
       kind = SurfaceParamKind.excludedByAnnotation;
+    } else if (_isDeprecated(parameter)) {
+      kind = SurfaceParamKind.excludedDeprecated;
+    } else if (hasCopyWith && !copyWithParams.containsKey(name)) {
+      kind = SurfaceParamKind.excludedNoCopyWithParam;
     } else if (type is FunctionType) {
       kind = SurfaceParamKind.excludedFunction;
     } else if (_isControllerType(type)) {
@@ -180,12 +310,68 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       dartType: type.getDisplayString(),
       kind: kind,
       isRequired: parameter.isRequired,
-      isNullable: type.nullabilitySuffix == NullabilitySuffix.question,
+      isNullable: isNullable,
+      isNamed: parameter.isNamed,
       defaultCode: parameter.defaultValueCode,
       triStatePayloadType: triStatePayloadType,
-      clearFlag: clearFlags[name],
+      clearFlag: clearFlagOverrides[name] ??
+          _derivedClearFlag(name, isNullable, copyWithParams),
       enumValues: enumValues,
+      typeOrigins: _typeOrigins(type),
     );
+  }
+
+  /// The coarse classification used for factory parameters, where the
+  /// nesting/tri-state distinctions the emitter needs do not apply.
+  SurfaceParamKind _classifyType(DartType type) {
+    if (type is FunctionType) return SurfaceParamKind.excludedFunction;
+    if (type is InterfaceType && type.element is EnumElement) {
+      return SurfaceParamKind.enumType;
+    }
+    if (type.isDartCoreList) return SurfaceParamKind.listValue;
+    if (type.isDartCoreMap) return SurfaceParamKind.mapValue;
+    return SurfaceParamKind.value;
+  }
+
+  /// `clearFoo` when `copyWith` declares `bool clearFoo` next to nullable
+  /// `foo`. This is what removes 119 hand transcriptions from Task 5/6.
+  String? _derivedClearFlag(
+    String name,
+    bool isNullable,
+    Map<String, DartType> copyWithParams,
+  ) {
+    if (!isNullable || name.isEmpty) return null;
+    final flag = 'clear${name[0].toUpperCase()}${name.substring(1)}';
+    final type = copyWithParams[flag];
+    if (type == null) return null;
+    return type.isDartCoreBool ? flag : null;
+  }
+
+  bool _isDeprecated(Element element) => element.metadata.annotations
+      .any((annotation) => annotation.isDeprecated);
+
+  /// Simple type name -> defining library URI, for [type] and its arguments.
+  Map<String, String> _typeOrigins(DartType type) {
+    final origins = <String, String>{};
+    void collect(DartType current) {
+      if (current is InterfaceType) {
+        final name = current.element.name;
+        if (name != null && name.isNotEmpty) {
+          origins[name] = current.element.library.uri.toString();
+        }
+        for (final argument in current.typeArguments) {
+          collect(argument);
+        }
+      } else if (current is FunctionType) {
+        collect(current.returnType);
+        for (final parameter in current.formalParameters) {
+          collect(parameter.type);
+        }
+      }
+    }
+
+    collect(type);
+    return origins;
   }
 
   /// Whether [type] is controller-shaped: named `*Controller`, named
@@ -201,13 +387,127 @@ class AnalyzerSurfaceReader implements SurfaceReader {
         .any((supertype) => supertype.element.name == 'Listenable');
   }
 
-  /// Whether [cls] declares or inherits an instance `copyWith` method.
-  bool _hasInstanceCopyWith(ClassElement cls) {
-    bool declares(InterfaceElement element) => element.methods
-        .any((method) => method.name == 'copyWith' && !method.isStatic);
-    if (declares(cls)) return true;
-    return cls.allSupertypes.any((supertype) => declares(supertype.element));
+  /// The instance `copyWith` [cls] declares or inherits, or `null`.
+  MethodElement? _findCopyWith(ClassElement cls) {
+    MethodElement? declared(InterfaceElement element) {
+      for (final method in element.methods) {
+        if (method.name == 'copyWith' && !method.isStatic) return method;
+      }
+      return null;
+    }
+
+    final own = declared(cls);
+    if (own != null) return own;
+    for (final supertype in cls.allSupertypes) {
+      final inherited = declared(supertype.element);
+      if (inherited != null) return inherited;
+    }
+    return null;
   }
+
+  /// Named diagnostic: slicing copyWith.
+  void _checkSlicingCopyWith(
+    ClassElement cls,
+    MethodElement? copyWith,
+    LibraryElement library,
+  ) {
+    if (copyWith == null || copyWith.isAbstract) return;
+    if (copyWith.enclosingElement != cls) return;
+    if (copyWith.returnType.getDisplayString() != cls.name) return;
+
+    final overriding = <String>[];
+    for (final candidate in library.classes) {
+      if (identical(candidate, cls)) continue;
+      final inherits =
+          candidate.allSupertypes.any((supertype) => supertype.element == cls);
+      if (!inherits) continue;
+      final own = candidate.methods
+          .any((method) => method.name == 'copyWith' && !method.isStatic);
+      if (own) overriding.add(candidate.name ?? '<unnamed>');
+    }
+    if (overriding.isEmpty) return;
+
+    throw StateError(
+      'surface_gen: slicing copyWith — ${cls.name}.copyWith returns '
+      '${cls.name} while ${overriding.join(', ')} override copyWith. '
+      'Generated ${cls.name}Fluent verbs would be typed to ${cls.name} and '
+      'silently discard subclass state whenever the static type is '
+      '${cls.name}. Annotate @ChartSurfaceExempt(reason) on ${cls.name} and '
+      'model the concrete subtypes instead, or make ${cls.name}.copyWith '
+      'abstract.',
+    );
+  }
+
+  /// Constructor-initializer asserts naming two or more parameters.
+  ///
+  /// Only const constructors carry their initializers into the element model,
+  /// which is exactly the population that matters: the enforcement rule
+  /// already requires a const constructor of every config-shaped class.
+  List<List<String>> _assertGroups(
+    ConstructorElement? constructor,
+    List<SurfaceParam> params,
+  ) {
+    if (constructor is! ConstructorElementImpl) return const [];
+    final names = {for (final param in params) param.name};
+    final groups = <String, List<String>>{};
+    for (final initializer in constructor.constantInitializers) {
+      if (initializer is! AssertInitializer) continue;
+      final visitor = _IdentifierCollector();
+      initializer.condition.accept(visitor);
+      final referenced = (visitor.names.intersection(names).toList())..sort();
+      if (referenced.length < 2) continue;
+      groups[referenced.join(',')] = referenced;
+    }
+    final result = groups.values.toList()
+      ..sort((a, b) => a.join(',').compareTo(b.join(',')));
+    return result;
+  }
+
+  /// Named diagnostic: assert-coupled parameters.
+  void _checkAssertCoverage(
+    ClassElement cls,
+    List<List<String>> groups,
+    List<CombinedSetterModel> combinedSetters,
+    List<SurfaceParam> params,
+  ) {
+    if (groups.isEmpty) return;
+    final emitted = {
+      for (final param in params)
+        if (!_isExcludedKind(param.kind)) param.name,
+    };
+    for (final group in groups) {
+      final live = group.where(emitted.contains).toList();
+      if (live.length < 2) continue;
+      final covered = combinedSetters.any(
+        (setter) => live.every(setter.paramNames.contains),
+      );
+      if (covered) continue;
+      final suggestion = "CombinedSetter('with${_cap(live.first)}"
+          "${live.skip(1).map(_cap).join()}', "
+          "[${live.map((n) => "'$n'").join(', ')}])";
+      throw StateError(
+        'surface_gen: assert-coupled parameters — ${cls.name} asserts a '
+        'relationship between ${live.join(', ')} in its constructor, so an '
+        'individual with${_cap(live.first)}(...) can build a value the assert '
+        'rejects at runtime. Add '
+        '@ChartSurface(combinedSetters: [$suggestion]) to ${cls.name}, or '
+        'force-exclude the parameters.',
+      );
+    }
+  }
+
+  bool _isExcludedKind(SurfaceParamKind kind) => switch (kind) {
+        SurfaceParamKind.excludedFunction ||
+        SurfaceParamKind.excludedController ||
+        SurfaceParamKind.excludedByAnnotation ||
+        SurfaceParamKind.excludedDeprecated ||
+        SurfaceParamKind.excludedNoCopyWithParam =>
+          true,
+        _ => false,
+      };
+
+  String _cap(String name) =>
+      name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
 
   /// Returns the `ChartSurface` constant on [element], matched by name +
   /// shape (see library dartdoc), or `null`.
@@ -245,4 +545,15 @@ class AnalyzerSurfaceReader implements SurfaceReader {
             _stringList(setter.getField('params')),
           ),
       ];
+}
+
+/// Collects every simple identifier name inside an expression.
+class _IdentifierCollector extends RecursiveAstVisitor<void> {
+  final Set<String> names = <String>{};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    names.add(node.name);
+    super.visitSimpleIdentifier(node);
+  }
 }

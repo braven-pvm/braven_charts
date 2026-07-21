@@ -18,5 +18,9 @@ targets:
           exclude:
             # The builder's own checked-in outputs are never inputs.
             - lib/src/fluent/generated/**
+      # Regenerates lib/braven_charts_fluent.dart from the generated file set
+      # (a later build phase; see tool/surface_gen/build.yaml).
+      surface_gen|fluent_barrel:
+        enabled: true
       mockito|mockBuilder:
         enabled: false
