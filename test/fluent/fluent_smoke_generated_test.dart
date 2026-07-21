@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1117 verbs total; 10 of them have an argument type with no
+// 1099 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -136,9 +136,8 @@ void _smokeAutoScrollConfig(_Verb verb, AutoScrollConfig subject) {
   );
 }
 
-/// Smoke coverage for [CandlestickChartSeries]'s 12 executable verb(s).
+/// Smoke coverage for [CandlestickChartSeries]'s 11 executable verb(s).
 void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
-  verb('CandlestickChartSeriesFluent.withId', () => subject.withId('y'));
   verb('CandlestickChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'CandlestickChartSeriesFluent.withColor',
@@ -404,15 +403,6 @@ void _smokeCartesianValueSummaryConfig(
   );
 }
 
-/// Compile-only coverage for [CartesianValueSummaryConfig]'s 1 verb(s)
-/// whose argument type has no synthesizable value.
-void _compileCartesianValueSummaryConfig(
-  CartesianValueSummaryConfig subject,
-  CartesianValueSummaryContentModel Function(CartesianTrackingSnapshot) a0,
-) {
-  subject.withBuilderContent(a0);
-}
-
 /// Smoke coverage for [CartesianValueSummaryStyle]'s 42 executable verb(s).
 void _smokeCartesianValueSummaryStyle(
   _Verb verb,
@@ -624,9 +614,8 @@ void _smokeCategoryAxisConfig(_Verb verb, CategoryAxisConfig subject) {
   );
 }
 
-/// Smoke coverage for [PointAnnotation]'s 14 executable verb(s).
+/// Smoke coverage for [PointAnnotation]'s 13 executable verb(s).
 void _smokePointAnnotation(_Verb verb, PointAnnotation subject) {
-  verb('PointAnnotationFluent.withId', () => subject.withId('y'));
   verb('PointAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'PointAnnotationFluent.withStyle',
@@ -672,9 +661,8 @@ void _smokePointAnnotation(_Verb verb, PointAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [RangeAnnotation]'s 15 executable verb(s).
+/// Smoke coverage for [RangeAnnotation]'s 14 executable verb(s).
 void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
-  verb('RangeAnnotationFluent.withId', () => subject.withId('y'));
   verb('RangeAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'RangeAnnotationFluent.withStyle',
@@ -724,9 +712,8 @@ void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [TextAnnotation]'s 12 executable verb(s).
+/// Smoke coverage for [TextAnnotation]'s 11 executable verb(s).
 void _smokeTextAnnotation(_Verb verb, TextAnnotation subject) {
-  verb('TextAnnotationFluent.withId', () => subject.withId('y'));
   verb('TextAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'TextAnnotationFluent.withStyle',
@@ -764,9 +751,8 @@ void _smokeTextAnnotation(_Verb verb, TextAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [ThresholdAnnotation]'s 16 executable verb(s).
+/// Smoke coverage for [ThresholdAnnotation]'s 15 executable verb(s).
 void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
-  verb('ThresholdAnnotationFluent.withId', () => subject.withId('y'));
   verb('ThresholdAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'ThresholdAnnotationFluent.withStyle',
@@ -820,9 +806,8 @@ void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [PinAnnotation]'s 13 executable verb(s).
+/// Smoke coverage for [PinAnnotation]'s 12 executable verb(s).
 void _smokePinAnnotation(_Verb verb, PinAnnotation subject) {
-  verb('PinAnnotationFluent.withId', () => subject.withId('y'));
   verb('PinAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'PinAnnotationFluent.withStyle',
@@ -858,9 +843,8 @@ void _smokePinAnnotation(_Verb verb, PinAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [TrendAnnotation]'s 29 executable verb(s).
+/// Smoke coverage for [TrendAnnotation]'s 28 executable verb(s).
 void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
-  verb('TrendAnnotationFluent.withId', () => subject.withId('y'));
   verb('TrendAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'TrendAnnotationFluent.withStyle',
@@ -954,9 +938,8 @@ void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [ErrorBarAnnotation]'s 11 executable verb(s).
+/// Smoke coverage for [ErrorBarAnnotation]'s 10 executable verb(s).
 void _smokeErrorBarAnnotation(_Verb verb, ErrorBarAnnotation subject) {
-  verb('ErrorBarAnnotationFluent.withId', () => subject.withId('y'));
   verb('ErrorBarAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'ErrorBarAnnotationFluent.withStyle',
@@ -987,9 +970,8 @@ void _smokeErrorBarAnnotation(_Verb verb, ErrorBarAnnotation subject) {
   verb('ErrorBarAnnotationFluent.withCapSize', () => subject.withCapSize(6));
 }
 
-/// Smoke coverage for [ChordAnnotation]'s 21 executable verb(s).
+/// Smoke coverage for [ChordAnnotation]'s 20 executable verb(s).
 void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
-  verb('ChordAnnotationFluent.withId', () => subject.withId('y'));
   verb('ChordAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb(
     'ChordAnnotationFluent.withStyle',
@@ -1057,9 +1039,8 @@ void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [LegendAnnotation]'s 11 executable verb(s).
+/// Smoke coverage for [LegendAnnotation]'s 10 executable verb(s).
 void _smokeLegendAnnotation(_Verb verb, LegendAnnotation subject) {
-  verb('LegendAnnotationFluent.withId', () => subject.withId('y'));
   verb('LegendAnnotationFluent.withLabel', () => subject.withLabel('y'));
   verb('LegendAnnotationFluent.withZIndex', () => subject.withZIndex(0));
   verb('LegendAnnotationFluent.withSeries', () => subject.withSeries(const []));
@@ -1156,9 +1137,8 @@ void _smokeChartOverlayPlacement(_Verb verb, ChartOverlayPlacement subject) {
   );
 }
 
-/// Smoke coverage for [LineChartSeries]'s 24 executable verb(s).
+/// Smoke coverage for [LineChartSeries]'s 23 executable verb(s).
 void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
-  verb('LineChartSeriesFluent.withId', () => subject.withId('y'));
   verb('LineChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'LineChartSeriesFluent.withPoints',
@@ -1237,9 +1217,8 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   );
 }
 
-/// Smoke coverage for [ScatterChartSeries]'s 28 executable verb(s).
+/// Smoke coverage for [ScatterChartSeries]'s 27 executable verb(s).
 void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
-  verb('ScatterChartSeriesFluent.withId', () => subject.withId('y'));
   verb('ScatterChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'ScatterChartSeriesFluent.withPoints',
@@ -1358,9 +1337,8 @@ void _compileScatterChartSeries(
   subject.withCategoryEncoding(a3);
 }
 
-/// Smoke coverage for [AreaChartSeries]'s 29 executable verb(s).
+/// Smoke coverage for [AreaChartSeries]'s 28 executable verb(s).
 void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
-  verb('AreaChartSeriesFluent.withId', () => subject.withId('y'));
   verb('AreaChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'AreaChartSeriesFluent.withPoints',
@@ -1465,9 +1443,8 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 36 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 35 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
-  verb('BarChartSeriesFluent.withId', () => subject.withId('y'));
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'BarChartSeriesFluent.withPoints',
@@ -2126,9 +2103,8 @@ void _smokeDonutChartStyle(_Verb verb, DonutChartStyle subject) {
   );
 }
 
-/// Smoke coverage for [DonutChartSeries]'s 16 executable verb(s).
+/// Smoke coverage for [DonutChartSeries]'s 15 executable verb(s).
 void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
-  verb('DonutChartSeriesFluent.withId', () => subject.withId('y'));
   verb('DonutChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'DonutChartSeriesFluent.withPoints',
@@ -3003,9 +2979,8 @@ void _smokePieDataLabelConfig(_Verb verb, PieDataLabelConfig subject) {
   );
 }
 
-/// Smoke coverage for [PieChartSeries]'s 14 executable verb(s).
+/// Smoke coverage for [PieChartSeries]'s 13 executable verb(s).
 void _smokePieChartSeries(_Verb verb, PieChartSeries subject) {
-  verb('PieChartSeriesFluent.withId', () => subject.withId('y'));
   verb('PieChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'PieChartSeriesFluent.withPoints',
@@ -3457,9 +3432,8 @@ void _smokePolarColumnStyle(_Verb verb, PolarColumnStyle subject) {
   );
 }
 
-/// Smoke coverage for [PolarColumnChartSeries]'s 14 executable verb(s).
+/// Smoke coverage for [PolarColumnChartSeries]'s 13 executable verb(s).
 void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
-  verb('PolarColumnChartSeriesFluent.withId', () => subject.withId('y'));
   verb('PolarColumnChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
     'PolarColumnChartSeriesFluent.withColor',
@@ -4781,7 +4755,6 @@ void _smokeLabelStyle(_Verb verb, LabelStyle subject) {
 /// Every compile-only case, referenced so none of them is dead code.
 const List<Function> _compileOnlyCases = <Function>[
   _compileCandlestickDataPoint,
-  _compileCartesianValueSummaryConfig,
   _compileScatterChartSeries,
   _compileAreaChartSeries,
   _compileBarChartSeries,
@@ -4790,7 +4763,6 @@ const List<Function> _compileOnlyCases = <Function>[
 /// Verbs that cannot be executed, recorded rather than silently dropped.
 const List<String> _compileOnlyVerbs = <String>[
   'CandlestickDataPointFluent.withCandlestickStyle — no synthesizable value for CandlestickPointStyle',
-  'CartesianValueSummaryConfigFluent.withBuilderContent — no synthesizable value for CartesianValueSummaryContentModel Function(CartesianTrackingSnapshot)',
   'ScatterChartSeriesFluent.withSizeEncoding — no synthesizable value for ScatterSizeEncoding',
   'ScatterChartSeriesFluent.withColorEncoding — no synthesizable value for ScatterColorEncoding',
   'ScatterChartSeriesFluent.withOpacityEncoding — no synthesizable value for ScatterOpacityEncoding',
@@ -6092,7 +6064,7 @@ void main() {
   test('the executed/skipped split is what the generator reported', () {
     expect(_executedClasses, 93);
     expect(_skippedClasses, 0);
-    expect(_compileOnlyCases, hasLength(5));
-    expect(_compileOnlyVerbs, hasLength(10));
+    expect(_compileOnlyCases, hasLength(4));
+    expect(_compileOnlyVerbs, hasLength(9));
   });
 }

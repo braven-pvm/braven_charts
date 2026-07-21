@@ -9,12 +9,6 @@ import 'package:flutter/widgets.dart' show Color, Offset;
 
 /// Generated fluent modifiers for [PointAnnotation].
 extension PointAnnotationFluent on PointAnnotation {
-  /// Replaces [PointAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PointAnnotation.id]; construct a new instance to reset it.
-  PointAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [PointAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -68,12 +62,6 @@ extension PointAnnotationFluent on PointAnnotation {
 
 /// Generated fluent modifiers for [RangeAnnotation].
 extension RangeAnnotationFluent on RangeAnnotation {
-  /// Replaces [RangeAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAnnotation.id]; construct a new instance to reset it.
-  RangeAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [RangeAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -140,12 +128,6 @@ extension RangeAnnotationFluent on RangeAnnotation {
 
 /// Generated fluent modifiers for [TextAnnotation].
 extension TextAnnotationFluent on TextAnnotation {
-  /// Replaces [TextAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TextAnnotation.id]; construct a new instance to reset it.
-  TextAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [TextAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -198,12 +180,6 @@ extension TextAnnotationFluent on TextAnnotation {
 
 /// Generated fluent modifiers for [ThresholdAnnotation].
 extension ThresholdAnnotationFluent on ThresholdAnnotation {
-  /// Replaces [ThresholdAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ThresholdAnnotation.id]; construct a new instance to reset it.
-  ThresholdAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [ThresholdAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -272,12 +248,6 @@ extension ThresholdAnnotationFluent on ThresholdAnnotation {
 
 /// Generated fluent modifiers for [PinAnnotation].
 extension PinAnnotationFluent on PinAnnotation {
-  /// Replaces [PinAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PinAnnotation.id]; construct a new instance to reset it.
-  PinAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [PinAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -326,12 +296,6 @@ extension PinAnnotationFluent on PinAnnotation {
 
 /// Generated fluent modifiers for [TrendAnnotation].
 extension TrendAnnotationFluent on TrendAnnotation {
-  /// Replaces [TrendAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TrendAnnotation.id]; construct a new instance to reset it.
-  TrendAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [TrendAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -456,12 +420,6 @@ extension TrendAnnotationFluent on TrendAnnotation {
 
 /// Generated fluent modifiers for [ErrorBarAnnotation].
 extension ErrorBarAnnotationFluent on ErrorBarAnnotation {
-  /// Replaces [ErrorBarAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ErrorBarAnnotation.id]; construct a new instance to reset it.
-  ErrorBarAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [ErrorBarAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -505,12 +463,6 @@ extension ErrorBarAnnotationFluent on ErrorBarAnnotation {
 
 /// Generated fluent modifiers for [ChordAnnotation].
 extension ChordAnnotationFluent on ChordAnnotation {
-  /// Replaces [ChordAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.id]; construct a new instance to reset it.
-  ChordAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [ChordAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -619,12 +571,6 @@ extension ChordAnnotationFluent on ChordAnnotation {
 
 /// Generated fluent modifiers for [LegendAnnotation].
 extension LegendAnnotationFluent on LegendAnnotation {
-  /// Replaces [LegendAnnotation.id] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendAnnotation.id]; construct a new instance to reset it.
-  LegendAnnotation withId(String value) => copyWith(id: value);
-
   /// Replaces [LegendAnnotation.label] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

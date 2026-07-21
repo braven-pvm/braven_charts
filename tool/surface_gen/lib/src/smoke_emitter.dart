@@ -458,6 +458,7 @@ T? _subject<T>(T Function() build) {
       final sealed = sealedOwnerFor(param, model);
       if (sealed != null) {
         for (final factory in sealed.factories) {
+          if (!isEmittableFactory(factory)) continue;
           _sealedCall(cls, param, sealed, factory, synth, run, compile);
         }
       }

@@ -25,8 +25,13 @@ import 'y_axis_config.dart';
 /// validation message names the offending index.
 // The constructor validates in its BODY via validateConfiguration(), which
 // names no parameter, so every emitted parameter is nominally in scope.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
 @ChartSurface(
-  excluded: ['points'],
+  excluded: ['id', 'points'],
   bodyValidated: [
     BodyValidated(
       'validateConfiguration() re-runs candlestickStyle.validate(), '

@@ -132,20 +132,6 @@ extension CartesianValueSummaryConfigFluent on CartesianValueSummaryConfig {
     ),
   );
 
-  /// Sets [CartesianValueSummaryConfig.content] to `CartesianValueSummaryContent.builder(...)`.
-  ///
-  /// Omitted parameters take their defaults.
-  CartesianValueSummaryConfig withBuilderContent(
-    CartesianValueSummaryContentModel Function(CartesianTrackingSnapshot)
-    builder, {
-    String? descriptorId,
-  }) => copyWith(
-    content: CartesianValueSummaryContent.builder(
-      builder,
-      descriptorId: descriptorId,
-    ),
-  );
-
   /// Rebuilds [CartesianValueSummaryConfig.content] from its current value.
   ///
   /// `update` receives the current [CartesianValueSummaryContent] and returns the replacement, so

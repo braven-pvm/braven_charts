@@ -179,6 +179,15 @@ void main() {
         expect(source, isNot(contains('withBarWidthPixels(')));
       });
 
+      test('`id` has no verb — a series id is a cross-object join key', () {
+        // yAxisId, annotations and artifact documents all bind to it, so a
+        // mid-chain rewrite would detach the series from everything that
+        // references it. YAxisConfig.id was already excluded on this rule.
+        final source = _generatedSource('chart_series_fluent.dart');
+        expect(source, isNot(contains('withId(')));
+        expect(base.withBaselineValue(2).id, 'bars');
+      });
+
       test('every derived clear verb unsets its field', () {
         final loaded = base
             .withGroupId('g1')
@@ -829,11 +838,26 @@ void main() {
       );
     });
 
-    test('withBuilderContent builds the builder variant', () {
+    test('the function-typed sealed factory gets NO helper — withContent '
+        'carries it instead', () {
+      // `withBuilderContent` was the fleet's only function-typed verb: the
+      // sealed-variant path bypassed the excludedFunction rule, and the
+      // config it minted is the one artifacts refuse to serialize without a
+      // REGISTERED descriptorId — which no signature can enforce. The plain
+      // withX verb still reaches the variant, at the constructor where that
+      // requirement is documented.
+      final source = _generatedSource(
+        'cartesian_value_summary_config_fluent.dart',
+      );
+      expect(source, isNot(contains('withBuilderContent')));
+      expect(source, contains('withAutomaticContent('));
+
       CartesianValueSummaryContentModel builder(
         CartesianTrackingSnapshot snapshot,
       ) => const CartesianValueSummaryContentModel(title: 'custom');
-      final config = base.withBuilderContent(builder, descriptorId: 'demo');
+      final config = base.withContent(
+        CartesianValueSummaryContent.builder(builder, descriptorId: 'demo'),
+      );
       final content = config.content as CartesianValueSummaryBuilderContent;
       expect(content.descriptorId, 'demo');
       expect(content.builder, same(builder));
@@ -1249,12 +1273,14 @@ void main() {
         () => base.copyWith(startX: 50),
         throwsA(isA<AssertionError>()),
       );
-      // ...and no individual verb exists for any coupled bound.
+      // ...and no verb exists for any coupled bound, combined or individual.
       final source = _generatedSource('chart_annotation_fluent.dart');
       expect(source, isNot(contains('RangeAnnotation withStartX(')));
       expect(source, isNot(contains('RangeAnnotation withEndX(')));
       expect(source, isNot(contains('RangeAnnotation withStartY(')));
       expect(source, isNot(contains('RangeAnnotation withEndY(')));
+      // `id` is a join key for selection state and artifact documents.
+      expect(source, isNot(contains('withId(')));
     });
 
     test('TextAnnotation withText and withAnchor equal their copyWith', () {

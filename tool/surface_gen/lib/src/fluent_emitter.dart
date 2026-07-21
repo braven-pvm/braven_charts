@@ -43,7 +43,9 @@
 /// - Sealed nested parameter whose type carries `sealedVariants`: one
 ///   constructor helper per sealed FACTORY, `with<Factory><Param>`, mirroring
 ///   the factory signature verbatim (defaults included). Nothing is emitted
-///   on the sealed base itself.
+///   on the sealed base itself. A factory taking a FUNCTION or a CONTROLLER
+///   gets no helper — see [isEmittableFactory]; the plain `withX(SealedType)`
+///   verb still reaches that variant.
 /// - `combinedSetters` metadata replaces its member parameters entirely with
 ///   one setter over the members, always with NON-NULLABLE types (a nullable
 ///   combined setter would let `withVisibleRange(null, null)` compile into a
@@ -240,6 +242,7 @@ class FluentEmitter implements SurfaceEmitter {
       final sealed = _sealedOwner(param, model);
       if (sealed == null) continue;
       for (final factory in sealed.factories) {
+        if (!isEmittableFactory(factory)) continue;
         for (final factoryParam in factory.params) {
           yield factoryParam.dartType;
         }
@@ -269,6 +272,7 @@ class FluentEmitter implements SurfaceEmitter {
       final sealed = _sealedOwner(param, model);
       if (sealed != null) {
         for (final factory in sealed.factories) {
+          if (!isEmittableFactory(factory)) continue;
           members.add(_sealedVariantMethod(cls, self, param, sealed, factory));
         }
       }
@@ -566,6 +570,27 @@ SurfaceClass? sealedOwnerFor(SurfaceParam param, SurfaceModel model) {
   if (owner.sealedVariants.isEmpty || owner.factories.isEmpty) return null;
   return owner;
 }
+
+/// Whether a sealed-variant helper may be generated for [factory].
+///
+/// The `excludedFunction` / `excludedController` rules exist because a
+/// function or controller is not configuration: it is behaviour a chain step
+/// cannot meaningfully carry, and it does not survive serialization. Those
+/// rules were applied to constructor PARAMETERS only, so the sealed-variant
+/// path let one through — `withBuilderContent` was the fleet's only
+/// function-typed verb, and the config it minted is exactly the one the
+/// artifact codec refuses to serialize unless a registered `descriptorId`
+/// accompanies it (which no signature can enforce).
+///
+/// Dropping the helper costs nothing a caller cannot express: the plain
+/// `withX(SealedType value)` verb is still generated, so
+/// `withContent(CartesianValueSummaryContent.builder(fn, descriptorId: id))`
+/// remains one call — with the constructor's own documentation in view.
+bool isEmittableFactory(SurfaceFactoryModel factory) => !factory.params.any(
+      (param) =>
+          param.kind == SurfaceParamKind.excludedFunction ||
+          param.kind == SurfaceParamKind.excludedController,
+    );
 
 /// The parameter names a class's combined setters consume.
 Set<String> combinedMemberNames(SurfaceClass cls) => {

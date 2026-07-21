@@ -636,8 +636,14 @@ class PolarColumnStyle {
 /// the lists are stated together and validated once.
 // _validate() names no parameter (it reads fields), so every remaining
 // emitted parameter is nominally in scope.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
 @ChartSurface(
   excluded: [
+    'id',
     'points',
     'targetValues',
     'intervalLowerValues',

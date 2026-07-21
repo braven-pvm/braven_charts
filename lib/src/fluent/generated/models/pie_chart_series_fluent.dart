@@ -9,9 +9,6 @@ import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [PieChartSeries].
 extension PieChartSeriesFluent on PieChartSeries {
-  /// Replaces [PieChartSeries.id] with [value].
-  PieChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [PieChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

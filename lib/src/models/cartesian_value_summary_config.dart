@@ -501,6 +501,16 @@ class DefaultCartesianValueSummaryController extends ChangeNotifier
 ///   ),
 /// )
 /// ```
+///
+/// The fluent surface generates a variant helper per sealed factory, EXCEPT
+/// for factories that take a function: `withBuilderContent` used to be the
+/// only function-typed verb on the whole surface, and the config it minted
+/// (`CartesianValueSummaryContent.builder`) is precisely the one artifacts
+/// and generated Source refuse to serialize unless a REGISTERED
+/// `descriptorId` accompanies it — something no generated signature can
+/// enforce. Call `withContent(CartesianValueSummaryContent.builder(fn,
+/// descriptorId: id))` instead, where that requirement is documented at the
+/// point of use.
 @chartSurface
 class CartesianValueSummaryConfig {
   /// Creates a value summary configuration.

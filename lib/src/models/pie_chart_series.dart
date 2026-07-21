@@ -35,8 +35,13 @@ import 'y_axis_config.dart';
 // validateRadialConfiguration() reads FIELDS (radialStyle, selectionStyle,
 // points), never the constructor's own parameter names, so surface_gen
 // cannot narrow the scope below the whole class.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
 @ChartSurface(
-  excluded: ['sliceRadiusConfig'],
+  excluded: ['id', 'sliceRadiusConfig'],
   bodyValidated: [
     BodyValidated(
       'validateRadialConfiguration() re-checks the whole series on every '

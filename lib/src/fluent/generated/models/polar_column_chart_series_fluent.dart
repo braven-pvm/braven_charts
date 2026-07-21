@@ -180,9 +180,6 @@ extension PolarColumnStyleFluent on PolarColumnStyle {
 
 /// Generated fluent modifiers for [PolarColumnChartSeries].
 extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
-  /// Replaces [PolarColumnChartSeries.id] with [value].
-  PolarColumnChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [PolarColumnChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

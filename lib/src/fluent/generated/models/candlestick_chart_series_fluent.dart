@@ -9,9 +9,6 @@ import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [CandlestickChartSeries].
 extension CandlestickChartSeriesFluent on CandlestickChartSeries {
-  /// Replaces [CandlestickChartSeries.id] with [value].
-  CandlestickChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [CandlestickChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

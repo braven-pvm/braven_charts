@@ -9,9 +9,6 @@ import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [LineChartSeries].
 extension LineChartSeriesFluent on LineChartSeries {
-  /// Replaces [LineChartSeries.id] with [value].
-  LineChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [LineChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -129,9 +126,6 @@ extension LineChartSeriesFluent on LineChartSeries {
 
 /// Generated fluent modifiers for [ScatterChartSeries].
 extension ScatterChartSeriesFluent on ScatterChartSeries {
-  /// Replaces [ScatterChartSeries.id] with [value].
-  ScatterChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [ScatterChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -275,9 +269,6 @@ extension ScatterChartSeriesFluent on ScatterChartSeries {
 
 /// Generated fluent modifiers for [AreaChartSeries].
 extension AreaChartSeriesFluent on AreaChartSeries {
-  /// Replaces [AreaChartSeries.id] with [value].
-  AreaChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [AreaChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -426,9 +417,6 @@ extension AreaChartSeriesFluent on AreaChartSeries {
 
 /// Generated fluent modifiers for [BarChartSeries].
 extension BarChartSeriesFluent on BarChartSeries {
-  /// Replaces [BarChartSeries.id] with [value].
-  BarChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [BarChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

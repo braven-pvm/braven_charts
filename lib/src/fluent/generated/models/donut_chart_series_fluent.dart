@@ -9,9 +9,6 @@ import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [DonutChartSeries].
 extension DonutChartSeriesFluent on DonutChartSeries {
-  /// Replaces [DonutChartSeries.id] with [value].
-  DonutChartSeries withId(String value) => copyWith(id: value);
-
   /// Replaces [DonutChartSeries.name] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

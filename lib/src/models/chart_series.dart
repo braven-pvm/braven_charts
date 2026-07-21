@@ -300,7 +300,12 @@ class ChartSeries {
 }
 
 /// Line chart series with configurable interpolation.
-@chartSurface
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class LineChartSeries extends ChartSeries {
   const LineChartSeries({
     required super.id,
@@ -447,7 +452,12 @@ class LineChartSeries extends ChartSeries {
 }
 
 /// Scatter plot series with configurable marker size.
-@chartSurface
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class ScatterChartSeries extends ChartSeries {
   const ScatterChartSeries({
     required super.id,
@@ -663,7 +673,12 @@ class AreaGradient {
 }
 
 /// Area chart series with fill and interpolation.
-@chartSurface
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class AreaChartSeries extends ChartSeries {
   const AreaChartSeries({
     required super.id,
@@ -862,8 +877,13 @@ class AreaChartSeries extends ChartSeries {
 /// `withBarWidth(percent, pixels)` this class used to generate required BOTH,
 /// which made its percent argument dead in every possible call. Choose the
 /// sizing mode at construction, where the alternatives are visible.
+///
+/// `id` is force-excluded as well: a series id is a JOIN KEY — axes
+/// ([yAxisId]), annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Rebuild the series with the id it should carry.
 @ChartSurface(
-  excluded: ['barWidthPercent', 'barWidthPixels'],
+  excluded: ['id', 'barWidthPercent', 'barWidthPixels'],
   combinedSetters: [
     // `maxWidth >= minWidth` — the bounds only move as a pair.
     CombinedSetter('withWidthBounds', ['maxWidth', 'minWidth']),
