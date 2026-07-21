@@ -163,7 +163,11 @@ void main() {
         expect(
           base
               .withBulletStyle(
-                const BarBulletStyle(ranges: [BarBulletRange(endValue: 5, color: Color(0xFFCCCCCC))]),
+                const BarBulletStyle(
+                  ranges: [
+                    BarBulletRange(endValue: 5, color: Color(0xFFCCCCCC)),
+                  ],
+                ),
               )
               .clearBulletStyle()
               .bulletStyle,
@@ -192,9 +196,7 @@ void main() {
       final base = CandlestickChartSeries(
         id: 'ohlc',
         points: candles,
-        densityGrouping: const CandlestickDensityGrouping(
-          targetGroupWidth: 6,
-        ),
+        densityGrouping: const CandlestickDensityGrouping(targetGroupWidth: 6),
       );
       final updated = base.updateDensityGrouping(
         (current) => current.withEnabled(true),
@@ -263,9 +265,10 @@ void main() {
 
     test('a chain equals one combined copyWith', () {
       expect(
-        base.withEnabled(true).withTargetGroupWidth(8).withMinimumPointsPerGroup(
-          3,
-        ),
+        base
+            .withEnabled(true)
+            .withTargetGroupWidth(8)
+            .withMinimumPointsPerGroup(3),
         base.copyWith(
           enabled: true,
           targetGroupWidth: 8,
@@ -404,7 +407,9 @@ void main() {
       const base = PolarColumnStyle();
       expect(base.withCornerRadius(9), base.copyWith(cornerRadius: 9));
       expect(
-        base.withBorderColor(const Color(0xFF223344)).clearBorderColor()
+        base
+            .withBorderColor(const Color(0xFF223344))
+            .clearBorderColor()
             .borderColor,
         isNull,
       );
@@ -417,7 +422,10 @@ void main() {
       );
       final updated = base.updateShadow((current) => current.withOpacity(0.4));
       expect(updated.shadow.opacity, 0.4);
-      expect(updated, base.copyWith(shadow: base.shadow.copyWith(opacity: 0.4)));
+      expect(
+        updated,
+        base.copyWith(shadow: base.shadow.copyWith(opacity: 0.4)),
+      );
     });
 
     test('PolarColumnChartSeries: withX and the nested updater', () {
@@ -460,6 +468,152 @@ void main() {
           .withRadiusAggregation(RadialSliceRadiusAggregation.sum);
       expect(loaded.clearColor().color, isNull);
       expect(loaded.clearRadiusAggregation().radiusAggregation, isNull);
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/x_axis_config.dart
+  // ===========================================================================
+  group('x_axis_config.dart', () {
+    const base = XAxisConfig();
+
+    test('withLabel equals the copyWith equivalent', () {
+      expect(base.withLabel('Time'), base.copyWith(label: 'Time'));
+    });
+
+    test('withRange moves the assert-coupled bounds together', () {
+      final ranged = base.withRange(0, 100);
+      expect(ranged, base.copyWith(min: 0, max: 100));
+      expect(ranged.min, 0);
+      expect(ranged.max, 100);
+    });
+
+    test('withHeightBounds moves the assert-coupled extents together', () {
+      final sized = base.withHeightBounds(10, 90);
+      expect(sized, base.copyWith(minHeight: 10, maxHeight: 90));
+    });
+
+    test('the invalid intermediate the combined setters replace is '
+        'unreachable', () {
+      // Inverting one bound alone throws on the raw config API...
+      expect(
+        () => base.withRange(0, 100).copyWith(min: 200),
+        throwsA(isA<AssertionError>()),
+      );
+      // ...and no individual verb is generated for a coupled parameter.
+      final source = _generatedSource('x_axis_config_fluent.dart');
+      expect(source, isNot(contains('withMin(')));
+      expect(source, isNot(contains('withMax(')));
+      expect(source, isNot(contains('withMinHeight(')));
+      expect(source, isNot(contains('withMaxHeight(')));
+    });
+
+    test('clearCategoryAxis unsets the nested category metadata', () {
+      final loaded = base.withCategoryAxis(
+        const CategoryAxisConfig(categories: ['a', 'b']),
+      );
+      expect(loaded.categoryAxis, isNotNull);
+      expect(
+        loaded.clearCategoryAxis(),
+        loaded.copyWith(clearCategoryAxis: true),
+      );
+      expect(loaded.clearCategoryAxis().categoryAxis, isNull);
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/y_axis_config.dart
+  // ===========================================================================
+  group('y_axis_config.dart', () {
+    YAxisConfig base() => YAxisConfig(position: YAxisPosition.left);
+
+    test('withUnit equals the copyWith equivalent', () {
+      expect(base().withUnit('bpm'), base().copyWith(unit: 'bpm'));
+    });
+
+    test('withRange and withWidthBounds move their pairs together', () {
+      final tuned = base().withRange(40, 200).withWidthBounds(20, 120);
+      expect(tuned.min, 40);
+      expect(tuned.max, 200);
+      expect(tuned.minWidth, 20);
+      expect(tuned.maxWidth, 120);
+      expect(
+        tuned,
+        base().copyWith(min: 40, max: 200, minWidth: 20, maxWidth: 120),
+      );
+    });
+
+    test('no individual verb exists for a coupled parameter, and `id` stays '
+        'internal', () {
+      final source = _generatedSource('y_axis_config_fluent.dart');
+      expect(source, isNot(contains('withMin(')));
+      expect(source, isNot(contains('withMax(')));
+      expect(source, isNot(contains('withMinWidth(')));
+      expect(source, isNot(contains('withMaxWidth(')));
+      // `id` is force-excluded: a public withId would hijack multi-axis
+      // binding identity.
+      expect(source, isNot(contains('withId(')));
+    });
+
+    test('the fluent surface preserves the axis identity', () {
+      final axis = YAxisConfig.withId(
+        id: 'power',
+        position: YAxisPosition.right,
+      );
+      expect(axis.withLabel('Power').id, 'power');
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/category_axis_config.dart
+  // ===========================================================================
+  group('category_axis_config.dart', () {
+    const base = CategoryAxisConfig(categories: ['Mon', 'Tue']);
+
+    test('withLabelOverflow equals the copyWith equivalent', () {
+      expect(
+        base.withLabelOverflow(CategoryLabelOverflow.ellipsis),
+        base.copyWith(labelOverflow: CategoryLabelOverflow.ellipsis),
+      );
+    });
+
+    test('a chain equals one combined copyWith', () {
+      expect(
+        base
+            .withCategories(const ['Mon', 'Tue', 'Wed'])
+            .withMaxLabelLines(3)
+            .withAutoViewport(false),
+        base.copyWith(
+          categories: const ['Mon', 'Tue', 'Wed'],
+          maxLabelLines: 3,
+          autoViewport: false,
+        ),
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/multi_axis_config.dart
+  // ===========================================================================
+  group('multi_axis_config.dart', () {
+    const base = MultiAxisConfig();
+
+    test('withMode equals the copyWith equivalent', () {
+      expect(
+        base.withMode(NormalizationMode.none),
+        base.copyWith(mode: NormalizationMode.none),
+      );
+    });
+
+    test('withAxes carries fluent-built axes', () {
+      final axes = [
+        YAxisConfig.withId(
+          id: 'hr',
+          position: YAxisPosition.left,
+        ).withRange(40, 200),
+      ];
+      expect(base.withAxes(axes), base.copyWith(axes: axes));
+      expect(base.withAxes(axes).axes.single.max, 200);
     });
   });
 }

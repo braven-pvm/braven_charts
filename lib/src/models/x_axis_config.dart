@@ -3,6 +3,7 @@
 
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'category_axis_config.dart';
 import 'y_axis_config.dart';
 
@@ -26,6 +27,15 @@ typedef XAxisLabelFormatter = String Function(double value);
 ///   labelDisplay: AxisLabelDisplay.labelWithUnit,
 /// );
 /// ```
+@ChartSurface(
+  combinedSetters: [
+    // `min == null || max == null || min < max` — a lone bound can invert the
+    // range, so the axis window only moves as a pair.
+    CombinedSetter('withRange', ['min', 'max']),
+    // `maxHeight >= minHeight`.
+    CombinedSetter('withHeightBounds', ['minHeight', 'maxHeight']),
+  ],
+)
 class XAxisConfig {
   /// Creates an X-axis configuration.
   ///
