@@ -237,18 +237,110 @@ becomes the single source of truth the hand-written mirrors converge on.
 
 ### Convergence proof — AI schema (V1) and drift tests
 
-- The `chart_tool_schema.dart` public API (its exposed schema maps) is kept;
-  its 1,698 lines of hand-written literals are replaced by maps generated
-  from the SurfaceModel into `lib/src/ai/generated/`. Behavior gate: the
-  generated schema is a superset of the previous hand-written schema for all
-  overlapping definitions (snapshot-diff test at migration time), plus it
-  now includes surfaces the hand-written one missed (value summary et al.).
-- Drift tests generated from the SurfaceModel: (a) every surface property is
-  representable in the AI schema; (b) every surface class the AI config
-  builder claims to parse covers its current parameter list; (c) every
-  surface class the Source emitter emits covers its current parameter list.
-  (b) and (c) start as coverage warnings promoted to failures once each
-  mirror migrates in follow-up lanes.
+**RE-SCOPED 2026-07-21, after the Task 7 implementation attempt.** The
+original plan above assumed `chart_tool_schema.dart` is a MIRROR of the config
+classes, so that generating it from the `SurfaceModel` would be a swap. It is
+not, and the difference is structural rather than a matter of effort.
+
+#### What the AI schema actually is
+
+`chart_tool_schema.dart` is a flat **LLM vocabulary**, keyed independently of
+class structure:
+
+- its properties are snake_case names invented for the agent protocol
+  (`bar_waterfall_connector_color`, `pie_label_minimum_sweep`), consumed
+  literally by `ChartConfigBuilder` as `json['bar_corner_radius']`;
+- one flat `style` bag flattens dozens of nested config classes, so there is
+  no function from a Dart parameter to a schema key that a generator could
+  compute;
+- of the 205 keys the builder reads, **21** have a same-named parameter
+  anywhere in the surface model even under the most generous
+  case-and-underscore-insensitive match. The other 184 land on classes the
+  model cannot see, or on names the vocabulary invented;
+- **22 config classes the builder constructs carry no `@chartSurface`** —
+  `BarChartStyle`, `BarLabelStyle`, `BarWaterfallStyle`, `CandlestickChartStyle`,
+  `ScatterDensityConfig` and 17 siblings — because none of them has a
+  `copyWith`, which is the enforcement rule's definition of "config-shaped".
+  Roughly half the vocabulary lowers onto them. They are enumerated and
+  regression-gated in `test/meta/ai_mirror_drift_test.dart`.
+
+The literals therefore cannot be "regenerated". Replacing them means
+generating a DIFFERENT artifact and migrating every consumer to it.
+
+#### The three options
+
+1. **Additive (chosen for V1).** Generate a class-keyed structural `$defs`
+   block alongside the untouched literals, and gate the literals against the
+   parser instead of against the classes. Cost: the 1,698 literals stay
+   hand-written. Benefit: an always-current, un-driftable description of the
+   config surface, plus — for the first time — a machine check of the contract
+   that actually matters.
+2. **Full metadata.** Add snake_case key names, nesting path and vocabulary
+   grouping to `@ChartSurface` for all ~93 modelled classes AND give the 22
+   unmodelled classes a `copyWith` so they can be annotated. Reproduces the
+   literals exactly, at the price of encoding the whole agent protocol in
+   annotations — the vocabulary's authorship moves into the model layer.
+3. **Builder-AST-derived.** Generate the schema from `ChartConfigBuilder`
+   itself, which is the only artifact that knows the true key set. Correct by
+   construction for key NAMES; supplies no descriptions, enum lists or
+   defaults, all of which are today's schema's actual value to an LLM.
+
+Options 2 and 3 are both viable and both large. The choice is an owner
+decision and is explicitly **deferred**; V1 does not prejudge it.
+
+#### What V1 delivers
+
+- `lib/src/ai/generated/surface_definitions.dart` — JSON-Schema `$defs` for
+  every `@chartSurface` class (95 classes, ~940 properties), exposed as the
+  new `ChartToolSchema.surfaceDefinitions`. Enums become enum lists, nested
+  configs become `$ref`s, `ChartStyleValue<X>` becomes a
+  `{value | "none" | "inherit"}` union, defaults are surfaced, and the
+  exclusion kinds split by INTENT: callbacks/controllers/deprecated parameters
+  are omitted with the omission stated on the class, while force-excluded and
+  no-`copyWith` parameters are INCLUDED and marked `x-mutation:
+  construction-only` — they are unsettable, not unconstructible.
+- `createChartTool` / `modifyChartTool` / `explainDataTool` are **byte-for-byte
+  unchanged**; `test/unit/ai/fixtures/pre_convergence_schema.json` still
+  matches the live dump exactly.
+- Task 8 hard gate (a) is now gateable, because the new member is class-keyed:
+  `test/meta/ai_surface_definitions_test.dart` checks the definitions against
+  two INDEPENDENT sources — the analyzer enforcement scan for the class list,
+  and the generated fluent extensions for the per-parameter check.
+- `test/meta/ai_mirror_drift_test.dart` gates the real contract in both
+  directions, with today's holes pinned and a one-line reason each.
+
+Deferred, pending the owner decision: deleting the 1,698 literals, and drift
+test (c) for the Source emitter.
+
+#### Named follow-up — the candlestick schema gap
+
+Ten keys are parsed by `ChartConfigBuilder` and undiscoverable to an LLM:
+
+```
+candlestick_body_fill            candlestick_animation_mode
+candlestick_body_width_factor    candlestick_animation_stagger
+candlestick_border_width         candlestick_density_grouping
+candlestick_wick_width           candlestick_target_group_width
+candlestick_corner_radius        candlestick_minimum_points_per_group
+```
+
+Seven of them DO appear in `chart_tool_schema.dart` — but as siblings of
+`properties` and `required` inside the `allOf[0].if` subschema, a position
+where JSON Schema ignores unknown keywords outright. Source-present and
+consumer-invisible is the same as absent. The remaining three
+(`candlestick_density_grouping`, `candlestick_target_group_width`,
+`candlestick_minimum_points_per_group`) never appear at all.
+
+This is a product gap, not a cosmetic one: candlestick body fill, wick width,
+corner radius, entrance animation and density grouping are all supported by
+the package and cannot be requested by an agent. A second gap runs the other
+way — `line_interpolation` is documented as a four-member enum but
+`_parseLineSeries` hardcodes `LineInterpolation.linear` and never reads it, so
+an agent that sets it gets a straight-line chart and no error.
+
+Fixing the literals is deliberately out of scope here (it is part of the
+deferred decision above); all eleven keys are pinned in the drift test so the
+gaps are recorded, visible in CI, and cannot widen.
 
 ## Success criteria
 
@@ -261,8 +353,12 @@ becomes the single source of truth the hand-written mirrors converge on.
    with interaction config) and the result is config-equal to hand-built.
 3. Spec-built charts round-trip artifacts, hydration, generated Dart Source,
    and Workbench with zero changes to those subsystems.
-4. The AI schema mirror is generated, provably a superset of today's, and
-   hand-edits to it are impossible (file is generated + CI-diffed).
+4. ~~The AI schema mirror is generated, provably a superset of today's, and
+   hand-edits to it are impossible (file is generated + CI-diffed).~~
+   **RE-SCOPED** (see the convergence section): the STRUCTURAL surface is
+   generated and CI-diffed as `ChartToolSchema.surfaceDefinitions`; the flat
+   LLM vocabulary in `createChartTool` stays hand-written and is instead
+   gated against the parser that consumes it, in both directions.
 5. Package analyze/tests stay green; no existing golden drifts; the fluent
    barrel is absent from the core barrel (opt-in only).
 6. A first-class "Chart Grammar" showcase page demonstrates facade-authored
@@ -274,7 +370,7 @@ becomes the single source of truth the hand-written mirrors converge on.
 |---|---|---|
 | 1 | `tool/surface_gen` + annotations + SurfaceModel, proven end-to-end on 3 pilot classes (CrosshairConfig, CartesianValueSummaryStyle, LineChartSeries) with snapshot tests of emitted code | generator unit + snapshot suite green; CI regenerate-and-diff wired |
 | 2 | Annotate the full surface (~90 builder-target classes incl. metadata for irregulars); fluent emission for all; `braven_charts_fluent.dart` barrel; behavior tests | full suite green; enforcement check active |
-| 3 | AI schema generated + superset snapshot gate + drift tests (builder/emitter as warnings) | schema parity proven; hand-written literals deleted |
+| 3 | Structural AI `$defs` generated ADDITIVELY (`ChartToolSchema.surfaceDefinitions`) + bidirectional schema/builder drift gate | tool literals byte-unchanged vs the frozen fixture; class+parameter gate green against two independent sources; drift pinned with reasons. Deleting the 1,698 literals is deferred — owner decision |
 | 4 | `BravenPlot` spec core + lowering + parity suite; chained facade + validation diagnostics | parity matrix green (config + artifact equality) |
 | 5 | Showcase "Chart Grammar" page (facade-authored presets, live Source view), docs (`doc/chart_grammar.md`), CHANGELOG; full release gates | user checkpoint; PR on approval |
 

@@ -307,22 +307,40 @@ The same independent review found the enforcement/CI half unsound. Fixed in
 
 ## SLICE 3 — AI schema convergence
 
-### Task 7: AiSchemaEmitter + superset gate + swap
+### Task 7 + 8 (RE-SCOPED 2026-07-21): additive structural `$defs` + bidirectional drift gate
+
+The original Task 7/8 assumed `chart_tool_schema.dart` mirrors the config
+classes and could be SWAPPED for generated output. It does not — it is a flat
+LLM vocabulary keyed independently of class structure, and 184 of the 205 keys
+the builder reads have no same-named parameter in the surface model at all.
+See the convergence section of
+`docs/superpowers/specs/2026-07-21-chart-grammar-design.md` for the quantified
+evidence and the three re-scope options. **Deleting the 1,698 hand-written
+literals is deferred, pending an owner decision.**
 
 **Files:**
-- Create: `tool/surface_gen/lib/src/ai_schema_emitter.dart` (+ snapshot tests), generated `lib/src/ai/generated/chart_tool_schema_generated.dart`
-- Modify: `lib/src/ai/chart_tool_schema.dart` — public members (`createChartTool`, `modifyChartTool`, any exposed maps) become getters returning the generated maps; delete the hand-written literals.
-- Test: `test/unit/ai/chart_tool_schema_superset_test.dart` — SNAPSHOT the pre-change schema maps (capture in Step 1 to a fixture JSON before any swap), then assert generated ⊇ snapshot for all overlapping definition paths, and assert value-summary/navigator surfaces (the known drift) are now present.
+- Create: `tool/surface_gen/lib/src/ai_schema_emitter.dart` (+
+  `test/ai_schema_emitter_test.dart`, `test/assert_shape_reader_test.dart`),
+  `SurfaceDefinitionsBuilder` in `builder.dart`, generated
+  `lib/src/ai/generated/surface_definitions.dart`.
+- Modify: `lib/src/ai/chart_tool_schema.dart` — ADD
+  `ChartToolSchema.surfaceDefinitions`. `createChartTool` / `modifyChartTool` /
+  `explainDataTool` are untouched and stay byte-identical to
+  `test/unit/ai/fixtures/pre_convergence_schema.json`.
+- Modify: `surface_model.dart` / `surface_reader.dart` — capture each assert's
+  MESSAGE and whether its condition is a provable null-alternation, so an
+  `anyOf` is only emitted where it is sound.
+- Test: `test/meta/ai_surface_definitions_test.dart` (Task 8 hard gate (a),
+  now gateable because the new member is class-keyed) and
+  `test/meta/ai_mirror_drift_test.dart` (bidirectional schema ↔ builder).
 
-- [ ] Steps: capture fixture snapshot FIRST (from current master schema at runtime, dumped to `test/unit/ai/fixtures/pre_convergence_schema.json`) → emitter snapshot tests (schema shape rules: enums as enum lists, nested configs as $defs refs, tri-state as {value|none|inherit} union, function/controller params omitted, defaults annotated) → implement → swap internals → superset test green + ENTIRE existing AI-lane suite green (`test/unit/ai/`) → full gates → commit `feat(ai): generate tool schema from surface model with superset gate`
+- [x] Steps: baseline fixture already frozen (`tool/dump_pre_convergence_schema.dart`) → emitter tests (enums as enum lists, nested configs as `$defs` refs, tri-state as `{value|none|inherit}`, callbacks/controllers/deprecated omitted, force-excluded and no-copyWith INCLUDED as `x-mutation`, combined setters as `required`/`dependentRequired`, proven null-alternations as `anyOf`, defaults surfaced) → implement → gate (a) against the analyzer scan AND the generated fluent extensions → bidirectional drift gate with pinned holes → full gates → commits `feat(ai): generate structural surface definitions alongside the tool schema`, `test(meta): gate AI schema and builder against bidirectional drift`, `docs(surface-gen): record AI convergence scope and candlestick schema gap`
 
-### Task 8: Drift tests for the remaining mirrors
+**Live gaps recorded, not fixed** (deliberately — they belong to the deferred decision): 10 `candlestick_*` keys the builder parses that an LLM cannot discover, and `line_interpolation`, documented as an enum but never read. Both pinned in `ai_mirror_drift_test.dart`.
 
-**Files:** Create `test/meta/mirror_drift_test.dart` — from the SurfaceModel (exposed via a generated manifest `lib/src/meta/generated/surface_manifest.dart`: class name → param names list): (a) hard: every surface class present in AI schema; (b) warning-mode (expect+skip pattern printing the gap list): AI builder `_parse*` coverage per class param list; (c) warning-mode: Source emitter `_emit*` coverage. Manifest emitter added to surface_gen.
+Deferred from Task 8: drift test (c), Source-emitter `_emit*` coverage.
 
-- [ ] Steps: manifest emitter snapshot test → implement → drift tests (a) hard-green, (b)/(c) reporting real current gaps as skips with counts → commit `feat(surface-gen): surface manifest and mirror drift detection`
-
-**SLICE 3 GATE:** schema generated + superset-proven; AI tests green; drift visibility live. Independent review (overseer dispatches).
+**SLICE 3 GATE:** structural `$defs` generated and gated; tool literals provably unchanged; bidirectional drift gate live with pinned holes; AI-lane suite green. Independent review (overseer dispatches).
 
 ---
 
