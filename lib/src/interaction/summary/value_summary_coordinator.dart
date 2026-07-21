@@ -37,6 +37,25 @@ import '../core/tracking_snapshot_resolver.dart';
 import 'value_summary_adapters.dart';
 import 'value_summary_reducer.dart';
 
+/// Assistive-technology surface of the active value summary panel, consumed
+/// by the render box's semantics assembly.
+///
+/// [label] is the grouped region's title + context (always prefixed
+/// `Value summary` so traversal can never confuse the region with the
+/// crosshair panel's canvas content), [value] the unit-carrying rows in
+/// meaningful source order. The boolean capabilities gate which semantic
+/// actions the render box attaches.
+typedef ValueSummarySemanticsInfo = ({
+  Rect bounds,
+  String label,
+  String value,
+  bool focusable,
+  bool focused,
+  bool movable,
+  bool canPin,
+  bool canClearPin,
+});
+
 /// Owns the value summary pipeline state for one chart.
 ///
 /// Responsibilities, in frame order:
@@ -74,6 +93,12 @@ class ValueSummaryCoordinator {
 
   /// Requests a repaint of the owning render box.
   final VoidCallback onNeedsRepaint;
+
+  /// Delivers a debounced assistive announcement (config `announceChanges`).
+  ///
+  /// Set by the render box, which owns the platform view needed to send it.
+  /// Called from a post-frame callback, never during paint.
+  ValueChanged<String>? onAnnounce;
 
   final ValueSummaryOverlayElement _overlayElement =
       ValueSummaryOverlayElement();
@@ -147,6 +172,15 @@ class ValueSummaryCoordinator {
 
   bool _paintActive = false;
   bool _pinClearScheduled = false;
+
+  // Semantics + announcement state. The strings are recomputed only when the
+  // displayed model changes (reduce cadence), never per repaint.
+  CartesianValueSummaryConfig? _activeConfig;
+  String _semanticsLabel = '';
+  String _semanticsValue = '';
+  CartesianTrackingSnapshot? _announcedSnapshot;
+  String? _pendingAnnouncement;
+  bool _announceScheduled = false;
 
   /// The active presentation element for one paint frame.
   ValueSummaryPanelElement get _activeElement =>
@@ -353,23 +387,132 @@ class ValueSummaryCoordinator {
     }
   }
 
-  /// Basic assistive info for the annotation panel, or null while it is
-  /// inactive or hidden. Full semantics contract lands with Task 15.
-  ({Rect bounds, bool focusable, bool focused})? get annotationSemanticsInfo =>
-      _paintActive &&
-          _annotationActive &&
-          _annotationElement.bounds != Rect.zero
-      ? (
-          bounds: _annotationElement.bounds,
-          focusable: _annotationDraggable,
-          focused: _annotationFocused,
-        )
-      : null;
+  // ==========================================================================
+  // Semantics surface (both presentations)
+  // ==========================================================================
+
+  /// Assistive info for the active summary panel, or null while no summary
+  /// is painted.
+  ///
+  /// Both presentations expose the same grouped region: the fixed overlay as
+  /// a passive labelled region, the annotation panel additionally focusable
+  /// and movable while draggable. Bounds follow the painted panel at paint
+  /// cadence (a mid-drag panel reports its live position).
+  ValueSummarySemanticsInfo? get summarySemanticsInfo {
+    if (!_paintActive || _activeElement.bounds == Rect.zero) return null;
+    final model = _model;
+    if (model == null || model.rows.isEmpty) return null;
+    final controller = _controller;
+    final policy = _activeConfig?.valuePolicy;
+    final pinPolicy =
+        policy == CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest ||
+        policy == CartesianValueSummaryValuePolicy.explicitOnly;
+    final primary = _reducedSnapshot?.primaryPoint;
+    final movable = _annotationActive && _annotationDraggable;
+    return (
+      bounds: _activeElement.bounds,
+      label: _semanticsLabel,
+      value: _semanticsValue,
+      focusable: movable,
+      focused: movable && _annotationFocused,
+      movable: movable,
+      canPin:
+          controller != null &&
+          pinPolicy &&
+          primary != null &&
+          controller.pinnedPoint != primary,
+      canClearPin:
+          controller != null && pinPolicy && controller.pinnedPoint != null,
+    );
+  }
+
+  /// Moves the draggable annotation panel by [delta] and commits the
+  /// placement once (semantic move action). No-op for the fixed overlay.
+  void performSemanticMove(Offset delta) {
+    if (!_annotationActive || !_annotationDraggable) return;
+    nudgeAnnotation(delta);
+    commitKeyboardNudge();
+  }
+
+  /// Pins the currently displayed datum through the attached controller
+  /// (semantic pin action).
+  void performSemanticPin() {
+    final point = _reducedSnapshot?.primaryPoint;
+    if (point == null) return;
+    _controller?.pin(point);
+  }
+
+  /// Clears the controller pin (semantic clear-pin action).
+  void performSemanticClearPin() => _controller?.clearPin();
+
+  /// Rebuilds the cached semantics label/value strings from [_model].
+  ///
+  /// Called only when the displayed model changes, so the per-repaint
+  /// semantics dirty check compares cached string references.
+  void _updateSemanticsStrings() {
+    final model = _model;
+    if (model == null || model.rows.isEmpty) {
+      _semanticsLabel = '';
+      _semanticsValue = '';
+      return;
+    }
+    _semanticsLabel = [
+      'Value summary',
+      if (model.title case final title? when title.isNotEmpty) title,
+      if (model.subtitle case final subtitle? when subtitle.isNotEmpty)
+        subtitle,
+    ].join(', ');
+    _semanticsValue = [
+      for (final row in model.rows)
+        switch (row.semanticValue ?? row.value) {
+          '' => row.label,
+          final value => '${row.label}: $value',
+        },
+    ].join(', ');
+  }
+
+  /// Emits one debounced announcement per resolved-datum identity change.
+  ///
+  /// Runs inside the reduce stage, so the announcement cadence can never
+  /// exceed the reduce cadence; [CartesianTrackingSnapshot.sameIdentityAs]
+  /// additionally suppresses re-announcing the same datum (for example a
+  /// reduce caused by a config or theme change). The very first appearance
+  /// announces nothing — it is not a change.
+  void _maybeAnnounce(
+    CartesianValueSummaryConfig config,
+    CartesianTrackingSnapshot? snapshot,
+  ) {
+    if (snapshot == null || _model == null || _model!.rows.isEmpty) {
+      _announcedSnapshot = null;
+      return;
+    }
+    final previous = _announcedSnapshot;
+    _announcedSnapshot = snapshot;
+    if (!config.announceChanges) return;
+    if (previous == null || snapshot.sameIdentityAs(previous)) return;
+    _scheduleAnnouncement('$_semanticsLabel: $_semanticsValue');
+  }
+
+  /// Defers the announcement out of the paint phase, coalescing multiple
+  /// datum changes within one frame into the last message.
+  void _scheduleAnnouncement(String message) {
+    _pendingAnnouncement = message;
+    if (_announceScheduled) return;
+    _announceScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _announceScheduled = false;
+      final pending = _pendingAnnouncement;
+      _pendingAnnouncement = null;
+      if (pending != null) onAnnounce?.call(pending);
+    }, debugLabel: 'ValueSummaryCoordinator.announce');
+  }
 
   /// Detaches the controller listener and releases element resources.
   void dispose() {
     _detachControllerListener();
     _controller = null;
+    onAnnounce = null;
+    _pendingAnnouncement = null;
   }
 
   /// Runs one frame of the summary pipeline.
@@ -403,6 +546,9 @@ class ValueSummaryCoordinator {
         _reducedSnapshot = null;
         _lastConfig = null; // Re-enabling must re-reduce.
         _annotationFocused = false;
+        _activeConfig = null;
+        _announcedSnapshot = null;
+        _updateSemanticsStrings();
         final style =
             _resolvedStyle ??
             ResolvedValueSummaryStyle.resolve(
@@ -416,6 +562,7 @@ class ValueSummaryCoordinator {
     }
 
     _paintActive = true;
+    _activeConfig = config;
     switch (config.presentation) {
       case final CartesianValueSummaryOverlay presentation:
         _annotationActive = false;
@@ -532,6 +679,8 @@ class ValueSummaryCoordinator {
             showSeriesAccent: config.showSeriesAccent,
           );
     _activeElement.updateContent(_model, _resolvedStyle!);
+    _updateSemanticsStrings();
+    _maybeAnnounce(config, snapshot);
   }
 
   /// Clears an invalidated pin on the controller after the current frame.

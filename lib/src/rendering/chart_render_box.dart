@@ -156,6 +156,7 @@ class ChartRenderBox extends RenderBox {
     _valueSummaryCoordinator = ValueSummaryCoordinator(
       onNeedsRepaint: markNeedsPaint,
     );
+    _valueSummaryCoordinator.onAnnounce = _announceValueSummary;
     // Controllers are excluded from config equality; attach by reference.
     _valueSummaryCoordinator.attachController(
       interactionConfig?.valueSummary.controller,
@@ -1084,6 +1085,62 @@ class ChartRenderBox extends RenderBox {
   /// instance must stay identical across hover/tracking frames.
   @visibleForTesting
   ui.Picture? get debugSeriesCachePicture => _seriesCacheManager.cachedPicture;
+
+  // ==========================================================================
+  // Value summary semantics
+  // ==========================================================================
+
+  /// Semantic move step for one custom move action, matching the
+  /// Shift+arrow keyboard step.
+  static const double _valueSummarySemanticMoveStep = 10;
+
+  static const CustomSemanticsAction _valueSummaryMoveLeftAction =
+      CustomSemanticsAction(label: 'Move left');
+  static const CustomSemanticsAction _valueSummaryMoveRightAction =
+      CustomSemanticsAction(label: 'Move right');
+  static const CustomSemanticsAction _valueSummaryMoveUpAction =
+      CustomSemanticsAction(label: 'Move up');
+  static const CustomSemanticsAction _valueSummaryMoveDownAction =
+      CustomSemanticsAction(label: 'Move down');
+  static const CustomSemanticsAction _valueSummaryResetPositionAction =
+      CustomSemanticsAction(label: 'Reset position');
+  static const CustomSemanticsAction _valueSummaryPinAction =
+      CustomSemanticsAction(label: 'Pin value');
+  static const CustomSemanticsAction _valueSummaryClearPinAction =
+      CustomSemanticsAction(label: 'Clear pin');
+
+  /// The semantics surface last observed at the end of a paint frame.
+  ///
+  /// Compared per paint (record value equality over cached references) so
+  /// content, bounds, focus, or capability changes re-flush semantics at
+  /// paint cadence without any per-frame string building.
+  ValueSummarySemanticsInfo? _lastValueSummarySemantics;
+
+  /// Re-flushes semantics when the summary's assistive surface changed.
+  ///
+  /// Called at the end of [paint], after the foreground element pass has
+  /// finalized the panel bounds for this frame. Marking during paint is
+  /// safe: the semantics flush runs after the paint flush in the same
+  /// frame.
+  void _updateValueSummarySemanticsDirty() {
+    final info = _valueSummaryCoordinator.summarySemanticsInfo;
+    if (info == _lastValueSummarySemantics) return;
+    _lastValueSummarySemantics = info;
+    markNeedsSemanticsUpdate();
+  }
+
+  /// Sends one debounced summary announcement (config `announceChanges`).
+  ///
+  /// Skipped entirely while no assistive technology has enabled semantics.
+  void _announceValueSummary(String message) {
+    if (owner?.semanticsOwner == null) return;
+    RenderObject node = this;
+    while (node.parent != null) {
+      node = node.parent!;
+    }
+    if (node is! RenderView) return;
+    SemanticsService.sendAnnouncement(node.flutterView, message, _textDirection);
+  }
 
   // ==========================================================================
   // Lifecycle
@@ -3691,6 +3748,11 @@ class ChartRenderBox extends RenderBox {
     _scrollbarManager.paint(canvas, size);
 
     canvas.restore(); // Final restore (removes initial offset translation)
+
+    // The value summary's assistive surface (content, bounds, focus,
+    // capabilities) is final for this frame now that the foreground element
+    // pass has painted the panel; re-flush semantics only when it changed.
+    _updateValueSummarySemanticsDirty();
   }
 
   // ==========================================================================
@@ -3815,7 +3877,7 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .length;
-    final valueSummaryPanel = _valueSummaryCoordinator.annotationSemanticsInfo;
+    final valueSummaryPanel = _valueSummaryCoordinator.summarySemanticsInfo;
     if (hitCount == 0 && summaryCount == 0 && valueSummaryPanel == null) {
       return;
     }
@@ -3847,7 +3909,7 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .toList();
-    final valueSummaryPanel = _valueSummaryCoordinator.annotationSemanticsInfo;
+    final valueSummaryPanel = _valueSummaryCoordinator.summarySemanticsInfo;
     if (hits.isEmpty && summaries.isEmpty && valueSummaryPanel == null) {
       _dataSemanticsNodes.clear();
       super.assembleSemanticsNode(node, config, children);
@@ -3857,25 +3919,56 @@ class ChartRenderBox extends RenderBox {
     final nextNodes = <String, SemanticsNode>{};
     final orderedNodes = <SemanticsNode>[];
     if (valueSummaryPanel != null) {
-      // Basic label-only node for the annotation-style value summary panel;
-      // the full grouped-region semantics contract (rows, announcements,
-      // move/reset/pin actions) lands with Task 15. A panel dragged fully
-      // outside the chart (clampToPlot false) contributes no node: invisible
-      // semantics nodes are forbidden.
+      // One grouped region per visible summary, shared by both
+      // presentations: the label carries the `Value summary` prefix plus
+      // title/context, the value the unit-carrying rows in source order. A
+      // panel dragged fully outside the chart (clampToPlot false)
+      // contributes no node: invisible semantics nodes are forbidden.
       final panelRect = valueSummaryPanel.bounds
           .shift(_plotArea.topLeft)
           .intersect(Offset.zero & size);
       if (!panelRect.isEmpty) {
-        const identity = 'value-summary-annotation';
+        const identity = 'value-summary';
         final semanticConfig = SemanticsConfiguration()
           ..sortKey = const OrdinalSortKey(0)
           ..textDirection = _textDirection
           ..identifier = identity
-          ..label = 'Value summary';
+          ..label = valueSummaryPanel.label
+          ..value = valueSummaryPanel.value;
         if (valueSummaryPanel.focusable) {
           semanticConfig
             ..isFocusable = true
             ..isFocused = valueSummaryPanel.focused;
+        }
+        final coordinator = _valueSummaryCoordinator;
+        final actions = <CustomSemanticsAction, VoidCallback>{
+          // Movable (draggable annotation) panels get explicit move actions
+          // regardless of the internal pointer-focus flag, so assistive
+          // users who never click can still reposition the panel; each
+          // action moves by one Shift+arrow step and commits once.
+          if (valueSummaryPanel.movable) ...{
+            _valueSummaryMoveLeftAction: () => coordinator.performSemanticMove(
+              const Offset(-_valueSummarySemanticMoveStep, 0),
+            ),
+            _valueSummaryMoveRightAction: () => coordinator.performSemanticMove(
+              const Offset(_valueSummarySemanticMoveStep, 0),
+            ),
+            _valueSummaryMoveUpAction: () => coordinator.performSemanticMove(
+              const Offset(0, -_valueSummarySemanticMoveStep),
+            ),
+            _valueSummaryMoveDownAction: () => coordinator.performSemanticMove(
+              const Offset(0, _valueSummarySemanticMoveStep),
+            ),
+            _valueSummaryResetPositionAction: () =>
+                coordinator.resetAnnotationPlacement(emit: true),
+          },
+          if (valueSummaryPanel.canPin)
+            _valueSummaryPinAction: coordinator.performSemanticPin,
+          if (valueSummaryPanel.canClearPin)
+            _valueSummaryClearPinAction: coordinator.performSemanticClearPin,
+        };
+        if (actions.isNotEmpty) {
+          semanticConfig.customSemanticsActions = actions;
         }
         final semanticNode =
             _dataSemanticsNodes[identity] ??

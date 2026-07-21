@@ -657,6 +657,7 @@ UX.
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
+- [Cartesian value summary](https://github.com/braven-pvm/braven_charts/blob/master/doc/value_summary.md)
 - [Candlestick charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/candlestick_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)

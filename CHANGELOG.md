@@ -5,6 +5,53 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Native Cartesian value summary for every Cartesian family through
+  `InteractionConfig.valueSummary` and `CartesianValueSummaryConfig`: a
+  persistent in-plot panel showing the current policy-resolved datum, fed by
+  the chart's shared immutable tracking snapshot with one resolution per
+  interaction frame.
+- Two presentations sharing content, style, semantics, and formatting:
+  `CartesianValueSummaryPresentation.overlay` (fixed, pointer-transparent,
+  anchored via `ChartOverlayPlacement`) and
+  `CartesianValueSummaryPresentation.annotation` (optionally draggable and
+  keyboard-movable with plot clamping, continuous drag preview, and exactly
+  one committed placement per gesture through `onPlacementChanged`).
+- Deterministic `CartesianValueSummaryValuePolicy` precedence chains over
+  tracking, selection, pinning, and latest/first visible fallbacks, with
+  automatic invalid-pin clearing.
+- Family-aware `CartesianValueSummaryContent.automatic()` rows (Line/Area/Bar
+  values with grouped context, Scatter encodings, Candlestick OHLC/change/
+  direction, per-series sections for mixed charts, optional trend rows) and
+  portable `CartesianValueSummaryContent.builder()` rows over the published
+  snapshot.
+- Tri-state `CartesianValueSummaryStyle` (`inherit`/`value`/`none` per field,
+  with genuinely transparent clears) resolved against the new
+  `CartesianValueSummaryTheme` component, including `light`, `dark`,
+  `highContrast`, and `colorblindFriendly` presets.
+- `CartesianValueSummaryController` /
+  `DefaultCartesianValueSummaryController` for programmatic pinning by stable
+  `ChartPointRef` identity and placement reset.
+- Accessibility: one grouped semantic region per visible summary with title,
+  context, and unit-carrying rows in source order; opt-in `announceChanges`
+  screen-reader announcements debounced by resolved datum identity;
+  focusability and `Move`/`Reset position` custom actions for the draggable
+  panel; `Pin value`/`Clear pin` actions when a controller and pin policy are
+  active.
+- Full portability: value summary configuration in chart artifacts and
+  hydration, deterministic generated Dart Source, runtime-binding
+  diagnostics for unregistered builder content, and Workbench integration.
+- A first-class Value Summary showcase page with presets for single-series
+  fallback, multi-series, multi-axis units, Candlestick OHLC, synchronized
+  charts, and the draggable panel, plus appearance, policy, and pin
+  controls.
+- A permanent value summary benchmark matrix (50k-point overlay updates,
+  candlestick zero-invalidation tracking, dense Scatter single-scan proof,
+  synchronized fanout, drag commit cadence) and a `doc/value_summary.md`
+  feature guide.
+
 ## 0.10.0-dev.1
 
 Prerelease validating the new automated release pipeline; content below is
