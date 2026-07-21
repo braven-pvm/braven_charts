@@ -1,10 +1,13 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 enum _BarLabPreset {
@@ -114,6 +117,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ChartWorkbenchController();
   final ChartInteractionGroupController _interactionGroupController =
       ChartInteractionGroupController();
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
   static const _dayCategories = [
     'Mon',
     'Tue',
@@ -274,6 +278,8 @@ class _BarLabPageState extends State<BarLabPage> {
   ];
 
   _BarLabPreset _preset = _BarLabPreset.capacity;
+  _BarLabPreset _authoredPreset = _BarLabPreset.capacity;
+  bool _playgroundActive = false;
   int _seriesCount = 2;
   int _stackGroupCount = 1;
   BarLayoutMode _layoutMode = BarLayoutMode.grouped;
@@ -293,6 +299,7 @@ class _BarLabPageState extends State<BarLabPage> {
   double _labelEdgeOffset = 8;
   double _dimmedOpacity = 0.42;
   int _motionRevision = 0;
+  List<double> _playgroundValues = const [54, 72, 61, 88, 69, 94, 76];
   double _motionDurationMs = 650;
   BarAnimationOrder _motionOrder = BarAnimationOrder.together;
   double _motionStagger = 0;
@@ -340,6 +347,11 @@ class _BarLabPageState extends State<BarLabPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 101,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _chartController.addListener(_onChartInteractionChanged);
     final requestedView = Uri.base.queryParameters['view'];
     for (final mode in ChartDisplayMode.values) {
@@ -382,10 +394,12 @@ class _BarLabPageState extends State<BarLabPage> {
         break;
       }
     }
+    _authoredPreset = _preset;
   }
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _chartController
       ..removeListener(_onChartInteractionChanged)
       ..dispose();
@@ -397,6 +411,111 @@ class _BarLabPageState extends State<BarLabPage> {
   void _onChartInteractionChanged() {
     if (mounted && _preset == _BarLabPreset.states) setState(() {});
   }
+
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    setState(() {
+      _playgroundValues = List<double>.generate(
+        _categories.length,
+        (_) => 12 + random.nextDouble() * 88,
+        growable: false,
+      );
+      _seriesCount = 1 + random.nextInt(6);
+      _stackGroupCount = 1 + random.nextInt(_seriesCount);
+      _layoutMode = const [
+        BarLayoutMode.grouped,
+        BarLayoutMode.overlaid,
+        BarLayoutMode.stacked,
+        BarLayoutMode.normalizedStacked,
+      ][random.nextInt(4)];
+      _orientation =
+          BarOrientation.values[random.nextInt(BarOrientation.values.length)];
+      _barWidth = 0.48 + random.nextDouble() * 0.46;
+      _barGap = random.nextDouble() * 10;
+      _overlayWidthStep = random.nextDouble() * 42;
+      _overlayOffsetStep = -20 + random.nextDouble() * 40;
+      _cornerRadius = random.nextDouble() * 14;
+      _cornerPolicy = BarCornerRadiusPolicy
+          .values[random.nextInt(BarCornerRadiusPolicy.values.length)];
+      _showGradient = random.nextBool();
+      _showBorder = random.nextBool();
+      _showLabels = random.nextBool();
+      _showConnectors = random.nextBool();
+      _labelPosition = BarLabelPosition
+          .values[random.nextInt(BarLabelPosition.values.length)];
+      _labelEdgeOffset = 2 + random.nextDouble() * 14;
+      _showTracks = random.nextBool();
+      _dimmedOpacity = 0.2 + random.nextDouble() * 0.55;
+      _categoryLabelDensity = CategoryLabelDensity
+          .values[random.nextInt(CategoryLabelDensity.values.length)];
+      _categoryLabelOverflow = CategoryLabelOverflow
+          .values[random.nextInt(CategoryLabelOverflow.values.length)];
+      _animateBars = random.nextBool();
+      _motionDurationMs = 250 + random.nextDouble() * 950;
+      _motionOrder = BarAnimationOrder
+          .values[random.nextInt(BarAnimationOrder.values.length)];
+      _motionStagger = random.nextDouble() * 0.7;
+      _motionIncludeSunday = random.nextBool();
+      _motionIncludeForecast = random.nextBool();
+      _showTargets = random.nextBool();
+      _targetMarkerWidth = 0.5 + random.nextDouble() * 3.5;
+      _targetMarkerLength = 0.5 + random.nextDouble() * 1.5;
+      _showUncertainty = random.nextBool();
+      _errorBarWidth = 0.5 + random.nextDouble() * 3;
+      _errorCapLength = 0.2 + random.nextDouble() * 1.2;
+      _lollipopStemWidth = 1 + random.nextDouble() * 5;
+      _lollipopHeadRadius = 3 + random.nextDouble() * 11;
+      _paretoLineWidth = 1 + random.nextDouble() * 5;
+      _showParetoMarkers = random.nextBool();
+      _showParetoCumulativeLabels = random.nextBool();
+      _histogramMethod = HistogramBinningMethod
+          .values[random.nextInt(HistogramBinningMethod.values.length)];
+      _histogramBinCount = 4 + random.nextInt(17);
+      _histogramValueMode = HistogramValueMode
+          .values[random.nextInt(HistogramValueMode.values.length)];
+      _showPatterns = random.nextBool();
+      _patternSpacing = 3 + random.nextDouble() * 13;
+      _patternStrokeWidth = 0.5 + random.nextDouble() * 3;
+      _patternOpacity = 0.25 + random.nextDouble() * 0.7;
+      _categoryMinimumExtent = 40 + random.nextDouble() * 100;
+      _categoryMaxLines = 1 + random.nextInt(4);
+      _categoryRotation = -60 + random.nextDouble() * 120;
+      _stressCategoryCount = 16 + random.nextInt(113);
+      _labelCollisionPolicy = BarLabelCollisionPolicy
+          .values[random.nextInt(BarLabelCollisionPolicy.values.length)];
+      _labelPlotEdgeAware = random.nextBool();
+      _labelCollisionPadding = random.nextDouble() * 8;
+      _showLabelBackground = random.nextBool();
+      _showLabelCallouts = random.nextBool();
+      _showStackTotals = random.nextBool();
+      _bulletRangeCount = 2 + random.nextInt(4);
+      _bulletMeasureThickness = 0.2 + random.nextDouble() * 0.6;
+      _bulletRangeRadius = random.nextDouble() * 12;
+      _showDivergingCenterLine = random.nextBool();
+      _divergingCenterLineWidth = 0.5 + random.nextDouble() * 3;
+    });
+  }
+
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredPreset = _preset;
+      setState(() {
+        _playgroundActive = true;
+        _preset = _BarLabPreset.capacity;
+        _setPresetValues(_BarLabPreset.capacity);
+      });
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _applyPreset(_authoredPreset);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
   ChartDocumentExtractOptions get _documentOptions =>
       ChartDocumentExtractOptions(
@@ -450,6 +569,12 @@ class _BarLabPageState extends State<BarLabPage> {
         ),
       ],
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'bar-randomizer',
       chart: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -477,21 +602,21 @@ class _BarLabPageState extends State<BarLabPage> {
                     ChoiceChip(
                       key: ValueKey('bar-lab-preset-${preset.name}'),
                       showCheckmark: false,
-                      selected: preset == _preset,
+                      selected: !_playgroundActive && preset == _preset,
                       onSelected: (_) => _applyPreset(preset),
                       avatar: Icon(
                         preset.icon,
                         size: 17,
-                        color: preset == _preset
+                        color: !_playgroundActive && preset == _preset
                             ? theme.colorScheme.onSecondaryContainer
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                       label: Text(preset.label),
                       labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: preset == _preset
+                        color: !_playgroundActive && preset == _preset
                             ? theme.colorScheme.onSecondaryContainer
                             : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: preset == _preset
+                        fontWeight: !_playgroundActive && preset == _preset
                             ? FontWeight.w600
                             : FontWeight.w400,
                       ),
@@ -504,6 +629,11 @@ class _BarLabPageState extends State<BarLabPage> {
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                  PlaygroundChoiceChip(
+                    key: const ValueKey('bar-playground'),
+                    selected: _playgroundActive,
+                    onSelected: () => _setPlaygroundActive(true),
+                  ),
                 ];
                 if (constraints.maxWidth < 900) {
                   return SingleChildScrollView(
@@ -522,7 +652,9 @@ class _BarLabPageState extends State<BarLabPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              _presetDescription(),
+              _playgroundActive
+                  ? 'Generated values and every compatible bar property. Seeded playback is available in Options.'
+                  : _presetDescription(),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -812,8 +944,9 @@ class _BarLabPageState extends State<BarLabPage> {
       title: 'Composition',
       icon: Icons.view_week_outlined,
       children: [
-        if (_preset != _BarLabPreset.pareto &&
-            _preset != _BarLabPreset.histogram) ...[
+        if (_playgroundActive ||
+            (_preset != _BarLabPreset.pareto &&
+                _preset != _BarLabPreset.histogram)) ...[
           IntSliderOption(
             label: 'Series count',
             value: _seriesCount,
@@ -842,7 +975,8 @@ class _BarLabPageState extends State<BarLabPage> {
             onChanged: (value) => setState(() => _orientation = value),
           ),
         ],
-        if (_layoutMode == BarLayoutMode.overlaid ||
+        if (_playgroundActive ||
+            _layoutMode == BarLayoutMode.overlaid ||
             _layoutMode == BarLayoutMode.stacked ||
             _layoutMode == BarLayoutMode.normalizedStacked)
           IntSliderOption(
@@ -854,7 +988,7 @@ class _BarLabPageState extends State<BarLabPage> {
             max: _seriesCount,
             onChanged: (value) => setState(() => _stackGroupCount = value),
           ),
-        if (_layoutMode == BarLayoutMode.overlaid)
+        if (_playgroundActive || _layoutMode == BarLayoutMode.overlaid)
           SliderOption(
             label: 'Layer inset',
             value: _overlayWidthStep,
@@ -865,7 +999,7 @@ class _BarLabPageState extends State<BarLabPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _overlayWidthStep = value),
           ),
-        if (_layoutMode == BarLayoutMode.overlaid)
+        if (_playgroundActive || _layoutMode == BarLayoutMode.overlaid)
           SliderOption(
             label: 'Layer offset',
             value: _overlayOffsetStep,
@@ -897,7 +1031,7 @@ class _BarLabPageState extends State<BarLabPage> {
         ),
       ],
     ),
-    if (_preset == _BarLabPreset.pareto)
+    if (_playgroundActive || _preset == _BarLabPreset.pareto)
       OptionSection(
         title: 'Cumulative line',
         icon: Icons.trending_up,
@@ -930,7 +1064,7 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
-    if (_preset == _BarLabPreset.histogram)
+    if (_playgroundActive || _preset == _BarLabPreset.histogram)
       OptionSection(
         title: 'Binning',
         icon: Icons.grid_on_outlined,
@@ -943,7 +1077,8 @@ class _BarLabPageState extends State<BarLabPage> {
             labelBuilder: _histogramMethodLabel,
             onChanged: (value) => setState(() => _histogramMethod = value),
           ),
-          if (_histogramMethod == HistogramBinningMethod.fixedCount)
+          if (_playgroundActive ||
+              _histogramMethod == HistogramBinningMethod.fixedCount)
             IntSliderOption(
               key: const ValueKey('bar-lab-histogram-bin-count'),
               label: 'Bin count',
@@ -970,12 +1105,14 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
-    if (_preset == _BarLabPreset.categories || _preset == _BarLabPreset.stress)
+    if (_playgroundActive ||
+        _preset == _BarLabPreset.categories ||
+        _preset == _BarLabPreset.stress)
       OptionSection(
         title: 'Category axis',
         icon: Icons.view_week_outlined,
         children: [
-          if (_preset == _BarLabPreset.stress)
+          if (_playgroundActive || _preset == _BarLabPreset.stress)
             IntSliderOption(
               key: const ValueKey('bar-lab-stress-category-count'),
               label: 'Category count',
@@ -1040,7 +1177,7 @@ class _BarLabPageState extends State<BarLabPage> {
       title: 'Shape',
       icon: Icons.rounded_corner,
       children: [
-        if (_preset == _BarLabPreset.lollipop) ...[
+        if (_playgroundActive || _preset == _BarLabPreset.lollipop) ...[
           SliderOption(
             key: const ValueKey('bar-lab-lollipop-stem-width'),
             label: 'Stem width',
@@ -1063,7 +1200,8 @@ class _BarLabPageState extends State<BarLabPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _lollipopHeadRadius = value),
           ),
-        ] else ...[
+        ],
+        if (_playgroundActive || _preset != _BarLabPreset.lollipop) ...[
           SliderOption(
             label: 'Corner radius',
             value: _cornerRadius,
@@ -1085,17 +1223,18 @@ class _BarLabPageState extends State<BarLabPage> {
             onChanged: (value) => setState(() => _cornerPolicy = value),
           ),
         ],
-        if (_layoutMode != BarLayoutMode.waterfall)
-          if (_preset != _BarLabPreset.bullet &&
-              _preset != _BarLabPreset.pareto &&
-              _preset != _BarLabPreset.histogram)
+        if (_playgroundActive || _layoutMode != BarLayoutMode.waterfall)
+          if (_playgroundActive ||
+              (_preset != _BarLabPreset.bullet &&
+                  _preset != _BarLabPreset.pareto &&
+                  _preset != _BarLabPreset.histogram))
             BoolOption(
               label: 'Capacity tracks',
               value: _showTracks,
               onChanged: (value) => setState(() => _showTracks = value),
               subtitle: 'Show the available range behind each bar',
             ),
-        if (_layoutMode == BarLayoutMode.waterfall)
+        if (_playgroundActive || _layoutMode == BarLayoutMode.waterfall)
           BoolOption(
             label: 'Connectors',
             value: _showConnectors,
@@ -1108,9 +1247,10 @@ class _BarLabPageState extends State<BarLabPage> {
           value: _showBorder,
           onChanged: (value) => setState(() => _showBorder = value),
         ),
-        if (_layoutMode != BarLayoutMode.waterfall)
-          if (_preset != _BarLabPreset.bullet &&
-              _preset != _BarLabPreset.lollipop)
+        if (_playgroundActive || _layoutMode != BarLayoutMode.waterfall)
+          if (_playgroundActive ||
+              (_preset != _BarLabPreset.bullet &&
+                  _preset != _BarLabPreset.lollipop))
             BoolOption(
               key: const ValueKey('bar-lab-gradient'),
               label: 'Gradient',
@@ -1119,7 +1259,7 @@ class _BarLabPageState extends State<BarLabPage> {
             ),
       ],
     ),
-    if (_preset == _BarLabPreset.patterns)
+    if (_playgroundActive || _preset == _BarLabPreset.patterns)
       OptionSection(
         title: 'Pattern encoding',
         icon: Icons.texture,
@@ -1131,7 +1271,7 @@ class _BarLabPageState extends State<BarLabPage> {
             subtitle: 'Pair line direction with one shared hue',
             onChanged: (value) => setState(() => _showPatterns = value),
           ),
-          if (_showPatterns)
+          if (_playgroundActive || _showPatterns)
             SliderOption(
               label: 'Pattern spacing',
               value: _patternSpacing,
@@ -1142,7 +1282,7 @@ class _BarLabPageState extends State<BarLabPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _patternSpacing = value),
             ),
-          if (_showPatterns)
+          if (_playgroundActive || _showPatterns)
             SliderOption(
               label: 'Line width',
               value: _patternStrokeWidth,
@@ -1153,7 +1293,7 @@ class _BarLabPageState extends State<BarLabPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _patternStrokeWidth = value),
             ),
-          if (_showPatterns)
+          if (_playgroundActive || _showPatterns)
             SliderOption(
               label: 'Pattern opacity',
               value: _patternOpacity,
@@ -1165,7 +1305,7 @@ class _BarLabPageState extends State<BarLabPage> {
             ),
         ],
       ),
-    if (_preset == _BarLabPreset.bullet)
+    if (_playgroundActive || _preset == _BarLabPreset.bullet)
       OptionSection(
         title: 'Bullet ranges',
         icon: Icons.linear_scale,
@@ -1201,7 +1341,7 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
-    if (_preset == _BarLabPreset.likert)
+    if (_playgroundActive || _preset == _BarLabPreset.likert)
       OptionSection(
         title: 'Diverging scale',
         icon: Icons.balance,
@@ -1214,7 +1354,7 @@ class _BarLabPageState extends State<BarLabPage> {
             onChanged: (value) =>
                 setState(() => _showDivergingCenterLine = value),
           ),
-          if (_showDivergingCenterLine)
+          if (_playgroundActive || _showDivergingCenterLine)
             SliderOption(
               key: const ValueKey('bar-lab-diverging-center-line-width'),
               label: 'Line width',
@@ -1238,7 +1378,7 @@ class _BarLabPageState extends State<BarLabPage> {
           value: _showLabels,
           onChanged: (value) => setState(() => _showLabels = value),
         ),
-        if (_showLabels)
+        if (_playgroundActive || _showLabels)
           EnumOption<BarLabelPosition>(
             label: 'Label position',
             value: _labelPosition,
@@ -1261,7 +1401,8 @@ class _BarLabPageState extends State<BarLabPage> {
             },
             onChanged: (value) => setState(() => _labelPosition = value),
           ),
-        if (_showLabels && _labelPosition != BarLabelPosition.insideCenter)
+        if (_playgroundActive ||
+            (_showLabels && _labelPosition != BarLabelPosition.insideCenter))
           SliderOption(
             label: 'Edge offset',
             value: _labelEdgeOffset,
@@ -1272,10 +1413,11 @@ class _BarLabPageState extends State<BarLabPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _labelEdgeOffset = value),
           ),
-        if (_showLabels &&
-            (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config ||
-                _preset == _BarLabPreset.stress))
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_preset == _BarLabPreset.labels ||
+                    _preset == _BarLabPreset.config ||
+                    _preset == _BarLabPreset.stress)))
           EnumOption<BarLabelCollisionPolicy>(
             label: 'Collisions',
             value: _labelCollisionPolicy,
@@ -1287,21 +1429,23 @@ class _BarLabPageState extends State<BarLabPage> {
             },
             onChanged: (value) => setState(() => _labelCollisionPolicy = value),
           ),
-        if (_showLabels &&
-            (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config ||
-                _preset == _BarLabPreset.stress))
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_preset == _BarLabPreset.labels ||
+                    _preset == _BarLabPreset.config ||
+                    _preset == _BarLabPreset.stress)))
           BoolOption(
             label: 'Plot-edge aware',
             value: _labelPlotEdgeAware,
             subtitle: 'Keep labels inside the visible plotting area',
             onChanged: (value) => setState(() => _labelPlotEdgeAware = value),
           ),
-        if (_showLabels &&
-            (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config ||
-                _preset == _BarLabPreset.stress) &&
-            _labelCollisionPolicy != BarLabelCollisionPolicy.none)
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_preset == _BarLabPreset.labels ||
+                    _preset == _BarLabPreset.config ||
+                    _preset == _BarLabPreset.stress) &&
+                _labelCollisionPolicy != BarLabelCollisionPolicy.none))
           SliderOption(
             label: 'Collision gap',
             value: _labelCollisionPadding,
@@ -1313,29 +1457,32 @@ class _BarLabPageState extends State<BarLabPage> {
             onChanged: (value) =>
                 setState(() => _labelCollisionPadding = value),
           ),
-        if (_showLabels &&
-            (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config ||
-                _preset == _BarLabPreset.stress))
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_preset == _BarLabPreset.labels ||
+                    _preset == _BarLabPreset.config ||
+                    _preset == _BarLabPreset.stress)))
           BoolOption(
             label: 'Label background',
             value: _showLabelBackground,
             subtitle: 'Add a restrained box when labels cross chart marks',
             onChanged: (value) => setState(() => _showLabelBackground = value),
           ),
-        if (_showLabels &&
-            (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config ||
-                _preset == _BarLabPreset.stress))
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_preset == _BarLabPreset.labels ||
+                    _preset == _BarLabPreset.config ||
+                    _preset == _BarLabPreset.stress)))
           BoolOption(
             label: 'Callout lines',
             value: _showLabelCallouts,
             subtitle: 'Connect displaced labels to their value end',
             onChanged: (value) => setState(() => _showLabelCallouts = value),
           ),
-        if (_showLabels &&
-            (_layoutMode == BarLayoutMode.stacked ||
-                _layoutMode == BarLayoutMode.normalizedStacked))
+        if (_playgroundActive ||
+            (_showLabels &&
+                (_layoutMode == BarLayoutMode.stacked ||
+                    _layoutMode == BarLayoutMode.normalizedStacked)))
           BoolOption(
             label: 'Stack totals',
             value: _showStackTotals,
@@ -1344,7 +1491,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
       ],
     ),
-    if (_preset == _BarLabPreset.targets ||
+    if (_playgroundActive ||
+        _preset == _BarLabPreset.targets ||
         _preset == _BarLabPreset.bullet ||
         (_preset == _BarLabPreset.config &&
             (_layoutMode == BarLayoutMode.grouped ||
@@ -1359,7 +1507,7 @@ class _BarLabPageState extends State<BarLabPage> {
             subtitle: 'Show one benchmark across each bar',
             onChanged: (value) => setState(() => _showTargets = value),
           ),
-          if (_showTargets)
+          if (_playgroundActive || _showTargets)
             SliderOption(
               label: 'Marker width',
               value: _targetMarkerWidth,
@@ -1370,7 +1518,7 @@ class _BarLabPageState extends State<BarLabPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _targetMarkerWidth = value),
             ),
-          if (_showTargets)
+          if (_playgroundActive || _showTargets)
             SliderOption(
               label: 'Marker span',
               value: _targetMarkerLength,
@@ -1382,7 +1530,8 @@ class _BarLabPageState extends State<BarLabPage> {
             ),
         ],
       ),
-    if (_preset == _BarLabPreset.uncertainty ||
+    if (_playgroundActive ||
+        _preset == _BarLabPreset.uncertainty ||
         (_preset == _BarLabPreset.config &&
             (_layoutMode == BarLayoutMode.grouped ||
                 _layoutMode == BarLayoutMode.overlaid)))
@@ -1396,7 +1545,7 @@ class _BarLabPageState extends State<BarLabPage> {
             subtitle: 'Show absolute lower and upper bounds',
             onChanged: (value) => setState(() => _showUncertainty = value),
           ),
-          if (_showUncertainty)
+          if (_playgroundActive || _showUncertainty)
             SliderOption(
               label: 'Line width',
               value: _errorBarWidth,
@@ -1407,7 +1556,7 @@ class _BarLabPageState extends State<BarLabPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _errorBarWidth = value),
             ),
-          if (_showUncertainty)
+          if (_playgroundActive || _showUncertainty)
             SliderOption(
               label: 'Cap span',
               value: _errorCapLength,
@@ -1419,7 +1568,7 @@ class _BarLabPageState extends State<BarLabPage> {
             ),
         ],
       ),
-    if (_preset == _BarLabPreset.states)
+    if (_playgroundActive || _preset == _BarLabPreset.states)
       OptionSection(
         title: 'Interaction',
         icon: Icons.touch_app_outlined,
@@ -1435,7 +1584,7 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
-    if (_preset == _BarLabPreset.motion)
+    if (_playgroundActive || _preset == _BarLabPreset.motion)
       OptionSection(
         title: 'Motion',
         icon: Icons.animation,
@@ -1469,7 +1618,7 @@ class _BarLabPageState extends State<BarLabPage> {
             labelBuilder: _motionOrderLabel,
             onChanged: (value) => setState(() => _motionOrder = value),
           ),
-          if (_motionOrder != BarAnimationOrder.together)
+          if (_playgroundActive || _motionOrder != BarAnimationOrder.together)
             SliderOption(
               label: 'Stagger',
               value: _motionStagger * 100,
@@ -1667,67 +1816,133 @@ class _BarLabPageState extends State<BarLabPage> {
     if (_preset == _BarLabPreset.config) return _agentBuildResult.series;
     if (_preset == _BarLabPreset.pareto) return _buildParetoSeries();
     if (_preset == _BarLabPreset.histogram) return _buildHistogramSeries();
-    final values = switch (_preset) {
-      _BarLabPreset.capacity => const <double>[42, 61, 88, 35, 70, 94, 55],
-      _BarLabPreset.bullet => const <double>[82, 64, 91, 73, 58, 87],
-      _BarLabPreset.likert => const <double>[8, 12, 6, 15, 10, 7],
-      _BarLabPreset.targets => const <double>[68, 74, 81, 57, 88, 92, 70],
-      _BarLabPreset.uncertainty => const <double>[64, 72, 78, 58, 85, 90, 69],
-      _BarLabPreset.lollipop => const <double>[54, 72, 61, 88, 69, 94, 76],
-      _BarLabPreset.pareto => const <double>[],
-      _BarLabPreset.histogram => const <double>[],
-      _BarLabPreset.rtl => const <double>[96, 84, 73, 61, 49, 36],
-      _BarLabPreset.rods => const <double>[34, 57, 46, 69, 81, 96, 62],
-      _BarLabPreset.gradient => const <double>[28, 49, 64, 91, 73, 84, 58],
-      _BarLabPreset.signed => const <double>[38, -24, 52, -38, 71, 26, -18],
-      _BarLabPreset.overlay => const <double>[42, 61, 88, 35, 70, 94, 55],
-      _BarLabPreset.offset => const <double>[38, 39, 27, 17, 10],
-      _BarLabPreset.range => const <double>[25, 29, 27, 31, 28, 24, 26],
-      _BarLabPreset.waterfall => const <double>[82, 28, 16, -18, -24, 7, 0],
-      _BarLabPreset.horizontal => const <double>[96, 84, 73, 61, 49, 36],
-      _BarLabPreset.axes => const <double>[96, 84, 73, 61, 49, 36],
-      _BarLabPreset.categories => const <double>[
-        72,
-        64,
-        81,
-        58,
-        69,
-        76,
-        62,
-        88,
-        54,
-        79,
-        67,
-        91,
-        73,
-        61,
-        84,
-        70,
-        56,
-        86,
-        77,
-        65,
-        89,
-        60,
-        75,
-        82,
-      ],
-      _BarLabPreset.stress => List<double>.generate(
-        _categories.length,
-        (index) => (12 + index * 11 % 32).toDouble(),
-        growable: false,
-      ),
-      _BarLabPreset.labels => const <double>[88, 91, 86, 93, 89, 95, 87],
-      _BarLabPreset.config => const <double>[],
-      _BarLabPreset.patterns => const <double>[74, 58, 86, 67, 92, 79, 63],
-      _BarLabPreset.motion =>
-        _motionRevision.isEven
-            ? const <double>[54, 72, 61, 88, 69, 94, 76]
-            : const <double>[82, 48, 91, 63, 86, 57, 96],
-      _BarLabPreset.states => const <double>[54, 72, 61, 88, 69, 94, 76],
-      _BarLabPreset.stacked => const <double>[18, 24, 31, 22, 28, 35, 26],
-      _BarLabPreset.normalized => const <double>[18, 24, 31, 22, 28, 35, 26],
-    };
+    final values = _playgroundActive
+        ? _playgroundValues
+        : switch (_preset) {
+            _BarLabPreset.capacity => const <double>[
+              42,
+              61,
+              88,
+              35,
+              70,
+              94,
+              55,
+            ],
+            _BarLabPreset.bullet => const <double>[82, 64, 91, 73, 58, 87],
+            _BarLabPreset.likert => const <double>[8, 12, 6, 15, 10, 7],
+            _BarLabPreset.targets => const <double>[68, 74, 81, 57, 88, 92, 70],
+            _BarLabPreset.uncertainty => const <double>[
+              64,
+              72,
+              78,
+              58,
+              85,
+              90,
+              69,
+            ],
+            _BarLabPreset.lollipop => const <double>[
+              54,
+              72,
+              61,
+              88,
+              69,
+              94,
+              76,
+            ],
+            _BarLabPreset.pareto => const <double>[],
+            _BarLabPreset.histogram => const <double>[],
+            _BarLabPreset.rtl => const <double>[96, 84, 73, 61, 49, 36],
+            _BarLabPreset.rods => const <double>[34, 57, 46, 69, 81, 96, 62],
+            _BarLabPreset.gradient => const <double>[
+              28,
+              49,
+              64,
+              91,
+              73,
+              84,
+              58,
+            ],
+            _BarLabPreset.signed => const <double>[
+              38,
+              -24,
+              52,
+              -38,
+              71,
+              26,
+              -18,
+            ],
+            _BarLabPreset.overlay => const <double>[42, 61, 88, 35, 70, 94, 55],
+            _BarLabPreset.offset => const <double>[38, 39, 27, 17, 10],
+            _BarLabPreset.range => const <double>[25, 29, 27, 31, 28, 24, 26],
+            _BarLabPreset.waterfall => const <double>[
+              82,
+              28,
+              16,
+              -18,
+              -24,
+              7,
+              0,
+            ],
+            _BarLabPreset.horizontal => const <double>[96, 84, 73, 61, 49, 36],
+            _BarLabPreset.axes => const <double>[96, 84, 73, 61, 49, 36],
+            _BarLabPreset.categories => const <double>[
+              72,
+              64,
+              81,
+              58,
+              69,
+              76,
+              62,
+              88,
+              54,
+              79,
+              67,
+              91,
+              73,
+              61,
+              84,
+              70,
+              56,
+              86,
+              77,
+              65,
+              89,
+              60,
+              75,
+              82,
+            ],
+            _BarLabPreset.stress => List<double>.generate(
+              _categories.length,
+              (index) => (12 + index * 11 % 32).toDouble(),
+              growable: false,
+            ),
+            _BarLabPreset.labels => const <double>[88, 91, 86, 93, 89, 95, 87],
+            _BarLabPreset.config => const <double>[],
+            _BarLabPreset.patterns => const <double>[
+              74,
+              58,
+              86,
+              67,
+              92,
+              79,
+              63,
+            ],
+            _BarLabPreset.motion =>
+              _motionRevision.isEven
+                  ? const <double>[54, 72, 61, 88, 69, 94, 76]
+                  : const <double>[82, 48, 91, 63, 86, 57, 96],
+            _BarLabPreset.states => const <double>[54, 72, 61, 88, 69, 94, 76],
+            _BarLabPreset.stacked => const <double>[18, 24, 31, 22, 28, 35, 26],
+            _BarLabPreset.normalized => const <double>[
+              18,
+              24,
+              31,
+              22,
+              28,
+              35,
+              26,
+            ],
+          };
     final comparison = switch (_preset) {
       _BarLabPreset.capacity => const <double>[31, 69, 81, 52, 64, 86, 72],
       _BarLabPreset.bullet => const <double>[78, 69, 84, 76, 63, 90],
@@ -2517,11 +2732,15 @@ class _BarLabPageState extends State<BarLabPage> {
       _preset == _BarLabPreset.rtl;
 
   void _applyPreset(_BarLabPreset preset) {
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
     _interactionGroupController.reset();
     _chartController
       ..clearPointFocus()
       ..clearPointSelection();
     setState(() {
+      _playgroundActive = false;
+      _authoredPreset = preset;
       _preset = preset;
       _setPresetValues(preset);
     });
@@ -2984,35 +3203,37 @@ class _BarLabPageState extends State<BarLabPage> {
     return _categories[index];
   }
 
-  String _presetTitle() => switch (_preset) {
-    _BarLabPreset.capacity => 'Progress against capacity',
-    _BarLabPreset.bullet => 'Delivery against target',
-    _BarLabPreset.likert => 'Product experience survey',
-    _BarLabPreset.targets => 'Actual against target',
-    _BarLabPreset.uncertainty => 'Estimate with uncertainty',
-    _BarLabPreset.lollipop => 'Weekly activation score',
-    _BarLabPreset.pareto => 'Support issues by cause',
-    _BarLabPreset.histogram => 'Support response-time distribution',
-    _BarLabPreset.rtl => 'الإيرادات حسب القناة',
-    _BarLabPreset.rods => 'Compact rounded rods',
-    _BarLabPreset.gradient => 'Value-axis gradients',
-    _BarLabPreset.signed => 'Positive and negative values',
-    _BarLabPreset.overlay => 'Layered comparisons',
-    _BarLabPreset.offset => 'Offset comparisons',
-    _BarLabPreset.range => 'Floating temperature ranges',
-    _BarLabPreset.waterfall => 'Cash-flow bridge',
-    _BarLabPreset.horizontal => 'Revenue by channel',
-    _BarLabPreset.axes => 'Independent channel metrics',
-    _BarLabPreset.categories => 'Dense categorical comparison',
-    _BarLabPreset.stress => 'Dense category and label stress',
-    _BarLabPreset.labels => 'Collision-aware value labels',
-    _BarLabPreset.config => 'Tool-configured analytical bars',
-    _BarLabPreset.patterns => 'Pattern-coded comparisons',
-    _BarLabPreset.motion => 'Keyed lifecycle motion',
-    _BarLabPreset.states => 'Interactive bar states',
-    _BarLabPreset.stacked => 'Named stacked totals',
-    _BarLabPreset.normalized => '100% stacked composition',
-  };
+  String _presetTitle() => _playgroundActive
+      ? 'Bar playground'
+      : switch (_preset) {
+          _BarLabPreset.capacity => 'Progress against capacity',
+          _BarLabPreset.bullet => 'Delivery against target',
+          _BarLabPreset.likert => 'Product experience survey',
+          _BarLabPreset.targets => 'Actual against target',
+          _BarLabPreset.uncertainty => 'Estimate with uncertainty',
+          _BarLabPreset.lollipop => 'Weekly activation score',
+          _BarLabPreset.pareto => 'Support issues by cause',
+          _BarLabPreset.histogram => 'Support response-time distribution',
+          _BarLabPreset.rtl => 'الإيرادات حسب القناة',
+          _BarLabPreset.rods => 'Compact rounded rods',
+          _BarLabPreset.gradient => 'Value-axis gradients',
+          _BarLabPreset.signed => 'Positive and negative values',
+          _BarLabPreset.overlay => 'Layered comparisons',
+          _BarLabPreset.offset => 'Offset comparisons',
+          _BarLabPreset.range => 'Floating temperature ranges',
+          _BarLabPreset.waterfall => 'Cash-flow bridge',
+          _BarLabPreset.horizontal => 'Revenue by channel',
+          _BarLabPreset.axes => 'Independent channel metrics',
+          _BarLabPreset.categories => 'Dense categorical comparison',
+          _BarLabPreset.stress => 'Dense category and label stress',
+          _BarLabPreset.labels => 'Collision-aware value labels',
+          _BarLabPreset.config => 'Tool-configured analytical bars',
+          _BarLabPreset.patterns => 'Pattern-coded comparisons',
+          _BarLabPreset.motion => 'Keyed lifecycle motion',
+          _BarLabPreset.states => 'Interactive bar states',
+          _BarLabPreset.stacked => 'Named stacked totals',
+          _BarLabPreset.normalized => '100% stacked composition',
+        };
 
   String _presetDescription() => switch (_preset) {
     _BarLabPreset.capacity =>

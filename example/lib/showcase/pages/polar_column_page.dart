@@ -1,7 +1,6 @@
 // Copyright 2026 Braven Charts contributors
 // SPDX-License-Identifier: MIT
 
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -9,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/polar_showcase_randomizer.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// Public, renderer-backed guide for axis-based Polar Column charts.
@@ -25,12 +25,10 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       ChartWorkbenchController();
   final math.Random _random = math.Random(47);
 
-  int _randomizerSeed = 47;
-  int? _appliedRandomizerSeed;
-  Timer? _randomPlaybackTimer;
+  late final ShowcaseRandomizerController<PolarShowcaseRandomization>
+  _showcaseRandomizer;
   bool _randomizedShowcaseSelected = false;
-  bool _randomPlaybackActive = false;
-  int _randomPlaybackIntervalSeconds = 3;
+  _PolarPresentation _authoredPresentation = _PolarPresentation.standard;
   _PolarPresentation _presentation = _PolarPresentation.standard;
   late Map<String, num> _values;
   late Map<String, num> _comparisonValues;
@@ -43,6 +41,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _outerRadius = 0.84;
   double _innerPadding = 0.12;
   double _outerPadding = 0.04;
+
+  int? get _appliedRandomizerSeed => _showcaseRandomizer.appliedSeed;
   PolarColumnCompositionMode _compositionMode =
       PolarColumnCompositionMode.layered;
   double _groupInnerPadding = 0.12;
@@ -316,6 +316,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer =
+        ShowcaseRandomizerController<PolarShowcaseRandomization>(
+          generate: PolarShowcaseRandomizer.generate,
+          apply: _applyGeneratedRandomization,
+        );
     _values = Map<String, num>.of(_standardValues);
     _comparisonValues = const {};
     _tertiaryValues = const {};
@@ -323,7 +328,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   @override
   void dispose() {
-    _randomPlaybackTimer?.cancel();
+    _showcaseRandomizer.dispose();
     _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
@@ -335,22 +340,23 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       title: 'Polar Column',
       subtitle:
           'Compare category magnitudes on angular categories and a numeric radial axis',
-      actions: [
-        OutlinedButton.icon(
-          key: const ValueKey('polar-column-regenerate'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-          onPressed: _regenerateValues,
-          icon: const Icon(Icons.casino_outlined, size: 18),
-          label: const Text('Regenerate values'),
-        ),
-        FilledButton.icon(
-          key: const ValueKey('polar-column-randomize-all'),
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-          onPressed: _generateNextSeed,
-          icon: const Icon(Icons.auto_awesome, size: 18),
-          label: const Text('Randomize all'),
-        ),
-      ],
+      actions: _randomizedShowcaseSelected
+          ? [
+              OutlinedButton.icon(
+                key: const ValueKey('polar-column-regenerate'),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _regenerateValues,
+                icon: const Icon(Icons.casino_outlined, size: 18),
+                label: const Text('Regenerate values'),
+              ),
+            ]
+          : null,
+      playground: ChartPlaygroundConfig(
+        active: _randomizedShowcaseSelected,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'polar-randomizer',
       optionsChildren: _buildOptions(),
       chart: _buildWorkspace(),
     );
@@ -393,8 +399,9 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       children: [
         Semantics(
           container: true,
-          label: 'Choose an authored Polar Column presentation',
+          label: 'Choose a Polar Column example',
           child: Wrap(
+            key: const ValueKey('polar-presentation-selector'),
             spacing: 8,
             runSpacing: 8,
             children: [
@@ -409,18 +416,17 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                     onPressed: () => _applyPresentation(presentation),
                   ),
                 ),
+              SizedBox(
+                width: cardWidth,
+                height: 104,
+                child: PlaygroundExampleCard(
+                  key: const ValueKey('polar-playground'),
+                  selected: _randomizedShowcaseSelected,
+                  onTap: () => _setPlaygroundActive(true),
+                ),
+              ),
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        _RandomizedPresentationCard(
-          selected: _randomizedShowcaseSelected,
-          playing: _randomPlaybackActive,
-          seed: _randomizerSeed,
-          intervalSeconds: _randomPlaybackIntervalSeconds,
-          currentPresentation: _presentation.label,
-          onGenerate: _generateFromSeed,
-          onTogglePlayback: _toggleRandomPlayback,
         ),
       ],
     );
@@ -495,14 +501,18 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _presentation.chartTitle,
+                        _randomizedShowcaseSelected
+                            ? 'Polar Column playground'
+                            : _presentation.chartTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        _presentation.chartSubtitle,
+                        _randomizedShowcaseSelected
+                            ? 'Generated data and every compatible Polar Column property.'
+                            : _presentation.chartSubtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -1094,56 +1104,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     });
   }
 
-  void _generateNextSeed() {
-    _randomizerSeed = (_randomizerSeed + 1) % 1000;
-    _generateFromSeed();
-  }
-
-  void _toggleRandomPlayback() {
-    if (_randomPlaybackActive) {
-      _pauseRandomPlayback();
-    } else {
-      _startRandomPlayback();
-    }
-  }
-
-  void _startRandomPlayback() {
-    if (_randomPlaybackActive) return;
-    _randomPlaybackActive = true;
-    _generateNextSeed();
-    _scheduleRandomPlayback();
-  }
-
-  void _pauseRandomPlayback() {
-    _randomPlaybackTimer?.cancel();
-    _randomPlaybackTimer = null;
-    if (!_randomPlaybackActive) return;
-    setState(() => _randomPlaybackActive = false);
-  }
-
-  void _scheduleRandomPlayback() {
-    _randomPlaybackTimer?.cancel();
-    if (!_randomPlaybackActive) return;
-    _randomPlaybackTimer = Timer.periodic(
-      Duration(seconds: _randomPlaybackIntervalSeconds),
-      (_) {
-        if (!mounted) return;
-        _generateNextSeed();
-      },
-    );
-  }
-
-  void _setRandomPlaybackInterval(int seconds) {
-    setState(() => _randomPlaybackIntervalSeconds = seconds);
-    _scheduleRandomPlayback();
-  }
-
-  void _generateFromSeed() {
-    final generated = PolarShowcaseRandomizer.generate(_randomizerSeed);
+  void _applyGeneratedRandomization(PolarShowcaseRandomization generated) {
+    if (!mounted) return;
     _chartController.clearPointFocus();
     _chartController.clearPointSelection();
     setState(() {
-      _appliedRandomizerSeed = generated.seed;
       _randomizedShowcaseSelected = true;
       _presentation = _presentationFor(generated.presentation);
       _themePreset = _themePresetFor(generated.theme);
@@ -1300,50 +1265,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   List<Widget> _buildOptions() => [
     OptionSection(
-      title: 'Property randomizer',
-      icon: Icons.auto_awesome,
-      children: [
-        IntSliderOption(
-          key: const ValueKey('polar-randomizer-seed'),
-          label: 'Seed',
-          value: _randomizerSeed,
-          min: 0,
-          max: 999,
-          onChanged: (value) => setState(() => _randomizerSeed = value),
-        ),
-        IntSliderOption(
-          key: const ValueKey('polar-randomizer-playback-interval'),
-          label: 'Playback interval',
-          value: _randomPlaybackIntervalSeconds,
-          min: 2,
-          max: 8,
-          suffix: 's',
-          onChanged: _setRandomPlaybackInterval,
-        ),
-        const InfoBox(
-          message:
-              'The same seed reproduces every generated property. Play advances one seed at a time and can be paused without losing the current chart.',
-        ),
-        ActionButton(
-          key: const ValueKey('polar-randomizer-generate'),
-          label: 'Generate from seed',
-          icon: Icons.tune,
-          isPrimary: true,
-          onPressed: _generateFromSeed,
-        ),
-        ActionButton(
-          key: const ValueKey('polar-randomizer-playback-toggle'),
-          label: _randomPlaybackActive
-              ? 'Pause random sequence'
-              : 'Play random sequence',
-          icon: _randomPlaybackActive
-              ? Icons.pause_outlined
-              : Icons.play_arrow_outlined,
-          onPressed: _toggleRandomPlayback,
-        ),
-      ],
-    ),
-    OptionSection(
       title: 'Chart appearance',
       icon: Icons.palette_outlined,
       children: [
@@ -1443,7 +1364,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _categoryLabelOffset = value),
         ),
-        if (_showAngularLabels)
+        if (_randomizedShowcaseSelected || _showAngularLabels)
           IntSliderOption(
             label: 'Maximum category labels',
             value: _maximumAngularLabels,
@@ -1497,7 +1418,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           onChanged: (value) =>
               setState(() => _valueLabelRadialPosition = value / 100),
         ),
-        if (_showValues)
+        if (_randomizedShowcaseSelected || _showValues)
           IntSliderOption(
             label: 'Maximum value labels',
             value: _maximumDataLabels,
@@ -1598,7 +1519,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showAngularGrid,
           onChanged: (value) => setState(() => _showAngularGrid = value),
         ),
-        if (_showAngularGrid)
+        if (_randomizedShowcaseSelected || _showAngularGrid)
           IntSliderOption(
             label: 'Maximum grid spokes',
             value: _maximumAngularGridLines,
@@ -1639,7 +1560,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ],
     ),
-    if (_presentation == _PolarPresentation.layered ||
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.layered ||
         _presentation == _PolarPresentation.grouped ||
         _presentation == _PolarPresentation.stacked)
       OptionSection(
@@ -1657,7 +1579,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             },
             onChanged: (value) => setState(() => _compositionMode = value),
           ),
-          if (_compositionMode == PolarColumnCompositionMode.grouped)
+          if (_randomizedShowcaseSelected ||
+              _compositionMode == PolarColumnCompositionMode.grouped)
             SliderOption(
               label: 'Gap between series',
               value: _groupInnerPadding,
@@ -1669,7 +1592,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             ),
         ],
       ),
-    if (_presentation == _PolarPresentation.references)
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.references)
       OptionSection(
         title: 'Reference marks',
         icon: Icons.flag_outlined,
@@ -1679,7 +1603,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showTargets,
             onChanged: (value) => setState(() => _showTargets = value),
           ),
-          if (_showTargets) ...[
+          if (_randomizedShowcaseSelected || _showTargets) ...[
             _PolarColorOption(
               label: 'Target color',
               value: _targetColor,
@@ -1724,7 +1648,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showThreshold,
             onChanged: (value) => setState(() => _showThreshold = value),
           ),
-          if (_showThreshold) ...[
+          if (_randomizedShowcaseSelected || _showThreshold) ...[
             _PolarColorOption(
               label: 'Threshold color',
               value: _thresholdColor,
@@ -1761,7 +1685,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           ],
         ],
       ),
-    if (_presentation == _PolarPresentation.intervals)
+    if (_randomizedShowcaseSelected ||
+        _presentation == _PolarPresentation.intervals)
       OptionSection(
         title: 'Uncertainty & ranges',
         icon: Icons.vertical_align_center_outlined,
@@ -1771,7 +1696,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             value: _showIntervals,
             onChanged: (value) => setState(() => _showIntervals = value),
           ),
-          if (_showIntervals) ...[
+          if (_randomizedShowcaseSelected || _showIntervals) ...[
             EnumOption<PolarColumnIntervalDisplay>(
               label: 'Presentation',
               value: _intervalDisplay,
@@ -1798,7 +1723,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _intervalWidth = value),
             ),
-            if (_intervalDisplay == PolarColumnIntervalDisplay.whisker)
+            if (_randomizedShowcaseSelected ||
+                _intervalDisplay == PolarColumnIntervalDisplay.whisker)
               SliderOption(
                 label: 'Cap length',
                 value: _intervalCapLength * 100,
@@ -1856,7 +1782,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           colors: _colorChoices,
           onChanged: (value) => setState(() => _selectionColor = value),
         ),
-        if (_selectionEffect == RadialSelectionEffect.lift) ...[
+        if (_randomizedShowcaseSelected ||
+            _selectionEffect == RadialSelectionEffect.lift) ...[
           SliderOption(
             label: 'Lift scale',
             value: _selectionScale * 100,
@@ -1910,7 +1837,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showTooltip,
           onChanged: (value) => setState(() => _showTooltip = value),
         ),
-        if (_showTooltip) ...[
+        if (_randomizedShowcaseSelected || _showTooltip) ...[
           EnumOption<TooltipTriggerMode>(
             label: 'Trigger',
             value: _tooltipTrigger,
@@ -2391,13 +2318,19 @@ BravenChartPlus(
     ),
   );
 
-  void _applyPresentation(_PolarPresentation presentation) {
-    _randomPlaybackTimer?.cancel();
-    _randomPlaybackTimer = null;
+  void _applyPresentation(
+    _PolarPresentation presentation, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     setState(() {
-      _appliedRandomizerSeed = null;
-      _randomizedShowcaseSelected = false;
-      _randomPlaybackActive = false;
+      if (authoredSelection) {
+        _randomizedShowcaseSelected = false;
+        _authoredPresentation = presentation;
+      }
       _presentation = presentation;
       _selectedCategory = null;
       _selectedSeries = null;
@@ -2541,13 +2474,23 @@ BravenChartPlus(
     });
   }
 
+  void _setPlaygroundActive(bool active) {
+    if (active == _randomizedShowcaseSelected) return;
+    if (active) {
+      _authoredPresentation = _presentation;
+      setState(() => _randomizedShowcaseSelected = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _applyPresentation(_authoredPresentation);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
+
   void _setCategoryCount(int count) {
-    _randomPlaybackTimer?.cancel();
-    _randomPlaybackTimer = null;
     setState(() {
-      _appliedRandomizerSeed = null;
-      _randomizedShowcaseSelected = false;
-      _randomPlaybackActive = false;
       _categoryCount = count;
       _selectedCategory = null;
       _selectedSeries = null;
@@ -2581,12 +2524,7 @@ BravenChartPlus(
   }
 
   void _regenerateValues() {
-    _randomPlaybackTimer?.cancel();
-    _randomPlaybackTimer = null;
     setState(() {
-      _appliedRandomizerSeed = null;
-      _randomizedShowcaseSelected = false;
-      _randomPlaybackActive = false;
       _selectedCategory = null;
       _selectedSeries = null;
       if (_presentation == _PolarPresentation.layered) {
@@ -2864,155 +2802,6 @@ class _PresentationCard extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RandomizedPresentationCard extends StatelessWidget {
-  const _RandomizedPresentationCard({
-    required this.selected,
-    required this.playing,
-    required this.seed,
-    required this.intervalSeconds,
-    required this.currentPresentation,
-    required this.onGenerate,
-    required this.onTogglePlayback,
-  });
-
-  final bool selected;
-  final bool playing;
-  final int seed;
-  final int intervalSeconds;
-  final String currentPresentation;
-  final VoidCallback onGenerate;
-  final VoidCallback onTogglePlayback;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    Widget summary() => Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.auto_awesome,
-          size: 22,
-          color: selected ? scheme.primary : scheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Randomized properties',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                selected
-                    ? 'Current shape: $currentPresentation. Every property remains editable in Options.'
-                    : 'Generate a reproducible combination of data, geometry, colors, labels, references, tooltips, and selection effects.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (selected) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.check_circle, size: 18, color: scheme.primary),
-        ],
-      ],
-    );
-
-    final status = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _MetricChip(label: 'Seed $seed'),
-        _MetricChip(
-          label: playing
-              ? 'Playing · every $intervalSeconds s'
-              : 'Paused · every $intervalSeconds s',
-        ),
-      ],
-    );
-    final actions = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        OutlinedButton.icon(
-          key: const ValueKey('polar-randomized-generate'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-          onPressed: onGenerate,
-          icon: const Icon(Icons.casino_outlined, size: 18),
-          label: const Text('Generate example'),
-        ),
-        FilledButton.tonalIcon(
-          key: const ValueKey('polar-randomized-playback-toggle'),
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-          onPressed: onTogglePlayback,
-          icon: Icon(
-            playing ? Icons.pause_outlined : Icons.play_arrow_outlined,
-            size: 18,
-          ),
-          label: Text(playing ? 'Pause sequence' : 'Play sequence'),
-        ),
-      ],
-    );
-
-    return Semantics(
-      key: const ValueKey('polar-randomized-example-card'),
-      container: true,
-      selected: selected,
-      label: 'Randomized Polar Column example',
-      child: Material(
-        color: selected
-            ? scheme.secondaryContainer
-            : scheme.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(
-            color: selected ? scheme.primary : scheme.outlineVariant,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 1050) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    summary(),
-                    const SizedBox(height: 12),
-                    status,
-                    const SizedBox(height: 12),
-                    actions,
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: summary()),
-                  const SizedBox(width: 24),
-                  status,
-                  const SizedBox(width: 16),
-                  actions,
-                ],
-              );
-            },
           ),
         ),
       ),

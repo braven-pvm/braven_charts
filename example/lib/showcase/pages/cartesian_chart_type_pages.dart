@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../data/scatter_point_generator.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 enum _CartesianFamily { line, area, scatter }
@@ -79,8 +80,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   );
   final ScrollController _presetScrollController = ScrollController();
   final Map<int, GlobalKey> _presetLabelKeys = {};
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
 
   int _presetIndex = 0;
+  int _authoredPresetIndex = 0;
+  bool _playgroundActive = false;
   LineInterpolation _interpolation = LineInterpolation.monotone;
   double _strokeWidth = 2.5;
   double _lineGlow = 0;
@@ -237,11 +241,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   int _motionValueRevision = 0;
   late List<ChartDataPoint> _motionPrimaryPoints;
   late List<ChartDataPoint> _motionSecondaryPoints;
+  List<ChartDataPoint> _playgroundPrimaryPoints = const [];
+  List<ChartDataPoint> _playgroundSecondaryPoints = const [];
   ChartDisplayMode _initialDisplayMode = ChartDisplayMode.chart;
 
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 601 + widget.family.index * 100,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
     _resetMotionData();
     _chartController.addListener(_handleChartControllerChanged);
@@ -252,6 +263,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       );
       if (index >= 0) _presetIndex = index;
     }
+    _authoredPresetIndex = _presetIndex;
     final requestedView = Uri.base.queryParameters['view'];
     for (final mode in ChartDisplayMode.values) {
       if (mode.name == requestedView) {
@@ -266,6 +278,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _chartController.removeListener(_handleChartControllerChanged);
     _chartController.dispose();
     _workbenchController.dispose();
@@ -293,11 +306,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   }
 
   void _selectPreset(int index) {
-    if (index == _presetIndex) return;
+    if (!_playgroundActive && index == _presetIndex) return;
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
     _interactionGroupController.reset();
     _chartController.clearPointFocus();
     _chartController.clearPointSelection();
     setState(() {
+      _playgroundActive = false;
+      _authoredPresetIndex = index;
       _presetIndex = index;
       _scatterSelectionResult = const ChartSelectionResult.empty();
       _resetMotionData();
@@ -308,6 +325,216 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       });
     }
   }
+
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    const colors = <Color>[
+      Color(0xFF2563EB),
+      Color(0xFFF97316),
+      Color(0xFF0F9F8F),
+      Color(0xFF8B5CF6),
+      Color(0xFFE11D48),
+      Color(0xFFD69E00),
+    ];
+    Color randomColor() => colors[random.nextInt(colors.length)];
+    final generatedPointCount = 8 + random.nextInt(25);
+    _optionsController.updateWith(
+      theme:
+          ThemePreset.values[random.nextInt(ThemePreset.values.length)].theme,
+      showGrid: random.nextBool(),
+      showAxisLines: random.nextBool(),
+      showDataMarkers: random.nextBool(),
+      showXScrollbar: random.nextBool(),
+      showYScrollbar: random.nextBool(),
+      showLegend: random.nextBool(),
+      enableZoom: random.nextBool(),
+      enablePan: random.nextBool(),
+    );
+    setState(() {
+      _playgroundPrimaryPoints = _generateCartesianPlaygroundPoints(
+        random,
+        generatedPointCount,
+        phase: 0,
+      );
+      _playgroundSecondaryPoints = _generateCartesianPlaygroundPoints(
+        random,
+        generatedPointCount,
+        phase: 1.7,
+      );
+      _interpolation = LineInterpolation
+          .values[random.nextInt(LineInterpolation.values.length)];
+      _strokeWidth = 1 + random.nextDouble() * 5;
+      _lineGlow = random.nextDouble() * 12;
+      _fillOpacity = 0.08 + random.nextDouble() * 0.55;
+      _markerRadius = 2 + random.nextDouble() * 9;
+      _lineMarkerRadius = 2 + random.nextDouble() * 6;
+      _lineMarkerStyle = DataPointMarkerStyle
+          .values[random.nextInt(DataPointMarkerStyle.values.length)];
+      _motionDurationMs = 220 + random.nextDouble() * 1180;
+      _motionSeriesDelayMs = random.nextDouble() * 300;
+      _showSecondSeries = random.nextBool();
+      _showPointLabels = random.nextBool();
+      _showBaselineFill = random.nextBool();
+      _useAreaGradient = random.nextBool();
+      _animatePaths = random.nextBool();
+
+      if (widget.family == _CartesianFamily.scatter) {
+        final markerShapes = SeriesMarkerShape.values
+            .where((shape) => shape != SeriesMarkerShape.none)
+            .toList(growable: false);
+        _scatterMarkerShape = markerShapes[random.nextInt(markerShapes.length)];
+        _scatterFillTone = _ScatterFillTone
+            .values[random.nextInt(_ScatterFillTone.values.length)];
+        _scatterMarkerWidth = 6 + random.nextDouble() * 24;
+        _scatterMarkerHeight = 6 + random.nextDouble() * 24;
+        _scatterMarkerStrokeWidth = random.nextDouble() * 4;
+        _scatterMarkerOpacity = 0.35 + random.nextDouble() * 0.65;
+        _scatterMarkerRotation = random.nextDouble() * 180;
+        _scatterSelectionScale = 1.05 + random.nextDouble() * 0.8;
+        _scatterDimmedOpacity = 0.08 + random.nextDouble() * 0.45;
+        _scatterBubbleMinimumRadius = 2 + random.nextDouble() * 6;
+        _scatterBubbleMaximumRadius =
+            _scatterBubbleMinimumRadius + 10 + random.nextDouble() * 24;
+        _scatterMinimumOpacity = 0.08 + random.nextDouble() * 0.45;
+        _scatterJitterX = random.nextDouble() * 80;
+        _scatterJitterY = random.nextDouble() * 80;
+        _scatterJitterSeed = seed;
+        _scatterLoessSpan = 0.2 + random.nextDouble() * 0.65;
+        _scatterLoessRobustnessIterations = random.nextInt(5);
+        _scatterShowConfidenceBand = random.nextBool();
+        _scatterShowPredictionBand = random.nextBool();
+        _scatterConfidenceLevel = <double>[
+          0.8,
+          0.9,
+          0.95,
+          0.99,
+        ][random.nextInt(4)];
+        _scatterShowXErrorBars = random.nextBool();
+        _scatterShowYErrorBars = random.nextBool();
+        _scatterAsymmetricErrorBars = random.nextBool();
+        _scatterErrorScale = 0.5 + random.nextDouble() * 1.5;
+        _scatterLabelPosition = DataPointLabelPosition
+            .values[random.nextInt(DataPointLabelPosition.values.length)];
+        _scatterLabelCollisionPolicy =
+            DataPointLabelCollisionPolicy.values[random.nextInt(
+              DataPointLabelCollisionPolicy.values.length,
+            )];
+        _scatterPointCount = <int>[100, 1000, 10000][random.nextInt(3)];
+        _scatterSeriesCount = 1 + random.nextInt(5);
+        _scatterGeneratorSeriesCount = 1 + random.nextInt(5);
+        _scatterGeneratorConfig = ScatterPointGeneratorConfig(
+          pointCount: const [
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000,
+            10000,
+          ][random.nextInt(8)],
+          xCenter: 35 + random.nextDouble() * 30,
+          yCenter: 35 + random.nextDouble() * 30,
+          xSpread: 30 + random.nextDouble() * 70,
+          ySpread: 30 + random.nextDouble() * 70,
+          correlation: -0.9 + random.nextDouble() * 1.8,
+          outlierFraction: random.nextDouble() * 0.18,
+          seed: seed,
+          distribution: ScatterPointDistribution
+              .values[random.nextInt(ScatterPointDistribution.values.length)],
+        );
+        _scatterClusterCellSize = 24 + random.nextDouble() * 52;
+        _scatterClusterMinimumPoints = 2 + random.nextInt(8);
+        _scatterClusterShowLabels = random.nextBool();
+        _scatterClusterShowZones = random.nextBool();
+        _scatterClusterDrillOnTap = random.nextBool();
+        _scatterBinCellSize = 20 + random.nextDouble() * 44;
+        _scatterBinShowLabels = random.nextBool();
+        _scatterDensityBandwidth = 12 + random.nextDouble() * 52;
+        _scatterDensityContourCount = 3 + random.nextInt(8);
+        _scatterDensityShowPoints = random.nextBool();
+        for (
+          var index = 0;
+          index < _scatterSeriesColorOverrides.length;
+          index++
+        ) {
+          _scatterSeriesColorOverrides[index] = random.nextBool()
+              ? randomColor()
+              : null;
+        }
+        _scatterFillOverrideEnabled = random.nextBool();
+        _scatterFillColorOverride = random.nextBool() ? randomColor() : null;
+        _scatterOutlineOverrideEnabled = random.nextBool();
+        _scatterOutlineColorOverride = random.nextBool() ? randomColor() : null;
+        _scatterOutlineWidthOverride = random.nextDouble() * 4;
+        _scatterOpacityOverrideEnabled = random.nextBool();
+        _scatterOpacityOverride = 0.2 + random.nextDouble() * 0.8;
+        _scatterBackgroundColorOverride = random.nextBool()
+            ? randomColor().withValues(alpha: 0.12)
+            : null;
+        _scatterGridColorOverride = random.nextBool() ? randomColor() : null;
+        _scatterAxisColorOverride = random.nextBool() ? randomColor() : null;
+        _scatterCrosshairColorOverride = random.nextBool()
+            ? randomColor()
+            : null;
+        _scatterInteractionColorOverrideEnabled = random.nextBool();
+        _scatterHoverColorOverride = random.nextBool() ? randomColor() : null;
+        _scatterSelectionColorOverride = random.nextBool()
+            ? randomColor()
+            : null;
+        _scatterFocusColorOverride = random.nextBool() ? randomColor() : null;
+      }
+      _resetMotionData();
+      _motionValueRevision = seed;
+    });
+    _chartController.clearPointFocus();
+    _chartController.clearPointSelection();
+  }
+
+  List<ChartDataPoint> _generateCartesianPlaygroundPoints(
+    math.Random random,
+    int count, {
+    required double phase,
+  }) {
+    final baseline = 35 + random.nextDouble() * 35;
+    final amplitude = 8 + random.nextDouble() * 24;
+    final frequency = 0.5 + random.nextDouble() * 1.8;
+    final drift = -12 + random.nextDouble() * 24;
+    return List<ChartDataPoint>.generate(count, (index) {
+      final progress = count == 1 ? 0.0 : index / (count - 1);
+      final noise = (random.nextDouble() - 0.5) * amplitude * 0.32;
+      return ChartDataPoint(
+        x: index.toDouble(),
+        y:
+            baseline +
+            math.sin(progress * math.pi * 2 * frequency + phase) * amplitude +
+            progress * drift +
+            noise,
+      );
+    }, growable: false);
+  }
+
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredPresetIndex = _presetIndex;
+      setState(() => _playgroundActive = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    final authoredPresetIndex = _authoredPresetIndex;
+    _reset();
+    setState(() {
+      _playgroundActive = false;
+      _presetIndex = authoredPresetIndex;
+    });
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +549,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ],
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: '${widget.family.name}-randomizer',
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
@@ -695,21 +928,21 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                     ChoiceChip(
                       key: ValueKey('scatter-preset-${_presets[index].label}'),
                       showCheckmark: false,
-                      selected: index == _presetIndex,
+                      selected: !_playgroundActive && index == _presetIndex,
                       onSelected: (_) => _selectPreset(index),
                       avatar: Icon(
                         _presets[index].icon,
                         size: 17,
-                        color: index == _presetIndex
+                        color: !_playgroundActive && index == _presetIndex
                             ? theme.colorScheme.onSecondaryContainer
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                       label: Text(_presets[index].label),
                       labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: index == _presetIndex
+                        color: !_playgroundActive && index == _presetIndex
                             ? theme.colorScheme.onSecondaryContainer
                             : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: index == _presetIndex
+                        fontWeight: !_playgroundActive && index == _presetIndex
                             ? FontWeight.w600
                             : FontWeight.w400,
                       ),
@@ -722,6 +955,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                  PlaygroundChoiceChip(
+                    key: ValueKey('${widget.family.name}-playground'),
+                    selected: _playgroundActive,
+                    onSelected: () => _setPlaygroundActive(true),
+                  ),
                 ],
               )
             else
@@ -744,16 +982,33 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                           ),
                         ),
                       ),
+                    ButtonSegment(
+                      value: -1,
+                      icon: const Icon(Icons.science_outlined, size: 18),
+                      label: Text(
+                        'Playground',
+                        key: ValueKey('${widget.family.name}-playground'),
+                      ),
+                    ),
                   ],
-                  selected: {_presetIndex},
+                  selected: {_playgroundActive ? -1 : _presetIndex},
                   onSelectionChanged: (selection) {
-                    _selectPreset(selection.single);
+                    if (selection.isNotEmpty) {
+                      final value = selection.single;
+                      if (value == -1) {
+                        _setPlaygroundActive(true);
+                      } else {
+                        _selectPreset(value);
+                      }
+                    }
                   },
                 ),
               ),
             const SizedBox(height: 8),
             Text(
-              _presets[_presetIndex].description,
+              _playgroundActive
+                  ? 'Generated data and every compatible ${widget.family.name} property. Seeded playback is available in Options.'
+                  : _presets[_presetIndex].description,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1137,54 +1392,67 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     );
   }
 
-  String get _chartSummary => switch (widget.family) {
-    _CartesianFamily.line =>
-      _isLineForecast
-          ? 'Observed + prognosis · dotted forecast · current-time boundary'
-          : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
-    _CartesianFamily.area =>
-      '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
-    _CartesianFamily.scatter =>
-      _presetIndex == 8
-          ? 'X: revenue growth · Y: customer retention · Bubble area: active accounts · Shape: market type'
-          : _presetIndex == 9
-          ? 'X: weekly load · Y: 20-minute power · Marker color: recovery readiness · Shape: training block'
-          : _presetIndex == 10
-          ? 'X: vibration · Y: bearing temperature · Marker color: discrete risk band · Threshold equality enters the higher band'
-          : _presetIndex == 11
-          ? 'X: forecast horizon · Y: expected demand · Marker opacity: model confidence · Shape: forecast model'
-          : _presetIndex == 12
-          ? '1 series · X: daily distance · Y: operating cost · Category: powertrain · Color + shape encoding'
-          : _presetIndex == 13
-          ? '1 series · ${_scatterSurveyResponses.length} integer responses · ${_scatterJitterX.toStringAsFixed(0)}×${_scatterJitterY.toStringAsFixed(0)}px stable jitter · seed $_scatterJitterSeed'
-          : _presetIndex == 14
-          ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} named accounts · ${_formatDataPointLabelPosition(_scatterLabelPosition).toLowerCase()} labels · ${_formatDataPointLabelCollisionPolicy(_scatterLabelCollisionPolicy).toLowerCase()} collisions'
-          : _isScatterSelectionPreset
-          ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} accounts · ${_scatterSelectionMode.name} acquisition · ${_formatChartSelectionOperation(_scatterSelectionOperation).toLowerCase()} operation · ${_scatterSelectionResult.statistics.pointCount} selected'
-          : _isScatterRegressionPreset
-          ? '1 cohort · ${_scatterCampaignResponse.length} observations · robust LOESS · ${(_scatterLoessSpan * 100).round()}% neighborhood · $_scatterLoessRobustnessIterations robust passes'
-          : _isScatterUncertaintyPreset
-          ? '${_scatterAssayCalibration.length} measurements · grey bars: ${_scatterAsymmetricErrorBars ? 'asymmetric' : 'symmetric'} ${_scatterShowXErrorBars && _scatterShowYErrorBars
-                ? 'X/Y error'
-                : _scatterShowXErrorBars
-                ? 'X error'
-                : _scatterShowYErrorBars
-                ? 'Y error'
-                : 'hidden error'} · inner teal: ${(_scatterConfidenceLevel * 100).round()}% mean confidence · outer violet: future prediction'
-          : _isScatterGeneratorPreset
-          ? '$_scatterGeneratorSeriesCount generated cohorts · ${_scatterGeneratorSeriesCount * _scatterGeneratorConfig.pointCount} observations · ${_scatterGeneratorConfig.distribution.name} distribution · ${_scatterGeneratorConfig.correlation.toStringAsFixed(2)} correlation · ${(_scatterGeneratorConfig.outlierFraction * 100).round()}% outliers · seed ${_scatterGeneratorConfig.seed}'
-          : _isScatterClusterPreset
-          ? '$_scatterClusterPointCount raw observations · ${_scatterClusterCellSize.toStringAsFixed(0)}px screen cells · count-scaled markers · ${_scatterClusterShowZones ? 'cluster zones · ' : ''}${_scatterClusterDrillOnTap ? 'tap a cluster to drill in' : 'zoom reveals detail'}'
-          : _isScatterBinPreset
-          ? '$_scatterBinPointCount raw observations · ${_scatterBinCellSize.toStringAsFixed(0)}px ${_isScatterHexbinPreset ? 'hexagonal' : 'rectangular'} cells · ${_formatScatterBinAggregate(_scatterBinAggregate).toLowerCase()} aggregation${_scatterBinAggregate == ScatterBinAggregate.count || _scatterBinAggregate == ScatterBinAggregate.proportion ? '' : ' of ${_formatScatterBinValueSource(_scatterBinValueSource).toLowerCase()}'} · opacity shows magnitude · raw identities retained'
-          : _isScatterDensityPreset
-          ? '$_scatterDensityPointCount raw observations · $_scatterDensityContourCount Gaussian contours · ${_scatterDensityBandwidth.toStringAsFixed(0)}px bandwidth · relative-density interaction · raw identities retained'
-          : _isScatterMarginalPreset
-          ? '${_scatterMarginalPoints.length} athlete observations · ${_formatScatterMarginalMode(_scatterMarginalMode).toLowerCase()} · ${_scatterMarginalMode.showsHistogram ? '$_scatterMarginalBinCount bins per axis · ' : ''}${_scatterMarginalMode.showsDensity ? '${_scatterMarginalBandwidth.toStringAsFixed(2)}× automatic bandwidth · ' : ''}viewport-linked X/Y marginals'
-          : '$_scatterEffectiveSeriesCount series · $_scatterRawPointCount observations · ${_presetIndex == 4 ? '${_scatterMarkerWidth.toStringAsFixed(0)}×${_scatterMarkerHeight.toStringAsFixed(0)}px styled markers' : '${_markerRadius.toStringAsFixed(0)}px markers'} · ${_presetIndex == 0 || _presetIndex == 3 || _presetIndex == 4 || _presetIndex == 7 ? 'mixed shapes' : _formatMarkerShape(_scatterMarkerShape).toLowerCase()} · ${_presetIndex == 7 ? 'selection-aware states' : 'indexed 2D tracking'}',
-  };
+  String get _chartSummary {
+    if (_playgroundActive) {
+      return switch (widget.family) {
+        _CartesianFamily.line || _CartesianFamily.area =>
+          '${_playgroundPrimaryPoints.length} generated observations per series · ${_interpolation.name} · seed ${_showcaseRandomizer.appliedSeed ?? _showcaseRandomizer.seed}',
+        _CartesianFamily.scatter =>
+          '$_scatterGeneratorSeriesCount generated cohorts · ${_scatterGeneratorSeriesCount * _scatterGeneratorConfig.pointCount} observations · ${_scatterGeneratorConfig.distribution.name} · seed ${_scatterGeneratorConfig.seed}',
+      };
+    }
+    return switch (widget.family) {
+      _CartesianFamily.line =>
+        _isLineForecast
+            ? 'Observed + prognosis · dotted forecast · current-time boundary'
+            : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
+      _CartesianFamily.area =>
+        '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
+      _CartesianFamily.scatter =>
+        _presetIndex == 8
+            ? 'X: revenue growth · Y: customer retention · Bubble area: active accounts · Shape: market type'
+            : _presetIndex == 9
+            ? 'X: weekly load · Y: 20-minute power · Marker color: recovery readiness · Shape: training block'
+            : _presetIndex == 10
+            ? 'X: vibration · Y: bearing temperature · Marker color: discrete risk band · Threshold equality enters the higher band'
+            : _presetIndex == 11
+            ? 'X: forecast horizon · Y: expected demand · Marker opacity: model confidence · Shape: forecast model'
+            : _presetIndex == 12
+            ? '1 series · X: daily distance · Y: operating cost · Category: powertrain · Color + shape encoding'
+            : _presetIndex == 13
+            ? '1 series · ${_scatterSurveyResponses.length} integer responses · ${_scatterJitterX.toStringAsFixed(0)}×${_scatterJitterY.toStringAsFixed(0)}px stable jitter · seed $_scatterJitterSeed'
+            : _presetIndex == 14
+            ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} named accounts · ${_formatDataPointLabelPosition(_scatterLabelPosition).toLowerCase()} labels · ${_formatDataPointLabelCollisionPolicy(_scatterLabelCollisionPolicy).toLowerCase()} collisions'
+            : _isScatterSelectionPreset
+            ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} accounts · ${_scatterSelectionMode.name} acquisition · ${_formatChartSelectionOperation(_scatterSelectionOperation).toLowerCase()} operation · ${_scatterSelectionResult.statistics.pointCount} selected'
+            : _isScatterRegressionPreset
+            ? '1 cohort · ${_scatterCampaignResponse.length} observations · robust LOESS · ${(_scatterLoessSpan * 100).round()}% neighborhood · $_scatterLoessRobustnessIterations robust passes'
+            : _isScatterUncertaintyPreset
+            ? '${_scatterAssayCalibration.length} measurements · grey bars: ${_scatterAsymmetricErrorBars ? 'asymmetric' : 'symmetric'} ${_scatterShowXErrorBars && _scatterShowYErrorBars
+                  ? 'X/Y error'
+                  : _scatterShowXErrorBars
+                  ? 'X error'
+                  : _scatterShowYErrorBars
+                  ? 'Y error'
+                  : 'hidden error'} · inner teal: ${(_scatterConfidenceLevel * 100).round()}% mean confidence · outer violet: future prediction'
+            : _isScatterGeneratorPreset
+            ? '$_scatterGeneratorSeriesCount generated cohorts · ${_scatterGeneratorSeriesCount * _scatterGeneratorConfig.pointCount} observations · ${_scatterGeneratorConfig.distribution.name} distribution · ${_scatterGeneratorConfig.correlation.toStringAsFixed(2)} correlation · ${(_scatterGeneratorConfig.outlierFraction * 100).round()}% outliers · seed ${_scatterGeneratorConfig.seed}'
+            : _isScatterClusterPreset
+            ? '$_scatterClusterPointCount raw observations · ${_scatterClusterCellSize.toStringAsFixed(0)}px screen cells · count-scaled markers · ${_scatterClusterShowZones ? 'cluster zones · ' : ''}${_scatterClusterDrillOnTap ? 'tap a cluster to drill in' : 'zoom reveals detail'}'
+            : _isScatterBinPreset
+            ? '$_scatterBinPointCount raw observations · ${_scatterBinCellSize.toStringAsFixed(0)}px ${_isScatterHexbinPreset ? 'hexagonal' : 'rectangular'} cells · ${_formatScatterBinAggregate(_scatterBinAggregate).toLowerCase()} aggregation${_scatterBinAggregate == ScatterBinAggregate.count || _scatterBinAggregate == ScatterBinAggregate.proportion ? '' : ' of ${_formatScatterBinValueSource(_scatterBinValueSource).toLowerCase()}'} · opacity shows magnitude · raw identities retained'
+            : _isScatterDensityPreset
+            ? '$_scatterDensityPointCount raw observations · $_scatterDensityContourCount Gaussian contours · ${_scatterDensityBandwidth.toStringAsFixed(0)}px bandwidth · relative-density interaction · raw identities retained'
+            : _isScatterMarginalPreset
+            ? '${_scatterMarginalPoints.length} athlete observations · ${_formatScatterMarginalMode(_scatterMarginalMode).toLowerCase()} · ${_scatterMarginalMode.showsHistogram ? '$_scatterMarginalBinCount bins per axis · ' : ''}${_scatterMarginalMode.showsDensity ? '${_scatterMarginalBandwidth.toStringAsFixed(2)}× automatic bandwidth · ' : ''}viewport-linked X/Y marginals'
+            : '$_scatterEffectiveSeriesCount series · $_scatterRawPointCount observations · ${_presetIndex == 4 ? '${_scatterMarkerWidth.toStringAsFixed(0)}×${_scatterMarkerHeight.toStringAsFixed(0)}px styled markers' : '${_markerRadius.toStringAsFixed(0)}px markers'} · ${_presetIndex == 0 || _presetIndex == 3 || _presetIndex == 4 || _presetIndex == 7 ? 'mixed shapes' : _formatMarkerShape(_scatterMarkerShape).toLowerCase()} · ${_presetIndex == 7 ? 'selection-aware states' : 'indexed 2D tracking'}',
+    };
+  }
 
   String get _chartTitle {
+    if (_playgroundActive) {
+      return '${_pageTitle.replaceAll(' Charts', '')} playground';
+    }
     if (widget.family != _CartesianFamily.scatter) {
       return _presets[_presetIndex].label;
     }
@@ -1375,8 +1643,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   List<Widget> _buildOptions() {
     final typeOptions = <Widget>[
       if (widget.family != _CartesianFamily.scatter &&
-          !_isLineSpotlight &&
-          !_isAreaPulse)
+          (_playgroundActive || (!_isLineSpotlight && !_isAreaPulse)))
         EnumOption<LineInterpolation>(
           label: 'Interpolation',
           value: _interpolation,
@@ -1384,8 +1651,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _interpolation = value),
         ),
       if (widget.family != _CartesianFamily.scatter &&
-          !_isLineSpotlight &&
-          !_isAreaPulse)
+          (_playgroundActive || (!_isLineSpotlight && !_isAreaPulse)))
         SliderOption(
           label: 'Stroke width',
           value: _strokeWidth,
@@ -1397,8 +1663,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _strokeWidth = value),
         ),
       if (widget.family != _CartesianFamily.scatter &&
-          !_isLineSpotlight &&
-          !_isAreaPulse)
+          (_playgroundActive || (!_isLineSpotlight && !_isAreaPulse)))
         SliderOption(
           label: 'Line glow',
           value: _lineGlow,
@@ -1420,10 +1685,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _fillOpacity = value),
         ),
       if (widget.family == _CartesianFamily.scatter &&
-          _presetIndex != 4 &&
-          _presetIndex != 8 &&
-          !_isScatterBinPreset &&
-          !_isScatterDensityPreset)
+          (_playgroundActive ||
+              (_presetIndex != 4 &&
+                  _presetIndex != 8 &&
+                  !_isScatterBinPreset &&
+                  !_isScatterDensityPreset)))
         SliderOption(
           label: 'Marker radius',
           value: _markerRadius,
@@ -1434,7 +1700,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _markerRadius = value),
         ),
-      if (widget.family == _CartesianFamily.line && !_isLineForecast)
+      if (widget.family == _CartesianFamily.line &&
+          (_playgroundActive || !_isLineForecast))
         EnumOption<DataPointMarkerStyle>(
           key: const ValueKey('line-marker-style'),
           label: 'Marker style',
@@ -1459,18 +1726,19 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _lineMarkerRadius = value),
         ),
       if (widget.family == _CartesianFamily.scatter &&
-          _presetIndex != 0 &&
-          _presetIndex != 3 &&
-          _presetIndex != 4 &&
-          _presetIndex != 7 &&
-          _presetIndex != 8 &&
-          _presetIndex != 9 &&
-          _presetIndex != 10 &&
-          _presetIndex != 11 &&
-          _presetIndex != 12 &&
-          _presetIndex != 13 &&
-          _presetIndex != 14 &&
-          !_isScatterBinPreset)
+          (_playgroundActive ||
+              (_presetIndex != 0 &&
+                  _presetIndex != 3 &&
+                  _presetIndex != 4 &&
+                  _presetIndex != 7 &&
+                  _presetIndex != 8 &&
+                  _presetIndex != 9 &&
+                  _presetIndex != 10 &&
+                  _presetIndex != 11 &&
+                  _presetIndex != 12 &&
+                  _presetIndex != 13 &&
+                  _presetIndex != 14 &&
+                  !_isScatterBinPreset)))
         EnumOption<SeriesMarkerShape>(
           label: 'Marker shape',
           value: _scatterMarkerShape,
@@ -1480,7 +1748,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           labelBuilder: _formatMarkerShape,
           onChanged: (value) => setState(() => _scatterMarkerShape = value),
         ),
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 4) ...[
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 4)) ...[
         EnumOption<_ScatterFillTone>(
           label: 'Fill tone',
           value: _scatterFillTone,
@@ -1541,7 +1810,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ],
       if (widget.family == _CartesianFamily.scatter &&
-          (_presetIndex == 5 || _presetIndex == 6))
+          (_playgroundActive || _presetIndex == 5 || _presetIndex == 6))
         EnumOption<int>(
           label: 'Points per series',
           value: _scatterPointCount,
@@ -1550,7 +1819,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _scatterPointCount = value),
         ),
       if (widget.family == _CartesianFamily.scatter &&
-          (_presetIndex == 5 || _presetIndex == 6))
+          (_playgroundActive || _presetIndex == 5 || _presetIndex == 6))
         IntSliderOption(
           label: 'Series count',
           value: _scatterSeriesCount,
@@ -1558,9 +1827,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           max: 6,
           onChanged: (value) => setState(() => _scatterSeriesCount = value),
         ),
-      if (!_isLineForecast &&
-          !_isLineSynchronized &&
-          (widget.family != _CartesianFamily.scatter || _presetIndex < 3))
+      if (_playgroundActive ||
+          (!_isLineForecast &&
+              !_isLineSynchronized &&
+              (widget.family != _CartesianFamily.scatter || _presetIndex < 3)))
         BoolOption(
           label: widget.family == _CartesianFamily.scatter
               ? switch (_presetIndex) {
@@ -1573,20 +1843,23 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           value: _showSecondSeries,
           onChanged: (value) => setState(() => _showSecondSeries = value),
         ),
-      if (widget.family != _CartesianFamily.scatter && !_isLineSynchronized)
+      if (widget.family != _CartesianFamily.scatter &&
+          (_playgroundActive || !_isLineSynchronized))
         BoolOption(
           label: 'Show point labels',
           value: _showPointLabels,
           onChanged: (value) => setState(() => _showPointLabels = value),
         ),
-      if (widget.family == _CartesianFamily.area && _presetIndex == 1)
+      if (widget.family == _CartesianFamily.area &&
+          (_playgroundActive || _presetIndex == 1))
         BoolOption(
           label: 'Use baseline fills',
           value: _showBaselineFill,
           onChanged: (value) => setState(() => _showBaselineFill = value),
           subtitle: 'Apply positive and negative fills in the baseline preset',
         ),
-      if (widget.family == _CartesianFamily.area && _presetIndex >= 4)
+      if (widget.family == _CartesianFamily.area &&
+          (_playgroundActive || _presetIndex >= 4))
         BoolOption(
           key: const ValueKey('area-gradient-fill'),
           label: 'Gradient fill',
@@ -1595,7 +1868,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           subtitle: 'Blend configured colors across the plot',
         ),
       if (widget.family == _CartesianFamily.scatter &&
-          (_presetIndex == 7 || _isScatterSelectionPreset)) ...[
+          (_playgroundActive ||
+              _presetIndex == 7 ||
+              _isScatterSelectionPreset)) ...[
         SliderOption(
           key: const ValueKey('scatter-selection-scale'),
           label: 'Selection scale',
@@ -1640,7 +1915,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _scatterFocusGap = value),
         ),
       ],
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 8) ...[
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 8)) ...[
         SliderOption(
           key: const ValueKey('scatter-bubble-minimum-radius'),
           label: 'Small bubble',
@@ -1666,7 +1942,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               setState(() => _scatterBubbleMaximumRadius = value),
         ),
       ],
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 9)
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 9))
         EnumOption<_ScatterColorRamp>(
           key: const ValueKey('scatter-color-ramp'),
           label: 'Color ramp',
@@ -1679,7 +1956,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           },
           onChanged: (value) => setState(() => _scatterColorRamp = value),
         ),
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 10)
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 10))
         EnumOption<_ScatterRiskPalette>(
           key: const ValueKey('scatter-risk-palette'),
           label: 'Band palette',
@@ -1692,7 +1970,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           },
           onChanged: (value) => setState(() => _scatterRiskPalette = value),
         ),
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 11)
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 11))
         SliderOption(
           key: const ValueKey('scatter-minimum-opacity'),
           label: 'Low-confidence opacity',
@@ -1703,7 +1982,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 2,
           onChanged: (value) => setState(() => _scatterMinimumOpacity = value),
         ),
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 12)
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 12))
         EnumOption<_ScatterCategoryPalette>(
           key: const ValueKey('scatter-category-palette'),
           label: 'Category palette',
@@ -1715,7 +1995,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           },
           onChanged: (value) => setState(() => _scatterCategoryPalette = value),
         ),
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 13) ...[
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 13)) ...[
         SliderOption(
           key: const ValueKey('scatter-jitter-x'),
           label: 'Horizontal spread',
@@ -1747,7 +2028,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _scatterJitterSeed = value),
         ),
       ],
-      if (widget.family == _CartesianFamily.scatter && _presetIndex == 14) ...[
+      if (widget.family == _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 14)) ...[
         EnumOption<DataPointLabelPosition>(
           key: const ValueKey('scatter-label-position'),
           label: 'Label anchor',
@@ -1788,7 +2070,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _scatterLabelOffsetY = value),
         ),
       ],
-      if (_isScatterRegressionPreset) ...[
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterRegressionPreset) ...[
         SliderOption(
           key: const ValueKey('scatter-loess-span'),
           label: 'Neighborhood',
@@ -1818,7 +2101,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               setState(() => _scatterLoessSampleCount = value),
         ),
       ],
-      if (_isScatterUncertaintyPreset) ...[
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterUncertaintyPreset) ...[
         SliderOption(
           key: const ValueKey('scatter-uncertainty-error-scale'),
           label: 'Error magnitude',
@@ -1831,7 +2115,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _scatterErrorScale = value),
         ),
       ],
-      if (_isScatterSelectionPreset) ...[
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterSelectionPreset) ...[
         EnumOption<ChartSelectionOperation>(
           key: const ValueKey('scatter-selection-operation'),
           label: 'Selection operation',
@@ -1862,7 +2147,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         },
         children: typeOptions,
       ),
-      if (_isScatterClusterPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterClusterPreset)
         OptionSection(
           title: 'Cluster layout',
           icon: Icons.hub_outlined,
@@ -1937,7 +2223,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterClusterShowZones = value),
             ),
-            if (_scatterClusterShowZones)
+            if (_playgroundActive || _scatterClusterShowZones)
               SliderOption(
                 key: const ValueKey('scatter-cluster-zone-opacity'),
                 label: 'Zone opacity',
@@ -1957,7 +2243,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterClusterDrillOnTap = value),
             ),
-            if (_scatterClusterDrillOnTap)
+            if (_playgroundActive || _scatterClusterDrillOnTap)
               SliderOption(
                 key: const ValueKey('scatter-cluster-drill-padding'),
                 label: 'Drill padding',
@@ -1972,7 +2258,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
           ],
         ),
-      if (_isScatterBinPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterBinPreset)
         OptionSection(
           title: '2D bin layout',
           icon: _isScatterHexbinPreset
@@ -1993,8 +2280,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 }
               }),
             ),
-            if (_scatterBinAggregate != ScatterBinAggregate.count &&
-                _scatterBinAggregate != ScatterBinAggregate.proportion)
+            if (_playgroundActive ||
+                (_scatterBinAggregate != ScatterBinAggregate.count &&
+                    _scatterBinAggregate != ScatterBinAggregate.proportion))
               EnumOption<ScatterBinValueSource>(
                 key: const ValueKey('scatter-bin-value-source'),
                 label: 'Value',
@@ -2090,7 +2378,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterBinShowLabels = value),
             ),
-            if (_scatterBinShowLabels)
+            if (_playgroundActive || _scatterBinShowLabels)
               IntSliderOption(
                 key: const ValueKey('scatter-bin-label-minimum-points'),
                 label: 'Label threshold',
@@ -2102,7 +2390,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
           ],
         ),
-      if (_isScatterDensityPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterDensityPreset)
         OptionSection(
           title: 'Density contours',
           icon: Icons.layers_outlined,
@@ -2168,7 +2457,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterDensityShowPoints = value),
             ),
-            if (_scatterDensityShowPoints)
+            if (_playgroundActive || _scatterDensityShowPoints)
               SliderOption(
                 key: const ValueKey('scatter-density-marker-radius'),
                 label: 'Point radius',
@@ -2182,7 +2471,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
           ],
         ),
-      if (_isScatterMarginalPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterMarginalPreset)
         OptionSection(
           title: 'Marginal distributions',
           icon: Icons.space_dashboard_outlined,
@@ -2196,7 +2486,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterMarginalMode = value),
             ),
-            if (_scatterMarginalMode.showsHistogram)
+            if (_playgroundActive || _scatterMarginalMode.showsHistogram)
               IntSliderOption(
                 key: const ValueKey('scatter-marginal-bin-count'),
                 label: 'Bins per axis',
@@ -2206,7 +2496,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 onChanged: (value) =>
                     setState(() => _scatterMarginalBinCount = value),
               ),
-            if (_scatterMarginalMode == ScatterMarginalMode.histogram)
+            if (_playgroundActive ||
+                _scatterMarginalMode == ScatterMarginalMode.histogram)
               EnumOption<HistogramValueMode>(
                 key: const ValueKey('scatter-marginal-value-mode'),
                 label: 'Bar value',
@@ -2216,7 +2507,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 onChanged: (value) =>
                     setState(() => _scatterMarginalValueMode = value),
               ),
-            if (_scatterMarginalMode.showsDensity)
+            if (_playgroundActive || _scatterMarginalMode.showsDensity)
               SliderOption(
                 key: const ValueKey('scatter-marginal-bandwidth'),
                 label: 'Density smoothing',
@@ -2255,7 +2546,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (_isScatterGeneratorPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterGeneratorPreset)
         OptionSection(
           title: 'Point generator',
           icon: Icons.tune,
@@ -2382,7 +2674,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (_isScatterRegressionPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterRegressionPreset)
         OptionSection(
           title: 'Regression diagnostics',
           icon: Icons.functions,
@@ -2424,7 +2717,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (_isScatterUncertaintyPreset)
+      if ((widget.family == _CartesianFamily.scatter && _playgroundActive) ||
+          _isScatterUncertaintyPreset)
         OptionSection(
           title: 'Uncertainty model',
           icon: Icons.straighten_outlined,
@@ -2480,14 +2774,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (_isLineSynchronized)
+      if (_isLineSynchronized && !_playgroundActive)
         StandardChartOptions(
           controller: _optionsController,
           showLegendOption: false,
           showYScrollbarOption: false,
           showLineStyleOption: false,
         ),
-      if (_isLineSynchronized)
+      if (widget.family == _CartesianFamily.line &&
+          (_playgroundActive || _isLineSynchronized))
         OptionSection(
           title: 'Chart composition',
           icon: Icons.view_stream_outlined,
@@ -2530,7 +2825,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                   });
                 },
               ),
-              if (_visibleSynchronizedMetrics.contains(metric))
+              if (_playgroundActive ||
+                  _visibleSynchronizedMetrics.contains(metric))
                 SliderOption(
                   key: ValueKey('synchronized-${metric.name}-height'),
                   label: '${_synchronizedMetricLabel(metric)} height',
@@ -2546,7 +2842,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ],
           ],
         ),
-      if (_isLineSynchronized)
+      if (widget.family == _CartesianFamily.line &&
+          (_playgroundActive || _isLineSynchronized))
         OptionSection(
           title: 'Data updates',
           icon: Icons.update_outlined,
@@ -2591,7 +2888,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _animateSynchronizedUpdates = value),
             ),
-            if (_animateSynchronizedUpdates)
+            if (_playgroundActive || _animateSynchronizedUpdates)
               SliderOption(
                 key: const ValueKey('synchronized-update-duration'),
                 label: 'Update duration',
@@ -2606,7 +2903,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
           ],
         ),
-      if (_isLineSynchronized)
+      if (widget.family == _CartesianFamily.line &&
+          (_playgroundActive || _isLineSynchronized))
         OptionSection(
           title: 'Synchronization',
           icon: Icons.sync_alt,
@@ -2651,7 +2949,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (_isLineSynchronized)
+      if (widget.family == _CartesianFamily.line &&
+          (_playgroundActive || _isLineSynchronized))
         OptionSection(
           title: 'Tracking detail',
           icon: Icons.center_focus_strong_outlined,
@@ -2787,7 +3086,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      if (widget.family != _CartesianFamily.scatter && _presetIndex == 3)
+      if (widget.family != _CartesianFamily.scatter &&
+          (_playgroundActive || _presetIndex == 3))
         OptionSection(
           title: 'Motion',
           icon: Icons.animation,
@@ -2903,12 +3203,13 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       if (widget.family == _CartesianFamily.scatter)
         ..._buildScatterStyleSections(),
-      if (!_isLineSynchronized)
+      if (_playgroundActive || !_isLineSynchronized)
         StandardChartOptions(
           controller: _optionsController,
-          showThemeOption: !_isLineSpotlight,
+          showThemeOption: _playgroundActive || !_isLineSpotlight,
           showLegendOption:
-              !_isLineSpotlight && !_isLineForecast && !_isAreaPulse,
+              _playgroundActive ||
+              (!_isLineSpotlight && !_isLineForecast && !_isAreaPulse),
           showLineStyleOption: false,
         ),
     ];
@@ -2964,7 +3265,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             onChanged: (value) =>
                 setState(() => _scatterOutlineColorOverride = value),
           ),
-          if (_scatterOutlineOverrideEnabled)
+          if (_playgroundActive || _scatterOutlineOverrideEnabled)
             SliderOption(
               key: const ValueKey('scatter-marker-outline-width'),
               label: 'Outline width',
@@ -2985,7 +3286,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             onChanged: (value) =>
                 setState(() => _scatterOpacityOverrideEnabled = value),
           ),
-          if (_scatterOpacityOverrideEnabled)
+          if (_playgroundActive || _scatterOpacityOverrideEnabled)
             SliderOption(
               key: const ValueKey('scatter-marker-opacity-override'),
               label: 'Marker opacity',
@@ -3059,7 +3360,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             onChanged: (value) =>
                 setState(() => _scatterInteractionColorOverrideEnabled = value),
           ),
-          if (_scatterInteractionColorOverrideEnabled) ...[
+          if (_playgroundActive || _scatterInteractionColorOverrideEnabled) ...[
             PaletteColorOption(
               key: const ValueKey('scatter-hover-color-option'),
               keyPrefix: 'scatter-hover-color',
@@ -3103,6 +3404,25 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   };
 
   List<ChartSeries> _buildLineSeries() {
+    if (_playgroundActive) {
+      return [
+        _line(
+          id: 'playground-primary',
+          name: 'Generated A',
+          unit: 'units',
+          points: _playgroundPrimaryPoints,
+          color: const Color(0xFF2563EB),
+        ),
+        if (_showSecondSeries)
+          _line(
+            id: 'playground-secondary',
+            name: 'Generated B',
+            unit: 'units',
+            points: _playgroundSecondaryPoints,
+            color: const Color(0xFFF97316),
+          ),
+      ];
+    }
     if (_isLineForecast) {
       const forecastColor = Color(0xFF4F8CFF);
       return [
@@ -3363,6 +3683,25 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   }
 
   List<ChartSeries> _buildAreaSeries() {
+    if (_playgroundActive) {
+      return [
+        _area(
+          id: 'playground-primary',
+          name: 'Generated A',
+          points: _playgroundPrimaryPoints,
+          color: const Color(0xFF4F46E5),
+          fillOpacity: _fillOpacity,
+        ),
+        if (_showSecondSeries)
+          _area(
+            id: 'playground-secondary',
+            name: 'Generated B',
+            points: _playgroundSecondaryPoints,
+            color: const Color(0xFF0891B2),
+            fillOpacity: (_fillOpacity * 0.72).clamp(0.04, 0.7),
+          ),
+      ];
+    }
     if (_presetIndex == 3) {
       return [
         _area(
@@ -3662,6 +4001,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   }
 
   List<ChartSeries> _buildScatterPresetSeries() {
+    if (_playgroundActive) return _buildScatterPlaygroundSeries();
     if (_presetIndex == 3) return _buildScatterShapeSeries();
     if (_presetIndex == 4) return _buildScatterStylingSeries();
     if (_presetIndex == 7) return _buildScatterStateSeries();
@@ -3815,33 +4155,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       ];
     }
     if (_isScatterGeneratorPreset) {
-      const colors = [
-        Color(0xFF2563EB),
-        Color(0xFFF97316),
-        Color(0xFF0F9F8F),
-        Color(0xFF8B5CF6),
-        Color(0xFFE11D48),
-        Color(0xFFD69E00),
-      ];
-      return [
-        for (
-          var seriesIndex = 0;
-          seriesIndex < _scatterGeneratorSeriesCount;
-          seriesIndex++
-        )
-          ScatterChartSeries(
-            id: 'generated-cohort-$seriesIndex',
-            name: 'Generated cohort ${seriesIndex + 1}',
-            points: ScatterPointGenerator.generate(
-              _scatterGeneratorConfig,
-              seriesIndex: seriesIndex,
-            ),
-            color: colors[seriesIndex % colors.length],
-            markerRadius: _markerRadius,
-            markerShape: _scatterMarkerShape,
-            isXOrdered: true,
-          ),
-      ];
+      return _buildScatterPlaygroundSeries();
     }
     if (_presetIndex == 5 || _presetIndex == 6) {
       const colors = [
@@ -3948,6 +4262,36 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           color: const Color(0xFFE11D48),
           markerRadius: _markerRadius + 2,
           markerShape: SeriesMarkerShape.diamond,
+          isXOrdered: true,
+        ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterPlaygroundSeries() {
+    const colors = [
+      Color(0xFF2563EB),
+      Color(0xFFF97316),
+      Color(0xFF0F9F8F),
+      Color(0xFF8B5CF6),
+      Color(0xFFE11D48),
+      Color(0xFFD69E00),
+    ];
+    return [
+      for (
+        var seriesIndex = 0;
+        seriesIndex < _scatterGeneratorSeriesCount;
+        seriesIndex++
+      )
+        ScatterChartSeries(
+          id: 'playground-cohort-$seriesIndex',
+          name: 'Generated cohort ${seriesIndex + 1}',
+          points: ScatterPointGenerator.generate(
+            _scatterGeneratorConfig,
+            seriesIndex: seriesIndex,
+          ),
+          color: colors[seriesIndex % colors.length],
+          markerRadius: _markerRadius,
+          markerShape: _scatterMarkerShape,
           isXOrdered: true,
         ),
     ];

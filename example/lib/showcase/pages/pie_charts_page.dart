@@ -12,6 +12,7 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// Public showcase for categorical contribution charts.
@@ -28,9 +29,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
   final ChartWorkbenchController _workbenchController =
       ChartWorkbenchController();
   final math.Random _random = math.Random();
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
 
   _PieDataset _dataset = _PieDataset.revenue;
   _PieShowcasePreset _showcasePreset = _PieShowcasePreset.editorial;
+  _PieDataset _authoredDataset = _PieDataset.revenue;
+  _PieShowcasePreset _authoredPreset = _PieShowcasePreset.editorial;
+  bool _playgroundActive = false;
   late Map<String, num> _values;
   late Map<String, num> _radiusValues;
   late int _categoryCount;
@@ -137,6 +142,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 307,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _values = Map<String, num>.of(_dataset.categoryValues);
     _radiusValues = Map<String, num>.of(
       _dataset.radiusValues ?? const <String, num>{},
@@ -146,15 +156,26 @@ class _PieChartsPageState extends State<PieChartsPage> {
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _optionsController.dispose();
     _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
   }
 
-  void _selectDataset(_PieDataset dataset) {
-    if (_dataset == dataset) return;
+  void _selectDataset(_PieDataset dataset, {bool authoredSelection = true}) {
+    if (_dataset == dataset && (!authoredSelection || !_playgroundActive)) {
+      return;
+    }
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     setState(() {
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredDataset = dataset;
+      }
       _dataset = dataset;
       _values = Map<String, num>.of(dataset.categoryValues);
       _radiusValues = Map<String, num>.of(
@@ -167,9 +188,143 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _chartController.clearPointSelection();
   }
 
-  void _applyShowcasePreset(_PieShowcasePreset preset) {
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    final count = radialDemoMinimumDataPoints + random.nextInt(8);
+    final labels = List<String>.generate(
+      count,
+      (index) => 'Category ${index + 1}',
+      growable: false,
+    );
+    setState(() {
+      _values = randomRadialDistribution(
+        labels: labels,
+        total: 100,
+        random: random,
+      );
+      // Variable radii are part of the dataset contract. Supplying an
+      // undeclared second metric would make grouped slices ambiguous because
+      // there is no radius aggregation policy to apply.
+      _radiusValues = randomRadialMetric(
+        labels: labels,
+        minimum: 0.35,
+        maximum: 1,
+        random: random,
+      );
+      _categoryCount = count;
+      _showLabels = random.nextBool();
+      _labelPosition = PieDataLabelPosition
+          .values[random.nextInt(PieDataLabelPosition.values.length)];
+      _labelContent = PieDataLabelContent
+          .values[random.nextInt(PieDataLabelContent.values.length)];
+      _collisionStrategy = PieDataLabelCollisionStrategy
+          .values[random.nextInt(PieDataLabelCollisionStrategy.values.length)];
+      _minimumShare = random.nextDouble() * 0.08;
+      _minimumSweepDegrees = random.nextDouble() * 14;
+      _labelPadding = random.nextDouble() * 14;
+      _labelLayout =
+          _PieLabelLayout.values[random.nextInt(_PieLabelLayout.values.length)];
+      _insideLabelOffset = -8 + random.nextDouble() * 16;
+      _outsideLabelOffset = random.nextDouble() * 14;
+      _connectorLength = 6 + random.nextDouble() * 22;
+      _connectorWidth = 0.5 + random.nextDouble() * 2.5;
+      _useCustomConnectorColor = random.nextBool();
+      _connectorColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _startAngle = -180 + random.nextDouble() * 360;
+      _clockwise = random.nextBool();
+      _radiusFactor = 0.62 + random.nextDouble() * 0.34;
+      _minimumSliceRadiusFactor = 0.2 + random.nextDouble() * 0.55;
+      _sliceRadiusScale = PieSliceRadiusScale
+          .values[random.nextInt(PieSliceRadiusScale.values.length)];
+      _sliceGap = random.nextDouble() * 8;
+      _borderWidth = random.nextDouble() * 3;
+      _borderPreset = _PieBorderPreset
+          .values[random.nextInt(_PieBorderPreset.values.length)];
+      _fixedBorderColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientPreset = _PieGradientPreset
+          .values[random.nextInt(_PieGradientPreset.values.length)];
+      _useFixedGradientColors = random.nextBool();
+      _gradientStartColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientEndColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientStartLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientEndLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientAngleDegrees = -180 + random.nextDouble() * 360;
+      _selectionEffect = RadialSelectionEffect
+          .values[random.nextInt(RadialSelectionEffect.values.length)];
+      _selectionExplodeOffset = random.nextDouble() * 20;
+      _selectionLiftScale = 1 + random.nextDouble() * 0.3;
+      _selectionLiftOffset = random.nextDouble() * 14;
+      _selectionBackdropBlur = random.nextDouble() * 3;
+      _cornerRadius = random.nextDouble() * 16;
+      _cornerTreatment = PieCornerTreatment
+          .values[random.nextInt(PieCornerTreatment.values.length)];
+      _sliceOpacity = 0.58 + random.nextDouble() * 0.42;
+      _showShadow = random.nextBool();
+      _showSelectedGlow = random.nextBool();
+      _selectedGlowColor =
+          _PieGlowColor.values[random.nextInt(_PieGlowColor.values.length)];
+      _selectedGlowBlur = random.nextDouble() * 24;
+      _selectedGlowSpread = random.nextDouble() * 8;
+      _selectedGlowOpacity = 0.15 + random.nextDouble() * 0.8;
+      _selectedGlowOffsetY = -8 + random.nextDouble() * 16;
+      _animationMode = PieAnimationMode
+          .values[random.nextInt(PieAnimationMode.values.length)];
+      _dataTransitionMode = RadialDataTransitionMode
+          .values[random.nextInt(RadialDataTransitionMode.values.length)];
+      _palette = _PiePalette.values[random.nextInt(_PiePalette.values.length)];
+      _calloutPreset = _PieCalloutPreset
+          .values[random.nextInt(_PieCalloutPreset.values.length)];
+      _insideShareStyle = _PieInsideShareStyle
+          .values[random.nextInt(_PieInsideShareStyle.values.length)];
+      _showLegend = random.nextBool();
+      _legendPosition =
+          LegendPosition.values[random.nextInt(LegendPosition.values.length)];
+      _legendMarkerShape = LegendMarkerShape
+          .values[random.nextInt(LegendMarkerShape.values.length)];
+      _legendPreset = _PieLegendPreset
+          .values[random.nextInt(_PieLegendPreset.values.length)];
+      _legendContent = _PieLegendContent
+          .values[random.nextInt(_PieLegendContent.values.length)];
+      _legendOrientation = LegendOrientation
+          .values[random.nextInt(LegendOrientation.values.length)];
+      _legendMarkerSize = 6 + random.nextDouble() * 12;
+      _legendFontSize = 8 + random.nextDouble() * 8;
+      _legendOpacity = 0.35 + random.nextDouble() * 0.65;
+      _showTooltips = random.nextBool();
+      _tooltipPosition =
+          TooltipPosition.values[random.nextInt(TooltipPosition.values.length)];
+      _tooltipPreset = _PieTooltipPreset
+          .values[random.nextInt(_PieTooltipPreset.values.length)];
+      _tooltipFollowsCursor = random.nextBool();
+      _tooltipOffset = 2 + random.nextDouble() * 18;
+      _groupSmallSlices = random.nextBool();
+      _groupingMinimumShare = 0.04 + random.nextDouble() * 0.12;
+      _radiusAggregation = RadialSliceRadiusAggregation
+          .values[random.nextInt(RadialSliceRadiusAggregation.values.length)];
+      if (_groupSmallSlices) {
+        _radiusValues = const <String, num>{};
+      }
+      _selectedCategory = null;
+      _clearPortableState();
+    });
+    _chartController.clearPointSelection();
+  }
+
+  void _applyShowcasePreset(
+    _PieShowcasePreset preset, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     _chartController.clearPointSelection();
     setState(() {
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredPreset = preset;
+      }
       _showcasePreset = preset;
       _selectedCategory = null;
       _clearPortableState();
@@ -533,6 +688,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
       title: 'Pie Charts',
       subtitle: 'Explain how categories contribute to one meaningful whole',
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'pie-randomizer',
       chart: _buildWorkspace(),
     );
   }
@@ -552,7 +713,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               onChanged: (value) => setState(() => _showLabels = value),
               subtitle: 'Keep category meaning next to each contribution',
             ),
-            if (_showLabels) ...[
+            if (_playgroundActive || _showLabels) ...[
               EnumOption<_PieLabelLayout>(
                 key: const ValueKey('pie-label-layout'),
                 label: 'Layout',
@@ -564,7 +725,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 },
                 onChanged: (value) => setState(() => _labelLayout = value),
               ),
-              if (_labelLayout == _PieLabelLayout.single) ...[
+              if (_playgroundActive ||
+                  _labelLayout == _PieLabelLayout.single) ...[
                 EnumOption<PieDataLabelPosition>(
                   key: const ValueKey('pie-label-position'),
                   label: 'Position',
@@ -592,7 +754,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 labelBuilder: _calloutPresetName,
                 onChanged: (value) => setState(() => _calloutPreset = value),
               ),
-              if (_labelLayout == _PieLabelLayout.split)
+              if (_playgroundActive || _labelLayout == _PieLabelLayout.split)
                 EnumOption<_PieInsideShareStyle>(
                   key: const ValueKey('pie-inside-share-style'),
                   label: 'Inside share style',
@@ -638,7 +800,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 decimalPlaces: 0,
                 onChanged: (value) => setState(() => _labelPadding = value),
               ),
-              if (_labelLayout == _PieLabelLayout.split ||
+              if (_playgroundActive ||
+                  _labelLayout == _PieLabelLayout.split ||
                   _labelPosition == PieDataLabelPosition.inside)
                 SliderOption(
                   key: const ValueKey('pie-label-inside-offset'),
@@ -652,7 +815,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   onChanged: (value) =>
                       setState(() => _insideLabelOffset = value),
                 ),
-              if (_labelLayout == _PieLabelLayout.split ||
+              if (_playgroundActive ||
+                  _labelLayout == _PieLabelLayout.split ||
                   _labelPosition == PieDataLabelPosition.outside) ...[
                 EnumOption<PieDataLabelCollisionStrategy>(
                   key: const ValueKey('pie-label-collision'),
@@ -705,7 +869,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   onChanged: (value) =>
                       setState(() => _useCustomConnectorColor = value),
                 ),
-                if (_useCustomConnectorColor)
+                if (_playgroundActive || _useCustomConnectorColor)
                   ColorOption(
                     key: const ValueKey('pie-connector-color'),
                     label: 'Connector color',
@@ -750,7 +914,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _radiusFactor = value / 100),
             ),
-            if (_dataset.hasVariableSliceRadius) ...[
+            if (_playgroundActive || _dataset.hasVariableSliceRadius) ...[
               SliderOption(
                 label: 'Smallest slice radius',
                 value: _minimumSliceRadiusFactor * 100,
@@ -790,7 +954,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
               labelBuilder: _gradientPresetName,
               onChanged: (value) => setState(() => _gradientPreset = value),
             ),
-            if (_gradientPreset != _PieGradientPreset.solid) ...[
+            if (_playgroundActive ||
+                _gradientPreset != _PieGradientPreset.solid) ...[
               BoolOption(
                 key: const ValueKey('pie-fixed-gradient-colors'),
                 label: 'Use fixed gradient colors',
@@ -799,7 +964,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                     setState(() => _useFixedGradientColors = value),
                 subtitle: 'Off derives both stops from each category color',
               ),
-              if (_useFixedGradientColors) ...[
+              if (_playgroundActive || _useFixedGradientColors) ...[
                 ColorOption(
                   key: const ValueKey('pie-gradient-start-color'),
                   label: 'Gradient start',
@@ -843,7 +1008,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
                       setState(() => _gradientEndLightnessShift = value / 100),
                 ),
               ],
-              if (_gradientPreset == _PieGradientPreset.linear)
+              if (_playgroundActive ||
+                  _gradientPreset == _PieGradientPreset.linear)
                 SliderOption(
                   key: const ValueKey('pie-gradient-angle'),
                   label: 'Gradient angle',
@@ -890,7 +1056,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _borderWidth = value),
             ),
-            if (_borderWidth > 0) ...[
+            if (_playgroundActive || _borderWidth > 0) ...[
               EnumOption<_PieBorderPreset>(
                 key: const ValueKey('pie-border-color'),
                 label: 'Border color',
@@ -899,7 +1065,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 labelBuilder: _borderPresetName,
                 onChanged: (value) => setState(() => _borderPreset = value),
               ),
-              if (_borderPreset == _PieBorderPreset.fixedAccent)
+              if (_playgroundActive ||
+                  _borderPreset == _PieBorderPreset.fixedAccent)
                 ColorOption(
                   key: const ValueKey('pie-fixed-border-color'),
                   label: 'Fixed border',
@@ -920,7 +1087,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _cornerRadius = value),
             ),
-            if (_cornerRadius > 0)
+            if (_playgroundActive || _cornerRadius > 0)
               EnumOption<PieCornerTreatment>(
                 key: const ValueKey('pie-corner-treatment'),
                 label: 'Corner treatment',
@@ -941,7 +1108,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               value: _showSelectedGlow,
               onChanged: (value) => setState(() => _showSelectedGlow = value),
             ),
-            if (_showSelectedGlow) ...[
+            if (_playgroundActive || _showSelectedGlow) ...[
               EnumOption<_PieGlowColor>(
                 key: const ValueKey('pie-glow-color'),
                 label: 'Glow color',
@@ -1017,7 +1184,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
               subtitle: 'Pull a slice outward or lift it towards the viewer',
               onChanged: (value) => setState(() => _selectionEffect = value),
             ),
-            if (_selectionEffect == RadialSelectionEffect.explode)
+            if (_playgroundActive ||
+                _selectionEffect == RadialSelectionEffect.explode)
               SliderOption(
                 key: const ValueKey('pie-selection-explode-offset'),
                 label: 'Selected slice offset',
@@ -1128,7 +1296,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   ? 'Group angle and aggregate radius by the policy below'
                   : 'Render one Other slice while preserving every source row',
             ),
-            if (_groupSmallSlices) ...[
+            if (_playgroundActive || _groupSmallSlices) ...[
               SliderOption(
                 key: const ValueKey('pie-grouping-threshold'),
                 label: 'Share threshold',
@@ -1140,7 +1308,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 decimalPlaces: 0,
                 onChanged: _setGroupingThreshold,
               ),
-              if (_dataset.hasVariableSliceRadius)
+              if (_playgroundActive || _dataset.hasVariableSliceRadius)
                 EnumOption<RadialSliceRadiusAggregation>(
                   key: const ValueKey('pie-radius-aggregation'),
                   label: 'Radius aggregation',
@@ -1170,7 +1338,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               onChanged: (value) => setState(() => _showLegend = value),
               subtitle: 'Legend items select slices; they do not hide data',
             ),
-            if (_showLegend) ...[
+            if (_playgroundActive || _showLegend) ...[
               EnumOption<_PieLegendPreset>(
                 key: const ValueKey('pie-legend-style'),
                 label: 'Legend style',
@@ -1265,7 +1433,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               subtitle:
                   'Hover, tap, or select from the legend or table; deselect to hide',
             ),
-            if (_showTooltips) ...[
+            if (_playgroundActive || _showTooltips) ...[
               EnumOption<_PieTooltipPreset>(
                 key: const ValueKey('pie-tooltip-style'),
                 label: 'Tooltip style',
@@ -1363,6 +1531,24 @@ class _PieChartsPageState extends State<PieChartsPage> {
     ]);
   }
 
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredDataset = _dataset;
+      _authoredPreset = _showcasePreset;
+      setState(() => _playgroundActive = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _applyShowcasePreset(_authoredPreset);
+    _selectDataset(_authoredDataset);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
+
   Widget _buildWorkspace() {
     return ListenableBuilder(
       listenable: _optionsController,
@@ -1457,8 +1643,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
     final theme = _buildPieTheme();
     return BravenChartPlus(
       key: const ValueKey('pie-showcase-chart'),
-      title: _dataset.chartTitle,
-      subtitle: _dataset.chartSubtitle,
+      title: _playgroundActive ? 'Pie playground' : _dataset.chartTitle,
+      subtitle: _playgroundActive
+          ? '${_values.length} generated categories · seed ${_showcaseRandomizer.appliedSeed ?? _showcaseRandomizer.seed}'
+          : _dataset.chartSubtitle,
       bravenChartController: controller,
       showLegend: _showLegend,
       radialLegendItemBuilder: _legendContent == _PieLegendContent.valueCards
@@ -1942,11 +2130,17 @@ class _PieChartsPageState extends State<PieChartsPage> {
         child: ListView.separated(
           key: const ValueKey('pie-presentation-selector'),
           scrollDirection: Axis.horizontal,
-          itemCount: _PieShowcasePreset.values.length,
+          itemCount: _PieShowcasePreset.values.length + 1,
           separatorBuilder: (_, _) => const SizedBox(width: spacing),
           itemBuilder: (context, index) => SizedBox(
             width: 220,
-            child: _presentationCard(_PieShowcasePreset.values[index]),
+            child: index == _PieShowcasePreset.values.length
+                ? PlaygroundExampleCard(
+                    key: const ValueKey('pie-playground'),
+                    selected: _playgroundActive,
+                    onTap: () => _setPlaygroundActive(true),
+                  )
+                : _presentationCard(_PieShowcasePreset.values[index]),
           ),
         ),
       );
@@ -1959,13 +2153,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
           if (index > 0) const SizedBox(width: spacing),
           Expanded(child: _presentationCard(preset)),
         ],
+        const SizedBox(width: spacing),
+        Expanded(
+          child: PlaygroundExampleCard(
+            key: const ValueKey('pie-playground'),
+            selected: _playgroundActive,
+            onTap: () => _setPlaygroundActive(true),
+          ),
+        ),
       ],
     );
   }
 
   Widget _presentationCard(_PieShowcasePreset preset) {
     final colors = Theme.of(context).colorScheme;
-    final selected = preset == _showcasePreset;
+    final selected = !_playgroundActive && preset == _showcasePreset;
     return Semantics(
       button: true,
       selected: selected,
@@ -2092,7 +2294,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
 
   Widget _datasetCard(_PieDataset dataset) {
     final colors = Theme.of(context).colorScheme;
-    final selected = dataset == _dataset;
+    final selected = !_playgroundActive && dataset == _dataset;
     return Semantics(
       button: true,
       selected: selected,

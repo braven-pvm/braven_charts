@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// First-class Candlestick chart-family Workbench surface.
@@ -44,6 +45,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       ValueNotifier(null);
   final ChartInteractionGroupController _stockGroupController =
       ChartInteractionGroupController();
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
   late List<CandlestickDataPoint> _candles;
   late FinancialTimeDomain _timeDomain;
   late final List<CandlestickDataPoint> _densityCandles;
@@ -135,6 +137,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   int _minimumPointsPerGroup = 2;
   FinancialTimeSpacing _timeSpacing = FinancialTimeSpacing.ordinal;
   _CandlestickExample _selectedExample = _CandlestickExample.priceAction;
+  _CandlestickExample _authoredExample = _CandlestickExample.priceAction;
+  bool _playgroundActive = false;
   _CandlestickPalette _candlePalette = _CandlestickPalette.theme;
   _CandlestickStyleRecipe _styleRecipe = _CandlestickStyleRecipe.balanced;
   _GapFrequency _gapFrequency = _GapFrequency.occasional;
@@ -163,6 +167,11 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 211,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _candles = _buildCandles();
     _timeDomain = FinancialTimeDomain(
       _candles.map((point) => point.timestamp!),
@@ -182,6 +191,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   @override
   void dispose() {
     _pinnedSummaryCandle.dispose();
+    _showcaseRandomizer.dispose();
     _optionsController.dispose();
     _chartController.dispose();
     _stockGroupController.dispose();
@@ -218,14 +228,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
       ],
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'candlestick-randomizer',
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
           final contentHeight = math.max(
             constraints.maxHeight,
             _showcaseMode == _CandlestickShowcaseMode.stock
-                ? (compact ? 2060.0 : 1360.0)
-                : (compact ? 1320.0 : 960.0),
+                ? (compact ? 2160.0 : 1360.0)
+                : (compact ? 1420.0 : 960.0),
           );
           final content = SizedBox(
             height: contentHeight,
@@ -309,9 +325,14 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                     key: ValueKey('candlestick-example-${example.name}'),
                     avatar: Icon(_exampleIcon(example), size: 18),
                     label: Text(_exampleLabel(example)),
-                    selected: _selectedExample == example,
+                    selected: !_playgroundActive && _selectedExample == example,
                     onSelected: (_) => _applyExample(example),
                   ),
+                PlaygroundChoiceChip(
+                  key: const ValueKey('candlestick-playground'),
+                  selected: _playgroundActive,
+                  onSelected: () => _setPlaygroundActive(true),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -1493,12 +1514,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   }
 
   List<Widget> _buildOptions() => [
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Example data',
         icon: Icons.dataset_outlined,
         children: [
-          if (!_useDensityStressData) ...[
+          if (_playgroundActive || !_useDensityStressData) ...[
             IntSliderOption(
               key: const ValueKey('candlestick-session-count'),
               label: 'Visible sessions',
@@ -1563,7 +1585,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           ),
         ],
       ),
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Annotations and events',
         icon: Icons.event_note_outlined,
@@ -1576,7 +1599,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _showMarketContext,
             onChanged: (value) => setState(() => _showMarketContext = value),
           ),
-          if (_showMarketContext) ...[
+          if (_playgroundActive || _showMarketContext) ...[
             _AnnotationPaletteOption(
               key: const ValueKey('candlestick-context-threshold-color'),
               label: 'Price level colour',
@@ -1628,7 +1651,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _trackingEnabled,
           onChanged: (value) => setState(() => _trackingEnabled = value),
         ),
-        if (_trackingEnabled)
+        if (_playgroundActive || _trackingEnabled)
           BoolOption(
             key: const ValueKey('candlestick-tracking-tooltip'),
             label: 'Show crosshair OHLC panel',
@@ -1636,7 +1659,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _showTrackingTooltip,
             onChanged: (value) => setState(() => _showTrackingTooltip = value),
           ),
-        if (_trackingEnabled) ...[
+        if (_playgroundActive || _trackingEnabled) ...[
           BoolOption(
             key: const ValueKey('candlestick-coordinate-labels'),
             label: 'Show crosshair axis values',
@@ -1652,7 +1675,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             onChanged: (value) =>
                 setState(() => _showIntersectionMarkers = value),
           ),
-          if (_showIntersectionMarkers)
+          if (_playgroundActive || _showIntersectionMarkers)
             SliderOption(
               key: const ValueKey('candlestick-marker-radius'),
               label: 'Intersection dot radius',
@@ -1691,7 +1714,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showPointTooltip,
           onChanged: (value) => setState(() => _showPointTooltip = value),
         ),
-        if (_showPointTooltip) ...[
+        if (_playgroundActive || _showPointTooltip) ...[
           EnumOption<TooltipPosition>(
             key: const ValueKey('candlestick-tooltip-position'),
             label: 'Hover card position',
@@ -1716,7 +1739,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showPinnedSummary,
           onChanged: (value) => setState(() => _showPinnedSummary = value),
         ),
-        if (_showPinnedSummary) ...[
+        if (_playgroundActive || _showPinnedSummary) ...[
           EnumOption<_PinnedSummaryPresentation>(
             key: const ValueKey('candlestick-pinned-summary-presentation'),
             label: 'Presentation',
@@ -1729,7 +1752,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             onChanged: (value) =>
                 setState(() => _pinnedSummaryPresentation = value),
           ),
-          if (_pinnedSummaryPresentation == _PinnedSummaryPresentation.overlay)
+          if (_playgroundActive ||
+              _pinnedSummaryPresentation == _PinnedSummaryPresentation.overlay)
             EnumOption<_PinnedSummaryCorner>(
               key: const ValueKey('candlestick-pinned-summary-corner'),
               label: 'Overlay position',
@@ -1744,8 +1768,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               onChanged: (value) =>
                   setState(() => _pinnedSummaryCorner = value),
             ),
-          if (_pinnedSummaryPresentation ==
-              _PinnedSummaryPresentation.annotation) ...[
+          if (_playgroundActive ||
+              _pinnedSummaryPresentation ==
+                  _PinnedSummaryPresentation.annotation) ...[
             BoolOption(
               key: const ValueKey('candlestick-pinned-summary-draggable'),
               label: 'Allow annotation dragging',
@@ -1862,7 +1887,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                 setState(() => _pinnedSummaryFontSize = value),
           ),
         ],
-        if (_showcaseMode == _CandlestickShowcaseMode.workbench) ...[
+        if (_playgroundActive ||
+            _showcaseMode == _CandlestickShowcaseMode.workbench) ...[
           const _OptionGroupLabel('Time scale'),
           EnumOption<FinancialTimeSpacing>(
             key: const ValueKey('candlestick-time-spacing'),
@@ -1883,7 +1909,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ],
       ],
     ),
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Motion and revisions',
         icon: Icons.animation_outlined,
@@ -1899,7 +1926,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             },
             onChanged: (value) => setState(() => _entranceAnimation = value),
           ),
-          if (_entranceAnimation == CandlestickAnimationMode.reveal)
+          if (_playgroundActive ||
+              _entranceAnimation == CandlestickAnimationMode.reveal)
             SliderOption(
               key: const ValueKey('candlestick-entrance-stagger'),
               label: 'Entrance stagger',
@@ -2009,7 +2037,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _customTrackingTheme,
           onChanged: (value) => setState(() => _customTrackingTheme = value),
         ),
-        if (_customTrackingTheme) ...[
+        if (_playgroundActive || _customTrackingTheme) ...[
           const _OptionGroupLabel('Tracking lines'),
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-crosshair-color'),
@@ -2099,7 +2127,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ],
       ],
     ),
-    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+    if (_playgroundActive ||
+        _showcaseMode == _CandlestickShowcaseMode.workbench)
       OptionSection(
         title: 'Data density',
         icon: Icons.density_medium,
@@ -2112,7 +2141,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             onChanged: (value) =>
                 setState(() => _densityGroupingEnabled = value),
           ),
-          if (_densityGroupingEnabled) ...[
+          if (_playgroundActive || _densityGroupingEnabled) ...[
             SliderOption(
               key: const ValueKey('candlestick-target-group-width'),
               label: 'Target group width',
@@ -2236,7 +2265,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _customDirectionColors,
           onChanged: (value) => setState(() => _customDirectionColors = value),
         ),
-        if (_customDirectionColors) ...[
+        if (_playgroundActive || _customDirectionColors) ...[
           const _OptionGroupLabel('Body fills'),
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-rising-body-color'),
@@ -2256,7 +2285,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _dojiBodyColor,
             onChanged: (value) => setState(() => _dojiBodyColor = value),
           ),
-          if (_showBodyBorder) ...[
+          if (_playgroundActive || _showBodyBorder) ...[
             const _OptionGroupLabel('Body borders'),
             _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-border-color'),
@@ -2277,7 +2306,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               onChanged: (value) => setState(() => _dojiBorderColor = value),
             ),
           ],
-          if (_showWicks) ...[
+          if (_playgroundActive || _showWicks) ...[
             const _OptionGroupLabel('Wicks'),
             _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-wick-color'),
@@ -2306,7 +2335,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _highlightLatestCandle,
           onChanged: (value) => setState(() => _highlightLatestCandle = value),
         ),
-        if (_highlightLatestCandle) ...[
+        if (_playgroundActive || _highlightLatestCandle) ...[
           _AnnotationPaletteOption(
             key: const ValueKey('candlestick-highlight-body-color'),
             label: 'Highlight body',
@@ -2381,7 +2410,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showBodyBorder,
           onChanged: (value) => setState(() => _showBodyBorder = value),
         ),
-        if (_showBodyBorder)
+        if (_playgroundActive || _showBodyBorder)
           SliderOption(
             key: const ValueKey('candlestick-border-width'),
             label: 'Border width',
@@ -2398,7 +2427,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showWicks,
           onChanged: (value) => setState(() => _showWicks = value),
         ),
-        if (_showWicks)
+        if (_playgroundActive || _showWicks)
           SliderOption(
             key: const ValueKey('candlestick-wick-width'),
             label: 'Wick width',
@@ -2416,7 +2445,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showCloseAverage,
           onChanged: (value) => setState(() => _showCloseAverage = value),
         ),
-        if (_showCloseAverage) ...[
+        if (_playgroundActive || _showCloseAverage) ...[
           SliderOption(
             key: const ValueKey('candlestick-average-window'),
             label: 'Average window',
@@ -2462,7 +2491,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             setState(() {});
           },
         ),
-        if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+        if (_playgroundActive ||
+            _showcaseMode == _CandlestickShowcaseMode.workbench)
           BoolOption(
             key: const ValueKey('candlestick-direction-key'),
             label: 'Show direction key',
@@ -2587,6 +2617,148 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     });
   }
 
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    const colors = <Color>[
+      Color(0xFF2563EB),
+      Color(0xFF0D9488),
+      Color(0xFFF59E0B),
+      Color(0xFF7C3AED),
+      Color(0xFFEF4444),
+      Color(0xFF334155),
+      Color(0xFFF8FAFC),
+    ];
+    Color randomColor() => colors[random.nextInt(colors.length)];
+    final dataProfile = _CandlestickDataProfile
+        .values[random.nextInt(_CandlestickDataProfile.values.length)];
+    final recipe = _CandlestickStyleRecipe
+        .values[random.nextInt(_CandlestickStyleRecipe.values.length)];
+    _applyStyleRecipe(recipe);
+    setState(() {
+      _showcaseMode = _CandlestickShowcaseMode.workbench;
+      _sessionCount = 18 + random.nextInt(83);
+      _rangeScale = 0.55 + random.nextDouble() * 2.2;
+      _trendBias = -0.65 + random.nextDouble() * 1.3;
+      _gapFrequency =
+          _GapFrequency.values[random.nextInt(_GapFrequency.values.length)];
+      _useDensityStressData = false;
+      _densityGroupingEnabled = false;
+      _candles = _buildScenarioCandles(
+        profile: dataProfile,
+        count: _sessionCount,
+        rangeScale: _rangeScale,
+        trendBias: _trendBias,
+        gapFrequency: _gapFrequency,
+      );
+      _timeDomain = FinancialTimeDomain(
+        _candles.map((point) => point.timestamp!),
+      );
+      _bodyFillMode = CandlestickBodyFillMode
+          .values[random.nextInt(CandlestickBodyFillMode.values.length)];
+      _bodyWidthFactor = 0.42 + random.nextDouble() * 0.5;
+      _minBodyWidth = 1 + random.nextDouble() * 3;
+      _maxBodyWidth = 10 + random.nextDouble() * 16;
+      _bodyBorderWidth = 0.5 + random.nextDouble() * 2.5;
+      _wickWidth = 0.5 + random.nextDouble() * 2.5;
+      _cornerRadius = random.nextDouble() * 5;
+      _minimumBodyHeight = 0.5 + random.nextDouble() * 3.5;
+      _showBodyBorder = random.nextBool();
+      _showWicks = random.nextBool();
+      _showCloseAverage = random.nextBool();
+      _showDirectionLegend = random.nextBool();
+      _averageWindow = 3 + random.nextInt(18);
+      _averageStrokeWidth = 1 + random.nextDouble() * 3;
+      _averageColor = randomColor();
+      _customDirectionColors = random.nextBool();
+      _risingBodyColor = randomColor();
+      _fallingBodyColor = randomColor();
+      _dojiBodyColor = randomColor();
+      _risingBorderColor = randomColor();
+      _fallingBorderColor = randomColor();
+      _dojiBorderColor = randomColor();
+      _risingWickColor = randomColor();
+      _fallingWickColor = randomColor();
+      _dojiWickColor = randomColor();
+      _highlightLatestCandle = random.nextBool();
+      _highlightBodyColor = randomColor();
+      _highlightBorderColor = randomColor();
+      _highlightWickColor = randomColor();
+      _trackingEnabled = random.nextBool();
+      _showTrackingTooltip = random.nextBool();
+      _showPointTooltip = random.nextBool();
+      _showPinnedSummary = random.nextBool();
+      _pinnedSummaryPresentation = _PinnedSummaryPresentation
+          .values[random.nextInt(_PinnedSummaryPresentation.values.length)];
+      _pinnedSummaryCorner = _PinnedSummaryCorner
+          .values[random.nextInt(_PinnedSummaryCorner.values.length)];
+      _pinnedSummaryDraggable = random.nextBool();
+      _pinnedSummaryBackgroundVisible = random.nextBool();
+      _pinnedSummaryBorderVisible = random.nextBool();
+      _pinnedSummaryBackgroundColor = randomColor();
+      _pinnedSummaryBorderColor = randomColor();
+      _pinnedSummaryTextColor = randomColor();
+      _pinnedSummaryAccentColor = randomColor();
+      _pinnedSummaryBackgroundOpacity = 0.35 + random.nextDouble() * 0.65;
+      _pinnedSummaryBorderWidth = random.nextDouble() * 3;
+      _pinnedSummaryCornerRadius = random.nextDouble() * 16;
+      _pinnedSummaryPadding = 4 + random.nextDouble() * 12;
+      _pinnedSummaryFontSize = 8 + random.nextDouble() * 10;
+      _showCoordinateLabels = random.nextBool();
+      _showIntersectionMarkers = random.nextBool();
+      _intersectionMarkerRadius = 2 + random.nextDouble() * 6;
+      _crosshairLineWidth = 0.5 + random.nextDouble() * 2.5;
+      _crosshairDashed = random.nextBool();
+      _customTrackingTheme = random.nextBool();
+      _crosshairColor = randomColor();
+      _coordinateLabelBackgroundColor = randomColor();
+      _coordinateLabelTextColor = randomColor();
+      _tooltipBackgroundColor = randomColor();
+      _tooltipBorderColor = randomColor();
+      _tooltipTextColor = randomColor();
+      _selectionColor = randomColor();
+      _focusColor = randomColor();
+      _tooltipBorderWidth = random.nextDouble() * 3;
+      _tooltipCornerRadius = random.nextDouble() * 14;
+      _tooltipFontSize = 8 + random.nextDouble() * 10;
+      _tooltipPosition =
+          TooltipPosition.values[random.nextInt(TooltipPosition.values.length)];
+      _tooltipFollowsCursor = random.nextBool();
+      _selectionEnabled = random.nextBool();
+      _keyboardEnabled = random.nextBool();
+      _showFocusBorder = random.nextBool();
+      _entranceAnimation = CandlestickAnimationMode
+          .values[random.nextInt(CandlestickAnimationMode.values.length)];
+      _dataUpdateAnimation =
+          CandlestickDataUpdateAnimationMode.values[random.nextInt(
+            CandlestickDataUpdateAnimationMode.values.length,
+          )];
+      _animationDurationMs = 180 + random.nextInt(1021);
+      _entranceStagger = random.nextDouble();
+      _motionCurve = _CandlestickMotionCurve
+          .values[random.nextInt(_CandlestickMotionCurve.values.length)];
+      _revisionMagnitude = 1 + random.nextDouble() * 10;
+      _targetGroupWidth = 2 + random.nextDouble() * 10;
+      _minimumPointsPerGroup = 2 + random.nextInt(8);
+      _timeSpacing = FinancialTimeSpacing
+          .values[random.nextInt(FinancialTimeSpacing.values.length)];
+      _legendPosition =
+          LegendPosition.values[random.nextInt(LegendPosition.values.length)];
+      _yAxisPosition =
+          YAxisPosition.values[random.nextInt(YAxisPosition.values.length)];
+      _xTickCount = 4 + random.nextInt(9);
+      _showXAxisLabels = random.nextBool();
+      _showYAxisLabels = random.nextBool();
+      _legendDraggable = random.nextBool();
+      _showMarketContext = random.nextBool();
+      _contextThresholdColor = randomColor();
+      _contextWindowColor = randomColor();
+      _contextEventColor = randomColor();
+      _contextLineWidth = 0.5 + random.nextDouble() * 3;
+      _contextLineDashed = random.nextBool();
+    });
+  }
+
   void _applyStyleRecipe(_CandlestickStyleRecipe recipe) {
     setState(() {
       _styleRecipe = recipe;
@@ -2643,9 +2815,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     });
   }
 
-  void _applyExample(_CandlestickExample example) {
+  void _applyExample(
+    _CandlestickExample example, {
+    bool authoredSelection = true,
+  }) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     _pinnedSummaryCandle.value = null;
     setState(() {
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredExample = example;
+      }
       _selectedExample = example;
       _showcaseMode = example == _CandlestickExample.stockComposition
           ? _CandlestickShowcaseMode.stock
@@ -2741,6 +2924,26 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     }
   }
 
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredExample = _selectedExample;
+      setState(() {
+        _playgroundActive = true;
+        _showcaseMode = _CandlestickShowcaseMode.workbench;
+      });
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _reset();
+    _applyExample(_authoredExample);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
+
   void _regenerateWorkbenchData() {
     final dataProfile = switch (_selectedExample) {
       _CandlestickExample.trend => _CandlestickDataProfile.trend,
@@ -2763,34 +2966,38 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _pinnedSummaryCandle.value = null;
   }
 
-  String get _exampleDescription => switch (_selectedExample) {
-    _CandlestickExample.priceAction =>
-      'Balanced market action with rising, falling, and doji candles.',
-    _CandlestickExample.trend =>
-      'A sustained advance tests dense bodies and a longer moving average.',
-    _CandlestickExample.volatility =>
-      'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
-    _CandlestickExample.gapsAndDoji =>
-      'Discontinuous opens and repeated doji make direction cues explicit.',
-    _CandlestickExample.events =>
-      'A session band, price level, and candle-linked event demonstrate native Cartesian annotations.',
-    _CandlestickExample.accessible =>
-      'Blue/orange hues, hollow rising bodies, stronger strokes, and a direction key avoid colour-only meaning.',
-    _CandlestickExample.density =>
-      '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
-    _CandlestickExample.stockComposition =>
-      'Price, volume, and navigator charts share one financial time viewport.',
-  };
+  String get _exampleDescription => _playgroundActive
+      ? 'Generated OHLC data and every compatible candlestick property. Seeded playback is available in Options.'
+      : switch (_selectedExample) {
+          _CandlestickExample.priceAction =>
+            'Balanced market action with rising, falling, and doji candles.',
+          _CandlestickExample.trend =>
+            'A sustained advance tests dense bodies and a longer moving average.',
+          _CandlestickExample.volatility =>
+            'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
+          _CandlestickExample.gapsAndDoji =>
+            'Discontinuous opens and repeated doji make direction cues explicit.',
+          _CandlestickExample.events =>
+            'A session band, price level, and candle-linked event demonstrate native Cartesian annotations.',
+          _CandlestickExample.accessible =>
+            'Blue/orange hues, hollow rising bodies, stronger strokes, and a direction key avoid colour-only meaning.',
+          _CandlestickExample.density =>
+            '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
+          _CandlestickExample.stockComposition =>
+            'Price, volume, and navigator charts share one financial time viewport.',
+        };
 
-  String get _exampleChartTitle => switch (_selectedExample) {
-    _CandlestickExample.priceAction => 'Balanced price action',
-    _CandlestickExample.trend => 'Advancing market trend',
-    _CandlestickExample.volatility => 'High-volatility sessions',
-    _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
-    _CandlestickExample.events => 'Events and price levels',
-    _CandlestickExample.accessible => 'Accessible direction cues',
-    _ => 'Candlestick price action',
-  };
+  String get _exampleChartTitle => _playgroundActive
+      ? 'Candlestick playground'
+      : switch (_selectedExample) {
+          _CandlestickExample.priceAction => 'Balanced price action',
+          _CandlestickExample.trend => 'Advancing market trend',
+          _CandlestickExample.volatility => 'High-volatility sessions',
+          _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
+          _CandlestickExample.events => 'Events and price levels',
+          _CandlestickExample.accessible => 'Accessible direction cues',
+          _ => 'Candlestick price action',
+        };
 
   String _exampleLabel(_CandlestickExample example) => switch (example) {
     _CandlestickExample.priceAction => 'Price action',

@@ -55,13 +55,21 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    await tester.tap(find.text('Run 10K stress case'));
+    tester
+        .widget<ActionButton>(
+          find.widgetWithText(ActionButton, 'Run 10K stress case'),
+        )
+        .onPressed();
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('10000 total points'), findsOneWidget);
     expect(find.text('10000'), findsOneWidget);
 
-    await tester.tap(find.text('Reset session metrics'));
+    tester
+        .widget<ActionButton>(
+          find.widgetWithText(ActionButton, 'Reset session metrics'),
+        )
+        .onPressed();
     await tester.pump();
     expect(find.text('0 / 0'), findsOneWidget);
 

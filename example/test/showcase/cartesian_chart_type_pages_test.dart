@@ -214,7 +214,14 @@ void main() {
       expect(find.text('Pulse'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
 
-      await tester.tap(find.text('Baseline'));
+      final picker = find.byKey(const ValueKey('area-preset-picker'));
+      final baseline = find.descendant(
+        of: picker,
+        matching: find.text('Baseline'),
+      );
+      await tester.ensureVisible(baseline);
+      await tester.pumpAndSettle();
+      await tester.tap(baseline);
       await tester.pump(const Duration(milliseconds: 200));
 
       final chart = tester.widget<BravenChartPlus>(
@@ -224,12 +231,13 @@ void main() {
       expect(series.aboveBaselineFillColor, isNotNull);
       expect(series.belowBaselineFillColor, isNotNull);
 
-      await tester.tap(
-        find.descendant(
-          of: find.byKey(const ValueKey('area-preset-picker')),
-          matching: find.text('Forecast'),
-        ),
+      final forecast = find.descendant(
+        of: picker,
+        matching: find.text('Forecast'),
       );
+      await tester.ensureVisible(forecast);
+      await tester.pumpAndSettle();
+      await tester.tap(forecast);
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('area-guide-navigator')),
@@ -281,9 +289,13 @@ void main() {
     await pumpPage(tester, const AreaChartsPage());
     final picker = find.byKey(const ValueKey('area-preset-picker'));
 
-    await tester.tap(
-      find.descendant(of: picker, matching: find.text('Gradient')),
+    final gradient = find.descendant(
+      of: picker,
+      matching: find.text('Gradient'),
     );
+    await tester.ensureVisible(gradient);
+    await tester.pumpAndSettle();
+    await tester.tap(gradient);
     await tester.pumpAndSettle();
     var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
     expect(chart.series, hasLength(1));
@@ -1334,7 +1346,7 @@ void main() {
     );
     expect(
       find.descendant(of: picker, matching: find.byType(ChoiceChip)),
-      findsNWidgets(26),
+      findsNWidgets(27),
     );
     expect(
       tester.getTopLeft(lasso).dy,
@@ -3020,12 +3032,13 @@ void main() {
     tester,
   ) async {
     await pumpPage(tester, const LineChartsPage());
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey('line-preset-picker')),
-        matching: find.text('Motion'),
-      ),
+    final motion = find.descendant(
+      of: find.byKey(const ValueKey('line-preset-picker')),
+      matching: find.text('Motion'),
     );
+    await tester.ensureVisible(motion);
+    await tester.pumpAndSettle();
+    await tester.tap(motion);
     await tester.pumpAndSettle();
 
     var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
