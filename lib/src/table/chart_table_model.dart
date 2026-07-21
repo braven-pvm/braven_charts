@@ -18,6 +18,9 @@ enum ChartTableAuxiliaryField {
   magnitude,
   colorValue,
   opacityValue,
+  rangeLow,
+  rangeHigh,
+  rangeSpan,
   rangeStart,
   target,
   errorLower,
@@ -34,6 +37,9 @@ extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
     ChartTableAuxiliaryField.magnitude => 'Magnitude',
     ChartTableAuxiliaryField.colorValue => 'Color value',
     ChartTableAuxiliaryField.opacityValue => 'Opacity value',
+    ChartTableAuxiliaryField.rangeLow => 'Low',
+    ChartTableAuxiliaryField.rangeHigh => 'High',
+    ChartTableAuxiliaryField.rangeSpan => 'Span',
     ChartTableAuxiliaryField.rangeStart => 'Start',
     ChartTableAuxiliaryField.target => 'Target',
     ChartTableAuxiliaryField.errorLower => 'Lower',
@@ -533,7 +539,10 @@ class ChartTableModel {
         final point = payload.points[pointIndex];
         final x = point.x.asDouble;
         if (!_inViewport(x, viewState, options)) continue;
-        final y = point.y.asDouble;
+        final rangeArea = series.type == 'rangeArea'
+            ? _rangeAreaValues(point)
+            : null;
+        final y = rangeArea?.isGap == true ? double.nan : point.y.asDouble;
         final reference = ChartTablePointReference(
           seriesId: series.id,
           pointIndex: pointIndex,
@@ -1156,9 +1165,53 @@ String _xColumnLabel(ChartAxisDocument axis) {
   return unit == null || unit.isEmpty ? 'X value' : unit;
 }
 
+({bool isGap, double? low, double? high}) _rangeAreaValues(
+  ChartPointDocument point,
+) {
+  final extension = point.extensions['rangeArea.interval.v1'];
+  if (extension is! JsonObjectValue) {
+    throw const FormatException(
+      'Range Area table points require a rangeArea.interval.v1 extension.',
+    );
+  }
+  final isGap = extension.values['isGap']?.toJson();
+  if (isGap is! bool) {
+    throw const FormatException('Range Area point isGap must be boolean.');
+  }
+  if (isGap) return (isGap: true, low: null, high: null);
+
+  final lowValue = extension.values['low']?.toJson();
+  final highValue = extension.values['high']?.toJson();
+  if (lowValue is! num || highValue is! num) {
+    throw const FormatException(
+      'Range Area low and high values must be numeric.',
+    );
+  }
+  final low = lowValue.toDouble();
+  final high = highValue.toDouble();
+  if (!low.isFinite || !high.isFinite || low > high) {
+    throw const FormatException(
+      'Range Area table values require finite low <= high.',
+    );
+  }
+  if (point.y.asDouble != (low + high) / 2) {
+    throw const FormatException(
+      'Range Area table midpoint must equal canonical y.',
+    );
+  }
+  return (isGap: false, low: low, high: high);
+}
+
 Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
   ChartSeriesDocument series,
 ) {
+  if (series.type == 'rangeArea') {
+    return const {
+      ChartTableAuxiliaryField.rangeLow,
+      ChartTableAuxiliaryField.rangeHigh,
+      ChartTableAuxiliaryField.rangeSpan,
+    };
+  }
   if (series.type == 'scatter') {
     return Set.unmodifiable({
       if (series.style?.values['sizeEncoding'] is JsonObjectValue)
@@ -1203,6 +1256,35 @@ _auxiliaryValuesForPoint(
   required String Function(double)? formatter,
   _BarStackTableValue? stackValue,
 }) {
+  if (series.type == 'rangeArea') {
+    final payload = series.data;
+    if (payload is! InlineChartDataPayload ||
+        pointIndex >= payload.points.length) {
+      return const {};
+    }
+    final range = _rangeAreaValues(payload.points[pointIndex]);
+    if (range.isGap) return const {};
+    final low = range.low!;
+    final high = range.high!;
+    final span = high - low;
+    return Map.unmodifiable({
+      ChartTableAuxiliaryField.rangeLow: ChartTableAuxiliaryValue(
+        raw: low,
+        display: _displayNumber(low, formatter),
+        isValid: low.isFinite,
+      ),
+      ChartTableAuxiliaryField.rangeHigh: ChartTableAuxiliaryValue(
+        raw: high,
+        display: _displayNumber(high, formatter),
+        isValid: high.isFinite,
+      ),
+      ChartTableAuxiliaryField.rangeSpan: ChartTableAuxiliaryValue(
+        raw: span,
+        display: _displayNumber(span, formatter),
+        isValid: span.isFinite && span >= 0,
+      ),
+    });
+  }
   if (series.type == 'scatter') {
     final payload = series.data;
     if (payload is! InlineChartDataPayload ||

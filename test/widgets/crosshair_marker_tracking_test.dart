@@ -18,98 +18,128 @@ import 'package:flutter_test/flutter_test.dart';
 /// formatted display (`toStringAsFixed(0)`) quantizes a full data unit: many
 /// cursor pixels share one `formattedY`, making the retained-Y bug visible.
 void main() {
-  testWidgets(
-    'interpolated tracking marker follows the curve within one '
-    'formatted-value window (identity-suppressed snapshot retained)',
-    (tester) async {
-      await tester.pumpWidget(_host());
-      await tester.pumpAndSettle();
+  testWidgets('interpolated tracking marker follows the curve within one '
+      'formatted-value window (identity-suppressed snapshot retained)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host());
+    await tester.pumpAndSettle();
 
-      final renderBox = _renderBox(tester);
-      final transform = renderBox.transform!;
-      final plotArea = renderBox.debugPlotArea;
+    final renderBox = _renderBox(tester);
+    final transform = renderBox.transform!;
+    final plotArea = renderBox.debugPlotArea;
 
-      // Both hover positions sit in the x∈(4, 6) segment and format to
-      // '1005' (1004.7 and 1005.1 round alike), so the second hover is
-      // identity-suppressed.
-      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      addTearDown(pointer.removePointer);
-      await pointer.addPointer(location: Offset.zero);
-      await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 4.7));
-      await tester.pump();
+    // Both hover positions sit in the x∈(4, 6) segment and format to
+    // '1005' (1004.7 and 1005.1 round alike), so the second hover is
+    // identity-suppressed.
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 4.7));
+    await tester.pump();
 
-      final snapshot = renderBox.debugTrackingSnapshot;
-      expect(snapshot, isNotNull);
-      expect(snapshot!.values.single.formattedY, '1005');
-      final publishCount = renderBox.debugTrackingPublishCount;
+    final snapshot = renderBox.debugTrackingSnapshot;
+    expect(snapshot, isNotNull);
+    expect(snapshot!.values.single.formattedY, '1005');
+    final publishCount = renderBox.debugTrackingPublishCount;
 
-      final firstMarkers = renderBox.debugPaintedIntersectionMarkers;
-      expect(firstMarkers, hasLength(1));
-      final firstCenter = firstMarkers.single.center;
-      expect(
-        firstCenter.dy,
-        closeTo(_curveScreenY(plotArea, transform, dataX: 4.7), 0.5),
-        reason: 'marker must sit on the curve at the live cursor X',
-      );
+    final firstMarkers = renderBox.debugPaintedIntersectionMarkers;
+    expect(firstMarkers, hasLength(1));
+    final firstCenter = firstMarkers.single.center;
+    expect(
+      firstCenter.dy,
+      closeTo(_curveScreenY(plotArea, transform, dataX: 4.7), 0.5),
+      reason: 'marker must sit on the curve at the live cursor X',
+    );
 
-      await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 5.1));
-      await tester.pump();
+    await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 5.1));
+    await tester.pump();
 
-      // The move stayed within one formatted-value quantum: the snapshot is
-      // the retained instance and nothing was republished.
-      expect(renderBox.debugTrackingSnapshot, same(snapshot));
-      expect(renderBox.debugTrackingPublishCount, publishCount);
+    // The move stayed within one formatted-value quantum: the snapshot is
+    // the retained instance and nothing was republished.
+    expect(renderBox.debugTrackingSnapshot, same(snapshot));
+    expect(renderBox.debugTrackingPublishCount, publishCount);
 
-      final secondMarkers = renderBox.debugPaintedIntersectionMarkers;
-      expect(secondMarkers, hasLength(1));
-      final secondCenter = secondMarkers.single.center;
-      expect(
-        secondCenter.dx,
-        closeTo(plotArea.left + transform.dataToPlot(5.1, 1005.1).dx, 0.5),
-        reason: 'marker X follows the cursor continuously',
-      );
-      expect(
-        secondCenter.dy,
-        closeTo(_curveScreenY(plotArea, transform, dataX: 5.1), 0.5),
-        reason:
-            'marker Y must be recomputed from the live cursor X at paint '
-            'time, not reused from the identity-suppressed snapshot',
-      );
-      expect(
-        (secondCenter.dy - firstCenter.dy).abs(),
-        greaterThan(2.0),
-        reason:
-            'a 0.4-unit curve rise must move the marker visibly; identical '
-            'Ys mean the retained snapshot Y was painted (stair-stepping)',
-      );
-    },
-  );
+    final secondMarkers = renderBox.debugPaintedIntersectionMarkers;
+    expect(secondMarkers, hasLength(1));
+    final secondCenter = secondMarkers.single.center;
+    expect(
+      secondCenter.dx,
+      closeTo(plotArea.left + transform.dataToPlot(5.1, 1005.1).dx, 0.5),
+      reason: 'marker X follows the cursor continuously',
+    );
+    expect(
+      secondCenter.dy,
+      closeTo(_curveScreenY(plotArea, transform, dataX: 5.1), 0.5),
+      reason:
+          'marker Y must be recomputed from the live cursor X at paint '
+          'time, not reused from the identity-suppressed snapshot',
+    );
+    expect(
+      (secondCenter.dy - firstCenter.dy).abs(),
+      greaterThan(2.0),
+      reason:
+          'a 0.4-unit curve rise must move the marker visibly; identical '
+          'Ys mean the retained snapshot Y was painted (stair-stepping)',
+    );
+  });
 
-  testWidgets(
-    'non-interpolated tracking marker paints at the snapped datum',
-    (tester) async {
-      await tester.pumpWidget(_host(interpolateValues: false));
-      await tester.pumpAndSettle();
+  testWidgets('non-interpolated tracking marker paints at the snapped datum', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(interpolateValues: false));
+    await tester.pumpAndSettle();
 
-      final renderBox = _renderBox(tester);
-      final transform = renderBox.transform!;
-      final plotArea = renderBox.debugPlotArea;
+    final renderBox = _renderBox(tester);
+    final transform = renderBox.transform!;
+    final plotArea = renderBox.debugPlotArea;
 
-      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      addTearDown(pointer.removePointer);
-      await pointer.addPointer(location: Offset.zero);
-      await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 4.6));
-      await tester.pump();
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(_cursorFor(tester, renderBox, dataX: 4.6));
+    await tester.pump();
 
-      // Nearest datum to 4.6 is (4, 1004): the marker snaps to the sample
-      // instead of riding the cursor.
-      final markers = renderBox.debugPaintedIntersectionMarkers;
-      expect(markers, hasLength(1));
-      final expected = plotArea.topLeft + transform.dataToPlot(4, 1004);
-      expect(markers.single.center.dx, closeTo(expected.dx, 0.5));
-      expect(markers.single.center.dy, closeTo(expected.dy, 0.5));
-    },
-  );
+    // Nearest datum to 4.6 is (4, 1004): the marker snaps to the sample
+    // instead of riding the cursor.
+    final markers = renderBox.debugPaintedIntersectionMarkers;
+    expect(markers, hasLength(1));
+    final expected = plotArea.topLeft + transform.dataToPlot(4, 1004);
+    expect(markers.single.center.dx, closeTo(expected.dx, 0.5));
+    expect(markers.single.center.dy, closeTo(expected.dy, 0.5));
+  });
+
+  testWidgets('Range Area paints paired markers at the exact low and high', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_rangeHost());
+    await tester.pumpAndSettle();
+
+    final renderBox = _renderBox(tester);
+    final transform = renderBox.transform!;
+    final plotArea = renderBox.debugPlotArea;
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(
+      tester.getTopLeft(find.byType(BravenChartPlus)) +
+          renderBox.plotToWidget(transform.dataToPlot(5, 10)),
+    );
+    await tester.pump();
+
+    final tracked = renderBox.debugTrackingSnapshot!.values.single;
+    expect(tracked.rangeArea!.low, closeTo(5, 1e-9));
+    expect(tracked.rangeArea!.high, closeTo(15, 1e-9));
+    final markers = renderBox.debugPaintedIntersectionMarkers;
+    expect(markers, hasLength(2));
+    final markerYs = markers.map((marker) => marker.center.dy).toList()..sort();
+    final expectedYs = [
+      plotArea.top + transform.dataToPlot(5, 5).dy,
+      plotArea.top + transform.dataToPlot(5, 15).dy,
+    ]..sort();
+    expect(markerYs[0], closeTo(expectedYs[0], 0.5));
+    expect(markerYs[1], closeTo(expectedYs[1], 0.5));
+  });
 }
 
 /// Screen Y of the hosted line (y = 1000 + x) at [dataX], mapped exactly as
@@ -181,3 +211,33 @@ Widget _host({bool interpolateValues = true}) {
     ),
   );
 }
+
+Widget _rangeHost() => MaterialApp(
+  home: Scaffold(
+    body: Center(
+      child: SizedBox(
+        width: 640,
+        height: 300,
+        child: BravenChartPlus(
+          showLegend: false,
+          interactionConfig: const InteractionConfig(
+            crosshair: CrosshairConfig(
+              displayMode: CrosshairDisplayMode.tracking,
+              showTrackingTooltip: false,
+            ),
+          ),
+          series: [
+            RangeAreaChartSeries(
+              id: 'interval',
+              interpolation: LineInterpolation.linear,
+              points: [
+                RangeAreaDataPoint(x: 0, low: 0, high: 10),
+                RangeAreaDataPoint(x: 10, low: 10, high: 20),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+);

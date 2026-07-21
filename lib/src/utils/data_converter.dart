@@ -14,8 +14,10 @@ import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/range_area_chart_series.dart';
 import '../rendering/bar_composition.dart';
 import '../theming/components/candlestick_theme.dart';
+import '../theming/components/range_area_theme.dart';
 import 'path_series_transition.dart';
 
 /// Converts ChartSeries data to SeriesElements for rendering.
@@ -79,6 +81,7 @@ class DataConverter {
         transform: transform,
         seriesTheme: theme?.seriesTheme,
         candlestickTheme: theme?.candlestickTheme ?? CandlestickTheme.light,
+        rangeAreaTheme: theme?.rangeAreaTheme ?? RangeAreaTheme.light,
         seriesIndex: index,
         coordinator: coordinator,
         barGroupInfo: barGroupInfo,
@@ -135,6 +138,11 @@ class DataConverter {
           final candle = s.candleAt(pointIndex);
           if (candle.low < yMin) yMin = candle.low;
           if (candle.high > yMax) yMax = candle.high;
+        } else if (s is RangeAreaChartSeries) {
+          final interval = s.intervalAt(pointIndex);
+          if (interval.isGap) continue;
+          if (interval.low! < yMin) yMin = interval.low!;
+          if (interval.high! > yMax) yMax = interval.high!;
         } else if (s is BarChartSeries) {
           final info = barComposition[s.id];
           final rangeStart = s.rangeStartValueFor(pointIndex);
@@ -246,6 +254,14 @@ class DataConverter {
     }
     if (candleSeries.isNotEmpty && yPadding == 0) {
       yPadding = math.max(yMin.abs() * 0.05, 0.5);
+    }
+
+    final rangeAreaSeries = series.whereType<RangeAreaChartSeries>();
+    if (rangeAreaSeries.isNotEmpty) {
+      if (xPadding == 0) xPadding = 0.5;
+      if (yPadding == 0) {
+        yPadding = math.max(yMin.abs() * 0.05, 0.5);
+      }
     }
 
     return DataBounds(

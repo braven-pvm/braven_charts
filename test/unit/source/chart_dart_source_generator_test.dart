@@ -67,6 +67,10 @@ void main() {
         ),
         const LineChartSeries(id: 'line', points: [ChartDataPoint(x: 0, y: 1)]),
         const AreaChartSeries(id: 'area', points: [ChartDataPoint(x: 0, y: 2)]),
+        RangeAreaChartSeries(
+          id: 'range-area',
+          points: [RangeAreaDataPoint(x: 0, low: 1, high: 3)],
+        ),
         const ScatterChartSeries(
           id: 'scatter',
           points: [ChartDataPoint(x: 0, y: 3)],
@@ -111,6 +115,7 @@ void main() {
           CandlestickChartSeries() => 'CandlestickChartSeries(',
           LineChartSeries() => 'LineChartSeries(',
           AreaChartSeries() => 'AreaChartSeries(',
+          RangeAreaChartSeries() => 'RangeAreaChartSeries(',
           ScatterChartSeries() => 'ScatterChartSeries(',
           BarChartSeries() => 'BarChartSeries(',
           PieChartSeries() => 'PieChartSeries(',
@@ -192,6 +197,63 @@ void main() {
       expect(first.source, contains('targetGroupWidth: 6.0,'));
       expect(first.source, contains('minimumPointsPerGroup: 3,'));
       expect(first.source, contains('wickColor: Color(0xFF334455),'));
+    });
+
+    test('generates deterministic Range Area intervals, gaps, and styling', () {
+      final snapshot = _snapshot(
+        RangeAreaChartSeries(
+          id: 'confidence',
+          unit: '%',
+          points: [
+            RangeAreaDataPoint(x: 1, low: 42, high: 58),
+            RangeAreaDataPoint.gap(x: 2, label: 'Missing'),
+          ],
+          color: const Color(0xFF2563EB),
+          interpolation: LineInterpolation.monotone,
+          fillOpacity: .4,
+          fillGradient: const AreaGradient(
+            colors: [Color(0x332563EB), Color(0x992563EB)],
+          ),
+          borderMode: RangeAreaBorderMode.closed,
+          upperBoundaryStyle: const RangeAreaBoundaryStyle(
+            strokeWidth: 2,
+            dashPattern: [4, 2],
+          ),
+          showBoundaryMarkers: true,
+          labelConfig: const RangeAreaLabelConfig(
+            value: RangeAreaLabelValue.both,
+            labels: DataPointLabelConfig(show: true),
+          ),
+          pathAnimation: const PathAnimationStyle(
+            entranceMode: PathEntranceAnimationMode.reveal,
+            dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+          ),
+        ),
+      );
+
+      final first = _success(ChartDartSourceGenerator.generate(snapshot));
+      final second = _success(ChartDartSourceGenerator.generate(snapshot));
+
+      expect(second.source, first.source);
+      expect(first.source, contains('RangeAreaChartSeries('));
+      expect(first.source, contains('RangeAreaDataPoint('));
+      expect(first.source, contains('low: 42.0,'));
+      expect(first.source, contains('high: 58.0,'));
+      expect(first.source, contains('RangeAreaDataPoint.gap('));
+      expect(first.source, contains("label: 'Missing',"));
+      expect(first.source, contains('fillGradient: AreaGradient('));
+      expect(first.source, contains('borderMode: RangeAreaBorderMode.closed,'));
+      expect(first.source, contains('dashPattern: [4.0, 2.0],'));
+      expect(first.source, contains('showBoundaryMarkers: true,'));
+      expect(first.source, contains('labelConfig: RangeAreaLabelConfig('));
+      expect(first.source, contains('value: RangeAreaLabelValue.both,'));
+      expect(first.source, contains('pathAnimation: PathAnimationStyle('));
+      expect(
+        first.source,
+        contains('entranceMode: PathEntranceAnimationMode.reveal,'),
+      );
+      expect(first.source, isNot(contains('isXOrdered:')));
+      expect(first.completeness, ChartGeneratedSourceCompleteness.complete);
     });
 
     test('omits all data explicitly when the inline ceiling is exceeded', () {

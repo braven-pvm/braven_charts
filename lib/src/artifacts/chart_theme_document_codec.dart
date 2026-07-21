@@ -8,6 +8,7 @@ import '../theming/components/axis_style.dart';
 import '../theming/components/candlestick_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
+import '../theming/components/range_area_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../theming/components/series_theme.dart' as series_theme;
 import '../theming/components/typography_theme.dart';
@@ -96,6 +97,7 @@ Map<String, Object?> _encodeTheme(ChartTheme theme) => {
   ).toJson(),
   'pieChartTheme': _encodePieChartTheme(theme.pieChartTheme),
   'candlestickTheme': _encodeCandlestickTheme(theme.candlestickTheme),
+  'rangeAreaTheme': _encodeRangeAreaTheme(theme.rangeAreaTheme),
   'focusBorderColor': theme.focusBorderColor.toARGB32(),
   'focusBorderWidth': _n(theme.focusBorderWidth),
   'focusBorderRadius': _n(theme.focusBorderRadius),
@@ -122,6 +124,9 @@ ChartTheme _decodeTheme(Map<String, Object?> map) => ChartTheme(
   candlestickTheme: map['candlestickTheme'] == null
       ? CandlestickTheme.light
       : _decodeCandlestickTheme(_requiredMap(map, 'candlestickTheme')),
+  rangeAreaTheme: map['rangeAreaTheme'] == null
+      ? RangeAreaTheme.light
+      : _decodeRangeAreaTheme(_requiredMap(map, 'rangeAreaTheme')),
   focusBorderColor: _color(map, 'focusBorderColor'),
   focusBorderWidth: _double(map, 'focusBorderWidth'),
   focusBorderRadius: _double(map, 'focusBorderRadius'),
@@ -152,6 +157,29 @@ CandlestickTheme _decodeCandlestickTheme(Map<String, Object?> map) =>
       risingWickColor: _color(map, 'risingWickColor'),
       fallingWickColor: _color(map, 'fallingWickColor'),
       dojiWickColor: _color(map, 'dojiWickColor'),
+      selectionColor: _color(map, 'selectionColor'),
+      focusColor: _color(map, 'focusColor'),
+    );
+
+Map<String, Object?> _encodeRangeAreaTheme(RangeAreaTheme theme) => {
+  'fillOpacity': _n(theme.fillOpacity),
+  'boundaryOpacity': _n(theme.boundaryOpacity),
+  'boundaryWidth': _n(theme.boundaryWidth),
+  'markerFillColor': theme.markerFillColor.toARGB32(),
+  'markerStrokeColor': theme.markerStrokeColor.toARGB32(),
+  'markerStrokeWidth': _n(theme.markerStrokeWidth),
+  'selectionColor': theme.selectionColor.toARGB32(),
+  'focusColor': theme.focusColor.toARGB32(),
+};
+
+RangeAreaTheme _decodeRangeAreaTheme(Map<String, Object?> map) =>
+    RangeAreaTheme(
+      fillOpacity: _double(map, 'fillOpacity'),
+      boundaryOpacity: _double(map, 'boundaryOpacity'),
+      boundaryWidth: _double(map, 'boundaryWidth'),
+      markerFillColor: _color(map, 'markerFillColor'),
+      markerStrokeColor: _color(map, 'markerStrokeColor'),
+      markerStrokeWidth: _double(map, 'markerStrokeWidth'),
       selectionColor: _color(map, 'selectionColor'),
       focusColor: _color(map, 'focusColor'),
     );

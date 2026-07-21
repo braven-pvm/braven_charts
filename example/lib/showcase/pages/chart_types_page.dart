@@ -32,7 +32,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-cartesian-grid'),
-            chartTypes: showcaseChartTypes.take(5).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(6).toList(growable: false),
             maxColumns: 4,
             onOpenChartType: onOpenChartType,
           ),
@@ -46,7 +46,7 @@ class ChartTypesPage extends StatelessWidget {
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-radial-grid'),
             chartTypes: showcaseChartTypes
-                .skip(5)
+                .skip(6)
                 .take(3)
                 .toList(growable: false),
             maxColumns: 3,
@@ -61,7 +61,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-polar-grid'),
-            chartTypes: showcaseChartTypes.skip(8).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(9).toList(growable: false),
             maxColumns: 3,
             onOpenChartType: onOpenChartType,
           ),
@@ -175,7 +175,7 @@ class _OverviewIntroduction extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, partition-radial charts for shares, and polar axes for cyclical magnitude.',
+                  'Use trends for change, areas for magnitude, Range Area for paired intervals, bars for categories, scatter plots for relationships, partition-radial charts for shares, and polar axes for cyclical magnitude.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     height: 1.45,
@@ -261,6 +261,11 @@ class _SelectionGuide extends StatelessWidget {
                   icon: Icons.timeline,
                   title: 'Continuous X values',
                   body: 'Start with line or area.',
+                ),
+                _GuideItem(
+                  icon: Icons.water_outlined,
+                  title: 'Paired low–high values',
+                  body: 'Start with Range Area.',
                 ),
                 _GuideItem(
                   icon: Icons.category_outlined,

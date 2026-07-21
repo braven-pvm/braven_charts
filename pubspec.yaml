@@ -1,8 +1,8 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter Line, Area, Bar, Scatter, Candlestick, Pie, Donut,
-  Concentric Donut, and Polar Column charts with custom rendering and live
-  interaction.
+  Pure Dart Flutter Line, Area, Range Area, Bar, Scatter, Candlestick, Pie,
+  Donut, Concentric Donut, and Polar Column charts with custom rendering and
+  live interaction.
 version: 0.10.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts

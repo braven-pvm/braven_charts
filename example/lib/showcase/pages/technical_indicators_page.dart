@@ -30,6 +30,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
   late final List<CandlestickDataPoint> _candles;
   late final List<double> _fastEma;
   late final List<double> _slowEma;
+  late final List<RangeAreaDataPoint> _volatilityBand;
   late final List<double> _macd;
   late final List<double> _macdSignal;
   late final List<double> _macdHistogram;
@@ -38,6 +39,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
 
   _FinancialStudyPreset _preset = _FinancialStudyPreset.overview;
   _FinancialRange _range = _FinancialRange.threeMonths;
+  bool _showVolatilityBand = true;
   bool _showFastAverage = true;
   bool _showSlowAverage = true;
   bool _showVolume = true;
@@ -50,6 +52,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
   bool _showTrackingTooltip = true;
   bool _showIntersections = true;
   double _indicatorStrokeWidth = 1.6;
+  double _volatilityFillOpacity = .16;
 
   @override
   void initState() {
@@ -58,6 +61,11 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
     final closes = _candles.map((candle) => candle.close).toList();
     _fastEma = _ema(closes, 12);
     _slowEma = _ema(closes, 26);
+    _volatilityBand = _rollingVolatilityBand(
+      _candles,
+      window: 20,
+      deviations: 2,
+    );
     _macd = List<double>.generate(
       closes.length,
       (index) => _fastEma[index] - _slowEma[index],
@@ -224,7 +232,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Native now: Candlestick + Line overlays, Bar + Line MACD, synchronized panes, and one shared navigator. Next geometry: ranged area bands for cloud and volatility envelopes.',
+              'Native now: Candlestick + Range Area volatility + Line overlays, Bar + Line MACD, synchronized panes, and one shared navigator.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -408,6 +416,26 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
     interactionGroupOptions: _groupOptions,
     axislessPlotInsets: _financialPlotInsets,
     series: [
+      if (_showVolatilityBand)
+        RangeAreaChartSeries(
+          id: 'financial-volatility-band',
+          name: '20-session volatility',
+          unit: 'USD',
+          points: _volatilityBand,
+          color: const Color(0xFF0F766E),
+          interpolation: LineInterpolation.monotone,
+          fillOpacity: _volatilityFillOpacity,
+          borderMode: RangeAreaBorderMode.boundaries,
+          upperBoundaryStyle: RangeAreaBoundaryStyle(
+            color: const Color(0xFF0F766E),
+            strokeWidth: _indicatorStrokeWidth * .72,
+          ),
+          lowerBoundaryStyle: RangeAreaBoundaryStyle(
+            color: const Color(0xFF0F766E),
+            strokeWidth: _indicatorStrokeWidth * .72,
+          ),
+          hitTestMode: RangeAreaHitTestMode.band,
+        ),
       CandlestickChartSeries(
         id: 'financial-price',
         name: 'Price',
@@ -683,6 +711,13 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
       icon: Icons.layers_outlined,
       children: [
         BoolOption(
+          key: const ValueKey('financial-show-volatility-band'),
+          label: 'Show volatility band',
+          subtitle: '20-session average with paired 2σ low/high bounds',
+          value: _showVolatilityBand,
+          onChanged: (value) => setState(() => _showVolatilityBand = value),
+        ),
+        BoolOption(
           key: const ValueKey('financial-show-fast-average'),
           label: 'Show fast EMA',
           value: _showFastAverage,
@@ -762,6 +797,18 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
       title: 'Indicator appearance',
       icon: Icons.tune,
       children: [
+        if (_showVolatilityBand)
+          SliderOption(
+            key: const ValueKey('financial-volatility-opacity'),
+            label: 'Volatility fill opacity',
+            value: _volatilityFillOpacity,
+            min: .06,
+            max: .34,
+            divisions: 14,
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _volatilityFillOpacity = value),
+          ),
         SliderOption(
           key: const ValueKey('financial-indicator-width'),
           label: 'Indicator stroke width',
@@ -791,19 +838,29 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
     _preset = preset;
     switch (preset) {
       case _FinancialStudyPreset.overview:
+        _showVolatilityBand = true;
         _showFastAverage = true;
         _showSlowAverage = true;
         _showVolume = true;
         _showMacd = true;
         _showMomentum = true;
       case _FinancialStudyPreset.trendAndVolume:
+        _showVolatilityBand = false;
         _showFastAverage = true;
+        _showSlowAverage = true;
+        _showVolume = true;
+        _showMacd = false;
+        _showMomentum = false;
+      case _FinancialStudyPreset.volatility:
+        _showVolatilityBand = true;
+        _showFastAverage = false;
         _showSlowAverage = true;
         _showVolume = true;
         _showMacd = false;
         _showMomentum = false;
       case _FinancialStudyPreset.momentum:
       case _FinancialStudyPreset.terminal:
+        _showVolatilityBand = false;
         _showFastAverage = false;
         _showSlowAverage = true;
         _showVolume = false;
@@ -870,6 +927,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
     _options.update(const ChartOptions(showLegend: true));
     setState(() {
       _preset = _FinancialStudyPreset.overview;
+      _showVolatilityBand = true;
       _showFastAverage = true;
       _showSlowAverage = true;
       _showVolume = true;
@@ -882,6 +940,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
       _showTrackingTooltip = true;
       _showIntersections = true;
       _indicatorStrokeWidth = 1.6;
+      _volatilityFillOpacity = .16;
       _range = _FinancialRange.threeMonths;
     });
     _applyRange(_FinancialRange.threeMonths);
@@ -953,6 +1012,11 @@ enum _FinancialStudyPreset {
     'Trend + volume',
     Icons.show_chart,
     'A quieter composition for validating Candlestick overlays against an independent volume scale.',
+  ),
+  volatility(
+    'Volatility band',
+    Icons.area_chart_outlined,
+    'A typed 20-session 2σ Range Area envelope sits behind price while preserving one low/high interval per session.',
   ),
   momentum(
     'Momentum stack',
@@ -1148,6 +1212,62 @@ List<CandlestickDataPoint> _buildMarketSessions(int count) {
     date = date.add(const Duration(days: 1));
   }
   return List.unmodifiable(sessions);
+}
+
+List<RangeAreaDataPoint> _rollingVolatilityBand(
+  List<CandlestickDataPoint> candles, {
+  required int window,
+  required double deviations,
+}) {
+  assert(window > 1);
+  assert(deviations > 0);
+  return List<RangeAreaDataPoint>.unmodifiable([
+    for (var index = 0; index < candles.length; index++)
+      if (index < window - 1)
+        RangeAreaDataPoint.gap(
+          x: candles[index].x,
+          timestamp: candles[index].timestamp,
+          label: candles[index].label,
+          metadata: const {'state': 'warmup'},
+        )
+      else
+        _volatilityInterval(
+          candles: candles,
+          index: index,
+          window: window,
+          deviations: deviations,
+        ),
+  ]);
+}
+
+RangeAreaDataPoint _volatilityInterval({
+  required List<CandlestickDataPoint> candles,
+  required int index,
+  required int window,
+  required double deviations,
+}) {
+  final start = index - window + 1;
+  var total = 0.0;
+  for (var cursor = start; cursor <= index; cursor++) {
+    total += candles[cursor].close;
+  }
+  final mean = total / window;
+  var squaredDeviation = 0.0;
+  for (var cursor = start; cursor <= index; cursor++) {
+    final difference = candles[cursor].close - mean;
+    squaredDeviation += difference * difference;
+  }
+  final standardDeviation = math.sqrt(squaredDeviation / window);
+  final spread = standardDeviation * deviations;
+  final candle = candles[index];
+  return RangeAreaDataPoint(
+    x: candle.x,
+    low: mean - spread,
+    high: mean + spread,
+    timestamp: candle.timestamp,
+    label: candle.label,
+    metadata: {'window': window, 'deviations': deviations, 'mean': mean},
+  );
 }
 
 List<double> _ema(List<double> values, int period) {

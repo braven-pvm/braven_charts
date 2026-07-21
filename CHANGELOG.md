@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- First-class Range Area charts through `RangeAreaDataPoint` and
+  `RangeAreaChartSeries`, including atomic low/high bounds, explicit gaps,
+  linear/Bezier/monotone/stepped interpolation, solid or gradient fills,
+  independently styled boundaries, markers, labels, hit policies, typed
+  low/high/midpoint/span tracking, paired axis values and intersections,
+  keyboard selection and semantics, invariant-preserving entrance/update
+  motion, nested bands and ordinary Line composition, viewport culling,
+  artifacts, hydration, native tables/CSV, generated Dart, Workbench modes,
+  and strict tool-driven configuration.
+- A complete Range Area publication surface across the ten-family Chart Types
+  catalog and Gallery, including a native interval preview, weather envelope,
+  nested forecast fan, financial volatility composition, dedicated route, and
+  property-testing Workbench.
+
 ## 0.10.0 - 2026-07-21
 
 ### Added

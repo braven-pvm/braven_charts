@@ -29,6 +29,7 @@ import '../../elements/value_summary_overlay_element.dart';
 import '../../models/cartesian_value_summary_config.dart';
 import '../../models/cartesian_value_summary_style.dart';
 import '../../models/chart_overlay_placement.dart';
+import '../../models/range_area_data_point.dart';
 import '../../rendering/modules/crosshair_renderer.dart' show MultiAxisInfo;
 import '../../theming/components/cartesian_value_summary_theme.dart';
 import '../core/cartesian_tracking_snapshot.dart';
@@ -405,7 +406,8 @@ class ValueSummaryCoordinator {
     final controller = _controller;
     final policy = _activeConfig?.valuePolicy;
     final pinPolicy =
-        policy == CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest ||
+        policy ==
+            CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest ||
         policy == CartesianValueSummaryValuePolicy.explicitOnly;
     final primary = _reducedSnapshot?.primaryPoint;
     final movable = _annotationActive && _annotationDraggable;
@@ -726,7 +728,9 @@ class ValueSummaryCoordinator {
     final points = match.series.points;
     if (ref.pointIndex < 0 || ref.pointIndex >= points.length) return null;
     final point = points[ref.pointIndex];
-    if (!point.isValid) return null;
+    if (!point.isValid || point is RangeAreaDataPoint && point.isGap) {
+      return null;
+    }
 
     final pointPlot = match.dataToCurrentPlot(point.x, point.y);
     final cursor = transform.transposed
@@ -857,7 +861,9 @@ class ValueSummaryCoordinator {
     for (final element in elements) {
       if (element is! SeriesElement) continue;
       for (final point in element.series.points) {
-        if (!point.isValid) continue;
+        if (!point.isValid || point is RangeAreaDataPoint && point.isGap) {
+          continue;
+        }
         final x = point.x;
         if (x < xMin || x > xMax) continue;
         if (minX == null || x < minX) minX = x;

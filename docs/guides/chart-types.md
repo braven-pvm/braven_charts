@@ -1,10 +1,12 @@
 # Chart types
 
-Braven Charts renders seven first-class series types through
-`BravenChartPlus`: line, area, bar, scatter, Candlestick, Pie, and Donut. Two
-or more Donut series form the Concentric Donut composition. Line, area, bar,
-scatter, and Candlestick use the Cartesian layout. Pie and standalone Donut are
-single-series partition-radial charts; Concentric Donut is multi-series.
+Braven Charts renders line, area, Range Area, bar, scatter, Candlestick, Pie,
+Donut, and Polar Column as first-class series through `BravenChartPlus`. Two or
+more Donut series form the Concentric Donut composition. Line, area, Range
+Area, bar, scatter, and Candlestick use the Cartesian layout. Pie and
+standalone Donut are single-series partition-radial charts; Concentric Donut
+is multi-series; Polar Column uses angular categories and a numeric radial
+axis.
 
 Import only the public package entrypoint:
 
@@ -18,6 +20,7 @@ import 'package:braven_charts/braven_charts.dart';
 | --- | --- | --- |
 | `LineChartSeries` | Trends and ordered measurements | interpolation, stroke, markers, labels, glow, path motion |
 | `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, solid or gradient fill, baseline colors, path motion |
+| `RangeAreaChartSeries` | Paired low/high envelopes and uncertainty | atomic intervals, gaps, boundaries, gradient fill, typed tracking and motion |
 | `BarChartSeries` | Discrete comparisons and grouped values | relative or fixed bar width |
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
 | `CandlestickChartSeries` | Ordered open-high-low-close observations | body and wick geometry, direction theme, OHLC motion, density grouping |
@@ -149,6 +152,33 @@ compatible value or boundary-topology updates, the fill and outline
 interpolate as one canonical series rather than as independent paint effects.
 Multiple Area layers can use independent `entranceTiming` and
 `dataUpdateTiming` windows while sharing one chart-level orchestration clock.
+
+## Range Area charts
+
+Range Area owns one typed low/high interval per X value. Low and high drive
+bounds, rendering, tracking, tables, artifacts, and semantics; the canonical
+inherited Y value is the interval midpoint. Missing values use an explicit
+gap rather than zero or NaN.
+
+```dart
+RangeAreaChartSeries(
+  id: 'confidence',
+  name: '90% confidence',
+  points: [
+    RangeAreaDataPoint(x: 0, low: 8, high: 14),
+    RangeAreaDataPoint(x: 1, low: 9, high: 16),
+    RangeAreaDataPoint.gap(x: 2),
+    RangeAreaDataPoint(x: 3, low: 10, high: 18),
+  ],
+  interpolation: LineInterpolation.monotone,
+  fillOpacity: 0.28,
+)
+```
+
+Compose a separate Line series for the mean, median, forecast, or price.
+Declare wider and narrower Range Area series in order for a nested forecast
+fan. See the complete [Range Area guide](../../doc/range_area_charts.md) and
+[runnable showcase](https://braven-pvm.github.io/braven_charts/?page=range-area-charts).
 
 ## Chart and data workbench
 

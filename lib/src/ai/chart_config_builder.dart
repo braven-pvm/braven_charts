@@ -18,6 +18,8 @@ import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_data_point.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/scatter_render_config.dart';
@@ -223,13 +225,21 @@ class ChartConfigBuilder {
 
     // Parse style before points because Candlestick has a dedicated OHLC
     // point contract and must never accept generic x/y data by accident.
-    final styleStr = json['style'] as String?;
-    final style = styleStr != null
-        ? _parseSeriesStyle(styleStr)
-        : (defaultStyle ?? SeriesStyle.line);
+    final typeValue = json['type'] ?? json['style'];
+    if (typeValue != null && typeValue is! String) {
+      throw const FormatException('Series type must be a string.');
+    }
+    final style = typeValue == null
+        ? (defaultStyle ?? SeriesStyle.line)
+        : _parseSeriesStyle(typeValue as String);
+    if (typeValue != null && style == null) {
+      throw FormatException('Unsupported series type "$typeValue".');
+    }
 
     final points = style == SeriesStyle.candlestick
         ? _parseCandlestickPoints(dataList)
+        : style == SeriesStyle.rangeArea
+        ? _parseRangeAreaPoints(dataList)
         : dataList.map((d) {
             final pointJson = d as Map<String, dynamic>;
             final x = pointJson['x'];
@@ -296,6 +306,14 @@ class ChartConfigBuilder {
         yAxisConfig: yAxisConfig,
         interpolation: LineInterpolation.linear,
         fillOpacity: 0.3,
+      ),
+      SeriesStyle.rangeArea => RangeAreaChartSeries(
+        id: id,
+        name: name ?? id,
+        points: points.cast<RangeAreaDataPoint>(),
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
       ),
       SeriesStyle.bar => _buildBarSeries(
         id: id,
@@ -365,6 +383,95 @@ class ChartConfigBuilder {
       _parseCandlestickPoint(data[index], index),
   ];
 
+  static List<RangeAreaDataPoint> _parseRangeAreaPoints(List<dynamic> data) => [
+    for (var index = 0; index < data.length; index++)
+      _parseRangeAreaPoint(data[index], index),
+  ];
+
+  static RangeAreaDataPoint _parseRangeAreaPoint(dynamic value, int index) {
+    if (value is! Map<String, dynamic>) {
+      throw FormatException('Range Area data point $index must be an object.');
+    }
+
+    final xValue = value['x'];
+    if (xValue is! num || !xValue.isFinite) {
+      throw FormatException(
+        'Range Area data point $index requires a finite numeric x.',
+      );
+    }
+
+    final timestamp = _parseOptionalTimestamp(
+      value['timestamp'],
+      family: 'Range Area',
+      index: index,
+    );
+    final gapValue = value['gap'];
+    if (gapValue != null && gapValue is! bool) {
+      throw FormatException(
+        'Range Area data point $index gap must be a boolean.',
+      );
+    }
+    if (gapValue == true) {
+      if (value.containsKey('low') ||
+          value.containsKey('high') ||
+          value.containsKey('y')) {
+        throw FormatException(
+          'Range Area gap $index cannot include low, high, or y.',
+        );
+      }
+      return RangeAreaDataPoint.gap(
+        x: xValue.toDouble(),
+        timestamp: timestamp,
+        label: value['label'] as String?,
+      );
+    }
+
+    if (value.containsKey('y')) {
+      throw FormatException(
+        'Range Area data point $index requires low and high; generic y is not supported.',
+      );
+    }
+    final lowValue = value['low'];
+    final highValue = value['high'];
+    if (lowValue is! num || !lowValue.isFinite) {
+      throw FormatException(
+        'Range Area data point $index requires a finite numeric low or an explicit gap.',
+      );
+    }
+    if (highValue is! num || !highValue.isFinite) {
+      throw FormatException(
+        'Range Area data point $index requires a finite numeric high or an explicit gap.',
+      );
+    }
+    return RangeAreaDataPoint(
+      x: xValue.toDouble(),
+      low: lowValue.toDouble(),
+      high: highValue.toDouble(),
+      timestamp: timestamp,
+      label: value['label'] as String?,
+    );
+  }
+
+  static DateTime? _parseOptionalTimestamp(
+    dynamic value, {
+    required String family,
+    required int index,
+  }) {
+    if (value == null) return null;
+    if (value is! String) {
+      throw FormatException(
+        '$family data point $index timestamp must be ISO 8601.',
+      );
+    }
+    final timestamp = DateTime.tryParse(value);
+    if (timestamp == null) {
+      throw FormatException(
+        '$family data point $index timestamp must be ISO 8601.',
+      );
+    }
+    return timestamp;
+  }
+
   static CandlestickDataPoint _parseCandlestickPoint(dynamic value, int index) {
     if (value is! Map<String, dynamic>) {
       throw FormatException('Candlestick data point $index must be an object.');
@@ -379,16 +486,11 @@ class ChartConfigBuilder {
       return number.toDouble();
     }
 
-    final timestampValue = value['timestamp'];
-    DateTime? timestamp;
-    if (timestampValue != null) {
-      if (timestampValue is! String ||
-          (timestamp = DateTime.tryParse(timestampValue)) == null) {
-        throw FormatException(
-          'Candlestick data point $index timestamp must be ISO 8601.',
-        );
-      }
-    }
+    final timestamp = _parseOptionalTimestamp(
+      value['timestamp'],
+      family: 'Candlestick',
+      index: index,
+    );
     return CandlestickDataPoint(
       x: requiredNumber('x'),
       open: requiredNumber('open'),
@@ -1341,6 +1443,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'rangearea' || 'range_area' || 'range-area' => SeriesStyle.rangeArea,
       'candlestick' => SeriesStyle.candlestick,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,
@@ -1354,6 +1457,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'rangearea' || 'range_area' || 'range-area' => SeriesStyle.rangeArea,
       'candlestick' => SeriesStyle.candlestick,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,

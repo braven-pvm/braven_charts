@@ -39,6 +39,8 @@ abstract final class ChartToolSchema {
 Creates an interactive BravenChartPlus chart from provided data.
 Use this tool when the user wants to visualize data as a chart.
 Cartesian charts support multiple overlaid series, axes, pan, zoom, and crosshair.
+Range Area series use one atomic low/high interval per X value, or an explicit
+gap, and can compose with ordinary Line, Area, Scatter, or Candlestick series.
 Candlestick charts require finite X/open/high/low/close values per point and
 support Line, Area, or Scatter overlays at matching X coordinates.
 Bar charts additionally support grouped, overlaid, stacked, normalized, range,
@@ -96,6 +98,21 @@ same radial interaction contract.
                 'type': 'string',
                 'description':
                     'Unit for Y-axis values (e.g., "W", "°C", "USD", "km/h")',
+              },
+              'type': {
+                'type': 'string',
+                'enum': [
+                  'line',
+                  'area',
+                  'rangeArea',
+                  'bar',
+                  'scatter',
+                  'candlestick',
+                  'pie',
+                  'donut',
+                ],
+                'description':
+                    'Optional concrete series family. Use rangeArea for atomic low/high intervals; it may be composed with other Cartesian series.',
               },
               'bar_group_id': {
                 'type': 'string',
@@ -261,17 +278,22 @@ same radial interaction contract.
                     'high': {
                       'type': 'number',
                       'description':
-                          'Candlestick-only high value. Must be at least open and close.',
+                          'Candlestick high, or Range Area upper bound. Must not be below the matching low value.',
                     },
                     'low': {
                       'type': 'number',
                       'description':
-                          'Candlestick-only low value. Must be at most open and close.',
+                          'Candlestick low, or Range Area lower bound. Must not exceed the matching high value.',
                     },
                     'close': {
                       'type': 'number',
                       'description':
                           'Candlestick-only closing value. Required instead of generic y.',
+                    },
+                    'gap': {
+                      'type': 'boolean',
+                      'description':
+                          'Range Area-only explicit missing interval. When true, omit low, high, and y.',
                     },
                     'label': {
                       'type': 'string',
@@ -1584,7 +1606,20 @@ same radial interaction contract.
                   'properties': {
                     'data': {
                       'items': {
-                        'required': ['x', 'y'],
+                        'anyOf': [
+                          {
+                            'required': ['x', 'y'],
+                          },
+                          {
+                            'required': ['x', 'low', 'high'],
+                          },
+                          {
+                            'properties': {
+                              'gap': {'const': true},
+                            },
+                            'required': ['x', 'gap'],
+                          },
+                        ],
                       },
                     },
                   },

@@ -33,6 +33,7 @@ enum SeriesStyle {
   bar,
   scatter,
   area,
+  rangeArea,
   pie,
   donut,
   candlestick,

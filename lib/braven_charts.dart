@@ -139,6 +139,10 @@ export 'src/models/legend_style.dart';
 export 'src/models/multi_axis_config.dart';
 export 'src/models/normalization_mode.dart';
 export 'src/models/path_animation_style.dart';
+export 'src/models/range_area_chart_series.dart';
+export 'src/models/range_area_data_point.dart';
+export 'src/models/range_area_interaction_details.dart';
+export 'src/models/range_area_style.dart';
 export 'src/models/radial_selection_style.dart';
 export 'src/models/pareto_chart_data.dart';
 export 'src/models/pie_chart_config.dart';
@@ -187,6 +191,7 @@ export 'src/theming/components/annotation_theme.dart';
 export 'src/theming/components/axis_style.dart';
 export 'src/theming/components/grid_style.dart';
 export 'src/theming/components/interaction_theme.dart';
+export 'src/theming/components/range_area_theme.dart';
 export 'src/theming/components/scrollbar_config.dart';
 export 'src/theming/components/series_theme.dart'
     show SeriesMarkerShape, SeriesTheme;

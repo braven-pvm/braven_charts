@@ -4,6 +4,7 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
+import '../models/range_area_chart_series.dart';
 import 'polar_column_composition.dart';
 
 /// Internal coordinate/composition family selected for a chart.
@@ -35,6 +36,7 @@ class ChartLayoutResolver {
         SeriesStyle.donut => candidate is! DonutChartSeries,
         SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
         SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
+        SeriesStyle.rangeArea => candidate is! RangeAreaChartSeries,
         _ => false,
       },
     );
@@ -51,6 +53,8 @@ class ChartLayoutResolver {
             'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
           SeriesStyle.candlestick =>
             'SeriesStyle.candlestick requires a CandlestickChartSeries',
+          SeriesStyle.rangeArea =>
+            'SeriesStyle.rangeArea requires a RangeAreaChartSeries',
           _ => 'Series style does not match its concrete series type',
         },
       );

@@ -15,7 +15,7 @@ types and where to begin.
 - `BravenChartPlus` — primary chart widget, including `fromValues` and
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
-- `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
+- `LineChartSeries`, `AreaChartSeries`, `RangeAreaChartSeries`, `BarChartSeries`,
   `ScatterChartSeries`, `CandlestickChartSeries`, `PieChartSeries`,
   `DonutChartSeries`, and `PolarColumnChartSeries` — concrete renderable
   series.
@@ -81,6 +81,22 @@ wide Split divider. Tables and artifacts always expose target data rather than
 transient animation frames. Controller-fed streaming tails retain their
 dedicated animation and do not also run path interpolation. See
 [Line and Area charts](line_area_charts.md).
+
+### Range Area charts
+
+- `RangeAreaDataPoint` owns finite low/high values at one ordered X position;
+  `.gap()` represents a missing interval explicitly.
+- `RangeAreaChartSeries` controls interpolation, fill/gradient, independent
+  boundary styles, side closure, markers, typed labels, hit testing, gaps, and
+  path motion.
+- `RangeAreaInteractionDetails` carries low, high, midpoint, and span through
+  tracking, hits, summaries, callbacks, keyboard navigation, and semantics.
+- `RangeAreaTheme` provides light, dark, high-contrast, and custom defaults.
+
+Range Area composes with ordinary Cartesian Line, Area, Scatter,
+Candlestick, and additional Range Area series. Data/Split/Source, CSV,
+artifacts, hydration, generated Dart, and typed agent input preserve the
+atomic interval. See [Range Area charts](range_area_charts.md).
 
 ### Bar charts
 
