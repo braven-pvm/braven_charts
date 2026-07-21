@@ -47,3 +47,18 @@ builders:
     required_inputs: ["_fluent.dart"]
     auto_apply: none
     build_to: source
+  # Generates lib/src/ai/generated/surface_definitions.dart: JSON-Schema $defs
+  # for every @chartSurface class, exposed as ChartToolSchema.surfaceDefinitions
+  # ALONGSIDE (never replacing) the hand-written tool literals. Aggregating —
+  # one $defs block spans the whole surface — so it takes $package$ and runs in
+  # a later phase than `surface_gen`, which keeps its output from ever being an
+  # input to the per-file builder.
+  surface_definitions:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["surfaceDefinitionsBuilder"]
+    build_extensions:
+      $package$:
+        - "lib/src/ai/generated/surface_definitions.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source

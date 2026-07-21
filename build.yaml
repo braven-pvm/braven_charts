@@ -18,6 +18,7 @@ targets:
           exclude:
             # The builder's own checked-in outputs are never inputs.
             - lib/src/fluent/generated/**
+            - lib/src/ai/generated/**
       # Regenerates lib/braven_charts_fluent.dart from the generated file set
       # (a later build phase; see tool/surface_gen/build.yaml).
       surface_gen|fluent_barrel:
@@ -26,6 +27,12 @@ targets:
       # whole surface model (a later build phase; see
       # tool/surface_gen/build.yaml).
       surface_gen|smoke_test:
+        enabled: true
+      # Regenerates lib/src/ai/generated/surface_definitions.dart — the
+      # structural JSON-Schema $defs exposed as
+      # ChartToolSchema.surfaceDefinitions ALONGSIDE the hand-written tool
+      # literals (see tool/surface_gen/build.yaml).
+      surface_gen|surface_definitions:
         enabled: true
       mockito|mockBuilder:
         enabled: false

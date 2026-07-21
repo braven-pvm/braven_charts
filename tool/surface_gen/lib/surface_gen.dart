@@ -24,3 +24,13 @@ Builder fluentBarrelBuilder(BuilderOptions options) =>
 /// regenerates `test/fluent/fluent_smoke_generated_test.dart`, which invokes
 /// every generated verb once so that compilation is the assertion.
 Builder smokeTestBuilder(BuilderOptions options) => const SmokeTestBuilder();
+
+/// Aggregating AI-schema builder, declared in `build.yaml` as
+/// `surface_definitions`.
+///
+/// Runs after [surfaceGenBuilder] (`required_inputs: ['_fluent.dart']`) and
+/// regenerates `lib/src/ai/generated/surface_definitions.dart`: the structural
+/// JSON-Schema `$defs` that `ChartToolSchema.surfaceDefinitions` exposes
+/// ALONGSIDE the hand-written tool literals.
+Builder surfaceDefinitionsBuilder(BuilderOptions options) =>
+    const SurfaceDefinitionsBuilder();

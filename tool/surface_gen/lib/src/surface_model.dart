@@ -140,6 +140,7 @@ class SurfaceClass {
     this.typeParameters = const <String>[],
     this.factories = const <SurfaceFactoryModel>[],
     this.assertGroups = const <List<String>>[],
+    this.asserts = const <SurfaceAssert>[],
     this.sealedVariants = const <String>[],
     this.presetFactories = const <String>[],
     this.combinedSetters = const <CombinedSetterModel>[],
@@ -197,6 +198,15 @@ class SurfaceClass {
   /// reader refuses to model the class, because individual setters could
   /// construct an intermediate value the assert rejects at runtime.
   final List<List<String>> assertGroups;
+
+  /// The same asserts as [assertGroups], carrying the two things a schema
+  /// needs and a bare name list cannot supply: the assert's own MESSAGE, and
+  /// whether the condition is a provable null-alternation.
+  ///
+  /// Kept alongside [assertGroups] rather than replacing it: the fluent
+  /// emitter's coverage rule only ever needed the names, and every existing
+  /// caller (and test fixture) constructs the class with them.
+  final List<SurfaceAssert> asserts;
 
   /// Constructor-BODY validation the reader detected, one entry per
   /// generative constructor with a non-empty body.
@@ -291,6 +301,41 @@ class BodyValidationModel {
 
   /// Whether this acknowledgement covers the whole class.
   bool get isClassWide => params.isEmpty;
+}
+
+/// One constructor-initializer `assert` that names two or more modelled
+/// parameters.
+///
+/// A name list alone cannot be translated into a schema constraint, and
+/// guessing costs correctness: of the three multi-parameter asserts on the
+/// real surface that no combined setter covers, `BarChartSeries`'s is
+/// `barWidthPercent != null || barWidthPixels != null` ("at least one"),
+/// `RangeAnnotation`'s `startX == null || endX == null || startX < endX` is an
+/// ORDERING check that permits both being null, and `LegendAnnotation`'s
+/// `[...].whereType<Object>().length <= 1` is "at MOST one" — the exact
+/// opposite. Emitting `anyOf: [{required: [a]}, {required: [b]}]` for all
+/// three would have documented two of them backwards.
+///
+/// So [isNullAlternation] is set only when the condition is provably a
+/// top-level `||` chain of `x != null` tests over exactly [params]. Everything
+/// else contributes [message] to the class description and no machine
+/// constraint at all.
+class SurfaceAssert {
+  const SurfaceAssert(
+    this.params, {
+    this.message,
+    this.isNullAlternation = false,
+  });
+
+  /// The modelled parameters the condition names, sorted and deduplicated.
+  final List<String> params;
+
+  /// The assert's message argument when it is a plain string literal.
+  final String? message;
+
+  /// Whether the condition is a provable `a != null || b != null [|| ...]`
+  /// over exactly [params].
+  final bool isNullAlternation;
 }
 
 /// Model counterpart of the `CombinedSetter` annotation.

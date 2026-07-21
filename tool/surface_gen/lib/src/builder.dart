@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
+import 'ai_schema_emitter.dart';
 import 'emitter.dart';
 import 'enforcement.dart';
 import 'fluent_emitter.dart';
@@ -39,8 +40,6 @@ import 'surface_reader.dart';
 class SurfaceGenBuilder implements Builder {
   const SurfaceGenBuilder();
 
-  static const String _generatedPrefix = 'lib/src/fluent/generated/';
-
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/src/{{}}.dart': ['lib/src/fluent/generated/{{}}_fluent.dart'],
@@ -49,11 +48,11 @@ class SurfaceGenBuilder implements Builder {
   @override
   Future<void> build(BuildStep buildStep) async {
     final inputId = buildStep.inputId;
-    if (inputId.path.startsWith(_generatedPrefix)) return;
+    if (isGeneratedPath(inputId.path)) return;
     if (!await buildStep.resolver.isLibrary(inputId)) return;
 
     final library = await buildStep.resolver.libraryFor(inputId);
-    final barrel = await _barrel(buildStep);
+    final barrel = await barrelLibrary(buildStep);
     final model = await const AnalyzerSurfaceReader().read(
       library,
       reachable: barrel == null ? const [] : reachableClasses([barrel]),
@@ -78,20 +77,6 @@ class SurfaceGenBuilder implements Builder {
     await buildStep.writeAsString(buildStep.allowedOutputs.single, source);
   }
 
-  /// The public barrel library, or `null` when there is none.
-  ///
-  /// It supplies BOTH halves of "reachable": the name set the emitter's
-  /// export guard needs, and the class set the reader's slicing diagnostic
-  /// scans. The generated fluent barrel re-exports this one and defines no
-  /// classes of its own, so the core barrel is the whole reachable surface.
-  Future<LibraryElement?> _barrel(BuildStep buildStep) async {
-    final barrelId = AssetId(
-      buildStep.inputId.package,
-      'lib/${buildStep.inputId.package}.dart',
-    );
-    if (!await buildStep.canRead(barrelId)) return null;
-    return buildStep.resolver.libraryFor(barrelId);
-  }
 }
 
 /// Generates the opt-in fluent barrel from the set of generated files.
@@ -187,8 +172,6 @@ class SmokeTestBuilder implements Builder {
 
   static const String _output = 'test/fluent/fluent_smoke_generated_test.dart';
 
-  static const String _generatedPrefix = 'lib/src/fluent/generated/';
-
   @override
   Map<String, List<String>> get buildExtensions => const {
         r'$package$': [_output],
@@ -196,31 +179,10 @@ class SmokeTestBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
-    final barrel = await _barrelLibrary(buildStep);
+    final barrel = await barrelLibrary(buildStep);
     if (barrel == null) return;
-    final reachable = reachableClasses([barrel]);
 
-    final assets = await buildStep
-        .findAssets(Glob('lib/src/**.dart'))
-        .where((asset) => !asset.path.startsWith(_generatedPrefix))
-        .toList();
-    assets.sort((a, b) => a.path.compareTo(b.path));
-
-    final classes = <SurfaceClass>[];
-    for (final asset in assets) {
-      final source = await buildStep.readAsString(asset);
-      if (!source.contains('@chartSurface') &&
-          !source.contains('@ChartSurface')) {
-        continue;
-      }
-      if (!await buildStep.resolver.isLibrary(asset)) continue;
-      final library = await buildStep.resolver.libraryFor(asset);
-      final model = await const AnalyzerSurfaceReader().read(
-        library,
-        reachable: reachable,
-      );
-      classes.addAll(model.classes);
-    }
+    final classes = await readWholeSurface(buildStep, barrel);
     if (classes.isEmpty) return;
 
     final SurfaceEmitter emitter = SmokeEmitter(
@@ -231,13 +193,104 @@ class SmokeTestBuilder implements Builder {
 
     await buildStep.writeAsString(buildStep.allowedOutputs.single, source);
   }
+}
 
-  Future<LibraryElement?> _barrelLibrary(BuildStep buildStep) async {
-    final barrelId = AssetId(
-      buildStep.inputId.package,
-      'lib/${buildStep.inputId.package}.dart',
-    );
-    if (!await buildStep.canRead(barrelId)) return null;
-    return buildStep.resolver.libraryFor(barrelId);
+/// Generates `lib/src/ai/generated/surface_definitions.dart` — the structural
+/// JSON-Schema `$defs` for every `@chartSurface` class.
+///
+/// Aggregating for the same reason [SmokeTestBuilder] is: one `$defs` block
+/// spans the whole surface, and `$ref`s only resolve when every referenced
+/// class is in the same map. It therefore shares that builder's input
+/// pipeline verbatim ([readWholeSurface]) — `$package$` input, a TEXTUAL
+/// `@chartSurface` pre-filter so the build does not resolve ~260 libraries to
+/// find ~90 annotated ones, and one merged [SurfaceModel].
+///
+/// The output is ADDITIVE: `chart_tool_schema.dart` keeps its hand-written
+/// `createChartTool` / `modifyChartTool` literals and their exact behavior,
+/// and exposes this map alongside them as `ChartToolSchema.surfaceDefinitions`.
+///
+/// The generated file is deliberately Flutter-free (plain `Map<String,
+/// Object?>` literals), because `chart_tool_schema.dart` is a leaf library
+/// that `tool/dump_pre_convergence_schema.dart` imports from a bare `dart run`.
+class SurfaceDefinitionsBuilder implements Builder {
+  const SurfaceDefinitionsBuilder();
+
+  static const String _output = 'lib/src/ai/generated/surface_definitions.dart';
+
+  @override
+  Map<String, List<String>> get buildExtensions => const {
+        r'$package$': [_output],
+      };
+
+  @override
+  Future<void> build(BuildStep buildStep) async {
+    final barrel = await barrelLibrary(buildStep);
+    if (barrel == null) return;
+
+    final classes = await readWholeSurface(buildStep, barrel);
+    if (classes.isEmpty) return;
+
+    final source = const AiSchemaEmitter().emitLibrary(SurfaceModel(classes));
+    if (source == null) return;
+
+    await buildStep.writeAsString(buildStep.allowedOutputs.single, source);
   }
+}
+
+/// Directories holding this generator's own checked-in output.
+///
+/// Never inputs: an aggregating builder that re-read its own output would
+/// oscillate, and the per-file builder would emit extensions for generated
+/// code.
+const List<String> generatedPrefixes = <String>[
+  'lib/src/fluent/generated/',
+  'lib/src/ai/generated/',
+];
+
+/// Whether [path] names checked-in generator output.
+bool isGeneratedPath(String path) =>
+    generatedPrefixes.any(path.startsWith);
+
+/// The package's public barrel library, or `null` when there is none.
+Future<LibraryElement?> barrelLibrary(BuildStep buildStep) async {
+  final barrelId = AssetId(
+    buildStep.inputId.package,
+    'lib/${buildStep.inputId.package}.dart',
+  );
+  if (!await buildStep.canRead(barrelId)) return null;
+  return buildStep.resolver.libraryFor(barrelId);
+}
+
+/// Reads every `@chartSurface` class under `lib/src/**` into one flat list.
+///
+/// Shared by the two aggregating builders so they can never disagree about
+/// what "the whole surface" is — a smoke test covering classes the schema
+/// omits (or vice versa) would be a drift the drift tests could not see,
+/// because both would be generated from different reads.
+Future<List<SurfaceClass>> readWholeSurface(
+  BuildStep buildStep,
+  LibraryElement barrel,
+) async {
+  final reachable = reachableClasses([barrel]);
+  final assets = await buildStep
+      .findAssets(Glob('lib/src/**.dart'))
+      .where((asset) => !isGeneratedPath(asset.path))
+      .toList();
+  assets.sort((a, b) => a.path.compareTo(b.path));
+
+  final classes = <SurfaceClass>[];
+  for (final asset in assets) {
+    final source = await buildStep.readAsString(asset);
+    if (!source.contains('@chartSurface') && !source.contains('@ChartSurface')) {
+      continue;
+    }
+    if (!await buildStep.resolver.isLibrary(asset)) continue;
+    final library = await buildStep.resolver.libraryFor(asset);
+    final model = await const AnalyzerSurfaceReader().read(
+      library,
+      reachable: reachable,
+    );
+    classes.addAll(model.classes);
+  }
+  return classes;
 }

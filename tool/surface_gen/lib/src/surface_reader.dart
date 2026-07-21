@@ -153,6 +153,7 @@ import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/dart/ast/token.dart';
 
 import 'surface_model.dart';
 
@@ -248,7 +249,8 @@ class AnalyzerSurfaceReader implements SurfaceReader {
 
     final combinedSetters =
         _combinedSetters(annotation.getField('combinedSetters'));
-    final assertGroups = _assertGroups(cls, params, library);
+    final asserts = _asserts(cls, params, library);
+    final assertGroups = [for (final entry in asserts) entry.params];
     _checkAssertCoverage(cls, assertGroups, combinedSetters, params);
 
     final bodyValidations =
@@ -276,6 +278,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       typeParameters: _typeParameters(cls),
       factories: sealedVariants.isEmpty ? const [] : _factories(cls),
       assertGroups: assertGroups,
+      asserts: asserts,
       bodyValidationGroups: bodyGroups,
       bodyValidations: bodyValidations,
       paramNotes: paramNotes,
@@ -617,14 +620,17 @@ class AnalyzerSurfaceReader implements SurfaceReader {
   /// through `super(id: id ?? ChartAnnotation.generateId())`. Their asserts
   /// couple parameters exactly as hard, so when the element model is empty the
   /// declaration is parsed and its initializers read from the AST.
-  List<List<String>> _assertGroups(
+  /// Each assert additionally carries its MESSAGE and whether its condition is
+  /// a provable null-alternation (see [SurfaceAssert]), because a name list
+  /// alone cannot be turned into a schema constraint without guessing.
+  List<SurfaceAssert> _asserts(
     ClassElement cls,
     List<SurfaceParam> params,
     LibraryElement library,
   ) {
     final names = {for (final param in params) param.name};
     if (names.isEmpty) return const [];
-    final groups = <String, List<String>>{};
+    final groups = <String, SurfaceAssert>{};
     for (final constructor in cls.constructors) {
       if (!constructor.isGenerative) continue;
       for (final initializer in _initializers(constructor, library)) {
@@ -633,12 +639,63 @@ class AnalyzerSurfaceReader implements SurfaceReader {
         initializer.condition.accept(visitor);
         final referenced = (visitor.names.intersection(names).toList())..sort();
         if (referenced.length < 2) continue;
-        groups[referenced.join(',')] = referenced;
+        groups[referenced.join(',')] = SurfaceAssert(
+          referenced,
+          message: _assertMessage(initializer),
+          isNullAlternation: _isNullAlternation(
+            initializer.condition,
+            referenced.toSet(),
+          ),
+        );
       }
     }
     final result = groups.values.toList()
-      ..sort((a, b) => a.join(',').compareTo(b.join(',')));
+      ..sort((a, b) => a.params.join(',').compareTo(b.params.join(',')));
     return result;
+  }
+
+  /// The assert's message argument, when it is a plain (non-interpolated)
+  /// string literal.
+  String? _assertMessage(AssertInitializer initializer) {
+    final message = initializer.message;
+    if (message is! SimpleStringLiteral) return null;
+    final value = message.value.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  /// Whether [condition] is `a != null || b != null [|| ...]` over exactly
+  /// [expected].
+  ///
+  /// Deliberately narrow: this is the ONLY assert shape that translates into a
+  /// sound `anyOf: [{required: [a]}, ...]`. Anything richer — an ordering
+  /// check, a `length <= 1` cardinality check — reads as a constraint the
+  /// schema would state backwards, so it is not recognized.
+  bool _isNullAlternation(Expression condition, Set<String> expected) {
+    final seen = <String>{};
+    bool walk(Expression node) {
+      final expression = node.unParenthesized;
+      if (expression is BinaryExpression) {
+        if (expression.operator.type == TokenType.BAR_BAR) {
+          return walk(expression.leftOperand) && walk(expression.rightOperand);
+        }
+        if (expression.operator.type == TokenType.BANG_EQ) {
+          final left = expression.leftOperand.unParenthesized;
+          final right = expression.rightOperand.unParenthesized;
+          if (right is NullLiteral && left is SimpleIdentifier) {
+            seen.add(left.name);
+            return true;
+          }
+          if (left is NullLiteral && right is SimpleIdentifier) {
+            seen.add(right.name);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    if (!walk(condition)) return false;
+    return seen.length == expected.length && seen.containsAll(expected);
   }
 
   /// Non-empty generative constructor bodies, one group per constructor.
