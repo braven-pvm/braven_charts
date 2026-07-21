@@ -5,16 +5,37 @@ import '../widgets/chart_code_block.dart';
 import 'chart_source_models.dart';
 
 /// Read-only, selectable Dart source presentation for a generated chart.
+///
+/// The pane shows ONE chart in one of two forms — see [ChartSourceForm]. The
+/// toggle is part of the package rather than of any one host page: both forms
+/// are readings of the same captured document, so every `BravenChartWorkbench`
+/// consumer gets both on every chart.
+///
+/// ## Keys
+///
+/// The config form keeps the original `chart-source-dark-window` /
+/// `chart-source-code` keys, so anything already asserting on the Source pane
+/// is untouched. The grammar form carries its own pair, which is also the
+/// cheapest way for a test to say WHICH form is on screen.
 class ChartSourceView extends StatefulWidget {
   const ChartSourceView({
     super.key,
     required this.generated,
+    this.form = ChartSourceForm.config,
+    this.onFormChanged,
     this.isStale = false,
     this.isRefreshing = false,
     this.onRefresh,
   });
 
   final ChartGeneratedSource generated;
+
+  /// The form [generated] was emitted in.
+  final ChartSourceForm form;
+
+  /// Called when the reader picks the other form. Null hides the toggle.
+  final ValueChanged<ChartSourceForm>? onFormChanged;
+
   final bool isStale;
   final bool isRefreshing;
   final VoidCallback? onRefresh;
@@ -31,6 +52,7 @@ class _ChartSourceViewState extends State<ChartSourceView> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final source = widget.generated;
+    final isGrammar = widget.form == ChartSourceForm.grammar;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -41,8 +63,10 @@ class _ChartSourceViewState extends State<ChartSourceView> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (widget.onFormChanged != null) _buildFormToggle(context),
               Text(
-                'Dart · Effective configuration · '
+                'Dart · '
+                '${isGrammar ? 'Grammar chain' : 'Effective configuration'} · '
                 '${source.seriesCount} series · '
                 '${source.pointCount} ${source.pointCount == 1 ? 'point' : 'points'}',
                 style: theme.textTheme.labelLarge,
@@ -93,13 +117,42 @@ class _ChartSourceViewState extends State<ChartSourceView> {
           child: ChartCodeBlock(
             code: source.source,
             wrapLines: _wrapLines,
-            surfaceKey: const ValueKey('chart-source-dark-window'),
-            codeKey: const ValueKey('chart-source-code'),
+            surfaceKey: isGrammar
+                ? const ValueKey('chart-grammar-source-dark-window')
+                : const ValueKey('chart-source-dark-window'),
+            codeKey: isGrammar
+                ? const ValueKey('chart-grammar-source-code')
+                : const ValueKey('chart-source-code'),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildFormToggle(BuildContext context) =>
+      SegmentedButton<ChartSourceForm>(
+        key: const ValueKey('chart-source-form-toggle'),
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        segments: const <ButtonSegment<ChartSourceForm>>[
+          ButtonSegment<ChartSourceForm>(
+            value: ChartSourceForm.config,
+            label: Text('Config'),
+            tooltip: 'The BravenChartPlus configuration this chart is',
+          ),
+          ButtonSegment<ChartSourceForm>(
+            value: ChartSourceForm.grammar,
+            label: Text('Grammar'),
+            tooltip: 'The BravenChart.of(rows) chain that rebuilds this chart',
+          ),
+        ],
+        selected: <ChartSourceForm>{widget.form},
+        onSelectionChanged: (selection) =>
+            widget.onFormChanged?.call(selection.first),
+      );
 
   Future<void> _copySource(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: widget.generated.source));
