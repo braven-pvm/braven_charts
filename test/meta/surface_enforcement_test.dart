@@ -125,11 +125,19 @@ String _generatedSources() {
 
 /// The body of `extension <name>Fluent on <name>` in [sources], or `null`
 /// when no such extension was generated.
+///
+/// `dart_style` wraps the declaration onto a second line once the class name
+/// is long enough (`extension CartesianValueSummaryAnnotationFluent\n    on
+/// CartesianValueSummaryAnnotation {`), so the header is matched with a
+/// whitespace-tolerant pattern rather than a literal.
 String? _fluentExtensionBody(String sources, String className) {
-  final header = 'extension ${className}Fluent on $className {';
-  final start = sources.indexOf(header);
-  if (start < 0) return null;
-  final rest = sources.substring(start + header.length);
+  final header = RegExp(
+    'extension ${RegExp.escape(className)}Fluent\\s+'
+    'on ${RegExp.escape(className)}\\s*\\{',
+  );
+  final match = header.firstMatch(sources);
+  if (match == null) return null;
+  final rest = sources.substring(match.end);
   final next = rest.indexOf('\nextension ');
   return next < 0 ? rest : rest.substring(0, next);
 }

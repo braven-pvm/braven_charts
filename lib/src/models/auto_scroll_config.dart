@@ -3,6 +3,8 @@
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Configuration for automatic scrolling in real-time streaming charts.
 ///
 /// When enabled, the chart automatically pans to keep the most recent data
@@ -31,6 +33,7 @@ import 'package:flutter/foundation.dart';
 /// )
 /// ```
 @immutable
+@chartSurface
 class AutoScrollConfig {
   /// Creates an auto-scroll configuration.
   const AutoScrollConfig({

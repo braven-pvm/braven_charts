@@ -145,6 +145,7 @@ class CrosshairTrackingState {
 }
 
 /// Style configuration for crosshair lines.
+@chartSurface
 class CrosshairStyle {
   /// Creates a crosshair style with the specified properties.
   const CrosshairStyle({
@@ -506,6 +507,7 @@ enum TooltipPosition {
 }
 
 /// Style configuration for tooltip appearance.
+@chartSurface
 class TooltipStyle {
   /// Creates a tooltip style with the specified properties.
   const TooltipStyle({
@@ -638,6 +640,7 @@ typedef TooltipBuilder =
 ///   position: TooltipPosition.above,
 /// );
 /// ```
+@chartSurface
 class TooltipConfig {
   /// Creates a tooltip configuration with the specified properties.
   ///
@@ -780,6 +783,7 @@ class TooltipConfig {
 ///   pinchThreshold: 0.1, // scale factor
 /// );
 /// ```
+@chartSurface
 class GestureConfig {
   const GestureConfig({
     this.tapTimeout = const Duration(milliseconds: 200),
@@ -850,6 +854,7 @@ class GestureConfig {
 ///   enableHomeEndKeys: true,
 /// );
 /// ```
+@chartSurface
 class KeyboardConfig {
   const KeyboardConfig({
     this.enabled = true,
@@ -1010,6 +1015,7 @@ enum ChartSelectionOperation { replace, add, subtract, toggle }
 enum ChartSelectionDragActivation { primary, shiftPrimary }
 
 /// Portable policy for chart point selection.
+@chartSurface
 class ChartSelectionConfig {
   const ChartSelectionConfig({
     this.mode = ChartSelectionMode.point,
@@ -1096,6 +1102,7 @@ class ChartSelectionConfig {
   );
 }
 
+@chartSurface
 class InteractionConfig {
   /// Creates an interaction configuration.
   ///

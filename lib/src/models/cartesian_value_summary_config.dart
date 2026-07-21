@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart'
 import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../interaction/core/cartesian_tracking_snapshot.dart'
     show CartesianTrackingSnapshot;
+import '../meta/chart_surface.dart';
 import 'cartesian_value_summary_style.dart';
 import 'chart_overlay_placement.dart';
 
@@ -84,6 +85,12 @@ enum CartesianValueSummaryValueMode {
 /// switches over a presentation are exhaustive without a wildcard. Both kinds
 /// share the same content, style resolution, and semantics; only placement
 /// behavior differs.
+@ChartSurface(
+  sealedVariants: [
+    'CartesianValueSummaryOverlay',
+    'CartesianValueSummaryAnnotation',
+  ],
+)
 sealed class CartesianValueSummaryPresentation {
   const CartesianValueSummaryPresentation._();
 
@@ -109,6 +116,7 @@ sealed class CartesianValueSummaryPresentation {
 }
 
 /// The fixed-overlay presentation of the value summary.
+@chartSurface
 final class CartesianValueSummaryOverlay
     extends CartesianValueSummaryPresentation {
   /// Creates a fixed overlay presentation.
@@ -136,6 +144,7 @@ final class CartesianValueSummaryOverlay
 }
 
 /// The annotation-style presentation of the value summary.
+@chartSurface
 final class CartesianValueSummaryAnnotation
     extends CartesianValueSummaryPresentation {
   /// Creates an annotation-style presentation.
@@ -200,6 +209,12 @@ typedef CartesianValueSummaryRowBuilder =
 /// [CartesianValueSummaryAutomaticContent] and
 /// [CartesianValueSummaryBuilderContent], and switches over a content value
 /// are exhaustive without a wildcard.
+@ChartSurface(
+  sealedVariants: [
+    'CartesianValueSummaryAutomaticContent',
+    'CartesianValueSummaryBuilderContent',
+  ],
+)
 sealed class CartesianValueSummaryContent {
   const CartesianValueSummaryContent._();
 
@@ -227,6 +242,7 @@ sealed class CartesianValueSummaryContent {
 }
 
 /// Automatic, family-aware summary content.
+@chartSurface
 final class CartesianValueSummaryAutomaticContent
     extends CartesianValueSummaryContent {
   /// Creates automatic content.
@@ -485,6 +501,7 @@ class DefaultCartesianValueSummaryController extends ChangeNotifier
 ///   ),
 /// )
 /// ```
+@chartSurface
 class CartesianValueSummaryConfig {
   /// Creates a value summary configuration.
   const CartesianValueSummaryConfig({

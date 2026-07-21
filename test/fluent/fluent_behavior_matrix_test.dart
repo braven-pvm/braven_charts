@@ -616,4 +616,305 @@ void main() {
       expect(base.withAxes(axes).axes.single.max, 200);
     });
   });
+
+  // ===========================================================================
+  // lib/src/models/interaction_config.dart
+  // ===========================================================================
+  group('interaction_config.dart', () {
+    test('CrosshairStyle: withX equals the copyWith equivalent', () {
+      const base = CrosshairStyle();
+      expect(base.withLineWidth(3), base.copyWith(lineWidth: 3));
+      expect(
+        base.withStrokeCap(StrokeCap.butt),
+        base.copyWith(strokeCap: StrokeCap.butt),
+      );
+    });
+
+    test('TooltipStyle: withX equals the copyWith equivalent', () {
+      const base = TooltipStyle();
+      expect(base.withBorderRadius(10), base.copyWith(borderRadius: 10));
+    });
+
+    test('TooltipConfig: withX and the nested style updater', () {
+      const base = TooltipConfig();
+      expect(
+        base.withTriggerMode(TooltipTriggerMode.tap),
+        base.copyWith(triggerMode: TooltipTriggerMode.tap),
+      );
+      final updated = base.updateStyle((current) => current.withFontSize(16));
+      expect(updated.style.fontSize, 16);
+      expect(updated, base.copyWith(style: base.style.copyWith(fontSize: 16)));
+    });
+
+    test('GestureConfig: withX equals the copyWith equivalent', () {
+      const base = GestureConfig();
+      expect(base.withPanThreshold(24), base.copyWith(panThreshold: 24));
+    });
+
+    test('KeyboardConfig: withX equals the copyWith equivalent', () {
+      const base = KeyboardConfig();
+      expect(base.withZoomStep(0.25), base.copyWith(zoomStep: 0.25));
+    });
+
+    test('ChartSelectionConfig: withX equals the copyWith equivalent', () {
+      const base = ChartSelectionConfig();
+      expect(
+        base.withMode(ChartSelectionMode.lasso),
+        base.copyWith(mode: ChartSelectionMode.lasso),
+      );
+    });
+
+    test('InteractionConfig: withX equals the copyWith equivalent', () {
+      const base = InteractionConfig();
+      expect(
+        base.withKeyboardZoomPercent(40),
+        base.copyWith(keyboardZoomPercent: 40),
+      );
+    });
+
+    test('InteractionConfig: all six nested updaters edit a leaf without '
+        're-stating the enclosing config', () {
+      const base = InteractionConfig();
+
+      final crosshair = base.updateCrosshair(
+        (current) => current.withSnapRadius(32),
+      );
+      expect(crosshair.crosshair.snapRadius, 32);
+      expect(crosshair.crosshair.mode, base.crosshair.mode);
+
+      final tooltip = base.updateTooltip(
+        (current) => current.updateStyle((style) => style.withPadding(12)),
+      );
+      expect(tooltip.tooltip.style.padding, 12);
+
+      final gesture = base.updateGesture(
+        (current) => current.withPinchThreshold(0.3),
+      );
+      expect(gesture.gesture.pinchThreshold, 0.3);
+
+      final keyboard = base.updateKeyboard(
+        (current) => current.withPanStep(25),
+      );
+      expect(keyboard.keyboard.panStep, 25);
+
+      final selection = base.updateSelection(
+        (current) => current.withUseModifierKeys(false),
+      );
+      expect(selection.selection.useModifierKeys, isFalse);
+
+      final summary = base.updateValueSummary(
+        (current) => current.withEnabled(true),
+      );
+      expect(summary.valueSummary.enabled, isTrue);
+      expect(
+        summary,
+        base.copyWith(valueSummary: base.valueSummary.copyWith(enabled: true)),
+      );
+    });
+
+    test('InteractionConfig: a deep chain equals one combined copyWith', () {
+      const base = InteractionConfig();
+      expect(
+        base
+            .withEnableZoom(false)
+            .withEnablePan(false)
+            .updateCrosshair((current) => current.withEnabled(false)),
+        base.copyWith(
+          enableZoom: false,
+          enablePan: false,
+          crosshair: base.crosshair.copyWith(enabled: false),
+        ),
+      );
+    });
+
+    test('function-typed callbacks get no fluent verb', () {
+      final source = _generatedSource('interaction_config_fluent.dart');
+      expect(source, isNot(contains('withOnDataPointTap(')));
+      expect(source, isNot(contains('withCustomBuilder(')));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/cartesian_value_summary_config.dart
+  // ===========================================================================
+  group('cartesian_value_summary_config.dart', () {
+    const base = CartesianValueSummaryConfig();
+
+    test('withEnabled equals the copyWith equivalent', () {
+      expect(base.withEnabled(true), base.copyWith(enabled: true));
+    });
+
+    test('withOverlayPresentation builds the overlay variant', () {
+      final config = base.withOverlayPresentation(
+        placement: ChartOverlayPlacement(anchor: Alignment.bottomRight),
+      );
+      expect(config.presentation, isA<CartesianValueSummaryOverlay>());
+      expect(
+        config,
+        base.copyWith(
+          presentation: const CartesianValueSummaryPresentation.overlay(
+            placement: ChartOverlayPlacement(anchor: Alignment.bottomRight),
+          ),
+        ),
+      );
+    });
+
+    test('withAnnotationPresentation builds the annotation variant with its '
+        'factory defaults', () {
+      final config = base.withAnnotationPresentation(draggable: true);
+      final presentation =
+          config.presentation as CartesianValueSummaryAnnotation;
+      expect(presentation.draggable, isTrue);
+      // Omitted parameters keep the factory defaults.
+      expect(presentation.clampToPlot, isTrue);
+      expect(presentation.placement, ChartOverlayPlacement.topLeft);
+    });
+
+    test('withAutomaticContent builds the automatic variant', () {
+      final config = base.withAutomaticContent(includeTrends: true);
+      expect(config.content, isA<CartesianValueSummaryAutomaticContent>());
+      expect(
+        (config.content as CartesianValueSummaryAutomaticContent).includeTrends,
+        isTrue,
+      );
+    });
+
+    test('withBuilderContent builds the builder variant', () {
+      CartesianValueSummaryContentModel builder(
+        CartesianTrackingSnapshot snapshot,
+      ) => const CartesianValueSummaryContentModel(title: 'custom');
+      final config = base.withBuilderContent(builder, descriptorId: 'demo');
+      final content = config.content as CartesianValueSummaryBuilderContent;
+      expect(content.descriptorId, 'demo');
+      expect(content.builder, same(builder));
+    });
+
+    test('updatePresentation rebuilds the sealed value in place', () {
+      final config = base
+          .withAnnotationPresentation(draggable: true)
+          .updatePresentation(
+            (current) => switch (current) {
+              CartesianValueSummaryOverlay() => current,
+              CartesianValueSummaryAnnotation() => current.withClampToPlot(
+                false,
+              ),
+            },
+          );
+      final presentation =
+          config.presentation as CartesianValueSummaryAnnotation;
+      expect(presentation.draggable, isTrue);
+      expect(presentation.clampToPlot, isFalse);
+    });
+
+    test('updateContent and updateStyle edit the nested leaves', () {
+      final content = base.withAutomaticContent().updateContent(
+        (current) => switch (current) {
+          CartesianValueSummaryAutomaticContent() =>
+            current.withIncludeHiddenSeries(true),
+          CartesianValueSummaryBuilderContent() => current,
+        },
+      );
+      expect(
+        (content.content as CartesianValueSummaryAutomaticContent)
+            .includeHiddenSeries,
+        isTrue,
+      );
+
+      final styled = base.updateStyle((current) => current.withBorderWidth(3));
+      expect(styled.style.borderWidth.resolve(0), 3);
+    });
+
+    test('the sealed variants carry their own fluent extensions', () {
+      const overlay = CartesianValueSummaryOverlay();
+      expect(
+        overlay
+            .withPlacement(
+              const ChartOverlayPlacement(anchor: Alignment.topRight),
+            )
+            .placement,
+        const ChartOverlayPlacement(anchor: Alignment.topRight),
+      );
+      expect(
+        overlay
+            .updatePlacement((current) => current.withAnchor(Alignment.center))
+            .placement
+            .anchor,
+        Alignment.center,
+      );
+
+      const annotation = CartesianValueSummaryAnnotation();
+      expect(annotation.withDraggable(true).draggable, isTrue);
+
+      const automatic = CartesianValueSummaryAutomaticContent();
+      expect(automatic.withIncludeTrends(true).includeTrends, isTrue);
+    });
+
+    test('the controller and the placement callback get no fluent verb', () {
+      final source = _generatedSource(
+        'cartesian_value_summary_config_fluent.dart',
+      );
+      expect(source, isNot(contains('withController(')));
+      expect(source, isNot(contains('withOnPlacementChanged(')));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/chart_overlay_placement.dart
+  // ===========================================================================
+  group('chart_overlay_placement.dart', () {
+    const base = ChartOverlayPlacement.topLeft;
+
+    test('withAnchor and withOffset equal their copyWith equivalents', () {
+      expect(
+        base.withAnchor(Alignment.bottomRight),
+        base.copyWith(anchor: Alignment.bottomRight),
+      );
+      expect(
+        base.withOffset(const Offset(4, 8)),
+        base.copyWith(offset: const Offset(4, 8)),
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/auto_scroll_config.dart
+  // ===========================================================================
+  group('auto_scroll_config.dart', () {
+    const base = AutoScrollConfig();
+
+    test('withMaxVisiblePoints equals the copyWith equivalent', () {
+      expect(
+        base.withMaxVisiblePoints(250),
+        base.copyWith(maxVisiblePoints: 250),
+      );
+    });
+
+    test(
+      'a nullable parameter with no copyWith clear flag has no clear verb',
+      () {
+        final source = _generatedSource('auto_scroll_config_fluent.dart');
+        expect(source, contains('withResumeAfterInteractionDelay('));
+        expect(source, isNot(contains('clearResumeAfterInteractionDelay(')));
+        expect(source, contains('No clear verb'));
+      },
+    );
+  });
+
+  // ===========================================================================
+  // lib/src/models/streaming_config.dart
+  // ===========================================================================
+  group('streaming_config.dart', () {
+    const base = StreamingConfig();
+
+    test('withMaxBufferSize equals the copyWith equivalent', () {
+      expect(base.withMaxBufferSize(500), base.copyWith(maxBufferSize: 500));
+    });
+
+    test('a chain equals one combined copyWith', () {
+      expect(
+        base.withAutoScroll(false).withAutoScrollWindowSize(64),
+        base.copyWith(autoScroll: false, autoScrollWindowSize: 64),
+      );
+    });
+  });
 }

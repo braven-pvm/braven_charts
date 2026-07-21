@@ -5,6 +5,8 @@ import 'dart:ui' show Offset;
 
 import 'package:flutter/painting.dart' show Alignment;
 
+import '../meta/chart_surface.dart';
+
 /// An anchor-relative position for an overlay panel inside the plot area.
 ///
 /// The [anchor] selects a point on the plot rectangle (for example
@@ -13,6 +15,7 @@ import 'package:flutter/painting.dart' show Alignment;
 /// rather than as an absolute canvas offset, a placed panel stays stable
 /// across plot resizes, axis-width changes, RTL resolution, and responsive
 /// layouts. Dragging a panel updates the offset relative to its anchor.
+@chartSurface
 class ChartOverlayPlacement {
   /// Creates a placement at [anchor], displaced by [offset] logical pixels.
   const ChartOverlayPlacement({required this.anchor, this.offset = Offset.zero});

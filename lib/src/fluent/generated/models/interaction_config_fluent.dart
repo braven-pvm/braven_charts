@@ -5,7 +5,38 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/widgets.dart' show TextStyle;
+import 'package:flutter/widgets.dart' show Color, StrokeCap, TextStyle;
+
+/// Generated fluent modifiers for [CrosshairStyle].
+extension CrosshairStyleFluent on CrosshairStyle {
+  /// Replaces [CrosshairStyle.lineColor] with [value].
+  CrosshairStyle withLineColor(Color value) => copyWith(lineColor: value);
+
+  /// Replaces [CrosshairStyle.lineWidth] with [value].
+  CrosshairStyle withLineWidth(double value) => copyWith(lineWidth: value);
+
+  /// Replaces [CrosshairStyle.dashPattern] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [CrosshairStyle.dashPattern]; construct a new instance to reset it.
+  CrosshairStyle withDashPattern(List<double> value) =>
+      copyWith(dashPattern: value);
+
+  /// Replaces [CrosshairStyle.strokeCap] with [value].
+  CrosshairStyle withStrokeCap(StrokeCap value) => copyWith(strokeCap: value);
+
+  /// Replaces [CrosshairStyle.labelBackgroundColor] with [value].
+  CrosshairStyle withLabelBackgroundColor(Color value) =>
+      copyWith(labelBackgroundColor: value);
+
+  /// Replaces [CrosshairStyle.labelTextColor] with [value].
+  CrosshairStyle withLabelTextColor(Color value) =>
+      copyWith(labelTextColor: value);
+
+  /// Replaces [CrosshairStyle.labelPadding] with [value].
+  CrosshairStyle withLabelPadding(double value) =>
+      copyWith(labelPadding: value);
+}
 
 /// Generated fluent modifiers for [CrosshairConfig].
 extension CrosshairConfigFluent on CrosshairConfig {
@@ -36,6 +67,14 @@ extension CrosshairConfigFluent on CrosshairConfig {
   /// Replaces [CrosshairConfig.style] with [value].
   CrosshairConfig withStyle(CrosshairStyle value) => copyWith(style: value);
 
+  /// Rebuilds [CrosshairConfig.style] from its current value.
+  ///
+  /// `update` receives the current [CrosshairStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  CrosshairConfig updateStyle(
+    CrosshairStyle Function(CrosshairStyle current) update,
+  ) => copyWith(style: update(style));
+
   /// Replaces [CrosshairConfig.displayMode] with [value].
   CrosshairConfig withDisplayMode(CrosshairDisplayMode value) =>
       copyWith(displayMode: value);
@@ -59,4 +98,247 @@ extension CrosshairConfigFluent on CrosshairConfig {
   /// Replaces [CrosshairConfig.intersectionMarkerRadius] with [value].
   CrosshairConfig withIntersectionMarkerRadius(double value) =>
       copyWith(intersectionMarkerRadius: value);
+}
+
+/// Generated fluent modifiers for [TooltipStyle].
+extension TooltipStyleFluent on TooltipStyle {
+  /// Replaces [TooltipStyle.backgroundColor] with [value].
+  TooltipStyle withBackgroundColor(Color value) =>
+      copyWith(backgroundColor: value);
+
+  /// Replaces [TooltipStyle.borderColor] with [value].
+  TooltipStyle withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Replaces [TooltipStyle.borderWidth] with [value].
+  TooltipStyle withBorderWidth(double value) => copyWith(borderWidth: value);
+
+  /// Replaces [TooltipStyle.borderRadius] with [value].
+  TooltipStyle withBorderRadius(double value) => copyWith(borderRadius: value);
+
+  /// Replaces [TooltipStyle.shadowColor] with [value].
+  TooltipStyle withShadowColor(Color value) => copyWith(shadowColor: value);
+
+  /// Replaces [TooltipStyle.shadowBlurRadius] with [value].
+  TooltipStyle withShadowBlurRadius(double value) =>
+      copyWith(shadowBlurRadius: value);
+
+  /// Replaces [TooltipStyle.padding] with [value].
+  TooltipStyle withPadding(double value) => copyWith(padding: value);
+
+  /// Replaces [TooltipStyle.textColor] with [value].
+  TooltipStyle withTextColor(Color value) => copyWith(textColor: value);
+
+  /// Replaces [TooltipStyle.fontSize] with [value].
+  TooltipStyle withFontSize(double value) => copyWith(fontSize: value);
+}
+
+/// Generated fluent modifiers for [TooltipConfig].
+extension TooltipConfigFluent on TooltipConfig {
+  /// Replaces [TooltipConfig.enabled] with [value].
+  TooltipConfig withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [TooltipConfig.triggerMode] with [value].
+  TooltipConfig withTriggerMode(TooltipTriggerMode value) =>
+      copyWith(triggerMode: value);
+
+  /// Replaces [TooltipConfig.preferredPosition] with [value].
+  TooltipConfig withPreferredPosition(TooltipPosition value) =>
+      copyWith(preferredPosition: value);
+
+  /// Replaces [TooltipConfig.showDelay] with [value].
+  TooltipConfig withShowDelay(Duration value) => copyWith(showDelay: value);
+
+  /// Replaces [TooltipConfig.hideDelay] with [value].
+  TooltipConfig withHideDelay(Duration value) => copyWith(hideDelay: value);
+
+  /// Replaces [TooltipConfig.followCursor] with [value].
+  TooltipConfig withFollowCursor(bool value) => copyWith(followCursor: value);
+
+  /// Replaces [TooltipConfig.offsetFromPoint] with [value].
+  TooltipConfig withOffsetFromPoint(double value) =>
+      copyWith(offsetFromPoint: value);
+
+  /// Replaces [TooltipConfig.style] with [value].
+  TooltipConfig withStyle(TooltipStyle value) => copyWith(style: value);
+
+  /// Rebuilds [TooltipConfig.style] from its current value.
+  ///
+  /// `update` receives the current [TooltipStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  TooltipConfig updateStyle(
+    TooltipStyle Function(TooltipStyle current) update,
+  ) => copyWith(style: update(style));
+}
+
+/// Generated fluent modifiers for [GestureConfig].
+extension GestureConfigFluent on GestureConfig {
+  /// Replaces [GestureConfig.tapTimeout] with [value].
+  GestureConfig withTapTimeout(Duration value) => copyWith(tapTimeout: value);
+
+  /// Replaces [GestureConfig.longPressTimeout] with [value].
+  GestureConfig withLongPressTimeout(Duration value) =>
+      copyWith(longPressTimeout: value);
+
+  /// Replaces [GestureConfig.panThreshold] with [value].
+  GestureConfig withPanThreshold(double value) => copyWith(panThreshold: value);
+
+  /// Replaces [GestureConfig.pinchThreshold] with [value].
+  GestureConfig withPinchThreshold(double value) =>
+      copyWith(pinchThreshold: value);
+}
+
+/// Generated fluent modifiers for [KeyboardConfig].
+extension KeyboardConfigFluent on KeyboardConfig {
+  /// Replaces [KeyboardConfig.enabled] with [value].
+  KeyboardConfig withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [KeyboardConfig.panStep] with [value].
+  KeyboardConfig withPanStep(double value) => copyWith(panStep: value);
+
+  /// Replaces [KeyboardConfig.zoomStep] with [value].
+  KeyboardConfig withZoomStep(double value) => copyWith(zoomStep: value);
+
+  /// Replaces [KeyboardConfig.enableArrowKeys] with [value].
+  KeyboardConfig withEnableArrowKeys(bool value) =>
+      copyWith(enableArrowKeys: value);
+
+  /// Replaces [KeyboardConfig.enablePlusMinusKeys] with [value].
+  KeyboardConfig withEnablePlusMinusKeys(bool value) =>
+      copyWith(enablePlusMinusKeys: value);
+
+  /// Replaces [KeyboardConfig.enableHomeEndKeys] with [value].
+  KeyboardConfig withEnableHomeEndKeys(bool value) =>
+      copyWith(enableHomeEndKeys: value);
+}
+
+/// Generated fluent modifiers for [ChartSelectionConfig].
+extension ChartSelectionConfigFluent on ChartSelectionConfig {
+  /// Replaces [ChartSelectionConfig.mode] with [value].
+  ChartSelectionConfig withMode(ChartSelectionMode value) =>
+      copyWith(mode: value);
+
+  /// Replaces [ChartSelectionConfig.operation] with [value].
+  ChartSelectionConfig withOperation(ChartSelectionOperation value) =>
+      copyWith(operation: value);
+
+  /// Replaces [ChartSelectionConfig.dragActivation] with [value].
+  ChartSelectionConfig withDragActivation(ChartSelectionDragActivation value) =>
+      copyWith(dragActivation: value);
+
+  /// Replaces [ChartSelectionConfig.clearOnBackgroundTap] with [value].
+  ChartSelectionConfig withClearOnBackgroundTap(bool value) =>
+      copyWith(clearOnBackgroundTap: value);
+
+  /// Replaces [ChartSelectionConfig.useModifierKeys] with [value].
+  ChartSelectionConfig withUseModifierKeys(bool value) =>
+      copyWith(useModifierKeys: value);
+}
+
+/// Generated fluent modifiers for [InteractionConfig].
+extension InteractionConfigFluent on InteractionConfig {
+  /// Replaces [InteractionConfig.enabled] with [value].
+  InteractionConfig withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [InteractionConfig.crosshair] with [value].
+  InteractionConfig withCrosshair(CrosshairConfig value) =>
+      copyWith(crosshair: value);
+
+  /// Rebuilds [InteractionConfig.crosshair] from its current value.
+  ///
+  /// `update` receives the current [CrosshairConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateCrosshair(
+    CrosshairConfig Function(CrosshairConfig current) update,
+  ) => copyWith(crosshair: update(crosshair));
+
+  /// Replaces [InteractionConfig.tooltip] with [value].
+  InteractionConfig withTooltip(TooltipConfig value) =>
+      copyWith(tooltip: value);
+
+  /// Rebuilds [InteractionConfig.tooltip] from its current value.
+  ///
+  /// `update` receives the current [TooltipConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateTooltip(
+    TooltipConfig Function(TooltipConfig current) update,
+  ) => copyWith(tooltip: update(tooltip));
+
+  /// Replaces [InteractionConfig.gesture] with [value].
+  InteractionConfig withGesture(GestureConfig value) =>
+      copyWith(gesture: value);
+
+  /// Rebuilds [InteractionConfig.gesture] from its current value.
+  ///
+  /// `update` receives the current [GestureConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateGesture(
+    GestureConfig Function(GestureConfig current) update,
+  ) => copyWith(gesture: update(gesture));
+
+  /// Replaces [InteractionConfig.keyboard] with [value].
+  InteractionConfig withKeyboard(KeyboardConfig value) =>
+      copyWith(keyboard: value);
+
+  /// Rebuilds [InteractionConfig.keyboard] from its current value.
+  ///
+  /// `update` receives the current [KeyboardConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateKeyboard(
+    KeyboardConfig Function(KeyboardConfig current) update,
+  ) => copyWith(keyboard: update(keyboard));
+
+  /// Replaces [InteractionConfig.enableZoom] with [value].
+  InteractionConfig withEnableZoom(bool value) => copyWith(enableZoom: value);
+
+  /// Replaces [InteractionConfig.enablePan] with [value].
+  InteractionConfig withEnablePan(bool value) => copyWith(enablePan: value);
+
+  /// Replaces [InteractionConfig.enableSelection] with [value].
+  InteractionConfig withEnableSelection(bool value) =>
+      copyWith(enableSelection: value);
+
+  /// Replaces [InteractionConfig.selection] with [value].
+  InteractionConfig withSelection(ChartSelectionConfig value) =>
+      copyWith(selection: value);
+
+  /// Rebuilds [InteractionConfig.selection] from its current value.
+  ///
+  /// `update` receives the current [ChartSelectionConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateSelection(
+    ChartSelectionConfig Function(ChartSelectionConfig current) update,
+  ) => copyWith(selection: update(selection));
+
+  /// Replaces [InteractionConfig.valueSummary] with [value].
+  InteractionConfig withValueSummary(CartesianValueSummaryConfig value) =>
+      copyWith(valueSummary: value);
+
+  /// Rebuilds [InteractionConfig.valueSummary] from its current value.
+  ///
+  /// `update` receives the current [CartesianValueSummaryConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateValueSummary(
+    CartesianValueSummaryConfig Function(CartesianValueSummaryConfig current)
+    update,
+  ) => copyWith(valueSummary: update(valueSummary));
+
+  /// Replaces [InteractionConfig.showFocusBorder] with [value].
+  InteractionConfig withShowFocusBorder(bool value) =>
+      copyWith(showFocusBorder: value);
+
+  /// Replaces [InteractionConfig.enableFocusOnHover] with [value].
+  InteractionConfig withEnableFocusOnHover(bool value) =>
+      copyWith(enableFocusOnHover: value);
+
+  /// Replaces [InteractionConfig.showXScrollbar] with [value].
+  InteractionConfig withShowXScrollbar(bool value) =>
+      copyWith(showXScrollbar: value);
+
+  /// Replaces [InteractionConfig.showYScrollbar] with [value].
+  InteractionConfig withShowYScrollbar(bool value) =>
+      copyWith(showYScrollbar: value);
+
+  /// Replaces [InteractionConfig.keyboardZoomPercent] with [value].
+  InteractionConfig withKeyboardZoomPercent(int value) =>
+      copyWith(keyboardZoomPercent: value);
 }
