@@ -437,6 +437,29 @@ void main() {
       ]);
     });
 
+    test('numbering an id-less axis preserves everything else on it', () {
+      // The `.y(label:)` chain synthesizes an id-less, LABELLED left axis and
+      // hands it to the lowering as a declared axis. Numbering it must not
+      // strip the label — that would turn `.y(acc, label: 'Power')` into a
+      // silent no-op the moment the spec was lowered.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+        yAxes: <YAxisConfig>[
+          YAxisConfig(position: YAxisPosition.left, label: 'Power', unit: 'W'),
+        ],
+      )).lower();
+
+      final axis = lowered.yAxes.single;
+      expect(axis.id, 'axis-0');
+      expect(axis.label, 'Power');
+      expect(axis.unit, 'W');
+      expect(axis.position, YAxisPosition.left);
+      expect(lowered.series.single.yAxisConfig?.label, 'Power');
+    });
+
     test('transposed bars lower to horizontal orientation', () {
       final lowered = (PlotSpec<Sample>(
         data: rows,

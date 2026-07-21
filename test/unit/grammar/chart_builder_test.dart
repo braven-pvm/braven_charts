@@ -372,6 +372,52 @@ void main() {
       expect(spec.xAxis, const XAxisConfig(label: 'Time', unit: 's'));
       expect(spec.yAxes, <YAxisConfig>[bpm]);
     });
+
+    // The two tests above stop at `toSpec()`. The label only matters if it
+    // survives LOWERING as well — a chain label that reaches the spec and is
+    // then dropped on the way to `YAxisConfig` would still be a silent no-op,
+    // and would make the Chart Grammar page's hand-built comparison a lie.
+    test('the .y label survives lowering onto the synthesized axis', () {
+      final lowered = BravenChart.of(rows)
+          .x(sampleTime, label: 'Elapsed')
+          .y(samplePower, label: 'Power')
+          .geomLine()
+          .toSpec()
+          .lower();
+
+      expect(lowered.yAxes.single.id, 'axis-0');
+      expect(lowered.yAxes.single.label, 'Power');
+      expect(lowered.yAxes.single.position, YAxisPosition.left);
+      expect(lowered.series.single.yAxisConfig?.label, 'Power');
+      expect(lowered.xAxis, const XAxisConfig(label: 'Elapsed'));
+    });
+
+    test('an explicit .yAxis() still wins after lowering', () {
+      final bpm = YAxisConfig.withId(
+        id: 'bpm',
+        position: YAxisPosition.right,
+        label: 'Heart rate',
+      );
+      final lowered = BravenChart.of(rows)
+          .y(samplePower, label: 'Power')
+          .yAxis(bpm)
+          .geomLine(x: sampleTime, yAxisId: 'bpm')
+          .toSpec()
+          .lower();
+
+      expect(lowered.yAxes, <YAxisConfig>[bpm]);
+      expect(lowered.yAxes.single.label, 'Heart rate');
+      expect(lowered.series.single.yAxisConfig, bpm);
+    });
+
+    test('no .y label leaves the synthesized axis unlabelled', () {
+      final lowered = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().toSpec().lower();
+
+      expect(lowered.yAxes.single.id, 'axis-0');
+      expect(lowered.yAxes.single.label, isNull);
+    });
   });
 
   group('missing encodings fail at the geom call, not at build', () {

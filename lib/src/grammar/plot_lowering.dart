@@ -237,6 +237,16 @@ List<String> _resolveMarkIds<T>(List<Mark<T>> marks) {
   return ids;
 }
 
+/// Numbers the declared axes, defaulting an empty list to one left axis.
+///
+/// The axis synthesized here is deliberately UNLABELLED: a bare [PlotSpec]
+/// has no channel label to name it with. The `.y(label:)` chain label is NOT
+/// dropped — `BravenChart.toSpec()` has already turned it into a declared,
+/// id-less left `YAxisConfig` carrying that label (an explicit `.yAxis()`
+/// wins over it there), so by the time it reaches this function the label is
+/// on `declared` and `copyWith(id:)` carries it through. Pinned by
+/// `test/unit/grammar/chart_builder_test.dart` and
+/// `test/unit/grammar/plot_lowering_parity_test.dart`.
 List<YAxisConfig> _resolveAxes(List<YAxisConfig> declared) {
   final source = declared.isEmpty
       ? <YAxisConfig>[YAxisConfig(position: YAxisPosition.left)]
