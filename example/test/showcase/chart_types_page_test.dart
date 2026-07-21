@@ -173,4 +173,200 @@ void main() {
     expect(find.text('View Polar Column'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Gallery and Chart Types share animated previews', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    void expectConfiguredEntrances() {
+      final line = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('chart-type-preview-line')),
+      );
+      expect(
+        line.series.whereType<LineChartSeries>().map(
+          (series) => series.pathAnimation.entranceMode,
+        ),
+        everyElement(PathEntranceAnimationMode.reveal),
+      );
+
+      final area = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('chart-type-preview-area')),
+      );
+      expect(
+        area.series.whereType<AreaChartSeries>().map(
+          (series) => series.pathAnimation.entranceMode,
+        ),
+        everyElement(PathEntranceAnimationMode.reveal),
+      );
+
+      final scatter = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('chart-type-preview-scatter')),
+      );
+      expect(scatter.series.whereType<ScatterChartSeries>(), hasLength(3));
+    }
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ChartTypesPage())),
+    );
+    await tester.pump();
+    expectConfiguredEntrances();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 640,
+            child: ChartTypeCatalogStrip(onOpenChartType: (_) {}),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expectConfiguredEntrances();
+  });
+
+  testWidgets(
+    'Scatter preview markers enter on mount and respect reduced motion',
+    (tester) async {
+      tester.view.physicalSize = const Size(420, 260);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final scatterType = showcaseChartTypeForSlug('scatter-charts');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ChartTypePreview(chartType: scatterType)),
+        ),
+      );
+
+      ScatterChartSeries firstSeries() =>
+          tester
+                  .widget<BravenChartPlus>(
+                    find.byKey(const ValueKey('chart-type-preview-scatter')),
+                  )
+                  .series
+                  .first
+              as ScatterChartSeries;
+
+      expect(firstSeries().markerRadius, 0);
+      expect(firstSeries().markerStyle?.opacity, 0);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(firstSeries().markerRadius, greaterThan(0));
+      expect(firstSeries().markerRadius, lessThan(4.4));
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(firstSeries().markerRadius, closeTo(4.4, 0.001));
+      expect(firstSeries().markerStyle?.opacity, 1);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: Scaffold(body: ChartTypePreview(chartType: scatterType)),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(firstSeries().markerRadius, closeTo(4.4, 0.001));
+      expect(firstSeries().markerStyle?.opacity, 1);
+    },
+  );
+
+  testWidgets('Polar Column preview uses its native sweep entrance', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(420, 320);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChartTypePreview(
+            chartType: showcaseChartTypeForSlug('polar-column'),
+          ),
+        ),
+      ),
+    );
+
+    final preview = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-polar-column')),
+    );
+    expect(
+      preview.series
+          .whereType<PolarColumnChartSeries>()
+          .single
+          .polarStyle
+          .animationMode,
+      PolarColumnAnimationMode.sweep,
+    );
+  });
+
+  testWidgets('Scatter and Candlestick cards use representative compositions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Row(
+          children: [
+            Expanded(
+              child: ChartTypePreview(
+                chartType: showcaseChartTypeForSlug('scatter-charts'),
+              ),
+            ),
+            Expanded(
+              child: ChartTypePreview(
+                chartType: showcaseChartTypeForSlug('candlestick-charts'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+
+    final scatter = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-scatter')),
+    );
+    final scatterSeries = scatter.series
+        .whereType<ScatterChartSeries>()
+        .toList();
+    expect(scatterSeries.map((series) => series.name), [
+      'Triathlon',
+      'Volleyball',
+      'Basketball',
+    ]);
+    expect(scatterSeries.map((series) => series.markerShape).toSet(), {
+      SeriesMarkerShape.triangle,
+      SeriesMarkerShape.square,
+      SeriesMarkerShape.circle,
+    });
+    expect(scatterSeries.every((series) => series.points.length >= 9), isTrue);
+
+    final candlestick = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-candlestick')),
+    );
+    final candles = candlestick.series
+        .whereType<CandlestickChartSeries>()
+        .single;
+    expect(candles.candles, hasLength(16));
+    expect(candles.candles.any((point) => point.close > point.open), isTrue);
+    expect(candles.candles.any((point) => point.close < point.open), isTrue);
+    expect(candles.animation.mode, CandlestickAnimationMode.reveal);
+    final average = candlestick.series.whereType<LineChartSeries>().single;
+    expect(average.points, hasLength(12));
+    expect(
+      average.pathAnimation.entranceMode,
+      PathEntranceAnimationMode.reveal,
+    );
+  });
 }

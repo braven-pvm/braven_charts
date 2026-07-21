@@ -131,13 +131,94 @@ ShowcaseChartType showcaseChartTypeForSlug(String slug) =>
     showcaseChartTypes.firstWhere((entry) => entry.slug == slug);
 
 /// Small native chart preview used wherever users choose a chart family.
-class ChartTypePreview extends StatelessWidget {
+class ChartTypePreview extends StatefulWidget {
   const ChartTypePreview({super.key, required this.chartType});
 
   final ShowcaseChartType chartType;
 
   @override
+  State<ChartTypePreview> createState() => _ChartTypePreviewState();
+}
+
+class _ChartTypePreviewState extends State<ChartTypePreview>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scatterEntranceController;
+  late final Animation<double> _scatterEntrance;
+  bool _scatterEntranceScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scatterEntranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 560),
+      value: widget.chartType.type == ChartType.scatter ? 0 : 1,
+    );
+    _scatterEntrance = CurvedAnimation(
+      parent: _scatterEntranceController,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleScatterEntrance();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChartTypePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.chartType.type == widget.chartType.type) return;
+    _scatterEntranceScheduled = false;
+    _scatterEntranceController.value =
+        widget.chartType.type == ChartType.scatter ? 0 : 1;
+    _scheduleScatterEntrance();
+  }
+
+  void _scheduleScatterEntrance() {
+    if (widget.chartType.type != ChartType.scatter) {
+      _scatterEntranceController.value = 1;
+      return;
+    }
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _scatterEntranceScheduled = true;
+      _scatterEntranceController.value = 1;
+      return;
+    }
+    if (_scatterEntranceScheduled) return;
+    _scatterEntranceScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scatterEntranceController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scatterEntranceController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (widget.chartType.type == ChartType.scatter) {
+      return AnimatedBuilder(
+        animation: _scatterEntrance,
+        builder: (context, _) => _buildPreview(
+          context,
+          scatterEntranceProgress: _scatterEntrance.value,
+        ),
+      );
+    }
+    return _buildPreview(context);
+  }
+
+  Widget _buildPreview(
+    BuildContext context, {
+    double scatterEntranceProgress = 1,
+  }) {
+    final chartType = widget.chartType;
     final isRadial =
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
@@ -151,7 +232,10 @@ class ChartTypePreview extends StatelessWidget {
 
     final preview = BravenChartPlus(
       key: ValueKey('chart-type-preview-${chartType.cardKeySuffix}'),
-      series: _previewSeries(chartType),
+      series: _previewSeries(
+        chartType,
+        scatterEntranceProgress: scatterEntranceProgress,
+      ),
       concentricDonutConfig: chartType.slug == 'concentric-donut'
           ? const ConcentricDonutConfig(
               innerRadiusFactor: 0.45,
@@ -439,7 +523,10 @@ class _ChartTypeCatalogRow extends StatelessWidget {
 String _compactGuideName(ShowcaseChartType chartType) =>
     chartType.slug == 'concentric-donut' ? 'Concentric' : chartType.label;
 
-List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
+List<ChartSeries> _previewSeries(
+  ShowcaseChartType chartType, {
+  double scatterEntranceProgress = 1,
+}) {
   const primary = [
     ChartDataPoint(x: 0, y: 18),
     ChartDataPoint(x: 1, y: 27),
@@ -471,6 +558,12 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         strokeWidth: 2.5,
         showDataPointMarkers: true,
         dataPointMarkerRadius: 2.2,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            duration: Duration(milliseconds: 560),
+          ),
+        ),
       ),
       LineChartSeries(
         id: 'catalog-line-secondary',
@@ -478,6 +571,13 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         color: Color(0xFFF97316),
         interpolation: LineInterpolation.monotone,
         strokeWidth: 1.8,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 90),
+            duration: Duration(milliseconds: 500),
+          ),
+        ),
       ),
     ],
     ChartType.area => const [
@@ -488,6 +588,12 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         interpolation: LineInterpolation.monotone,
         strokeWidth: 2,
         fillOpacity: 0.28,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            duration: Duration(milliseconds: 560),
+          ),
+        ),
       ),
       AreaChartSeries(
         id: 'catalog-area-secondary',
@@ -496,6 +602,13 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         interpolation: LineInterpolation.monotone,
         strokeWidth: 1.5,
         fillOpacity: 0.14,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 90),
+            duration: Duration(milliseconds: 500),
+          ),
+        ),
       ),
     ],
     ChartType.bar => const [
@@ -527,34 +640,246 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         ),
       ),
     ],
-    ChartType.scatter => const [
+    ChartType.scatter => [
       ScatterChartSeries(
-        id: 'catalog-scatter-primary',
-        points: primary,
-        color: Color(0xFF8B5CF6),
-        markerRadius: 5,
+        id: 'catalog-scatter-triathlon',
+        name: 'Triathlon',
+        points: const [
+          ChartDataPoint(x: 0, y: 15),
+          ChartDataPoint(x: 1, y: 19),
+          ChartDataPoint(x: 2, y: 22),
+          ChartDataPoint(x: 3, y: 27),
+          ChartDataPoint(x: 4, y: 29),
+          ChartDataPoint(x: 5, y: 35),
+          ChartDataPoint(x: 6, y: 38),
+          ChartDataPoint(x: 7, y: 43),
+          ChartDataPoint(x: 8, y: 46),
+        ],
+        color: const Color(0xFF38BDF8),
+        markerRadius:
+            4.4 *
+            _scatterSeriesProgress(
+              scatterEntranceProgress,
+              start: 0,
+              end: 0.78,
+            ),
+        markerShape: SeriesMarkerShape.triangle,
+        markerStyle: ScatterMarkerStyle(
+          opacity: _scatterSeriesProgress(
+            scatterEntranceProgress,
+            start: 0,
+            end: 0.78,
+          ),
+        ),
       ),
       ScatterChartSeries(
-        id: 'catalog-scatter-secondary',
-        points: secondary,
-        color: Color(0xFFF97316),
-        markerRadius: 4,
+        id: 'catalog-scatter-volleyball',
+        name: 'Volleyball',
+        points: const [
+          ChartDataPoint(x: 2, y: 25),
+          ChartDataPoint(x: 3, y: 30),
+          ChartDataPoint(x: 4, y: 33),
+          ChartDataPoint(x: 5, y: 39),
+          ChartDataPoint(x: 6, y: 42),
+          ChartDataPoint(x: 7, y: 47),
+          ChartDataPoint(x: 8, y: 49),
+          ChartDataPoint(x: 9, y: 55),
+          ChartDataPoint(x: 10, y: 58),
+          ChartDataPoint(x: 11, y: 61),
+        ],
+        color: const Color(0xFF7C3AED),
+        markerRadius:
+            4.2 *
+            _scatterSeriesProgress(
+              scatterEntranceProgress,
+              start: 0.10,
+              end: 0.90,
+            ),
+        markerShape: SeriesMarkerShape.square,
+        markerStyle: ScatterMarkerStyle(
+          opacity: _scatterSeriesProgress(
+            scatterEntranceProgress,
+            start: 0.10,
+            end: 0.90,
+          ),
+        ),
+      ),
+      ScatterChartSeries(
+        id: 'catalog-scatter-basketball',
+        name: 'Basketball',
+        points: const [
+          ChartDataPoint(x: 4, y: 35),
+          ChartDataPoint(x: 5, y: 40),
+          ChartDataPoint(x: 6, y: 44),
+          ChartDataPoint(x: 7, y: 49),
+          ChartDataPoint(x: 8, y: 52),
+          ChartDataPoint(x: 9, y: 57),
+          ChartDataPoint(x: 10, y: 60),
+          ChartDataPoint(x: 11, y: 65),
+          ChartDataPoint(x: 12, y: 68),
+          ChartDataPoint(x: 13, y: 73),
+        ],
+        color: const Color(0xFF10B981),
+        markerRadius:
+            4.5 *
+            _scatterSeriesProgress(
+              scatterEntranceProgress,
+              start: 0.22,
+              end: 1,
+            ),
+        markerStyle: ScatterMarkerStyle(
+          opacity: _scatterSeriesProgress(
+            scatterEntranceProgress,
+            start: 0.22,
+            end: 1,
+          ),
+        ),
       ),
     ],
     ChartType.candlestick => [
       CandlestickChartSeries(
         id: 'catalog-candlestick',
         points: [
-          CandlestickDataPoint(x: 0, open: 28, high: 34, low: 25, close: 32),
-          CandlestickDataPoint(x: 1, open: 32, high: 36, low: 29, close: 30),
-          CandlestickDataPoint(x: 2, open: 30, high: 38, low: 29, close: 36),
-          CandlestickDataPoint(x: 3, open: 36, high: 39, low: 32, close: 34),
-          CandlestickDataPoint(x: 4, open: 34, high: 43, low: 33, close: 41),
-          CandlestickDataPoint(x: 5, open: 41, high: 45, low: 38, close: 39),
-          CandlestickDataPoint(x: 6, open: 39, high: 48, low: 38, close: 46),
-          CandlestickDataPoint(x: 7, open: 46, high: 49, low: 42, close: 46),
+          CandlestickDataPoint(x: 0, open: 99, high: 104, low: 97, close: 102),
+          CandlestickDataPoint(
+            x: 1,
+            open: 102,
+            high: 108,
+            low: 100,
+            close: 106,
+          ),
+          CandlestickDataPoint(
+            x: 2,
+            open: 106,
+            high: 107,
+            low: 101,
+            close: 104,
+          ),
+          CandlestickDataPoint(
+            x: 3,
+            open: 104,
+            high: 112,
+            low: 103,
+            close: 110,
+          ),
+          CandlestickDataPoint(
+            x: 4,
+            open: 110,
+            high: 116,
+            low: 109,
+            close: 114,
+          ),
+          CandlestickDataPoint(
+            x: 5,
+            open: 114,
+            high: 117,
+            low: 110,
+            close: 112,
+          ),
+          CandlestickDataPoint(
+            x: 6,
+            open: 112,
+            high: 113,
+            low: 106,
+            close: 108,
+          ),
+          CandlestickDataPoint(
+            x: 7,
+            open: 108,
+            high: 109,
+            low: 102,
+            close: 105,
+          ),
+          CandlestickDataPoint(
+            x: 8,
+            open: 105,
+            high: 111,
+            low: 104,
+            close: 109,
+          ),
+          CandlestickDataPoint(
+            x: 9,
+            open: 109,
+            high: 118,
+            low: 108,
+            close: 116,
+          ),
+          CandlestickDataPoint(
+            x: 10,
+            open: 116,
+            high: 123,
+            low: 115,
+            close: 121,
+          ),
+          CandlestickDataPoint(
+            x: 11,
+            open: 121,
+            high: 123,
+            low: 116,
+            close: 118,
+          ),
+          CandlestickDataPoint(
+            x: 12,
+            open: 118,
+            high: 126,
+            low: 117,
+            close: 124,
+          ),
+          CandlestickDataPoint(
+            x: 13,
+            open: 124,
+            high: 126,
+            low: 120,
+            close: 122,
+          ),
+          CandlestickDataPoint(
+            x: 14,
+            open: 122,
+            high: 129,
+            low: 121,
+            close: 127,
+          ),
+          CandlestickDataPoint(
+            x: 15,
+            open: 127,
+            high: 130,
+            low: 123,
+            close: 125,
+          ),
         ],
-        candlestickStyle: const CandlestickChartStyle(maxBodyWidth: 10),
+        candlestickStyle: const CandlestickChartStyle(
+          maxBodyWidth: 8,
+          bodyWidthFactor: 0.64,
+          bodyCornerRadius: 1,
+        ),
+        animation: const CandlestickAnimationStyle(staggerFraction: 0.82),
+      ),
+      const LineChartSeries(
+        id: 'catalog-candlestick-average',
+        points: [
+          ChartDataPoint(x: 4, y: 107.2),
+          ChartDataPoint(x: 5, y: 109.2),
+          ChartDataPoint(x: 6, y: 109.6),
+          ChartDataPoint(x: 7, y: 109.8),
+          ChartDataPoint(x: 8, y: 109.6),
+          ChartDataPoint(x: 9, y: 110),
+          ChartDataPoint(x: 10, y: 111.8),
+          ChartDataPoint(x: 11, y: 113.8),
+          ChartDataPoint(x: 12, y: 117.6),
+          ChartDataPoint(x: 13, y: 120.2),
+          ChartDataPoint(x: 14, y: 122.4),
+          ChartDataPoint(x: 15, y: 123.2),
+        ],
+        color: Color(0xFF6366F1),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 1.5,
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 80),
+            duration: Duration(milliseconds: 520),
+          ),
+        ),
       ),
     ],
     ChartType.pie => [
@@ -714,8 +1039,19 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
           cornerRadius: 3,
           borderWidth: 0.5,
           showDataLabels: false,
+          animationMode: PolarColumnAnimationMode.sweep,
         ),
       ),
     ],
   };
+}
+
+double _scatterSeriesProgress(
+  double progress, {
+  required double start,
+  required double end,
+}) {
+  if (progress <= start) return 0;
+  if (progress >= end) return 1;
+  return (progress - start) / (end - start);
 }
