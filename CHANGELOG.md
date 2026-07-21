@@ -5,7 +5,7 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.11.0 - 2026-07-21
 
 ### Added
 - First-class Range Area charts through `RangeAreaDataPoint` and
@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   catalog and Gallery, including a native interval preview, weather envelope,
   nested forecast fan, financial volatility composition, dedicated route, and
   property-testing Workbench.
+- Native pub.dev captures for the temperature envelope, nested forecast fan,
+  and volatility envelope, plus a regenerated ten-family chart-type strip.
 
 ## 0.10.0 - 2026-07-21
 

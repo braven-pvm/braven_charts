@@ -51,7 +51,7 @@ streaming path so each sample does not require a widget-tree rebuild.
 [open the Candlestick guide](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts),
 [open the Polar Column guide](https://braven-pvm.github.io/braven_charts/?page=polar-column),
 [inspect the value summary](https://braven-pvm.github.io/braven_charts/?page=value-summary),
-or review the [0.10.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0100---2026-07-21)
+or review the [0.11.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0110---2026-07-21)
 for the complete API-level release notes.
 
 ## Rendered examples
@@ -62,13 +62,15 @@ package rather than treating a single composition as representative.
 
 ### Chart types
 
-| Line | Area | Bar |
+| Line | Area | Range Area |
 | --- | --- | --- |
-| [![Line chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_line.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Area chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_area.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Bar chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_bar.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts) |
-| **Scatter** | **Candlestick** | **Polar Column / Rose** |
-| [![Scatter chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_scatter.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Candlestick chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_candlestick.png)](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts) | [![Polar Column and Rose chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_polar_column.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |
+| [![Line chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_line.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Area chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_area.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Range Area chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_range_area.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts) |
+| **Bar** | **Scatter** | **Candlestick** |
+| [![Bar chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_bar.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts) | [![Scatter chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_scatter.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Candlestick chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_candlestick.png)](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts) |
 | **Pie** | **Donut** | **Concentric Donut** |
 | [![Pie chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_pie.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Donut chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_donut.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Concentric Donut chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_concentric.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) |
+| **Polar Column / Rose** |  |  |
+| [![Polar Column and Rose chart family](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_polar_column.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |  |  |
 
 ### Range Area compositions
 
@@ -78,6 +80,10 @@ Range Area preserves one paired low/high interval at each X position. Use the
 and [Gaps & steps](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=gapsAndSteps)
 presets to compare range-only, Range Area plus Line, nested bands, typed
 tracking, explicit gaps, styling, motion, and Chart/Data/Split/Source behavior.
+
+| Temperature envelope | Nested forecast fan | Volatility envelope |
+| --- | --- | --- |
+| [![Daily temperature Range Area with observed mean and typed low/high tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_temperature.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=temperature) | [![Nested 80% and 50% demand forecast intervals with a median line](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_forecast_fan.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts&preset=forecastFan) | [![Dark rolling volatility Range Area combined with a tracked close line](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/range_area_volatility.png)](https://braven-pvm.github.io/braven_charts/?page=technical-indicators) |
 
 ### Concentric Donut compositions
 
@@ -234,7 +240,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.10.0
+  braven_charts: ^0.11.0
 ```
 
 Then fetch dependencies:
@@ -243,7 +249,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.10.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.11.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
