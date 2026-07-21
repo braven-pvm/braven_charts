@@ -334,18 +334,22 @@ class CrosshairRenderer {
       );
     }
 
-    // Draw coordinate labels
-    _paintCrosshairLabels(
-      canvas: canvas,
-      size: size,
-      cursorPosition: cursorPosition,
-      plotArea: plotArea,
-      transform: transform,
-      theme: theme,
-      multiAxisInfo: multiAxisInfo,
-      seriesElements: seriesElements,
-      xAxisConfig: xAxisConfig,
-    );
+    // Draw coordinate labels. The axis value labels are their own feedback
+    // layer, gated by [CrosshairConfig.showCoordinateLabels] independently of
+    // the crosshair lines.
+    if (crosshairConfig.showCoordinateLabels) {
+      _paintCrosshairLabels(
+        canvas: canvas,
+        size: size,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        transform: transform,
+        theme: theme,
+        multiAxisInfo: multiAxisInfo,
+        seriesElements: seriesElements,
+        xAxisConfig: xAxisConfig,
+      );
+    }
   }
 
   /// Paints tracking mode overlay (vertical line + intersection markers + tooltip).
@@ -484,40 +488,47 @@ class CrosshairRenderer {
     }
 
     if (transform.transposed) {
-      _paintTransposedTrackingCategoryLabel(
-        canvas: canvas,
-        cursorPosition: cursorPosition,
-        plotArea: plotArea,
-        theme: theme,
-        dataX: dataX,
-        seriesElements: seriesElements,
-        xAxisConfig: xAxisConfig,
-      );
-      final isPerSeries =
-          multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
-      final value = isPerSeries
-          ? (cursorPosition.dx - plotArea.left) / plotArea.width
-          : transform
-                .plotToData(
-                  cursorPosition.dx - plotArea.left,
-                  cursorPosition.dy - plotArea.top,
-                )
-                .dy;
-      _paintTransposedValueLabels(
-        canvas: canvas,
-        size: size,
-        cursorPosition: cursorPosition,
-        plotArea: plotArea,
-        theme: theme,
-        value: value,
-        isNormalized: isPerSeries,
-        multiAxisInfo: multiAxisInfo,
-      );
+      if (crosshairConfig.showCoordinateLabels) {
+        _paintTransposedTrackingCategoryLabel(
+          canvas: canvas,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          dataX: dataX,
+          seriesElements: seriesElements,
+          xAxisConfig: xAxisConfig,
+        );
+        final isPerSeries =
+            multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+        final value = isPerSeries
+            ? (cursorPosition.dx - plotArea.left) / plotArea.width
+            : transform
+                  .plotToData(
+                    cursorPosition.dx - plotArea.left,
+                    cursorPosition.dy - plotArea.top,
+                  )
+                  .dy;
+        _paintTransposedValueLabels(
+          canvas: canvas,
+          size: size,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          value: value,
+          isNormalized: isPerSeries,
+          multiAxisInfo: multiAxisInfo,
+        );
+      }
       return;
     }
 
-    // Draw X label
-    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+    // Draw X label. Axis value labels form their own feedback layer behind
+    // [CrosshairConfig.showCoordinateLabels]; the mode filter is retained so
+    // a horizontal-only crosshair keeps its Y-only labels, while
+    // [CrosshairMode.none] (no lines) still allows the label layer —
+    // matching standard mode, where labels never depended on the lines.
+    if (crosshairConfig.showCoordinateLabels &&
+        mode != CrosshairMode.horizontal) {
       _paintTrackingXLabel(
         canvas: canvas,
         cursorPosition: cursorPosition,
@@ -530,7 +541,8 @@ class CrosshairRenderer {
     }
 
     // Draw Y label (per-axis if any axis has showCrosshairLabel)
-    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+    if (crosshairConfig.showCoordinateLabels &&
+        mode != CrosshairMode.vertical) {
       // Check if any axis wants a styled crosshair label
       final hasAxisWithCrosshairLabel = multiAxisInfo.effectiveAxes.any(
         (a) => a.showCrosshairLabel && a.visible,

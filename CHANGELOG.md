@@ -58,14 +58,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full portability: value summary configuration in chart artifacts and
   hydration, deterministic generated Dart Source, runtime-binding
   diagnostics for unregistered builder content, and Workbench integration.
-- A first-class Value Summary showcase page with presets for single-series
-  fallback, multi-series, multi-axis units, Candlestick OHLC, synchronized
-  charts, and the draggable panel, plus appearance, policy, and pin
-  controls.
+- A first-class Tracking & Value Display showcase page with presets for
+  single-series fallback, multi-series, multi-axis units, Candlestick OHLC,
+  synchronized charts, and the draggable panel, plus independent toggles for
+  every tracking feedback layer (crosshair lines, tracking panel, point
+  tooltip, axis value labels, intersection markers, data point markers, and
+  the value summary) alongside appearance, policy, and pin controls.
 - A permanent value summary benchmark matrix (50k-point overlay updates,
   candlestick zero-invalidation tracking, dense Scatter single-scan proof,
   synchronized fanout, drag commit cadence) and a `doc/value_summary.md`
   feature guide.
+
+### Fixed
+- `CrosshairConfig.showCoordinateLabels` is now honored by the crosshair
+  renderer: clearing it removes the axis value labels in both standard and
+  tracking display modes (previously the flag was serialized but never read
+  during painting). The labels are their own feedback layer — with
+  `CrosshairMode.none` they can now paint without any crosshair lines,
+  matching the layer-independence contract of the tracking feedback stack.
 
 ## 0.10.0-dev.1
 

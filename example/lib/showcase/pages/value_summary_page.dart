@@ -10,15 +10,20 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-/// First-class guide to the Cartesian value summary.
+/// First-class guide to tracking feedback and the Cartesian value summary.
 ///
-/// The value summary keeps the policy-resolved datum visible in a persistent
-/// in-plot panel, independent of the crosshair tracking panel and the point
-/// tooltip. Presets cover single-series fallback, crosshair independence,
-/// multi-axis units, candlestick OHLC rows, a synchronized chart pair, a
-/// programmatic pinning workflow, and a draggable annotation-style panel;
-/// the options panel exercises presentation, placement, value policy, and
-/// the tri-state style model live.
+/// Braven Charts offers independent layers for showing tracking data:
+/// crosshair lines, the tracking panel (the classic popover card near the
+/// cursor), the point tooltip, axis value labels, intersection markers,
+/// data point markers, and the persistent value summary — the flagship
+/// layer, which keeps the policy-resolved datum visible without any pointer.
+/// The Tracking Display section toggles each layer independently on every
+/// preset; enabling one never implicitly enables another. Presets cover
+/// single-series fallback, lines-off independence, multi-axis units,
+/// candlestick OHLC rows, a synchronized chart pair, a programmatic pinning
+/// workflow, and a draggable annotation-style panel; the options panel
+/// exercises presentation, placement, value policy, and the tri-state style
+/// model live.
 class ValueSummaryPage extends StatefulWidget {
   const ValueSummaryPage({super.key});
 
@@ -28,7 +33,8 @@ class ValueSummaryPage extends StatefulWidget {
 
 class _ValueSummaryPageState extends State<ValueSummaryPage> {
   /// Markers default on so the datum the summary describes is visible on the
-  /// curve; the Chart Options toggle hides them on every preset.
+  /// curve; the Tracking Display "Data Point Markers" toggle hides them on
+  /// every preset that has them (candlesticks are their own marks).
   final ChartOptionsController _optionsController = ChartOptionsController(
     const ChartOptions(showDataMarkers: true),
   );
@@ -58,7 +64,17 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   double _offsetY = 12;
   bool _showAccent = true;
   bool _announceChanges = false;
-  bool _crosshairEnabled = _SummaryPreset.line.defaultCrosshair;
+
+  // Tracking display layers. Each toggle drives exactly one config flag, so
+  // any combination composes: enabling one layer never implicitly enables
+  // another. Crosshair lines carry a per-preset default (the multi-series
+  // preset starts lines-off as the independence demonstration); the other
+  // layers keep their state across preset switches.
+  bool _crosshairLines = _SummaryPreset.line.defaultCrosshairLines;
+  bool _trackingPanel = false;
+  bool _pointTooltip = false;
+  bool _axisValueLabels = false;
+  bool _intersectionMarkers = true;
 
   // Annotation presentation options (the draggable panel).
   bool _draggable = true;
@@ -251,7 +267,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       _preset = preset;
       _policyChoice = _PolicyChoice.presetDefault;
       _presentationChoice = _PresentationChoice.presetDefault;
-      _crosshairEnabled = preset.defaultCrosshair;
+      _crosshairLines = preset.defaultCrosshairLines;
       _draggable = true;
       _clampToPlot = true;
       _committedPlacement = null;
@@ -357,10 +373,11 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Value Summary',
+      title: 'Tracking & Value Display',
       subtitle:
-          'A persistent, policy-driven datum panel — independent of the '
-          'crosshair and tooltip',
+          'Crosshair lines, tracking panel, point tooltip, axis value '
+          'labels, and markers — each an independent layer, with the '
+          'persistent value summary as the flagship',
       optionsChildren: _buildOptionsChildren(),
       chart: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -471,9 +488,15 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     return InteractionConfig(
       enableZoom: options.enableZoom,
       enablePan: options.enablePan,
+      // The crosshair subsystem stays enabled so every tracking feedback
+      // layer is gated by exactly one flag of its own: the lines by [mode]
+      // (CrosshairMode.none hides them), the tracking panel by
+      // [showTrackingTooltip], the axis value labels by
+      // [showCoordinateLabels], and the intersection markers by
+      // [showIntersectionMarkers]. Any combination composes.
       crosshair: CrosshairConfig(
-        enabled: _crosshairEnabled,
-        mode: crosshairMode,
+        enabled: true,
+        mode: _crosshairLines ? crosshairMode : CrosshairMode.none,
         displayMode: CrosshairDisplayMode.tracking,
         // The Value mode toggle drives the visual tracking too: pairing the
         // summary's valueMode with the crosshair's interpolateValues keeps
@@ -483,12 +506,12 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         // advanced cases; the showcase couples them for a coherent visual.
         interpolateValues:
             _valueMode == CartesianValueSummaryValueMode.interpolated,
-        showTrackingTooltip: false,
-        showCoordinateLabels: false,
-        showIntersectionMarkers: true,
+        showTrackingTooltip: _trackingPanel,
+        showCoordinateLabels: _axisValueLabels,
+        showIntersectionMarkers: _intersectionMarkers,
         intersectionMarkerRadius: 3.5,
       ),
-      tooltip: const TooltipConfig(enabled: false),
+      tooltip: TooltipConfig(enabled: _pointTooltip),
       valueSummary: _summaryConfig(withController: withController),
     );
   }
@@ -602,6 +625,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   }
 
   Widget _buildMultiAxisChart() {
+    // The per-series axis configs bypass the shared `yAxis` parameter of
+    // [_chart], so the standard "Show Axis Lines" toggle must be wired into
+    // each of them explicitly.
+    final showAxisLines = _optionsController.options.showAxisLines;
     return _chart(
       key: const ValueKey('value-summary-stage-multi-axis'),
       series: [
@@ -619,6 +646,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             label: 'VO₂',
             unit: 'mL/kg/min',
             color: const Color(0xFF1565C0),
+            showAxisLine: showAxisLines,
           ).copyWith(id: 'summary-vo2-axis'),
         ),
         LineChartSeries(
@@ -635,6 +663,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             label: 'Heart rate',
             unit: 'bpm',
             color: const Color(0xFFE53935),
+            showAxisLine: showAxisLines,
           ).copyWith(id: 'summary-hr-axis'),
         ),
       ],
@@ -809,16 +838,81 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   List<Widget> _buildOptionsChildren() {
     return [
       OptionSection(
-        title: 'Summary',
-        icon: Icons.summarize_outlined,
+        title: 'Tracking Display',
+        icon: Icons.layers_outlined,
         children: [
+          const InfoBox(
+            message:
+                'Every layer below is one independent config flag. Enabling '
+                'one never implicitly enables another — any combination '
+                'composes, on every preset.',
+          ),
+          const SizedBox(height: 8),
           BoolOption(
             key: const ValueKey('value-summary-enabled'),
-            label: 'Show Value Summary',
+            label: 'Value Summary',
+            subtitle:
+                'The flagship: a persistent, policy-resolved datum panel',
             value: _summaryEnabled,
             onChanged: (value) => setState(() => _summaryEnabled = value),
           ),
-          const SizedBox(height: 4),
+          BoolOption(
+            key: const ValueKey('value-summary-layer-crosshair-lines'),
+            label: 'Crosshair Lines',
+            subtitle: 'CrosshairConfig.mode — every other layer keeps working',
+            value: _crosshairLines,
+            onChanged: (value) => setState(() => _crosshairLines = value),
+          ),
+          BoolOption(
+            key: const ValueKey('value-summary-layer-tracking-panel'),
+            label: 'Tracking Panel',
+            subtitle:
+                'The classic popover card near the cursor — showTrackingTooltip',
+            value: _trackingPanel,
+            onChanged: (value) => setState(() => _trackingPanel = value),
+          ),
+          BoolOption(
+            key: const ValueKey('value-summary-layer-point-tooltip'),
+            label: 'Point Tooltip',
+            subtitle:
+                'Hover a datum directly for its tooltip — TooltipConfig.enabled',
+            value: _pointTooltip,
+            onChanged: (value) => setState(() => _pointTooltip = value),
+          ),
+          BoolOption(
+            key: const ValueKey('value-summary-layer-axis-labels'),
+            label: 'Axis Value Labels',
+            subtitle:
+                'Compact coordinates at the axis edges — showCoordinateLabels',
+            value: _axisValueLabels,
+            onChanged: (value) => setState(() => _axisValueLabels = value),
+          ),
+          BoolOption(
+            key: const ValueKey('value-summary-layer-intersection-markers'),
+            label: 'Intersection Markers',
+            subtitle:
+                'Dots on each series at the tracked X — showIntersectionMarkers',
+            value: _intersectionMarkers,
+            onChanged: (value) => setState(() => _intersectionMarkers = value),
+          ),
+          // Candlestick series have no datapoint markers — the candles are
+          // the marks — so the toggle hides on that preset (the Pinning
+          // section's conditional pattern).
+          if (_preset != _SummaryPreset.candlestick)
+            BoolOption(
+              key: const ValueKey('value-summary-layer-data-markers'),
+              label: 'Data Point Markers',
+              subtitle: 'Series-level showDataPointMarkers on every series',
+              value: _optionsController.showDataMarkers,
+              onChanged: (value) =>
+                  setState(() => _optionsController.showDataMarkers = value),
+            ),
+        ],
+      ),
+      OptionSection(
+        title: 'Summary Panel',
+        icon: Icons.summarize_outlined,
+        children: [
           Text(
             'Presentation',
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
@@ -1248,23 +1342,16 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
         ],
       ),
-      OptionSection(
-        title: 'Independence',
-        icon: Icons.call_split,
-        children: [
-          BoolOption(
-            key: const ValueKey('value-summary-crosshair'),
-            label: 'Enable Crosshair',
-            subtitle: 'The summary keeps tracking either way',
-            value: _crosshairEnabled,
-            onChanged: (value) => setState(() => _crosshairEnabled = value),
-          ),
-        ],
-      ),
       StandardChartOptions(
         controller: _optionsController,
+        // The data-markers layer toggle lives in the Tracking Display
+        // section; the line-style option stays hidden because every preset
+        // curates its own per-series interpolation mix.
+        showMarkerOption: false,
         showLineStyleOption: false,
-        showScrollbarOptions: false,
+        // The synchronized pair renders compact charts with legends
+        // intentionally off, so the legend toggle cannot apply there.
+        showLegendOption: _preset != _SummaryPreset.synchronized,
       ),
       OptionSection(
         title: 'How to Explore',
@@ -1312,7 +1399,7 @@ extension on _SummaryPreset {
 
   String get stageTitle => switch (this) {
     _SummaryPreset.line => 'Single series with latest fallback',
-    _SummaryPreset.multiSeries => 'Three riders, crosshair off',
+    _SummaryPreset.multiSeries => 'Three riders, crosshair lines off',
     _SummaryPreset.multiAxis => 'Dual axes with units',
     _SummaryPreset.candlestick => 'OHLC session summary',
     _SummaryPreset.synchronized => 'Synchronized pair',
@@ -1324,7 +1411,7 @@ extension on _SummaryPreset {
     _SummaryPreset.line =>
       'The panel shows the latest datum before any pointer arrives',
     _SummaryPreset.multiSeries =>
-      'The summary tracks the shared X while the crosshair stays disabled',
+      'The summary tracks the shared X while the crosshair lines stay hidden',
     _SummaryPreset.multiAxis =>
       'Each row keeps its own axis unit — mL/kg/min on the left, bpm on the '
           'right',
@@ -1346,7 +1433,7 @@ extension on _SummaryPreset {
     _ => CartesianValueSummaryValuePolicy.trackingThenLatest,
   };
 
-  bool get defaultCrosshair => switch (this) {
+  bool get defaultCrosshairLines => switch (this) {
     _SummaryPreset.multiSeries => false,
     _ => true,
   };
@@ -1361,11 +1448,14 @@ extension on _SummaryPreset {
       'The summary panel is visible before you touch the chart: the '
           'trackingThenLatest policy falls back to the latest visible datum. '
           'Hover to track, leave to fall back. Pan or zoom to see the panel '
-          'freeze until the gesture ends.',
+          'freeze until the gesture ends. Compose it with the other layers '
+          'under Tracking Display — try the classic tracking panel and the '
+          'summary side by side.',
     _SummaryPreset.multiSeries =>
-      'The crosshair is disabled on this preset, yet the summary still '
-          'tracks the pointer — the two feedback layers are fully '
-          'independent. Re-enable the crosshair under Independence.',
+      'The crosshair lines default off on this preset, yet the summary and '
+          'the intersection markers still track the pointer — every feedback '
+          'layer is independent. Re-enable the lines (or disable the other '
+          'layers) under Tracking Display.',
     _SummaryPreset.multiAxis =>
       'Two independently scaled axes: every summary row is formatted with '
           'its own axis unit.',

@@ -183,7 +183,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: InteractionPage(),
     ),
     const NavDestination(
-      label: 'Value Summary',
+      label: 'Tracking & Value Display',
       icon: Icons.summarize_outlined,
       selectedIcon: Icons.summarize,
       page: ValueSummaryPage(),

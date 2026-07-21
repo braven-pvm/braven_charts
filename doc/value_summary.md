@@ -9,9 +9,12 @@ data a second time (the sole exception is the divergent value mode described
 under "Value mode" below). It is independent of the crosshair panel, point tooltip,
 and axis value labels: enabling one never implicitly enables another.
 
-Open the runnable [Value Summary showcase](https://braven-pvm.github.io/braven_charts/?page=value-summary)
+Open the runnable [Tracking & Value Display showcase](https://braven-pvm.github.io/braven_charts/?page=value-summary)
 to prototype presets for single-series fallback, multi-series, multi-axis
-units, Candlestick OHLC, synchronized pairs, and the draggable panel.
+units, Candlestick OHLC, synchronized pairs, and the draggable panel — and
+to compose the summary with every other tracking feedback layer (crosshair
+lines, tracking panel, point tooltip, axis value labels, and markers), each
+behind its own independent toggle.
 
 ## Quick start
 

@@ -46,7 +46,7 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    expect(find.text('Value Summary'), findsOneWidget);
+    expect(find.text('Tracking & Value Display'), findsOneWidget);
     for (final preset in [
       'line',
       'multiSeries',
@@ -88,15 +88,17 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    // Multi-series: crosshair defaults OFF while the summary stays enabled —
-    // the independence demonstration.
+    // Multi-series: crosshair lines default OFF (CrosshairMode.none) while
+    // the crosshair subsystem stays enabled and the summary keeps tracking —
+    // the layer-independence demonstration.
     await tester.tap(
       find.byKey(const ValueKey('value-summary-preset-multiSeries')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Three riders, crosshair off'), findsOneWidget);
+    expect(find.text('Three riders, crosshair lines off'), findsOneWidget);
     var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
-    expect(chart.interactionConfig?.crosshair.enabled, isFalse);
+    expect(chart.interactionConfig?.crosshair.enabled, isTrue);
+    expect(chart.interactionConfig?.crosshair.mode, CrosshairMode.none);
     expect(chart.interactionConfig?.valueSummary.enabled, isTrue);
     expect(chart.series, hasLength(3));
 
@@ -262,7 +264,11 @@ void main() {
     // Markers default on so the tracked datum is visible on the curve.
     expect(markerFlag(allSeries().single.single), isTrue);
 
-    final markerToggle = find.text('Show Data Markers');
+    // The toggle now lives in the Tracking Display section as one of the
+    // independent layers (relocated from Standard Chart Options).
+    final markerToggle = find.byKey(
+      const ValueKey('value-summary-layer-data-markers'),
+    );
     await revealOption(tester, markerToggle);
     await tester.tap(markerToggle);
     await tester.pumpAndSettle();
@@ -306,6 +312,206 @@ void main() {
     }
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'tracking display layer toggles each drive exactly one config flag, '
+    'compose in any combination, and reach the synchronized pair',
+    (tester) async {
+      await pumpPage(tester);
+
+      InteractionConfig config() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+          .interactionConfig!;
+
+      Future<void> toggle(String key, {double delta = 120}) async {
+        final finder = find.byKey(ValueKey(key));
+        await revealOption(tester, finder, delta: delta);
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+      }
+
+      // Defaults: lines and intersection markers on; tracking panel, point
+      // tooltip, and axis value labels off; summary on. The crosshair
+      // subsystem itself stays enabled so each layer is one flag.
+      expect(config().crosshair.enabled, isTrue);
+      expect(config().crosshair.mode, CrosshairMode.both);
+      expect(config().crosshair.showTrackingTooltip, isFalse);
+      expect(config().crosshair.showCoordinateLabels, isFalse);
+      expect(config().crosshair.showIntersectionMarkers, isTrue);
+      expect(config().tooltip.enabled, isFalse);
+      expect(config().valueSummary.enabled, isTrue);
+
+      // Crosshair lines off: only the mode changes — the subsystem and the
+      // sibling layer flags are untouched.
+      await toggle('value-summary-layer-crosshair-lines');
+      expect(config().crosshair.enabled, isTrue);
+      expect(config().crosshair.mode, CrosshairMode.none);
+      expect(config().crosshair.showIntersectionMarkers, isTrue);
+      expect(config().valueSummary.enabled, isTrue);
+
+      // Classic tracking panel on while the lines stay off — and while the
+      // value summary stays on: both feedback panels are active at once.
+      await toggle('value-summary-layer-tracking-panel');
+      expect(config().crosshair.showTrackingTooltip, isTrue);
+      expect(config().crosshair.mode, CrosshairMode.none);
+      expect(config().valueSummary.enabled, isTrue);
+
+      // Point tooltip and axis value labels: one flag each.
+      await toggle('value-summary-layer-point-tooltip');
+      expect(config().tooltip.enabled, isTrue);
+      await toggle('value-summary-layer-axis-labels');
+      expect(config().crosshair.showCoordinateLabels, isTrue);
+
+      // Intersection markers off: the only flag that changes.
+      await toggle('value-summary-layer-intersection-markers');
+      expect(config().crosshair.showIntersectionMarkers, isFalse);
+      expect(config().crosshair.showTrackingTooltip, isTrue);
+
+      // Value summary off while the classic panel stays on: toggling the
+      // summary never implies any of the other four layers.
+      await toggle('value-summary-enabled', delta: -120);
+      expect(config().valueSummary.enabled, isFalse);
+      expect(config().crosshair.showTrackingTooltip, isTrue);
+      expect(config().tooltip.enabled, isTrue);
+
+      // The composed combination reaches BOTH charts of the synchronized
+      // pair. Crosshair lines return with the preset default; every other
+      // layer choice persists across the switch.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+      final charts = tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList();
+      expect(charts, hasLength(2));
+      for (final chart in charts) {
+        final crosshair = chart.interactionConfig!.crosshair;
+        expect(crosshair.enabled, isTrue);
+        expect(crosshair.mode, CrosshairMode.both);
+        expect(crosshair.showTrackingTooltip, isTrue);
+        expect(crosshair.showCoordinateLabels, isTrue);
+        expect(crosshair.showIntersectionMarkers, isFalse);
+        expect(chart.interactionConfig!.tooltip.enabled, isTrue);
+        expect(chart.interactionConfig!.valueSummary.enabled, isFalse);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'audit fix: the axis-lines toggle reaches the multi-axis per-series '
+    'axes',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-multiAxis')),
+      );
+      await tester.pumpAndSettle();
+
+      BravenChartPlus chart() =>
+          tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      for (final series in chart().series) {
+        expect(series.yAxisConfig?.showAxisLine, isTrue);
+      }
+
+      // Previously the per-series Y-axis configs bypassed the shared yAxis
+      // parameter, so this standard toggle was dead on this preset.
+      final axisToggle = find.text('Show Axis Lines');
+      await revealOption(tester, axisToggle);
+      await tester.tap(axisToggle);
+      await tester.pumpAndSettle();
+      for (final series in chart().series) {
+        expect(series.yAxisConfig?.showAxisLine, isFalse);
+      }
+      expect(chart().xAxisConfig?.showAxisLine, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'audit fix: inapplicable controls hide per preset — legend on the '
+    'synchronized pair, datapoint markers on candlestick',
+    (tester) async {
+      await pumpPage(tester);
+
+      // Line preset: both controls exist.
+      final legendToggle = find.text('Show Legend');
+      await revealOption(tester, legendToggle);
+      expect(legendToggle, findsOneWidget);
+
+      // Synchronized pair: both compact charts render with legends
+      // structurally off, so the dead control hides instead of silently
+      // doing nothing.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+      await revealOption(tester, find.text('Enable Zoom'));
+      expect(find.text('Show Legend'), findsNothing);
+
+      // Candlestick: the candles are the marks — there is no datapoint
+      // marker layer to toggle, while the intersection-marker layer stays.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-candlestick')),
+      );
+      await tester.pumpAndSettle();
+      final intersectionToggle = find.byKey(
+        const ValueKey('value-summary-layer-intersection-markers'),
+      );
+      await revealOption(tester, intersectionToggle, delta: -120);
+      expect(intersectionToggle, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('value-summary-layer-data-markers')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'audit fix: scrollbar toggles are exposed and flow into every preset '
+    'chart',
+    (tester) async {
+      await pumpPage(tester);
+
+      bool xScrollbar() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+          .showXScrollbar;
+      bool yScrollbar() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus).first)
+          .showYScrollbar;
+      expect(xScrollbar(), isFalse);
+      expect(yScrollbar(), isFalse);
+
+      final xToggle = find.text('Show X Scrollbar');
+      await revealOption(tester, xToggle);
+      await tester.tap(xToggle);
+      await tester.pumpAndSettle();
+      expect(xScrollbar(), isTrue);
+
+      final yToggle = find.text('Show Y Scrollbar');
+      await revealOption(tester, yToggle);
+      await tester.tap(yToggle);
+      await tester.pumpAndSettle();
+      expect(yScrollbar(), isTrue);
+
+      // Both charts of the synchronized pair follow.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+      final charts = tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList();
+      expect(charts, hasLength(2));
+      for (final chart in charts) {
+        expect(chart.showXScrollbar, isTrue);
+        expect(chart.showYScrollbar, isTrue);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'Data points mode paints the tracking marker at the real datum and every '
@@ -359,8 +565,10 @@ void main() {
       // summary's divergent-mode resolver is never consulted.
       expect(renderBox.debugSummaryTrackingResolveCount, 0);
 
-      // Multi-series preset: the crosshair is disabled, yet the panel still
-      // snaps to real samples through the summary-owned shared resolve.
+      // Multi-series preset: the crosshair lines default off
+      // (CrosshairMode.none), yet the intersection-marker layer and the
+      // panel still snap to real samples on the shared resolve — the layers
+      // are independent of the lines.
       await tester.tap(
         find.byKey(const ValueKey('value-summary-preset-multiSeries')),
       );
@@ -372,8 +580,9 @@ void main() {
       await pointer.moveTo(cursorFor(4.6, 250));
       await tester.pump();
 
-      // No crosshair — no painted markers.
-      expect(renderBox.debugPaintedIntersectionMarkers, isEmpty);
+      // No crosshair lines, but the marker layer still paints one snapped
+      // marker per series.
+      expect(renderBox.debugPaintedIntersectionMarkers, hasLength(3));
       final snapshot = renderBox.debugValueSummarySnapshot;
       expect(snapshot, isNotNull);
       expect(snapshot!.origin, CartesianTrackingOrigin.pointer);

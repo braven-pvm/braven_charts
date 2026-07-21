@@ -326,7 +326,15 @@ class CrosshairConfig {
   /// Only used when [snapToDataPoint] is true. Must be non-negative.
   final double snapRadius;
 
-  /// Whether to show coordinate labels on the crosshair lines.
+  /// Whether to show the axis value labels while the crosshair tracks.
+  ///
+  /// The labels are their own feedback layer, independent of the crosshair
+  /// lines: with [mode] set to [CrosshairMode.none] the labels can still
+  /// paint, and clearing this flag removes them while the lines remain.
+  /// In tracking mode a vertical-only crosshair keeps X-only labels and a
+  /// horizontal-only crosshair keeps Y-only labels; [CrosshairMode.both] and
+  /// [CrosshairMode.none] show both. Per-axis `showCrosshairLabel` flags
+  /// continue to filter individual axes.
   final bool showCoordinateLabels;
 
   /// The text style for coordinate labels.
