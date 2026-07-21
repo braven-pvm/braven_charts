@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter/services.dart';
 
 import '../artifacts/chart_artifact.dart';
@@ -702,9 +703,33 @@ class ChartWorkbenchController extends ChangeNotifier
 
   void _notifyStatus() {
     if (_disposed) return;
+    // A status change can originate from inside a frame the framework is still
+    // building: a remounted chart attaches its controller from `initState`,
+    // which publishes an effective document revision while this workbench's
+    // own subtree is under construction. Rebuilding a listening widget from
+    // there is illegal, so publish once the frame is finished instead. Every
+    // state change stays synchronous — only the notification moves.
+    if (_isInsideFrame) {
+      _scheduleStatusNotification();
+      return;
+    }
     notifyListeners();
     _onStatusChanged?.call(status);
   }
+
+  /// Whether the framework is currently building, laying out, or painting.
+  ///
+  /// Marking a widget dirty during those phases throws; every other phase
+  /// (idle, transient callbacks, post-frame callbacks) simply schedules the
+  /// next frame.
+  static bool get _isInsideFrame =>
+      switch (WidgetsBinding.instance.schedulerPhase) {
+        SchedulerPhase.persistentCallbacks ||
+        SchedulerPhase.midFrameMicrotasks => true,
+        SchedulerPhase.idle ||
+        SchedulerPhase.transientCallbacks ||
+        SchedulerPhase.postFrameCallbacks => false,
+      };
 
   void _scheduleStatusNotification() {
     if (_statusNotificationFrameScheduled || _disposed) return;
@@ -1419,24 +1444,34 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
             ),
           ),
         ),
+        // A pane that has been requested once stays mounted so returning to it
+        // is instant, but a hidden pane must stop animating: its indeterminate
+        // progress bar would otherwise schedule frames for as long as the
+        // workbench lives.
         if (tableHasBeenRequested)
           Positioned.fromRect(
             rect: tableRect,
-            child: Offstage(
-              offstage: !_modeShowsTable(effective),
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surface,
-                child: _buildTableSurface(context),
+            child: TickerMode(
+              enabled: _modeShowsTable(effective),
+              child: Offstage(
+                offstage: !_modeShowsTable(effective),
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: _buildTableSurface(context),
+                ),
               ),
             ),
           ),
         if (sourceHasBeenRequested)
           Positioned.fill(
-            child: Offstage(
-              offstage: !_modeShowsSource(effective),
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surface,
-                child: _buildSourceSurface(context),
+            child: TickerMode(
+              enabled: _modeShowsSource(effective),
+              child: Offstage(
+                offstage: !_modeShowsSource(effective),
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: _buildSourceSurface(context),
+                ),
               ),
             ),
           ),

@@ -439,10 +439,7 @@ void main() {
       expect(workbench.workbenchController!.tableModel?.rowCount, 13);
 
       // Source last: the generated Dart is an ordinary BravenChartPlus with a
-      // real series type — the whole point of the lowering. (Deliberately no
-      // chart change after this visit: a captured Source snapshot invalidated
-      // by a later change leaves the offstage pane's progress ticker running,
-      // a pre-existing workbench behavior the cartesian pages share.)
+      // real series type — the whole point of the lowering.
       await tester.tap(
         find.descendant(of: switcher, matching: find.text('Chart')),
       );
@@ -491,6 +488,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(workbench.workbenchController!.generatedSource!.source, source);
       expect(tester.takeException(), isNull);
+
+      // Changing the chart with the Source pane already holding a snapshot
+      // invalidates it and remounts the chart. The pane must re-emit for the
+      // new preset without ever notifying its listeners mid-build.
+      await selectPreset(tester, 'candlestick');
+      await tester.pumpAndSettle();
+      expect(
+        workbench.workbenchController!.generatedSource!.source,
+        contains('CandlestickChartSeries('),
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -505,27 +513,26 @@ void main() {
       'barTransposed': '.geomBar(',
     };
 
-    // Each preset gets a FRESH page. Switching preset while the Source pane
-    // already holds a snapshot invalidates it and leaves the workbench's
-    // revision-refresh ticker running, which `pumpAndSettle` cannot settle —
-    // a pre-existing workbench behavior the other Source tests work around
-    // the same way.
+    // ONE page for the whole sweep: the Source pane stays open and the preset
+    // changes underneath it, which is exactly how the page is used.
+    await pumpPage(tester);
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('chart-source-form-toggle')),
+        matching: find.text('Grammar'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
     for (final preset in presets) {
-      await pumpPage(tester);
       await selectPreset(tester, preset);
-      final switcher = find.byKey(
-        const ValueKey('chart-workbench-mode-switcher'),
-      );
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Source')),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(
-          of: find.byKey(const ValueKey('chart-source-form-toggle')),
-          matching: find.text('Grammar'),
-        ),
-      );
       await tester.pumpAndSettle();
 
       final workbench = tester.widget<BravenChartWorkbench>(

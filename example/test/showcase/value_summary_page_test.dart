@@ -1507,10 +1507,6 @@ void main() {
 
       // Source last, back on the line preset: the generated Dart names the
       // page variable and carries the enabled value summary configuration.
-      // (Deliberately no preset switch after this visit: a captured Source
-      // snapshot invalidated by a later chart change leaves the offstage
-      // source pane's indeterminate progress ticker running forever — a
-      // pre-existing workbench behavior the master cartesian pages share.)
       await tester.tap(
         find.descendant(of: switcher, matching: find.text('Chart')),
       );
@@ -1529,6 +1525,22 @@ void main() {
       final source = workbench.workbenchController!.generatedSource!.source;
       expect(source, contains('final valueSummaryChart = BravenChartPlus('));
       expect(source, contains('valueSummary: CartesianValueSummaryConfig('));
+
+      // Switching preset with a captured Source snapshot in hand invalidates
+      // it and remounts the chart underneath the open pane. The pane re-emits
+      // for the new preset and the hidden panes stop animating, so this
+      // settles.
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-candlestick')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        workbench.workbenchController!.generatedSource!.source,
+        contains('CandlestickChartSeries('),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
+      await tester.pumpAndSettle();
 
       // Chart once more: the summary is alive after the full mode tour.
       await tester.tap(
