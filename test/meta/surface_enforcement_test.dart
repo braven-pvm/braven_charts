@@ -51,7 +51,14 @@ const _pilots = <String>[
 /// means a new `@ChartSurfaceExempt` fails this test until it is added
 /// deliberately — with the reason read by a human — instead of quietly
 /// shrinking the modelled surface.
-const _allowedExemptions = <String>['ChartSeries'];
+const _allowedExemptions = <String>[
+  // Slicing base copyWith; only the concrete series types are modelled.
+  'ChartSeries',
+  // Runtime coordinate mapping derived by the render pipeline (Task 5).
+  'ChartTransform',
+  // Render-time bar-slot layout result produced per frame (Task 5).
+  'BarGroupInfo',
+];
 
 /// Directories holding checked-in generator output.
 const _generatedDirectories = <String>[

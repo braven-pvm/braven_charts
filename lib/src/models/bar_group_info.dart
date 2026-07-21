@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart' show mapEquals, setEquals;
 
+import '../meta/chart_surface.dart';
 import 'bar_chart_style.dart';
 
 /// Metadata for positioning and composing a bar series within category slots.
@@ -28,6 +29,13 @@ import 'bar_chart_style.dart';
 ///
 /// See also:
 /// - `SeriesElement`, which stores bar group metadata during rendering
+@ChartSurfaceExempt(
+  'Render-time layout result, not an authoring config: the bar layout engine '
+  'computes index/count and the stacked start, end and percentage maps per '
+  'frame and hands them to the renderer. Consumers compose bars through '
+  'BarChartSeries. index and count are additionally assert-coupled '
+  '(index < count), so individual setters could only build an invalid slot.',
+)
 class BarGroupInfo {
   /// Creates bar group positioning metadata.
   ///

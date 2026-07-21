@@ -917,4 +917,225 @@ void main() {
       );
     });
   });
+
+  // ===========================================================================
+  // lib/src/models/data_point_label_config.dart
+  // ===========================================================================
+  group('data_point_label_config.dart', () {
+    const base = DataPointLabelConfig();
+
+    test('withPosition equals the copyWith equivalent', () {
+      expect(
+        base.withPosition(DataPointLabelPosition.below),
+        base.copyWith(position: DataPointLabelPosition.below),
+      );
+    });
+
+    test('the function-typed formatter gets no fluent verb', () {
+      final source = _generatedSource('data_point_label_config_fluent.dart');
+      expect(source, isNot(contains('withFormatter(')));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/series_inline_label_config.dart
+  // ===========================================================================
+  group('series_inline_label_config.dart', () {
+    test('SeriesLabelBackground: withX equals the copyWith equivalent', () {
+      const base = SeriesLabelBackground(color: Color(0xFF102030));
+      expect(base.withBorderWidth(2), base.copyWith(borderWidth: 2));
+      expect(base.withCornerRadius(6).cornerRadius, 6);
+    });
+
+    test('SeriesInlineLabelConfig: withX equals the copyWith equivalent', () {
+      const base = SeriesInlineLabelConfig(text: 'FTP');
+      expect(
+        base.withPosition(SeriesLabelPosition.left),
+        base.copyWith(position: SeriesLabelPosition.left),
+      );
+      expect(
+        base
+            .withBackground(
+              const SeriesLabelBackground(color: Color(0xFF102030)),
+            )
+            .background,
+        isNotNull,
+      );
+    });
+
+    test('a sentinel-based copyWith yields no clear verb', () {
+      // SeriesLabelBackground unsets through `Object? = _sentinel`, not
+      // through a `bool clearX` flag, so the derived-clear convention finds
+      // nothing to lower onto.
+      final source = _generatedSource('series_inline_label_config_fluent.dart');
+      expect(source, isNot(contains('clearCornerRadius(')));
+      expect(source, isNot(contains('clearBorderColor(')));
+      expect(source, contains('No clear verb'));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/segment_style.dart
+  // ===========================================================================
+  group('segment_style.dart', () {
+    test('SegmentStyle: withX and every derived clear verb', () {
+      const base = SegmentStyle();
+      expect(
+        base.withColor(const Color(0xFF00FF00)),
+        base.copyWith(color: const Color(0xFF00FF00)),
+      );
+      final loaded = base
+          .withColor(const Color(0xFF00FF00))
+          .withStrokeWidth(3)
+          .withDashPattern(const [2, 6]);
+      expect(loaded.clearColor().color, isNull);
+      expect(loaded.clearStrokeWidth().strokeWidth, isNull);
+      expect(loaded.clearDashPattern().dashPattern, isNull);
+    });
+
+    test('PointStyle: withX and every derived clear verb', () {
+      const base = PointStyle();
+      expect(base.withSize(9), base.copyWith(size: 9));
+      final loaded = base
+          .withColor(const Color(0xFFFF0000))
+          .withSize(9)
+          .withScatterMarkerShape(SeriesMarkerShape.square)
+          .withScatterMarkerStyle(const ScatterMarkerStyle(opacity: 0.5));
+      expect(loaded.clearColor().color, isNull);
+      expect(loaded.clearSize().size, isNull);
+      expect(loaded.clearScatterMarkerShape().scatterMarkerShape, isNull);
+      expect(loaded.clearScatterMarkerStyle().scatterMarkerStyle, isNull);
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/path_animation_style.dart
+  // ===========================================================================
+  group('path_animation_style.dart', () {
+    test('PathAnimationTiming: withX and the overridden clear flag', () {
+      const base = PathAnimationTiming();
+      expect(
+        base.withDelay(const Duration(milliseconds: 40)),
+        base.copyWith(delay: const Duration(milliseconds: 40)),
+      );
+      final timed = base.withDuration(const Duration(milliseconds: 400));
+      expect(timed.duration, const Duration(milliseconds: 400));
+      // `copyWith` spells this flag `inheritDuration`; the clearFlags override
+      // is what maps it onto the `clearX` verb.
+      expect(timed.clearDuration(), timed.copyWith(inheritDuration: true));
+      expect(timed.clearDuration().duration, isNull);
+    });
+
+    test('PathAnimationStyle: withX and both nested updaters', () {
+      const base = PathAnimationStyle();
+      expect(
+        base.withEntranceMode(PathEntranceAnimationMode.reveal),
+        base.copyWith(entranceMode: PathEntranceAnimationMode.reveal),
+      );
+      final entrance = base.updateEntranceTiming(
+        (current) => current.withDuration(const Duration(milliseconds: 250)),
+      );
+      expect(
+        entrance.entranceTiming.duration,
+        const Duration(milliseconds: 250),
+      );
+      final update = base.updateDataUpdateTiming(
+        (current) => current.withDelay(const Duration(milliseconds: 10)),
+      );
+      expect(update.dataUpdateTiming.delay, const Duration(milliseconds: 10));
+    });
+
+    test('the series-level nested updater reaches the animation leaf', () {
+      const series = LineChartSeries(
+        id: 'power',
+        points: [ChartDataPoint(x: 0, y: 1)],
+      );
+      final animated = series.updatePathAnimation(
+        (current) => current.withEntranceMode(PathEntranceAnimationMode.reveal),
+      );
+      expect(
+        animated.pathAnimation.entranceMode,
+        PathEntranceAnimationMode.reveal,
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/scatter_marker_style.dart
+  // ===========================================================================
+  group('scatter_marker_style.dart', () {
+    test('ScatterMarkerStyle: withX and every derived clear verb', () {
+      const base = ScatterMarkerStyle();
+      expect(base.withOpacity(0.5), base.copyWith(opacity: 0.5));
+      final loaded = base
+          .withFillColor(const Color(0xFF102030))
+          .withStrokeColor(const Color(0xFF405060))
+          .withStrokeWidth(2)
+          .withOpacity(0.5)
+          .withWidth(10)
+          .withHeight(12)
+          .withRotationDegrees(45);
+      expect(loaded.clearFillColor().fillColor, isNull);
+      expect(loaded.clearStrokeColor().strokeColor, isNull);
+      expect(loaded.clearStrokeWidth().strokeWidth, isNull);
+      expect(loaded.clearOpacity().opacity, isNull);
+      expect(loaded.clearWidth().width, isNull);
+      expect(loaded.clearHeight().height, isNull);
+      // `copyWith` spells this flag `clearRotation`; the clearFlags override
+      // supplies the missing derivation.
+      expect(
+        loaded.clearRotationDegrees(),
+        loaded.copyWith(clearRotation: true),
+      );
+      expect(loaded.clearRotationDegrees().rotationDegrees, isNull);
+    });
+
+    test('ScatterInteractionStyle: withX and its three clear verbs', () {
+      const base = ScatterInteractionStyle();
+      expect(base.withHoverScale(1.6), base.copyWith(hoverScale: 1.6));
+      final loaded = base
+          .withHoverColor(const Color(0xFF102030))
+          .withSelectionColor(const Color(0xFF405060))
+          .withFocusColor(const Color(0xFF708090));
+      expect(loaded.clearHoverColor().hoverColor, isNull);
+      expect(loaded.clearSelectionColor().selectionColor, isNull);
+      expect(loaded.clearFocusColor().focusColor, isNull);
+    });
+
+    test('the series-level nested updater reaches the interaction leaf', () {
+      const series = ScatterChartSeries(
+        id: 'scatter',
+        points: [ChartDataPoint(x: 0, y: 1)],
+      );
+      final updated = series.updateInteractionStyle(
+        (current) => current.withDimmedOpacity(0.5),
+      );
+      expect(updated.interactionStyle.dimmedOpacity, 0.5);
+    });
+  });
+
+  // ===========================================================================
+  // Exempt runtime/result types (Task 5 judgement call)
+  // ===========================================================================
+  group('exempt runtime types', () {
+    test('ChartTransform and BarGroupInfo get no fluent extension', () {
+      final directory = Directory(
+        [
+          Directory.current.path,
+          'lib',
+          'src',
+          'fluent',
+          'generated',
+        ].join(Platform.pathSeparator),
+      );
+      final sources = StringBuffer();
+      for (final entity in directory.listSync(recursive: true)) {
+        if (entity is File && entity.path.endsWith('.dart')) {
+          sources.writeln(entity.readAsStringSync());
+        }
+      }
+      expect(sources.toString(), isNot(contains('ChartTransformFluent')));
+      expect(sources.toString(), isNot(contains('BarGroupInfoFluent')));
+    });
+  });
 }

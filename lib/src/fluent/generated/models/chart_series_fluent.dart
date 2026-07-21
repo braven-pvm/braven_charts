@@ -114,6 +114,14 @@ extension LineChartSeriesFluent on LineChartSeries {
   LineChartSeries withPathAnimation(PathAnimationStyle value) =>
       copyWith(pathAnimation: value);
 
+  /// Rebuilds [LineChartSeries.pathAnimation] from its current value.
+  ///
+  /// `update` receives the current [PathAnimationStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  LineChartSeries updatePathAnimation(
+    PathAnimationStyle Function(PathAnimationStyle current) update,
+  ) => copyWith(pathAnimation: update(pathAnimation));
+
   /// Replaces [LineChartSeries.dashPattern] with [value].
   LineChartSeries withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
@@ -255,6 +263,14 @@ extension ScatterChartSeriesFluent on ScatterChartSeries {
   /// Replaces [ScatterChartSeries.interactionStyle] with [value].
   ScatterChartSeries withInteractionStyle(ScatterInteractionStyle value) =>
       copyWith(interactionStyle: value);
+
+  /// Rebuilds [ScatterChartSeries.interactionStyle] from its current value.
+  ///
+  /// `update` receives the current [ScatterInteractionStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ScatterChartSeries updateInteractionStyle(
+    ScatterInteractionStyle Function(ScatterInteractionStyle current) update,
+  ) => copyWith(interactionStyle: update(interactionStyle));
 }
 
 /// Generated fluent modifiers for [AreaChartSeries].
@@ -394,6 +410,14 @@ extension AreaChartSeriesFluent on AreaChartSeries {
   /// Replaces [AreaChartSeries.pathAnimation] with [value].
   AreaChartSeries withPathAnimation(PathAnimationStyle value) =>
       copyWith(pathAnimation: value);
+
+  /// Rebuilds [AreaChartSeries.pathAnimation] from its current value.
+  ///
+  /// `update` receives the current [PathAnimationStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  AreaChartSeries updatePathAnimation(
+    PathAnimationStyle Function(PathAnimationStyle current) update,
+  ) => copyWith(pathAnimation: update(pathAnimation));
 
   /// Replaces [AreaChartSeries.dashPattern] with [value].
   AreaChartSeries withDashPattern(List<double> value) =>

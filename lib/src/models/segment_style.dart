@@ -8,6 +8,8 @@ import 'chart_series.dart';
 import 'scatter_marker_style.dart';
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 
+import '../meta/chart_surface.dart';
+
 // =============================================================================
 // SegmentStyle - For Line and Area Charts
 // =============================================================================
@@ -50,6 +52,7 @@ import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 ///
 /// See also:
 /// - [PointStyle] for styling individual points in scatter/bar charts
+@chartSurface
 class SegmentStyle {
   /// Creates a segment style with optional color, width, and pattern overrides.
   ///
@@ -180,6 +183,7 @@ bool _nullableListEquals<T>(List<T>? first, List<T>? second) {
 ///
 /// See also:
 /// - [SegmentStyle] for styling line segments in line/area charts
+@chartSurface
 class PointStyle {
   /// Creates a point style with optional color and size overrides.
   ///

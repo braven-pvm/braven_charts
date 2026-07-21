@@ -6,6 +6,8 @@ import 'dart:ui';
 
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 
+import '../meta/chart_surface.dart';
+
 /// One categorical Scatter mapping entry.
 ///
 /// Color and shape are independent: a shape-only category mapping can coexist
@@ -597,6 +599,9 @@ class ScatterSizeEncoding {
 /// Null properties inherit from the point, series, or theme layer beneath
 /// them. Width and height are expressed in logical pixels. Rotation is
 /// clockwise in degrees.
+// `copyWith` spells the rotation unset flag `clearRotation`, not
+// `clearRotationDegrees`, so the derived convention needs an override.
+@ChartSurface(clearFlags: {'rotationDegrees': 'clearRotation'})
 class ScatterMarkerStyle {
   const ScatterMarkerStyle({
     this.fillColor,
@@ -711,6 +716,7 @@ class ScatterMarkerStyle {
 /// Every state combines a geometry change with an outline so meaning never
 /// depends on color alone. Null colors inherit from the chart interaction
 /// theme or the point's effective series color.
+@chartSurface
 class ScatterInteractionStyle {
   const ScatterInteractionStyle({
     this.hoverColor,

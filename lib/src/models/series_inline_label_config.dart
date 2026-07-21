@@ -3,8 +3,11 @@
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
+
 enum SeriesLabelPosition { left, center, right }
 
+@chartSurface
 class SeriesLabelBackground {
   const SeriesLabelBackground({
     required this.color,
@@ -64,6 +67,7 @@ class SeriesLabelBackground {
 // Sentinel for nullable copyWith params so callers can explicitly pass null.
 const Object _sentinel = Object();
 
+@chartSurface
 class SeriesInlineLabelConfig {
   const SeriesInlineLabelConfig({
     required this.text,
