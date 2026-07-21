@@ -321,12 +321,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               runSpacing: 8,
               children: [
                 for (final example in _CandlestickExample.values)
-                  ChoiceChip(
+                  ShowcaseExampleChoiceChip(
                     key: ValueKey('candlestick-example-${example.name}'),
-                    avatar: Icon(_exampleIcon(example), size: 18),
-                    label: Text(_exampleLabel(example)),
+                    label: _exampleLabel(example),
+                    icon: _exampleIcon(example),
                     selected: !_playgroundActive && _selectedExample == example,
-                    onSelected: (_) => _applyExample(example),
+                    onSelected: () => _applyExample(example),
                   ),
                 PlaygroundChoiceChip(
                   key: const ValueKey('candlestick-playground'),

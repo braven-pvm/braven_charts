@@ -216,4 +216,58 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'example grid keeps cards compact and visually separates Playground',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(colorSchemeSeed: Colors.indigo),
+          home: Scaffold(
+            body: SizedBox(
+              width: 900,
+              child: ShowcaseExampleGrid(
+                children: [
+                  ShowcaseExampleCard(
+                    key: const ValueKey('authored-card'),
+                    title: 'Authored sample',
+                    description: 'A stable, deliberately configured example.',
+                    icon: Icons.show_chart,
+                    selected: false,
+                    onTap: () {},
+                  ),
+                  PlaygroundExampleCard(
+                    key: const ValueKey('playground-card'),
+                    selected: false,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final playground = find.byKey(const ValueKey('playground-card'));
+      final authored = find.byKey(const ValueKey('authored-card'));
+      expect(tester.getSize(playground).height, 92);
+      expect(tester.getSize(authored).height, 92);
+      expect(
+        tester.getTopLeft(playground).dx,
+        greaterThan(tester.getTopLeft(authored).dx),
+      );
+
+      final playgroundMaterial = tester.widget<Material>(
+        find.descendant(of: playground, matching: find.byType(Material)).first,
+      );
+      final authoredMaterial = tester.widget<Material>(
+        find.descendant(of: authored, matching: find.byType(Material)).first,
+      );
+      expect(playgroundMaterial.color, isNot(authoredMaterial.color));
+      expect(
+        find.descendant(of: playground, matching: find.text('Playground')),
+        findsOneWidget,
+      );
+    },
+  );
 }

@@ -485,6 +485,62 @@ class ChartPageLayout extends StatelessWidget {
 /// Unlike authored samples this mounts generated data and the exhaustive
 /// family inspector. It deliberately shares the host selector's visual
 /// language instead of introducing a second page-level mode control.
+class ShowcaseExampleChoiceChip extends StatelessWidget {
+  const ShowcaseExampleChoiceChip({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onSelected,
+    this.playground = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onSelected;
+  final bool playground;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final foreground = playground
+        ? colors.onTertiaryContainer
+        : selected
+        ? colors.onSecondaryContainer
+        : colors.onSurfaceVariant;
+    return ChoiceChip(
+      showCheckmark: false,
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      avatar: Icon(icon, size: 17, color: foreground),
+      label: Text(label),
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: foreground,
+        fontWeight: playground || selected ? FontWeight.w700 : FontWeight.w400,
+      ),
+      selectedColor: playground
+          ? colors.tertiaryContainer
+          : colors.secondaryContainer,
+      backgroundColor: playground
+          ? colors.tertiaryContainer.withValues(alpha: 0.52)
+          : colors.surface,
+      side: BorderSide(
+        color: playground
+            ? colors.tertiary
+            : selected
+            ? colors.primary
+            : colors.outlineVariant,
+        width: playground ? (selected ? 2 : 1.4) : (selected ? 1.5 : 1),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
 class PlaygroundChoiceChip extends StatelessWidget {
   const PlaygroundChoiceChip({
     super.key,
@@ -499,23 +555,151 @@ class PlaygroundChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ChoiceChip(
-      showCheckmark: false,
+    return ShowcaseExampleChoiceChip(
+      label: label,
+      icon: Icons.science_outlined,
       selected: selected,
-      onSelected: (_) => onSelected(),
-      avatar: Icon(
-        Icons.science_outlined,
-        size: 17,
-        color: selected ? colors.onSecondaryContainer : colors.onSurfaceVariant,
+      onSelected: onSelected,
+      playground: true,
+    );
+  }
+}
+
+class ShowcaseExampleGrid extends StatelessWidget {
+  const ShowcaseExampleGrid({
+    super.key,
+    required this.children,
+    this.minimumCardWidth = 190,
+    this.maximumColumns = 6,
+    this.cardHeight = 92,
+    this.spacing = 8,
+  });
+
+  final List<Widget> children;
+  final double minimumCardWidth;
+  final int maximumColumns;
+  final double cardHeight;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final availableWidth = constraints.maxWidth;
+      final fittingColumns =
+          ((availableWidth + spacing) / (minimumCardWidth + spacing)).floor();
+      final columns = fittingColumns.clamp(1, maximumColumns);
+      final cardWidth = (availableWidth - spacing * (columns - 1)) / columns;
+      return Wrap(
+        spacing: spacing,
+        runSpacing: spacing,
+        children: [
+          for (final child in children)
+            SizedBox(width: cardWidth, height: cardHeight, child: child),
+        ],
+      );
+    },
+  );
+}
+
+class ShowcaseExampleCard extends StatelessWidget {
+  const ShowcaseExampleCard({
+    super.key,
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.playground = false,
+    this.semanticsLabel,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool playground;
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final background = playground
+        ? selected
+              ? colors.tertiaryContainer
+              : colors.tertiaryContainer.withValues(alpha: 0.52)
+        : selected
+        ? colors.primaryContainer.withValues(alpha: 0.42)
+        : colors.surface;
+    final accent = playground ? colors.tertiary : colors.primary;
+    final foreground = playground
+        ? colors.onTertiaryContainer
+        : selected
+        ? colors.primary
+        : colors.onSurfaceVariant;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel ?? 'Open $title example',
+      child: Material(
+        color: background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: playground
+                ? accent
+                : selected
+                ? accent
+                : colors.outlineVariant,
+            width: playground ? (selected ? 2.4 : 1.4) : (selected ? 2 : 1),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: foreground),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: playground ? colors.onTertiaryContainer : null,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(Icons.check_circle, size: 17, color: accent),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: playground
+                        ? colors.onTertiaryContainer.withValues(alpha: 0.82)
+                        : colors.onSurfaceVariant,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      label: Text(label),
-      selectedColor: colors.secondaryContainer,
-      backgroundColor: colors.surface,
-      side: BorderSide(color: colors.outlineVariant),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
@@ -536,71 +720,14 @@ class PlaygroundExampleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Semantics(
-      button: true,
+    return ShowcaseExampleCard(
+      title: title,
+      description: description,
+      icon: Icons.science_outlined,
       selected: selected,
-      label: 'Open $title',
-      child: Material(
-        color: selected
-            ? colors.primaryContainer.withValues(alpha: 0.42)
-            : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.science_outlined,
-                      size: 19,
-                      color: selected
-                          ? colors.primary
-                          : colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (selected)
-                      Icon(Icons.check_circle, size: 18, color: colors.primary),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      onTap: onTap,
+      playground: true,
+      semanticsLabel: 'Open $title',
     );
   }
 }

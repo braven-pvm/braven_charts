@@ -370,7 +370,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPresentationSelector(constraints.maxWidth),
+              _buildPresentationSelector(),
               const SizedBox(height: 16),
               _buildInteractionNotice(),
               const SizedBox(height: 16),
@@ -387,48 +387,27 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     );
   }
 
-  Widget _buildPresentationSelector(double availableWidth) {
-    final columns = availableWidth < 720
-        ? 1
-        : availableWidth < 900
-        ? 2
-        : 4;
-    final cardWidth = (availableWidth - (columns - 1) * 8) / columns;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          container: true,
-          label: 'Choose a Polar Column example',
-          child: Wrap(
-            key: const ValueKey('polar-presentation-selector'),
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final presentation in _PolarPresentation.values)
-                SizedBox(
-                  width: cardWidth,
-                  child: _PresentationCard(
-                    presentation: presentation,
-                    selected:
-                        !_randomizedShowcaseSelected &&
-                        presentation == _presentation,
-                    onPressed: () => _applyPresentation(presentation),
-                  ),
-                ),
-              SizedBox(
-                width: cardWidth,
-                height: 104,
-                child: PlaygroundExampleCard(
-                  key: const ValueKey('polar-playground'),
-                  selected: _randomizedShowcaseSelected,
-                  onTap: () => _setPlaygroundActive(true),
-                ),
-              ),
-            ],
+  Widget _buildPresentationSelector() {
+    return Semantics(
+      container: true,
+      label: 'Choose a Polar Column example',
+      child: ShowcaseExampleGrid(
+        key: const ValueKey('polar-presentation-selector'),
+        children: [
+          for (final presentation in _PolarPresentation.values)
+            _PresentationCard(
+              presentation: presentation,
+              selected:
+                  !_randomizedShowcaseSelected && presentation == _presentation,
+              onPressed: () => _applyPresentation(presentation),
+            ),
+          PlaygroundExampleCard(
+            key: const ValueKey('polar-playground'),
+            selected: _randomizedShowcaseSelected,
+            onTap: () => _setPlaygroundActive(true),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2745,66 +2724,14 @@ class _PresentationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Material(
-      color: selected
-          ? scheme.secondaryContainer
-          : scheme.surfaceContainerLowest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: selected ? scheme.primary : scheme.outlineVariant,
-          width: selected ? 1.5 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('polar-presentation-${presentation.name}'),
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 104),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  presentation.icon,
-                  size: 22,
-                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        presentation.label,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        presentation.description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.check_circle, size: 18, color: scheme.primary),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return ShowcaseExampleCard(
+      key: ValueKey('polar-presentation-${presentation.name}'),
+      title: presentation.label,
+      description: presentation.description,
+      icon: presentation.icon,
+      selected: selected,
+      onTap: onPressed,
+      semanticsLabel: 'Apply ${presentation.label} Polar Column example',
     );
   }
 }

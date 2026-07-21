@@ -78,8 +78,6 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   final ChartOptionsController _optionsController = ChartOptionsController(
     const ChartOptions(showDataMarkers: true),
   );
-  final ScrollController _presetScrollController = ScrollController();
-  final Map<int, GlobalKey> _presetLabelKeys = {};
   late final ShowcaseRandomizerController<int> _showcaseRandomizer;
 
   int _presetIndex = 0;
@@ -271,9 +269,6 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         break;
       }
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _revealActivePreset(animate: false);
-    });
   }
 
   @override
@@ -284,25 +279,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _workbenchController.dispose();
     _interactionGroupController.dispose();
     _optionsController.dispose();
-    _presetScrollController.dispose();
     super.dispose();
   }
 
   void _handleChartControllerChanged() {
     if (mounted && _isScatterSelectionPreset) setState(() {});
-  }
-
-  void _revealActivePreset({required bool animate}) {
-    if (widget.family == _CartesianFamily.scatter) return;
-    final renderObject = _presetLabelKeys[_presetIndex]?.currentContext
-        ?.findRenderObject();
-    if (!_presetScrollController.hasClients || renderObject == null) return;
-    _presetScrollController.position.ensureVisible(
-      renderObject,
-      alignment: 0.5,
-      duration: animate ? const Duration(milliseconds: 180) : Duration.zero,
-      curve: Curves.easeOutCubic,
-    );
   }
 
   void _selectPreset(int index) {
@@ -319,11 +300,6 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _scatterSelectionResult = const ChartSelectionResult.empty();
       _resetMotionData();
     });
-    if (widget.family != _CartesianFamily.scatter) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _revealActivePreset(animate: true);
-      });
-    }
   }
 
   void _applyRandomSeed(int seed) {
@@ -560,9 +536,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           final compact = constraints.maxWidth < 600;
           final preferredHeight = switch ((widget.family, compact)) {
             (_CartesianFamily.line, true) =>
-              _isLineSynchronized ? 1660.0 : 820.0,
+              _isLineSynchronized ? 1960.0 : 1040.0,
             (_CartesianFamily.line, false) =>
-              _isLineSynchronized ? 1504.0 : 960.0,
+              _isLineSynchronized ? 1536.0 : 992.0,
+            (_CartesianFamily.area, true) => 1040.0,
+            (_CartesianFamily.area, false) => 992.0,
             (_CartesianFamily.scatter, true) => 1500.0,
             _ => constraints.maxHeight,
           };
@@ -918,92 +896,28 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
             ),
             SizedBox(height: compact ? 8 : 10),
-            if (widget.family == _CartesianFamily.scatter)
-              Wrap(
-                key: ValueKey('${widget.family.name}-preset-picker'),
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (var index = 0; index < _presets.length; index++)
-                    ChoiceChip(
-                      key: ValueKey('scatter-preset-${_presets[index].label}'),
-                      showCheckmark: false,
-                      selected: !_playgroundActive && index == _presetIndex,
-                      onSelected: (_) => _selectPreset(index),
-                      avatar: Icon(
-                        _presets[index].icon,
-                        size: 17,
-                        color: !_playgroundActive && index == _presetIndex
-                            ? theme.colorScheme.onSecondaryContainer
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      label: Text(_presets[index].label),
-                      labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: !_playgroundActive && index == _presetIndex
-                            ? theme.colorScheme.onSecondaryContainer
-                            : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: !_playgroundActive && index == _presetIndex
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                      selectedColor: theme.colorScheme.secondaryContainer,
-                      backgroundColor: theme.colorScheme.surface,
-                      side: BorderSide(color: theme.colorScheme.outlineVariant),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Wrap(
+              key: ValueKey('${widget.family.name}-preset-picker'),
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var index = 0; index < _presets.length; index++)
+                  ShowcaseExampleChoiceChip(
+                    key: ValueKey(
+                      '${widget.family.name}-preset-${_presets[index].label}',
                     ),
-                  PlaygroundChoiceChip(
-                    key: ValueKey('${widget.family.name}-playground'),
-                    selected: _playgroundActive,
-                    onSelected: () => _setPlaygroundActive(true),
+                    label: _presets[index].label,
+                    icon: _presets[index].icon,
+                    selected: !_playgroundActive && index == _presetIndex,
+                    onSelected: () => _selectPreset(index),
                   ),
-                ],
-              )
-            else
-              SingleChildScrollView(
-                controller: _presetScrollController,
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<int>(
-                  key: ValueKey('${widget.family.name}-preset-picker'),
-                  showSelectedIcon: false,
-                  segments: [
-                    for (var index = 0; index < _presets.length; index++)
-                      ButtonSegment(
-                        value: index,
-                        icon: Icon(_presets[index].icon, size: 18),
-                        label: Text(
-                          _presets[index].label,
-                          key: _presetLabelKeys.putIfAbsent(
-                            index,
-                            GlobalKey.new,
-                          ),
-                        ),
-                      ),
-                    ButtonSegment(
-                      value: -1,
-                      icon: const Icon(Icons.science_outlined, size: 18),
-                      label: Text(
-                        'Playground',
-                        key: ValueKey('${widget.family.name}-playground'),
-                      ),
-                    ),
-                  ],
-                  selected: {_playgroundActive ? -1 : _presetIndex},
-                  onSelectionChanged: (selection) {
-                    if (selection.isNotEmpty) {
-                      final value = selection.single;
-                      if (value == -1) {
-                        _setPlaygroundActive(true);
-                      } else {
-                        _selectPreset(value);
-                      }
-                    }
-                  },
+                PlaygroundChoiceChip(
+                  key: ValueKey('${widget.family.name}-playground'),
+                  selected: _playgroundActive,
+                  onSelected: () => _setPlaygroundActive(true),
                 ),
-              ),
+              ],
+            ),
             const SizedBox(height: 8),
             Text(
               _playgroundActive
