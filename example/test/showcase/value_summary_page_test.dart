@@ -535,6 +535,123 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('text size and weight controls compose one row-text override', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    CartesianValueSummaryStyle style() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .interactionConfig!
+        .valueSummary
+        .style;
+
+    // The page runs without a theme override, so the charts resolve the
+    // summary against the light component theme — the base the page must
+    // build its overrides from.
+    const themeBase = CartesianValueSummaryTheme.light;
+
+    // Untouched: both text fields inherit the theme's row styles.
+    expect(style().textStyle.isInherit, isTrue);
+    expect(style().labelStyle.isInherit, isTrue);
+
+    // First touch of the size slider promotes BOTH fields to explicit
+    // overrides built from the theme preset's corresponding base styles:
+    // fontSize is the chosen value while everything else — color, the value
+    // style's w500 weight — still comes from the theme.
+    final sizeSlider = find.byKey(const ValueKey('value-summary-text-size'));
+    await revealOption(tester, sizeSlider);
+    tester.widget<SliderOption>(sizeSlider).onChanged(14);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(fontSize: 14),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(fontSize: 14),
+      ),
+    );
+
+    // Weight selection composes onto the same override: the chosen fontSize
+    // is preserved and both fields carry size and weight together.
+    final semiBold = find.byKey(
+      const ValueKey('value-summary-text-weight-600'),
+    );
+    await revealOption(tester, semiBold);
+    await tester.tap(semiBold);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+
+    // Reset Style to Theme returns both fields to inheritance.
+    final reset = find.byKey(const ValueKey('value-summary-reset-style'));
+    await revealOption(tester, reset);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(style().textStyle.isInherit, isTrue);
+    expect(style().labelStyle.isInherit, isTrue);
+
+    // Weight-only touch after the reset: the size dimension stays on the
+    // theme base — the override carries only what was touched, so the label
+    // style keeps its theme size and the value style keeps 11/w500 -> w700.
+    final bold = find.byKey(const ValueKey('value-summary-text-weight-700'));
+    await revealOption(tester, bold);
+    await tester.tap(bold);
+    await tester.pumpAndSettle();
+    expect(
+      style().textStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.valueStyle.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+    expect(
+      style().labelStyle,
+      isA<ChartStyleExplicit<TextStyle>>().having(
+        (v) => v.value,
+        'value',
+        themeBase.labelStyle.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+
+    // And a final reset restores full inheritance again.
+    await revealOption(tester, reset);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(style().textStyle.isInherit, isTrue);
+    expect(style().labelStyle.isInherit, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pin and clear buttons drive the summary controller', (
     tester,
   ) async {

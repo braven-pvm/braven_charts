@@ -86,6 +86,19 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   bool _minWidthOverridden = false;
   double _maxWidth = 280;
   bool _maxWidthOverridden = false;
+  double _textSize = 11;
+  bool _textSizeOverridden = false;
+  FontWeight _textWeight = FontWeight.w500;
+  bool _textWeightOverridden = false;
+
+  /// The weight choices the annotation dialog offers, in the same order.
+  static const _textWeightChoices = <(FontWeight, String)>[
+    (FontWeight.w300, 'Light'),
+    (FontWeight.w400, 'Normal'),
+    (FontWeight.w500, 'Medium'),
+    (FontWeight.w600, 'Semi-Bold'),
+    (FontWeight.w700, 'Bold'),
+  ];
 
   @override
   void dispose() {
@@ -130,6 +143,31 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       _preset != _SummaryPreset.synchronized &&
       _effectivePresentation == _PresentationKind.annotation;
 
+  /// The component theme the charts actually resolve the summary against:
+  /// the selected chart theme's summary component, falling back to the light
+  /// default exactly like the chart does when no theme is set.
+  CartesianValueSummaryTheme get _summaryTheme =>
+      (_optionsController.options.theme ?? ChartTheme.light)
+          .cartesianValueSummaryTheme;
+
+  /// Builds the row-text override for one of the two text fields.
+  ///
+  /// Untouched controls keep the field on [ChartStyleValue.inherit]. The
+  /// first touch of either the Text size slider or the Text weight selector
+  /// promotes BOTH `textStyle` and `labelStyle` to one explicit override
+  /// built from the theme preset's corresponding base style, so the
+  /// untouched dimension — and the base color — still comes from the theme.
+  /// Size then weight compose into a single override carrying both.
+  ChartStyleValue<TextStyle> _rowTextOverride(TextStyle base) =>
+      _textSizeOverridden || _textWeightOverridden
+      ? ChartStyleValue.value(
+          base.copyWith(
+            fontSize: _textSizeOverridden ? _textSize : null,
+            fontWeight: _textWeightOverridden ? _textWeight : null,
+          ),
+        )
+      : const ChartStyleValue.inherit();
+
   CartesianValueSummaryStyle get _summaryStyle => CartesianValueSummaryStyle(
     backgroundColor: _backgroundColor,
     borderColor: _borderColor,
@@ -152,6 +190,8 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     maxWidth: _maxWidthOverridden
         ? ChartStyleValue.value(_maxWidth)
         : const ChartStyleValue.inherit(),
+    textStyle: _rowTextOverride(_summaryTheme.valueStyle),
+    labelStyle: _rowTextOverride(_summaryTheme.labelStyle),
   );
 
   CartesianValueSummaryConfig _summaryConfig({bool withController = true}) {
@@ -225,6 +265,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       _minWidthOverridden = false;
       _maxWidth = 280;
       _maxWidthOverridden = false;
+      _textSize = 11;
+      _textSizeOverridden = false;
+      _textWeight = FontWeight.w500;
+      _textWeightOverridden = false;
     });
   }
 
@@ -1010,6 +1054,62 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             onChanged: (color) =>
                 setState(() => _accentColor = _styleValueFor(color)),
           ),
+          SliderOption(
+            key: const ValueKey('value-summary-text-size'),
+            label: 'Text size',
+            value: _textSize,
+            min: 8,
+            max: 16,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() {
+              _textSize = value;
+              _textSizeOverridden = true;
+            }),
+          ),
+          Text(
+            'Text weight',
+            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            key: const ValueKey('value-summary-text-weight'),
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final (weight, label) in _textWeightChoices)
+                ChoiceChip(
+                  key: ValueKey('value-summary-text-weight-${weight.value}'),
+                  showCheckmark: false,
+                  selected: _textWeightOverridden && _textWeight == weight,
+                  onSelected: (_) => setState(() {
+                    _textWeight = weight;
+                    _textWeightOverridden = true;
+                  }),
+                  label: Text(
+                    label,
+                    style: TextStyle(fontSize: 11, fontWeight: weight),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _textSizeOverridden || _textWeightOverridden
+                ? 'ChartStyleValue.value() — the theme value and label '
+                      'styles with your size and weight composed on top. '
+                      'The title stays theme-driven.'
+                : 'ChartStyleValue.inherit() — the theme resolves the row '
+                      'text. Touch either control to override value and '
+                      'label rows together.',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).hintColor.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 4),
           SliderOption(
             label: 'Background opacity',
             value: _backgroundOpacity,
