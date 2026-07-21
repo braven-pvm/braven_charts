@@ -1,0 +1,23 @@
+# Builder definitions exported by the surface_gen package.
+#
+# The root package enables this builder in its own build.yaml:
+#
+#   targets:
+#     $default:
+#       builders:
+#         surface_gen|surface_gen:
+#           enabled: true
+#           generate_for:
+#             - lib/src/**
+#
+# auto_apply is `none`: the builder never runs implicitly in dependents; the
+# root build.yaml opts in explicitly with the scope above.
+builders:
+  surface_gen:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["surfaceGenBuilder"]
+    build_extensions:
+      "^lib/src/{{}}.dart":
+        - "lib/src/fluent/generated/{{}}_fluent.dart"
+    auto_apply: none
+    build_to: source
