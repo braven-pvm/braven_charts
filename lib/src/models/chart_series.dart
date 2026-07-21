@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'bar_chart_style.dart';
 import 'chart_data_point.dart';
@@ -290,6 +291,7 @@ class ChartSeries {
 }
 
 /// Line chart series with configurable interpolation.
+@chartSurface
 class LineChartSeries extends ChartSeries {
   const LineChartSeries({
     required super.id,

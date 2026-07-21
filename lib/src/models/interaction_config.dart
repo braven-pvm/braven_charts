@@ -8,6 +8,7 @@ import 'dart:ui' show Color, StrokeCap;
 
 import 'package:flutter/widgets.dart' show TextStyle, Widget, BuildContext;
 
+import '../meta/chart_surface.dart';
 import 'cartesian_value_summary_config.dart';
 import 'interaction_callbacks.dart';
 import 'candlestick_interaction_details.dart';
@@ -256,6 +257,7 @@ class CrosshairStyle {
 ///   snapToDataPoint: true,
 /// );
 /// ```
+@ChartSurface(presetFactories: ['tracking', 'defaultConfig'])
 class CrosshairConfig {
   /// Creates a CrosshairConfig optimized for tracking mode.
   factory CrosshairConfig.tracking({

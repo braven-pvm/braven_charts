@@ -119,7 +119,7 @@ Classification rules the reader implements (test each): function-typed param →
 
 **Files:**
 - Create: `tool/surface_gen/lib/src/emitter.dart` (interface), `tool/surface_gen/lib/src/fluent_emitter.dart`, `tool/surface_gen/lib/src/builder.dart` (real builder: read → emit → dart_style format)
-- Create (generated, checked in): `lib/src/fluent/generated/crosshair_config_fluent.dart`, `cartesian_value_summary_style_fluent.dart`, `line_chart_series_fluent.dart`
+- Create (generated, checked in): `lib/src/fluent/generated/models/interaction_config_fluent.dart`, `lib/src/fluent/generated/models/cartesian_value_summary_style_fluent.dart`, `lib/src/fluent/generated/models/chart_series_fluent.dart` — the capture-group build extension preserves source subdirectories and maps one generated file per SOURCE file (collision-proof for same-named files in different dirs; a source file with several annotated classes yields several extensions in its one file, e.g. `interaction_config_fluent.dart` once InteractionConfig joins CrosshairConfig in Task 5)
 - Create: `lib/braven_charts_fluent.dart` (barrel: exports core barrel + the generated files)
 - Modify: `lib/src/models/interaction_config.dart`, `lib/src/models/cartesian_value_summary_style.dart`, `lib/src/models/chart_series.dart` — add `@chartSurface` (with metadata where needed) to the 3 pilot classes ONLY
 - Test: `tool/surface_gen/test/fluent_emitter_snapshot_test.dart`, `test/fluent/fluent_pilot_behavior_test.dart`

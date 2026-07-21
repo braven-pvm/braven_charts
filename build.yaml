@@ -13,6 +13,10 @@ targets:
       surface_gen|surface_gen:
         enabled: true
         generate_for:
-          - lib/src/**
+          include:
+            - lib/src/**
+          exclude:
+            # The builder's own checked-in outputs are never inputs.
+            - lib/src/fluent/generated/**
       mockito|mockBuilder:
         enabled: false
