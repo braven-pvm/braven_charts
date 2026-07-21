@@ -5,6 +5,8 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Chart-level configuration for grid line visibility and styling.
 ///
 /// GridConfig controls the rendering of horizontal and vertical grid lines
@@ -37,6 +39,7 @@ import 'package:flutter/foundation.dart';
 /// )
 /// ```
 @immutable
+@chartSurface
 class GridConfig {
   /// Creates a grid configuration.
   const GridConfig({

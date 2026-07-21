@@ -1115,6 +1115,233 @@ void main() {
   });
 
   // ===========================================================================
+  // lib/src/models/annotation_style.dart
+  // ===========================================================================
+  group('annotation_style.dart', () {
+    const base = AnnotationStyle();
+
+    test('withBorderWidth equals the copyWith equivalent', () {
+      expect(base.withBorderWidth(3), base.copyWith(borderWidth: 3));
+    });
+
+    test('a 3-step chain equals the single copyWith and does not mutate', () {
+      final chained = base
+          .withBackgroundColor(const Color(0xFF112233))
+          .withBorderColor(const Color(0xFF445566))
+          .withPadding(const EdgeInsets.all(6));
+      expect(
+        chained,
+        base.copyWith(
+          backgroundColor: const Color(0xFF112233),
+          borderColor: const Color(0xFF445566),
+          padding: const EdgeInsets.all(6),
+        ),
+      );
+      expect(base.backgroundColor, isNull);
+    });
+
+    test('the nullable gap is documented, not silently unclearable', () {
+      final source = _generatedSource('annotation_style_fluent.dart');
+      expect(source, isNot(contains('clearBackgroundColor(')));
+      expect(source, contains("No clear verb: this class's copyWith cannot"));
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/chart_annotation.dart
+  // ===========================================================================
+  group('chart_annotation.dart', () {
+    test('PointAnnotation withMarkerSize equals the copyWith equivalent', () {
+      final base = PointAnnotation(seriesId: 's', dataPointIndex: 3);
+      final widened = base.withMarkerSize(14);
+      expect(widened.markerSize, 14);
+      expect(widened.markerSize, base.copyWith(markerSize: 14).markerSize);
+      // The chain does not mutate the receiver.
+      expect(base.markerSize, 8.0);
+    });
+
+    test('PointAnnotation updateStyle rebuilds the nested annotation style',
+        () {
+      final base = PointAnnotation(
+        seriesId: 's',
+        dataPointIndex: 0,
+      ).withStyle(const AnnotationStyle(borderWidth: 1));
+      final updated = base.updateStyle(
+        (current) => current.withBorderWidth(5),
+      );
+      expect(updated.style.borderWidth, 5);
+      expect(base.style.borderWidth, 1);
+    });
+
+    test('RangeAnnotation withBounds moves all four assert-coupled bounds', () {
+      final base = RangeAnnotation(startX: 0, endX: 1);
+      final bounded = base.withBounds(2, 8, 10, 40);
+      expect(bounded.startX, 2);
+      expect(bounded.endX, 8);
+      expect(bounded.startY, 10);
+      expect(bounded.endY, 40);
+    });
+
+    test('RangeAnnotation: the invalid intermediate is unreachable', () {
+      final base = RangeAnnotation(startX: 0, endX: 1);
+      // Inverting a single bound throws on the raw config API...
+      expect(
+        () => base.copyWith(startX: 50),
+        throwsA(isA<AssertionError>()),
+      );
+      // ...and no individual verb exists for any coupled bound.
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, isNot(contains('RangeAnnotation withStartX(')));
+      expect(source, isNot(contains('RangeAnnotation withEndX(')));
+      expect(source, isNot(contains('RangeAnnotation withStartY(')));
+      expect(source, isNot(contains('RangeAnnotation withEndY(')));
+    });
+
+    test('TextAnnotation withText and withAnchor equal their copyWith', () {
+      final base = TextAnnotation(text: 'a', position: const Offset(4, 4));
+      expect(base.withText('b').text, 'b');
+      expect(
+        base.withAnchor(AnnotationAnchor.center).anchor,
+        AnnotationAnchor.center,
+      );
+    });
+
+    test('ThresholdAnnotation withValue equals the copyWith equivalent', () {
+      final base = ThresholdAnnotation(axis: AnnotationAxis.y, value: 100);
+      expect(base.withValue(180).value, 180);
+      expect(base.withValue(180).value, base.copyWith(value: 180).value);
+    });
+
+    test('PinAnnotation withX/withY equal their copyWith equivalents', () {
+      final base = PinAnnotation(x: 1, y: 2);
+      expect(base.withX(9).x, 9);
+      expect(base.withY(7).y, 7);
+    });
+
+    test('TrendAnnotation withTrend moves the coupled pair together', () {
+      final base = TrendAnnotation(trendType: TrendType.linear);
+      final moving = base.withTrend(TrendType.movingAverage, 7);
+      expect(moving.trendType, TrendType.movingAverage);
+      expect(moving.windowSize, 7);
+    });
+
+    test('TrendAnnotation: the invalid intermediate is unreachable', () {
+      final base = TrendAnnotation(trendType: TrendType.linear);
+      // Switching to a moving average without a window throws...
+      expect(
+        () => base.copyWith(trendType: TrendType.movingAverage),
+        throwsA(isA<AssertionError>()),
+      );
+      // ...and neither half has an individual verb.
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, isNot(contains('TrendAnnotation withTrendType(')));
+      expect(source, isNot(contains('TrendAnnotation withWindowSize(')));
+    });
+
+    test('ErrorBarAnnotation withCapSize equals the copyWith equivalent', () {
+      final base = ErrorBarAnnotation(
+        seriesId: 's',
+        values: const [ErrorBarDatum(pointIndex: 0, yPositive: 1)],
+      );
+      expect(base.withCapSize(9).capSize, 9);
+    });
+
+    test('ChordAnnotation withEndpoints moves the coupled indices', () {
+      final base = ChordAnnotation(seriesId: 's', startIndex: 0, endIndex: 1);
+      final moved = base.withEndpoints(4, 9);
+      expect(moved.startIndex, 4);
+      expect(moved.endIndex, 9);
+    });
+
+    test('ChordAnnotation: the invalid intermediate is unreachable', () {
+      final base = ChordAnnotation(seriesId: 's', startIndex: 0, endIndex: 1);
+      // Collapsing the chord onto one point throws...
+      expect(
+        () => base.copyWith(endIndex: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      // ...and neither index has an individual verb.
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, isNot(contains('ChordAnnotation withStartIndex(')));
+      expect(source, isNot(contains('ChordAnnotation withEndIndex(')));
+    });
+
+    test('LegendAnnotation clearCustomPosition unsets the drag override', () {
+      final base = LegendAnnotation().withCustomPosition(const Offset(20, 30));
+      expect(base.customPosition, const Offset(20, 30));
+      expect(base.clearCustomPosition().customPosition, isNull);
+    });
+
+    test('LegendAnnotation: the mutually exclusive scales get no verb', () {
+      // `assert([sizeScale, colorScale, opacityScale, categoryScale]
+      // .whereType<Object>().length <= 1)` — a second scale throws, so the
+      // four are force-excluded rather than given chainable setters.
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, isNot(contains('withSizeScale(')));
+      expect(source, isNot(contains('withColorScale(')));
+      expect(source, isNot(contains('withOpacityScale(')));
+      expect(source, isNot(contains('withCategoryScale(')));
+    });
+
+    test('LegendAnnotation updateLegendStyle reaches the nested style', () {
+      final base = LegendAnnotation();
+      final updated = base.updateLegendStyle(
+        (current) => current.withBorderWidth(3),
+      );
+      expect(updated.legendStyle.borderWidth, 3);
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/grid_config.dart
+  // ===========================================================================
+  group('grid_config.dart', () {
+    const base = GridConfig();
+
+    test('withHorizontal equals the copyWith equivalent', () {
+      expect(base.withHorizontal(false), base.copyWith(horizontal: false));
+    });
+
+    test('a 3-step chain equals the single copyWith', () {
+      expect(
+        base
+            .withVertical(false)
+            .withHorizontalStrokeWidth(2)
+            .withVerticalColor(const Color(0xFF223344)),
+        base.copyWith(
+          vertical: false,
+          horizontalStrokeWidth: 2,
+          verticalColor: const Color(0xFF223344),
+        ),
+      );
+    });
+  });
+
+  // ===========================================================================
+  // lib/src/models/legend_style.dart
+  // ===========================================================================
+  group('legend_style.dart', () {
+    const base = LegendStyle();
+
+    test('withPosition equals the copyWith equivalent', () {
+      expect(
+        base.withPosition(LegendPosition.bottomCenter),
+        base.copyWith(position: LegendPosition.bottomCenter),
+      );
+    });
+
+    test('a 3-step chain equals the single copyWith', () {
+      expect(
+        base
+            .withBorderWidth(2)
+            .withItemSpacing(9)
+            .withAllowDragging(false),
+        base.copyWith(borderWidth: 2, itemSpacing: 9, allowDragging: false),
+      );
+    });
+  });
+
+  // ===========================================================================
   // Exempt runtime/result types (Task 5 judgement call)
   // ===========================================================================
   group('exempt runtime types', () {

@@ -22,6 +22,7 @@
 library;
 
 export 'braven_charts.dart';
+export 'src/fluent/generated/models/annotation_style_fluent.dart';
 export 'src/fluent/generated/models/auto_scroll_config_fluent.dart';
 export 'src/fluent/generated/models/candlestick_chart_series_fluent.dart';
 export 'src/fluent/generated/models/candlestick_data_point_fluent.dart';
@@ -29,12 +30,15 @@ export 'src/fluent/generated/models/candlestick_density_grouping_fluent.dart';
 export 'src/fluent/generated/models/cartesian_value_summary_config_fluent.dart';
 export 'src/fluent/generated/models/cartesian_value_summary_style_fluent.dart';
 export 'src/fluent/generated/models/category_axis_config_fluent.dart';
+export 'src/fluent/generated/models/chart_annotation_fluent.dart';
 export 'src/fluent/generated/models/chart_data_point_fluent.dart';
 export 'src/fluent/generated/models/chart_overlay_placement_fluent.dart';
 export 'src/fluent/generated/models/chart_series_fluent.dart';
 export 'src/fluent/generated/models/data_point_label_config_fluent.dart';
 export 'src/fluent/generated/models/donut_chart_series_fluent.dart';
+export 'src/fluent/generated/models/grid_config_fluent.dart';
 export 'src/fluent/generated/models/interaction_config_fluent.dart';
+export 'src/fluent/generated/models/legend_style_fluent.dart';
 export 'src/fluent/generated/models/multi_axis_config_fluent.dart';
 export 'src/fluent/generated/models/path_animation_style_fluent.dart';
 export 'src/fluent/generated/models/pie_chart_series_fluent.dart';

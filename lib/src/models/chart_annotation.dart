@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:parchment/parchment.dart';
 
+import '../meta/chart_surface.dart';
 import 'annotation_style.dart';
 import 'chart_series.dart';
 import 'enums.dart';
@@ -145,6 +146,7 @@ enum AnnotationLabelPosition {
 ///   markerColor: Colors.red,
 /// )
 /// ```
+@chartSurface
 class PointAnnotation extends ChartAnnotation {
   /// Creates a point annotation.
   PointAnnotation({
@@ -254,6 +256,16 @@ class PointAnnotation extends ChartAnnotation {
 ///   label: 'Weekend',
 /// )
 /// ```
+@ChartSurface(
+  combinedSetters: [
+    // Three overlapping asserts couple all four bounds:
+    // `startX != null || startY != null`, `startX < endX` and
+    // `startY < endY`. One setter taking all four non-nullable makes every
+    // intermediate valid by construction; individual verbs could invert a
+    // range or empty both axes.
+    CombinedSetter('withBounds', ['startX', 'endX', 'startY', 'endY']),
+  ],
+)
 class RangeAnnotation extends ChartAnnotation {
   /// Creates a range annotation.
   ///
@@ -443,6 +455,7 @@ class RangeAnnotation extends ChartAnnotation {
 ///   position: Offset(100, 50),
 /// )
 /// ```
+@chartSurface
 class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {
@@ -960,6 +973,7 @@ enum AnnotationAxis {
 ///   lineWidth: 2.0,
 /// )
 /// ```
+@chartSurface
 class ThresholdAnnotation extends ChartAnnotation {
   /// Creates a threshold annotation.
   ThresholdAnnotation({
@@ -1111,6 +1125,7 @@ class ThresholdAnnotation extends ChartAnnotation {
 ///   markerColor: Colors.red,
 /// )
 /// ```
+@chartSurface
 class PinAnnotation extends ChartAnnotation {
   /// Creates a pin annotation at the specified x/y coordinates.
   PinAnnotation({
@@ -1235,6 +1250,14 @@ enum TrendType {
 ///   dashPattern: [5, 5],
 /// )
 /// ```
+@ChartSurface(
+  combinedSetters: [
+    // `trendType != movingAverage || (windowSize != null && windowSize > 0)`
+    // — switching to a moving average without a window throws, so the pair
+    // moves together. `windowSize` is ignored by the other trend types.
+    CombinedSetter('withTrend', ['trendType', 'windowSize']),
+  ],
+)
 class TrendAnnotation extends ChartAnnotation {
   /// Creates a trend annotation.
   TrendAnnotation({
@@ -1548,6 +1571,7 @@ class ErrorBarDatum {
 /// Error magnitudes are expressed in data units. Each side can be configured
 /// independently, enabling both symmetric and asymmetric error bars without
 /// changing the source observations.
+@chartSurface
 class ErrorBarAnnotation extends ChartAnnotation {
   ErrorBarAnnotation({
     String? id,
@@ -1653,6 +1677,13 @@ class ErrorBarAnnotation extends ChartAnnotation {
 ///   perpendicularLabel: 'D',
 /// )
 /// ```
+@ChartSurface(
+  combinedSetters: [
+    // `startIndex != endIndex` — a chord needs two distinct data points, so
+    // the endpoints only move as a pair.
+    CombinedSetter('withEndpoints', ['startIndex', 'endIndex']),
+  ],
+)
 class ChordAnnotation extends ChartAnnotation {
   /// Creates a chord annotation.
   ChordAnnotation({
@@ -2117,6 +2148,15 @@ class LegendCategoryScale {
   int get hashCode => Object.hash(label, Object.hashAll(items));
 }
 
+@ChartSurface(
+  // The four scales are MUTUALLY EXCLUSIVE (`assert(... .length <= 1)`): a
+  // quantitative or categorical key lives on its own LegendAnnotation. A
+  // combined setter cannot express that — it takes its members non-nullable,
+  // which is precisely the state the assert rejects — and an individual
+  // `withColorScale` on a legend that already carries a size scale throws.
+  // Construct the keyed legend directly instead.
+  excluded: ['sizeScale', 'colorScale', 'opacityScale', 'categoryScale'],
+)
 class LegendAnnotation extends ChartAnnotation {
   /// Creates a legend annotation.
   ///

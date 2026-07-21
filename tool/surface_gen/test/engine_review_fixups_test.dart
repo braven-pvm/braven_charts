@@ -561,6 +561,42 @@ class FixtureBarSeries {
       );
     });
 
+    test('a NON-CONST constructor\'s asserts couple just as hard', () async {
+      // Task 6 finding: the whole annotation family
+      // (`RangeAnnotation`, `ChordAnnotation`, `TrendAnnotation`, ...) has a
+      // non-const unnamed constructor, because it defaults `id` through
+      // `super(id: id ?? ChartAnnotation.generateId())`. The asserts are
+      // identical to a const class's and fail at runtime identically, so the
+      // guard must see them there too.
+      await _expectReadThrows(
+        '''
+@chartSurface
+class FixtureRange {
+  FixtureRange({this.startX, this.endX})
+      : assert(
+          startX == null || endX == null || startX < endX,
+          'startX must be less than endX',
+        );
+  final double? startX;
+  final double? endX;
+  FixtureRange copyWith({double? startX, double? endX}) =>
+      FixtureRange(startX: startX ?? this.startX, endX: endX ?? this.endX);
+}
+''',
+        throwsA(
+          isA<StateError>()
+              .having(
+                (e) => e.message,
+                'message',
+                contains('assert-coupled parameters'),
+              )
+              .having((e) => e.message, 'message', contains('FixtureRange'))
+              .having((e) => e.message, 'message', contains('endX'))
+              .having((e) => e.message, 'message', contains('startX')),
+        ),
+      );
+    });
+
     test('single-parameter asserts are not coupling', () async {
       final model = await _read('''
 @chartSurface

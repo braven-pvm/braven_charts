@@ -90,6 +90,7 @@ library;
 // ignore: implementation_imports
 import 'package:analyzer/src/dart/element/element.dart'
     show ConstructorElementImpl;
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/constant/value.dart';
@@ -162,7 +163,7 @@ class AnalyzerSurfaceReader implements SurfaceReader {
 
     final combinedSetters =
         _combinedSetters(annotation.getField('combinedSetters'));
-    final assertGroups = _assertGroups(constructor, params);
+    final assertGroups = _assertGroups(constructor, params, library);
     _checkAssertCoverage(cls, assertGroups, combinedSetters, params);
 
     final sealedVariants = _stringList(annotation.getField('sealedVariants'));
@@ -440,17 +441,24 @@ class AnalyzerSurfaceReader implements SurfaceReader {
 
   /// Constructor-initializer asserts naming two or more parameters.
   ///
-  /// Only const constructors carry their initializers into the element model,
-  /// which is exactly the population that matters: the enforcement rule
-  /// already requires a const constructor of every config-shaped class.
+  /// Only CONST constructors carry their initializers into the element model
+  /// (`constantInitializers` exists for constant evaluation). Const-ness is
+  /// not part of the enforcement rule, though, and the whole annotation
+  /// family has a NON-const unnamed constructor because it defaults `id`
+  /// through `super(id: id ?? ChartAnnotation.generateId())`. Their asserts
+  /// couple parameters exactly as hard, so when the element model is empty the
+  /// declaration is parsed and its initializers read from the AST.
   List<List<String>> _assertGroups(
     ConstructorElement? constructor,
     List<SurfaceParam> params,
+    LibraryElement library,
   ) {
-    if (constructor is! ConstructorElementImpl) return const [];
+    if (constructor == null) return const [];
+    final initializers = _initializers(constructor, library);
+    if (initializers.isEmpty) return const [];
     final names = {for (final param in params) param.name};
     final groups = <String, List<String>>{};
-    for (final initializer in constructor.constantInitializers) {
+    for (final initializer in initializers) {
       if (initializer is! AssertInitializer) continue;
       final visitor = _IdentifierCollector();
       initializer.condition.accept(visitor);
@@ -461,6 +469,27 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     final result = groups.values.toList()
       ..sort((a, b) => a.join(',').compareTo(b.join(',')));
     return result;
+  }
+
+  /// The initializers of [constructor] — from the element model for a const
+  /// constructor, from the parsed declaration otherwise.
+  ///
+  /// Returns an empty list when there is no declaration to parse (a
+  /// constructor synthesised by the analyzer has none), which degrades to
+  /// "no coupling detected" rather than failing the build.
+  List<ConstructorInitializer> _initializers(
+    ConstructorElement constructor,
+    LibraryElement library,
+  ) {
+    if (constructor is ConstructorElementImpl) {
+      final constant = constructor.constantInitializers;
+      if (constant.isNotEmpty) return constant;
+    }
+    final parsed = library.session.getParsedLibraryByElement(library);
+    if (parsed is! ParsedLibraryResult) return const [];
+    final node = parsed.getFragmentDeclaration(constructor.firstFragment)?.node;
+    if (node is! ConstructorDeclaration) return const [];
+    return node.initializers;
   }
 
   /// Named diagnostic: assert-coupled parameters.
