@@ -851,11 +851,20 @@ class AreaChartSeries extends ChartSeries {
 }
 
 /// Bar chart series with configurable geometry and presentation.
+///
+/// Bar WIDTH is construction-only: there is no generated verb for
+/// [barWidthPercent] or [barWidthPixels]. The constructor asserts
+/// `barWidthPercent != null || barWidthPixels != null` — an OR, so the two
+/// are alternatives, not a pair — while `copyWith` merges each with `??` and
+/// exposes no clear flag for either. No fluent verb can therefore express
+/// "size in percent INSTEAD of pixels": `withBarWidthPercent` would leave the
+/// pixel width in place and lose to it at render time, and the combined
+/// `withBarWidth(percent, pixels)` this class used to generate required BOTH,
+/// which made its percent argument dead in every possible call. Choose the
+/// sizing mode at construction, where the alternatives are visible.
 @ChartSurface(
+  excluded: ['barWidthPercent', 'barWidthPixels'],
   combinedSetters: [
-    // `barWidthPercent != null || barWidthPixels != null` — an individual
-    // setter could null out the only supplied width.
-    CombinedSetter('withBarWidth', ['barWidthPercent', 'barWidthPixels']),
     // `maxWidth >= minWidth` — the bounds only move as a pair.
     CombinedSetter('withWidthBounds', ['maxWidth', 'minWidth']),
   ],

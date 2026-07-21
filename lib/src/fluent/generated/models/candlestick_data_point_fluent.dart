@@ -84,11 +84,11 @@ extension CandlestickDataPointFluent on CandlestickDataPoint {
 
   /// Replaces [CandlestickDataPoint.open], [CandlestickDataPoint.high], [CandlestickDataPoint.low], and [CandlestickDataPoint.close] together.
   ///
-  /// The parameters are assert-coupled, so they only move as a pair.
-  CandlestickDataPoint withOhlc(
-    double open,
-    double high,
-    double low,
-    double close,
-  ) => copyWith(open: open, high: high, low: low, close: close);
+  /// The parameters are assert-coupled, so all four only move together.
+  CandlestickDataPoint withOhlc({
+    required double open,
+    required double high,
+    required double low,
+    required double close,
+  }) => copyWith(open: open, high: high, low: low, close: close);
 }

@@ -585,18 +585,6 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withLabelStyle(BarLabelStyle value) =>
       copyWith(labelStyle: value);
 
-  /// Replaces [BarChartSeries.barWidthPercent] and [BarChartSeries.barWidthPixels] together.
-  ///
-  /// The parameters are assert-coupled, so they only move as a pair.
-  ///
-  /// No clear verb: this class's copyWith cannot unset them;
-  /// construct a new instance to reset.
-  BarChartSeries withBarWidth(double barWidthPercent, double barWidthPixels) =>
-      copyWith(
-        barWidthPercent: barWidthPercent,
-        barWidthPixels: barWidthPixels,
-      );
-
   /// Replaces [BarChartSeries.maxWidth] and [BarChartSeries.minWidth] together.
   ///
   /// The parameters are assert-coupled, so they only move as a pair.

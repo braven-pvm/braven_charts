@@ -136,19 +136,6 @@ extension RangeAnnotationFluent on RangeAnnotation {
 
   /// Replaces [RangeAnnotation.labelMargin] with [value].
   RangeAnnotation withLabelMargin(double value) => copyWith(labelMargin: value);
-
-  /// Replaces [RangeAnnotation.startX], [RangeAnnotation.endX], [RangeAnnotation.startY], and [RangeAnnotation.endY] together.
-  ///
-  /// The parameters are assert-coupled, so they only move as a pair.
-  ///
-  /// No clear verb: this class's copyWith cannot unset them;
-  /// construct a new instance to reset.
-  RangeAnnotation withBounds(
-    double startX,
-    double endX,
-    double startY,
-    double endY,
-  ) => copyWith(startX: startX, endX: endX, startY: startY, endY: endY);
 }
 
 /// Generated fluent modifiers for [TextAnnotation].

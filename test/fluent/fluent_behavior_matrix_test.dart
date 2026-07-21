@@ -138,11 +138,22 @@ void main() {
         expect(base.withBaselineValue(2), base.copyWith(baselineValue: 2));
       });
 
-      test('withBarWidth moves both assert-coupled width inputs', () {
-        final moved = base.withBarWidth(0.4, 18);
-        expect(moved, base.copyWith(barWidthPercent: 0.4, barWidthPixels: 18));
-        expect(moved.barWidthPercent, 0.4);
-        expect(moved.barWidthPixels, 18);
+      test('bar WIDTH is construction-only — the OR-shaped assert has no '
+          'honest setter', () {
+        // The constructor asserts `percent != null || pixels != null`: the
+        // two are ALTERNATIVES. copyWith merges each with `??` and exposes no
+        // clear flag, so no verb can select percent sizing INSTEAD of pixel
+        // sizing — a percent-only series is unreachable through any chain.
+        // The withBarWidth(percent, pixels) this class used to generate
+        // required both, which made its percent argument dead in every call.
+        expect(base.barWidthPercent, 0.6);
+        expect(
+          base.copyWith(barWidthPixels: 18).barWidthPercent,
+          0.6,
+          reason: 'copyWith cannot null the sibling width',
+        );
+        final source = _generatedSource('chart_series_fluent.dart');
+        expect(source, isNot(contains('withBarWidth(')));
       });
 
       test('withWidthBounds moves min and max together', () {
@@ -238,7 +249,7 @@ void main() {
 
     test('withOhlc equals the copyWith equivalent', () {
       expect(
-        point().withOhlc(1, 6, 0.5, 3),
+        point().withOhlc(open: 1, high: 6, low: 0.5, close: 3),
         point().copyWith(open: 1, high: 6, low: 0.5, close: 3),
       );
     });
@@ -249,7 +260,7 @@ void main() {
       // low is 0.5 < 1 but close is 3 > 1. The combined verb states the whole
       // candle, so no intermediate value exists for the body validation to
       // reject.
-      expect(point().withOhlc(0.8, 1, 0.5, 0.9).high, 1);
+      expect(point().withOhlc(open: 0.8, high: 1, low: 0.5, close: 0.9).high, 1);
     });
 
     test('every derived clear verb unsets its field', () {
@@ -271,7 +282,7 @@ void main() {
     });
 
     test('the subtype extension keeps the OHLC state', () {
-      final moved = point().withOhlc(1, 4, 0.5, 3.5);
+      final moved = point().withOhlc(open: 1, high: 4, low: 0.5, close: 3.5);
       expect(moved, isA<CandlestickDataPoint>());
       expect(moved.open, 1);
       expect(moved.high, 4);
@@ -1212,13 +1223,23 @@ void main() {
       expect(base.style.borderWidth, 1);
     });
 
-    test('RangeAnnotation withBounds moves all four assert-coupled bounds', () {
-      final base = RangeAnnotation(startX: 0, endX: 1);
-      final bounded = base.withBounds(2, 8, 10, 40);
-      expect(bounded.startX, 2);
-      expect(bounded.endX, 8);
-      expect(bounded.startY, 10);
-      expect(bounded.endY, 40);
+    test('RangeAnnotation bounds are construction-only — a band must stay a '
+        'band', () {
+      // An X-only band and a Y-only band are legal ranges (the constructor
+      // asserts `startX != null || startY != null`, an OR). copyWith merges
+      // each bound with `??` and has no clear flag, so nothing can put one
+      // BACK to null: the withBounds(startX, endX, startY, endY) this class
+      // used to generate took all four non-nullable and silently converted a
+      // band into a box.
+      final band = RangeAnnotation(startX: 0, endX: 1);
+      expect(band.startY, isNull);
+      expect(
+        band.copyWith(startY: 10, endY: 40).startX,
+        0,
+        reason: 'copyWith cannot null the opposite pair',
+      );
+      final source = _generatedSource('chart_annotation_fluent.dart');
+      expect(source, isNot(contains('withBounds(')));
     });
 
     test('RangeAnnotation: the invalid intermediate is unreachable', () {
@@ -1833,7 +1854,11 @@ void main() {
 
     test('GridStyle: withMinorGrid moves the three coupled inputs', () {
       const base = GridStyle.defaultLight;
-      final minor = base.withMinorGrid(true, const Color(0xFFEEEEEE), 0.5);
+      final minor = base.withMinorGrid(
+        showMinor: true,
+        minorColor: const Color(0xFFEEEEEE),
+        minorWidth: 0.5,
+      );
       expect(minor.showMinor, isTrue);
       expect(minor.minorColor, const Color(0xFFEEEEEE));
       expect(minor.minorWidth, 0.5);

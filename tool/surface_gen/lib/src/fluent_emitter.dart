@@ -45,9 +45,15 @@
 ///   the factory signature verbatim (defaults included). Nothing is emitted
 ///   on the sealed base itself.
 /// - `combinedSetters` metadata replaces its member parameters entirely with
-///   one setter taking the members positionally with NON-NULLABLE types (a
-///   nullable combined setter would let `withVisibleRange(null, null)`
-///   compile into a silent no-op against `min ?? this.min`).
+///   one setter over the members, always with NON-NULLABLE types (a nullable
+///   combined setter would let `withVisibleRange(null, null)` compile into a
+///   silent no-op against `min ?? this.min`). Two members stay POSITIONAL;
+///   three or more become REQUIRED NAMED, because `withOhlc(1, 6, 0.5, 3)` is
+///   a tuple no reader can decode. The dartdoc pluralises off the member
+///   count — "as a pair" is only true of two.
+/// - `paramNotes` metadata appends a caveat to a parameter's verb dartdoc,
+///   for a truth the generator can neither derive nor fix (`withText` is a
+///   no-op on a RICH `TextAnnotation`).
 /// - `presetFactories` get NO fluent surface: Dart factories already chain
 ///   (`CrosshairConfig.tracking(...).withSnapRadius(12)` works today). They
 ///   stay in the model for Slice 3's AI schema.
@@ -422,9 +428,14 @@ $self $verb($signature) =>
       for (final name in setter.paramNames) _paramByName(cls, name),
     ];
     final refs = _joinRefs(cls, setter.paramNames);
-    final signature = members
-        .map((p) => '${_stripNullability(p.dartType)} ${p.name}')
-        .join(', ');
+    final formals = [
+      for (final p in members) '${_stripNullability(p.dartType)} ${p.name}',
+    ];
+    // Three or more unlabelled positional doubles is a tuple, not an API:
+    // `withOhlc(1, 6, 0.5, 3)` cannot be read without the declaration.
+    final signature = members.length >= 3
+        ? '{${[for (final formal in formals) 'required $formal'].join(', ')}}'
+        : formals.join(', ');
     final arguments = members.map((p) => '${p.name}: ${p.name}').join(', ');
     final unclearable = members
         .any((param) => param.isNullable && param.clearFlag == null);
@@ -436,10 +447,27 @@ $self $verb($signature) =>
     return '''
 /// Replaces $refs together.
 ///
-/// The parameters are assert-coupled, so they only move as a pair.
+/// The parameters are assert-coupled, so ${_coupling(members.length)}.
 $gap$self ${setter.name}($signature) => copyWith($arguments);
 ''';
   }
+
+  /// How a combined setter's dartdoc describes its members moving together.
+  ///
+  /// "as a pair" is only true of a two-member setter; `withOhlc` moves four.
+  String _coupling(int count) => count == 2
+      ? 'they only move as a pair'
+      : 'all ${_numberWord(count)} only move together';
+
+  /// The English word for a small member count, so the dartdoc reads as
+  /// prose. Falls back to digits beyond the counts this surface has.
+  String _numberWord(int count) => switch (count) {
+        3 => 'three',
+        4 => 'four',
+        5 => 'five',
+        6 => 'six',
+        _ => '$count',
+      };
 
   /// The sealed surface class behind [param], when it has variant factories.
   SurfaceClass? _sealedOwner(SurfaceParam param, SurfaceModel model) =>

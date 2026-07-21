@@ -256,16 +256,16 @@ class PointAnnotation extends ChartAnnotation {
 ///   label: 'Weekend',
 /// )
 /// ```
-@ChartSurface(
-  combinedSetters: [
-    // Three overlapping asserts couple all four bounds:
-    // `startX != null || startY != null`, `startX < endX` and
-    // `startY < endY`. One setter taking all four non-nullable makes every
-    // intermediate valid by construction; individual verbs could invert a
-    // range or empty both axes.
-    CombinedSetter('withBounds', ['startX', 'endX', 'startY', 'endY']),
-  ],
-)
+/// The BOUNDS are construction-only: there is no generated verb for
+/// [startX], [endX], [startY] or [endY], individually or together. A range is
+/// an X band, a Y band, or a 2-D box — the constructor's
+/// `startX != null || startY != null` is an OR — while `copyWith` merges each
+/// bound with `??` and exposes no clear flag, so nothing can put a bound
+/// BACK to null. The combined `withBounds(startX, endX, startY, endY)` this
+/// class used to generate therefore took all four non-nullable and silently
+/// converted an X-only band into a box; an `withXRange` pair could never
+/// convert a box back into a band. Construct the range you want.
+@ChartSurface(excluded: ['startX', 'endX', 'startY', 'endY'])
 class RangeAnnotation extends ChartAnnotation {
   /// Creates a range annotation.
   ///

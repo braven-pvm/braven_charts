@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1119 verbs total; 10 of them have an argument type with no
+// 1117 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -248,10 +248,10 @@ void _smokeCandlestickDataPoint(_Verb verb, CandlestickDataPoint subject) {
   verb(
     'CandlestickDataPointFluent.withOhlc',
     () => subject.withOhlc(
-      subject.open,
-      subject.high,
-      subject.low,
-      subject.close,
+      open: subject.open,
+      high: subject.high,
+      low: subject.low,
+      close: subject.close,
     ),
   );
 }
@@ -672,7 +672,7 @@ void _smokePointAnnotation(_Verb verb, PointAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [RangeAnnotation]'s 16 executable verb(s).
+/// Smoke coverage for [RangeAnnotation]'s 15 executable verb(s).
 void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
   verb('RangeAnnotationFluent.withId', () => subject.withId('y'));
   verb('RangeAnnotationFluent.withLabel', () => subject.withLabel('y'));
@@ -721,10 +721,6 @@ void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
   verb(
     'RangeAnnotationFluent.withLabelMargin',
     () => subject.withLabelMargin(8.0),
-  );
-  verb(
-    'RangeAnnotationFluent.withBounds',
-    () => subject.withBounds(1.0, 2.0, 3.0, 4.0),
   );
 }
 
@@ -1469,7 +1465,7 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 37 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 36 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb('BarChartSeriesFluent.withId', () => subject.withId('y'));
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
@@ -1585,10 +1581,6 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb(
     'BarChartSeriesFluent.withLabelStyle',
     () => subject.withLabelStyle(const BarLabelStyle()),
-  );
-  verb(
-    'BarChartSeriesFluent.withBarWidth',
-    () => subject.withBarWidth(1.0, 2.0),
   );
   verb(
     'BarChartSeriesFluent.withWidthBounds',
@@ -4549,8 +4541,11 @@ void _smokeGridStyle(_Verb verb, GridStyle subject) {
   );
   verb(
     'GridStyleFluent.withMinorGrid',
-    () =>
-        subject.withMinorGrid(subject.showMinor, const Color(0xFF2196F3), 1.0),
+    () => subject.withMinorGrid(
+      showMinor: subject.showMinor,
+      minorColor: const Color(0xFF2196F3),
+      minorWidth: 1.0,
+    ),
   );
 }
 

@@ -477,6 +477,10 @@ T? _subject<T>(T Function() build) {
     }
 
     for (final setter in cls.combinedSetters) {
+      // The fluent emitter labels a setter of three or more members; the two
+      // emitters must agree about the call shape or the generated smoke file
+      // does not compile.
+      final isNamed = setter.paramNames.length >= 3;
       final arguments = <String>[];
       var ascending = 0;
       var synthesizable = true;
@@ -491,7 +495,7 @@ T? _subject<T>(T Function() build) {
           break;
         }
         if (synth.usesAscending(param)) ascending++;
-        arguments.add(argument);
+        arguments.add(isNamed ? '$name: $argument' : argument);
       }
       if (!synthesizable) {
         compile(
@@ -500,7 +504,7 @@ T? _subject<T>(T Function() build) {
             for (final name in setter.paramNames)
               (
                 type: stripNullability(_paramByName(cls, name).dartType),
-                label: null,
+                label: isNamed ? name : null,
               ),
           ],
           'its members',
