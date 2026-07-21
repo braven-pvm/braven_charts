@@ -2,24 +2,37 @@
 ///
 /// ## The rule (spec: Layer 0 — Enforcement)
 ///
-/// Every class reachable from the public barrel (`lib/braven_charts.dart`)
-/// that is CONFIG-SHAPED must carry `@chartSurface` or
-/// `@ChartSurfaceExempt(reason)`. Config-shaped means both:
+/// Every class reachable from a public entrypoint (`lib/*.dart` — today
+/// `braven_charts.dart` and the generated `braven_charts_fluent.dart`) that is
+/// CONFIG-SHAPED must carry `@chartSurface` or `@ChartSurfaceExempt(reason)`.
+/// Config-shaped means:
 ///
-/// 1. a `const` UNNAMED generative constructor, and
-/// 2. an instance `copyWith` method (declared or inherited).
+/// 1. the class is neither `abstract` nor `sealed` (it can be instantiated,
+///    so it is a config a consumer actually holds), and
+/// 2. an instance `copyWith` is callable on it — declared on the class,
+///    inherited from a supertype, or supplied by a public extension.
 ///
-/// A `copyWith` that is `static`, or that lives in an extension rather than
-/// the class itself, does not count: neither can participate in a fluent
-/// `withX` chain.
+/// Const-ness is deliberately NOT part of the rule. The emitter never needs a
+/// const constructor, and the reader already handles non-const constructors
+/// and the `const _internal` idiom; requiring const would permanently exempt
+/// large parts of the real fleet (candlestick, polar and pie series, the
+/// annotation family, the theme components). Const-ness is still recorded on
+/// every entry as [EnforcementEntry.hasConstUnnamedConstructor].
+///
+/// A `static` `copyWith` does NOT count: it cannot participate in a fluent
+/// `withX` chain. An EXTENSION `copyWith` does count — consumers can chain it
+/// exactly like a member, so leaving it out would be a silent escape hatch
+/// (move `copyWith` to an extension, vanish from enforcement).
 ///
 /// ## Reachability
 ///
-/// "Reachable" means present in the barrel's EXPORT NAMESPACE — the names a
-/// consumer can actually write after `import 'package:braven_charts/
-/// braven_charts.dart';`. Combinators (`show`/`hide`) are therefore honoured
-/// for free, and a config class that lives under `lib/src/` but is never
-/// exported is out of scope, exactly like the public API contract says.
+/// "Reachable" means present in the EXPORT NAMESPACE of any public entrypoint
+/// — the names a consumer can actually write after `import
+/// 'package:braven_charts/braven_charts.dart';` (or `..._fluent.dart`).
+/// Combinators (`show`/`hide`) are therefore honoured for free, and a config
+/// class that lives under `lib/src/` but is never exported is out of scope,
+/// exactly like the public API contract says. Classes reachable from more
+/// than one entrypoint are reported once.
 ///
 /// ## Annotation matching
 ///
@@ -71,6 +84,8 @@ class EnforcementEntry implements Comparable<EnforcementEntry> {
     required this.libraryUri,
     required this.status,
     required this.isConfigShaped,
+    required this.hasInstanceCopyWith,
+    required this.hasConstUnnamedConstructor,
     this.exemptReason,
   });
 
@@ -83,9 +98,17 @@ class EnforcementEntry implements Comparable<EnforcementEntry> {
   /// The bucket this class landed in.
   final EnforcementStatus status;
 
-  /// Whether the class has a const unnamed constructor and an instance
-  /// `copyWith` (always `true` for [EnforcementStatus.missing]).
+  /// Whether the class is instantiable and carries an instance `copyWith`
+  /// (always `true` for [EnforcementStatus.missing]).
   final bool isConfigShaped;
+
+  /// Whether an instance `copyWith` is callable on the class — declared,
+  /// inherited, or supplied by a public extension.
+  final bool hasInstanceCopyWith;
+
+  /// Whether the class has a `const` unnamed generative constructor. Reported
+  /// only; it is NOT part of the enforcement rule.
+  final bool hasConstUnnamedConstructor;
 
   /// The reason string of `@ChartSurfaceExempt`, when [status] is
   /// [EnforcementStatus.exempt].
@@ -143,6 +166,19 @@ class EnforcementResult {
     }
     return buffer.toString();
   }
+
+  /// A human-readable listing of [exempt] as `ClassName — reason`, one per
+  /// line, so every exemption is visible in the CI log and can be reviewed.
+  ///
+  /// Returns the empty string when nothing is exempt.
+  String describeExempt() {
+    if (exempt.isEmpty) return '';
+    final buffer = StringBuffer();
+    for (final entry in exempt) {
+      buffer.writeln('  ${entry.className} — ${entry.exemptReason}');
+    }
+    return buffer.toString();
+  }
 }
 
 /// The names a `ChartSurface`-shaped constant must expose to match.
@@ -159,54 +195,65 @@ class SurfaceEnforcement {
   const SurfaceEnforcement();
 
   /// Scans every class in [barrel]'s export namespace and classifies it.
-  EnforcementResult check({required LibraryElement barrel}) {
+  EnforcementResult check({required LibraryElement barrel}) =>
+      checkAll(barrels: [barrel]);
+
+  /// Scans the UNION of every entrypoint in [barrels].
+  ///
+  /// A class reachable from more than one entrypoint (the fluent barrel
+  /// re-exports the core barrel) is classified once, keyed by defining
+  /// library plus class name.
+  EnforcementResult checkAll({required Iterable<LibraryElement> barrels}) {
     final annotated = <EnforcementEntry>[];
     final exempt = <EnforcementEntry>[];
     final missing = <EnforcementEntry>[];
+    final seen = <String>{};
 
-    for (final element in barrel.exportNamespace.definedNames2.values) {
+    final elements = <Element>[];
+    for (final barrel in barrels) {
+      elements.addAll(barrel.exportNamespace.definedNames2.values);
+    }
+    final extensionCopyWithTargets = _extensionCopyWithTargets(elements);
+
+    for (final element in elements) {
       if (element is! ClassElement) continue;
       final name = element.name;
       if (name == null || name.isEmpty) continue;
+      final libraryUri = element.library.uri.toString();
+      if (!seen.add('$libraryUri#$name')) continue;
 
-      final configShaped = _isConfigShaped(element);
-      final surface = _annotationValue(element, 'ChartSurface');
-      if (surface != null && _hasFields(surface, _chartSurfaceFields)) {
-        annotated.add(
+      final hasCopyWith =
+          _hasInstanceCopyWith(element) ||
+          extensionCopyWithTargets.contains(element);
+      final configShaped = _isConfigShaped(element, hasCopyWith: hasCopyWith);
+      final isConst = _hasConstUnnamedConstructor(element);
+
+      EnforcementEntry entry(EnforcementStatus status, {String? reason}) =>
           EnforcementEntry(
             className: name,
-            libraryUri: element.library.uri.toString(),
-            status: EnforcementStatus.annotated,
+            libraryUri: libraryUri,
+            status: status,
             isConfigShaped: configShaped,
-          ),
-        );
+            hasInstanceCopyWith: hasCopyWith,
+            hasConstUnnamedConstructor: isConst,
+            exemptReason: reason,
+          );
+
+      final surface = _annotationValue(element, 'ChartSurface');
+      if (surface != null && _hasFields(surface, _chartSurfaceFields)) {
+        annotated.add(entry(EnforcementStatus.annotated));
         continue;
       }
 
       final exemption = _annotationValue(element, 'ChartSurfaceExempt');
-      final reason = exemption?.getField('reason')?.toStringValue();
-      if (reason != null) {
-        exempt.add(
-          EnforcementEntry(
-            className: name,
-            libraryUri: element.library.uri.toString(),
-            status: EnforcementStatus.exempt,
-            isConfigShaped: configShaped,
-            exemptReason: reason,
-          ),
-        );
+      final exemptReason = exemption?.getField('reason')?.toStringValue();
+      if (exemptReason != null) {
+        exempt.add(entry(EnforcementStatus.exempt, reason: exemptReason));
         continue;
       }
 
       if (!configShaped) continue;
-      missing.add(
-        EnforcementEntry(
-          className: name,
-          libraryUri: element.library.uri.toString(),
-          status: EnforcementStatus.missing,
-          isConfigShaped: true,
-        ),
-      );
+      missing.add(entry(EnforcementStatus.missing));
     }
 
     return EnforcementResult(
@@ -216,28 +263,49 @@ class SurfaceEnforcement {
     );
   }
 
-  /// A const unnamed generative constructor plus an instance `copyWith`.
-  bool _isConfigShaped(ClassElement cls) =>
-      _hasConstUnnamedConstructor(cls) && _hasInstanceCopyWith(cls);
+  /// Instantiable (neither abstract nor sealed) plus a callable instance
+  /// `copyWith`. Const-ness is NOT part of the rule; see the library doc.
+  bool _isConfigShaped(ClassElement cls, {required bool hasCopyWith}) =>
+      !cls.isAbstract && !cls.isSealed && hasCopyWith;
 
   bool _hasConstUnnamedConstructor(ClassElement cls) => cls.constructors.any(
-        (constructor) =>
-            constructor.isGenerative &&
-            constructor.isConst &&
-            _isUnnamed(constructor.name),
-      );
+    (constructor) =>
+        constructor.isGenerative &&
+        constructor.isConst &&
+        _isUnnamed(constructor.name),
+  );
 
-  bool _isUnnamed(String? name) => name == null || name.isEmpty || name == 'new';
+  bool _isUnnamed(String? name) =>
+      name == null || name.isEmpty || name == 'new';
 
   /// Whether [cls] declares or inherits an instance `copyWith` method.
   ///
-  /// Extension members are not class members and never reach [InterfaceElement.methods],
-  /// so extension `copyWith` is excluded structurally.
+  /// Extension members are not class members and never reach
+  /// [InterfaceElement.methods]; they are picked up separately by
+  /// [_extensionCopyWithTargets].
   bool _hasInstanceCopyWith(ClassElement cls) {
-    bool declares(InterfaceElement element) => element.methods
-        .any((method) => method.name == 'copyWith' && !method.isStatic);
+    bool declares(InterfaceElement element) => element.methods.any(
+      (method) => method.name == 'copyWith' && !method.isStatic,
+    );
     if (declares(cls)) return true;
     return cls.allSupertypes.any((supertype) => declares(supertype.element));
+  }
+
+  /// The classes that a reachable public extension gives an instance
+  /// `copyWith`. Such a `copyWith` chains exactly like a member, so hiding
+  /// one in an extension must not dodge enforcement.
+  Set<InterfaceElement> _extensionCopyWithTargets(Iterable<Element> elements) {
+    final targets = <InterfaceElement>{};
+    for (final element in elements) {
+      if (element is! ExtensionElement) continue;
+      final declaresCopyWith = element.methods.any(
+        (method) => method.name == 'copyWith' && !method.isStatic,
+      );
+      if (!declaresCopyWith) continue;
+      final extended = element.extendedType;
+      if (extended is InterfaceType) targets.add(extended.element);
+    }
+    return targets;
   }
 
   /// The computed constant value of the annotation on [element] whose type is
@@ -256,12 +324,16 @@ class SurfaceEnforcement {
       fields.every((field) => value.getField(field) != null);
 }
 
-/// Runs [SurfaceEnforcement] against a REAL package barrel on disk.
+/// Runs [SurfaceEnforcement] against a REAL package on disk, over EVERY
+/// public entrypoint.
 ///
-/// [barrelPath] is the absolute path of the barrel library (for braven_charts:
-/// `<packageRoot>/lib/braven_charts.dart`). The analysis context is anchored on
-/// the barrel's directory, so the package's `.dart_tool/package_config.json`
-/// resolves every dependency exactly as `dart analyze` would.
+/// [libPath] is the absolute path of the package's `lib/` directory. Every
+/// `lib/*.dart` is treated as a public entrypoint and its export namespace is
+/// unioned, so adding a third barrel never silently narrows the scan (there
+/// are two today: `braven_charts.dart` and the generated
+/// `braven_charts_fluent.dart`). The analysis context is anchored on `lib/`,
+/// so the package's `.dart_tool/package_config.json` resolves every dependency
+/// exactly as `dart analyze` would.
 ///
 /// [sdkPath] must be supplied when the host VM is not a Dart SDK executable —
 /// notably under `flutter test`, whose `flutter_tester` runtime would otherwise
@@ -269,26 +341,40 @@ class SurfaceEnforcement {
 /// `<flutterRoot>/bin/cache/dart-sdk` there; see
 /// `test/meta/surface_enforcement_test.dart`.
 ///
-/// Throws [StateError] when the barrel does not resolve.
-Future<EnforcementResult> checkPackageBarrel({
-  required String barrelPath,
+/// Throws [StateError] when `lib/` holds no entrypoint or one does not resolve.
+Future<EnforcementResult> checkPackageSurface({
+  required String libPath,
   String? sdkPath,
 }) async {
-  final barrel = File(barrelPath);
-  if (!barrel.existsSync()) {
-    throw StateError('surface_gen: barrel not found at $barrelPath');
+  final lib = Directory(libPath);
+  if (!lib.existsSync()) {
+    throw StateError('surface_gen: lib directory not found at $libPath');
   }
-  final absolutePath = barrel.absolute.path;
-  final collection = AnalysisContextCollection(
-    includedPaths: [barrel.parent.absolute.path],
-    sdkPath: sdkPath,
-  );
-  final session = collection.contextFor(absolutePath).currentSession;
-  final resolved = await session.getResolvedLibrary(absolutePath);
-  if (resolved is! ResolvedLibraryResult) {
+  final entrypoints =
+      lib
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.absolute.path)
+          .where((path) => path.endsWith('.dart'))
+          .toList()
+        ..sort();
+  if (entrypoints.isEmpty) {
     throw StateError(
-      'surface_gen: could not resolve $absolutePath (got $resolved)',
+      'surface_gen: no public entrypoint (lib/*.dart) in $libPath',
     );
   }
-  return const SurfaceEnforcement().check(barrel: resolved.element);
+  final collection = AnalysisContextCollection(
+    includedPaths: [lib.absolute.path],
+    sdkPath: sdkPath,
+  );
+  final barrels = <LibraryElement>[];
+  for (final path in entrypoints) {
+    final session = collection.contextFor(path).currentSession;
+    final resolved = await session.getResolvedLibrary(path);
+    if (resolved is! ResolvedLibraryResult) {
+      throw StateError('surface_gen: could not resolve $path (got $resolved)');
+    }
+    barrels.add(resolved.element);
+  }
+  return const SurfaceEnforcement().checkAll(barrels: barrels);
 }

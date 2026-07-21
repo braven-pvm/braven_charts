@@ -189,7 +189,7 @@ resolves types through the barrel plus a `show`-limited
 - Create: `test/meta/surface_enforcement_test.dart` (package-level: runs the check against the real barrel)
 - Modify: `.github/workflows/package-quality.yml` (after `flutter pub get`, before analyze: `dart run build_runner build --delete-conflicting-outputs` then `git diff --exit-code -- lib/src/fluent/generated lib/src/ai/generated` with an explanatory failure message)
 
-Enforcement rule (from spec): every class reachable from `lib/braven_charts.dart` with a const unnamed constructor AND an instance `copyWith` method must carry `@chartSurface` or `@ChartSurfaceExempt(reason)`. In Slice 1 the check runs in REPORT mode: it asserts the three pilots are annotated and emits the full un-annotated list as a skip-with-message (promoted to hard failure in Task 6 when the fleet is annotated).
+Enforcement rule (WIDENED in Task 4c — see below): every class reachable from any public entrypoint (`lib/*.dart`) that is instantiable (not abstract, not sealed) AND has a callable instance `copyWith` (declared, inherited, or extension-supplied) must carry `@chartSurface` or `@ChartSurfaceExempt(reason)`. Const-ness is NOT part of the rule. In Slice 1 the check runs in REPORT mode: it asserts the three pilots are annotated, pins the exemption allowlist, and prints the full un-annotated list from `setUpAll` while the single hard gate stays skipped (promoted to hard failure in Task 6 when the fleet is annotated — one `skip:` line to delete).
 
 - [ ] Steps: failing enforcement unit tests (fixture: annotated passes, exempt passes, bare config fails, non-config class ignored) → implement → package-level test green in report mode → CI workflow edit → commit `feat(surface-gen): enforcement check and CI regeneration gate`
 
@@ -254,6 +254,34 @@ What Task 5/6 must know:
   it to any CI regenerate-and-diff path list.
 - Task 6's exhaustive smoke test must call `withoutX`, not `clearX`, for
   tri-state fields.
+
+### Task 4c: Enforcement + CI review fixups (post-review, before the fleet)
+
+The same independent review found the enforcement/CI half unsound. Fixed in
+`fix(surface-gen): enforcement and CI gate hardening`. What Task 5/6 must know:
+
+- The CI regen gate now uses `git status --porcelain --untracked-files=all`,
+  not `git diff --exit-code`: a NEW generated file that was never `git add`ed
+  used to pass CI green. Annotate → regenerate → **`git add` the new files**.
+- `tool/surface_gen` is analyzed and tested in CI before it is trusted to
+  regenerate anything.
+- The rule widened (const-ness dropped, extension `copyWith` counts,
+  abstract/sealed excluded, all `lib/*.dart` entrypoints unioned). That added
+  18 classes to the demanded set: `CandlestickChartSeries`,
+  `CandlestickDataPoint`, `YAxisConfig`, `PieChartSeries`, `DonutChartSeries`,
+  `PolarColumnChartSeries`, the nine `chart_annotation.dart` classes
+  (`ChordAnnotation`, `ErrorBarAnnotation`, `LegendAnnotation`,
+  `PinAnnotation`, `PointAnnotation`, `RangeAnnotation`, `TextAnnotation`,
+  `ThresholdAnnotation`, `TrendAnnotation`), `AnimationTheme`, `SeriesTheme`,
+  `TypographyTheme`. Backlog: 74 → 92.
+- `@ChartSurfaceExempt` asserts a reason of >= 12 characters, and
+  `test/meta/surface_enforcement_test.dart` pins the exempt set to
+  `_allowedExemptions` (today: `ChartSeries`). A new exemption must be added
+  there deliberately.
+- That file also asserts every annotated class with a `copyWith` produced a
+  NON-EMPTY generated extension, so a silent no-output regression fails.
+- Promotion is ONE edit: delete `skip: _reportModeSkip,`. No test asserts the
+  backlog is non-empty, so annotating the fleet never turns the file red.
 
 ---
 

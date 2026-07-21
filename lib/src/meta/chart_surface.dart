@@ -35,8 +35,19 @@ class CombinedSetter {
 }
 
 /// Exempts a barrel-reachable config-shaped class from enforcement.
+///
+/// An exemption is a permanent hole in the surface model, so [reason] must
+/// explain WHY generation is wrong for this class — the assert rejects
+/// placeholders like `''`, `'n/a'` or `'TODO'`. Every exemption is also
+/// printed and count-pinned by `test/meta/surface_enforcement_test.dart`, so
+/// adding one is a deliberate, reviewed act.
 class ChartSurfaceExempt {
-  const ChartSurfaceExempt(this.reason);
+  const ChartSurfaceExempt(this.reason)
+    : assert(
+        reason.length >= 12,
+        'ChartSurfaceExempt needs a real reason (>= 12 characters) '
+        'explaining why this class must not be generated.',
+      );
 
   final String reason;
 }
