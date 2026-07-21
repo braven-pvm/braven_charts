@@ -1,5 +1,6 @@
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -15,6 +16,7 @@ import 'y_axis_config.dart';
 /// Cartesian series. Each point requires a finite ordering [ChartDataPoint.x],
 /// a non-negative finite [ChartDataPoint.y], and a non-empty category label.
 /// Zero-valued points remain transportable but do not produce visible slices.
+@chartSurface
 class PieChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered pie series and validates it in all modes.
   PieChartSeries({

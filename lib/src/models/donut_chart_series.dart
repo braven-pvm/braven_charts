@@ -1,5 +1,6 @@
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -15,6 +16,7 @@ import 'y_axis_config.dart';
 /// A chart may contain exactly one [DonutChartSeries] and may not mix it with
 /// Pie or Cartesian series. The circular opening is configured by
 /// [DonutChartStyle.innerRadiusFactor].
+@chartSurface
 class DonutChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered Donut series and validates it in all modes.
   DonutChartSeries({

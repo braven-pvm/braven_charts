@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
 import 'candlestick_chart_style.dart';
 import 'chart_data_point.dart';
 import 'segment_style.dart';
@@ -9,6 +10,7 @@ import 'segment_style.dart';
 ///
 /// The inherited [y] value is always equal to [close]. This keeps generic
 /// point identity and callback behavior meaningful without losing OHLC data.
+@chartSurface
 final class CandlestickDataPoint extends ChartDataPoint {
   CandlestickDataPoint({
     required super.x,

@@ -444,6 +444,7 @@ class LineChartSeries extends ChartSeries {
 }
 
 /// Scatter plot series with configurable marker size.
+@chartSurface
 class ScatterChartSeries extends ChartSeries {
   const ScatterChartSeries({
     required super.id,
@@ -659,6 +660,7 @@ class AreaGradient {
 }
 
 /// Area chart series with fill and interpolation.
+@chartSurface
 class AreaChartSeries extends ChartSeries {
   const AreaChartSeries({
     required super.id,
@@ -846,6 +848,15 @@ class AreaChartSeries extends ChartSeries {
 }
 
 /// Bar chart series with configurable geometry and presentation.
+@ChartSurface(
+  combinedSetters: [
+    // `barWidthPercent != null || barWidthPixels != null` — an individual
+    // setter could null out the only supplied width.
+    CombinedSetter('withBarWidth', ['barWidthPercent', 'barWidthPixels']),
+    // `maxWidth >= minWidth` — the bounds only move as a pair.
+    CombinedSetter('withWidthBounds', ['maxWidth', 'minWidth']),
+  ],
+)
 class BarChartSeries extends ChartSeries {
   const BarChartSeries({
     required super.id,

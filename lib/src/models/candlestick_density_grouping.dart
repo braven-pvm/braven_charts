@@ -1,11 +1,14 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
+
 /// Opt-in pixel-density grouping for a native Candlestick series.
 ///
 /// Grouping is a render and interaction projection only. The source points on
 /// the series remain unchanged, so artifacts, Data mode, copy, and CSV keep
 /// exposing the raw OHLC observations.
+@chartSurface
 class CandlestickDensityGrouping {
   const CandlestickDensityGrouping({
     this.enabled = false,

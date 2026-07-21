@@ -2,6 +2,7 @@ import 'dart:ui' show Color, Offset;
 
 import 'package:flutter/foundation.dart' show immutable;
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -72,6 +73,7 @@ enum PolarColumnAnimationMode {
 /// Null colors are derived from each mark's resolved palette color, preserving
 /// category or series identity across grouped and stacked compositions.
 @immutable
+@chartSurface
 class PolarColumnGradientStyle {
   const PolarColumnGradientStyle({
     this.enabled = true,
@@ -140,6 +142,7 @@ class PolarColumnGradientStyle {
 
 /// Blurred elevation painted beneath each Polar Column mark.
 @immutable
+@chartSurface
 class PolarColumnShadowStyle {
   const PolarColumnShadowStyle({
     this.color,
@@ -260,6 +263,7 @@ class PolarColumnInterval {
 }
 
 /// Appearance of per-category Polar Column uncertainty/range intervals.
+@chartSurface
 class PolarColumnIntervalStyle {
   const PolarColumnIntervalStyle({
     this.display = PolarColumnIntervalDisplay.whisker,
@@ -367,6 +371,7 @@ class PolarColumnIntervalStyle {
 /// participate in grouped or stacked geometry and remain fixed when a column
 /// is lifted for selection, so the represented value can be compared against
 /// its benchmark.
+@chartSurface
 class PolarColumnTargetMarkerStyle {
   const PolarColumnTargetMarkerStyle({
     this.color,
@@ -439,6 +444,7 @@ class PolarColumnTargetMarkerStyle {
 }
 
 /// Mark appearance for one Polar Column series.
+@chartSurface
 class PolarColumnStyle {
   const PolarColumnStyle({
     this.cornerRadius = 4,
@@ -616,6 +622,7 @@ class PolarColumnStyle {
 /// into stable angular sub-bands, or stacked independently on the positive and
 /// negative sides of zero. They share category labels/order, preset, unit, and
 /// one radial scale.
+@chartSurface
 class PolarColumnChartSeries extends ChartSeries {
   /// Artifact capability required by non-default radial corner placement.
   static const cornerRadiusModeCapability =

@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import '../meta/chart_surface.dart';
 import 'candlestick_chart_style.dart';
 import 'candlestick_data_point.dart';
 import 'candlestick_density_grouping.dart';
@@ -12,6 +13,7 @@ import 'chart_series.dart';
 import 'y_axis_config.dart';
 
 /// A first-class Cartesian open-high-low-close series.
+@chartSurface
 final class CandlestickChartSeries extends ChartSeries {
   CandlestickChartSeries({
     required super.id,

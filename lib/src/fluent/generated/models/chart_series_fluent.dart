@@ -118,3 +118,464 @@ extension LineChartSeriesFluent on LineChartSeries {
   LineChartSeries withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
 }
+
+/// Generated fluent modifiers for [ScatterChartSeries].
+extension ScatterChartSeriesFluent on ScatterChartSeries {
+  /// Replaces [ScatterChartSeries.id] with [value].
+  ScatterChartSeries withId(String value) => copyWith(id: value);
+
+  /// Replaces [ScatterChartSeries.name] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.name]; construct a new instance to reset it.
+  ScatterChartSeries withName(String value) => copyWith(name: value);
+
+  /// Replaces [ScatterChartSeries.points] with [value].
+  ScatterChartSeries withPoints(List<ChartDataPoint> value) =>
+      copyWith(points: value);
+
+  /// Replaces [ScatterChartSeries.color] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.color]; construct a new instance to reset it.
+  ScatterChartSeries withColor(Color value) => copyWith(color: value);
+
+  /// Replaces [ScatterChartSeries.isXOrdered] with [value].
+  ScatterChartSeries withXOrdered(bool value) => copyWith(isXOrdered: value);
+
+  /// Replaces [ScatterChartSeries.metadata] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.metadata]; construct a new instance to reset it.
+  ScatterChartSeries withMetadata(Map<String, dynamic> value) =>
+      copyWith(metadata: value);
+
+  /// Replaces [ScatterChartSeries.style] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.style]; construct a new instance to reset it.
+  ScatterChartSeries withStyle(SeriesStyle value) => copyWith(style: value);
+
+  /// Replaces [ScatterChartSeries.annotations] with [value].
+  ScatterChartSeries withAnnotations(List<ChartAnnotation> value) =>
+      copyWith(annotations: value);
+
+  /// Replaces [ScatterChartSeries.yAxisId] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.yAxisId]; construct a new instance to reset it.
+  ScatterChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
+
+  /// Replaces [ScatterChartSeries.yAxisConfig] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.yAxisConfig]; construct a new instance to reset it.
+  ScatterChartSeries withYAxisConfig(YAxisConfig value) =>
+      copyWith(yAxisConfig: value);
+
+  /// Replaces [ScatterChartSeries.unit] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [ScatterChartSeries.unit]; construct a new instance to reset it.
+  ScatterChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Replaces [ScatterChartSeries.markerRadius] with [value].
+  ScatterChartSeries withMarkerRadius(double value) =>
+      copyWith(markerRadius: value);
+
+  /// Replaces [ScatterChartSeries.markerShape] with [value].
+  ScatterChartSeries withMarkerShape(SeriesMarkerShape value) =>
+      copyWith(markerShape: value);
+
+  /// Replaces [ScatterChartSeries.markerStyle] with [value].
+  ScatterChartSeries withMarkerStyle(ScatterMarkerStyle value) =>
+      copyWith(markerStyle: value);
+
+  /// Clears [ScatterChartSeries.markerStyle] to `null`.
+  ScatterChartSeries clearMarkerStyle() => copyWith(clearMarkerStyle: true);
+
+  /// Replaces [ScatterChartSeries.sizeEncoding] with [value].
+  ScatterChartSeries withSizeEncoding(ScatterSizeEncoding value) =>
+      copyWith(sizeEncoding: value);
+
+  /// Clears [ScatterChartSeries.sizeEncoding] to `null`.
+  ScatterChartSeries clearSizeEncoding() => copyWith(clearSizeEncoding: true);
+
+  /// Replaces [ScatterChartSeries.colorEncoding] with [value].
+  ScatterChartSeries withColorEncoding(ScatterColorEncoding value) =>
+      copyWith(colorEncoding: value);
+
+  /// Clears [ScatterChartSeries.colorEncoding] to `null`.
+  ScatterChartSeries clearColorEncoding() => copyWith(clearColorEncoding: true);
+
+  /// Replaces [ScatterChartSeries.opacityEncoding] with [value].
+  ScatterChartSeries withOpacityEncoding(ScatterOpacityEncoding value) =>
+      copyWith(opacityEncoding: value);
+
+  /// Clears [ScatterChartSeries.opacityEncoding] to `null`.
+  ScatterChartSeries clearOpacityEncoding() =>
+      copyWith(clearOpacityEncoding: true);
+
+  /// Replaces [ScatterChartSeries.categoryEncoding] with [value].
+  ScatterChartSeries withCategoryEncoding(ScatterCategoryEncoding value) =>
+      copyWith(categoryEncoding: value);
+
+  /// Clears [ScatterChartSeries.categoryEncoding] to `null`.
+  ScatterChartSeries clearCategoryEncoding() =>
+      copyWith(clearCategoryEncoding: true);
+
+  /// Replaces [ScatterChartSeries.jitter] with [value].
+  ScatterChartSeries withJitter(ScatterJitterConfig value) =>
+      copyWith(jitter: value);
+
+  /// Replaces [ScatterChartSeries.renderMode] with [value].
+  ScatterChartSeries withRenderMode(ScatterRenderMode value) =>
+      copyWith(renderMode: value);
+
+  /// Replaces [ScatterChartSeries.clusterConfig] with [value].
+  ScatterChartSeries withClusterConfig(ScatterClusterConfig value) =>
+      copyWith(clusterConfig: value);
+
+  /// Replaces [ScatterChartSeries.binConfig] with [value].
+  ScatterChartSeries withBinConfig(ScatterBinConfig value) =>
+      copyWith(binConfig: value);
+
+  /// Replaces [ScatterChartSeries.densityConfig] with [value].
+  ScatterChartSeries withDensityConfig(ScatterDensityConfig value) =>
+      copyWith(densityConfig: value);
+
+  /// Replaces [ScatterChartSeries.dataPointLabels] with [value].
+  ScatterChartSeries withDataPointLabels(DataPointLabelConfig value) =>
+      copyWith(dataPointLabels: value);
+
+  /// Clears [ScatterChartSeries.dataPointLabels] to `null`.
+  ScatterChartSeries clearDataPointLabels() =>
+      copyWith(clearDataPointLabels: true);
+
+  /// Replaces [ScatterChartSeries.interactionStyle] with [value].
+  ScatterChartSeries withInteractionStyle(ScatterInteractionStyle value) =>
+      copyWith(interactionStyle: value);
+}
+
+/// Generated fluent modifiers for [AreaChartSeries].
+extension AreaChartSeriesFluent on AreaChartSeries {
+  /// Replaces [AreaChartSeries.id] with [value].
+  AreaChartSeries withId(String value) => copyWith(id: value);
+
+  /// Replaces [AreaChartSeries.name] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.name]; construct a new instance to reset it.
+  AreaChartSeries withName(String value) => copyWith(name: value);
+
+  /// Replaces [AreaChartSeries.points] with [value].
+  AreaChartSeries withPoints(List<ChartDataPoint> value) =>
+      copyWith(points: value);
+
+  /// Replaces [AreaChartSeries.color] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.color]; construct a new instance to reset it.
+  AreaChartSeries withColor(Color value) => copyWith(color: value);
+
+  /// Replaces [AreaChartSeries.isXOrdered] with [value].
+  AreaChartSeries withXOrdered(bool value) => copyWith(isXOrdered: value);
+
+  /// Replaces [AreaChartSeries.metadata] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.metadata]; construct a new instance to reset it.
+  AreaChartSeries withMetadata(Map<String, dynamic> value) =>
+      copyWith(metadata: value);
+
+  /// Replaces [AreaChartSeries.style] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.style]; construct a new instance to reset it.
+  AreaChartSeries withStyle(SeriesStyle value) => copyWith(style: value);
+
+  /// Replaces [AreaChartSeries.annotations] with [value].
+  AreaChartSeries withAnnotations(List<ChartAnnotation> value) =>
+      copyWith(annotations: value);
+
+  /// Replaces [AreaChartSeries.yAxisId] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.yAxisId]; construct a new instance to reset it.
+  AreaChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
+
+  /// Replaces [AreaChartSeries.yAxisConfig] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.yAxisConfig]; construct a new instance to reset it.
+  AreaChartSeries withYAxisConfig(YAxisConfig value) =>
+      copyWith(yAxisConfig: value);
+
+  /// Replaces [AreaChartSeries.unit] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.unit]; construct a new instance to reset it.
+  AreaChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Replaces [AreaChartSeries.interpolation] with [value].
+  AreaChartSeries withInterpolation(LineInterpolation value) =>
+      copyWith(interpolation: value);
+
+  /// Replaces [AreaChartSeries.strokeWidth] with [value].
+  AreaChartSeries withStrokeWidth(double value) => copyWith(strokeWidth: value);
+
+  /// Replaces [AreaChartSeries.tension] with [value].
+  AreaChartSeries withTension(double value) => copyWith(tension: value);
+
+  /// Replaces [AreaChartSeries.fillOpacity] with [value].
+  AreaChartSeries withFillOpacity(double value) => copyWith(fillOpacity: value);
+
+  /// Replaces [AreaChartSeries.fillGradient] with [value].
+  AreaChartSeries withFillGradient(AreaGradient value) =>
+      copyWith(fillGradient: value);
+
+  /// Clears [AreaChartSeries.fillGradient] to `null`.
+  AreaChartSeries clearFillGradient() => copyWith(clearFillGradient: true);
+
+  /// Replaces [AreaChartSeries.showDataPointMarkers] with [value].
+  AreaChartSeries withShowDataPointMarkers(bool value) =>
+      copyWith(showDataPointMarkers: value);
+
+  /// Replaces [AreaChartSeries.dataPointMarkerRadius] with [value].
+  AreaChartSeries withDataPointMarkerRadius(double value) =>
+      copyWith(dataPointMarkerRadius: value);
+
+  /// Replaces [AreaChartSeries.dataPointMarkerStyle] with [value].
+  AreaChartSeries withDataPointMarkerStyle(DataPointMarkerStyle value) =>
+      copyWith(dataPointMarkerStyle: value);
+
+  /// Replaces [AreaChartSeries.dataPointMarkerBackground] with [value].
+  AreaChartSeries withDataPointMarkerBackground(Color value) =>
+      copyWith(dataPointMarkerBackground: value);
+
+  /// Replaces [AreaChartSeries.lineGlow] with [value].
+  AreaChartSeries withLineGlow(double value) => copyWith(lineGlow: value);
+
+  /// Replaces [AreaChartSeries.dataPointLabels] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.dataPointLabels]; construct a new instance to reset it.
+  AreaChartSeries withDataPointLabels(DataPointLabelConfig value) =>
+      copyWith(dataPointLabels: value);
+
+  /// Replaces [AreaChartSeries.inlineLabel] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.inlineLabel]; construct a new instance to reset it.
+  AreaChartSeries withInlineLabel(SeriesInlineLabelConfig value) =>
+      copyWith(inlineLabel: value);
+
+  /// Replaces [AreaChartSeries.baselineValue] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.baselineValue]; construct a new instance to reset it.
+  AreaChartSeries withBaselineValue(double value) =>
+      copyWith(baselineValue: value);
+
+  /// Replaces [AreaChartSeries.aboveBaselineFillColor] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.aboveBaselineFillColor]; construct a new instance to reset it.
+  AreaChartSeries withAboveBaselineFillColor(Color value) =>
+      copyWith(aboveBaselineFillColor: value);
+
+  /// Replaces [AreaChartSeries.belowBaselineFillColor] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [AreaChartSeries.belowBaselineFillColor]; construct a new instance to reset it.
+  AreaChartSeries withBelowBaselineFillColor(Color value) =>
+      copyWith(belowBaselineFillColor: value);
+
+  /// Replaces [AreaChartSeries.pathAnimation] with [value].
+  AreaChartSeries withPathAnimation(PathAnimationStyle value) =>
+      copyWith(pathAnimation: value);
+
+  /// Replaces [AreaChartSeries.dashPattern] with [value].
+  AreaChartSeries withDashPattern(List<double> value) =>
+      copyWith(dashPattern: value);
+}
+
+/// Generated fluent modifiers for [BarChartSeries].
+extension BarChartSeriesFluent on BarChartSeries {
+  /// Replaces [BarChartSeries.id] with [value].
+  BarChartSeries withId(String value) => copyWith(id: value);
+
+  /// Replaces [BarChartSeries.name] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.name]; construct a new instance to reset it.
+  BarChartSeries withName(String value) => copyWith(name: value);
+
+  /// Replaces [BarChartSeries.points] with [value].
+  BarChartSeries withPoints(List<ChartDataPoint> value) =>
+      copyWith(points: value);
+
+  /// Replaces [BarChartSeries.color] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.color]; construct a new instance to reset it.
+  BarChartSeries withColor(Color value) => copyWith(color: value);
+
+  /// Replaces [BarChartSeries.isXOrdered] with [value].
+  BarChartSeries withXOrdered(bool value) => copyWith(isXOrdered: value);
+
+  /// Replaces [BarChartSeries.metadata] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.metadata]; construct a new instance to reset it.
+  BarChartSeries withMetadata(Map<String, dynamic> value) =>
+      copyWith(metadata: value);
+
+  /// Replaces [BarChartSeries.style] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.style]; construct a new instance to reset it.
+  BarChartSeries withStyle(SeriesStyle value) => copyWith(style: value);
+
+  /// Replaces [BarChartSeries.annotations] with [value].
+  BarChartSeries withAnnotations(List<ChartAnnotation> value) =>
+      copyWith(annotations: value);
+
+  /// Replaces [BarChartSeries.yAxisId] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.yAxisId]; construct a new instance to reset it.
+  BarChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
+
+  /// Replaces [BarChartSeries.yAxisConfig] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.yAxisConfig]; construct a new instance to reset it.
+  BarChartSeries withYAxisConfig(YAxisConfig value) =>
+      copyWith(yAxisConfig: value);
+
+  /// Replaces [BarChartSeries.unit] with [value].
+  ///
+  /// No clear verb: this class's copyWith cannot unset
+  /// [BarChartSeries.unit]; construct a new instance to reset it.
+  BarChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Replaces [BarChartSeries.barGap] with [value].
+  BarChartSeries withBarGap(double value) => copyWith(barGap: value);
+
+  /// Replaces [BarChartSeries.orientation] with [value].
+  BarChartSeries withOrientation(BarOrientation value) =>
+      copyWith(orientation: value);
+
+  /// Replaces [BarChartSeries.layoutMode] with [value].
+  BarChartSeries withLayoutMode(BarLayoutMode value) =>
+      copyWith(layoutMode: value);
+
+  /// Replaces [BarChartSeries.groupId] with [value].
+  BarChartSeries withGroupId(String value) => copyWith(groupId: value);
+
+  /// Clears [BarChartSeries.groupId] to `null`.
+  BarChartSeries clearGroupId() => copyWith(clearGroupId: true);
+
+  /// Replaces [BarChartSeries.divergingRole] with [value].
+  BarChartSeries withDivergingRole(BarDivergingRole value) =>
+      copyWith(divergingRole: value);
+
+  /// Replaces [BarChartSeries.divergingStyle] with [value].
+  BarChartSeries withDivergingStyle(BarDivergingStyle value) =>
+      copyWith(divergingStyle: value);
+
+  /// Replaces [BarChartSeries.overlayWidthFactor] with [value].
+  BarChartSeries withOverlayWidthFactor(double value) =>
+      copyWith(overlayWidthFactor: value);
+
+  /// Replaces [BarChartSeries.overlayOffsetFactor] with [value].
+  BarChartSeries withOverlayOffsetFactor(double value) =>
+      copyWith(overlayOffsetFactor: value);
+
+  /// Replaces [BarChartSeries.baselineValue] with [value].
+  BarChartSeries withBaselineValue(double value) =>
+      copyWith(baselineValue: value);
+
+  /// Replaces [BarChartSeries.rangeStartValues] with [value].
+  BarChartSeries withRangeStartValues(List<double?> value) =>
+      copyWith(rangeStartValues: value);
+
+  /// Replaces [BarChartSeries.waterfallTotalIndices] with [value].
+  BarChartSeries withWaterfallTotalIndices(Set<int> value) =>
+      copyWith(waterfallTotalIndices: value);
+
+  /// Replaces [BarChartSeries.waterfallStyle] with [value].
+  BarChartSeries withWaterfallStyle(BarWaterfallStyle value) =>
+      copyWith(waterfallStyle: value);
+
+  /// Replaces [BarChartSeries.minBarLength] with [value].
+  BarChartSeries withMinBarLength(double value) =>
+      copyWith(minBarLength: value);
+
+  /// Replaces [BarChartSeries.barStyle] with [value].
+  BarChartSeries withBarStyle(BarChartStyle value) => copyWith(barStyle: value);
+
+  /// Replaces [BarChartSeries.trackStyle] with [value].
+  BarChartSeries withTrackStyle(BarTrackStyle value) =>
+      copyWith(trackStyle: value);
+
+  /// Clears [BarChartSeries.trackStyle] to `null`.
+  BarChartSeries clearTrackStyle() => copyWith(clearTrackStyle: true);
+
+  /// Replaces [BarChartSeries.lollipopStyle] with [value].
+  BarChartSeries withLollipopStyle(BarLollipopStyle value) =>
+      copyWith(lollipopStyle: value);
+
+  /// Clears [BarChartSeries.lollipopStyle] to `null`.
+  BarChartSeries clearLollipopStyle() => copyWith(clearLollipopStyle: true);
+
+  /// Replaces [BarChartSeries.bulletStyle] with [value].
+  BarChartSeries withBulletStyle(BarBulletStyle value) =>
+      copyWith(bulletStyle: value);
+
+  /// Clears [BarChartSeries.bulletStyle] to `null`.
+  BarChartSeries clearBulletStyle() => copyWith(clearBulletStyle: true);
+
+  /// Replaces [BarChartSeries.targetValues] with [value].
+  BarChartSeries withTargetValues(List<double?> value) =>
+      copyWith(targetValues: value);
+
+  /// Replaces [BarChartSeries.targetMarkerStyle] with [value].
+  BarChartSeries withTargetMarkerStyle(BarTargetMarkerStyle value) =>
+      copyWith(targetMarkerStyle: value);
+
+  /// Replaces [BarChartSeries.errorLowerValues] with [value].
+  BarChartSeries withErrorLowerValues(List<double?> value) =>
+      copyWith(errorLowerValues: value);
+
+  /// Replaces [BarChartSeries.errorUpperValues] with [value].
+  BarChartSeries withErrorUpperValues(List<double?> value) =>
+      copyWith(errorUpperValues: value);
+
+  /// Replaces [BarChartSeries.errorBarStyle] with [value].
+  BarChartSeries withErrorBarStyle(BarErrorBarStyle value) =>
+      copyWith(errorBarStyle: value);
+
+  /// Replaces [BarChartSeries.labelStyle] with [value].
+  BarChartSeries withLabelStyle(BarLabelStyle value) =>
+      copyWith(labelStyle: value);
+
+  /// Replaces [BarChartSeries.barWidthPercent] and [BarChartSeries.barWidthPixels] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  ///
+  /// No clear verb: this class's copyWith cannot unset them;
+  /// construct a new instance to reset.
+  BarChartSeries withBarWidth(double barWidthPercent, double barWidthPixels) =>
+      copyWith(
+        barWidthPercent: barWidthPercent,
+        barWidthPixels: barWidthPixels,
+      );
+
+  /// Replaces [BarChartSeries.maxWidth] and [BarChartSeries.minWidth] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  BarChartSeries withWidthBounds(double maxWidth, double minWidth) =>
+      copyWith(maxWidth: maxWidth, minWidth: minWidth);
+}
