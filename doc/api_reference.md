@@ -16,8 +16,9 @@ types and where to begin.
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
 - `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
-  `ScatterChartSeries`, `PieChartSeries`, `DonutChartSeries`, and
-  `PolarColumnChartSeries` — concrete renderable series.
+  `ScatterChartSeries`, `CandlestickChartSeries`, `PieChartSeries`,
+  `DonutChartSeries`, and `PolarColumnChartSeries` — concrete renderable
+  series.
 - `ChartDataPoint`, `DataRange`, `ChartType` — core data types.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
@@ -41,6 +42,23 @@ types and where to begin.
 Scatter channels, legends, tracking values, tables, CSV, artifacts, hydration,
 and generated Dart share the same portable configuration. See
 [Chart types: Scatter](../docs/guides/chart-types.md#scatter-charts).
+
+### Candlestick charts
+
+- `CandlestickDataPoint` carries typed open, high, low, and close values while
+  retaining the shared Cartesian X identity.
+- `CandlestickChartStyle`, `CandlestickPointStyle`, and `CandlestickTheme`
+  resolve rising, falling, doji, wick, body, width, and spacing presentation.
+- `CandlestickAnimationStyle` controls entrance and compatible OHLC update
+  motion; `LiveStreamController.upsertLatestCandlestick` revises or appends the
+  active candle without rebuilding the chart widget tree per sample.
+- `CandlestickDensityGrouping` produces viewport-aware OHLC aggregates while
+  raw tables, CSV, artifacts, and generated Source retain source values.
+
+One Candlestick series can share a plot with Line, Area, and Scatter overlays.
+The family uses the common axes, annotations, navigator, interaction group,
+Workbench, data table, artifact, and generated-source contracts. See
+[Candlestick charts](candlestick_charts.md).
 
 ### Line and Area charts
 
@@ -300,6 +318,17 @@ only when the corresponding data exists. See
   fixed-interval, or ordered-value edge snapping.
 - `CartesianNavigatorStyle` — theme-aware selection, mask, handle, interaction,
   focus, disabled, and touch-target styling.
+- `CartesianValueSummaryConfig` — persistent, policy-resolved Cartesian datum
+  display for Line, Area, Bar, Scatter, Candlestick, mixed, and multi-axis
+  charts.
+- `CartesianValueSummaryPresentation`, `CartesianValueSummaryValuePolicy`,
+  `CartesianValueSummaryContent`, `CartesianValueSummaryStyle`, and
+  `CartesianValueSummaryController` — fixed or draggable presentation,
+  deterministic value precedence, automatic or custom rows, tri-state styling,
+  pinning, placement, and accessibility behavior.
+- `ChartContextMenuConfig`, `ChartContextAction`, and `ChartOverlayAction` —
+  typed host actions exposed through context menus or an opt-in compact in-chart
+  button; Workbench builders receive the same stable mounted-chart handle.
 
 ## Annotations
 

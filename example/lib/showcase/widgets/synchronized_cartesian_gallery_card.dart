@@ -107,7 +107,13 @@ class _SynchronizedCartesianGalleryCardState
                       key: const ValueKey('synchronized-cartesian-navigator'),
                       interactionGroupController: _interactionGroup,
                       fullDomain: const ChartXViewport(min: 0, max: 20),
-                      initialViewport: const ChartXViewport(min: 4, max: 16),
+                      // Keep the 4 km and 16 km labels inside the visible
+                      // range so release captures do not clip either label at
+                      // the plot boundary.
+                      initialViewport: const ChartXViewport(
+                        min: 3.5,
+                        max: 16.5,
+                      ),
                       behavior: const CartesianNavigatorBehavior(
                         minimumSpan: 2,
                       ),

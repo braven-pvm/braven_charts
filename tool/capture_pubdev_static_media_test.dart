@@ -14,6 +14,8 @@ import '../example/lib/showcase/widgets/gallery_flagships.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/bar_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/cartesian_release_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/donut_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
@@ -263,6 +265,27 @@ void main() {
       outputDirectory: outputDirectory,
       fileName: 'synchronized_route_profile.png',
       source: const SynchronizedCartesianGalleryCard(),
+    );
+  });
+
+  testWidgets('capture pub.dev 0.10.0 Cartesian media', (tester) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    await _captureInteraction(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'candlestick_market_structure.png',
+      source: const CandlestickMarketGalleryCard(),
+      includeTransientInteraction: false,
+    );
+    await _captureInteraction(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'value_summary_panel.png',
+      source: const ValueSummaryGalleryCard(),
+      includeTransientInteraction: false,
     );
   });
 
@@ -674,11 +697,18 @@ Future<void> _captureComposition(
   const logicalSize = Size(1200, 720);
   const pixelRatio = 1.5;
   final boundaryKey = GlobalKey();
+  final baseTheme = ThemeData.light();
   await tester.binding.setSurfaceSize(logicalSize);
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: _captureFontFamily),
+      theme: ThemeData(
+        fontFamily: _captureFontFamily,
+        textTheme: baseTheme.textTheme.apply(fontFamily: _captureFontFamily),
+        primaryTextTheme: baseTheme.primaryTextTheme.apply(
+          fontFamily: _captureFontFamily,
+        ),
+      ),
       home: Scaffold(
         body: RepaintBoundary(
           key: boundaryKey,
@@ -736,6 +766,8 @@ Future<_ChartTypeCapture> _captureChartType(
             xAxisConfig: const XAxisConfig(visible: false),
             yAxis: YAxisConfig(position: YAxisPosition.hidden),
             interactionConfig: InteractionConfig.none(),
+            concentricDonutConfig: asset.concentricDonutConfig,
+            polarChartConfig: asset.polarChartConfig,
           ),
         ),
       ),
@@ -895,6 +927,8 @@ class _ChartTypeAsset {
     required this.headerColor,
     required this.headerTextColor,
     this.grid = const GridConfig(horizontal: true, vertical: false),
+    this.concentricDonutConfig = const ConcentricDonutConfig(),
+    this.polarChartConfig = const PolarChartConfig(),
   });
 
   final String label;
@@ -904,6 +938,8 @@ class _ChartTypeAsset {
   final Color headerColor;
   final Color headerTextColor;
   final GridConfig grid;
+  final ConcentricDonutConfig concentricDonutConfig;
+  final PolarChartConfig polarChartConfig;
 }
 
 class _ChartTypeCapture {
@@ -971,6 +1007,15 @@ List<_ChartTypeAsset> _chartTypeAssets() {
       borderColorMode: PieBorderColorMode.slice,
       borderLightnessShift: 0.18,
     ),
+  );
+  final candlestickTheme = ChartTheme.dark.copyWith(
+    backgroundColor: const Color(0xFF101827),
+  );
+  final concentricTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFFBF8FF),
+  );
+  final polarTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFF4FAFF),
   );
 
   return [
@@ -1133,6 +1178,111 @@ List<_ChartTypeAsset> _chartTypeAssets() {
       ],
     ),
     _ChartTypeAsset(
+      label: 'Candlestick',
+      fileName: 'chart_type_candlestick.png',
+      theme: candlestickTheme,
+      headerColor: const Color(0xFF1E293B),
+      headerTextColor: const Color(0xFFE2E8F0),
+      series: [
+        CandlestickChartSeries(
+          id: 'candlestick',
+          points: [
+            CandlestickDataPoint(
+              x: 0,
+              open: 99,
+              high: 104,
+              low: 97,
+              close: 102,
+            ),
+            CandlestickDataPoint(
+              x: 1,
+              open: 102,
+              high: 108,
+              low: 100,
+              close: 106,
+            ),
+            CandlestickDataPoint(
+              x: 2,
+              open: 106,
+              high: 107,
+              low: 101,
+              close: 104,
+            ),
+            CandlestickDataPoint(
+              x: 3,
+              open: 104,
+              high: 112,
+              low: 103,
+              close: 110,
+            ),
+            CandlestickDataPoint(
+              x: 4,
+              open: 110,
+              high: 116,
+              low: 109,
+              close: 114,
+            ),
+            CandlestickDataPoint(
+              x: 5,
+              open: 114,
+              high: 117,
+              low: 110,
+              close: 112,
+            ),
+            CandlestickDataPoint(
+              x: 6,
+              open: 112,
+              high: 113,
+              low: 106,
+              close: 108,
+            ),
+            CandlestickDataPoint(
+              x: 7,
+              open: 108,
+              high: 116,
+              low: 107,
+              close: 114,
+            ),
+            CandlestickDataPoint(
+              x: 8,
+              open: 114,
+              high: 121,
+              low: 113,
+              close: 119,
+            ),
+            CandlestickDataPoint(
+              x: 9,
+              open: 119,
+              high: 122,
+              low: 115,
+              close: 117,
+            ),
+          ],
+          candlestickStyle: const CandlestickChartStyle(
+            bodyFillMode: CandlestickBodyFillMode.filled,
+            maxBodyWidth: 14,
+            bodyWidthFactor: 0.68,
+            bodyCornerRadius: 2,
+          ),
+        ),
+        const LineChartSeries(
+          id: 'candlestick-average',
+          points: [
+            ChartDataPoint(x: 3, y: 105.5),
+            ChartDataPoint(x: 4, y: 108.5),
+            ChartDataPoint(x: 5, y: 110),
+            ChartDataPoint(x: 6, y: 111),
+            ChartDataPoint(x: 7, y: 112),
+            ChartDataPoint(x: 8, y: 112.8),
+            ChartDataPoint(x: 9, y: 114.5),
+          ],
+          color: Color(0xFFFBBF24),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 1.8,
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
       label: 'Pie',
       fileName: 'chart_type_pie.png',
       theme: pieTheme,
@@ -1218,6 +1368,89 @@ List<_ChartTypeAsset> _chartTypeAssets() {
         ),
       ],
     ),
+    _ChartTypeAsset(
+      label: 'Concentric',
+      fileName: 'chart_type_concentric.png',
+      theme: concentricTheme,
+      headerColor: const Color(0xFFEDE9FE),
+      headerTextColor: const Color(0xFF5B21B6),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      concentricDonutConfig: const ConcentricDonutConfig(
+        innerRadiusFactor: 0.42,
+        outerRadiusFactor: 0.9,
+        ringGap: 4,
+      ),
+      series: [
+        DonutChartSeries.fromMap(
+          id: 'concentric-outer',
+          values: const {'Core': 46, 'Growth': 32, 'Other': 22},
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+          donutStyle: const DonutChartStyle(sliceGap: 1, cornerRadius: 3),
+        ),
+        DonutChartSeries.fromMap(
+          id: 'concentric-middle',
+          values: const {'Core': 31, 'Growth': 44, 'Other': 25},
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+          donutStyle: const DonutChartStyle(sliceGap: 1, cornerRadius: 3),
+        ),
+        DonutChartSeries.fromMap(
+          id: 'concentric-inner',
+          values: const {'Core': 54, 'Growth': 27, 'Other': 19},
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+          donutStyle: const DonutChartStyle(sliceGap: 1, cornerRadius: 3),
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
+      label: 'Polar Column',
+      fileName: 'chart_type_polar_column.png',
+      theme: polarTheme,
+      headerColor: const Color(0xFFE0F2FE),
+      headerTextColor: const Color(0xFF075985),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      polarChartConfig: const PolarChartConfig(
+        pane: PolarPaneConfig(outerRadiusFactor: 0.82),
+        angularAxis: PolarCategoryAxisConfig(
+          innerPadding: 0.14,
+          showLabels: false,
+          showGridLines: false,
+        ),
+        radialAxis: PolarNumericAxisConfig(
+          showLabels: false,
+          showGridLines: false,
+        ),
+      ),
+      series: [
+        PolarColumnChartSeries.rose(
+          id: 'polar',
+          values: const {
+            'N': 48,
+            'NE': 72,
+            'E': 58,
+            'SE': 86,
+            'S': 42,
+            'SW': 66,
+            'W': 54,
+            'NW': 78,
+          },
+          columnColors: const {
+            'N': Color(0xFF0EA5E9),
+            'NE': Color(0xFF0891B2),
+            'E': Color(0xFF0D9488),
+            'SE': Color(0xFF16A34A),
+            'S': Color(0xFFF59E0B),
+            'SW': Color(0xFFF97316),
+            'W': Color(0xFFE11D48),
+            'NW': Color(0xFF7C3AED),
+          },
+          polarStyle: const PolarColumnStyle(
+            cornerRadius: 3,
+            borderWidth: 0.5,
+            showDataLabels: false,
+          ),
+        ),
+      ],
+    ),
   ];
 }
 
@@ -1273,6 +1506,7 @@ ChartTheme _withCaptureFont(ChartTheme theme) {
   final axisStyle = theme.axisStyle;
   final interactionTheme = theme.interactionTheme;
   final annotationTheme = theme.annotationTheme;
+  final valueSummaryTheme = theme.cartesianValueSummaryTheme;
   TextStyle textStyle(TextStyle style) =>
       style.copyWith(fontFamily: _captureFontFamily);
   LabelStyle labelStyle(LabelStyle style) =>
@@ -1305,6 +1539,11 @@ ChartTheme _withCaptureFont(ChartTheme theme) {
       trendDefaults: annotationTheme.trendDefaults.copyWith(
         labelStyle: labelStyle(annotationTheme.trendDefaults.labelStyle),
       ),
+    ),
+    cartesianValueSummaryTheme: valueSummaryTheme.copyWith(
+      titleStyle: textStyle(valueSummaryTheme.titleStyle),
+      labelStyle: textStyle(valueSummaryTheme.labelStyle),
+      valueStyle: textStyle(valueSummaryTheme.valueStyle),
     ),
     legendStyle: theme.legendStyle.copyWith(
       textStyle: theme.legendStyle.textStyle.copyWith(

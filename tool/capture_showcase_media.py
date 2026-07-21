@@ -583,6 +583,8 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command.extend(["--plain-name", "capture pub.dev interaction media"])
     elif group == "type-strip":
         command.extend(["--plain-name", "capture pub.dev chart type strip"])
+    elif group == "cartesian-0.10":
+        command.extend(["--plain-name", "capture pub.dev 0.10.0 Cartesian media"])
     subprocess.run(
         command,
         cwd=repository,
@@ -997,6 +999,7 @@ def main() -> None:
             "concentric",
             "polar",
             "line-area",
+            "cartesian-0.10",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -1036,6 +1039,9 @@ def main() -> None:
         return
     if args.capture == "line-area":
         _path_workbench_stills(base_url, args.output_dir)
+        return
+    if args.capture == "cartesian-0.10":
+        _native_stills(args.output_dir, "cartesian-0.10")
         return
 
     driver = _driver()
