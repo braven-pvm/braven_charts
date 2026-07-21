@@ -89,14 +89,6 @@ extension DonutChartSeriesFluent on DonutChartSeries {
     PieDataLabelConfig Function(PieDataLabelConfig current) update,
   ) => copyWith(dataLabels: update(dataLabels));
 
-  /// Replaces [DonutChartSeries.sliceRadiusConfig] with [value].
-  DonutChartSeries withSliceRadiusConfig(PieSliceRadiusConfig value) =>
-      copyWith(sliceRadiusConfig: value);
-
-  /// Clears [DonutChartSeries.sliceRadiusConfig] to `null`.
-  DonutChartSeries clearSliceRadiusConfig() =>
-      copyWith(clearSliceRadiusConfig: true);
-
   /// Replaces [DonutChartSeries.sliceGroupingConfig] with [value].
   DonutChartSeries withSliceGroupingConfig(RadialSliceGroupingConfig value) =>
       copyWith(sliceGroupingConfig: value);

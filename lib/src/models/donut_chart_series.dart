@@ -24,10 +24,18 @@ import 'y_axis_config.dart';
 /// `updateDonutStyle` reject a style that is individually constructible. The
 /// coupling crosses the nested-config boundary and cannot be expressed as a
 /// [CombinedSetter]; it is acknowledged instead.
+///
+/// There is no generated `withSliceRadiusConfig` verb either. Variable slice
+/// radii are a PAIR: the config and a `PointStyle.size` on every point. A
+/// setter that supplies only the config threw `ArgumentError` on every series
+/// whose points carry no sizes, which is every series built without them.
+/// Supply both through [DonutChartSeries.fromMap]'s `radiusValues`, or
+/// through the constructor.
 // The body mixes an opaque validateRadialConfiguration() call with named
 // range checks on donutStyle, sliceRadiusConfig and centerContent, so the
 // opaque statement widens the scope to the whole class.
 @ChartSurface(
+  excluded: ['sliceRadiusConfig'],
   bodyValidated: [
     BodyValidated(
       'validateRadialConfiguration() re-checks the whole series, and the '

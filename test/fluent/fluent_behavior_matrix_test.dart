@@ -358,7 +358,18 @@ void main() {
       );
       expect(loaded.sliceGroupingConfig, isNotNull);
       expect(loaded.clearSliceGroupingConfig().sliceGroupingConfig, isNull);
-      expect(base().clearSliceRadiusConfig().sliceRadiusConfig, isNull);
+    });
+
+    test('sliceRadiusConfig has no generated verb — it is paired with every '
+        "point's PointStyle.size", () {
+      // Reviewer-adjacent: the executing smoke test caught
+      // `withSliceRadiusConfig` throwing on any series whose points carry no
+      // sizes, which is every series built without them. The parameter is
+      // force-excluded; construction remains the complete path.
+      expect(
+        () => base().copyWith(sliceRadiusConfig: const PieSliceRadiusConfig()),
+        throwsArgumentError,
+      );
     });
   });
 

@@ -76,14 +76,6 @@ extension PieChartSeriesFluent on PieChartSeries {
     PieDataLabelConfig Function(PieDataLabelConfig current) update,
   ) => copyWith(dataLabels: update(dataLabels));
 
-  /// Replaces [PieChartSeries.sliceRadiusConfig] with [value].
-  PieChartSeries withSliceRadiusConfig(PieSliceRadiusConfig value) =>
-      copyWith(sliceRadiusConfig: value);
-
-  /// Clears [PieChartSeries.sliceRadiusConfig] to `null`.
-  PieChartSeries clearSliceRadiusConfig() =>
-      copyWith(clearSliceRadiusConfig: true);
-
   /// Replaces [PieChartSeries.sliceGroupingConfig] with [value].
   PieChartSeries withSliceGroupingConfig(RadialSliceGroupingConfig value) =>
       copyWith(sliceGroupingConfig: value);

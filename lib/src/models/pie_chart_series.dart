@@ -25,10 +25,18 @@ import 'y_axis_config.dart';
 /// `(0, 1]`. That coupling crosses the nested-config boundary, so no
 /// [CombinedSetter] can express it and excluding `pieStyle` would remove the
 /// most useful verb on the class; it is acknowledged instead.
+///
+/// There is no generated `withSliceRadiusConfig` verb either. Variable slice
+/// radii are a PAIR: the config and a `PointStyle.size` on every point. A
+/// setter that supplies only the config threw `ArgumentError` on every series
+/// whose points carry no sizes, which is every series built without them.
+/// Supply both through [PieChartSeries.fromMap]'s `radiusValues`, or through
+/// the constructor.
 // validateRadialConfiguration() reads FIELDS (radialStyle, selectionStyle,
 // points), never the constructor's own parameter names, so surface_gen
 // cannot narrow the scope below the whole class.
 @ChartSurface(
+  excluded: ['sliceRadiusConfig'],
   bodyValidated: [
     BodyValidated(
       'validateRadialConfiguration() re-checks the whole series on every '
