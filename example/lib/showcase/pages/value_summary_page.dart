@@ -74,6 +74,12 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   bool _cornerRadiusOverridden = false;
   double _panelPadding = 8;
   bool _panelPaddingOverridden = false;
+  double _labelValueGap = 24;
+  bool _labelValueGapOverridden = false;
+  double _minWidth = 168;
+  bool _minWidthOverridden = false;
+  double _maxWidth = 280;
+  bool _maxWidthOverridden = false;
 
   @override
   void dispose() {
@@ -130,6 +136,15 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         : const ChartStyleValue.inherit(),
     padding: _panelPaddingOverridden
         ? ChartStyleValue.value(EdgeInsets.all(_panelPadding))
+        : const ChartStyleValue.inherit(),
+    labelValueGap: _labelValueGapOverridden
+        ? ChartStyleValue.value(_labelValueGap)
+        : const ChartStyleValue.inherit(),
+    minWidth: _minWidthOverridden
+        ? ChartStyleValue.value(_minWidth)
+        : const ChartStyleValue.inherit(),
+    maxWidth: _maxWidthOverridden
+        ? ChartStyleValue.value(_maxWidth)
         : const ChartStyleValue.inherit(),
   );
 
@@ -197,6 +212,21 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       _cornerRadiusOverridden = false;
       _panelPadding = 8;
       _panelPaddingOverridden = false;
+      _labelValueGap = 24;
+      _labelValueGapOverridden = false;
+      _minWidth = 168;
+      _minWidthOverridden = false;
+      _maxWidth = 280;
+      _maxWidthOverridden = false;
+    });
+  }
+
+  /// Returns only the label-value gap to theme inheritance: the panel falls
+  /// back to the spread layout while width overrides stay put.
+  void _spreadLabelValueGap() {
+    setState(() {
+      _labelValueGap = 24;
+      _labelValueGapOverridden = false;
     });
   }
 
@@ -955,6 +985,63 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             onChanged: (value) => setState(() {
               _panelPadding = value;
               _panelPaddingOverridden = true;
+            }),
+          ),
+          SliderOption(
+            key: const ValueKey('value-summary-label-value-gap'),
+            label: 'Label-value gap',
+            value: _labelValueGap,
+            min: 8,
+            max: 64,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() {
+              _labelValueGap = value;
+              _labelValueGapOverridden = true;
+            }),
+          ),
+          Text(
+            _labelValueGapOverridden
+                ? 'Packed: values start right after the longest label plus '
+                      'the gap. Long values still ellipsize at Max width.'
+                : 'Spread (default): values right-align to the panel edge. '
+                      'Touch the slider to pack them behind the labels.',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).hintColor.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 4),
+          ActionButton(
+            key: const ValueKey('value-summary-gap-spread'),
+            label: 'Spread (default)',
+            icon: Icons.align_horizontal_right,
+            onPressed: _spreadLabelValueGap,
+          ),
+          SliderOption(
+            key: const ValueKey('value-summary-min-width'),
+            label: 'Min width',
+            value: _minWidth,
+            min: 80,
+            max: 280,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() {
+              _minWidth = value;
+              _minWidthOverridden = true;
+            }),
+          ),
+          SliderOption(
+            key: const ValueKey('value-summary-max-width'),
+            label: 'Max width',
+            value: _maxWidth,
+            min: 120,
+            max: 480,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() {
+              _maxWidth = value;
+              _maxWidthOverridden = true;
             }),
           ),
           ActionButton(

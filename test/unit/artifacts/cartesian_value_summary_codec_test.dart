@@ -46,6 +46,7 @@ const _fullStyle = CartesianValueSummaryStyle(
   minWidth: ChartStyleValue.value(168),
   maxWidth: ChartStyleValue<double>.none(),
   rowGap: ChartStyleValue.value(4),
+  labelValueGap: ChartStyleValue.value(18),
 );
 
 const _fullConfig = CartesianValueSummaryConfig(
@@ -151,6 +152,62 @@ void main() {
         const ChartStyleValue.value(Color(0xFF2563EB)),
       );
       expect(decodedStyle, source.valueSummary.style);
+    });
+
+    test('labelValueGap round-trips inherit, none, and value forms', () {
+      Map<String, Object?> styleJson(CartesianValueSummaryStyle style) {
+        final document = _encode(
+          InteractionConfig(
+            valueSummary: CartesianValueSummaryConfig(
+              enabled: true,
+              style: style,
+            ),
+          ),
+        );
+        return Map<String, Object?>.from(
+          _valueSummaryJson(document)['style']! as Map,
+        );
+      }
+
+      CartesianValueSummaryStyle roundTrip(CartesianValueSummaryStyle style) {
+        final document = _encode(
+          InteractionConfig(
+            valueSummary: CartesianValueSummaryConfig(
+              enabled: true,
+              style: style,
+            ),
+          ),
+        );
+        return _decode(
+          ChartInteractionDocument.fromJson(document.toJson()),
+        ).valueSummary.style;
+      }
+
+      // Inherit stays an absent key.
+      const inherit = CartesianValueSummaryStyle(
+        rowGap: ChartStyleValue.value(6),
+      );
+      expect(styleJson(inherit).containsKey('labelValueGap'), isFalse);
+      expect(roundTrip(inherit).labelValueGap.isInherit, isTrue);
+
+      // An explicit clear is the "none" token, decoded back to .none().
+      const cleared = CartesianValueSummaryStyle(
+        labelValueGap: ChartStyleValue<double>.none(),
+      );
+      expect(styleJson(cleared)['labelValueGap'], 'none');
+      expect(
+        roundTrip(cleared).labelValueGap,
+        const ChartStyleValue<double>.none(),
+      );
+
+      // An explicit value carries the double payload.
+      const packed = CartesianValueSummaryStyle(
+        labelValueGap: ChartStyleValue.value(22.5),
+      );
+      expect(
+        roundTrip(packed).labelValueGap,
+        const ChartStyleValue<double>.value(22.5),
+      );
     });
 
     test('rejects an unknown value policy with a structured diagnostic', () {

@@ -145,11 +145,32 @@ CartesianValueSummaryConfig(
 ```
 
 Fields cover surface color and opacity, border, corner radius, padding, value
-and label text styles, series accent color, shadow, min/max width, and row
-gap. Theme presets exist for `light`, `dark`, `highContrast`, and
-`colorblindFriendly` through `ChartTheme.cartesianValueSummaryTheme`. A
-transparent surface does not waive text-contrast requirements; authors
-clearing the background remain responsible for a legible explicit text color.
+and label text styles, series accent color, shadow, min/max width, row gap,
+and the label-value gap. Theme presets exist for `light`, `dark`,
+`highContrast`, and `colorblindFriendly` through
+`ChartTheme.cartesianValueSummaryTheme`. A transparent surface does not waive
+text-contrast requirements; authors clearing the background remain
+responsible for a legible explicit text color.
+
+`labelValueGap` selects between the two row layouts. Inherited (no theme
+preset sets a default) or cleared, rows **spread**: values right-align to the
+panel's content edge and the panel fills `minWidth`, which can leave a wide
+gap between short labels and short values. An explicit value **packs** the
+rows: every value left-aligns in a shared column that starts at the widest
+row label plus the gap, and the panel's intrinsic width tightens to
+labels + gap + widest value — still clamped by `minWidth`/`maxWidth`, with
+long values (for example a candlestick's `203.81 USD`) still ellipsizing at
+`maxWidth`. Title, subtitle, and section-header rows are unaffected.
+
+```dart
+CartesianValueSummaryConfig(
+  enabled: true,
+  style: CartesianValueSummaryStyle(
+    labelValueGap: ChartStyleValue.value(16), // pack values behind labels
+    minWidth: ChartStyleValue.none(),         // let the panel shrink to fit
+  ),
+)
+```
 
 ## Controller and pinning
 

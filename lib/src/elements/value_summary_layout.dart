@@ -20,7 +20,9 @@ import '../models/cartesian_value_summary_config.dart'
 import '../models/cartesian_value_summary_style.dart';
 import '../theming/components/cartesian_value_summary_theme.dart';
 
-/// Horizontal gap between a row label and its right-aligned value.
+/// Horizontal gap between a row label and its right-aligned value in the
+/// default spread layout (a resolved `labelValueGap` replaces this with a
+/// packed value column).
 const double _labelValueGap = 12.0;
 
 /// Horizontal gap between a series swatch and the text that follows it.
@@ -55,6 +57,7 @@ class ResolvedValueSummaryStyle {
     this.minWidth,
     this.maxWidth,
     this.rowGap,
+    this.labelValueGap,
   });
 
   /// Resolves [style] against [theme] with tri-state semantics: an inherited
@@ -83,6 +86,7 @@ class ResolvedValueSummaryStyle {
     minWidth: style.minWidth.resolve(theme.minWidth),
     maxWidth: style.maxWidth.resolve(theme.maxWidth),
     rowGap: style.rowGap.resolve(theme.rowGap),
+    labelValueGap: style.labelValueGap.resolve(theme.labelValueGap),
   );
 
   /// Panel surface color, or null for a truly transparent panel.
@@ -136,6 +140,11 @@ class ResolvedValueSummaryStyle {
   /// Vertical gap between stacked lines; null means no gap.
   final double? rowGap;
 
+  /// Horizontal gap between the label column and a packed, left-aligned
+  /// value column; null (spread mode) right-aligns values to the panel's
+  /// content edge instead.
+  final double? labelValueGap;
+
   /// Creates a copy with the given fields replaced.
   ///
   /// Nullable fields cannot be re-cleared through copyWith; construct a new
@@ -157,6 +166,7 @@ class ResolvedValueSummaryStyle {
     double? minWidth,
     double? maxWidth,
     double? rowGap,
+    double? labelValueGap,
   }) => ResolvedValueSummaryStyle(
     backgroundColor: backgroundColor ?? this.backgroundColor,
     backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
@@ -174,6 +184,7 @@ class ResolvedValueSummaryStyle {
     minWidth: minWidth ?? this.minWidth,
     maxWidth: maxWidth ?? this.maxWidth,
     rowGap: rowGap ?? this.rowGap,
+    labelValueGap: labelValueGap ?? this.labelValueGap,
   );
 
   @override
@@ -195,7 +206,8 @@ class ResolvedValueSummaryStyle {
           other.shadow == shadow &&
           other.minWidth == minWidth &&
           other.maxWidth == maxWidth &&
-          other.rowGap == rowGap;
+          other.rowGap == rowGap &&
+          other.labelValueGap == labelValueGap;
 
   @override
   int get hashCode => Object.hashAll([
@@ -215,6 +227,7 @@ class ResolvedValueSummaryStyle {
     minWidth,
     maxWidth,
     rowGap,
+    labelValueGap,
   ]);
 }
 
@@ -556,6 +569,24 @@ class ValueSummaryLayout {
       }
     }
 
+    // Packed mode (a resolved labelValueGap): every value left-aligns in a
+    // shared column that starts at the widest row label (including its
+    // swatch extent) plus the gap. Null keeps the spread layout.
+    final packedGap = style.labelValueGap;
+    var labelColumnWidth = 0.0;
+    if (packedGap != null) {
+      for (final line in lines) {
+        if (line.isSection) continue;
+        final swatchExtent = line.hasSwatch ? swatchSize + _swatchTextGap : 0.0;
+        labelColumnWidth = math.max(
+          labelColumnWidth,
+          swatchExtent + line.label.width,
+        );
+      }
+    }
+    final valueColumnStart =
+        packedGap == null ? 0.0 : labelColumnWidth + packedGap;
+
     // Natural content width: widest line, bounded by contentMax.
     var natural = 0.0;
     if (title != null) natural = math.max(natural, title.width);
@@ -566,10 +597,12 @@ class ValueSummaryLayout {
           ? math.max(natural, swatchExtent + line.label.width)
           : math.max(
               natural,
-              swatchExtent +
-                  line.label.width +
-                  _labelValueGap +
-                  line.value!.width,
+              packedGap == null
+                  ? swatchExtent +
+                      line.label.width +
+                      _labelValueGap +
+                      line.value!.width
+                  : valueColumnStart + line.value!.width,
             );
     }
     final contentWidth = natural
@@ -584,11 +617,23 @@ class ValueSummaryLayout {
       final available = math.max(0.0, contentWidth - swatchExtent);
       if (line.isSection) {
         line.label.layout(maxWidth: available);
-      } else {
+      } else if (packedGap == null) {
         final value = line.value!;
         value.layout(maxWidth: available);
         line.label.layout(
           maxWidth: math.max(0.0, available - value.width - _labelValueGap),
+        );
+      } else {
+        // Packed: the value gets whatever remains past the fixed column
+        // start (ellipsizing long values); labels never outgrow the column.
+        line.value!.layout(
+          maxWidth: math.max(0.0, contentWidth - valueColumnStart),
+        );
+        line.label.layout(
+          maxWidth: math.max(
+            0.0,
+            math.min(labelColumnWidth, contentWidth) - swatchExtent,
+          ),
         );
       }
     }
@@ -702,7 +747,11 @@ class ValueSummaryLayout {
         final labelX = isRtl
             ? contentRight - swatchExtent - label.width
             : contentLeft + swatchExtent;
-        final valueX = isRtl ? contentLeft : contentRight - value.width;
+        final valueX = packedGap == null
+            ? (isRtl ? contentLeft : contentRight - value.width)
+            : (isRtl
+                  ? contentRight - valueColumnStart - value.width
+                  : contentLeft + valueColumnStart);
         texts.add(
           _PlacedPainter(
             role: ValueSummaryTextRole.label,

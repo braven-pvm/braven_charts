@@ -649,6 +649,7 @@ Map<String, Object?> _encodeValueSummaryStyle(
   ..._styleEntry('minWidth', value.minWidth, _n),
   ..._styleEntry('maxWidth', value.maxWidth, _n),
   ..._styleEntry('rowGap', value.rowGap, _n),
+  ..._styleEntry('labelValueGap', value.labelValueGap, _n),
 };
 
 CartesianValueSummaryStyle _decodeValueSummaryStyle(
@@ -667,6 +668,7 @@ CartesianValueSummaryStyle _decodeValueSummaryStyle(
   minWidth: _styleValue(map, 'minWidth', _doublePayload),
   maxWidth: _styleValue(map, 'maxWidth', _doublePayload),
   rowGap: _styleValue(map, 'rowGap', _doublePayload),
+  labelValueGap: _styleValue(map, 'labelValueGap', _doublePayload),
 );
 
 /// Tri-state artifact form: an absent key is [ChartStyleValue.inherit], the

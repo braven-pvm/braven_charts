@@ -132,6 +132,28 @@ void main() {
 
     await _expectGolden(tester, 'goldens/overlay_rtl_sections.png');
   });
+
+  testWidgets('packed labelValueGap tightens the multi-series panel', (
+    tester,
+  ) async {
+    await _pumpOverlay(
+      tester,
+      dark: false,
+      element: _element(
+        placement: ChartOverlayPlacement.topLeft,
+        summaryTheme: CartesianValueSummaryTheme.light,
+        model: _multiSeriesModel,
+        style: const CartesianValueSummaryStyle(
+          // Packed mode: values left-align in a column right after the
+          // widest label; clearing minWidth lets the panel shrink to it.
+          labelValueGap: ChartStyleValue.value(16),
+          minWidth: ChartStyleValue.none(),
+        ),
+      ),
+    );
+
+    await _expectGolden(tester, 'goldens/overlay_packed_multi_series.png');
+  });
 }
 
 ValueSummaryOverlayElement _element({

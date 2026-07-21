@@ -248,6 +248,74 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('label-value gap and width sliders drive the tri-state style', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    CartesianValueSummaryStyle style() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .interactionConfig!
+        .valueSummary
+        .style;
+
+    // Untouched sliders leave every field inheriting the theme default —
+    // the spread layout with the theme's min/max widths.
+    expect(style().labelValueGap.isInherit, isTrue);
+    expect(style().minWidth.isInherit, isTrue);
+    expect(style().maxWidth.isInherit, isTrue);
+
+    // First touch of the gap slider promotes the field to an explicit
+    // override: the packed layout.
+    final gapSlider = find.byKey(
+      const ValueKey('value-summary-label-value-gap'),
+    );
+    await revealOption(tester, gapSlider);
+    tester.widget<SliderOption>(gapSlider).onChanged(24);
+    await tester.pumpAndSettle();
+    expect(
+      style().labelValueGap,
+      const ChartStyleValue<double>.value(24.0),
+    );
+
+    // Min and max width sliders follow the same first-touch promotion.
+    final minWidthSlider = find.byKey(
+      const ValueKey('value-summary-min-width'),
+    );
+    await revealOption(tester, minWidthSlider);
+    tester.widget<SliderOption>(minWidthSlider).onChanged(120);
+    await tester.pumpAndSettle();
+    expect(style().minWidth, const ChartStyleValue<double>.value(120.0));
+
+    final maxWidthSlider = find.byKey(
+      const ValueKey('value-summary-max-width'),
+    );
+    await revealOption(tester, maxWidthSlider);
+    tester.widget<SliderOption>(maxWidthSlider).onChanged(320);
+    await tester.pumpAndSettle();
+    expect(style().maxWidth, const ChartStyleValue<double>.value(320.0));
+
+    // The Spread affordance returns only the gap to theme inheritance —
+    // the width overrides stay put.
+    final spread = find.byKey(const ValueKey('value-summary-gap-spread'));
+    await revealOption(tester, spread);
+    await tester.tap(spread);
+    await tester.pumpAndSettle();
+    expect(style().labelValueGap.isInherit, isTrue);
+    expect(style().minWidth, const ChartStyleValue<double>.value(120.0));
+    expect(style().maxWidth, const ChartStyleValue<double>.value(320.0));
+
+    // Reset Style to Theme restores full inheritance.
+    final reset = find.byKey(const ValueKey('value-summary-reset-style'));
+    await revealOption(tester, reset);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(style().labelValueGap.isInherit, isTrue);
+    expect(style().minWidth.isInherit, isTrue);
+    expect(style().maxWidth.isInherit, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pin and clear buttons drive the summary controller', (
     tester,
   ) async {

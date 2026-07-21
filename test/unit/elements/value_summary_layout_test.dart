@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/braven_charts.dart';
@@ -104,6 +105,8 @@ void main() {
       expect(resolved.minWidth, theme.minWidth);
       expect(resolved.maxWidth, theme.maxWidth);
       expect(resolved.rowGap, theme.rowGap);
+      // No theme preset packs rows: the null default keeps the spread layout.
+      expect(resolved.labelValueGap, isNull);
       // Inherited accent color defers to the content model's series color.
       expect(resolved.accentColor, isNull);
       expect(resolved.accentVisible, isTrue);
@@ -118,6 +121,7 @@ void main() {
           borderWidth: ChartStyleValue.value(3.0),
           accentColor: ChartStyleValue.value(accent),
           minWidth: ChartStyleValue.value(220.0),
+          labelValueGap: ChartStyleValue.value(16.0),
         ),
         theme,
       );
@@ -127,6 +131,7 @@ void main() {
       expect(resolved.accentColor, accent);
       expect(resolved.accentVisible, isTrue);
       expect(resolved.minWidth, 220.0);
+      expect(resolved.labelValueGap, 16.0);
       // Untouched fields still inherit.
       expect(resolved.borderColor, theme.border);
     });
@@ -145,6 +150,7 @@ void main() {
           minWidth: ChartStyleValue.none(),
           maxWidth: ChartStyleValue.none(),
           rowGap: ChartStyleValue.none(),
+          labelValueGap: ChartStyleValue.none(),
         ),
         theme,
       );
@@ -160,6 +166,7 @@ void main() {
       expect(resolved.minWidth, isNull);
       expect(resolved.maxWidth, isNull);
       expect(resolved.rowGap, isNull);
+      expect(resolved.labelValueGap, isNull);
     });
 
     test('equal inputs resolve to equal values', () {
@@ -526,6 +533,180 @@ void main() {
       expect(labels.single.text, 'HR');
       expect(values, hasLength(1));
       expect(values.single.text, '162 bpm');
+    });
+  });
+
+  group('ValueSummaryLayout packed rows', () {
+    const packedModel = CartesianValueSummaryContentModel(
+      rows: [
+        CartesianValueSummaryRow(label: 'Open', value: '104.20'),
+        CartesianValueSummaryRow(label: 'Change', value: '+3.1%'),
+      ],
+    );
+
+    ValueSummaryLayoutResult lay(
+      ResolvedValueSummaryStyle style, {
+      CartesianValueSummaryContentModel model = packedModel,
+      TextDirection textDirection = TextDirection.ltr,
+      double maxWidth = 400,
+    }) => ValueSummaryLayout().layout(
+      model,
+      style,
+      maxWidth: maxWidth,
+      textScale: 1.0,
+      textDirection: textDirection,
+    );
+
+    List<ValueSummaryPlacedText> byRole(
+      ValueSummaryLayoutResult result,
+      ValueSummaryTextRole role,
+    ) => result.placedTexts.where((placed) => placed.role == role).toList();
+
+    double widestLabel(ValueSummaryLayoutResult result) =>
+        byRole(result, ValueSummaryTextRole.label)
+            .map((placed) => placed.size.width)
+            .reduce(math.max);
+
+    test('the value column starts at the widest label plus the gap', () {
+      final result = lay(_opaqueStyle.copyWith(labelValueGap: 16.0));
+
+      final values = byRole(result, ValueSummaryTextRole.value);
+      expect(values, hasLength(2));
+      // padding.left == 8, no accent (model has no color), no swatches.
+      final columnStart = 8.0 + widestLabel(result) + 16.0;
+      for (final value in values) {
+        expect(value.offset.dx, closeTo(columnStart, 0.001));
+      }
+    });
+
+    test('packed intrinsic width is labels + gap + widest value + chrome', () {
+      final result = lay(_opaqueStyle.copyWith(labelValueGap: 16.0));
+
+      final widestValue = byRole(result, ValueSummaryTextRole.value)
+          .map((placed) => placed.size.width)
+          .reduce(math.max);
+      // minWidth 0 in _opaqueStyle: the panel tightens to its packed content
+      // plus horizontal padding (8 + 8).
+      expect(
+        result.size.width,
+        closeTo(16.0 + widestLabel(result) + 16.0 + widestValue, 0.001),
+      );
+    });
+
+    test('packed width still clamps at minWidth, values stay in the column',
+        () {
+      final result = lay(
+        _opaqueStyle.copyWith(labelValueGap: 12.0, minWidth: 220.0),
+      );
+
+      expect(result.size.width, 220.0);
+      final columnStart = 8.0 + widestLabel(result) + 12.0;
+      for (final value in byRole(result, ValueSummaryTextRole.value)) {
+        expect(value.offset.dx, closeTo(columnStart, 0.001));
+        // Left-aligned in the packed column, not pushed to the right edge.
+        expect(
+          value.offset.dx + value.size.width,
+          lessThan(220.0 - 8.0),
+        );
+      }
+    });
+
+    test('packed width clamps at maxWidth and long values ellipsize', () {
+      const model = CartesianValueSummaryContentModel(
+        rows: [
+          CartesianValueSummaryRow(
+            label: 'Close',
+            value: '203.81 USD with a very long trailing note',
+          ),
+        ],
+      );
+      final result = lay(
+        _opaqueStyle.copyWith(labelValueGap: 12.0, maxWidth: 120.0),
+        model: model,
+      );
+
+      expect(result.size.width, 120.0);
+      for (final placed in result.placedTexts) {
+        expect(
+          placed.offset.dx + placed.size.width,
+          lessThanOrEqualTo(120.0 - 8.0 + 0.001),
+          reason: 'every packed run stays inside the padded content area',
+        );
+      }
+    });
+
+    test('a null labelValueGap keeps the spread layout under minWidth', () {
+      final result = lay(_opaqueStyle.copyWith(minWidth: 220.0));
+
+      expect(result.size.width, 220.0);
+      for (final value in byRole(result, ValueSummaryTextRole.value)) {
+        // Spread mode: values right-align to the padded content edge.
+        expect(
+          value.offset.dx + value.size.width,
+          closeTo(220.0 - 8.0, 0.001),
+        );
+      }
+    });
+
+    test('RTL mirrors the packed value column', () {
+      final result = lay(
+        _opaqueStyle.copyWith(labelValueGap: 16.0),
+        textDirection: TextDirection.rtl,
+      );
+
+      final columnStart = widestLabel(result) + 16.0;
+      for (final label in byRole(result, ValueSummaryTextRole.label)) {
+        expect(
+          label.offset.dx + label.size.width,
+          closeTo(result.size.width - 8.0, 0.001),
+        );
+      }
+      for (final value in byRole(result, ValueSummaryTextRole.value)) {
+        expect(
+          value.offset.dx + value.size.width,
+          closeTo(result.size.width - 8.0 - columnStart, 0.001),
+        );
+      }
+    });
+
+    test('swatch extents join the label column; section headers stay put', () {
+      const sectioned = CartesianValueSummaryContentModel(
+        rows: [
+          CartesianValueSummaryRow(
+            label: 'Speed',
+            value: '',
+            color: Color(0xFF0173B2),
+          ),
+          CartesianValueSummaryRow(
+            label: 'Avg',
+            value: '14.2 km/h',
+            color: Color(0xFF0173B2),
+          ),
+          CartesianValueSummaryRow(
+            label: 'Maximum',
+            value: '41 km/h',
+            color: Color(0xFF0173B2),
+          ),
+        ],
+      );
+      final result = lay(
+        _opaqueStyle.copyWith(labelValueGap: 16.0),
+        model: sectioned,
+      );
+
+      // Swatch extent = accentSize 8 + swatch-text gap 6.
+      const swatchExtent = 8.0 + 6.0;
+      final labelColumn = swatchExtent + widestLabel(result);
+      final values = byRole(result, ValueSummaryTextRole.value);
+      expect(values, hasLength(2));
+      for (final value in values) {
+        expect(value.offset.dx, closeTo(8.0 + labelColumn + 16.0, 0.001));
+      }
+
+      // The section header keeps its swatch-led start, unaffected by the
+      // packed value column.
+      final header = byRole(result, ValueSummaryTextRole.sectionHeader).single;
+      expect(header.offset.dx, closeTo(8.0 + swatchExtent, 0.001));
     });
   });
 

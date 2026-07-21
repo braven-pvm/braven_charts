@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with genuinely transparent clears) resolved against the new
   `CartesianValueSummaryTheme` component, including `light`, `dark`,
   `highContrast`, and `colorblindFriendly` presets.
+- Packed row layout through `CartesianValueSummaryStyle.labelValueGap` (and
+  the matching nullable `CartesianValueSummaryTheme.labelValueGap` default):
+  an explicit gap left-aligns values in a shared column right after the
+  widest row label and tightens the panel's intrinsic width — clamped by
+  `minWidth`/`maxWidth`, long values still ellipsizing — while inherited or
+  cleared keeps the spread layout with right-aligned values.
 - `CartesianValueSummaryController` /
   `DefaultCartesianValueSummaryController` for programmatic pinning by stable
   `ChartPointRef` identity and placement reset.

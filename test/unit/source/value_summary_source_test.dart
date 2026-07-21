@@ -66,6 +66,7 @@ void main() {
             ),
             minWidth: ChartStyleValue.value(180),
             rowGap: ChartStyleValue.none(),
+            labelValueGap: ChartStyleValue.value(20),
           ),
           showSeriesAccent: false,
           announceChanges: true,
@@ -114,6 +115,7 @@ void main() {
             'blurStyle: BlurStyle.outer)),\n'
             '        minWidth: ChartStyleValue.value(180.0),\n'
             '        rowGap: ChartStyleValue<double>.none(),\n'
+            '        labelValueGap: ChartStyleValue.value(20.0),\n'
             '      ),\n'
             '      showSeriesAccent: false,\n'
             '      announceChanges: true,\n'
@@ -136,8 +138,31 @@ void main() {
         expect(roundTripped.style.borderColor.isNone, isTrue);
         expect(roundTripped.style.labelStyle.isNone, isTrue);
         expect(roundTripped.style.rowGap.isNone, isTrue);
+        expect(
+          roundTripped.style.labelValueGap,
+          const ChartStyleValue<double>.value(20.0),
+        );
       },
     );
+
+    test('emits a cleared labelValueGap as a typed none', () {
+      final generated = _generate(
+        const InteractionConfig(
+          valueSummary: CartesianValueSummaryConfig(
+            enabled: true,
+            style: CartesianValueSummaryStyle(
+              labelValueGap: ChartStyleValue.none(),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('labelValueGap: ChartStyleValue<double>.none(),'),
+      );
+      expect(generated.source, isNot(contains('labelValueGap: ChartStyleValue.value')));
+    });
 
     test('emits non-default overlay placement and omits default arguments', () {
       final generated = _generate(

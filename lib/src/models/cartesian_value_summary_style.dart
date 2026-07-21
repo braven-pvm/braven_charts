@@ -49,6 +49,7 @@ class CartesianValueSummaryStyle {
     this.minWidth = const ChartStyleValue<double>.inherit(),
     this.maxWidth = const ChartStyleValue<double>.inherit(),
     this.rowGap = const ChartStyleValue<double>.inherit(),
+    this.labelValueGap = const ChartStyleValue<double>.inherit(),
   });
 
   /// Panel surface color. Cleared means a truly transparent surface.
@@ -90,6 +91,18 @@ class CartesianValueSummaryStyle {
   /// Vertical gap between rows in logical pixels.
   final ChartStyleValue<double> rowGap;
 
+  /// Horizontal gap between the row-label column and the value column, in
+  /// logical pixels.
+  ///
+  /// Resolved to a value, rows pack: values left-align in a shared column
+  /// that starts at the widest row label plus this gap, and the panel's
+  /// intrinsic width tightens to labels + gap + widest value (still clamped
+  /// by [minWidth] and [maxWidth], with long values still ellipsizing).
+  /// Inherited (no theme preset sets a default) or cleared, rows spread:
+  /// values right-align to the panel's content edge. Title, subtitle, and
+  /// section-header rows are unaffected either way.
+  final ChartStyleValue<double> labelValueGap;
+
   /// Creates a copy with the given fields replaced.
   ///
   /// Pass an explicit [ChartStyleValue.inherit] to restore theme inheritance
@@ -108,6 +121,7 @@ class CartesianValueSummaryStyle {
     ChartStyleValue<double>? minWidth,
     ChartStyleValue<double>? maxWidth,
     ChartStyleValue<double>? rowGap,
+    ChartStyleValue<double>? labelValueGap,
   }) => CartesianValueSummaryStyle(
     backgroundColor: backgroundColor ?? this.backgroundColor,
     backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
@@ -122,6 +136,7 @@ class CartesianValueSummaryStyle {
     minWidth: minWidth ?? this.minWidth,
     maxWidth: maxWidth ?? this.maxWidth,
     rowGap: rowGap ?? this.rowGap,
+    labelValueGap: labelValueGap ?? this.labelValueGap,
   );
 
   @override
@@ -140,7 +155,8 @@ class CartesianValueSummaryStyle {
           other.shadow == shadow &&
           other.minWidth == minWidth &&
           other.maxWidth == maxWidth &&
-          other.rowGap == rowGap;
+          other.rowGap == rowGap &&
+          other.labelValueGap == labelValueGap;
 
   @override
   int get hashCode => Object.hash(
@@ -157,5 +173,6 @@ class CartesianValueSummaryStyle {
     minWidth,
     maxWidth,
     rowGap,
+    labelValueGap,
   );
 }

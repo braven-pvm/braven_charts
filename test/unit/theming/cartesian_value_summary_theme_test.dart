@@ -57,6 +57,19 @@ void main() {
         expect(light.valueStyle.fontSize, 11.0);
         expect(light.accentSize, 8.0);
       });
+
+      test('no preset sets a labelValueGap — rows spread by default', () {
+        const presets = [
+          CartesianValueSummaryTheme.light,
+          CartesianValueSummaryTheme.dark,
+          CartesianValueSummaryTheme.highContrast,
+          CartesianValueSummaryTheme.colorblindFriendly,
+        ];
+
+        for (final preset in presets) {
+          expect(preset.labelValueGap, isNull);
+        }
+      });
     });
 
     group('lerp', () {
@@ -108,6 +121,42 @@ void main() {
         expect(mid.shadow, isNotNull);
         expect(end.shadow, isNull);
       });
+
+      test(
+        'labelValueGap interpolates between packed endpoints and snaps '
+        'around a spread endpoint',
+        () {
+          final packedA =
+              CartesianValueSummaryTheme.light.copyWith(labelValueGap: 10.0);
+          final packedB =
+              CartesianValueSummaryTheme.light.copyWith(labelValueGap: 30.0);
+
+          expect(
+            CartesianValueSummaryTheme.lerp(packedA, packedB, 0.5)
+                .labelValueGap,
+            closeTo(20.0, 1e-9),
+          );
+
+          // A null endpoint is the spread layout mode, not a zero-pixel gap:
+          // it snaps at the midpoint instead of fading through tiny gaps.
+          expect(
+            CartesianValueSummaryTheme.lerp(
+              CartesianValueSummaryTheme.light,
+              packedB,
+              0.25,
+            ).labelValueGap,
+            isNull,
+          );
+          expect(
+            CartesianValueSummaryTheme.lerp(
+              CartesianValueSummaryTheme.light,
+              packedB,
+              0.75,
+            ).labelValueGap,
+            30.0,
+          );
+        },
+      );
     });
 
     group('copyWith', () {
@@ -138,6 +187,7 @@ void main() {
         expect(base.copyWith(minWidth: 200.0).minWidth, 200.0);
         expect(base.copyWith(maxWidth: 400.0).maxWidth, 400.0);
         expect(base.copyWith(rowGap: 9.0).rowGap, 9.0);
+        expect(base.copyWith(labelValueGap: 20.0).labelValueGap, 20.0);
       });
 
       test('keeps every other field when replacing one', () {
@@ -156,6 +206,7 @@ void main() {
         expect(copy.minWidth, base.minWidth);
         expect(copy.maxWidth, base.maxWidth);
         expect(copy.rowGap, base.rowGap);
+        expect(copy.labelValueGap, base.labelValueGap);
       });
 
       test('with no arguments returns an equal theme', () {
@@ -176,6 +227,10 @@ void main() {
       test('a single changed field breaks equality', () {
         expect(
           CartesianValueSummaryTheme.light.copyWith(accentSize: 99.0),
+          isNot(CartesianValueSummaryTheme.light),
+        );
+        expect(
+          CartesianValueSummaryTheme.light.copyWith(labelValueGap: 20.0),
           isNot(CartesianValueSummaryTheme.light),
         );
       });

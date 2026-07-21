@@ -3818,6 +3818,13 @@ class _ChartDartEmitter {
         'double',
         DartSourceWriter.numberLiteral,
       );
+      _styleValueIf<double>(
+        writer,
+        'labelValueGap',
+        style.labelValueGap,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
     });
     writer.writeLine('),');
   }

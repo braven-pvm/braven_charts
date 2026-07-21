@@ -33,6 +33,7 @@ class CartesianValueSummaryTheme {
     required this.minWidth,
     required this.maxWidth,
     required this.rowGap,
+    this.labelValueGap,
   });
 
   /// Panel surface color before [backgroundOpacity] is applied.
@@ -76,6 +77,11 @@ class CartesianValueSummaryTheme {
 
   /// Vertical gap between rows in logical pixels.
   final double rowGap;
+
+  /// Horizontal gap between the row-label column and a packed value column,
+  /// or null (the default in every preset) for the spread layout where
+  /// values right-align to the panel's content edge.
+  final double? labelValueGap;
 
   static const light = CartesianValueSummaryTheme(
     background: Color(0xFFFFFFFF),
@@ -190,6 +196,10 @@ class CartesianValueSummaryTheme {
   /// the shadow in or out rather than popping. Values of [t] at or below 0
   /// return [a] exactly and values at or above 1 return [b] exactly, so
   /// endpoint themes keep their identity (including a null [shadow]).
+  ///
+  /// A null [labelValueGap] endpoint is the spread layout mode, not a
+  /// zero-pixel gap, so it snaps at the midpoint instead of fading the gap
+  /// through near-zero values; two non-null endpoints interpolate.
   static CartesianValueSummaryTheme lerp(
     CartesianValueSummaryTheme a,
     CartesianValueSummaryTheme b,
@@ -216,6 +226,9 @@ class CartesianValueSummaryTheme {
       minWidth: lerpDouble(a.minWidth, b.minWidth, t)!,
       maxWidth: lerpDouble(a.maxWidth, b.maxWidth, t)!,
       rowGap: lerpDouble(a.rowGap, b.rowGap, t)!,
+      labelValueGap: a.labelValueGap != null && b.labelValueGap != null
+          ? lerpDouble(a.labelValueGap, b.labelValueGap, t)
+          : (t < 0.5 ? a.labelValueGap : b.labelValueGap),
     );
   }
 
@@ -234,6 +247,7 @@ class CartesianValueSummaryTheme {
     double? minWidth,
     double? maxWidth,
     double? rowGap,
+    double? labelValueGap,
   }) => CartesianValueSummaryTheme(
     background: background ?? this.background,
     backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
@@ -249,6 +263,7 @@ class CartesianValueSummaryTheme {
     minWidth: minWidth ?? this.minWidth,
     maxWidth: maxWidth ?? this.maxWidth,
     rowGap: rowGap ?? this.rowGap,
+    labelValueGap: labelValueGap ?? this.labelValueGap,
   );
 
   @override
@@ -268,7 +283,8 @@ class CartesianValueSummaryTheme {
           other.shadow == shadow &&
           other.minWidth == minWidth &&
           other.maxWidth == maxWidth &&
-          other.rowGap == rowGap;
+          other.rowGap == rowGap &&
+          other.labelValueGap == labelValueGap;
 
   @override
   int get hashCode => Object.hashAll([
@@ -286,5 +302,6 @@ class CartesianValueSummaryTheme {
     minWidth,
     maxWidth,
     rowGap,
+    labelValueGap,
   ]);
 }
