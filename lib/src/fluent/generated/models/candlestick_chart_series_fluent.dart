@@ -18,10 +18,6 @@ extension CandlestickChartSeriesFluent on CandlestickChartSeries {
   /// [CandlestickChartSeries.name]; construct a new instance to reset it.
   CandlestickChartSeries withName(String value) => copyWith(name: value);
 
-  /// Replaces [CandlestickChartSeries.points] with [value].
-  CandlestickChartSeries withPoints(List<CandlestickDataPoint> value) =>
-      copyWith(points: value);
-
   /// Replaces [CandlestickChartSeries.color] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset

@@ -11,18 +11,6 @@ extension CandlestickDataPointFluent on CandlestickDataPoint {
   /// Replaces [CandlestickDataPoint.x] with [value].
   CandlestickDataPoint withX(double value) => copyWith(x: value);
 
-  /// Replaces [CandlestickDataPoint.open] with [value].
-  CandlestickDataPoint withOpen(double value) => copyWith(open: value);
-
-  /// Replaces [CandlestickDataPoint.high] with [value].
-  CandlestickDataPoint withHigh(double value) => copyWith(high: value);
-
-  /// Replaces [CandlestickDataPoint.low] with [value].
-  CandlestickDataPoint withLow(double value) => copyWith(low: value);
-
-  /// Replaces [CandlestickDataPoint.close] with [value].
-  CandlestickDataPoint withClose(double value) => copyWith(close: value);
-
   /// Replaces [CandlestickDataPoint.magnitude] with [value].
   CandlestickDataPoint withMagnitude(double value) =>
       copyWith(magnitude: value);
@@ -93,4 +81,14 @@ extension CandlestickDataPointFluent on CandlestickDataPoint {
   /// Clears [CandlestickDataPoint.candlestickStyle] to `null`.
   CandlestickDataPoint clearCandlestickStyle() =>
       copyWith(clearCandlestickStyle: true);
+
+  /// Replaces [CandlestickDataPoint.open], [CandlestickDataPoint.high], [CandlestickDataPoint.low], and [CandlestickDataPoint.close] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  CandlestickDataPoint withOhlc(
+    double open,
+    double high,
+    double low,
+    double close,
+  ) => copyWith(open: open, high: high, low: low, close: close);
 }

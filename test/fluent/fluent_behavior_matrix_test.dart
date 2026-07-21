@@ -236,8 +236,20 @@ void main() {
     CandlestickDataPoint point() =>
         CandlestickDataPoint(x: 0, open: 1, high: 4, low: 0.5, close: 3);
 
-    test('withHigh equals the copyWith equivalent', () {
-      expect(point().withHigh(6), point().copyWith(high: 6));
+    test('withOhlc equals the copyWith equivalent', () {
+      expect(
+        point().withOhlc(1, 6, 0.5, 3),
+        point().copyWith(open: 1, high: 6, low: 0.5, close: 3),
+      );
+    });
+
+    test('the OHLC values move as a unit — an individual setter would have '
+        'thrown', () {
+      // Reviewer-verified: `point().withHigh(1)` threw ArgumentError because
+      // low is 0.5 < 1 but close is 3 > 1. The combined verb states the whole
+      // candle, so no intermediate value exists for the body validation to
+      // reject.
+      expect(point().withOhlc(0.8, 1, 0.5, 0.9).high, 1);
     });
 
     test('every derived clear verb unsets its field', () {
@@ -259,7 +271,7 @@ void main() {
     });
 
     test('the subtype extension keeps the OHLC state', () {
-      final moved = point().withClose(3.5);
+      final moved = point().withOhlc(1, 4, 0.5, 3.5);
       expect(moved, isA<CandlestickDataPoint>());
       expect(moved.open, 1);
       expect(moved.high, 4);

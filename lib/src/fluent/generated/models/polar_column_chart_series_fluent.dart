@@ -189,10 +189,6 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
   /// [PolarColumnChartSeries.name]; construct a new instance to reset it.
   PolarColumnChartSeries withName(String value) => copyWith(name: value);
 
-  /// Replaces [PolarColumnChartSeries.points] with [value].
-  PolarColumnChartSeries withPoints(List<ChartDataPoint> value) =>
-      copyWith(points: value);
-
   /// Replaces [PolarColumnChartSeries.color] with [value].
   ///
   /// No clear verb: this class's copyWith cannot unset
@@ -240,10 +236,6 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
     RadialSelectionStyle Function(RadialSelectionStyle current) update,
   ) => copyWith(selectionStyle: update(selectionStyle));
 
-  /// Replaces [PolarColumnChartSeries.targetValues] with [value].
-  PolarColumnChartSeries withTargetValues(List<double?> value) =>
-      copyWith(targetValues: value);
-
   /// Replaces [PolarColumnChartSeries.targetMarkerStyle] with [value].
   PolarColumnChartSeries withTargetMarkerStyle(
     PolarColumnTargetMarkerStyle value,
@@ -257,14 +249,6 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
     PolarColumnTargetMarkerStyle Function(PolarColumnTargetMarkerStyle current)
     update,
   ) => copyWith(targetMarkerStyle: update(targetMarkerStyle));
-
-  /// Replaces [PolarColumnChartSeries.intervalLowerValues] with [value].
-  PolarColumnChartSeries withIntervalLowerValues(List<double?> value) =>
-      copyWith(intervalLowerValues: value);
-
-  /// Replaces [PolarColumnChartSeries.intervalUpperValues] with [value].
-  PolarColumnChartSeries withIntervalUpperValues(List<double?> value) =>
-      copyWith(intervalUpperValues: value);
 
   /// Replaces [PolarColumnChartSeries.intervalStyle] with [value].
   PolarColumnChartSeries withIntervalStyle(PolarColumnIntervalStyle value) =>

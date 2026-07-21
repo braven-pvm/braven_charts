@@ -16,7 +16,31 @@ import 'y_axis_config.dart';
 /// Cartesian series. Each point requires a finite ordering [ChartDataPoint.x],
 /// a non-negative finite [ChartDataPoint.y], and a non-empty category label.
 /// Zero-valued points remain transportable but do not produce visible slices.
-@chartSurface
+///
+/// Every generated verb re-validates the whole series, because the
+/// constructor does. In particular the legal range of a [PieChartStyle]
+/// NARROWS inside a pie series: `PieChartStyle(radiusFactor: 2)` is a
+/// perfectly constructible style, and `withPieStyle` / `updatePieStyle`
+/// reject it with `ArgumentError` because a pie's radius factor must be in
+/// `(0, 1]`. That coupling crosses the nested-config boundary, so no
+/// [CombinedSetter] can express it and excluding `pieStyle` would remove the
+/// most useful verb on the class; it is acknowledged instead.
+// validateRadialConfiguration() reads FIELDS (radialStyle, selectionStyle,
+// points), never the constructor's own parameter names, so surface_gen
+// cannot narrow the scope below the whole class.
+@ChartSurface(
+  bodyValidated: [
+    BodyValidated(
+      'validateRadialConfiguration() re-checks the whole series on every '
+      'construction: finite non-negative point values with non-empty labels, '
+      'radialStyle.radiusFactor in (0, 1], non-negative sliceGap and '
+      'borderWidth, and the selectionStyle lift/blur ranges. A verb whose '
+      'argument is individually valid — a PieChartStyle with '
+      'radiusFactor 2 — therefore throws ArgumentError with the failing '
+      'field named.',
+    ),
+  ],
+)
 class PieChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered pie series and validates it in all modes.
   PieChartSeries({

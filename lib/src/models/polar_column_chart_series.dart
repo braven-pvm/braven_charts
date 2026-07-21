@@ -622,7 +622,39 @@ class PolarColumnStyle {
 /// into stable angular sub-bands, or stacked independently on the positive and
 /// negative sides of zero. They share category labels/order, preset, unit, and
 /// one radial scale.
-@chartSurface
+///
+/// There are no generated `withPoints`, `withTargetValues`,
+/// `withIntervalLowerValues` or `withIntervalUpperValues` verbs. Those four
+/// lists are PARALLEL ARRAYS indexed by category: a non-empty
+/// `targetValues`/`intervalLowerValues`/`intervalUpperValues` must have
+/// exactly `points.length` entries, and the two interval lists must be
+/// supplied together. Any single setter breaks the alignment — replacing
+/// `points` alone on a series with two targets threw `ArgumentError` — and a
+/// combined setter over all four would be a constructor with extra steps.
+/// They are force-excluded; build the series with
+/// [PolarColumnChartSeries.new] or [PolarColumnChartSeries.fromMap], where
+/// the lists are stated together and validated once.
+// _validate() names no parameter (it reads fields), so every remaining
+// emitted parameter is nominally in scope.
+@ChartSurface(
+  excluded: [
+    'points',
+    'targetValues',
+    'intervalLowerValues',
+    'intervalUpperValues',
+  ],
+  bodyValidated: [
+    BodyValidated(
+      '_validate() re-runs polarStyle.validate(), '
+      'targetMarkerStyle.validate() and intervalStyle.validate() on every '
+      'construction, so withPolarStyle / withTargetMarkerStyle / '
+      'withIntervalStyle throw ArgumentError for a nested config that is '
+      'individually constructible but invalid inside this series. The check '
+      'reads fields, not parameters, so surface_gen cannot narrow the scope '
+      'below the whole class.',
+    ),
+  ],
+)
 class PolarColumnChartSeries extends ChartSeries {
   /// Artifact capability required by non-default radial corner placement.
   static const cornerRadiusModeCapability =

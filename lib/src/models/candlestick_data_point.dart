@@ -10,7 +10,25 @@ import 'segment_style.dart';
 ///
 /// The inherited [y] value is always equal to [close]. This keeps generic
 /// point identity and callback behavior meaningful without losing OHLC data.
-@chartSurface
+// The constructor validates OHLC in its BODY, so the reader cannot see the
+// coupling in an assert initializer. `open`/`high`/`low`/`close` are one
+// value — `high >= max(open, close)` and `low <= min(open, close)` — and an
+// individual `withHigh(1)` on a candle whose `low` is 99 threw ArgumentError;
+// they move together through `withOhlc` instead. `x` is only checked for
+// finiteness, which no sibling value can influence.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withOhlc', ['open', 'high', 'low', 'close']),
+  ],
+  bodyValidated: [
+    BodyValidated(
+      'validateValues() rejects a non-finite x. That is a single-parameter '
+      'check with no sibling coupling: withX(v) throws for exactly the v '
+      'that CandlestickDataPoint(x: v, ...) would reject.',
+      params: ['x'],
+    ),
+  ],
+)
 final class CandlestickDataPoint extends ChartDataPoint {
   CandlestickDataPoint({
     required super.x,

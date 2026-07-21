@@ -16,7 +16,29 @@ import 'y_axis_config.dart';
 /// A chart may contain exactly one [DonutChartSeries] and may not mix it with
 /// Pie or Cartesian series. The circular opening is configured by
 /// [DonutChartStyle.innerRadiusFactor].
-@chartSurface
+///
+/// Every generated verb re-validates the whole series, because the
+/// constructor does. As on [PieChartSeries], the legal range of a
+/// [DonutChartStyle] NARROWS inside the series — `innerRadiusFactor` must be
+/// in `(0, 1)` and `sweepAngleDegrees` in `(0, 360]` — so `withDonutStyle` /
+/// `updateDonutStyle` reject a style that is individually constructible. The
+/// coupling crosses the nested-config boundary and cannot be expressed as a
+/// [CombinedSetter]; it is acknowledged instead.
+// The body mixes an opaque validateRadialConfiguration() call with named
+// range checks on donutStyle, sliceRadiusConfig and centerContent, so the
+// opaque statement widens the scope to the whole class.
+@ChartSurface(
+  bodyValidated: [
+    BodyValidated(
+      'validateRadialConfiguration() re-checks the whole series, and the '
+      'body then range-checks donutStyle.innerRadiusFactor, '
+      'donutStyle.sweepAngleDegrees, sliceRadiusConfig.minimumFactor and the '
+      'centerContent label/value rules. A verb whose argument is '
+      'individually valid can therefore throw ArgumentError with the failing '
+      'field named.',
+    ),
+  ],
+)
 class DonutChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered Donut series and validates it in all modes.
   DonutChartSeries({

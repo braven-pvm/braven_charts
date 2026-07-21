@@ -143,6 +143,9 @@ class SurfaceClass {
     this.sealedVariants = const <String>[],
     this.presetFactories = const <String>[],
     this.combinedSetters = const <CombinedSetterModel>[],
+    this.bodyValidations = const <BodyValidationModel>[],
+    this.bodyValidationGroups = const <BodyValidationGroup>[],
+    this.unnamedConstructorParams,
     this.isSealed = false,
   });
 
@@ -183,10 +186,39 @@ class SurfaceClass {
   /// Groups of constructor parameters that appear together in one
   /// constructor-initializer `assert`, sorted, deduplicated.
   ///
+  /// Unioned over EVERY generative constructor the class declares, not just
+  /// the one the reader selected for parameters: the `const _internal` idiom
+  /// puts the asserts on the public constructor and the parameters on the
+  /// private one, and reading only the selected constructor made a whole
+  /// class's coupling invisible.
+  ///
   /// Every group must be covered by a [combinedSetters] entry — otherwise the
   /// reader refuses to model the class, because individual setters could
   /// construct an intermediate value the assert rejects at runtime.
   final List<List<String>> assertGroups;
+
+  /// Constructor-BODY validation the reader detected, one entry per
+  /// generative constructor with a non-empty body.
+  ///
+  /// Every parameter named by a group must be discharged — excluded, owned by
+  /// a [combinedSetters] entry, or acknowledged in [bodyValidations] —
+  /// or the reader refuses to model the class.
+  final List<BodyValidationGroup> bodyValidationGroups;
+
+  /// `ChartSurface(bodyValidated: [...])` acknowledgements.
+  final List<BodyValidationModel> bodyValidations;
+
+  /// Parameters of the class's PUBLIC UNNAMED generative constructor, or
+  /// `null` when it declares none (a sealed base, or the `const _internal`
+  /// shape where the reader selected a private constructor that no test can
+  /// call).
+  ///
+  /// [params] is the surface contract — what verbs exist. This is the
+  /// CONSTRUCTION contract — how a test builds an instance to run them on.
+  /// The two differ for `YAxisConfig`, whose parameters are read from
+  /// `const YAxisConfig._internal(...)` but which can only be built through
+  /// the public `YAxisConfig(position: ...)`.
+  final List<SurfaceParam>? unnamedConstructorParams;
 
   /// Subclass names from `ChartSurface(sealedVariants: [...])` metadata.
   final List<String> sealedVariants;
@@ -203,6 +235,48 @@ class SurfaceClass {
 
   /// Whether the class itself is declared `sealed`.
   final bool isSealed;
+}
+
+/// One generative constructor whose BODY validates the class.
+///
+/// [params] lists the class's modelled parameters the body NAMES. When the
+/// body names none of them — the `validateConfiguration();` shape, where the
+/// statements read fields rather than parameters — the reader cannot tell
+/// which parameters the validation reaches, so [isOpaque] is `true` and
+/// [params] carries every emitted parameter of the class.
+class BodyValidationGroup {
+  const BodyValidationGroup(
+    this.constructorName,
+    this.params, {
+    this.isOpaque = false,
+  });
+
+  /// Declared constructor name; the empty string for the unnamed constructor.
+  final String constructorName;
+
+  /// The modelled parameters this body could reach, sorted.
+  final List<String> params;
+
+  /// Whether [params] is the conservative "every parameter" fallback.
+  final bool isOpaque;
+
+  /// How the constructor is written in a diagnostic.
+  String get displayName =>
+      constructorName.isEmpty ? 'the unnamed constructor' : constructorName;
+}
+
+/// Model counterpart of the `BodyValidated` annotation.
+class BodyValidationModel {
+  const BodyValidationModel(this.reason, this.params);
+
+  /// Why the validation cannot be modelled, and what a caller can still trip.
+  final String reason;
+
+  /// The parameters this acknowledgement covers; empty means every parameter.
+  final List<String> params;
+
+  /// Whether this acknowledgement covers the whole class.
+  bool get isClassWide => params.isEmpty;
 }
 
 /// Model counterpart of the `CombinedSetter` annotation.

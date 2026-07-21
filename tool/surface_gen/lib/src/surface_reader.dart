@@ -33,6 +33,23 @@
 /// [SurfaceClass.isConstConstructible] always describes the SELECTED
 /// constructor.
 ///
+/// Selection governs PARAMETERS only. Two things are read from EVERY
+/// generative constructor the class declares, because reading them from the
+/// selected one alone made real coupling invisible:
+///
+/// - assert initializers ([SurfaceClass.assertGroups]) — deleting
+///   `YAxisConfig`'s hand-written `CombinedSetter`s used to leave the reader
+///   silent, because its asserts live on the public non-const constructor
+///   while its parameters are read from `const YAxisConfig._internal`;
+/// - non-empty constructor BODIES
+///   ([SurfaceClass.bodyValidationGroups]), the unmodelled-validation signal
+///   described below.
+///
+/// [SurfaceClass.unnamedConstructorParams] additionally records the PUBLIC
+/// unnamed constructor's parameters — the construction contract, as opposed
+/// to `params`' surface contract — so generated tests can build a real
+/// instance of a class whose selected constructor is private.
+///
 /// ## Classification precedence
 ///
 /// Each parameter gets exactly one [SurfaceParamKind], decided in this
@@ -84,10 +101,46 @@
 ///   `reachableClasses`), because a subclass almost never shares a file with
 ///   its base. Fix by giving the subclass a covariant `copyWith`, annotating
 ///   `@ChartSurfaceExempt(reason)`, or making `copyWith` abstract.
+///
+///   **Scope of this guard — read before trusting it.** It proves DATA
+///   RETENTION THROUGH VIRTUAL DISPATCH, and nothing else. It answers one
+///   question: does the `copyWith` a subclass effectively runs return the
+///   subclass's own type? It does NOT prove field completeness. A covariant
+///   override that returns the right type while silently dropping inherited
+///   fields — `TintedPieStyle copyWith(...) => TintedPieStyle(tint: tint)`,
+///   discarding `sliceGap`, `opacity` and `gradient` — passes this guard
+///   untouched, and the reviewer confirmed it by injecting exactly that
+///   class. A static sweep of all 647 reachable classes found no real case
+///   today, so the hole is theoretical, but it IS a hole. A cheap
+///   field-coverage check is not available at this layer: `copyWith` bodies
+///   are ordinary Dart, the constructor arguments they build are arbitrary
+///   expressions, and legitimate overrides routinely omit fields that are
+///   DERIVED (`CandlestickDataPoint` never passes `y`; it passes `close` and
+///   the constructor computes `y`). Distinguishing "derived" from "dropped"
+///   needs dataflow the analyzer element model does not offer here, so a
+///   naive "every field appears as an argument" rule would be a false-alarm
+///   generator on the existing fleet. It is deliberately not added.
+///
+///   Note also that passing this guard does not make an INHERITED verb a
+///   no-op-safe operation on a subclass: a base verb may be REMAPPED by the
+///   subclass's `copyWith`. `ChartDataPointFluent.withY(42)` applied to a
+///   base-typed `CandlestickDataPoint` lowers to `copyWith(y: 42)`, which
+///   `CandlestickDataPoint.copyWith` re-reads as `close`, and throws when the
+///   result violates the OHLC ordering. That is a REMAP, not slicing, and it
+///   is out of this guard's scope by construction.
 /// - **assert-coupled parameters** — a multi-parameter constructor assert not
 ///   covered by a `CombinedSetter`. Individual setters would let a chain step
 ///   construct a value the assert rejects (`BarChartSeries(...).withMinWidth(200)`
-///   throws today).
+///   throws today). Scanned over every generative constructor, not just the
+///   selected one.
+/// - **unmodelled constructor validation** — an annotated class with a
+///   non-empty generative constructor BODY. Statements in a body are opaque
+///   to the reader: it can see that the class validates something and cannot
+///   see what, so it cannot prove a generated `withX(...)` produces a value
+///   the constructor accepts. Five classes shipped throwing verbs exactly
+///   this way. Every emitted parameter the body could reach must be
+///   discharged — owned by a `CombinedSetter`, force-excluded, or
+///   acknowledged with `ChartSurface(bodyValidated: [BodyValidated(reason)])`.
 library;
 
 // ignore: implementation_imports
@@ -195,8 +248,19 @@ class AnalyzerSurfaceReader implements SurfaceReader {
 
     final combinedSetters =
         _combinedSetters(annotation.getField('combinedSetters'));
-    final assertGroups = _assertGroups(constructor, params, library);
+    final assertGroups = _assertGroups(cls, params, library);
     _checkAssertCoverage(cls, assertGroups, combinedSetters, params);
+
+    final bodyValidations =
+        _bodyValidations(annotation.getField('bodyValidated'));
+    final bodyGroups = _bodyValidationGroups(cls, params, library);
+    _checkBodyValidationCoverage(
+      cls,
+      bodyGroups,
+      bodyValidations,
+      combinedSetters,
+      params,
+    );
 
     final sealedVariants = _stringList(annotation.getField('sealedVariants'));
 
@@ -209,12 +273,51 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       typeParameters: _typeParameters(cls),
       factories: sealedVariants.isEmpty ? const [] : _factories(cls),
       assertGroups: assertGroups,
+      bodyValidationGroups: bodyGroups,
+      bodyValidations: bodyValidations,
+      unnamedConstructorParams: _unnamedConstructorParams(
+        cls,
+        excluded: excluded,
+        clearFlagOverrides: clearFlagOverrides,
+        copyWithParams: copyWithParams,
+        hasCopyWith: copyWith != null,
+      ),
       params: params,
       sealedVariants: sealedVariants,
       presetFactories: _stringList(annotation.getField('presetFactories')),
       combinedSetters: combinedSetters,
       isSealed: cls.isSealed,
     );
+  }
+
+  /// The PUBLIC unnamed generative constructor's parameters, or `null`.
+  ///
+  /// This is the CONSTRUCTION contract (see
+  /// [SurfaceClass.unnamedConstructorParams]); it coincides with `params` for
+  /// every class except the `const _internal` shape and sealed bases.
+  List<SurfaceParam>? _unnamedConstructorParams(
+    ClassElement cls, {
+    required Set<String> excluded,
+    required Map<String, String> clearFlagOverrides,
+    required Map<String, DartType> copyWithParams,
+    required bool hasCopyWith,
+  }) {
+    for (final constructor in cls.constructors) {
+      if (!constructor.isGenerative) continue;
+      final name = constructor.name;
+      if (name != null && name.isNotEmpty && name != 'new') continue;
+      return [
+        for (final parameter in constructor.formalParameters)
+          _readParam(
+            parameter,
+            excluded: excluded,
+            clearFlagOverrides: clearFlagOverrides,
+            copyWithParams: copyWithParams,
+            hasCopyWith: hasCopyWith,
+          ),
+      ];
+    }
+    return null;
   }
 
   /// Selects the constructor to read, per the library-level dartdoc.
@@ -492,7 +595,16 @@ class AnalyzerSurfaceReader implements SurfaceReader {
     );
   }
 
-  /// Constructor-initializer asserts naming two or more parameters.
+  /// Constructor-initializer asserts naming two or more parameters, unioned
+  /// over EVERY generative constructor the class declares.
+  ///
+  /// Reading only the selected constructor was a hole: `YAxisConfig` puts its
+  /// asserts on the public non-const constructor and its parameters on
+  /// `const YAxisConfig._internal`, so deleting its hand-written
+  /// `CombinedSetter`s left the reader silent while the identical deletion on
+  /// `XAxisConfig` — which has one constructor — fired. Coupling is a
+  /// property of the CLASS, not of whichever constructor happened to be
+  /// selected for parameter reading.
   ///
   /// Only CONST constructors carry their initializers into the element model
   /// (`constantInitializers` exists for constant evaluation). Const-ness is
@@ -502,26 +614,102 @@ class AnalyzerSurfaceReader implements SurfaceReader {
   /// couple parameters exactly as hard, so when the element model is empty the
   /// declaration is parsed and its initializers read from the AST.
   List<List<String>> _assertGroups(
-    ConstructorElement? constructor,
+    ClassElement cls,
     List<SurfaceParam> params,
     LibraryElement library,
   ) {
-    if (constructor == null) return const [];
-    final initializers = _initializers(constructor, library);
-    if (initializers.isEmpty) return const [];
     final names = {for (final param in params) param.name};
+    if (names.isEmpty) return const [];
     final groups = <String, List<String>>{};
-    for (final initializer in initializers) {
-      if (initializer is! AssertInitializer) continue;
-      final visitor = _IdentifierCollector();
-      initializer.condition.accept(visitor);
-      final referenced = (visitor.names.intersection(names).toList())..sort();
-      if (referenced.length < 2) continue;
-      groups[referenced.join(',')] = referenced;
+    for (final constructor in cls.constructors) {
+      if (!constructor.isGenerative) continue;
+      for (final initializer in _initializers(constructor, library)) {
+        if (initializer is! AssertInitializer) continue;
+        final visitor = _IdentifierCollector();
+        initializer.condition.accept(visitor);
+        final referenced = (visitor.names.intersection(names).toList())..sort();
+        if (referenced.length < 2) continue;
+        groups[referenced.join(',')] = referenced;
+      }
     }
     final result = groups.values.toList()
       ..sort((a, b) => a.join(',').compareTo(b.join(',')));
     return result;
+  }
+
+  /// Non-empty generative constructor bodies, one group per constructor.
+  ///
+  /// A body is the unmodelled-validation signal: the reader can see that the
+  /// class validates something in imperative code and cannot see what.
+  ///
+  /// Scope is resolved per STATEMENT, not per body, because the two shapes
+  /// mix — `DonutChartSeries` opens with an opaque
+  /// `validateRadialConfiguration(chartName: 'Donut')` and then range-checks
+  /// `donutStyle` and `centerContent` by name in the statements that follow:
+  ///
+  /// - a statement that NAMES modelled parameters (`validateValues(x: x,
+  ///   open: open, ...)`) contributes exactly those parameters;
+  /// - a statement that names NONE of them (`validateConfiguration();`, which
+  ///   reads FIELDS) makes the whole group opaque — every emitted parameter is
+  ///   in scope and [BodyValidationGroup.isOpaque] is set. Recursing into the
+  ///   callee is not sound: `PieChartSeries` forwards `pieStyle` to
+  ///   `super(radialStyle: pieStyle)` and `validateRadialConfiguration` then
+  ///   range-checks `radialStyle`, so a callee scan would miss the very
+  ///   parameter whose verb throws.
+  ///
+  /// Const constructors cannot have bodies, so this never fires on the
+  /// `_internal` half of a two-constructor class.
+  List<BodyValidationGroup> _bodyValidationGroups(
+    ClassElement cls,
+    List<SurfaceParam> params,
+    LibraryElement library,
+  ) {
+    final names = {for (final param in params) param.name};
+    final emitted = [
+      for (final param in params)
+        if (!_isExcludedKind(param.kind)) param.name,
+    ]..sort();
+    final groups = <BodyValidationGroup>[];
+    for (final constructor in cls.constructors) {
+      if (!constructor.isGenerative) continue;
+      final declaration = _declaration(constructor, library);
+      final body = declaration?.body;
+      if (body is! BlockFunctionBody) continue;
+      final statements = body.block.statements;
+      if (statements.isEmpty) continue;
+      final referenced = <String>{};
+      var isOpaque = false;
+      for (final statement in statements) {
+        final visitor = _IdentifierCollector();
+        statement.accept(visitor);
+        final named = visitor.names.intersection(names);
+        if (named.isEmpty) {
+          isOpaque = true;
+        } else {
+          referenced.addAll(named);
+        }
+      }
+      groups.add(
+        isOpaque
+            ? BodyValidationGroup(
+                _constructorName(constructor),
+                emitted,
+                isOpaque: true,
+              )
+            : BodyValidationGroup(
+                _constructorName(constructor),
+                referenced.toList()..sort(),
+              ),
+      );
+    }
+    return groups;
+  }
+
+  /// The declared name of [constructor]; the empty string when unnamed.
+  String _constructorName(ConstructorElement constructor) {
+    final name = constructor.name;
+    if (name == null || name.isEmpty || name == 'new') return '';
+    return name;
   }
 
   /// The initializers of [constructor] — from the element model for a const
@@ -538,11 +726,19 @@ class AnalyzerSurfaceReader implements SurfaceReader {
       final constant = constructor.constantInitializers;
       if (constant.isNotEmpty) return constant;
     }
+    return _declaration(constructor, library)?.initializers ?? const [];
+  }
+
+  /// The parsed declaration of [constructor], or `null` when the analyzer
+  /// synthesised it (a synthesised constructor has no source and no body).
+  ConstructorDeclaration? _declaration(
+    ConstructorElement constructor,
+    LibraryElement library,
+  ) {
     final parsed = library.session.getParsedLibraryByElement(library);
-    if (parsed is! ParsedLibraryResult) return const [];
+    if (parsed is! ParsedLibraryResult) return null;
     final node = parsed.getFragmentDeclaration(constructor.firstFragment)?.node;
-    if (node is! ConstructorDeclaration) return const [];
-    return node.initializers;
+    return node is ConstructorDeclaration ? node : null;
   }
 
   /// Named diagnostic: assert-coupled parameters.
@@ -574,6 +770,80 @@ class AnalyzerSurfaceReader implements SurfaceReader {
         'rejects at runtime. Add '
         '@ChartSurface(combinedSetters: [$suggestion]) to ${cls.name}, or '
         'force-exclude the parameters.',
+      );
+    }
+  }
+
+  /// Named diagnostic: unmodelled constructor validation.
+  ///
+  /// A parameter is DISCHARGED when it is force-excluded, when it is a member
+  /// of some `CombinedSetter` (the author has explicitly modelled how it
+  /// moves), or when a `BodyValidated` acknowledgement names it — or names
+  /// nothing, which covers the whole class.
+  void _checkBodyValidationCoverage(
+    ClassElement cls,
+    List<BodyValidationGroup> groups,
+    List<BodyValidationModel> acknowledgements,
+    List<CombinedSetterModel> combinedSetters,
+    List<SurfaceParam> params,
+  ) {
+    final known = {for (final param in params) param.name};
+    for (final acknowledgement in acknowledgements) {
+      for (final name in acknowledgement.params) {
+        if (known.contains(name)) continue;
+        throw StateError(
+          'surface_gen: ${cls.name} carries a BodyValidated acknowledgement '
+          'for `$name`, which is not a parameter of its constructor. Known: '
+          '${known.join(', ')}.',
+        );
+      }
+    }
+    if (groups.isEmpty) {
+      if (acknowledgements.isEmpty) return;
+      throw StateError(
+        'surface_gen: stale BodyValidated on ${cls.name} — no generative '
+        'constructor of ${cls.name} has a non-empty body, so there is no '
+        'unmodelled validation to acknowledge. Drop the '
+        'ChartSurface(bodyValidated: [...]) entry.',
+      );
+    }
+
+    final acknowledged = <String>{
+      for (final acknowledgement in acknowledgements)
+        if (acknowledgement.isClassWide) ...known else ...acknowledgement.params,
+    };
+    final combined = <String>{
+      for (final setter in combinedSetters) ...setter.paramNames,
+    };
+    final emitted = {
+      for (final param in params)
+        if (!_isExcludedKind(param.kind)) param.name,
+    };
+
+    for (final group in groups) {
+      final live = [
+        for (final name in group.params)
+          if (emitted.contains(name) &&
+              !combined.contains(name) &&
+              !acknowledged.contains(name))
+            name,
+      ];
+      if (live.isEmpty) continue;
+      final scope = group.isOpaque
+          ? 'names no parameter of ${cls.name}, so every emitted parameter is '
+              'in scope'
+          : 'names ${group.params.join(', ')}';
+      throw StateError(
+        'surface_gen: unmodelled constructor validation — ${cls.name} '
+        'validates in the BODY of ${group.displayName}, not in assert '
+        'initializers, so surface_gen cannot prove a generated verb produces '
+        'a value the constructor accepts. The body $scope; undischarged: '
+        '${live.join(', ')}. Resolve each one by covering it with a '
+        'CombinedSetter when the parameters are genuinely a unit, by naming '
+        'it in ChartSurface(excluded: [...]) when no single verb could keep '
+        'the invariant, or by acknowledging it with '
+        "ChartSurface(bodyValidated: [BodyValidated('why...', "
+        "params: ['${live.first}'])]) — omit `params` to cover the class.",
       );
     }
   }
@@ -619,6 +889,20 @@ class AnalyzerSurfaceReader implements SurfaceReader {
                 .entries)
           entry.key!.toStringValue()!: entry.value!.toStringValue()!,
       };
+
+  /// `ChartSurface(bodyValidated: [...])`.
+  ///
+  /// Read OPTIONALLY: `bodyValidated` is deliberately not part of the
+  /// annotation shape the reader matches on (see the library dartdoc), so a
+  /// fixture mirroring only the five original fields still matches and simply
+  /// carries no acknowledgements.
+  List<BodyValidationModel> _bodyValidations(DartObject? value) => [
+        for (final entry in value?.toListValue() ?? const <DartObject>[])
+          BodyValidationModel(
+            entry.getField('reason')?.toStringValue() ?? '',
+            _stringList(entry.getField('params')),
+          ),
+      ];
 
   List<CombinedSetterModel> _combinedSetters(DartObject? value) => [
         for (final setter in value?.toListValue() ?? const <DartObject>[])
