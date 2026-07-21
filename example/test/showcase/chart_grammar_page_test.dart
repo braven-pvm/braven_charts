@@ -462,8 +462,86 @@ void main() {
       expect(source, isNot(contains('BravenChart.of(')));
       expect(source, isNot(contains('PlotSpec')));
       expect(tester.takeException(), isNull);
+
+      // The Source pane's second reading: the same chart, written back as the
+      // chain. It is emitted over a SYNTHESISED row type, which is exactly the
+      // contrast the hand-written Authoring code card exists to show — the
+      // card's chain reads GrammarSample, this one cannot.
+      // The options panel also has a section titled "Grammar", so the tap is
+      // scoped to the Source pane's own toggle key.
+      final formToggle = find.byKey(const ValueKey('chart-source-form-toggle'));
+      await tester.tap(
+        find.descendant(of: formToggle, matching: find.text('Grammar')),
+      );
+      await tester.pumpAndSettle();
+      final chain = workbench.workbenchController!.generatedSource!.source;
+      expect(chain, contains('final grammarChart = BravenChart.of(rows)'));
+      expect(chain, contains('class GrammarRow {'));
+      expect(chain, contains('.geomLine('));
+      expect(chain, contains('.trend('));
+      expect(chain, isNot(contains('BravenChartPlus(')));
+      expect(
+        find.byKey(const ValueKey('chart-grammar-source-code')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.descendant(of: formToggle, matching: find.text('Config')),
+      );
+      await tester.pumpAndSettle();
+      expect(workbench.workbenchController!.generatedSource!.source, source);
+      expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('the Grammar form emits a chain for every preset', (
+    tester,
+  ) async {
+    const verbs = <String, String>{
+      'lineTrend': '.geomLine(',
+      'multiAxis': '.geomArea(',
+      'scatterChannels': '.geomPoint(',
+      'candlestick': '.geomCandlestick(',
+      'barTransposed': '.geomBar(',
+    };
+
+    // Each preset gets a FRESH page. Switching preset while the Source pane
+    // already holds a snapshot invalidates it and leaves the workbench's
+    // revision-refresh ticker running, which `pumpAndSettle` cannot settle —
+    // a pre-existing workbench behavior the other Source tests work around
+    // the same way.
+    for (final preset in presets) {
+      await pumpPage(tester);
+      await selectPreset(tester, preset);
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('chart-source-form-toggle')),
+          matching: find.text('Grammar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      final chain = workbench.workbenchController!.generatedSource!.source;
+      expect(
+        chain,
+        contains('final grammarChart = BravenChart.of(rows)'),
+        reason: '$preset should emit a chain, not a diagnostic: $chain',
+      );
+      expect(chain, contains(verbs[preset]!), reason: preset);
+      expect(chain, contains('class GrammarRow {'), reason: preset);
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   // ==========================================================================
   // Per-preset fidelity: the page's central claim, asserted

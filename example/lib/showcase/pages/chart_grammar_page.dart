@@ -744,10 +744,13 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
 
   /// The Chart / Data / Split / Source workbench every preset renders inside.
   ///
-  /// The Source tab is the point of the page: the workbench extracts a chart
-  /// document from the mounted chart and generates Dart from it, and it has
-  /// no idea whether the chart came from a `PlotSpec` or from hand-written
-  /// series — because after lowering there is no difference.
+  /// The Source tab is the point of the page, and it now reads the chart TWO
+  /// ways. In Config it extracts a chart document and writes the ordinary
+  /// `BravenChartPlus` Dart, with no idea whether the chart came from a
+  /// `PlotSpec` or from hand-written series — because after lowering there is
+  /// no difference. In Grammar it writes the chain back out over a SYNTHESISED
+  /// row type, which is the honest limit of that direction: a document keeps
+  /// the numbers a chart was built from, never the objects they came out of.
   Widget _buildWorkbench() {
     return BravenChartWorkbench(
       key: const ValueKey('chart-grammar-workbench'),
@@ -764,6 +767,13 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         includeViewState: true,
       ),
       sourceOptions: const ChartDartSourceOptions(variableName: 'grammarChart'),
+      // The Source pane's Config / Grammar toggle is a PACKAGE feature: these
+      // options only name what the grammar form emits, they do not enable it.
+      grammarSourceOptions: const ChartGrammarSourceOptions(
+        variableName: 'grammarChart',
+        rowClassName: 'GrammarRow',
+        rowsVariableName: 'rows',
+      ),
       tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
       splitBreakpoint: 760,
       autoFitTablePane: true,
@@ -791,13 +801,26 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   /// `BravenChart.of(candleRows)` hides the whole point of the layer, which is
   /// that the rows are the AUTHOR'S own typed objects read through accessors,
   /// not a chart-specific row type.
+  ///
+  /// ## Why this card SURVIVED the Source pane's Grammar form
+  ///
+  /// The Source pane can now emit a grammar chain too, which makes this card
+  /// look redundant. It is not, and the difference is the most instructive
+  /// thing on the page: the generated chain reads `(row) => row.power` on a
+  /// SYNTHESISED `GrammarRow`, because a chart document stores numbers, not
+  /// the `GrammarSample` objects they were read out of. This card shows the
+  /// real authoring — the author's own row type, the tear-off accessors over
+  /// it, the domain names. Delete it and the page would silently teach that
+  /// the grammar layer's row type is something the library hands you.
   Widget _buildAuthoringCard() {
     final theme = Theme.of(context);
     return ChartCard(
       key: const ValueKey('chart-grammar-authoring-card'),
-      title: 'Authoring code',
+      title: 'Authoring code — over YOUR row type',
       subtitle:
-          'The chain that builds the chart above — no ChartSeries anywhere',
+          'The chain that builds the chart above, over GrammarSample. The '
+          'Source tab\'s Grammar form emits the same chart over a synthesised '
+          'GrammarRow, because a document keeps numbers, not your objects',
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -810,7 +833,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               child: ChartCodeBlock(
                 key: const ValueKey('chart-grammar-authoring-code'),
                 code: _preset.authoringCode,
-                semanticLabel: 'Authoring code for the '
+                semanticLabel:
+                    'Authoring code for the '
                     '${_preset.label} preset',
               ),
             ),
@@ -930,6 +954,18 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
                 'axis lines, markers, scrollbars, legend and line style are '
                 'widget- or series-level options the grammar does not model '
                 'in V1, so they are hidden here instead of shown inert.',
+          ),
+          const SizedBox(height: 8),
+          const InfoBox(
+            key: ValueKey('chart-grammar-source-forms'),
+            message:
+                'The Source tab has a Config / Grammar toggle. Config writes '
+                'the BravenChartPlus this chart IS; Grammar writes a chain '
+                'that rebuilds it, over a synthesised GrammarRow — compare it '
+                'with the Authoring code card below the chart, which shows '
+                'the real GrammarSample authoring the generator cannot '
+                'recover. A chart the chain cannot reproduce exactly emits a '
+                'named diagnostic instead of code.',
           ),
         ],
       ),
