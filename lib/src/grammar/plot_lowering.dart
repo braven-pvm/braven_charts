@@ -8,6 +8,7 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
@@ -41,6 +42,10 @@ class LoweredPlot {
     required this.yAxes,
     required this.interaction,
     required this.theme,
+    this.grid,
+    this.title,
+    this.subtitle,
+    this.showLegend,
   });
 
   /// One series per geometry mark, in spec order.
@@ -60,6 +65,18 @@ class LoweredPlot {
 
   /// The spec's theme, unchanged. Null lets the chart pick its own.
   final ChartTheme? theme;
+
+  /// The spec's grid configuration, unchanged. Null lets the chart default it.
+  final GridConfig? grid;
+
+  /// The spec's chart title, unchanged.
+  final String? title;
+
+  /// The spec's chart subtitle, unchanged.
+  final String? subtitle;
+
+  /// The spec's legend visibility, unchanged. Null lets the chart default it.
+  final bool? showLegend;
 }
 
 // Const prototypes. Reading defaults off a real instance instead of
@@ -299,6 +316,10 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     yAxes: axes,
     interaction: spec.interaction ?? const InteractionConfig(),
     theme: spec.theme,
+    grid: spec.grid,
+    title: spec.title,
+    subtitle: spec.subtitle,
+    showLegend: spec.showLegend,
   );
 }
 

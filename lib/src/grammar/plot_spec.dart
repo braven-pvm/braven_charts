@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart' show listEquals;
 
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
@@ -42,6 +43,10 @@ class PlotSpec<T> {
     this.interaction,
     this.xAxis,
     this.yAxes = const <YAxisConfig>[],
+    this.grid,
+    this.title,
+    this.subtitle,
+    this.showLegend,
   });
 
   /// Rows every mark's accessors read from.
@@ -78,6 +83,25 @@ class PlotSpec<T> {
   /// to a single default left axis, `axis-0`.
   final List<YAxisConfig> yAxes;
 
+  /// Optional grid configuration.
+  ///
+  /// Null lowers to the chart's default (`const GridConfig()`), which the
+  /// artifact round-trip already reproduces by carrying no grid. A non-null,
+  /// non-default grid is forwarded to `BravenChartPlus` unchanged.
+  final GridConfig? grid;
+
+  /// Optional chart title, forwarded to `BravenChartPlus` unchanged.
+  final String? title;
+
+  /// Optional chart subtitle, forwarded to `BravenChartPlus` unchanged.
+  final String? subtitle;
+
+  /// Whether the legend is shown.
+  ///
+  /// Null lowers to the chart's default (`true`); a non-null value is forwarded
+  /// to `BravenChartPlus` unchanged.
+  final bool? showLegend;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -88,7 +112,11 @@ class PlotSpec<T> {
           other.theme == theme &&
           other.interaction == interaction &&
           other.xAxis == xAxis &&
-          listEquals(other.yAxes, yAxes);
+          listEquals(other.yAxes, yAxes) &&
+          other.grid == grid &&
+          other.title == title &&
+          other.subtitle == subtitle &&
+          other.showLegend == showLegend;
 
   @override
   int get hashCode => Object.hash(
@@ -99,6 +127,10 @@ class PlotSpec<T> {
     interaction,
     xAxis,
     Object.hashAll(yAxes),
+    grid,
+    title,
+    subtitle,
+    showLegend,
   );
 
   @override
