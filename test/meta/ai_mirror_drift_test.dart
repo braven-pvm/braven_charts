@@ -111,30 +111,12 @@ const Map<String, String> _parsedButNotDocumented = <String, String>{};
 ///
 /// The list may SHRINK (a class gains a `copyWith` and gets annotated); it may
 /// not grow unnoticed.
-const Set<String> _builderTargetsOutsideSurfaceModel = <String>{
-  'BarBorderStyle',
-  'BarBulletRange',
-  'BarBulletStyle',
-  'BarChartStyle',
-  'BarDivergingStyle',
-  'BarErrorBarStyle',
-  'BarGradient',
-  'BarInteractionStyle',
-  'BarLabelCalloutStyle',
-  'BarLabelStyle',
-  'BarLollipopStyle',
-  'BarMotionStyle',
-  'BarPatternStyle',
-  'BarTargetMarkerStyle',
-  'BarTrackStyle',
-  'BarWaterfallConnectorStyle',
-  'BarWaterfallStyle',
-  'CandlestickAnimationStyle',
-  'CandlestickChartStyle',
-  'ScatterBinConfig',
-  'ScatterClusterConfig',
-  'ScatterDensityConfig',
-};
+///
+/// Now EMPTY: all 22 classes that once lived here (the `Bar*Style` /
+/// `Candlestick*Style` / `Scatter*Config` families) gained a `copyWith` and a
+/// `@chartSurface` annotation in convergence slice 3a, so they are modelled in
+/// the surface manifest and no longer construction targets outside it.
+const Set<String> _builderTargetsOutsideSurfaceModel = <String>{};
 
 /// Types the builder names that are not config at all — the widget it builds,
 /// its own result type, and Flutter/dart:core values.

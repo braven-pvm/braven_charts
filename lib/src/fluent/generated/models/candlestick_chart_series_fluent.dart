@@ -55,9 +55,26 @@ extension CandlestickChartSeriesFluent on CandlestickChartSeries {
   CandlestickChartSeries withCandlestickStyle(CandlestickChartStyle value) =>
       copyWith(candlestickStyle: value);
 
+  /// Rebuilds [CandlestickChartSeries.candlestickStyle] from its current value.
+  ///
+  /// `update` receives the current [CandlestickChartStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  CandlestickChartSeries updateCandlestickStyle(
+    CandlestickChartStyle Function(CandlestickChartStyle current) update,
+  ) => copyWith(candlestickStyle: update(candlestickStyle));
+
   /// Replaces [CandlestickChartSeries.animation] with [value].
   CandlestickChartSeries withAnimation(CandlestickAnimationStyle value) =>
       copyWith(animation: value);
+
+  /// Rebuilds [CandlestickChartSeries.animation] from its current value.
+  ///
+  /// `update` receives the current [CandlestickAnimationStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  CandlestickChartSeries updateAnimation(
+    CandlestickAnimationStyle Function(CandlestickAnimationStyle current)
+    update,
+  ) => copyWith(animation: update(animation));
 
   /// Replaces [CandlestickChartSeries.densityGrouping] with [value].
   CandlestickChartSeries withDensityGrouping(
