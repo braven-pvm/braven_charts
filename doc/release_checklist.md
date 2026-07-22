@@ -89,6 +89,10 @@ in Flutter. The hero and interaction stills preserve transient tracking state.
 Browser recording remains appropriate for animated interaction and live-stream
 GIFs.
 
+Use `--capture mobile-0.13` against a local release build to capture the
+automatic phone showcase at its deterministic narrow viewport after entrance
+motion has settled.
+
 ## Public showcase
 
 - [ ] `flutter build web --release --base-href /braven_charts/` succeeds from

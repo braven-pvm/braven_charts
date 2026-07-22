@@ -63,14 +63,29 @@ streaming path so each sample does not require a widget-tree rebuild.
 - **Host-extensible chart actions:** add typed context commands or a compact,
   themeable in-chart action while using the same stable Workbench handle for
   artifact capture and application workflows.
+- **Purpose-built phone showcase:** below 600 logical pixels, the hosted demo
+  switches to a touch-sized chart browser with three focused examples for each
+  built-in family, Vivid/Midnight/Calm presentation presets, lazy vertical
+  mounting, and motion-aware chart updates.
 
 [Open the Range Area guide](https://braven-pvm.github.io/braven_charts/?page=range-area-charts),
 [open the Candlestick guide](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts),
 [open the Polar Column guide](https://braven-pvm.github.io/braven_charts/?page=polar-column),
 [open the Chart Grammar guide](https://braven-pvm.github.io/braven_charts/?page=chart-grammar),
 [inspect the value summary](https://braven-pvm.github.io/braven_charts/?page=value-summary),
-or review the [0.12.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0120---2026-07-22)
+or review the [0.13.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0130---2026-07-22)
 for the complete API-level release notes.
+
+## Responsive showcase
+
+The public demo detects phone-width viewports and presents the same ten chart
+families through a focused mobile interface rather than compressing the
+desktop workbench. Controls use touch-sized targets, charts remain vertically
+scrollable, and each family offers three deliberately different examples with
+entrance and update motion. Wider viewports retain the complete desktop
+showcase and configuration panels.
+
+[![Braven Charts phone showcase with animated Range Area examples](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/mobile_showcase.png)](https://braven-pvm.github.io/braven_charts/?page=range-area-charts)
 
 ## Typed authoring and generated source
 
@@ -298,7 +313,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.12.0
+  braven_charts: ^0.13.0
 ```
 
 Then fetch dependencies:
@@ -307,7 +322,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.12.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.13.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

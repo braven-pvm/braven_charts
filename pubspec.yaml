@@ -2,7 +2,7 @@ name: braven_charts
 description: >-
   Pure Dart Flutter charts with typed grammar and generated source: Line,
   Area, Range Area, Bar, Scatter, Candlestick, Pie, Donut, and Polar charts.
-version: 0.12.0
+version: 0.13.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -25,9 +25,9 @@ screenshots:
       including markers, grid control, and a threshold reference.
     path: doc/screenshots/grammar_authoring.png
   - description: >-
-      Workbench Source mode emitting a fidelity-checked Grammar chain from the
-      currently mounted chart, with Config and Grammar forms.
-    path: doc/screenshots/grammar_workbench_source.png
+      Phone-specific showcase with touch-sized family navigation, animated
+      Range Area examples, and selectable presentation themes.
+    path: doc/screenshots/mobile_showcase.png
   - description: >-
       Nested 80% and 50% Range Area forecast intervals with independent
       boundaries, a median line, typed low/high tracking, and widening horizon.
