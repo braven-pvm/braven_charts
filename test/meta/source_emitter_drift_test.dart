@@ -97,37 +97,6 @@ const Map<String, String> _classesNotEmittedBySource = <String, String>{
           'persist this component, so the hydrated ChartTheme never carries a '
           'non-default value and the emitter has nothing to write. (The '
           'per-chart CartesianValueSummaryConfig IS emitted via _emitValueSummary.)',
-  // The 7 Bar value-style classes below became modelled in convergence slice
-  // 3a (copyWith + @chartSurface). Modelling them made this gate SEE that the
-  // emitter has no construction site for any of them (verified: 0 `ClassName(`
-  // occurrences in chart_config_dart_emitter.dart), so an entire style graph is
-  // dropped on round-trip. Pinned whole-class — fix in slice 3b.
-  'BarPatternStyle':
-      'Bar pattern-fill style. The emitter has no _emitBarPatternStyle and no '
-          'construction site, so a patterned bar reconstructs without its fill '
-          '— fix in slice 3b.',
-  'BarMotionStyle':
-      'Per-series bar motion/animation style. No construction site in the '
-          'emitter, so bar motion is lost entirely on round-trip — fix in '
-          'slice 3b.',
-  'BarLabelCalloutStyle':
-      'Leader-line callout style for bar labels. No construction site in the '
-          'emitter, so a bar-label callout is dropped on round-trip — fix in '
-          'slice 3b.',
-  'BarDivergingStyle':
-      'Center-line / diverging style for diverging bars. No construction site '
-          'in the emitter, so the diverging presentation is lost on round-trip '
-          '— fix in slice 3b.',
-  'BarLollipopStyle':
-      'Lollipop head/stem style. No construction site in the emitter, so a '
-          'lollipop bar reconstructs as a plain bar — fix in slice 3b.',
-  'BarBulletStyle':
-      'Bullet-graph measure/range style. No construction site in the emitter, '
-          'so a bullet bar loses its measure and ranges on round-trip — fix in '
-          'slice 3b.',
-  'BarBulletRange':
-      'Qualitative range band nested inside BarBulletStyle. No construction '
-          'site in the emitter (its parent is not emitted) — fix in slice 3b.',
 };
 
 /// Individual modelled properties the emitter does not name, inside classes it
@@ -142,43 +111,6 @@ const Map<String, String> _propertyGaps = <String, String>{
       'Series-to-axis bindings are emitted per series as yAxisId / yAxisConfig, '
           'not as a MultiAxisConfig.bindings map. There is no MultiAxisConfig '
           'object in the emitted graph.',
-  'BarChartSeries.divergingRole':
-      'Captured only in divergingStacked layout, paired with divergingStyle '
-          'below; not emitted for the common grouped/stacked bars.',
-  'BarChartSeries.divergingStyle':
-      'Value type BarDivergingStyle is a copy-with-less class outside the '
-          'surface model (see the coverage boundary); emitting it belongs to '
-          'the unmodelled-class slice.',
-  'BarChartSeries.lollipopStyle':
-      'Value type BarLollipopStyle is a copy-with-less class outside the '
-          'surface model; same reason as divergingStyle.',
-  'BarChartSeries.bulletStyle':
-      'Value type BarBulletStyle is a copy-with-less class outside the surface '
-          'model; same reason as divergingStyle.',
-  'BarChartStyle.pattern':
-      'Bar pattern-fill style. _emitBarChartStyle does not write `pattern`, so '
-          'a patterned bar reconstructs without its fill — fix in slice 3b.',
-  'BarChartStyle.motion':
-      'Bar motion/animation style. _emitBarChartStyle does not write `motion`, '
-          'so per-series bar motion is lost on round-trip — fix in slice 3b.',
-  // BarLabelStyle also drops 7 more fields on round-trip that this flat
-  // name-union gate CANNOT enforce: their names are emitted for OTHER
-  // classes, so isEmitted() is true and a pin here would fail the
-  // "pins still real" sub-test. They are real bugs, fixed in slice 3b
-  // alongside the 3 pinned below:
-  //   collisionPolicy, plotEdgeAware, collisionPadding, backgroundColor,
-  //   borderColor, borderWidth, borderRadius
-  // (This is the gate's documented name-collision blind spot; closing it
-  //  needs a class-aware coverage scan — a separate slice.)
-  'BarLabelStyle.backgroundPadding':
-      '_emitBarLabelStyle omits the label background padding, so a padded label '
-          'background is lost on round-trip — fix in slice 3b.',
-  'BarLabelStyle.callout':
-      '_emitBarLabelStyle omits the label callout config, so a bar-label '
-          'callout is lost on round-trip — fix in slice 3b.',
-  'BarLabelStyle.showStackTotal':
-      '_emitBarLabelStyle omits showStackTotal, so a stack-total label is lost '
-          'on round-trip — fix in slice 3b.',
 };
 
 /// Every `@chartSurface` class keyed to its modelled property names, from the
