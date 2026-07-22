@@ -44,11 +44,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Order matches the enum: barTransposed stays LAST so the sweep never
+  // animates out of a horizontal-bar chart into a Cartesian one (the chart's
+  // retained-bar-exit bounds check requires an all-horizontal transition set).
   const presets = <String>[
     'lineTrend',
     'multiAxis',
     'scatterChannels',
     'candlestick',
+    'referenceLines',
     'barTransposed',
   ];
 
@@ -228,6 +232,7 @@ void main() {
       'scatterChannels': '.geomPoint(',
       'candlestick': '.geomCandlestick(',
       'barTransposed': '.geomBar(',
+      'referenceLines': '.threshold(',
     };
 
     // The preamble is the point of the card: it names the author's OWN typed
@@ -239,6 +244,7 @@ void main() {
       'scatterChannels': '// rideRows — List<GrammarSample>, 13 rows',
       'candlestick': '// candleRows — List<GrammarSample>, 10 OHLC sessions',
       'barTransposed': '// zoneRows — List<GrammarSample>, 5 training zones',
+      'referenceLines': '// rideRows — List<GrammarSample>, 13 rows',
     };
 
     for (final preset in presets) {
@@ -511,6 +517,7 @@ void main() {
       'scatterChannels': '.geomPoint(',
       'candlestick': '.geomCandlestick(',
       'barTransposed': '.geomBar(',
+      'referenceLines': '.threshold(',
     };
 
     // ONE page for the whole sweep: the Source pane stays open and the preset
@@ -549,6 +556,93 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  // ==========================================================================
+  // The V2.0 preset: the emission gaps closed, demonstrated end to end
+  // ==========================================================================
+  //
+  // The Reference lines preset is authored entirely through the facade and
+  // exercises all three V2.0 additions — a threshold reference mark, the
+  // chart-level grid/title options, and a per-mark data-point-marker flag.
+  // Every one of them round-trips, so its Grammar Source tab reaches ready
+  // with a real chain, NOT the "not emitted" diagnostic these shapes drew in
+  // V1.
+  testWidgets(
+    'the Reference lines preset is a facade chain, and its Grammar Source tab '
+    'emits .threshold( / .grid( / showDataPointMarkers with no diagnostic',
+    (tester) async {
+      await pumpPage(tester);
+
+      await selectPreset(tester, 'referenceLines');
+      expect(
+        find.text('Reference marks and chart-level options'),
+        findsOneWidget,
+      );
+
+      // The spec is built by the facade only: area + line geometries, a
+      // threshold reference mark, and the V2.0 chart-level options.
+      final spec = plot(tester).spec;
+      expect(spec.marks, hasLength(3));
+      expect(spec.marks[0], isA<AreaMark<GrammarSample>>());
+      expect(spec.marks[1], isA<LineMark<GrammarSample>>());
+      expect(spec.marks[2], isA<ThresholdMark<GrammarSample>>());
+      expect(
+        (spec.marks[1] as LineMark<GrammarSample>).showDataPointMarkers,
+        isTrue,
+        reason: 'the per-mark marker flag is a V2.0 addition',
+      );
+      expect(spec.grid, isNotNull, reason: '.grid() is a V2.0 chart-level verb');
+      expect(spec.title, 'Ride power');
+
+      // The compare toggle swaps the BravenPlot for the hand-built
+      // BravenChartPlus (in Chart mode, before the Source pane mounts).
+      final toggle = find.byKey(const ValueKey('chart-grammar-compare'));
+      await revealOption(tester, toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenPlot<GrammarSample>), findsNothing);
+      expect(find.byType(BravenChartPlus), findsOneWidget);
+      await revealOption(tester, toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenPlot<GrammarSample>), findsOneWidget);
+
+      // Grammar Source tab: reaches ready and CONTAINS the chain, with every
+      // V2.0 verb, and NO "not emitted" diagnostic.
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('chart-source-form-toggle')),
+          matching: find.text('Grammar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      expect(
+        workbench.workbenchController!.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      final chain = workbench.workbenchController!.generatedSource!.source;
+      expect(chain, contains('final grammarChart = BravenChart.of(rows)'));
+      expect(chain, contains('.threshold('), reason: chain);
+      expect(chain, contains('.grid('), reason: chain);
+      expect(chain, contains('showDataPointMarkers'), reason: chain);
+      expect(chain, contains('.title('), reason: chain);
+      // The headline of the whole lane: these shapes EMIT now, never diagnose.
+      expect(chain, isNot(contains('was not emitted')));
+      expect(chain, isNot(contains('BravenChartPlus(')));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   // ==========================================================================
   // Per-preset fidelity: the page's central claim, asserted
