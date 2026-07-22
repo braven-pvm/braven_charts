@@ -3,6 +3,8 @@
 
 import 'dart:ui';
 
+import '../meta/chart_surface.dart';
+
 /// Price direction represented by a candlestick.
 enum CandlestickDirection { rising, falling, doji }
 
@@ -44,6 +46,11 @@ class CandlestickPointStyle {
 /// Direction colors are nullable because final defaults are resolved by the
 /// chart theme. Geometry values are validated again by
 /// [CandlestickChartSeries] so invalid release-mode input fails closed.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withBodyWidthLimits', ['minBodyWidth', 'maxBodyWidth']),
+  ],
+)
 class CandlestickChartStyle {
   const CandlestickChartStyle({
     this.risingBodyFillColor,
@@ -136,6 +143,75 @@ class CandlestickChartStyle {
     }
   }
 
+  CandlestickChartStyle copyWith({
+    Color? risingBodyFillColor,
+    Color? fallingBodyFillColor,
+    Color? dojiBodyFillColor,
+    Color? risingBorderColor,
+    Color? fallingBorderColor,
+    Color? dojiBorderColor,
+    Color? risingWickColor,
+    Color? fallingWickColor,
+    Color? dojiWickColor,
+    CandlestickBodyFillMode? bodyFillMode,
+    double? bodyWidthFactor,
+    double? minBodyWidth,
+    double? maxBodyWidth,
+    double? bodyBorderWidth,
+    double? wickWidth,
+    bool? showBodyBorder,
+    bool? showWicks,
+    double? bodyCornerRadius,
+    double? minimumBodyHeight,
+    bool clearRisingBodyFillColor = false,
+    bool clearFallingBodyFillColor = false,
+    bool clearDojiBodyFillColor = false,
+    bool clearRisingBorderColor = false,
+    bool clearFallingBorderColor = false,
+    bool clearDojiBorderColor = false,
+    bool clearRisingWickColor = false,
+    bool clearFallingWickColor = false,
+    bool clearDojiWickColor = false,
+  }) => CandlestickChartStyle(
+    risingBodyFillColor: clearRisingBodyFillColor
+        ? null
+        : (risingBodyFillColor ?? this.risingBodyFillColor),
+    fallingBodyFillColor: clearFallingBodyFillColor
+        ? null
+        : (fallingBodyFillColor ?? this.fallingBodyFillColor),
+    dojiBodyFillColor: clearDojiBodyFillColor
+        ? null
+        : (dojiBodyFillColor ?? this.dojiBodyFillColor),
+    risingBorderColor: clearRisingBorderColor
+        ? null
+        : (risingBorderColor ?? this.risingBorderColor),
+    fallingBorderColor: clearFallingBorderColor
+        ? null
+        : (fallingBorderColor ?? this.fallingBorderColor),
+    dojiBorderColor: clearDojiBorderColor
+        ? null
+        : (dojiBorderColor ?? this.dojiBorderColor),
+    risingWickColor: clearRisingWickColor
+        ? null
+        : (risingWickColor ?? this.risingWickColor),
+    fallingWickColor: clearFallingWickColor
+        ? null
+        : (fallingWickColor ?? this.fallingWickColor),
+    dojiWickColor: clearDojiWickColor
+        ? null
+        : (dojiWickColor ?? this.dojiWickColor),
+    bodyFillMode: bodyFillMode ?? this.bodyFillMode,
+    bodyWidthFactor: bodyWidthFactor ?? this.bodyWidthFactor,
+    minBodyWidth: minBodyWidth ?? this.minBodyWidth,
+    maxBodyWidth: maxBodyWidth ?? this.maxBodyWidth,
+    bodyBorderWidth: bodyBorderWidth ?? this.bodyBorderWidth,
+    wickWidth: wickWidth ?? this.wickWidth,
+    showBodyBorder: showBodyBorder ?? this.showBodyBorder,
+    showWicks: showWicks ?? this.showWicks,
+    bodyCornerRadius: bodyCornerRadius ?? this.bodyCornerRadius,
+    minimumBodyHeight: minimumBodyHeight ?? this.minimumBodyHeight,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -185,6 +261,7 @@ class CandlestickChartStyle {
 }
 
 /// Entrance animation settings for a candlestick series.
+@chartSurface
 class CandlestickAnimationStyle {
   const CandlestickAnimationStyle({
     this.mode = CandlestickAnimationMode.reveal,
@@ -212,6 +289,16 @@ class CandlestickAnimationStyle {
       );
     }
   }
+
+  CandlestickAnimationStyle copyWith({
+    CandlestickAnimationMode? mode,
+    double? staggerFraction,
+    CandlestickDataUpdateAnimationMode? dataUpdateMode,
+  }) => CandlestickAnimationStyle(
+    mode: mode ?? this.mode,
+    staggerFraction: staggerFraction ?? this.staggerFraction,
+    dataUpdateMode: dataUpdateMode ?? this.dataUpdateMode,
+  );
 
   @override
   bool operator ==(Object other) =>
