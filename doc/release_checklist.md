@@ -78,7 +78,7 @@ http://127.0.0.1:<port>/` before the public site has the change.
 `--capture pie`, `--capture donut`, `--capture bar`, `--capture scatter`,
 `--capture range-area`, `--capture synchronized`, `--capture polar`,
 `--capture hero`, and `--capture interaction-still`, plus the release-specific
-`--capture cartesian-0.10`, do
+`--capture cartesian-0.10` and `--capture grammar-0.12`, do
 not take browser screenshots. They mount the same Gallery
 configurations in Flutter's deterministic test renderer, call the native
 preview API for individual charts, load Flutter's bundled Roboto font, and
@@ -100,6 +100,7 @@ GIFs.
 - [ ] The deployed Concentric Donut route loads directly and after a browser refresh.
 - [ ] The deployed Polar Column route loads directly and after a browser refresh.
 - [ ] The deployed Candlestick route loads directly and after a browser refresh.
+- [ ] The deployed Chart Grammar route loads directly and after a browser refresh.
 - [ ] The deployed Tracking & Value Display route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.

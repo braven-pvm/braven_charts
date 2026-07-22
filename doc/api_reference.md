@@ -10,6 +10,32 @@ Pub.dev generates the complete member-level API reference from Dart
 documentation comments. This page is a human-oriented map of the main exported
 types and where to begin.
 
+## Authoring surfaces
+
+- `BravenChartPlus` is the direct, immutable chart configuration surface.
+- `BravenChart.of<T>(rows)` starts the typed Chart Grammar facade. Its
+  `x`/`y`, geometry, encoding, axis, reference, title, legend, theme, and
+  interaction verbs build a `PlotSpec<T>` and lower through
+  `PlotSpecLowering` to the ordinary package configuration and renderer.
+- `BravenPlot<T>` mounts a `PlotSpec<T>` directly. `Mark<T>`, `Channel<T>`,
+  `CategoryChannel<T>`, and `GrammarDiagnosticCode` expose the typed grammar
+  model and fail-fast validation contract.
+- `BravenChartWorkbench` keeps one chart mounted across Chart, Data, Split,
+  and Source modes. `initialSourceForm` and `grammarSourceOptions` configure
+  the Config/Grammar source forms; `ChartGrammarSourceGenerator` emits a
+  Grammar chain only after lowering it and proving structural fidelity to the
+  captured chart document.
+- `package:braven_charts/braven_charts_fluent.dart` is an opt-in barrel that
+  re-exports the core API and adds generated immutable modifier extensions to
+  public configuration classes. Applications that do not import it keep the
+  original core namespace.
+
+The Grammar, direct configuration, fluent modifiers, Workbench, artifact
+codecs, data tables, and generated source are authoring and portability
+surfaces over the same renderer. See
+[Chart Grammar and fluent configuration](chart_grammar.md) for supported marks,
+round-trip boundaries, diagnostics, and integration guidance.
+
 ## Chart widget and series
 
 - `BravenChartPlus` — primary chart widget, including `fromValues` and

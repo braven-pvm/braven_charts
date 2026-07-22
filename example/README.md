@@ -7,6 +7,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Chart Workbench directly →**](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
 
+[**Open Chart Grammar directly →**](https://braven-pvm.github.io/braven_charts/?page=chart-grammar)
+
 [**Open Pie Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 
 [**Open the chart-family overview →**](https://braven-pvm.github.io/braven_charts/?page=chart-types)
@@ -111,10 +113,10 @@ bar.
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
 also be captured from Line Charts, Area Charts, Bar Charts, Scatter Charts,
 Range Area Charts, Candlestick Charts, Pie Charts, Donut Charts, Concentric
-Donut, Polar Column, Tracking & Value Display, Multi-Axis, Live Stream,
-Annotations, and Loading States to show path motion, workbench composition,
-radial rendering, categorical composition, the interaction engine, and application states in
-more detail.
+Donut, Polar Column, Chart Grammar, Tracking & Value Display, Multi-Axis, Live
+Stream, Annotations, and Loading States to show path motion, workbench
+composition, radial rendering, categorical composition, the interaction engine,
+and application states in more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
@@ -131,3 +133,6 @@ For path-series motion, streaming boundaries, and the Line/Area workbench, see
 [Line and Area charts](../doc/line_area_charts.md).
 For paired low/high intervals, nested bands, gaps, typed tracking, and portable
 surfaces, see [Range Area charts](../doc/range_area_charts.md).
+For typed marks and encodings, checked lowering, verified Workbench source, and
+the opt-in generated fluent configuration surface, see
+[Chart Grammar and fluent configuration](../doc/chart_grammar.md).
