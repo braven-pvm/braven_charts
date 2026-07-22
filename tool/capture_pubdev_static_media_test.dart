@@ -319,6 +319,25 @@ void main() {
     );
   });
 
+  testWidgets('capture pub.dev 0.12.0 Chart Grammar media', (tester) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    await _captureComposition(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'grammar_authoring.png',
+      source: const _GrammarAuthoringMedia(),
+    );
+    await _captureComposition(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'grammar_workbench_source.png',
+      source: const _GrammarWorkbenchSourceMedia(),
+    );
+  });
+
   testWidgets(
     'capture pub.dev flagship hero media through the public preview API',
     (tester) async {
@@ -768,6 +787,197 @@ Future<void> _captureComposition(
 
   await tester.pumpWidget(const SizedBox.shrink());
 }
+
+class _GrammarAuthoringMedia extends StatelessWidget {
+  const _GrammarAuthoringMedia();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFFF8F7FC),
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Typed chart grammar',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Describe data, marks, encodings, and references; render through the ordinary Braven Charts pipeline.',
+            style: TextStyle(fontSize: 15, color: Color(0xFF625D6B)),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: const ChartCodeBlock(
+                      code: _grammarAuthoringCode,
+                      wrapLines: true,
+                      semanticLabel: 'Typed Braven Chart grammar example',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 6,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFFD9D5E3)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                      child: _grammarMediaChart().build(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _GrammarWorkbenchSourceMedia extends StatelessWidget {
+  const _GrammarWorkbenchSourceMedia();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFFF8F7FC),
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Round-trip source from the mounted chart',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'The Workbench emits either effective BravenChartPlus configuration or a fidelity-checked Grammar chain.',
+            style: TextStyle(fontSize: 15, color: Color(0xFF625D6B)),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFFD9D5E3)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: BravenChartWorkbench(
+                  initialDisplayMode: ChartDisplayMode.source,
+                  initialSourceForm: ChartSourceForm.grammar,
+                  availableDisplayModes: const {
+                    ChartDisplayMode.chart,
+                    ChartDisplayMode.data,
+                    ChartDisplayMode.split,
+                    ChartDisplayMode.source,
+                  },
+                  grammarSourceOptions: const ChartGrammarSourceOptions(
+                    variableName: 'sessionChart',
+                    rowClassName: 'SessionSample',
+                    rowsVariableName: 'samples',
+                  ),
+                  chartBuilder: (context, controller) => _grammarMediaChart()
+                      .build(bravenChartController: controller),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+const _grammarAuthoringCode = '''
+final chart = BravenChart.of(samples)
+    .x((d) => d.minute, label: 'Elapsed (min)')
+    .y((d) => d.power, label: 'Power (W)')
+    .geomArea(
+      name: 'Power',
+      color: Color(0xFF2563EB),
+      fillOpacity: 0.16,
+    )
+    .geomLine(
+      name: 'Sampled power',
+      color: Color(0xFF1D4ED8),
+      showDataPointMarkers: true,
+    )
+    .threshold(
+      value: 285,
+      color: Color(0xFFDC2626),
+    )
+    .grid(GridConfig(vertical: false))
+    .title('Ride power', subtitle: 'Area, markers and FTP threshold')
+    .build();
+''';
+
+BravenChart<_GrammarMediaRow> _grammarMediaChart() =>
+    BravenChart.of(_grammarMediaRows)
+        .x(_grammarMinute, label: 'Elapsed (min)')
+        .y(_grammarPower, label: 'Power (W)')
+        .geomArea(
+          name: 'Power',
+          color: const Color(0xFF2563EB),
+          fillOpacity: 0.16,
+        )
+        .geomLine(
+          name: 'Sampled power',
+          color: const Color(0xFF1D4ED8),
+          strokeWidth: 2.4,
+          interpolation: LineInterpolation.monotone,
+          showDataPointMarkers: true,
+        )
+        .threshold(
+          value: 285,
+          color: const Color(0xFFDC2626),
+          dashPattern: const <double>[6, 4],
+        )
+        .grid(const GridConfig(vertical: false))
+        .title('Ride power', subtitle: 'Area, markers and FTP threshold')
+        .theme(_withCaptureFont(ChartTheme.light));
+
+double _grammarMinute(_GrammarMediaRow row) => row.minute;
+
+double _grammarPower(_GrammarMediaRow row) => row.power;
+
+class _GrammarMediaRow {
+  const _GrammarMediaRow(this.minute, this.power);
+
+  final double minute;
+  final double power;
+}
+
+const _grammarMediaRows = <_GrammarMediaRow>[
+  _GrammarMediaRow(0, 168),
+  _GrammarMediaRow(5, 186),
+  _GrammarMediaRow(10, 204),
+  _GrammarMediaRow(15, 232),
+  _GrammarMediaRow(20, 258),
+  _GrammarMediaRow(25, 276),
+  _GrammarMediaRow(30, 292),
+  _GrammarMediaRow(35, 306),
+  _GrammarMediaRow(40, 298),
+  _GrammarMediaRow(45, 314),
+  _GrammarMediaRow(50, 322),
+  _GrammarMediaRow(55, 307),
+  _GrammarMediaRow(60, 336),
+];
 
 Future<_ChartTypeCapture> _captureChartType(
   WidgetTester tester, {
@@ -1548,6 +1758,9 @@ Future<void> _loadCaptureFont() async {
     'Roboto',
     'Arial',
     'Helvetica',
+    // ChartCodeBlock deliberately requests the platform monospace family.
+    // Widget tests do not resolve that alias unless we register it explicitly.
+    'monospace',
   ]) {
     final loader = FontLoader(family);
     for (final fileName in [
@@ -1567,6 +1780,19 @@ Future<void> _loadCaptureFont() async {
     }
     await loader.load();
   }
+
+  final iconFont = File(
+    '${fontDirectory.path}${Platform.pathSeparator}'
+    'materialicons-regular.otf',
+  );
+  if (!iconFont.existsSync()) {
+    throw StateError('Flutter Material Icons font not found: ${iconFont.path}');
+  }
+  final iconLoader = FontLoader('MaterialIcons')
+    ..addFont(
+      iconFont.readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
+    );
+  await iconLoader.load();
 }
 
 Directory _findFlutterMaterialFontDirectory() {

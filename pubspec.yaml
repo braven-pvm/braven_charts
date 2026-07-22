@@ -1,9 +1,8 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter Line, Area, Range Area, Bar, Scatter, Candlestick, Pie,
-  Donut, Concentric Donut, and Polar Column charts with custom rendering and
-  live interaction.
-version: 0.11.0
+  Pure Dart Flutter charts with typed grammar and generated source: Line,
+  Area, Range Area, Bar, Scatter, Candlestick, Pie, Donut, and Polar charts.
+version: 0.12.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -22,13 +21,17 @@ screenshots:
       stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
+      Typed Chart Grammar authoring beside the rendered Area and Line chart,
+      including markers, grid control, and a threshold reference.
+    path: doc/screenshots/grammar_authoring.png
+  - description: >-
+      Workbench Source mode emitting a fidelity-checked Grammar chain from the
+      currently mounted chart, with Config and Grammar forms.
+    path: doc/screenshots/grammar_workbench_source.png
+  - description: >-
       Nested 80% and 50% Range Area forecast intervals with independent
       boundaries, a median line, typed low/high tracking, and widening horizon.
     path: doc/screenshots/range_area_forecast_fan.png
-  - description: >-
-      Dark financial Range Area envelope combined with a tracked close line,
-      gradient fill, typed interval values, and independent boundaries.
-    path: doc/screenshots/range_area_volatility.png
   - description: >-
       Typed OHLC Candlestick chart with rising, falling, and doji bodies,
       a moving average, event range, threshold, tracking, and dark theme.
@@ -41,10 +44,6 @@ screenshots:
       Nightingale Rose composition using area-correct radial values, direct
       labels, a numeric radial axis, gradients, and elevation.
     path: doc/screenshots/polar_seasonal_rose.png
-  - description: >-
-      Grouped Bar chart with gradients, targets, uncertainty intervals,
-      tracking tooltip, and durable point interaction.
-    path: doc/screenshots/bar_targets_interaction.png
   - description: >-
       Multi-series crosshair tracking across independently scaled line and
       area series.

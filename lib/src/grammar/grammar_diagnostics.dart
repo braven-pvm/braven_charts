@@ -55,7 +55,7 @@ enum GrammarDiagnosticCode {
 
   /// A facade geom was built without an x or y encoding to inherit.
   ///
-  /// Raised by the chained `BravenChart` facade, never by [lower] — a
+  /// Raised by the chained `BravenChart` facade, never by `spec.lower()` — a
   /// [PlotSpec] cannot express a mark with a missing accessor.
   missingEncoding,
 }

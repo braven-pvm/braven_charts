@@ -587,6 +587,8 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command.extend(["--plain-name", "capture pub.dev chart type strip"])
     elif group == "cartesian-0.10":
         command.extend(["--plain-name", "capture pub.dev 0.10.0 Cartesian media"])
+    elif group == "grammar-0.12":
+        command.extend(["--plain-name", "capture pub.dev 0.12.0 Chart Grammar media"])
     subprocess.run(
         command,
         cwd=repository,
@@ -1003,6 +1005,7 @@ def main() -> None:
             "polar",
             "line-area",
             "cartesian-0.10",
+            "grammar-0.12",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -1048,6 +1051,9 @@ def main() -> None:
         return
     if args.capture == "cartesian-0.10":
         _native_stills(args.output_dir, "cartesian-0.10")
+        return
+    if args.capture == "grammar-0.12":
+        _native_stills(args.output_dir, "grammar-0.12")
         return
 
     driver = _driver()

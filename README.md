@@ -19,6 +19,13 @@ and state views; chart, table, split, and generated Dart source modes; and
 portable chart artifacts. Rendering, input handling, and streaming updates
 remain inside the Flutter rendering pipeline.
 
+Charts can be authored directly with immutable configuration objects or with
+the typed `BravenChart.of(rows)` grammar. The Workbench can capture a mounted
+chart and emit either effective `BravenChartPlus` configuration or a
+fidelity-checked Grammar chain. An opt-in generated fluent barrel adds chained
+modifiers to the existing configuration model without expanding the core
+import.
+
 For update-heavy charts, the implementation uses cached series layers, a
 spatial hit-test index, frame-coalesced point delivery, and a direct render-box
 streaming path so each sample does not require a widget-tree rebuild.
@@ -27,6 +34,16 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 ## Current highlights
 
+- **Typed Chart Grammar:** describe data accessors, marks, encodings, axes,
+  references, titles, legends, themes, and interaction through a checked
+  `BravenChart.of(rows)` chain that lowers onto the standard renderer.
+- **Round-trip source from mounted charts:** switch the Workbench Source pane
+  between Config and Grammar forms; Grammar output is emitted only after its
+  lowered chart passes a structural fidelity comparison.
+- **Generated fluent configuration:** opt into approximately 1,160 immutable
+  modifier verbs across 98 public configuration types through
+  `braven_charts_fluent.dart`, generated and drift-checked from the same
+  annotated surface model used by tooling.
 - **Typed Range Area charts:** keep low/high intervals atomic through bounds,
   fill and boundary geometry, tracking, gaps, nested forecast fans, motion,
   tables, artifacts, Workbench, and generated Source.
@@ -50,9 +67,50 @@ streaming path so each sample does not require a widget-tree rebuild.
 [Open the Range Area guide](https://braven-pvm.github.io/braven_charts/?page=range-area-charts),
 [open the Candlestick guide](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts),
 [open the Polar Column guide](https://braven-pvm.github.io/braven_charts/?page=polar-column),
+[open the Chart Grammar guide](https://braven-pvm.github.io/braven_charts/?page=chart-grammar),
 [inspect the value summary](https://braven-pvm.github.io/braven_charts/?page=value-summary),
-or review the [0.11.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0110---2026-07-21)
+or review the [0.12.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#0120---2026-07-22)
 for the complete API-level release notes.
+
+## Typed authoring and generated source
+
+The Grammar is an authoring layer, not a second renderer. It lowers to the same
+series, annotations, axes, themes, interaction configuration, artifacts, data
+tables, and rendering pipeline used by `BravenChartPlus`. Workbench source
+generation travels in the opposite direction: it captures the mounted chart,
+reconstructs a typed chain, lowers that chain, and refuses to emit it if the
+result is not structurally equivalent.
+
+[![Typed Braven Chart Grammar code beside the chart it renders](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/grammar_authoring.png)](https://braven-pvm.github.io/braven_charts/?page=chart-grammar)
+
+[![Workbench Source mode showing its Config and Grammar forms](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/grammar_workbench_source.png)](https://braven-pvm.github.io/braven_charts/?page=chart-grammar)
+
+```dart
+final chart = BravenChart.of(samples)
+    .x(sampleMinute, label: 'Elapsed (min)')
+    .y(samplePower, label: 'Power (W)')
+    .geomArea(name: 'Power', fillOpacity: 0.16)
+    .geomLine(
+      name: 'Sampled power',
+      interpolation: LineInterpolation.monotone,
+      showDataPointMarkers: true,
+    )
+    .threshold(value: 285, color: Colors.red)
+    .grid(const GridConfig(vertical: false))
+    .title('Ride power', subtitle: 'Area, markers and FTP threshold')
+    .build();
+```
+
+For generated immutable modifiers, import the opt-in barrel instead of the core
+barrel:
+
+```dart
+import 'package:braven_charts/braven_charts_fluent.dart';
+
+final crosshair = const CrosshairConfig()
+    .withMode(CrosshairMode.vertical)
+    .withSnapRadius(24);
+```
 
 ## Rendered examples
 
@@ -240,7 +298,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.11.0
+  braven_charts: ^0.12.0
 ```
 
 Then fetch dependencies:
@@ -249,7 +307,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.11.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.12.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
