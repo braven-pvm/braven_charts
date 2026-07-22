@@ -574,6 +574,7 @@ class ChartConfigDartEmitter {
       _optionalNumber(writer, 'colorValue', point.colorValue);
       _optionalNumber(writer, 'opacityValue', point.opacityValue);
       _optionalString(writer, 'pointKey', point.pointKey);
+      _optionalString(writer, 'categoryValue', point.categoryValue);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',

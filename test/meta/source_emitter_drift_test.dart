@@ -155,16 +155,7 @@ const Map<String, String> _classAwareResidualClasses = <String, String>{
 /// that are deliberately NOT emitted, one reviewed reason each. Unlike a parser
 /// miss (a whole excluded class) these are per-property structural non-emits
 /// inside a block that IS correctly attributed.
-const Map<String, String> _classAwareExpectedGaps = <String, String>{
-  'CandlestickDataPoint.categoryValue':
-      'Codec-gated, not emitter-gated: the artifact codec ENCODES categoryValue '
-          '(_encodePoint) but _decodeCandlestickPoint drops it — unlike '
-          '_decodeRangeAreaPoint — so the hydrated candlestick point the '
-          'generator reads always has categoryValue == null. Emitting it would '
-          'produce dead output that never round-trips (cf. the divergingRole '
-          'codec-gating precedent) and would falsely register coverage here. '
-          'Fixing the codec decode is a separate slice; pin until then.',
-};
+const Map<String, String> _classAwareExpectedGaps = <String, String>{};
 
 /// Every `@chartSurface` class keyed to its modelled property names, from the
 /// generated manifest.

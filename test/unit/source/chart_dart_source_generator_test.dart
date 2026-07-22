@@ -1740,6 +1740,20 @@ void main() {
       expect(src, contains('color: Color(0xFFAA0000),'));
       expect(src, contains("label: 'low',"));
     });
+
+    test('emits CandlestickDataPoint.categoryValue', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        CandlestickChartSeries(
+          id: 'c',
+          points: [
+            CandlestickDataPoint(
+              x: 0, open: 2, high: 4, low: 1, close: 3, categoryValue: 'Q1',
+            ),
+          ],
+        ),
+      )));
+      expect(generated.source, contains("categoryValue: 'Q1',"));
+    });
   });
 }
 
