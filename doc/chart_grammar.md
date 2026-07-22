@@ -517,8 +517,8 @@ runtime-only bindings.
 | A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
 | Mixed bar orientations | **Blocked**: `.transposed()` is a whole-chart operation, so a transposed chain may contain horizontal bar marks only. |
 | An annotation other than `TrendAnnotation` | **Blocked and LISTED**, never dropped. `TrendAnnotation` maps to `.trend(of:)`. |
-| A chart-level option `BravenPlot` does not forward — title, subtitle, `showLegend`, `legendStyle`, grid, `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, `axisSwapMode`, `normalizationMode`, width/height, background | **Blocked**, naming each one. `BravenPlot` passes only series, annotations, the X axis, interaction and the theme. |
-| Anything else the reconstructed chain would not reproduce exactly | **Blocked** by the round-trip proof, naming the series, annotation or axis that differs. |
+| A chart-level option `BravenPlot` does not forward — title, subtitle, `showLegend`, `legendStyle`, a **non-default** grid, `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, `axisSwapMode`, `normalizationMode`, width/height, background | **Blocked**, naming each one. `BravenPlot` passes only series, annotations, the X axis, interaction and the theme. A *default* grid is not lost: `BravenChartPlus` resolves an unset grid to exactly `const GridConfig()`, which the chain reproduces by carrying no grid. |
+| Anything else the reconstructed chain would not reproduce exactly | **Blocked** by the round-trip proof, naming the series, annotation or axis that differs — and, where it can be pinned down cheaply, the specific option a V1 mark cannot carry (e.g. `showDataPointMarkers`, a fill gradient, an inline label) or the single-axis binding a config-authored chart leaves implicit. |
 | A runtime interaction binding | **Emitted with a warning**, exactly as the config form does. |
 | Data above `maxInlinePoints` | **Emitted with a placeholder row list and a warning**, exactly as the config form does. |
 | A host-owned theme reference | **Emitted without `.theme(...)`**, with a warning naming the reference. |
@@ -557,6 +557,17 @@ Deferred deliberately, so the V1 mark list is closed:
 - **Scale-driven channels on non-scatter families.** Colour/size/opacity
   channels exist only on `ScatterMark`, because scatter is the only family the
   render pipeline scales today.
+- **Non-trend annotation marks.** Only `TrendAnnotation` maps to the grammar,
+  through `.trend(of:)`; Range/Threshold/Point annotations have no chain verb.
+- **Grid and other chart-level options.** A non-default grid, title/subtitle,
+  legend/toolbar toggles, width/height, background and the axis-swap /
+  normalization knobs live on `BravenChartPlus`, not on `PlotSpec` / `BravenPlot`.
+  (A *default* grid IS carried — see the fidelity matrix.)
+- **Grammar-source emission of config-authored single-axis charts.** The
+  Workbench Grammar form reproduces charts document-for-document; a chart on the
+  widget-level `yAxis:` path (a series whose `yAxisId` is unset) is diagnosed
+  rather than emitted, because the grammar always binds every series to an
+  explicit axis.
 - **Stat reactivity unification.** `TrendMark` lowers onto the existing trend
   annotation statistics; the grammar adds no new statistics of its own.
 

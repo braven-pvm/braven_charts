@@ -260,10 +260,43 @@ becomes the single source of truth the hand-written mirrors converge on.
   (spec-lowered vs hand-built configs) and asserts config equality and
   artifact-document equality. The GoG layer cannot silently drift from the
   config surface it lowers to.
-- Deferred to V2+ (explicitly out of scope): radial/polar marks, faceting
-  (lowers to multiple widgets + `ChartInteractionGroupController`), log/time
-  scale objects, scale-driven color/size on non-scatter families,
-  string-column data adapters, stat reactivity unification.
+- Deferred to V2+ (explicitly out of scope). The V1 mark list is closed, so
+  every entry below is a V2 backlog item, not a V1 gap:
+  - **Radial/polar marks** — Pie, Donut, Concentric Donut, Polar Column have no
+    grammar geometry; author them with their config APIs.
+  - **Faceting / small multiples** — lowers to multiple widgets +
+    `ChartInteractionGroupController`, a different shape from one-spec-one-chart.
+  - **Log/time scale objects** — axis scaling stays in `XAxisConfig`/`YAxisConfig`.
+  - **Scale-driven colour/size/opacity channels on non-scatter families** —
+    scatter is the only family the render pipeline scales today.
+  - **String-column data adapters** — typed rows through typed accessors only;
+    no `data['column']` form.
+  - **Non-trend annotation marks** — only `TrendAnnotation` maps to the grammar
+    (`.trend(of:)`); Range/Threshold/Point annotations have no chain verb.
+  - **Grid and other chart-level options the grammar does not carry** — a
+    non-default grid, title/subtitle, legend/toolbar toggles, width/height,
+    background, and the axis-swap/normalization knobs live on `BravenChartPlus`,
+    not on `PlotSpec`/`BravenPlot`. (A *default* grid is carried: `BravenChartPlus`
+    resolves an unset grid to exactly `const GridConfig()`, which the chain
+    reproduces by carrying no grid.)
+  - **Stat reactivity unification** — `TrendMark` lowers onto the existing trend
+    statistics; the grammar adds none of its own.
+  - **Grammar-source emission coverage boundary** — the Workbench Grammar form
+    emits a chain only for charts the grammar reproduces document-for-document.
+    A config-authored single-axis chart (a series whose `yAxisId` is unset, i.e.
+    the widget-level `yAxis:` path) and any series/annotation/axis option no V1
+    mark carries (data-point markers, inline labels, fill gradients,
+    split-baseline fills, non-trend annotations, a non-default grid, …) are
+    diagnosed by name — now identifying the specific lost option — not emitted.
+  - **AI-literal ↔ builder-AST convergence** — deleting the 1,698 hand-written
+    tool-schema literals in favour of a single generated source (Options 2/3
+    below) remains an owner decision, still deferred.
+  - **`copyWith`-less classes carry no fluent verbs** — the marks, `PlotSpec`,
+    `Channel`, `CategoryChannel`, `LoweredPlot` and the config classes without a
+    `copyWith` are deliberately outside the generated surface; widening that is a
+    V2 call.
+  - **`YAxisConfig.withId` is `@visibleForTesting`** — production axis ids are
+    set with `.copyWith(id:)`; promoting `withId` to public API is deferred.
 
 ### Chained facade (sugar over the spec)
 

@@ -45,7 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generator lowers the spec it is about to write and compares the resulting
   series, annotations and axes to the ones the document hydrated to, so a
   chain that would render a different chart is refused with a named diagnostic
-  and no code. Non-Cartesian families, misaligned x domains, partially
+  and no code — one that identifies the specific series, annotation or axis
+  option a V1 mark cannot carry (a lost series field, or the single-axis
+  binding a config-authored chart leaves implicit) rather than only reporting
+  that the chart "does not reproduce exactly". Non-Cartesian families,
+  misaligned x domains, partially
   populated scatter channels, mixed bar orientations, annotations other than
   `TrendAnnotation` and chart-level options `BravenPlot` does not forward are
   each diagnosed by name; runtime bindings and over-budget data are warned
