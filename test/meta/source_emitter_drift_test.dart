@@ -311,10 +311,19 @@ String _methodSlice(String source, String methodName) {
   return '';
 }
 
-/// The fields every series emits: the `_emitSeries` body BEFORE its
-/// `switch (series)` type dispatch, plus the shared `_emitPoints` and
-/// `_emitSeriesStyle` helpers (points and the style discriminator are written
-/// through those helpers, not inline in `_emitSeries`).
+/// The fields every series emits UNCONDITIONALLY: the `_emitSeries` body BEFORE
+/// its `switch (series)` type dispatch (minus the `isXOrdered` gate, see below),
+/// plus the shared `_emitPoints` helper.
+///
+/// `style` and `isXOrdered` are DELIBERATELY excluded from this shared slice.
+/// Both are written through a per-series RUNTIME allowlist — `style` via the
+/// `_emitSeriesStyle` `if (series is …)` allowlist, `isXOrdered` via the
+/// `if (series is! …)` negative gate around its `_valueIf`. Unioning either into
+/// every series' slice would credit ALL series with the field regardless of that
+/// allowlist, so a regression that dropped a series from the emitter's allowlist
+/// would NOT be caught (the latent unsoundness slice 3f closes). They are
+/// attributed per-series in [_seriesEmittedNames] against the SAME allowlists,
+/// parsed from source ([_styleAllowlist] / [_isXOrderedExcluded]).
 String _sharedSeriesBaseSlice(String source) {
   final emitSeries = _methodSlice(source, '_emitSeries');
   // Two `switch (series)` occur: the `final constructor = switch (series)`
@@ -324,11 +333,47 @@ String _sharedSeriesBaseSlice(String source) {
   // the two switches.
   final switchIdx = emitSeries.lastIndexOf('switch (series)');
   final base = switchIdx == -1 ? emitSeries : emitSeries.substring(0, switchIdx);
+  // Strip the isXOrdered gate (the `if (series is! …) { _valueIf(… 'isXOrdered'
+  // …); }` block) so the shared base does not credit `isXOrdered` to every
+  // series — it is attributed per-series below.
+  final baseWithoutIsXOrdered = base.replaceAll(
+    RegExp(r"if \(series is![\s\S]*?'isXOrdered'[\s\S]*?\n\s*\}\n"),
+    '\n',
+  );
   return <String>[
-    base,
+    baseWithoutIsXOrdered,
     _methodSlice(source, '_emitPoints'),
-    _methodSlice(source, '_emitSeriesStyle'),
+    // _emitSeriesStyle is intentionally NOT unioned here — `style` is
+    // attributed per-series in _seriesEmittedNames.
   ].join('\n');
+}
+
+/// Series the emitter's `_emitSeriesStyle` positive allowlist names with
+/// `series is <ClassName>`, parsed from the method body. A series dropped from
+/// this allowlist loses its `style` credit in [_seriesEmittedNames], so the
+/// per-series gate fails for it — this is what makes the gate non-vacuous. The
+/// base type, admitted via `runtimeType ==`, is deliberately not parsed (it is
+/// not a manifest series, so it is never checked by the gate).
+Set<String> _styleAllowlist(String source) {
+  final method = _methodSlice(source, '_emitSeriesStyle');
+  return <String>{
+    for (final match in RegExp(r'series is (\w+)').allMatches(method))
+      match.group(1)!,
+  };
+}
+
+/// Series the emitter EXCLUDES from `isXOrdered` emission, parsed from the
+/// `series is! <ClassName>` negative gate around the `'isXOrdered'` `_valueIf`
+/// in `_emitSeries`. A series emits `isXOrdered` iff it is NOT in this set.
+Set<String> _isXOrderedExcluded(String source) {
+  final emitSeries = _methodSlice(source, '_emitSeries');
+  final gate =
+      RegExp(r"if \(series is![\s\S]*?'isXOrdered'").firstMatch(emitSeries);
+  if (gate == null) return const <String>{};
+  return <String>{
+    for (final match in RegExp(r'series is! (\w+)').allMatches(gate.group(0)!))
+      match.group(1)!,
+  };
 }
 
 /// `ScatterChartSeries` is emitted INLINE in the `_emitSeries` switch (no
@@ -345,14 +390,27 @@ String _scatterCaseSlice(String source) {
 }
 
 /// The union of emitted names for a series: shared base + its mapped method
-/// bodies (+ the scatter-case slice for the inline scatter series).
+/// bodies (+ the scatter-case slice for the inline scatter series), plus the
+/// per-series `style` / `isXOrdered` attribution.
+///
+/// `style` and `isXOrdered` are NOT in the shared base slice (they are written
+/// through per-series runtime allowlists — see [_sharedSeriesBaseSlice]). They
+/// are attributed here against the SAME allowlists parsed from the emitter
+/// source, so a series is credited a field iff the emitter actually emits it
+/// for that series. Dropping a series from the emitter's allowlist therefore
+/// makes this gate fail for that series (non-vacuous).
 Set<String> _seriesEmittedNames(String source, String className) {
   final parts = <String>[_sharedSeriesBaseSlice(source)];
   if (className == 'ScatterChartSeries') parts.add(_scatterCaseSlice(source));
   for (final method in _seriesEmitMethods[className] ?? const <String>[]) {
     parts.add(_methodSlice(source, method));
   }
-  return _emitterMentions(parts.join('\n'));
+  final names = _emitterMentions(parts.join('\n'));
+  if (_styleAllowlist(source).contains(className)) names.add('style');
+  if (!_isXOrderedExcluded(source).contains(className)) {
+    names.add('isXOrdered');
+  }
+  return names;
 }
 
 void main() {
@@ -731,6 +789,61 @@ void main() {
           'slice, add it to _seriesEmitMethods (do NOT pin a batch of gaps — '
           'that means the slice is wrong). A genuine structural non-emit goes '
           'in _seriesExpectedGaps with a reason:\n${gaps.join('\n')}',
+    );
+  });
+
+  test(
+      'style and isXOrdered are attributed per-series against the emitter '
+      'allowlists, not credited via the shared base slice', () {
+    final source = _emitterSource;
+
+    // (1) STRUCTURAL: the shared series base slice must credit NEITHER field.
+    // If it did, every series would count as covered regardless of the
+    // emitter's runtime allowlist — the latent unsoundness this closes: a
+    // series dropped from the _emitSeriesStyle allowlist (or added to the
+    // isXOrdered negative gate) would still pass the per-series gate because
+    // the shared base carried the field name for all series.
+    final baseNames = _emitterMentions(_sharedSeriesBaseSlice(source));
+    expect(baseNames.contains('style'), isFalse,
+        reason: 'the shared series base slice still names `style`; exclude '
+            "_emitSeriesStyle's body from _sharedSeriesBaseSlice so `style` is "
+            'attributed per-series.');
+    expect(baseNames.contains('isXOrdered'), isFalse,
+        reason: 'the shared series base slice still names `isXOrdered`; strip '
+            'its _valueIf gate from _sharedSeriesBaseSlice so it is attributed '
+            'per-series.');
+
+    // (2) The mirrored allowlists parse a plausible set — a rename/refactor that
+    // emptied them would make the per-series enforcement below vacuous.
+    final styleAllowlist = _styleAllowlist(source);
+    final isXOrderedExcluded = _isXOrderedExcluded(source);
+    expect(styleAllowlist, contains('LineChartSeries'),
+        reason: 'could not parse the _emitSeriesStyle `series is` allowlist');
+    expect(isXOrderedExcluded, contains('CandlestickChartSeries'),
+        reason: 'could not parse the isXOrdered `series is!` negative gate');
+
+    // (3) Each manifest series that MODELS the field is credited iff the
+    // emitter's own allowlist emits it for that series — required-covered for
+    // the emitting series, and (via step 1) NOT credited for the others.
+    final gaps = <String>[];
+    for (final className in _seriesEmitMethods.keys) {
+      final props = surface[className];
+      if (props == null) continue;
+      final names = _seriesEmittedNames(source, className);
+      if (props.contains('style') && !names.contains('style')) {
+        gaps.add('$className.style');
+      }
+      if (props.contains('isXOrdered') && !names.contains('isXOrdered')) {
+        gaps.add('$className.isXOrdered');
+      }
+    }
+    gaps.sort();
+    expect(
+      gaps,
+      isEmpty,
+      reason: 'these series model style/isXOrdered but the emitter allowlist '
+          'parsed from source does NOT emit them for that series, so they are '
+          'dropped on round-trip:\n${gaps.join('\n')}',
     );
   });
 
