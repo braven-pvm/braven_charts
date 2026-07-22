@@ -695,6 +695,159 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 8: a threshold annotation becomes .threshold(', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'threshold',
+        fragments: <String>[
+          '.threshold(',
+          'value: 250',
+          'axis: AnnotationAxis.y',
+          "label: 'FTP'",
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .threshold(
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .threshold(
+              id: 'mark-1',
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 9: a range annotation becomes .band(', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'band',
+        fragments: <String>[
+          '.band(',
+          'start: 200',
+          'end: 260',
+          'axis: AnnotationAxis.y',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .band(
+              start: 200,
+              end: 260,
+              axis: AnnotationAxis.y,
+              label: 'Zone',
+              color: const Color(0x332563EB),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .band(
+              id: 'mark-1',
+              start: 200,
+              end: 260,
+              axis: AnnotationAxis.y,
+              label: 'Zone',
+              color: const Color(0x332563EB),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 10: a point annotation becomes .pointAt(', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'point',
+        fragments: <String>[
+          '.pointAt(',
+          "seriesId: 'mark-0'",
+          'dataPointIndex: 1',
+          'markerShape: MarkerShape.star',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .pointAt(
+              seriesId: 'mark-0',
+              dataPointIndex: 1,
+              label: 'Peak',
+              color: const Color(0xFFDC2626),
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .pointAt(
+              id: 'mark-1',
+              seriesId: 'mark-0',
+              dataPointIndex: 1,
+              label: 'Peak',
+              color: const Color(0xFFDC2626),
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
   });
 
   group('fidelity matrix diagnostics', () {
@@ -770,6 +923,9 @@ void main() {
     testWidgets('an annotation the chain cannot express is listed', (
       tester,
     ) async {
+      // PinAnnotation is an arbitrary-coordinate marker with no chain verb (its
+      // series-bound cousin, PointAnnotation, is what .pointAt() expresses), so
+      // it stays gated after Grammar V2.0 mapped trend/threshold/band/point.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -784,7 +940,7 @@ void main() {
             ),
           ],
           annotations: <ChartAnnotation>[
-            ThresholdAnnotation(id: 'ftp', value: 1.5, axis: AnnotationAxis.y),
+            PinAnnotation(id: 'here', x: 0.5, y: 1.5),
           ],
         ),
       );
@@ -793,9 +949,9 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(
-          contains('TrendAnnotation only'),
-          contains('ThresholdAnnotation'),
-          contains('ftp'),
+          contains('trend, threshold, band and point'),
+          contains('PinAnnotation'),
+          contains('here'),
         ),
       );
     });

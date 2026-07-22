@@ -35,7 +35,8 @@
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
-/// | an annotation other than `TrendAnnotation` | blocked and LISTED, never dropped |
+/// | a chart-level trend, threshold, range or point annotation | emitted as .trend/.threshold/.band/.pointAt |
+/// | any other annotation (text, pin, chord, error-bar, legend, a 2-D/half-open range, or ANY series-level annotation) | blocked and LISTED, never dropped |
 /// | a chart-level option `BravenPlot` does not forward (title, legend, grid, size, …) | blocked and named |
 /// | anything else the reconstructed chain would not reproduce | blocked by the round-trip proof below |
 /// | a runtime interaction binding | emitted with a warning, exactly as the config form does |
@@ -421,9 +422,16 @@ class _GrammarChainEmitter {
     }
 
     // ---- 5. annotations ---------------------------------------------------
+    // Chart-level trend, threshold, band and point annotations each have a
+    // chain verb (a reference mark). Every OTHER annotation type — and ALL
+    // series-level annotations, which the grammar can only ever produce at
+    // chart level — has none, and is listed rather than dropped. A range that
+    // is not a clean 1-D band (a 2-D box, or a half-open bound) has no
+    // BandMark either, so `_annotationMark` returns null for it and it lands
+    // here too.
     final inexpressible = <String>[];
     for (final annotation in configuration.annotations) {
-      if (annotation is! TrendAnnotation) {
+      if (_annotationMark(annotation) == null) {
         inexpressible.add('${annotation.id} (${annotation.runtimeType})');
       }
     }
@@ -436,9 +444,10 @@ class _GrammarChainEmitter {
     }
     if (inexpressible.isNotEmpty) {
       block(
-        'Grammar chain not emitted: the chain expresses TrendAnnotation only, '
-        'through .trend(of:). These annotations have no chain verb and are '
-        'not dropped silently: ${inexpressible.join(', ')}.',
+        'Grammar chain not emitted: the chain expresses only trend, threshold, '
+        'band and point reference annotations, through .trend(of:), '
+        '.threshold(), .band() and .pointAt(). These annotations have no chain '
+        'verb and are not dropped silently: ${inexpressible.join(', ')}.',
         path: r'$.annotations',
       );
       return null;
@@ -491,13 +500,13 @@ class _GrammarChainEmitter {
     for (final item in series) {
       geometries.add(_planGeometry(item, xField));
     }
-    final trends = <TrendAnnotation>[
-      for (final annotation in configuration.annotations)
-        annotation as TrendAnnotation,
-    ];
+    // Every chart-level annotation passed the gate above, so each maps to a
+    // reference mark. Their order is preserved, which is what keeps the
+    // round-trip proof's index-by-index annotation comparison honest.
     final marks = <Mark<_SourceRow>>[
       for (final plan in geometries) plan.mark,
-      for (final annotation in trends) _planTrend(annotation),
+      for (final annotation in configuration.annotations)
+        _annotationMark(annotation)!,
     ];
 
     // ---- 8. the round-trip proof -----------------------------------------
@@ -538,7 +547,6 @@ class _GrammarChainEmitter {
     _captureKnownLimitations();
     return _emitBody(
       geometries: geometries,
-      trends: trends,
       transposed: transposed,
       xField: xField,
       rows: rows,
@@ -680,9 +688,7 @@ class _GrammarChainEmitter {
     for (var index = 0; index < lowered.annotations.length; index++) {
       final expected = configuration.annotations[index];
       final actual = lowered.annotations[index];
-      if (expected is! TrendAnnotation ||
-          actual is! TrendAnnotation ||
-          !_sameTrend(expected, actual)) {
+      if (!_sameAnnotation(expected, actual)) {
         return (
           subject: 'annotation "${expected.id}"',
           detail: _genericLossDetail,
@@ -845,6 +851,92 @@ class _GrammarChainEmitter {
     }
     return null;
   }
+
+  /// Structural equality for two annotations of the SAME expressible type.
+  ///
+  /// The annotation hierarchy is identity-compared, so each expressible type
+  /// gets a hand-written full-field comparison below. A pair of different
+  /// runtime types (or an unmapped type) compares unequal, which refuses the
+  /// chain — the safe direction.
+  static bool _sameAnnotation(ChartAnnotation a, ChartAnnotation b) {
+    if (a is TrendAnnotation && b is TrendAnnotation) return _sameTrend(a, b);
+    if (a is ThresholdAnnotation && b is ThresholdAnnotation) {
+      return _sameThreshold(a, b);
+    }
+    if (a is RangeAnnotation && b is RangeAnnotation) return _sameRange(a, b);
+    if (a is PointAnnotation && b is PointAnnotation) return _samePoint(a, b);
+    return false;
+  }
+
+  /// Full-field equality for a [ThresholdAnnotation].
+  ///
+  /// Compares EVERY field, including the ones a `ThresholdMark` cannot carry
+  /// (`seriesId`, `labelPosition`, `labelMargin`, `elevation`, `style`,
+  /// `zIndex`, the snap knobs, `allowDragging`/`allowEditing`). A captured
+  /// threshold that sets one of them is REFUSED rather than emitted as a chain
+  /// that silently drops it.
+  static bool _sameThreshold(ThresholdAnnotation a, ThresholdAnnotation b) =>
+      a.id == b.id &&
+      a.label == b.label &&
+      a.axis == b.axis &&
+      a.value == b.value &&
+      a.seriesId == b.seriesId &&
+      a.lineColor == b.lineColor &&
+      a.lineWidth == b.lineWidth &&
+      _sameDashPattern(a.dashPattern, b.dashPattern) &&
+      a.labelPosition == b.labelPosition &&
+      a.labelMargin == b.labelMargin &&
+      a.elevation == b.elevation &&
+      a.style == b.style &&
+      a.allowDragging == b.allowDragging &&
+      a.allowEditing == b.allowEditing &&
+      a.zIndex == b.zIndex &&
+      a.snapToValue == b.snapToValue &&
+      a.snapIncrement == b.snapIncrement;
+
+  /// Full-field equality for a [RangeAnnotation]. Fields a `BandMark` cannot
+  /// carry (`borderColor`, `seriesId`, `labelPosition`, `labelMargin`,
+  /// `snapTolerance`, the 2-D box / half-open bounds it never produces, and
+  /// the base flags) are compared, so a captured range that sets one is
+  /// refused rather than silently narrowed to a plain band.
+  static bool _sameRange(RangeAnnotation a, RangeAnnotation b) =>
+      a.id == b.id &&
+      a.label == b.label &&
+      a.startX == b.startX &&
+      a.endX == b.endX &&
+      a.startY == b.startY &&
+      a.endY == b.endY &&
+      a.seriesId == b.seriesId &&
+      a.fillColor == b.fillColor &&
+      a.borderColor == b.borderColor &&
+      a.labelPosition == b.labelPosition &&
+      a.labelMargin == b.labelMargin &&
+      a.snapTolerance == b.snapTolerance &&
+      a.style == b.style &&
+      a.allowDragging == b.allowDragging &&
+      a.allowEditing == b.allowEditing &&
+      a.zIndex == b.zIndex &&
+      a.snapToValue == b.snapToValue &&
+      a.snapIncrement == b.snapIncrement;
+
+  /// Full-field equality for a [PointAnnotation]. Fields a `PointMark` cannot
+  /// carry (`offset`, `labelMargin`, `style`, `zIndex`, the base flags) are
+  /// compared, so a captured point that sets one is refused rather than
+  /// emitted as a chain that drops it.
+  static bool _samePoint(PointAnnotation a, PointAnnotation b) =>
+      a.id == b.id &&
+      a.label == b.label &&
+      a.seriesId == b.seriesId &&
+      a.dataPointIndex == b.dataPointIndex &&
+      a.offset == b.offset &&
+      a.markerShape == b.markerShape &&
+      a.markerSize == b.markerSize &&
+      a.markerColor == b.markerColor &&
+      a.labelMargin == b.labelMargin &&
+      a.style == b.style &&
+      a.allowDragging == b.allowDragging &&
+      a.allowEditing == b.allowEditing &&
+      a.zIndex == b.zIndex;
 
   /// Structural equality for a [TrendAnnotation].
   ///
@@ -1147,6 +1239,73 @@ class _GrammarChainEmitter {
         dashPattern: annotation.dashPattern,
       );
 
+  /// The reference mark a chart-level [annotation] round-trips through, or null
+  /// when no V1 chain verb expresses it.
+  ///
+  /// This is the single source of truth the annotation gate and the mark
+  /// planner share: an annotation is expressible iff this returns non-null.
+  Mark<_SourceRow>? _annotationMark(ChartAnnotation annotation) =>
+      switch (annotation) {
+        TrendAnnotation() => _planTrend(annotation),
+        ThresholdAnnotation() => _planThreshold(annotation),
+        PointAnnotation() => _planPoint(annotation),
+        RangeAnnotation() => _planBand(annotation),
+        // TextAnnotation, PinAnnotation, ChordAnnotation, ErrorBarAnnotation
+        // and LegendAnnotation have no chain verb.
+        _ => null,
+      };
+
+  ThresholdMark<_SourceRow> _planThreshold(ThresholdAnnotation annotation) =>
+      ThresholdMark<_SourceRow>(
+        id: annotation.id,
+        value: annotation.value,
+        axis: annotation.axis,
+        label: annotation.label,
+        color: annotation.lineColor,
+        strokeWidth: annotation.lineWidth,
+        dashPattern: annotation.dashPattern,
+      );
+
+  PointMark<_SourceRow> _planPoint(PointAnnotation annotation) =>
+      PointMark<_SourceRow>(
+        id: annotation.id,
+        seriesId: annotation.seriesId,
+        dataPointIndex: annotation.dataPointIndex,
+        label: annotation.label,
+        color: annotation.markerColor,
+        markerSize: annotation.markerSize,
+        markerShape: annotation.markerShape,
+      );
+
+  /// A [BandMark] for a clean 1-D range, or null for a 2-D box or a half-open
+  /// bound — a `BandMark` cannot express either, so those ranges stay gated.
+  BandMark<_SourceRow>? _planBand(RangeAnnotation annotation) {
+    final axis = _bandAxis(annotation);
+    if (axis == null) return null;
+    final isY = axis == AnnotationAxis.y;
+    return BandMark<_SourceRow>(
+      id: annotation.id,
+      start: (isY ? annotation.startY : annotation.startX)!,
+      end: (isY ? annotation.endY : annotation.endX)!,
+      axis: axis,
+      label: annotation.label,
+      color: annotation.fillColor,
+    );
+  }
+
+  /// The single axis a [range] spans, or null when it is not a clean 1-D band:
+  /// a half-open bound (one side null), a 2-D box (both pairs set), or neither
+  /// pair set — none of which a `BandMark` can carry.
+  static AnnotationAxis? _bandAxis(RangeAnnotation range) {
+    final xClean = (range.startX == null) == (range.endX == null);
+    final yClean = (range.startY == null) == (range.endY == null);
+    if (!xClean || !yClean) return null;
+    final hasX = range.startX != null;
+    final hasY = range.startY != null;
+    if (hasX == hasY) return null;
+    return hasY ? AnnotationAxis.y : AnnotationAxis.x;
+  }
+
   List<_SourceRow> _synthesiseRows(List<ChartSeries> series, int rowCount) {
     final rows = <_SourceRow>[];
     for (var index = 0; index < rowCount; index++) {
@@ -1206,7 +1365,6 @@ class _GrammarChainEmitter {
 
   String _emitBody({
     required List<_GeometryPlan> geometries,
-    required List<TrendAnnotation> trends,
     required bool transposed,
     required _Field xField,
     required List<_SourceRow> rows,
@@ -1219,7 +1377,6 @@ class _GrammarChainEmitter {
     _emitChain(
       writer,
       geometries: geometries,
-      trends: trends,
       transposed: transposed,
       xField: xField,
     );
@@ -1312,7 +1469,6 @@ class _GrammarChainEmitter {
   void _emitChain(
     DartSourceWriter writer, {
     required List<_GeometryPlan> geometries,
-    required List<TrendAnnotation> trends,
     required bool transposed,
     required _Field xField,
   }) {
@@ -1329,8 +1485,10 @@ class _GrammarChainEmitter {
         for (final plan in geometries) {
           _emitGeometry(writer, plan);
         }
-        for (final annotation in trends) {
-          _emitTrend(writer, annotation);
+        // Annotations are emitted in document order so a re-lowered chain
+        // reproduces `configuration.annotations` index-for-index.
+        for (final annotation in configuration.annotations) {
+          _emitAnnotation(writer, annotation);
         }
         if (transposed) writer.writeLine('.transposed()');
         _emitTheme(writer);
@@ -1338,6 +1496,26 @@ class _GrammarChainEmitter {
         writer.writeLine('.build();');
       });
     });
+  }
+
+  /// Dispatches a chart-level annotation to its chain verb. Every annotation
+  /// reaching here passed the gate, so the wildcard is unreachable.
+  void _emitAnnotation(DartSourceWriter writer, ChartAnnotation annotation) {
+    switch (annotation) {
+      case TrendAnnotation():
+        _emitTrend(writer, annotation);
+      case ThresholdAnnotation():
+        _emitThreshold(writer, annotation);
+      case RangeAnnotation():
+        _emitBand(writer, annotation);
+      case PointAnnotation():
+        _emitPoint(writer, annotation);
+      case ChartAnnotation():
+        throw StateError(
+          'unreachable: annotation "${annotation.id}" '
+          '(${annotation.runtimeType}) passed the gate but has no chain verb',
+        );
+    }
   }
 
   void _emitX(DartSourceWriter writer, _Field xField) {
@@ -1529,6 +1707,69 @@ class _GrammarChainEmitter {
       }
       _optionalNumber(writer, 'lineWidth', annotation.lineWidth);
       _optionalNumberList(writer, 'dashPattern', annotation.dashPattern);
+    });
+    writer.writeLine(')');
+  }
+
+  void _emitThreshold(DartSourceWriter writer, ThresholdAnnotation annotation) {
+    writer.writeLine('.threshold(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(annotation.id));
+      writer.namedArgument(
+        'value',
+        DartSourceWriter.numberLiteral(annotation.value),
+      );
+      writer.namedArgument('axis', 'AnnotationAxis.${annotation.axis.name}');
+      _optionalString(writer, 'label', annotation.label);
+      _optionalColor(writer, 'color', annotation.lineColor);
+      _optionalNumber(writer, 'strokeWidth', annotation.lineWidth);
+      _optionalNumberList(writer, 'dashPattern', annotation.dashPattern);
+    });
+    writer.writeLine(')');
+  }
+
+  void _emitBand(DartSourceWriter writer, RangeAnnotation annotation) {
+    // The gate proved this is a clean 1-D band, so an axis is always resolved.
+    final axis = _bandAxis(annotation)!;
+    final isY = axis == AnnotationAxis.y;
+    writer.writeLine('.band(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(annotation.id));
+      writer.namedArgument(
+        'start',
+        DartSourceWriter.numberLiteral(
+          (isY ? annotation.startY : annotation.startX)!,
+        ),
+      );
+      writer.namedArgument(
+        'end',
+        DartSourceWriter.numberLiteral(
+          (isY ? annotation.endY : annotation.endX)!,
+        ),
+      );
+      writer.namedArgument('axis', 'AnnotationAxis.${axis.name}');
+      _optionalString(writer, 'label', annotation.label);
+      _optionalColor(writer, 'color', annotation.fillColor);
+    });
+    writer.writeLine(')');
+  }
+
+  void _emitPoint(DartSourceWriter writer, PointAnnotation annotation) {
+    writer.writeLine('.pointAt(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(annotation.id));
+      writer.namedArgument(
+        'seriesId',
+        DartSourceWriter.stringLiteral(annotation.seriesId),
+      );
+      writer.namedArgument('dataPointIndex', '${annotation.dataPointIndex}');
+      _optionalString(writer, 'label', annotation.label);
+      _optionalColor(writer, 'color', annotation.markerColor);
+      _optionalNumber(writer, 'markerSize', annotation.markerSize);
+      writer.namedArgument(
+        'markerShape',
+        'MarkerShape.${annotation.markerShape.name}',
+      );
     });
     writer.writeLine(')');
   }
