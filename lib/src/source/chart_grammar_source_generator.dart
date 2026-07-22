@@ -71,6 +71,7 @@ import '../models/candlestick_chart_series.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/data_point_label_config.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/scatter_marker_style.dart';
@@ -796,9 +797,8 @@ class _GrammarChainEmitter {
     switch (expected) {
       case LineChartSeries():
         final actual = lowered as LineChartSeries;
-        if (expected.showDataPointMarkers != actual.showDataPointMarkers) {
-          return 'data-point markers (showDataPointMarkers)';
-        }
+        // showDataPointMarkers and dataPointLabels are now carried by LineMark,
+        // so they are no longer in the uncarried set.
         if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
           return 'a data-point marker radius';
         }
@@ -807,9 +807,6 @@ class _GrammarChainEmitter {
         }
         if (expected.tension != actual.tension) return 'a curve tension';
         if (expected.lineGlow != actual.lineGlow) return 'a line glow';
-        if (expected.dataPointLabels != actual.dataPointLabels) {
-          return 'a data-point label configuration';
-        }
         if (expected.inlineLabel != actual.inlineLabel) {
           return 'an inline series label';
         }
@@ -818,9 +815,8 @@ class _GrammarChainEmitter {
         }
       case AreaChartSeries():
         final actual = lowered as AreaChartSeries;
-        if (expected.showDataPointMarkers != actual.showDataPointMarkers) {
-          return 'data-point markers (showDataPointMarkers)';
-        }
+        // showDataPointMarkers and dataPointLabels are now carried by AreaMark,
+        // so they are no longer in the uncarried set.
         if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
           return 'a data-point marker radius';
         }
@@ -832,9 +828,6 @@ class _GrammarChainEmitter {
           return 'a split baseline fill';
         }
         if (expected.lineGlow != actual.lineGlow) return 'a line glow';
-        if (expected.dataPointLabels != actual.dataPointLabels) {
-          return 'a data-point label configuration';
-        }
         if (expected.inlineLabel != actual.inlineLabel) {
           return 'an inline series label';
         }
@@ -843,10 +836,9 @@ class _GrammarChainEmitter {
         }
       case BarChartSeries():
         final actual = lowered as BarChartSeries;
+        // labelStyle is now carried by BarMark, so it is no longer in the
+        // uncarried set.
         if (expected.barStyle != actual.barStyle) return 'a bar style';
-        if (expected.labelStyle != actual.labelStyle) {
-          return 'a bar label style';
-        }
         if (expected.trackStyle != actual.trackStyle) return 'a track style';
         if (expected.divergingStyle != actual.divergingStyle) {
           return 'a diverging-bar style';
@@ -1137,6 +1129,8 @@ class _GrammarChainEmitter {
             strokeWidth: series.strokeWidth,
             dashPattern: series.dashPattern,
             interpolation: series.interpolation,
+            showDataPointMarkers: series.showDataPointMarkers,
+            dataPointLabels: series.dataPointLabels,
           ),
         );
 
@@ -1215,6 +1209,8 @@ class _GrammarChainEmitter {
             strokeWidth: series.strokeWidth,
             dashPattern: series.dashPattern,
             interpolation: series.interpolation,
+            showDataPointMarkers: series.showDataPointMarkers,
+            dataPointLabels: series.dataPointLabels,
           ),
         );
 
@@ -1237,6 +1233,7 @@ class _GrammarChainEmitter {
             layoutMode: series.layoutMode,
             groupId: series.groupId,
             baselineValue: series.baselineValue,
+            labelStyle: series.labelStyle,
           ),
         );
 
@@ -1623,6 +1620,11 @@ class _GrammarChainEmitter {
               'LineInterpolation.${mark.interpolation!.name}',
             );
           }
+          _emitDataPointMarkers(
+            writer,
+            showDataPointMarkers: mark.showDataPointMarkers,
+            dataPointLabels: mark.dataPointLabels,
+          );
         case AreaMark<_SourceRow>():
           _optionalNumber(writer, 'baseline', mark.baseline);
           _optionalNumber(writer, 'fillOpacity', mark.fillOpacity);
@@ -1634,6 +1636,11 @@ class _GrammarChainEmitter {
               'LineInterpolation.${mark.interpolation!.name}',
             );
           }
+          _emitDataPointMarkers(
+            writer,
+            showDataPointMarkers: mark.showDataPointMarkers,
+            dataPointLabels: mark.dataPointLabels,
+          );
         case BarMark<_SourceRow>():
           _optionalNumber(writer, 'barWidthPercent', mark.barWidthPercent);
           _optionalNumber(writer, 'barWidthPixels', mark.barWidthPixels);
@@ -1646,6 +1653,11 @@ class _GrammarChainEmitter {
           }
           _optionalString(writer, 'groupId', mark.groupId);
           _optionalNumber(writer, 'baselineValue', mark.baselineValue);
+          final labelStyle = mark.labelStyle;
+          if (labelStyle != null && labelStyle != const BarLabelStyle()) {
+            _config.emitBarLabelStyle(writer, labelStyle);
+            _absorbConfigWarnings();
+          }
         case ScatterMark<_SourceRow>():
           _emitScatterChannels(writer, plan, mark);
         case CandlestickMark<_SourceRow>():
@@ -1660,6 +1672,23 @@ class _GrammarChainEmitter {
       _optionalString(writer, 'yAxisId', mark.yAxisId);
     });
     writer.writeLine(')');
+  }
+
+  /// Emits the shared line/area data-point marker fields: the boolean toggle
+  /// when set, and the label configuration when present. Both default to unset
+  /// on the mark, so a V1 series (markers off, no labels) emits neither.
+  void _emitDataPointMarkers(
+    DartSourceWriter writer, {
+    required bool? showDataPointMarkers,
+    required DataPointLabelConfig? dataPointLabels,
+  }) {
+    if (showDataPointMarkers ?? false) {
+      writer.namedArgument('showDataPointMarkers', 'true');
+    }
+    if (dataPointLabels != null) {
+      _config.emitDataPointLabels(writer, dataPointLabels);
+      _absorbConfigWarnings();
+    }
   }
 
   void _emitScatterChannels(

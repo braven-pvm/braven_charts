@@ -658,6 +658,110 @@ void main() {
       );
     });
 
+    testWidgets('shape 9: per-mark data-point markers and labels round-trip', (
+      tester,
+    ) async {
+      // The headline V2.0 fix: line and area marks now carry
+      // showDataPointMarkers and a dataPointLabels configuration, so a chart
+      // using them round-trips through the emitted chain instead of blocking.
+      await expectRoundTrip(
+        tester,
+        name: 'data_point_markers',
+        fragments: <String>[
+          'showDataPointMarkers: true',
+          'dataPointLabels: DataPointLabelConfig(',
+          'position: DataPointLabelPosition.below',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Watts')
+            .geomArea(
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: const DataPointLabelConfig(
+                show: true,
+                position: DataPointLabelPosition.below,
+              ),
+            )
+            .geomLine(
+              y: sampleHeartRate,
+              name: 'Heart rate',
+              showDataPointMarkers: true,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Watts',
+              ),
+            )
+            .geomArea(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: const DataPointLabelConfig(
+                show: true,
+                position: DataPointLabelPosition.below,
+              ),
+              yAxisId: 'axis-0',
+            )
+            .geomLine(
+              id: 'mark-1',
+              y: (row) => row.heartRate,
+              name: 'Heart rate',
+              showDataPointMarkers: true,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 10: a bar label style round-trips', (tester) async {
+      // Bars have no per-point marker toggle; their inline-label field is
+      // `labelStyle` (BarLabelStyle). BarMark now carries it, so a bar chart
+      // with a non-default label style round-trips instead of blocking.
+      await expectRoundTrip(
+        tester,
+        name: 'bar_label_style',
+        fragments: <String>[
+          'labelStyle: BarLabelStyle(',
+          'show: true',
+          'showUnit: true',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Zone')
+            .y(samplePower, label: 'Minutes')
+            .geomBar(
+              name: 'Time in zone',
+              barWidthPercent: 0.7,
+              labelStyle: const BarLabelStyle(show: true, showUnit: true),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Zone')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Minutes',
+              ),
+            )
+            .geomBar(
+              id: 'mark-0',
+              y: (row) => row.timeInZone,
+              name: 'Time in zone',
+              barWidthPercent: 0.7,
+              labelStyle: const BarLabelStyle(show: true, showUnit: true),
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
       tester,
     ) async {
@@ -1149,39 +1253,31 @@ void main() {
       );
     });
 
-    testWidgets('the round-trip diagnostic names a lost series style field', (
-      tester,
-    ) async {
-      // An area series with data-point markers on: `AreaMark` has no marker
-      // channel, so the round trip fails — and the diagnostic must say which
-      // field it was, not just "does not reproduce exactly".
-      final snapshot = await snapshotOf(
-        tester,
-        (controller) => BravenChartPlus(
-          bravenChartController: controller,
-          series: const <ChartSeries>[
-            AreaChartSeries(
-              id: 'sessions',
-              points: <ChartDataPoint>[
-                ChartDataPoint(x: 0, y: 1),
-                ChartDataPoint(x: 1, y: 2),
-              ],
-              showDataPointMarkers: true,
-            ),
-          ],
-        ),
-      );
-      final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('does not reproduce'),
-          contains('sessions'),
-          contains('showDataPointMarkers'),
-        ),
-      );
-    });
+    testWidgets(
+      'the Layered case (area+line data-point markers) now emits, not blocks',
+      (tester) async {
+        // The exact "Layered" case the owner saw: an area+line chart with
+        // data-point markers on the area. AreaMark/LineMark now CARRY
+        // showDataPointMarkers, so the round trip reproduces it and the chain
+        // is emitted with the flag set, instead of being blocked by a "does
+        // not reproduce ... showDataPointMarkers" diagnostic.
+        final snapshot = await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT, label: 'Elapsed')
+              .y(samplePower, label: 'Power')
+              .geomArea(name: 'Sessions', showDataPointMarkers: true)
+              .geomLine(y: sampleHeartRate, name: 'Heart rate')
+              .build(bravenChartController: controller),
+        );
+        final generated = generateGrammar(snapshot);
+        expect(emittedChain(generated), isTrue);
+        expect(blockedReason(generated), isNull);
+        expect(generated.isComplete, isTrue);
+        expect(generated.warnings, isEmpty);
+        expect(generated.source, contains('showDataPointMarkers: true'));
+      },
+    );
 
     testWidgets('a single-axis config chart explains the axis binding', (
       tester,
