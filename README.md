@@ -826,12 +826,17 @@ flutter pub get
 flutter run -d chrome
 ```
 
-The showcase is responsive: desktop uses a persistent feature rail, while
-smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, Range Area, Candlestick, Pie, Donut, Concentric
-Donut, and Polar Column charts, interaction, tracking, annotations, streaming,
-theming, performance, multi-axis layouts, scientific data, baseline fills, and
-state UX.
+The showcase is responsive: desktop and tablet use the complete feature rail,
+while phones automatically receive a focused, touch-friendly browser with
+three vertically scrolling, production-shaped examples for every chart family.
+These retain representative features such as forecast segments, baseline
+fills, nested intervals, diverging bars, bubble encodings, financial overlays,
+and radial compositions with phone-sized data. Vivid, Midnight, and Calm style
+presets update the complete chart treatment, and every example uses
+reduced-motion-aware entrance animation. The full showcase includes
+gallery-ready examples and focused pages for chart types, interaction,
+tracking, annotations, streaming, theming, performance, multi-axis layouts,
+scientific data, baseline fills, and state UX.
 
 ## Documentation
 

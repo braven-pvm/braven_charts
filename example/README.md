@@ -104,9 +104,17 @@ the mode or show/hide the selector for the entire application.
 
 ## Responsive navigation
 
-Desktop and tablet layouts use a scrollable feature rail. Narrow layouts use a
-drawer so every demo remains reachable without an oversized bottom navigation
-bar.
+Desktop and tablet layouts use the complete scrollable feature rail. Phone
+layouts automatically switch to a focused chart-family browser with three
+production-shaped, vertically scrolling examples per family. The phone-sized
+examples preserve representative chart grammar—including forecast segments,
+baseline fills, nested intervals, diverging bars, bubble encodings, financial
+overlays, and radial compositions—without carrying desktop labs or large
+datasets into a narrow viewport. A compact Vivid, Midnight, and Calm selector
+demonstrates complete chart treatments, and every example uses
+reduced-motion-aware entrance animation. The phone surface covers Line, Area,
+Range Area, Bar, Scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar
+Column. Direct chart-family links select the matching phone example.
 
 ## Screenshot routes
 

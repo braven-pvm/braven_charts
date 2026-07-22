@@ -1,5 +1,7 @@
 import 'package:braven_charts_example/showcase/showcase_app.dart';
+import 'package:braven_charts_example/showcase/pages/mobile_showcase_page.dart';
 import 'package:braven_charts_example/showcase/widgets/braven_brand.dart';
+import 'package:braven_charts_example/showcase/widgets/chart_type_catalog.dart';
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,7 +94,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('narrow showcase uses a drawer for the complete feature list', (
+  testWidgets('narrow showcase uses the focused phone chart browser', (
     tester,
   ) async {
     final pixelRatio = tester.view.devicePixelRatio;
@@ -105,24 +107,276 @@ void main() {
 
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(AppBar), findsOneWidget);
-    expect(find.text('Gallery'), findsWidgets);
+    expect(find.byType(NavigationDrawer), findsNothing);
+    expect(find.byType(MobileShowcasePage), findsOneWidget);
+    expect(find.byType(BravenBrand), findsOneWidget);
+    expect(find.text('Charts for Flutter'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-chart-type-strip')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-chart-card-line-charts-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-chart-list-line-charts')),
+      findsOneWidget,
+    );
+    expect(find.byType(BravenChartPlus), findsAtLeast(1));
+    expect(find.text('Loading States'), findsNothing);
+  });
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
+  testWidgets('phone chart selector swaps one mounted chart at a time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const ShowcaseApp());
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final strip = find.byKey(const ValueKey('mobile-chart-type-strip'));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-chart-type-pie-charts')),
+      320,
+      scrollable: find.descendant(of: strip, matching: find.byType(Scrollable)),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-chart-type-pie-charts')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationDrawer), findsOneWidget);
-    expect(find.byType(BravenBrand), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-chart-card-pie-charts-0')),
+      findsOneWidget,
+    );
+    expect(find.text('Monthly spending'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-chart-list-pie-charts')),
+      findsOneWidget,
+    );
+    expect(find.byType(BravenChartPlus), findsAtLeast(1));
+    expect(tester.takeException(), isNull);
+  });
 
-    await tester.scrollUntilVisible(
-      find.text('Loading States'),
-      300,
-      scrollable: find.descendant(
-        of: find.byType(NavigationDrawer),
-        matching: find.byType(Scrollable),
+  testWidgets('phone direct chart route opens the matching focused example', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'polar-column'),
       ),
     );
-    expect(find.text('Loading States'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MobileShowcasePage), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-chart-card-polar-column-0')),
+      findsOneWidget,
+    );
+    expect(
+      find
+          .byKey(const ValueKey('mobile-chart-type-polar-column'))
+          .hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.text('Activity rhythm'), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsAtLeast(1));
+    expect(tester.takeException(), isNull);
   });
+
+  testWidgets('phone style selector applies a dark chart treatment', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const ShowcaseApp());
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.byKey(const ValueKey('mobile-style-midnight')));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.byKey(const ValueKey('mobile-style-selector')), findsOneWidget);
+    final chart = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus).first,
+    );
+    expect(chart.theme?.backgroundColor, const Color(0xFF0F172A));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone line examples preserve comparison and forecast grammar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MobileShowcasePage(initialChartSlug: 'line-charts'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final comparison = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-chart-card-line-charts-1')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(comparison.series, hasLength(3));
+    expect(comparison.showLegend, isTrue);
+
+    final forecast = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-chart-card-line-charts-2')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(forecast.annotations.single, isA<ThresholdAnnotation>());
+    final forecastSeries = forecast.series.single as LineChartSeries;
+    expect(
+      forecastSeries.points.where((point) => point.segmentStyle != null),
+      isNotEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone analytical examples retain native family composition', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    for (final slug in const [
+      'range-area-charts',
+      'bar-charts',
+      'scatter-charts',
+      'candlestick-charts',
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(home: MobileShowcasePage(initialChartSlug: slug)),
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(ValueKey('mobile-chart-card-$slug-2')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      switch (slug) {
+        case 'range-area-charts':
+          expect(chart.series.whereType<RangeAreaChartSeries>(), hasLength(2));
+          expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
+        case 'bar-charts':
+          expect(chart.series, hasLength(3));
+          expect(
+            chart.series.cast<BarChartSeries>().every(
+              (series) => series.layoutMode == BarLayoutMode.divergingStacked,
+            ),
+            isTrue,
+          );
+        case 'scatter-charts':
+          expect(chart.series.whereType<ScatterChartSeries>(), hasLength(3));
+        case 'candlestick-charts':
+          expect(
+            chart.series.whereType<CandlestickChartSeries>(),
+            hasLength(1),
+          );
+          expect(chart.series.whereType<RangeAreaChartSeries>(), hasLength(1));
+          expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
+      }
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('phone radial examples expose radius and composition variants', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MobileShowcasePage(initialChartSlug: 'donut-charts'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    final donut = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-chart-card-donut-charts-2')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(
+      (donut.series.single as DonutChartSeries).sliceRadiusConfig,
+      isNotNull,
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MobileShowcasePage(initialChartSlug: 'polar-column'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    final polar = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-chart-card-polar-column-2')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(polar.series.whereType<PolarColumnChartSeries>(), hasLength(3));
+    expect(
+      polar.polarChartConfig.composition.mode,
+      PolarColumnCompositionMode.grouped,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final chartType in showcaseChartTypes) {
+    testWidgets('phone renders the ${chartType.label} family example', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(home: MobileShowcasePage(initialChartSlug: chartType.slug)),
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(
+        find.byKey(ValueKey('mobile-chart-card-${chartType.slug}-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(ValueKey('mobile-chart-list-${chartType.slug}')),
+        findsOneWidget,
+      );
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -620));
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -320));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byKey(ValueKey('mobile-chart-card-${chartType.slug}-2')),
+        findsOneWidget,
+      );
+      expect(find.byType(BravenChartPlus), findsAtLeast(1));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('wide showcase uses the persistent feature rail', (tester) async {
     final pixelRatio = tester.view.devicePixelRatio;
