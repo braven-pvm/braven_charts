@@ -5,8 +5,9 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/painting.dart' show Color;
 
 import '../models/bar_chart_style.dart' show BarLayoutMode;
-import '../models/chart_annotation.dart' show TrendType;
+import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
+import '../models/enums.dart' show MarkerShape;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -550,4 +551,178 @@ final class TrendMark<T> extends Mark<T> {
 
   @override
   String toString() => 'TrendMark(id: $id, source: $sourceMarkId)';
+}
+
+/// A reference line at a fixed value on one axis.
+///
+/// Like [TrendMark], this mark produces no geometry: it lowers to a
+/// `ThresholdAnnotation` appended to the plot's annotations. It carries neither
+/// [Mark.name] nor [Mark.yAxisId] as a constructor parameter — a threshold is
+/// drawn in axis-VALUE space, not a series' coordinate space, so it binds no Y
+/// axis, and its on-chart caption is [label] (the annotation's own field),
+/// which is why an inherited `name` that lowers to nothing is deliberately not
+/// offered. The inherited [Mark.color] is the line color.
+final class ThresholdMark<T> extends Mark<T> {
+  /// Creates a reference line at [value] on [axis].
+  const ThresholdMark({
+    required this.value,
+    this.axis = AnnotationAxis.y,
+    super.id,
+    super.color,
+    this.label,
+    this.strokeWidth,
+    this.dashPattern,
+  });
+
+  /// The axis value the line is drawn at.
+  final double value;
+
+  /// Which axis the line is perpendicular to. Defaults to the Y axis.
+  final AnnotationAxis axis;
+
+  /// Optional on-chart caption. Null draws no label.
+  final String? label;
+
+  /// Line width in logical pixels. Null keeps the annotation default.
+  final double? strokeWidth;
+
+  /// Alternating painted/skipped distances. Null draws a solid line.
+  final List<double>? dashPattern;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ThresholdMark<T> &&
+          other.value == value &&
+          other.axis == axis &&
+          other.id == id &&
+          other.color == color &&
+          other.label == label &&
+          other.strokeWidth == strokeWidth &&
+          listEquals(other.dashPattern, dashPattern);
+
+  @override
+  int get hashCode => Object.hash(
+    value,
+    axis,
+    id,
+    color,
+    label,
+    strokeWidth,
+    dashPattern == null ? null : Object.hashAll(dashPattern!),
+  );
+
+  @override
+  String toString() => 'ThresholdMark(id: $id, value: $value)';
+}
+
+/// A shaded band between two values on one axis.
+///
+/// Like [TrendMark], this mark produces no geometry: it lowers to a
+/// `RangeAnnotation` appended to the plot's annotations. [axis] selects whether
+/// the band spans the X or the Y axis; the perpendicular direction is left
+/// unbounded, so this expresses a 1-D band, not a 2-D box. It carries neither
+/// [Mark.name] nor [Mark.yAxisId] as a constructor parameter, for the same
+/// reason [ThresholdMark] does not; the inherited [Mark.color] is the fill.
+final class BandMark<T> extends Mark<T> {
+  /// Creates a band from [start] to [end] on [axis].
+  const BandMark({
+    required this.start,
+    required this.end,
+    this.axis = AnnotationAxis.y,
+    super.id,
+    super.color,
+    this.label,
+  });
+
+  /// The band's lower bound on [axis].
+  final double start;
+
+  /// The band's upper bound on [axis].
+  final double end;
+
+  /// Which axis the band spans. Defaults to the Y axis.
+  final AnnotationAxis axis;
+
+  /// Optional on-chart caption. Null draws no label.
+  final String? label;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BandMark<T> &&
+          other.start == start &&
+          other.end == end &&
+          other.axis == axis &&
+          other.id == id &&
+          other.color == color &&
+          other.label == label;
+
+  @override
+  int get hashCode => Object.hash(start, end, axis, id, color, label);
+
+  @override
+  String toString() => 'BandMark(id: $id, start: $start, end: $end)';
+}
+
+/// A marker on one existing series' data point.
+///
+/// Like [TrendMark], this mark produces no geometry: it lowers to a
+/// `PointAnnotation` bound to ([seriesId], [dataPointIndex]) and appended to the
+/// plot's annotations. It is NOT the scatter geometry — it annotates ONE point
+/// of a series already in the plot, not a whole row list. The inherited
+/// [Mark.color] is the marker fill; [Mark.name]/[Mark.yAxisId] are not
+/// parameters here for the same reason the other reference marks omit them.
+final class PointMark<T> extends Mark<T> {
+  /// Marks point [dataPointIndex] of the series identified by [seriesId].
+  const PointMark({
+    required this.seriesId,
+    required this.dataPointIndex,
+    super.id,
+    super.color,
+    this.label,
+    this.markerSize,
+    this.markerShape,
+  });
+
+  /// Id of the geometry mark whose point is annotated.
+  final String seriesId;
+
+  /// Index of the annotated point within that series (must be `>= 0`).
+  final int dataPointIndex;
+
+  /// Optional on-chart caption. Null draws no label.
+  final String? label;
+
+  /// Marker size in logical pixels. Null keeps the annotation default.
+  final double? markerSize;
+
+  /// Marker silhouette. Null keeps the annotation default.
+  final MarkerShape? markerShape;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PointMark<T> &&
+          other.seriesId == seriesId &&
+          other.dataPointIndex == dataPointIndex &&
+          other.id == id &&
+          other.color == color &&
+          other.label == label &&
+          other.markerSize == markerSize &&
+          other.markerShape == markerShape;
+
+  @override
+  int get hashCode => Object.hash(
+    seriesId,
+    dataPointIndex,
+    id,
+    color,
+    label,
+    markerSize,
+    markerShape,
+  );
+
+  @override
+  String toString() => 'PointMark(id: $id, series: $seriesId)';
 }

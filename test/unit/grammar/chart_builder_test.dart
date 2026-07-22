@@ -309,6 +309,124 @@ void main() {
     });
   });
 
+  group('reference marks', () {
+    test('threshold appends a ThresholdMark with an explicit id', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power')
+          .threshold(
+            value: 250,
+            axis: AnnotationAxis.y,
+            label: 'FTP',
+            color: const Color(0xFFFF9800),
+            strokeWidth: 1.5,
+            dashPattern: const <double>[6, 3],
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+            ),
+            ThresholdMark<Sample>(
+              id: 'mark-1',
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: Color(0xFFFF9800),
+              strokeWidth: 1.5,
+              dashPattern: <double>[6, 3],
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('band appends a BandMark with an explicit id', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .band(
+            start: 200,
+            end: 260,
+            label: 'Zone',
+            color: const Color(0x332563EB),
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(id: 'mark-0', x: sampleTime, y: samplePower),
+            BandMark<Sample>(
+              id: 'mark-1',
+              start: 200,
+              end: 260,
+              label: 'Zone',
+              color: Color(0x332563EB),
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('pointAt appends a PointMark bound to a series point', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .geomLine(id: 'power', y: samplePower)
+          .pointAt(
+            seriesId: 'power',
+            dataPointIndex: 2,
+            label: 'Peak',
+            markerSize: 12,
+            markerShape: MarkerShape.star,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(id: 'power', x: sampleTime, y: samplePower),
+            PointMark<Sample>(
+              id: 'mark-1',
+              seriesId: 'power',
+              dataPointIndex: 2,
+              label: 'Peak',
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('a threshold is not a valid trend source', () {
+      // Reference marks are excluded from the geometry set, so a trend cannot
+      // fit over one.
+      expect(
+        () => BravenChart.of(rows)
+            .x(sampleTime)
+            .y(samplePower)
+            .threshold(value: 250)
+            .trend(),
+        throwsA(isA<GrammarSpecException>()),
+      );
+    });
+  });
+
   group('encoding defaults', () {
     test('geoms inherit the chain-level x and y', () {
       final spec = BravenChart.of(

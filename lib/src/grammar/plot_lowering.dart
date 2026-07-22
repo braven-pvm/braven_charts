@@ -97,6 +97,19 @@ final TrendAnnotation _trendDefaults = TrendAnnotation(
   trendType: TrendType.linear,
 );
 
+/// Reference-annotation prototypes, for the same reason as [_trendDefaults]:
+/// none is const-constructible, so their defaults are read off an instance
+/// rather than re-declared, which keeps the lowering from drifting from the
+/// model's own defaults.
+final ThresholdAnnotation _thresholdDefaults = ThresholdAnnotation(
+  axis: AnnotationAxis.y,
+  value: 0,
+);
+final PointAnnotation _pointDefaults = PointAnnotation(
+  seriesId: '',
+  dataPointIndex: 0,
+);
+
 /// Compiles a [PlotSpec] into the config objects the chart pipeline consumes.
 ///
 /// This is an EXTENSION rather than a top-level `lower<T>(spec)` function on
@@ -169,9 +182,17 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     }
   }
 
+  // Geometries are the marks that lower to a SERIES. Derived-statistic and
+  // reference marks (trend, threshold, band, point) lower to annotations and
+  // are therefore never valid trend sources, so they are excluded here.
   final geometryIds = <String>{
     for (var index = 0; index < spec.marks.length; index++)
-      if (spec.marks[index] is! TrendMark<T>) markIds[index],
+      if (spec.marks[index] is LineMark<T> ||
+          spec.marks[index] is AreaMark<T> ||
+          spec.marks[index] is BarMark<T> ||
+          spec.marks[index] is ScatterMark<T> ||
+          spec.marks[index] is CandlestickMark<T>)
+        markIds[index],
   };
 
   // ---- Data-INDEPENDENT structural validation --------------------------
@@ -215,6 +236,11 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           axesById,
           boundAxisIds,
         );
+      case ThresholdMark<T>() || BandMark<T>() || PointMark<T>():
+        // Reference marks bind no Y axis and carry no data-independent
+        // structural invariant beyond what their annotation asserts on
+        // construction during materialization.
+        break;
     }
   }
 
@@ -257,6 +283,12 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         series.add(_lowerCandlestick(mark, markId, axis!, spec.data));
       case TrendMark<T>():
         annotations.add(_lowerTrend(mark, markId));
+      case ThresholdMark<T>():
+        annotations.add(_lowerThreshold(mark, markId));
+      case BandMark<T>():
+        annotations.add(_lowerBand(mark, markId));
+      case PointMark<T>():
+        annotations.add(_lowerPoint(mark, markId));
     }
   }
 
@@ -611,6 +643,52 @@ TrendAnnotation _lowerTrend<T>(TrendMark<T> mark, String id) {
     lineColor: mark.color ?? _trendDefaults.lineColor,
     lineWidth: mark.lineWidth ?? _trendDefaults.lineWidth,
     dashPattern: mark.dashPattern,
+  );
+}
+
+/// Materializes a threshold reference line. Reference marks carry no
+/// data-dependent invariant, so this is a straight field mapping; the
+/// annotation's own `value.isFinite` assert is the only guard.
+ThresholdAnnotation _lowerThreshold<T>(ThresholdMark<T> mark, String id) {
+  return ThresholdAnnotation(
+    id: id,
+    label: mark.label,
+    axis: mark.axis,
+    value: mark.value,
+    lineColor: mark.color ?? _thresholdDefaults.lineColor,
+    lineWidth: mark.strokeWidth ?? _thresholdDefaults.lineWidth,
+    dashPattern: mark.dashPattern,
+  );
+}
+
+/// Materializes a band. The mark's [BandMark.axis] selects whether the band
+/// spans X or Y; the perpendicular pair is left null (unbounded), so the result
+/// is a 1-D band. `RangeAnnotation` defaults `allowDragging`/`allowEditing` to
+/// true, and those defaults are kept — a band authored through the grammar is
+/// the ordinary hand-constructed range.
+RangeAnnotation _lowerBand<T>(BandMark<T> mark, String id) {
+  final isY = mark.axis == AnnotationAxis.y;
+  return RangeAnnotation(
+    id: id,
+    label: mark.label,
+    startX: isY ? null : mark.start,
+    endX: isY ? null : mark.end,
+    startY: isY ? mark.start : null,
+    endY: isY ? mark.end : null,
+    fillColor: mark.color,
+  );
+}
+
+/// Materializes a point marker bound to one series' data point.
+PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
+  return PointAnnotation(
+    id: id,
+    label: mark.label,
+    seriesId: mark.seriesId,
+    dataPointIndex: mark.dataPointIndex,
+    markerColor: mark.color ?? _pointDefaults.markerColor,
+    markerSize: mark.markerSize ?? _pointDefaults.markerSize,
+    markerShape: mark.markerShape ?? _pointDefaults.markerShape,
   );
 }
 

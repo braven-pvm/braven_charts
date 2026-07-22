@@ -7,8 +7,9 @@ import 'package:flutter/widgets.dart' show Key;
 import '../controllers/chart_interaction_group_controller.dart';
 import '../models/bar_chart_style.dart' show BarLayoutMode;
 import '../models/braven_chart_controller.dart';
-import '../models/chart_annotation.dart' show TrendType;
+import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
+import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
 import '../models/interaction_config.dart' show InteractionConfig;
@@ -144,8 +145,16 @@ final class BravenChart<T> {
 
   String _idFor(String? id) => id ?? 'mark-${_marks.length}';
 
-  Iterable<String> get _geometryIds =>
-      _marks.where((mark) => mark is! TrendMark<T>).map((mark) => mark.id!);
+  Iterable<String> get _geometryIds => _marks
+      .where(
+        (mark) =>
+            mark is LineMark<T> ||
+            mark is AreaMark<T> ||
+            mark is BarMark<T> ||
+            mark is ScatterMark<T> ||
+            mark is CandlestickMark<T>,
+      )
+      .map((mark) => mark.id!);
 
   FieldAccessor<T, num> _resolveX(String verb, FieldAccessor<T, num>? x) =>
       x ?? _defaultX ?? (throw GrammarSpecException.missingEncoding(verb, 'x'));
@@ -363,6 +372,78 @@ final class BravenChart<T> {
       ),
     );
   }
+
+  /// Appends a reference line at [value] on [axis].
+  ///
+  /// A threshold produces no geometry: it lowers to a `ThresholdAnnotation`.
+  /// It binds no Y axis — the line is drawn in axis-value space — so there is
+  /// no `yAxisId` here.
+  BravenChart<T> threshold({
+    required double value,
+    AnnotationAxis axis = AnnotationAxis.y,
+    String? id,
+    String? label,
+    Color? color,
+    double? strokeWidth,
+    List<double>? dashPattern,
+  }) => _append(
+    ThresholdMark<T>(
+      id: _idFor(id),
+      value: value,
+      axis: axis,
+      label: label,
+      color: color,
+      strokeWidth: strokeWidth,
+      dashPattern: dashPattern,
+    ),
+  );
+
+  /// Appends a shaded band from [start] to [end] on [axis].
+  ///
+  /// A band produces no geometry: it lowers to a 1-D `RangeAnnotation` (an X
+  /// band or a Y band, never a 2-D box). [color] is the fill.
+  BravenChart<T> band({
+    required double start,
+    required double end,
+    AnnotationAxis axis = AnnotationAxis.y,
+    String? id,
+    String? label,
+    Color? color,
+  }) => _append(
+    BandMark<T>(
+      id: _idFor(id),
+      start: start,
+      end: end,
+      axis: axis,
+      label: label,
+      color: color,
+    ),
+  );
+
+  /// Appends a marker on point [dataPointIndex] of the series [seriesId].
+  ///
+  /// This annotates ONE point of a geometry already in the chain (it lowers to
+  /// a `PointAnnotation`), and is not the scatter geometry. [seriesId] names
+  /// the geometry's mark id, and [dataPointIndex] its row index.
+  BravenChart<T> pointAt({
+    required String seriesId,
+    required int dataPointIndex,
+    String? id,
+    String? label,
+    Color? color,
+    double? markerSize,
+    MarkerShape? markerShape,
+  }) => _append(
+    PointMark<T>(
+      id: _idFor(id),
+      seriesId: seriesId,
+      dataPointIndex: dataPointIndex,
+      label: label,
+      color: color,
+      markerSize: markerSize,
+      markerShape: markerShape,
+    ),
+  );
 
   /// Transposes the Cartesian plane. Legal on an all-bar chain only.
   BravenChart<T> transposed() => _copy(transposed: true);

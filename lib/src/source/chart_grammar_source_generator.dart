@@ -1388,6 +1388,13 @@ class _GrammarChainEmitter {
       ScatterMark<_SourceRow>() => 'geomPoint',
       CandlestickMark<_SourceRow>() => 'geomCandlestick',
       TrendMark<_SourceRow>() => 'trend',
+      // Reference marks lower to annotations and are emitted as their own chain
+      // verbs, never through _emitGeometry, which only ever sees a geometry plan.
+      ThresholdMark<_SourceRow>() ||
+      BandMark<_SourceRow>() ||
+      PointMark<_SourceRow>() => throw StateError(
+        'unreachable: a reference mark reached _emitGeometry',
+      ),
     };
     writer.writeLine('.$verb(');
     writer.indented(() {
@@ -1445,6 +1452,10 @@ class _GrammarChainEmitter {
           break;
         case TrendMark<_SourceRow>():
           break;
+        case ThresholdMark<_SourceRow>() ||
+            BandMark<_SourceRow>() ||
+            PointMark<_SourceRow>():
+          break; // unreachable: the verb switch above already threw.
       }
       _optionalString(writer, 'yAxisId', mark.yAxisId);
     });
