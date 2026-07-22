@@ -961,6 +961,7 @@ CandlestickDataPoint _decodeCandlestickPoint(ChartPointDocument point) {
     magnitude: base.magnitude,
     colorValue: base.colorValue,
     opacityValue: base.opacityValue,
+    categoryValue: base.categoryValue,
     timestamp: base.timestamp,
     label: base.label,
     metadata: base.metadata,

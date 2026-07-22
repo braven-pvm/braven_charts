@@ -1919,6 +1919,38 @@ void main() {
       }
     });
 
+    test('round-trips a Candlestick point categoryValue', () {
+      final source = CandlestickChartSeries(
+        id: 'prices',
+        points: [
+          CandlestickDataPoint(
+            x: 1,
+            open: 10,
+            high: 12,
+            low: 9,
+            close: 11,
+            categoryValue: 'Q1',
+          ),
+        ],
+      );
+
+      for (final storage in [
+        ChartDataStorage.inlinePoints,
+        ChartDataStorage.inlineColumns,
+      ]) {
+        final encoded =
+            ChartSeriesDocumentCodec.encode(source, dataStorage: storage)
+                as ChartArtifactSuccess<ChartSeriesDocument>;
+        final document = ChartSeriesDocument.fromJson(encoded.value.toJson());
+        final decoded =
+            ChartSeriesDocumentCodec.decode(document)
+                as ChartArtifactSuccess<ChartSeries>;
+
+        final point = decoded.value.points.single as CandlestickDataPoint;
+        expect(point.categoryValue, 'Q1');
+      }
+    });
+
     test(
       'rejects a Candlestick document whose canonical y disagrees with close',
       () {
