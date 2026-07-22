@@ -501,9 +501,8 @@ class _GrammarChainEmitter {
     if (mismatch != null) {
       block(
         'Grammar chain not emitted: the reconstructed chain does not reproduce '
-        '$mismatch exactly, so writing it would hand back a different chart. '
-        'This is normally a series, annotation or axis option that no V1 mark '
-        'carries.',
+        '${mismatch.subject} exactly, so writing it would hand back a '
+        'different chart. ${mismatch.detail}',
         path: r'$.series',
       );
       return null;
@@ -561,7 +560,12 @@ class _GrammarChainEmitter {
     if (configuration.backgroundColor != _chartPlusDefaultBackground) {
       lost.add('backgroundColor');
     }
-    if (configuration.grid != const GridConfig()) lost.add('grid');
+    // A DEFAULT grid is reproduced anyway: `BravenChartPlus` resolves its
+    // unset grid to exactly `const GridConfig()` (unlike `backgroundColor` and
+    // `legendStyle`, which resolve to concrete theme values), so the chain — by
+    // carrying no grid — lands on the same default. Only a NON-default grid is
+    // genuinely lost, because `PlotSpec` carries no grid at all.
+    if (configuration.grid != const GridConfig()) lost.add('a non-default grid');
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
     }
@@ -614,19 +618,35 @@ class _GrammarChainEmitter {
     return partial;
   }
 
+  /// The generic tail used when the specific option cannot be pinned down
+  /// cheaply (a list-length change, an annotation or an axis difference).
+  static const String _genericLossDetail =
+      'This is normally a series, annotation or axis option that no V1 mark '
+      'carries.';
+
   /// The first part of the lowered plot that does not match the captured
   /// chart, described for a diagnostic, or null when everything matches.
-  String? _firstMismatch(LoweredPlot lowered) {
+  ///
+  /// [subject] names what differs (a series, annotation or axis); [detail]
+  /// says WHY it differs — naming the specific option a V1 mark cannot carry
+  /// whenever that can be identified cheaply from the round-trip comparison
+  /// the emitter already runs, so the reader learns the boundary instead of
+  /// only reading "does not reproduce exactly".
+  ({String subject, String detail})? _firstMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
-      return 'the series list';
+      return (subject: 'the series list', detail: _genericLossDetail);
     }
     for (var index = 0; index < lowered.series.length; index++) {
-      if (lowered.series[index] != configuration.series[index]) {
-        return 'series "${configuration.series[index].id}"';
+      final expected = configuration.series[index];
+      if (lowered.series[index] != expected) {
+        return (
+          subject: 'series "${expected.id}"',
+          detail: _seriesLossDetail(expected, lowered.series[index]),
+        );
       }
     }
     if (lowered.annotations.length != configuration.annotations.length) {
-      return 'the annotation list';
+      return (subject: 'the annotation list', detail: _genericLossDetail);
     }
     for (var index = 0; index < lowered.annotations.length; index++) {
       final expected = configuration.annotations[index];
@@ -634,16 +654,144 @@ class _GrammarChainEmitter {
       if (expected is! TrendAnnotation ||
           actual is! TrendAnnotation ||
           !_sameTrend(expected, actual)) {
-        return 'annotation "${expected.id}"';
+        return (subject: 'annotation "${expected.id}"', detail: _genericLossDetail);
       }
     }
     if (lowered.yAxes.length != configuration.axes.length) {
-      return 'the Y-axis list';
+      return (subject: 'the Y-axis list', detail: _genericLossDetail);
     }
     for (var index = 0; index < lowered.yAxes.length; index++) {
       if (lowered.yAxes[index] != configuration.axes[index]) {
-        return 'the Y axis "${configuration.axes[index].id}"';
+        return (
+          subject: 'the Y axis "${configuration.axes[index].id}"',
+          detail: _genericLossDetail,
+        );
       }
+    }
+    return null;
+  }
+
+  /// Explains why a captured [expected] series is not reproduced by the
+  /// [lowered] one the grammar rebuilds.
+  ///
+  /// The lowered series is built by carrying exactly the fields the mark
+  /// supports and defaulting the rest, so the fields that differ are precisely
+  /// the options no V1 mark carries. Naming the first such field turns "does
+  /// not reproduce exactly" into an actionable boundary. When the only
+  /// difference is the axis binding — the captured chart used the single-axis
+  /// path and left `yAxisId` unset, while the grammar always binds every
+  /// series to an explicit axis — that is called out specifically, because it
+  /// is the usual reason a config-authored single-axis chart cannot round-trip.
+  String _seriesLossDetail(ChartSeries expected, ChartSeries lowered) {
+    final field = _firstUncarriedField(expected, lowered);
+    if (field != null) {
+      return 'It carries $field, which no V1 ${_familyWord(expected)} mark '
+          'carries.';
+    }
+    if (expected.yAxisId != lowered.yAxisId ||
+        (expected.yAxisConfig == null) != (lowered.yAxisConfig == null)) {
+      return 'The captured chart leaves this series\' yAxisId unset (the '
+          'single-axis path), while the grammar binds every series to an '
+          'explicit axis, so the reconstructed chain would render a different '
+          'chart document. Author the chart through the grammar, or with '
+          'explicit .yAxis(...) declarations, to express it as a chain.';
+    }
+    return _genericLossDetail;
+  }
+
+  /// The English family word for [series], for the diagnostic sentence.
+  static String _familyWord(ChartSeries series) => switch (series) {
+    LineChartSeries() => 'line',
+    AreaChartSeries() => 'area',
+    BarChartSeries() => 'bar',
+    ScatterChartSeries() => 'scatter',
+    CandlestickChartSeries() => 'candlestick',
+    _ => 'V1',
+  };
+
+  /// The first option set on [expected] that the [lowered] series does not
+  /// carry, phrased for a diagnostic, or null when the two differ only in
+  /// their axis binding (handled separately) or in a field not enumerated
+  /// here. The order walks the shared fields first, then the family-specific
+  /// ones, so the most common culprit is named first.
+  String? _firstUncarriedField(ChartSeries expected, ChartSeries lowered) {
+    if (expected.unit != lowered.unit) {
+      return "a unit ('${expected.unit}')";
+    }
+    switch (expected) {
+      case LineChartSeries():
+        final actual = lowered as LineChartSeries;
+        if (expected.showDataPointMarkers != actual.showDataPointMarkers) {
+          return 'data-point markers (showDataPointMarkers)';
+        }
+        if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
+          return 'a data-point marker radius';
+        }
+        if (expected.dataPointMarkerStyle != actual.dataPointMarkerStyle) {
+          return 'a data-point marker style';
+        }
+        if (expected.tension != actual.tension) return 'a curve tension';
+        if (expected.lineGlow != actual.lineGlow) return 'a line glow';
+        if (expected.dataPointLabels != actual.dataPointLabels) {
+          return 'a data-point label configuration';
+        }
+        if (expected.inlineLabel != actual.inlineLabel) {
+          return 'an inline series label';
+        }
+        if (expected.pathAnimation != actual.pathAnimation) {
+          return 'a path animation';
+        }
+      case AreaChartSeries():
+        final actual = lowered as AreaChartSeries;
+        if (expected.showDataPointMarkers != actual.showDataPointMarkers) {
+          return 'data-point markers (showDataPointMarkers)';
+        }
+        if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
+          return 'a data-point marker radius';
+        }
+        if (expected.fillGradient != actual.fillGradient) {
+          return 'a fill gradient';
+        }
+        if (expected.aboveBaselineFillColor != actual.aboveBaselineFillColor ||
+            expected.belowBaselineFillColor != actual.belowBaselineFillColor) {
+          return 'a split baseline fill';
+        }
+        if (expected.lineGlow != actual.lineGlow) return 'a line glow';
+        if (expected.dataPointLabels != actual.dataPointLabels) {
+          return 'a data-point label configuration';
+        }
+        if (expected.inlineLabel != actual.inlineLabel) {
+          return 'an inline series label';
+        }
+        if (expected.pathAnimation != actual.pathAnimation) {
+          return 'a path animation';
+        }
+      case BarChartSeries():
+        final actual = lowered as BarChartSeries;
+        if (expected.barStyle != actual.barStyle) return 'a bar style';
+        if (expected.labelStyle != actual.labelStyle) {
+          return 'a bar label style';
+        }
+        if (expected.trackStyle != actual.trackStyle) return 'a track style';
+        if (expected.divergingStyle != actual.divergingStyle) {
+          return 'a diverging-bar style';
+        }
+      case ScatterChartSeries():
+        final actual = lowered as ScatterChartSeries;
+        if (expected.dataPointLabels != actual.dataPointLabels) {
+          return 'a data-point label configuration';
+        }
+        if (expected.renderMode != actual.renderMode) {
+          return 'a non-default render mode';
+        }
+        if (expected.jitter != actual.jitter) return 'a jitter configuration';
+        if (expected.interactionStyle != actual.interactionStyle) {
+          return 'an interaction style';
+        }
+      case CandlestickChartSeries():
+        // Open/high/low/close and the timestamp are carried in full; any
+        // remaining styling difference falls through to the generic tail.
+        break;
     }
     return null;
   }

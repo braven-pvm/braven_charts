@@ -833,10 +833,136 @@ void main() {
       );
       final generated = generateGrammar(snapshot);
       expect(emittedChain(generated), isFalse);
+      // The diagnostic NAMES the specific option that no V1 mark carries,
+      // instead of only saying the chart "does not reproduce" exactly.
       expect(
         blockedReason(generated),
-        allOf(contains('does not reproduce'), contains('power')),
+        allOf(
+          contains('does not reproduce'),
+          contains('power'),
+          contains('unit'),
+        ),
       );
+    });
+
+    testWidgets('the round-trip diagnostic names a lost series style field', (
+      tester,
+    ) async {
+      // An area series with data-point markers on: `AreaMark` has no marker
+      // channel, so the round trip fails — and the diagnostic must say which
+      // field it was, not just "does not reproduce exactly".
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: const <ChartSeries>[
+            AreaChartSeries(
+              id: 'sessions',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+              showDataPointMarkers: true,
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('does not reproduce'),
+          contains('sessions'),
+          contains('showDataPointMarkers'),
+        ),
+      );
+    });
+
+    testWidgets('a single-axis config chart explains the axis binding', (
+      tester,
+    ) async {
+      // A chart authored through the single-axis path (`BravenChartPlus` with
+      // no per-series yAxisId) cannot be reproduced by the grammar, which
+      // always binds each series to an explicit axis. The diagnostic explains
+      // that rather than leaving the reader guessing.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('does not reproduce'),
+          contains('power'),
+          contains('single-axis'),
+          contains('yAxisId'),
+        ),
+      );
+    });
+
+    testWidgets('a non-default grid is named precisely, default grid is not', (
+      tester,
+    ) async {
+      // A NON-default grid is genuinely un-carried by the grammar (PlotSpec
+      // has no grid), so it blocks — with wording that says it is the
+      // non-default grid, not that all grids block.
+      final nonDefault = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          grid: const GridConfig(horizontal: false),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final blockedGrid = generateGrammar(nonDefault);
+      expect(emittedChain(blockedGrid), isFalse);
+      expect(
+        blockedReason(blockedGrid),
+        allOf(contains('would be lost'), contains('non-default grid')),
+      );
+
+      // A DEFAULT grid must NOT trip the chart-option gate. The chart still
+      // blocks (single-axis path), but never for `grid`.
+      final defaultGrid = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          grid: const GridConfig(),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final defaultGridResult = generateGrammar(defaultGrid);
+      expect(blockedReason(defaultGridResult), isNot(contains('grid')));
     });
 
     testWidgets('a runtime interaction binding is reported like Config does', (
