@@ -10,46 +10,46 @@ import 'package:flutter/widgets.dart' show Color;
 /// Generated fluent modifiers for [RangeAreaChartSeries].
 extension RangeAreaChartSeriesFluent on RangeAreaChartSeries {
   /// Replaces [RangeAreaChartSeries.name] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.name]; construct a new instance to reset it.
   RangeAreaChartSeries withName(String value) => copyWith(name: value);
 
+  /// Clears [RangeAreaChartSeries.name] to `null`.
+  RangeAreaChartSeries clearName() => copyWith(clearName: true);
+
   /// Replaces [RangeAreaChartSeries.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.color]; construct a new instance to reset it.
   RangeAreaChartSeries withColor(Color value) => copyWith(color: value);
 
+  /// Clears [RangeAreaChartSeries.color] to `null`.
+  RangeAreaChartSeries clearColor() => copyWith(clearColor: true);
+
   /// Replaces [RangeAreaChartSeries.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.metadata]; construct a new instance to reset it.
   RangeAreaChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
+
+  /// Clears [RangeAreaChartSeries.metadata] to `null`.
+  RangeAreaChartSeries clearMetadata() => copyWith(clearMetadata: true);
 
   /// Replaces [RangeAreaChartSeries.annotations] with [value].
   RangeAreaChartSeries withAnnotations(List<ChartAnnotation> value) =>
       copyWith(annotations: value);
 
   /// Replaces [RangeAreaChartSeries.yAxisId] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.yAxisId]; construct a new instance to reset it.
   RangeAreaChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
 
+  /// Clears [RangeAreaChartSeries.yAxisId] to `null`.
+  RangeAreaChartSeries clearYAxisId() => copyWith(clearYAxisId: true);
+
   /// Replaces [RangeAreaChartSeries.yAxisConfig] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.yAxisConfig]; construct a new instance to reset it.
   RangeAreaChartSeries withYAxisConfig(YAxisConfig value) =>
       copyWith(yAxisConfig: value);
 
+  /// Clears [RangeAreaChartSeries.yAxisConfig] to `null`.
+  RangeAreaChartSeries clearYAxisConfig() => copyWith(clearYAxisConfig: true);
+
   /// Replaces [RangeAreaChartSeries.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaChartSeries.unit]; construct a new instance to reset it.
   RangeAreaChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Clears [RangeAreaChartSeries.unit] to `null`.
+  RangeAreaChartSeries clearUnit() => copyWith(clearUnit: true);
 
   /// Replaces [RangeAreaChartSeries.interpolation] with [value].
   RangeAreaChartSeries withInterpolation(LineInterpolation value) =>

@@ -251,6 +251,8 @@ class CartesianValueSummaryTheme {
     double? maxWidth,
     double? rowGap,
     double? labelValueGap,
+    bool clearShadow = false,
+    bool clearLabelValueGap = false,
   }) => CartesianValueSummaryTheme(
     background: background ?? this.background,
     backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
@@ -262,11 +264,13 @@ class CartesianValueSummaryTheme {
     labelStyle: labelStyle ?? this.labelStyle,
     valueStyle: valueStyle ?? this.valueStyle,
     accentSize: accentSize ?? this.accentSize,
-    shadow: shadow ?? this.shadow,
+    shadow: clearShadow ? null : (shadow ?? this.shadow),
     minWidth: minWidth ?? this.minWidth,
     maxWidth: maxWidth ?? this.maxWidth,
     rowGap: rowGap ?? this.rowGap,
-    labelValueGap: labelValueGap ?? this.labelValueGap,
+    labelValueGap: clearLabelValueGap
+        ? null
+        : (labelValueGap ?? this.labelValueGap),
   );
 
   @override

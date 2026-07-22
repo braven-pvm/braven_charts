@@ -16,11 +16,11 @@ extension CrosshairStyleFluent on CrosshairStyle {
   CrosshairStyle withLineWidth(double value) => copyWith(lineWidth: value);
 
   /// Replaces [CrosshairStyle.dashPattern] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CrosshairStyle.dashPattern]; construct a new instance to reset it.
   CrosshairStyle withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
+
+  /// Clears [CrosshairStyle.dashPattern] to `null`.
+  CrosshairStyle clearDashPattern() => copyWith(clearDashPattern: true);
 
   /// Replaces [CrosshairStyle.strokeCap] with [value].
   CrosshairStyle withStrokeCap(StrokeCap value) => copyWith(strokeCap: value);
@@ -58,11 +58,12 @@ extension CrosshairConfigFluent on CrosshairConfig {
       copyWith(showCoordinateLabels: value);
 
   /// Replaces [CrosshairConfig.coordinateLabelStyle] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CrosshairConfig.coordinateLabelStyle]; construct a new instance to reset it.
   CrosshairConfig withCoordinateLabelStyle(TextStyle value) =>
       copyWith(coordinateLabelStyle: value);
+
+  /// Clears [CrosshairConfig.coordinateLabelStyle] to `null`.
+  CrosshairConfig clearCoordinateLabelStyle() =>
+      copyWith(clearCoordinateLabelStyle: true);
 
   /// Replaces [CrosshairConfig.style] with [value].
   CrosshairConfig withStyle(CrosshairStyle value) => copyWith(style: value);

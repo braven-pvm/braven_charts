@@ -10,33 +10,33 @@ import 'package:flutter/widgets.dart' show Color;
 /// Generated fluent modifiers for [PieChartSeries].
 extension PieChartSeriesFluent on PieChartSeries {
   /// Replaces [PieChartSeries.name] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PieChartSeries.name]; construct a new instance to reset it.
   PieChartSeries withName(String value) => copyWith(name: value);
+
+  /// Clears [PieChartSeries.name] to `null`.
+  PieChartSeries clearName() => copyWith(clearName: true);
 
   /// Replaces [PieChartSeries.points] with [value].
   PieChartSeries withPoints(List<ChartDataPoint> value) =>
       copyWith(points: value);
 
   /// Replaces [PieChartSeries.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PieChartSeries.color]; construct a new instance to reset it.
   PieChartSeries withColor(Color value) => copyWith(color: value);
 
+  /// Clears [PieChartSeries.color] to `null`.
+  PieChartSeries clearColor() => copyWith(clearColor: true);
+
   /// Replaces [PieChartSeries.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PieChartSeries.metadata]; construct a new instance to reset it.
   PieChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
 
+  /// Clears [PieChartSeries.metadata] to `null`.
+  PieChartSeries clearMetadata() => copyWith(clearMetadata: true);
+
   /// Replaces [PieChartSeries.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PieChartSeries.unit]; construct a new instance to reset it.
   PieChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Clears [PieChartSeries.unit] to `null`.
+  PieChartSeries clearUnit() => copyWith(clearUnit: true);
 
   /// Replaces [PieChartSeries.pieStyle] with [value].
   PieChartSeries withPieStyle(PieChartStyle value) => copyWith(pieStyle: value);

@@ -41,8 +41,12 @@ mirrors of the config surface. V1 made the model drive the fluent layer + AI sch
 - Artifact codec convergence (the deepest mirror). *(late)*
 
 ### Theme C — Depth (complete the fluent layer itself)
-- **Nullable-clear gap** — 70% of nullable params have no clear verb (`copyWith` can't unset them);
-  closing it is a model-driven sentinel-`copyWith` refactor across ~97 classes (also a Convergence enabler).
+- ✅ **Nullable-clear gap** — *(DONE)*. Closed by extending the shipped **bool-flag** `copyWith`
+  convention across the surface (~146 fields), NOT the sentinel refactor this line first proposed:
+  the fluent layer is opt-in, so `copyWith` is the primary authoring API and a sentinel `Object?`
+  rewrite would have un-typed it. The lone pre-existing sentinel class (`SeriesLabelBackground`) was
+  converted to bool-flag for consistency. Only structural exceptions remain (assert-coupled fields
+  where `null` is illegal, e.g. `TrendAnnotation.windowSize`). Generator unchanged.
 - `YAxisConfig.withId` → public API. *(trivial)*
 - Emitter → Dart `augment` declarations when they ship (the emitter seam already exists).
 

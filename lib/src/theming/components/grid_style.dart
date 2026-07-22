@@ -129,13 +129,15 @@ class GridStyle {
     double? minorWidth,
     List<double>? minorDashPattern,
     bool? showMinor,
+    bool clearMinorColor = false,
+    bool clearMinorWidth = false,
   }) {
     return GridStyle(
       majorColor: majorColor ?? this.majorColor,
       majorWidth: majorWidth ?? this.majorWidth,
       majorDashPattern: majorDashPattern ?? this.majorDashPattern,
-      minorColor: minorColor ?? this.minorColor,
-      minorWidth: minorWidth ?? this.minorWidth,
+      minorColor: clearMinorColor ? null : (minorColor ?? this.minorColor),
+      minorWidth: clearMinorWidth ? null : (minorWidth ?? this.minorWidth),
       minorDashPattern: minorDashPattern ?? this.minorDashPattern,
       showMinor: showMinor ?? this.showMinor,
     );

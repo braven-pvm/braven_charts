@@ -201,11 +201,12 @@ class CrosshairStyle {
     Color? labelBackgroundColor,
     Color? labelTextColor,
     double? labelPadding,
+    bool clearDashPattern = false,
   }) {
     return CrosshairStyle(
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
-      dashPattern: dashPattern ?? this.dashPattern,
+      dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
       strokeCap: strokeCap ?? this.strokeCap,
       labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
       labelTextColor: labelTextColor ?? this.labelTextColor,
@@ -416,6 +417,7 @@ class CrosshairConfig {
     bool? showTrackingTooltip,
     bool? showIntersectionMarkers,
     double? intersectionMarkerRadius,
+    bool clearCoordinateLabelStyle = false,
   }) {
     return CrosshairConfig(
       enabled: enabled ?? this.enabled,
@@ -423,7 +425,9 @@ class CrosshairConfig {
       snapToDataPoint: snapToDataPoint ?? this.snapToDataPoint,
       snapRadius: snapRadius ?? this.snapRadius,
       showCoordinateLabels: showCoordinateLabels ?? this.showCoordinateLabels,
-      coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
+      coordinateLabelStyle: clearCoordinateLabelStyle
+          ? null
+          : (coordinateLabelStyle ?? this.coordinateLabelStyle),
       style: style ?? this.style,
       displayMode: displayMode ?? this.displayMode,
       trackingModeThreshold:

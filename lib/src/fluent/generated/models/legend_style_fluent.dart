@@ -21,33 +21,33 @@ extension LegendStyleFluent on LegendStyle {
   LegendStyle withTextStyle(TextStyle value) => copyWith(textStyle: value);
 
   /// Replaces [LegendStyle.backgroundColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendStyle.backgroundColor]; construct a new instance to reset it.
   LegendStyle withBackgroundColor(Color value) =>
       copyWith(backgroundColor: value);
 
+  /// Clears [LegendStyle.backgroundColor] to `null`.
+  LegendStyle clearBackgroundColor() => copyWith(clearBackgroundColor: true);
+
   /// Replaces [LegendStyle.borderColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendStyle.borderColor]; construct a new instance to reset it.
   LegendStyle withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Clears [LegendStyle.borderColor] to `null`.
+  LegendStyle clearBorderColor() => copyWith(clearBorderColor: true);
 
   /// Replaces [LegendStyle.borderWidth] with [value].
   LegendStyle withBorderWidth(double value) => copyWith(borderWidth: value);
 
   /// Replaces [LegendStyle.borderRadius] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendStyle.borderRadius]; construct a new instance to reset it.
   LegendStyle withBorderRadius(BorderRadius value) =>
       copyWith(borderRadius: value);
 
+  /// Clears [LegendStyle.borderRadius] to `null`.
+  LegendStyle clearBorderRadius() => copyWith(clearBorderRadius: true);
+
   /// Replaces [LegendStyle.padding] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendStyle.padding]; construct a new instance to reset it.
   LegendStyle withPadding(EdgeInsets value) => copyWith(padding: value);
+
+  /// Clears [LegendStyle.padding] to `null`.
+  LegendStyle clearPadding() => copyWith(clearPadding: true);
 
   /// Replaces [LegendStyle.itemSpacing] with [value].
   LegendStyle withItemSpacing(double value) => copyWith(itemSpacing: value);

@@ -26,20 +26,19 @@ class SeriesLabelBackground {
 
   SeriesLabelBackground copyWith({
     Color? color,
-    Object? cornerRadius = _sentinel,
+    double? cornerRadius,
     EdgeInsets? padding,
-    Object? borderColor = _sentinel,
+    Color? borderColor,
     double? borderWidth,
+    bool clearCornerRadius = false,
+    bool clearBorderColor = false,
   }) =>
       SeriesLabelBackground(
         color: color ?? this.color,
-        cornerRadius: cornerRadius == _sentinel
-            ? this.cornerRadius
-            : cornerRadius as double?,
+        cornerRadius:
+            clearCornerRadius ? null : (cornerRadius ?? this.cornerRadius),
         padding: padding ?? this.padding,
-        borderColor: borderColor == _sentinel
-            ? this.borderColor
-            : borderColor as Color?,
+        borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
         borderWidth: borderWidth ?? this.borderWidth,
       );
 
@@ -63,9 +62,6 @@ class SeriesLabelBackground {
       'SeriesLabelBackground(color: $color, cornerRadius: $cornerRadius, '
       'padding: $padding, borderColor: $borderColor, borderWidth: $borderWidth)';
 }
-
-// Sentinel for nullable copyWith params so callers can explicitly pass null.
-const Object _sentinel = Object();
 
 @chartSurface
 class SeriesInlineLabelConfig {
@@ -95,15 +91,17 @@ class SeriesInlineLabelConfig {
     double? fontSize,
     FontWeight? fontWeight,
     SeriesLabelBackground? background,
+    bool clearColor = false,
+    bool clearBackground = false,
   }) =>
       SeriesInlineLabelConfig(
         text: text ?? this.text,
         position: position ?? this.position,
         offsetY: offsetY ?? this.offsetY,
-        color: color ?? this.color,
+        color: clearColor ? null : (color ?? this.color),
         fontSize: fontSize ?? this.fontSize,
         fontWeight: fontWeight ?? this.fontWeight,
-        background: background ?? this.background,
+        background: clearBackground ? null : (background ?? this.background),
       );
 
   @override

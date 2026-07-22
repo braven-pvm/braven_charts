@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1369 verbs total; 9 of them have an argument type with no
+// 1517 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -67,7 +67,7 @@ const int _executedClasses = 121;
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
 
-/// Smoke coverage for [ChartDocumentExtractOptions]'s 11 executable verb(s).
+/// Smoke coverage for [ChartDocumentExtractOptions]'s 14 executable verb(s).
 void _smokeChartDocumentExtractOptions(
   _Verb verb,
   ChartDocumentExtractOptions subject,
@@ -103,6 +103,14 @@ void _smokeChartDocumentExtractOptions(
     () => subject.withThemeReference('y'),
   );
   verb(
+    'ChartDocumentExtractOptionsFluent.clearThemeReference',
+    () => subject.clearThemeReference(),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.clearXAxisFormatterDescriptor',
+    () => subject.clearXAxisFormatterDescriptor(),
+  );
+  verb(
     'ChartDocumentExtractOptionsFluent.withYAxisFormatterDescriptors',
     () => subject.withYAxisFormatterDescriptors(const {}),
   );
@@ -113,6 +121,10 @@ void _smokeChartDocumentExtractOptions(
   verb(
     'ChartDocumentExtractOptionsFluent.withRadialFormatterDescriptors',
     () => subject.withRadialFormatterDescriptors(const {}),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.clearConcentricCenterFormatterDescriptor',
+    () => subject.clearConcentricCenterFormatterDescriptor(),
   );
   verb(
     'ChartDocumentExtractOptionsFluent.withMaxSnapshotAttempts',
@@ -131,7 +143,7 @@ void _compileChartDocumentExtractOptions(
   subject.withConcentricCenterFormatterDescriptor(a1);
 }
 
-/// Smoke coverage for [AnnotationStyle]'s 6 executable verb(s).
+/// Smoke coverage for [AnnotationStyle]'s 10 executable verb(s).
 void _smokeAnnotationStyle(_Verb verb, AnnotationStyle subject) {
   verb(
     'AnnotationStyleFluent.withTextStyle',
@@ -142,8 +154,16 @@ void _smokeAnnotationStyle(_Verb verb, AnnotationStyle subject) {
     () => subject.withBackgroundColor(const Color(0xFF2196F3)),
   );
   verb(
+    'AnnotationStyleFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
     'AnnotationStyleFluent.withBorderColor',
     () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'AnnotationStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
   );
   verb(
     'AnnotationStyleFluent.withBorderWidth',
@@ -154,12 +174,17 @@ void _smokeAnnotationStyle(_Verb verb, AnnotationStyle subject) {
     () => subject.withBorderRadius(BorderRadius.zero),
   );
   verb(
+    'AnnotationStyleFluent.clearBorderRadius',
+    () => subject.clearBorderRadius(),
+  );
+  verb(
     'AnnotationStyleFluent.withPadding',
     () => subject.withPadding(EdgeInsets.zero),
   );
+  verb('AnnotationStyleFluent.clearPadding', () => subject.clearPadding());
 }
 
-/// Smoke coverage for [AutoScrollConfig]'s 9 executable verb(s).
+/// Smoke coverage for [AutoScrollConfig]'s 10 executable verb(s).
 void _smokeAutoScrollConfig(_Verb verb, AutoScrollConfig subject) {
   verb('AutoScrollConfigFluent.withEnabled', () => subject.withEnabled(false));
   verb(
@@ -179,6 +204,10 @@ void _smokeAutoScrollConfig(_Verb verb, AutoScrollConfig subject) {
     () => subject.withResumeAfterInteractionDelay(
       const Duration(milliseconds: 1),
     ),
+  );
+  verb(
+    'AutoScrollConfigFluent.clearResumeAfterInteractionDelay',
+    () => subject.clearResumeAfterInteractionDelay(),
   );
   verb(
     'AutoScrollConfigFluent.withAnimateIncomingData',
@@ -649,16 +678,22 @@ void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
   );
 }
 
-/// Smoke coverage for [CandlestickChartSeries]'s 13 executable verb(s).
+/// Smoke coverage for [CandlestickChartSeries]'s 19 executable verb(s).
 void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
   verb('CandlestickChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('CandlestickChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'CandlestickChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('CandlestickChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'CandlestickChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb(
+    'CandlestickChartSeriesFluent.clearMetadata',
+    () => subject.clearMetadata(),
   );
   verb(
     'CandlestickChartSeriesFluent.withAnnotations',
@@ -669,12 +704,21 @@ void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
     () => subject.withYAxisId('y'),
   );
   verb(
+    'CandlestickChartSeriesFluent.clearYAxisId',
+    () => subject.clearYAxisId(),
+  );
+  verb(
     'CandlestickChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'CandlestickChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('CandlestickChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('CandlestickChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'CandlestickChartSeriesFluent.withCandlestickStyle',
     () => subject.withCandlestickStyle(const CandlestickChartStyle()),
@@ -835,7 +879,7 @@ void _smokeCandlestickAnimationStyle(
   );
 }
 
-/// Smoke coverage for [CandlestickDataPoint]'s 20 executable verb(s).
+/// Smoke coverage for [CandlestickDataPoint]'s 23 executable verb(s).
 void _smokeCandlestickDataPoint(_Verb verb, CandlestickDataPoint subject) {
   verb('CandlestickDataPointFluent.withX', () => subject.withX(1.0));
   verb(
@@ -882,10 +926,19 @@ void _smokeCandlestickDataPoint(_Verb verb, CandlestickDataPoint subject) {
     'CandlestickDataPointFluent.withTimestamp',
     () => subject.withTimestamp(DateTime.utc(2026)),
   );
+  verb(
+    'CandlestickDataPointFluent.clearTimestamp',
+    () => subject.clearTimestamp(),
+  );
   verb('CandlestickDataPointFluent.withLabel', () => subject.withLabel('y'));
+  verb('CandlestickDataPointFluent.clearLabel', () => subject.clearLabel());
   verb(
     'CandlestickDataPointFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb(
+    'CandlestickDataPointFluent.clearMetadata',
+    () => subject.clearMetadata(),
   );
   verb(
     'CandlestickDataPointFluent.withSegmentStyle',
@@ -1277,9 +1330,10 @@ void _smokeCategoryAxisConfig(_Verb verb, CategoryAxisConfig subject) {
   );
 }
 
-/// Smoke coverage for [PointAnnotation]'s 13 executable verb(s).
+/// Smoke coverage for [PointAnnotation]'s 14 executable verb(s).
 void _smokePointAnnotation(_Verb verb, PointAnnotation subject) {
   verb('PointAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('PointAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'PointAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1324,9 +1378,10 @@ void _smokePointAnnotation(_Verb verb, PointAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [RangeAnnotation]'s 14 executable verb(s).
+/// Smoke coverage for [RangeAnnotation]'s 18 executable verb(s).
 void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
   verb('RangeAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('RangeAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'RangeAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1357,13 +1412,19 @@ void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
     () => subject.withSnapTolerance(0.05),
   );
   verb('RangeAnnotationFluent.withSeriesId', () => subject.withSeriesId('y'));
+  verb('RangeAnnotationFluent.clearSeriesId', () => subject.clearSeriesId());
   verb(
     'RangeAnnotationFluent.withFillColor',
     () => subject.withFillColor(const Color(0xFF2196F3)),
   );
+  verb('RangeAnnotationFluent.clearFillColor', () => subject.clearFillColor());
   verb(
     'RangeAnnotationFluent.withBorderColor',
     () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RangeAnnotationFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
   );
   verb(
     'RangeAnnotationFluent.withLabelPosition',
@@ -1375,9 +1436,10 @@ void _smokeRangeAnnotation(_Verb verb, RangeAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [TextAnnotation]'s 11 executable verb(s).
+/// Smoke coverage for [TextAnnotation]'s 14 executable verb(s).
 void _smokeTextAnnotation(_Verb verb, TextAnnotation subject) {
   verb('TextAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('TextAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'TextAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1409,14 +1471,23 @@ void _smokeTextAnnotation(_Verb verb, TextAnnotation subject) {
     () => subject.withBackgroundColor(const Color(0xFF2196F3)),
   );
   verb(
+    'TextAnnotationFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
     'TextAnnotationFluent.withBorderColor',
     () => subject.withBorderColor(const Color(0xFF2196F3)),
   );
+  verb(
+    'TextAnnotationFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
 }
 
-/// Smoke coverage for [ThresholdAnnotation]'s 15 executable verb(s).
+/// Smoke coverage for [ThresholdAnnotation]'s 18 executable verb(s).
 void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
   verb('ThresholdAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('ThresholdAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'ThresholdAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1444,6 +1515,10 @@ void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
     () => subject.withSeriesId('y'),
   );
   verb(
+    'ThresholdAnnotationFluent.clearSeriesId',
+    () => subject.clearSeriesId(),
+  );
+  verb(
     'ThresholdAnnotationFluent.withLineColor',
     () => subject.withLineColor(const Color(0xFF2196F3)),
   );
@@ -1454,6 +1529,10 @@ void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
   verb(
     'ThresholdAnnotationFluent.withDashPattern',
     () => subject.withDashPattern(const <double>[]),
+  );
+  verb(
+    'ThresholdAnnotationFluent.clearDashPattern',
+    () => subject.clearDashPattern(),
   );
   verb(
     'ThresholdAnnotationFluent.withLabelPosition',
@@ -1469,9 +1548,10 @@ void _smokeThresholdAnnotation(_Verb verb, ThresholdAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [PinAnnotation]'s 12 executable verb(s).
+/// Smoke coverage for [PinAnnotation]'s 13 executable verb(s).
 void _smokePinAnnotation(_Verb verb, PinAnnotation subject) {
   verb('PinAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('PinAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'PinAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1506,9 +1586,10 @@ void _smokePinAnnotation(_Verb verb, PinAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [TrendAnnotation]'s 28 executable verb(s).
+/// Smoke coverage for [TrendAnnotation]'s 32 executable verb(s).
 void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
   verb('TrendAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('TrendAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'TrendAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1574,8 +1655,16 @@ void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
     () => subject.withConfidenceBandColor(const Color(0xFF2196F3)),
   );
   verb(
+    'TrendAnnotationFluent.clearConfidenceBandColor',
+    () => subject.clearConfidenceBandColor(),
+  );
+  verb(
     'TrendAnnotationFluent.withPredictionBandColor',
     () => subject.withPredictionBandColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'TrendAnnotationFluent.clearPredictionBandColor',
+    () => subject.clearPredictionBandColor(),
   );
   verb(
     'TrendAnnotationFluent.withConfidenceBandOpacity',
@@ -1594,6 +1683,10 @@ void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
     'TrendAnnotationFluent.withDashPattern',
     () => subject.withDashPattern(const <double>[]),
   );
+  verb(
+    'TrendAnnotationFluent.clearDashPattern',
+    () => subject.clearDashPattern(),
+  );
   verb('TrendAnnotationFluent.withElevation', () => subject.withElevation(0.0));
   verb(
     'TrendAnnotationFluent.withTrend',
@@ -1601,9 +1694,10 @@ void _smokeTrendAnnotation(_Verb verb, TrendAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [ErrorBarAnnotation]'s 10 executable verb(s).
+/// Smoke coverage for [ErrorBarAnnotation]'s 11 executable verb(s).
 void _smokeErrorBarAnnotation(_Verb verb, ErrorBarAnnotation subject) {
   verb('ErrorBarAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('ErrorBarAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'ErrorBarAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1633,9 +1727,10 @@ void _smokeErrorBarAnnotation(_Verb verb, ErrorBarAnnotation subject) {
   verb('ErrorBarAnnotationFluent.withCapSize', () => subject.withCapSize(6));
 }
 
-/// Smoke coverage for [ChordAnnotation]'s 20 executable verb(s).
+/// Smoke coverage for [ChordAnnotation]'s 29 executable verb(s).
 void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
   verb('ChordAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('ChordAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb(
     'ChordAnnotationFluent.withStyle',
     () => subject.withStyle(const AnnotationStyle()),
@@ -1663,14 +1758,26 @@ void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
     'ChordAnnotationFluent.withDashPattern',
     () => subject.withDashPattern(const <double>[]),
   );
+  verb(
+    'ChordAnnotationFluent.clearDashPattern',
+    () => subject.clearDashPattern(),
+  );
   verb('ChordAnnotationFluent.withElevation', () => subject.withElevation(0.0));
   verb(
     'ChordAnnotationFluent.withPerpendicularIndex',
     () => subject.withPerpendicularIndex(2),
   );
   verb(
+    'ChordAnnotationFluent.clearPerpendicularIndex',
+    () => subject.clearPerpendicularIndex(),
+  );
+  verb(
     'ChordAnnotationFluent.withPerpendicularLabel',
     () => subject.withPerpendicularLabel('y'),
+  );
+  verb(
+    'ChordAnnotationFluent.clearPerpendicularLabel',
+    () => subject.clearPerpendicularLabel(),
   );
   verb(
     'ChordAnnotationFluent.withPerpendicularLabelOffset',
@@ -1681,20 +1788,40 @@ void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
     () => subject.withPerpendicularLabelStyle(AnnotationStyle()),
   );
   verb(
+    'ChordAnnotationFluent.clearPerpendicularLabelStyle',
+    () => subject.clearPerpendicularLabelStyle(),
+  );
+  verb(
     'ChordAnnotationFluent.withPerpendicularLineColor',
     () => subject.withPerpendicularLineColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChordAnnotationFluent.clearPerpendicularLineColor',
+    () => subject.clearPerpendicularLineColor(),
   );
   verb(
     'ChordAnnotationFluent.withPerpendicularLineWidth',
     () => subject.withPerpendicularLineWidth(1.0),
   );
   verb(
+    'ChordAnnotationFluent.clearPerpendicularLineWidth',
+    () => subject.clearPerpendicularLineWidth(),
+  );
+  verb(
     'ChordAnnotationFluent.withPerpendicularDashPattern',
     () => subject.withPerpendicularDashPattern(const <double>[]),
   );
   verb(
+    'ChordAnnotationFluent.clearPerpendicularDashPattern',
+    () => subject.clearPerpendicularDashPattern(),
+  );
+  verb(
     'ChordAnnotationFluent.withPerpendicularElevation',
     () => subject.withPerpendicularElevation(1.0),
+  );
+  verb(
+    'ChordAnnotationFluent.clearPerpendicularElevation',
+    () => subject.clearPerpendicularElevation(),
   );
   verb(
     'ChordAnnotationFluent.withEndpoints',
@@ -1702,9 +1829,10 @@ void _smokeChordAnnotation(_Verb verb, ChordAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [LegendAnnotation]'s 10 executable verb(s).
+/// Smoke coverage for [LegendAnnotation]'s 11 executable verb(s).
 void _smokeLegendAnnotation(_Verb verb, LegendAnnotation subject) {
   verb('LegendAnnotationFluent.withLabel', () => subject.withLabel('y'));
+  verb('LegendAnnotationFluent.clearLabel', () => subject.clearLabel());
   verb('LegendAnnotationFluent.withZIndex', () => subject.withZIndex(0));
   verb('LegendAnnotationFluent.withSeries', () => subject.withSeries(const []));
   verb(
@@ -1737,7 +1865,7 @@ void _smokeLegendAnnotation(_Verb verb, LegendAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [ChartDataPoint]'s 19 executable verb(s).
+/// Smoke coverage for [ChartDataPoint]'s 22 executable verb(s).
 void _smokeChartDataPoint(_Verb verb, ChartDataPoint subject) {
   verb('ChartDataPointFluent.withX', () => subject.withX(1.0));
   verb('ChartDataPointFluent.withY', () => subject.withY(1.0));
@@ -1770,11 +1898,14 @@ void _smokeChartDataPoint(_Verb verb, ChartDataPoint subject) {
     'ChartDataPointFluent.withTimestamp',
     () => subject.withTimestamp(DateTime.utc(2026)),
   );
+  verb('ChartDataPointFluent.clearTimestamp', () => subject.clearTimestamp());
   verb('ChartDataPointFluent.withLabel', () => subject.withLabel('y'));
+  verb('ChartDataPointFluent.clearLabel', () => subject.clearLabel());
   verb(
     'ChartDataPointFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('ChartDataPointFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'ChartDataPointFluent.withSegmentStyle',
     () => subject.withSegmentStyle(SegmentStyle()),
@@ -1802,9 +1933,10 @@ void _smokeChartOverlayPlacement(_Verb verb, ChartOverlayPlacement subject) {
   );
 }
 
-/// Smoke coverage for [LineChartSeries]'s 23 executable verb(s).
+/// Smoke coverage for [LineChartSeries]'s 32 executable verb(s).
 void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   verb('LineChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('LineChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'LineChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -1813,27 +1945,36 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
     'LineChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('LineChartSeriesFluent.clearColor', () => subject.clearColor());
   verb('LineChartSeriesFluent.withXOrdered', () => subject.withXOrdered(false));
   verb(
     'LineChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('LineChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'LineChartSeriesFluent.withStyle',
     () => subject.withStyle(SeriesStyle.values.first),
   );
+  verb('LineChartSeriesFluent.clearStyle', () => subject.clearStyle());
   verb(
     'LineChartSeriesFluent.withAnnotations',
     () => subject.withAnnotations(const []),
   );
   verb('LineChartSeriesFluent.withYAxisId', () => subject.withYAxisId('y'));
+  verb('LineChartSeriesFluent.clearYAxisId', () => subject.clearYAxisId());
   verb(
     'LineChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'LineChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('LineChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('LineChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'LineChartSeriesFluent.withInterpolation',
     () => subject.withInterpolation(LineInterpolation.linear),
@@ -1865,8 +2006,16 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
     () => subject.withDataPointLabels(DataPointLabelConfig()),
   );
   verb(
+    'LineChartSeriesFluent.clearDataPointLabels',
+    () => subject.clearDataPointLabels(),
+  );
+  verb(
     'LineChartSeriesFluent.withInlineLabel',
     () => subject.withInlineLabel(SeriesInlineLabelConfig(text: 'y')),
+  );
+  verb(
+    'LineChartSeriesFluent.clearInlineLabel',
+    () => subject.clearInlineLabel(),
   );
   verb(
     'LineChartSeriesFluent.withPathAnimation',
@@ -1882,9 +2031,10 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   );
 }
 
-/// Smoke coverage for [ScatterChartSeries]'s 30 executable verb(s).
+/// Smoke coverage for [ScatterChartSeries]'s 37 executable verb(s).
 void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
   verb('ScatterChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('ScatterChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'ScatterChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -1893,6 +2043,7 @@ void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
     'ScatterChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('ScatterChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'ScatterChartSeriesFluent.withXOrdered',
     () => subject.withXOrdered(false),
@@ -1901,22 +2052,30 @@ void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
     'ScatterChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('ScatterChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'ScatterChartSeriesFluent.withStyle',
     () => subject.withStyle(SeriesStyle.values.first),
   );
+  verb('ScatterChartSeriesFluent.clearStyle', () => subject.clearStyle());
   verb(
     'ScatterChartSeriesFluent.withAnnotations',
     () => subject.withAnnotations(const []),
   );
   verb('ScatterChartSeriesFluent.withYAxisId', () => subject.withYAxisId('y'));
+  verb('ScatterChartSeriesFluent.clearYAxisId', () => subject.clearYAxisId());
   verb(
     'ScatterChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'ScatterChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('ScatterChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('ScatterChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'ScatterChartSeriesFluent.withMarkerRadius',
     () => subject.withMarkerRadius(5.0),
@@ -2014,9 +2173,10 @@ void _compileScatterChartSeries(
   subject.withCategoryEncoding(a3);
 }
 
-/// Smoke coverage for [AreaChartSeries]'s 28 executable verb(s).
+/// Smoke coverage for [AreaChartSeries]'s 40 executable verb(s).
 void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
   verb('AreaChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('AreaChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'AreaChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -2025,27 +2185,36 @@ void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
     'AreaChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('AreaChartSeriesFluent.clearColor', () => subject.clearColor());
   verb('AreaChartSeriesFluent.withXOrdered', () => subject.withXOrdered(false));
   verb(
     'AreaChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('AreaChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'AreaChartSeriesFluent.withStyle',
     () => subject.withStyle(SeriesStyle.values.first),
   );
+  verb('AreaChartSeriesFluent.clearStyle', () => subject.clearStyle());
   verb(
     'AreaChartSeriesFluent.withAnnotations',
     () => subject.withAnnotations(const []),
   );
   verb('AreaChartSeriesFluent.withYAxisId', () => subject.withYAxisId('y'));
+  verb('AreaChartSeriesFluent.clearYAxisId', () => subject.clearYAxisId());
   verb(
     'AreaChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'AreaChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('AreaChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('AreaChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'AreaChartSeriesFluent.withInterpolation',
     () => subject.withInterpolation(LineInterpolation.linear),
@@ -2085,20 +2254,40 @@ void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
     () => subject.withDataPointLabels(DataPointLabelConfig()),
   );
   verb(
+    'AreaChartSeriesFluent.clearDataPointLabels',
+    () => subject.clearDataPointLabels(),
+  );
+  verb(
     'AreaChartSeriesFluent.withInlineLabel',
     () => subject.withInlineLabel(SeriesInlineLabelConfig(text: 'y')),
+  );
+  verb(
+    'AreaChartSeriesFluent.clearInlineLabel',
+    () => subject.clearInlineLabel(),
   );
   verb(
     'AreaChartSeriesFluent.withBaselineValue',
     () => subject.withBaselineValue(1.0),
   );
   verb(
+    'AreaChartSeriesFluent.clearBaselineValue',
+    () => subject.clearBaselineValue(),
+  );
+  verb(
     'AreaChartSeriesFluent.withAboveBaselineFillColor',
     () => subject.withAboveBaselineFillColor(const Color(0xFF2196F3)),
   );
   verb(
+    'AreaChartSeriesFluent.clearAboveBaselineFillColor',
+    () => subject.clearAboveBaselineFillColor(),
+  );
+  verb(
     'AreaChartSeriesFluent.withBelowBaselineFillColor',
     () => subject.withBelowBaselineFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'AreaChartSeriesFluent.clearBelowBaselineFillColor',
+    () => subject.clearBelowBaselineFillColor(),
   );
   verb(
     'AreaChartSeriesFluent.withPathAnimation',
@@ -2120,9 +2309,10 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 44 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 51 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('BarChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'BarChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -2131,27 +2321,36 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     'BarChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('BarChartSeriesFluent.clearColor', () => subject.clearColor());
   verb('BarChartSeriesFluent.withXOrdered', () => subject.withXOrdered(false));
   verb(
     'BarChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('BarChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'BarChartSeriesFluent.withStyle',
     () => subject.withStyle(SeriesStyle.values.first),
   );
+  verb('BarChartSeriesFluent.clearStyle', () => subject.clearStyle());
   verb(
     'BarChartSeriesFluent.withAnnotations',
     () => subject.withAnnotations(const []),
   );
   verb('BarChartSeriesFluent.withYAxisId', () => subject.withYAxisId('y'));
+  verb('BarChartSeriesFluent.clearYAxisId', () => subject.clearYAxisId());
   verb(
     'BarChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'BarChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('BarChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('BarChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb('BarChartSeriesFluent.withBarGap', () => subject.withBarGap(2.0));
   verb(
     'BarChartSeriesFluent.withOrientation',
@@ -2578,7 +2777,7 @@ void _smokeConcentricDonutConfig(_Verb verb, ConcentricDonutConfig subject) {
   );
 }
 
-/// Smoke coverage for [DataPointLabelConfig]'s 15 executable verb(s).
+/// Smoke coverage for [DataPointLabelConfig]'s 17 executable verb(s).
 void _smokeDataPointLabelConfig(_Verb verb, DataPointLabelConfig subject) {
   verb('DataPointLabelConfigFluent.withShow', () => subject.withShow(false));
   verb(
@@ -2618,6 +2817,10 @@ void _smokeDataPointLabelConfig(_Verb verb, DataPointLabelConfig subject) {
     () => subject.withLabelColor(const Color(0xFF2196F3)),
   );
   verb(
+    'DataPointLabelConfigFluent.clearLabelColor',
+    () => subject.clearLabelColor(),
+  );
+  verb(
     'DataPointLabelConfigFluent.withFontSize',
     () => subject.withFontSize(10.0),
   );
@@ -2632,6 +2835,10 @@ void _smokeDataPointLabelConfig(_Verb verb, DataPointLabelConfig subject) {
   verb(
     'DataPointLabelConfigFluent.withBackground',
     () => subject.withBackground(const Color(0xFF2196F3)),
+  );
+  verb(
+    'DataPointLabelConfigFluent.clearBackground',
+    () => subject.clearBackground(),
   );
   verb(
     'DataPointLabelConfigFluent.withBackgroundOpacity',
@@ -2813,9 +3020,10 @@ void _smokeDonutChartStyle(_Verb verb, DonutChartStyle subject) {
   );
 }
 
-/// Smoke coverage for [DonutChartSeries]'s 15 executable verb(s).
+/// Smoke coverage for [DonutChartSeries]'s 19 executable verb(s).
 void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
   verb('DonutChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('DonutChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'DonutChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -2824,11 +3032,14 @@ void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
     'DonutChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('DonutChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'DonutChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('DonutChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb('DonutChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('DonutChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'DonutChartSeriesFluent.withDonutStyle',
     () => subject.withDonutStyle(const DonutChartStyle()),
@@ -2871,7 +3082,7 @@ void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
   );
 }
 
-/// Smoke coverage for [GridConfig]'s 6 executable verb(s).
+/// Smoke coverage for [GridConfig]'s 8 executable verb(s).
 void _smokeGridConfig(_Verb verb, GridConfig subject) {
   verb('GridConfigFluent.withHorizontal', () => subject.withHorizontal(true));
   verb('GridConfigFluent.withVertical', () => subject.withVertical(true));
@@ -2880,8 +3091,16 @@ void _smokeGridConfig(_Verb verb, GridConfig subject) {
     () => subject.withHorizontalColor(const Color(0xFF2196F3)),
   );
   verb(
+    'GridConfigFluent.clearHorizontalColor',
+    () => subject.clearHorizontalColor(),
+  );
+  verb(
     'GridConfigFluent.withVerticalColor',
     () => subject.withVerticalColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'GridConfigFluent.clearVerticalColor',
+    () => subject.clearVerticalColor(),
   );
   verb(
     'GridConfigFluent.withHorizontalStrokeWidth',
@@ -2893,7 +3112,7 @@ void _smokeGridConfig(_Verb verb, GridConfig subject) {
   );
 }
 
-/// Smoke coverage for [CrosshairStyle]'s 7 executable verb(s).
+/// Smoke coverage for [CrosshairStyle]'s 8 executable verb(s).
 void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
   verb(
     'CrosshairStyleFluent.withLineColor',
@@ -2903,6 +3122,10 @@ void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
   verb(
     'CrosshairStyleFluent.withDashPattern',
     () => subject.withDashPattern(const [5, 3]),
+  );
+  verb(
+    'CrosshairStyleFluent.clearDashPattern',
+    () => subject.clearDashPattern(),
   );
   verb(
     'CrosshairStyleFluent.withStrokeCap',
@@ -2922,7 +3145,7 @@ void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
   );
 }
 
-/// Smoke coverage for [CrosshairConfig]'s 14 executable verb(s).
+/// Smoke coverage for [CrosshairConfig]'s 15 executable verb(s).
 void _smokeCrosshairConfig(_Verb verb, CrosshairConfig subject) {
   verb('CrosshairConfigFluent.withEnabled', () => subject.withEnabled(true));
   verb(
@@ -2944,6 +3167,10 @@ void _smokeCrosshairConfig(_Verb verb, CrosshairConfig subject) {
   verb(
     'CrosshairConfigFluent.withCoordinateLabelStyle',
     () => subject.withCoordinateLabelStyle(const TextStyle()),
+  );
+  verb(
+    'CrosshairConfigFluent.clearCoordinateLabelStyle',
+    () => subject.clearCoordinateLabelStyle(),
   );
   verb(
     'CrosshairConfigFluent.withStyle',
@@ -3227,7 +3454,7 @@ void _smokeInteractionConfig(_Verb verb, InteractionConfig subject) {
   );
 }
 
-/// Smoke coverage for [LegendStyle]'s 16 executable verb(s).
+/// Smoke coverage for [LegendStyle]'s 20 executable verb(s).
 void _smokeLegendStyle(_Verb verb, LegendStyle subject) {
   verb(
     'LegendStyleFluent.withPosition',
@@ -3246,18 +3473,28 @@ void _smokeLegendStyle(_Verb verb, LegendStyle subject) {
     () => subject.withBackgroundColor(const Color(0xFF2196F3)),
   );
   verb(
+    'LegendStyleFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
     'LegendStyleFluent.withBorderColor',
     () => subject.withBorderColor(const Color(0xFF2196F3)),
   );
+  verb('LegendStyleFluent.clearBorderColor', () => subject.clearBorderColor());
   verb('LegendStyleFluent.withBorderWidth', () => subject.withBorderWidth(0.0));
   verb(
     'LegendStyleFluent.withBorderRadius',
     () => subject.withBorderRadius(BorderRadius.zero),
   );
   verb(
+    'LegendStyleFluent.clearBorderRadius',
+    () => subject.clearBorderRadius(),
+  );
+  verb(
     'LegendStyleFluent.withPadding',
     () => subject.withPadding(EdgeInsets.zero),
   );
+  verb('LegendStyleFluent.clearPadding', () => subject.clearPadding());
   verb('LegendStyleFluent.withItemSpacing', () => subject.withItemSpacing(6.0));
   verb('LegendStyleFluent.withMarkerSize', () => subject.withMarkerSize(16.0));
   verb(
@@ -3718,9 +3955,10 @@ void _smokePieDataLabelConfig(_Verb verb, PieDataLabelConfig subject) {
   );
 }
 
-/// Smoke coverage for [PieChartSeries]'s 13 executable verb(s).
+/// Smoke coverage for [PieChartSeries]'s 17 executable verb(s).
 void _smokePieChartSeries(_Verb verb, PieChartSeries subject) {
   verb('PieChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('PieChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'PieChartSeriesFluent.withPoints',
     () => subject.withPoints(const <ChartDataPoint>[]),
@@ -3729,11 +3967,14 @@ void _smokePieChartSeries(_Verb verb, PieChartSeries subject) {
     'PieChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('PieChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'PieChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('PieChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
   verb('PieChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('PieChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'PieChartSeriesFluent.withPieStyle',
     () => subject.withPieStyle(const PieChartStyle()),
@@ -4171,18 +4412,25 @@ void _smokePolarColumnStyle(_Verb verb, PolarColumnStyle subject) {
   );
 }
 
-/// Smoke coverage for [PolarColumnChartSeries]'s 13 executable verb(s).
+/// Smoke coverage for [PolarColumnChartSeries]'s 17 executable verb(s).
 void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
   verb('PolarColumnChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('PolarColumnChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'PolarColumnChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('PolarColumnChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'PolarColumnChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb(
+    'PolarColumnChartSeriesFluent.clearMetadata',
+    () => subject.clearMetadata(),
+  );
   verb('PolarColumnChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('PolarColumnChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'PolarColumnChartSeriesFluent.withPreset',
     () => subject.withPreset(PolarColumnPreset.standard),
@@ -4278,16 +4526,22 @@ void _smokeRadialSelectionStyle(_Verb verb, RadialSelectionStyle subject) {
   );
 }
 
-/// Smoke coverage for [RangeAreaChartSeries]'s 24 executable verb(s).
+/// Smoke coverage for [RangeAreaChartSeries]'s 30 executable verb(s).
 void _smokeRangeAreaChartSeries(_Verb verb, RangeAreaChartSeries subject) {
   verb('RangeAreaChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('RangeAreaChartSeriesFluent.clearName', () => subject.clearName());
   verb(
     'RangeAreaChartSeriesFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('RangeAreaChartSeriesFluent.clearColor', () => subject.clearColor());
   verb(
     'RangeAreaChartSeriesFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.clearMetadata',
+    () => subject.clearMetadata(),
   );
   verb(
     'RangeAreaChartSeriesFluent.withAnnotations',
@@ -4297,13 +4551,19 @@ void _smokeRangeAreaChartSeries(_Verb verb, RangeAreaChartSeries subject) {
     'RangeAreaChartSeriesFluent.withYAxisId',
     () => subject.withYAxisId('y'),
   );
+  verb('RangeAreaChartSeriesFluent.clearYAxisId', () => subject.clearYAxisId());
   verb(
     'RangeAreaChartSeriesFluent.withYAxisConfig',
     () => subject.withYAxisConfig(
       YAxisConfig(position: YAxisPosition.values.first),
     ),
   );
+  verb(
+    'RangeAreaChartSeriesFluent.clearYAxisConfig',
+    () => subject.clearYAxisConfig(),
+  );
   verb('RangeAreaChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('RangeAreaChartSeriesFluent.clearUnit', () => subject.clearUnit());
   verb(
     'RangeAreaChartSeriesFluent.withInterpolation',
     () => subject.withInterpolation(LineInterpolation.linear),
@@ -4383,7 +4643,7 @@ void _compileRangeAreaChartSeries(
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [RangeAreaDataPoint]'s 19 executable verb(s).
+/// Smoke coverage for [RangeAreaDataPoint]'s 22 executable verb(s).
 void _smokeRangeAreaDataPoint(_Verb verb, RangeAreaDataPoint subject) {
   verb('RangeAreaDataPointFluent.withX', () => subject.withX(1.0));
   verb(
@@ -4427,11 +4687,17 @@ void _smokeRangeAreaDataPoint(_Verb verb, RangeAreaDataPoint subject) {
     'RangeAreaDataPointFluent.withTimestamp',
     () => subject.withTimestamp(DateTime.utc(2026)),
   );
+  verb(
+    'RangeAreaDataPointFluent.clearTimestamp',
+    () => subject.clearTimestamp(),
+  );
   verb('RangeAreaDataPointFluent.withLabel', () => subject.withLabel('y'));
+  verb('RangeAreaDataPointFluent.clearLabel', () => subject.clearLabel());
   verb(
     'RangeAreaDataPointFluent.withMetadata',
     () => subject.withMetadata(const <String, dynamic>{}),
   );
+  verb('RangeAreaDataPointFluent.clearMetadata', () => subject.clearMetadata());
   verb(
     'RangeAreaDataPointFluent.withSegmentStyle',
     () => subject.withSegmentStyle(SegmentStyle()),
@@ -4771,7 +5037,7 @@ void _smokePointStyle(_Verb verb, PointStyle subject) {
   );
 }
 
-/// Smoke coverage for [SeriesLabelBackground]'s 5 executable verb(s).
+/// Smoke coverage for [SeriesLabelBackground]'s 7 executable verb(s).
 void _smokeSeriesLabelBackground(_Verb verb, SeriesLabelBackground subject) {
   verb(
     'SeriesLabelBackgroundFluent.withColor',
@@ -4782,6 +5048,10 @@ void _smokeSeriesLabelBackground(_Verb verb, SeriesLabelBackground subject) {
     () => subject.withCornerRadius(1.0),
   );
   verb(
+    'SeriesLabelBackgroundFluent.clearCornerRadius',
+    () => subject.clearCornerRadius(),
+  );
+  verb(
     'SeriesLabelBackgroundFluent.withPadding',
     () => subject.withPadding(EdgeInsets.zero),
   );
@@ -4790,12 +5060,16 @@ void _smokeSeriesLabelBackground(_Verb verb, SeriesLabelBackground subject) {
     () => subject.withBorderColor(const Color(0xFF2196F3)),
   );
   verb(
+    'SeriesLabelBackgroundFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
     'SeriesLabelBackgroundFluent.withBorderWidth',
     () => subject.withBorderWidth(1.0),
   );
 }
 
-/// Smoke coverage for [SeriesInlineLabelConfig]'s 7 executable verb(s).
+/// Smoke coverage for [SeriesInlineLabelConfig]'s 9 executable verb(s).
 void _smokeSeriesInlineLabelConfig(
   _Verb verb,
   SeriesInlineLabelConfig subject,
@@ -4813,6 +5087,7 @@ void _smokeSeriesInlineLabelConfig(
     'SeriesInlineLabelConfigFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('SeriesInlineLabelConfigFluent.clearColor', () => subject.clearColor());
   verb(
     'SeriesInlineLabelConfigFluent.withFontSize',
     () => subject.withFontSize(11.0),
@@ -4826,6 +5101,10 @@ void _smokeSeriesInlineLabelConfig(
     () => subject.withBackground(
       SeriesLabelBackground(color: const Color(0xFF2196F3)),
     ),
+  );
+  verb(
+    'SeriesInlineLabelConfigFluent.clearBackground',
+    () => subject.clearBackground(),
   );
 }
 
@@ -4849,16 +5128,21 @@ void _smokeStreamingConfig(_Verb verb, StreamingConfig subject) {
   );
 }
 
-/// Smoke coverage for [XAxisConfig]'s 23 executable verb(s).
+/// Smoke coverage for [XAxisConfig]'s 31 executable verb(s).
 void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   verb(
     'XAxisConfigFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('XAxisConfigFluent.clearColor', () => subject.clearColor());
   verb('XAxisConfigFluent.withLabel', () => subject.withLabel('y'));
+  verb('XAxisConfigFluent.clearLabel', () => subject.clearLabel());
   verb('XAxisConfigFluent.withUnit', () => subject.withUnit('y'));
+  verb('XAxisConfigFluent.clearUnit', () => subject.clearUnit());
   verb('XAxisConfigFluent.withRenderMin', () => subject.withRenderMin(1.0));
+  verb('XAxisConfigFluent.clearRenderMin', () => subject.clearRenderMin());
   verb('XAxisConfigFluent.withRenderMax', () => subject.withRenderMax(1.0));
+  verb('XAxisConfigFluent.clearRenderMax', () => subject.clearRenderMax());
   verb('XAxisConfigFluent.withVisible', () => subject.withVisible(true));
   verb(
     'XAxisConfigFluent.withShowAxisLine',
@@ -4891,6 +5175,7 @@ void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   );
   verb('XAxisConfigFluent.withAxisMargin', () => subject.withAxisMargin(8.0));
   verb('XAxisConfigFluent.withTickCount', () => subject.withTickCount(2));
+  verb('XAxisConfigFluent.clearTickCount', () => subject.clearTickCount());
   verb(
     'XAxisConfigFluent.withCategoryAxis',
     () => subject.withCategoryAxis(
@@ -4914,13 +5199,15 @@ void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
     () => subject.withMinorTickLength(3.0),
   );
   verb('XAxisConfigFluent.withRange', () => subject.withRange(1.0, 2.0));
+  verb('XAxisConfigFluent.clearMin', () => subject.clearMin());
+  verb('XAxisConfigFluent.clearMax', () => subject.clearMax());
   verb(
     'XAxisConfigFluent.withHeightBounds',
     () => subject.withHeightBounds(subject.minHeight, subject.maxHeight),
   );
 }
 
-/// Smoke coverage for [YAxisConfig]'s 22 executable verb(s).
+/// Smoke coverage for [YAxisConfig]'s 30 executable verb(s).
 void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
   verb(
     'YAxisConfigFluent.withPosition',
@@ -4930,10 +5217,15 @@ void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
     'YAxisConfigFluent.withColor',
     () => subject.withColor(const Color(0xFF2196F3)),
   );
+  verb('YAxisConfigFluent.clearColor', () => subject.clearColor());
   verb('YAxisConfigFluent.withLabel', () => subject.withLabel('y'));
+  verb('YAxisConfigFluent.clearLabel', () => subject.clearLabel());
   verb('YAxisConfigFluent.withUnit', () => subject.withUnit('y'));
+  verb('YAxisConfigFluent.clearUnit', () => subject.clearUnit());
   verb('YAxisConfigFluent.withRenderMin', () => subject.withRenderMin(1.0));
+  verb('YAxisConfigFluent.clearRenderMin', () => subject.clearRenderMin());
   verb('YAxisConfigFluent.withRenderMax', () => subject.withRenderMax(1.0));
+  verb('YAxisConfigFluent.clearRenderMax', () => subject.clearRenderMax());
   verb('YAxisConfigFluent.withVisible', () => subject.withVisible(true));
   verb(
     'YAxisConfigFluent.withShowAxisLine',
@@ -4966,6 +5258,7 @@ void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
   );
   verb('YAxisConfigFluent.withAxisMargin', () => subject.withAxisMargin(8.0));
   verb('YAxisConfigFluent.withTickCount', () => subject.withTickCount(2));
+  verb('YAxisConfigFluent.clearTickCount', () => subject.clearTickCount());
   verb(
     'YAxisConfigFluent.withShowMinorTicks',
     () => subject.withShowMinorTicks(false),
@@ -4979,13 +5272,15 @@ void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
     () => subject.withMinorTickLength(3.0),
   );
   verb('YAxisConfigFluent.withRange', () => subject.withRange(1.0, 2.0));
+  verb('YAxisConfigFluent.clearMin', () => subject.clearMin());
+  verb('YAxisConfigFluent.clearMax', () => subject.clearMax());
   verb(
     'YAxisConfigFluent.withWidthBounds',
     () => subject.withWidthBounds(subject.minWidth, subject.maxWidth),
   );
 }
 
-/// Smoke coverage for [ChartDataTableTheme]'s 15 executable verb(s).
+/// Smoke coverage for [ChartDataTableTheme]'s 24 executable verb(s).
 void _smokeChartDataTableTheme(_Verb verb, ChartDataTableTheme subject) {
   verb(
     'ChartDataTableThemeFluent.withRowHeight',
@@ -5016,36 +5311,72 @@ void _smokeChartDataTableTheme(_Verb verb, ChartDataTableTheme subject) {
     () => subject.withHeaderBackgroundColor(const Color(0xFF2196F3)),
   );
   verb(
+    'ChartDataTableThemeFluent.clearHeaderBackgroundColor',
+    () => subject.clearHeaderBackgroundColor(),
+  );
+  verb(
     'ChartDataTableThemeFluent.withEvenRowColor',
     () => subject.withEvenRowColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartDataTableThemeFluent.clearEvenRowColor',
+    () => subject.clearEvenRowColor(),
   );
   verb(
     'ChartDataTableThemeFluent.withOddRowColor',
     () => subject.withOddRowColor(const Color(0xFF2196F3)),
   );
   verb(
+    'ChartDataTableThemeFluent.clearOddRowColor',
+    () => subject.clearOddRowColor(),
+  );
+  verb(
     'ChartDataTableThemeFluent.withDividerColor',
     () => subject.withDividerColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartDataTableThemeFluent.clearDividerColor',
+    () => subject.clearDividerColor(),
   );
   verb(
     'ChartDataTableThemeFluent.withFocusedRowColor',
     () => subject.withFocusedRowColor(const Color(0xFF2196F3)),
   );
   verb(
+    'ChartDataTableThemeFluent.clearFocusedRowColor',
+    () => subject.clearFocusedRowColor(),
+  );
+  verb(
     'ChartDataTableThemeFluent.withSelectedRowColor',
     () => subject.withSelectedRowColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartDataTableThemeFluent.clearSelectedRowColor',
+    () => subject.clearSelectedRowColor(),
   );
   verb(
     'ChartDataTableThemeFluent.withHeaderTextStyle',
     () => subject.withHeaderTextStyle(const TextStyle()),
   );
   verb(
+    'ChartDataTableThemeFluent.clearHeaderTextStyle',
+    () => subject.clearHeaderTextStyle(),
+  );
+  verb(
     'ChartDataTableThemeFluent.withCellTextStyle',
     () => subject.withCellTextStyle(const TextStyle()),
   );
   verb(
+    'ChartDataTableThemeFluent.clearCellTextStyle',
+    () => subject.clearCellTextStyle(),
+  );
+  verb(
     'ChartDataTableThemeFluent.withRowNumberTextStyle',
     () => subject.withRowNumberTextStyle(const TextStyle()),
+  );
+  verb(
+    'ChartDataTableThemeFluent.clearRowNumberTextStyle',
+    () => subject.clearRowNumberTextStyle(),
   );
 }
 
@@ -5500,7 +5831,7 @@ void _smokeCandlestickTheme(_Verb verb, CandlestickTheme subject) {
   );
 }
 
-/// Smoke coverage for [CartesianValueSummaryTheme]'s 15 executable verb(s).
+/// Smoke coverage for [CartesianValueSummaryTheme]'s 17 executable verb(s).
 void _smokeCartesianValueSummaryTheme(
   _Verb verb,
   CartesianValueSummaryTheme subject,
@@ -5550,6 +5881,10 @@ void _smokeCartesianValueSummaryTheme(
     () => subject.withShadow(const BoxShadow()),
   );
   verb(
+    'CartesianValueSummaryThemeFluent.clearShadow',
+    () => subject.clearShadow(),
+  );
+  verb(
     'CartesianValueSummaryThemeFluent.withMinWidth',
     () => subject.withMinWidth(1.0),
   );
@@ -5565,9 +5900,13 @@ void _smokeCartesianValueSummaryTheme(
     'CartesianValueSummaryThemeFluent.withLabelValueGap',
     () => subject.withLabelValueGap(1.0),
   );
+  verb(
+    'CartesianValueSummaryThemeFluent.clearLabelValueGap',
+    () => subject.clearLabelValueGap(),
+  );
 }
 
-/// Smoke coverage for [GridStyle]'s 5 executable verb(s).
+/// Smoke coverage for [GridStyle]'s 7 executable verb(s).
 void _smokeGridStyle(_Verb verb, GridStyle subject) {
   verb(
     'GridStyleFluent.withMajorColor',
@@ -5590,6 +5929,8 @@ void _smokeGridStyle(_Verb verb, GridStyle subject) {
       minorWidth: 1.0,
     ),
   );
+  verb('GridStyleFluent.clearMinorColor', () => subject.clearMinorColor());
+  verb('GridStyleFluent.clearMinorWidth', () => subject.clearMinorWidth());
 }
 
 /// Smoke coverage for [InteractionTheme]'s 8 executable verb(s).
@@ -5824,7 +6165,7 @@ void _smokeTypographyTheme(_Verb verb, TypographyTheme subject) {
   );
 }
 
-/// Smoke coverage for [LabelStyle]'s 8 executable verb(s).
+/// Smoke coverage for [LabelStyle]'s 10 executable verb(s).
 void _smokeLabelStyle(_Verb verb, LabelStyle subject) {
   verb(
     'LabelStyleFluent.withTextStyle',
@@ -5851,9 +6192,14 @@ void _smokeLabelStyle(_Verb verb, LabelStyle subject) {
     'LabelStyleFluent.withShadowColor',
     () => subject.withShadowColor(const Color(0xFF2196F3)),
   );
+  verb('LabelStyleFluent.clearShadowColor', () => subject.clearShadowColor());
   verb(
     'LabelStyleFluent.withShadowBlurRadius',
     () => subject.withShadowBlurRadius(1.0),
+  );
+  verb(
+    'LabelStyleFluent.clearShadowBlurRadius',
+    () => subject.clearShadowBlurRadius(),
   );
 }
 

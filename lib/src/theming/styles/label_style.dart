@@ -90,6 +90,8 @@ class LabelStyle {
     EdgeInsets? padding,
     Color? shadowColor,
     double? shadowBlurRadius,
+    bool clearShadowColor = false,
+    bool clearShadowBlurRadius = false,
   }) {
     return LabelStyle(
       textStyle: textStyle ?? this.textStyle,
@@ -98,8 +100,10 @@ class LabelStyle {
       borderWidth: borderWidth ?? this.borderWidth,
       borderRadius: borderRadius ?? this.borderRadius,
       padding: padding ?? this.padding,
-      shadowColor: shadowColor ?? this.shadowColor,
-      shadowBlurRadius: shadowBlurRadius ?? this.shadowBlurRadius,
+      shadowColor: clearShadowColor ? null : (shadowColor ?? this.shadowColor),
+      shadowBlurRadius: clearShadowBlurRadius
+          ? null
+          : (shadowBlurRadius ?? this.shadowBlurRadius),
     );
   }
 

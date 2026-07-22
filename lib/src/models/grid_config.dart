@@ -93,12 +93,16 @@ class GridConfig {
     Color? verticalColor,
     double? horizontalStrokeWidth,
     double? verticalStrokeWidth,
+    bool clearHorizontalColor = false,
+    bool clearVerticalColor = false,
   }) {
     return GridConfig(
       horizontal: horizontal ?? this.horizontal,
       vertical: vertical ?? this.vertical,
-      horizontalColor: horizontalColor ?? this.horizontalColor,
-      verticalColor: verticalColor ?? this.verticalColor,
+      horizontalColor:
+          clearHorizontalColor ? null : (horizontalColor ?? this.horizontalColor),
+      verticalColor:
+          clearVerticalColor ? null : (verticalColor ?? this.verticalColor),
       horizontalStrokeWidth:
           horizontalStrokeWidth ?? this.horizontalStrokeWidth,
       verticalStrokeWidth: verticalStrokeWidth ?? this.verticalStrokeWidth,

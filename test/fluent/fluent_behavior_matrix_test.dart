@@ -966,15 +966,20 @@ void main() {
       );
     });
 
-    test(
-      'a nullable parameter with no copyWith clear flag has no clear verb',
-      () {
-        final source = _generatedSource('auto_scroll_config_fluent.dart');
-        expect(source, contains('withResumeAfterInteractionDelay('));
-        expect(source, isNot(contains('clearResumeAfterInteractionDelay(')));
-        expect(source, contains('No clear verb'));
-      },
-    );
+    test('clearResumeAfterInteractionDelay unsets the nullable delay', () {
+      final loaded = base.withResumeAfterInteractionDelay(
+        const Duration(seconds: 2),
+      );
+      expect(loaded.resumeAfterInteractionDelay, const Duration(seconds: 2));
+      expect(
+        loaded.clearResumeAfterInteractionDelay().resumeAfterInteractionDelay,
+        isNull,
+      );
+      expect(
+        loaded.clearResumeAfterInteractionDelay(),
+        loaded.copyWith(clearResumeAfterInteractionDelay: true),
+      );
+    });
   });
 
   // ===========================================================================
@@ -1040,14 +1045,20 @@ void main() {
       );
     });
 
-    test('a sentinel-based copyWith yields no clear verb', () {
-      // SeriesLabelBackground unsets through `Object? = _sentinel`, not
-      // through a `bool clearX` flag, so the derived-clear convention finds
-      // nothing to lower onto.
-      final source = _generatedSource('series_inline_label_config_fluent.dart');
-      expect(source, isNot(contains('clearCornerRadius(')));
-      expect(source, isNot(contains('clearBorderColor(')));
-      expect(source, contains('No clear verb'));
+    test('SeriesLabelBackground: the derived clear verbs unset their fields', () {
+      // Converted from a sentinel `copyWith` to the bool-flag convention, so
+      // the generator now lowers a `clearX` verb for each nullable field.
+      const base = SeriesLabelBackground(
+        color: Color(0xFF102030),
+        cornerRadius: 6,
+        borderColor: Color(0xFF405060),
+      );
+      expect(base.clearCornerRadius().cornerRadius, isNull);
+      expect(base.clearBorderColor().borderColor, isNull);
+      expect(
+        base.clearCornerRadius(),
+        base.copyWith(clearCornerRadius: true),
+      );
     });
   });
 
@@ -1217,10 +1228,16 @@ void main() {
       expect(base.backgroundColor, isNull);
     });
 
-    test('the nullable gap is documented, not silently unclearable', () {
-      final source = _generatedSource('annotation_style_fluent.dart');
-      expect(source, isNot(contains('clearBackgroundColor(')));
-      expect(source, contains("No clear verb: this class's copyWith cannot"));
+    test('the nullable fields now have working clear verbs', () {
+      final loaded = base
+          .withBackgroundColor(const Color(0xFF112233))
+          .withBorderColor(const Color(0xFF445566));
+      expect(loaded.clearBackgroundColor().backgroundColor, isNull);
+      expect(loaded.clearBorderColor().borderColor, isNull);
+      expect(
+        loaded.clearBackgroundColor(),
+        loaded.copyWith(clearBackgroundColor: true),
+      );
     });
   });
 

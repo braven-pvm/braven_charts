@@ -33,65 +33,71 @@ extension ChartDataTableThemeFluent on ChartDataTableTheme {
       copyWith(cellHorizontalPadding: value);
 
   /// Replaces [ChartDataTableTheme.headerBackgroundColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.headerBackgroundColor]; construct a new instance to reset it.
   ChartDataTableTheme withHeaderBackgroundColor(Color value) =>
       copyWith(headerBackgroundColor: value);
 
+  /// Clears [ChartDataTableTheme.headerBackgroundColor] to `null`.
+  ChartDataTableTheme clearHeaderBackgroundColor() =>
+      copyWith(clearHeaderBackgroundColor: true);
+
   /// Replaces [ChartDataTableTheme.evenRowColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.evenRowColor]; construct a new instance to reset it.
   ChartDataTableTheme withEvenRowColor(Color value) =>
       copyWith(evenRowColor: value);
 
+  /// Clears [ChartDataTableTheme.evenRowColor] to `null`.
+  ChartDataTableTheme clearEvenRowColor() => copyWith(clearEvenRowColor: true);
+
   /// Replaces [ChartDataTableTheme.oddRowColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.oddRowColor]; construct a new instance to reset it.
   ChartDataTableTheme withOddRowColor(Color value) =>
       copyWith(oddRowColor: value);
 
+  /// Clears [ChartDataTableTheme.oddRowColor] to `null`.
+  ChartDataTableTheme clearOddRowColor() => copyWith(clearOddRowColor: true);
+
   /// Replaces [ChartDataTableTheme.dividerColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.dividerColor]; construct a new instance to reset it.
   ChartDataTableTheme withDividerColor(Color value) =>
       copyWith(dividerColor: value);
 
+  /// Clears [ChartDataTableTheme.dividerColor] to `null`.
+  ChartDataTableTheme clearDividerColor() => copyWith(clearDividerColor: true);
+
   /// Replaces [ChartDataTableTheme.focusedRowColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.focusedRowColor]; construct a new instance to reset it.
   ChartDataTableTheme withFocusedRowColor(Color value) =>
       copyWith(focusedRowColor: value);
 
+  /// Clears [ChartDataTableTheme.focusedRowColor] to `null`.
+  ChartDataTableTheme clearFocusedRowColor() =>
+      copyWith(clearFocusedRowColor: true);
+
   /// Replaces [ChartDataTableTheme.selectedRowColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.selectedRowColor]; construct a new instance to reset it.
   ChartDataTableTheme withSelectedRowColor(Color value) =>
       copyWith(selectedRowColor: value);
 
+  /// Clears [ChartDataTableTheme.selectedRowColor] to `null`.
+  ChartDataTableTheme clearSelectedRowColor() =>
+      copyWith(clearSelectedRowColor: true);
+
   /// Replaces [ChartDataTableTheme.headerTextStyle] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.headerTextStyle]; construct a new instance to reset it.
   ChartDataTableTheme withHeaderTextStyle(TextStyle value) =>
       copyWith(headerTextStyle: value);
 
+  /// Clears [ChartDataTableTheme.headerTextStyle] to `null`.
+  ChartDataTableTheme clearHeaderTextStyle() =>
+      copyWith(clearHeaderTextStyle: true);
+
   /// Replaces [ChartDataTableTheme.cellTextStyle] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.cellTextStyle]; construct a new instance to reset it.
   ChartDataTableTheme withCellTextStyle(TextStyle value) =>
       copyWith(cellTextStyle: value);
 
+  /// Clears [ChartDataTableTheme.cellTextStyle] to `null`.
+  ChartDataTableTheme clearCellTextStyle() =>
+      copyWith(clearCellTextStyle: true);
+
   /// Replaces [ChartDataTableTheme.rowNumberTextStyle] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataTableTheme.rowNumberTextStyle]; construct a new instance to reset it.
   ChartDataTableTheme withRowNumberTextStyle(TextStyle value) =>
       copyWith(rowNumberTextStyle: value);
+
+  /// Clears [ChartDataTableTheme.rowNumberTextStyle] to `null`.
+  ChartDataTableTheme clearRowNumberTextStyle() =>
+      copyWith(clearRowNumberTextStyle: true);
 }

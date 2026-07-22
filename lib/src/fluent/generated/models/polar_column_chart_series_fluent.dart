@@ -181,29 +181,29 @@ extension PolarColumnStyleFluent on PolarColumnStyle {
 /// Generated fluent modifiers for [PolarColumnChartSeries].
 extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
   /// Replaces [PolarColumnChartSeries.name] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PolarColumnChartSeries.name]; construct a new instance to reset it.
   PolarColumnChartSeries withName(String value) => copyWith(name: value);
 
+  /// Clears [PolarColumnChartSeries.name] to `null`.
+  PolarColumnChartSeries clearName() => copyWith(clearName: true);
+
   /// Replaces [PolarColumnChartSeries.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PolarColumnChartSeries.color]; construct a new instance to reset it.
   PolarColumnChartSeries withColor(Color value) => copyWith(color: value);
 
+  /// Clears [PolarColumnChartSeries.color] to `null`.
+  PolarColumnChartSeries clearColor() => copyWith(clearColor: true);
+
   /// Replaces [PolarColumnChartSeries.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PolarColumnChartSeries.metadata]; construct a new instance to reset it.
   PolarColumnChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
 
+  /// Clears [PolarColumnChartSeries.metadata] to `null`.
+  PolarColumnChartSeries clearMetadata() => copyWith(clearMetadata: true);
+
   /// Replaces [PolarColumnChartSeries.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PolarColumnChartSeries.unit]; construct a new instance to reset it.
   PolarColumnChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Clears [PolarColumnChartSeries.unit] to `null`.
+  PolarColumnChartSeries clearUnit() => copyWith(clearUnit: true);
 
   /// Replaces [PolarColumnChartSeries.preset] with [value].
   PolarColumnChartSeries withPreset(PolarColumnPreset value) =>

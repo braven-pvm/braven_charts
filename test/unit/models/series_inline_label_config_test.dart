@@ -72,14 +72,14 @@ void main() {
 
     test('copyWith can set cornerRadius to null', () {
       const bg = SeriesLabelBackground(color: Colors.white, cornerRadius: 4.0);
-      final copy = bg.copyWith(cornerRadius: null);
+      final copy = bg.copyWith(clearCornerRadius: true);
       expect(copy.cornerRadius, isNull);
     });
 
     test('copyWith can set borderColor to null', () {
       const bg = SeriesLabelBackground(
           color: Colors.white, borderColor: Colors.black);
-      final copy = bg.copyWith(borderColor: null);
+      final copy = bg.copyWith(clearBorderColor: true);
       expect(copy.borderColor, isNull);
     });
   });

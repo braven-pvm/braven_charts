@@ -10,10 +10,10 @@ import 'package:flutter/widgets.dart' show Color, Offset;
 /// Generated fluent modifiers for [PointAnnotation].
 extension PointAnnotationFluent on PointAnnotation {
   /// Replaces [PointAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PointAnnotation.label]; construct a new instance to reset it.
   PointAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [PointAnnotation.label] to `null`.
+  PointAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [PointAnnotation.style] with [value].
   PointAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -63,10 +63,10 @@ extension PointAnnotationFluent on PointAnnotation {
 /// Generated fluent modifiers for [RangeAnnotation].
 extension RangeAnnotationFluent on RangeAnnotation {
   /// Replaces [RangeAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAnnotation.label]; construct a new instance to reset it.
   RangeAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [RangeAnnotation.label] to `null`.
+  RangeAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [RangeAnnotation.style] with [value].
   RangeAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -101,22 +101,22 @@ extension RangeAnnotationFluent on RangeAnnotation {
       copyWith(snapTolerance: value);
 
   /// Replaces [RangeAnnotation.seriesId] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAnnotation.seriesId]; construct a new instance to reset it.
   RangeAnnotation withSeriesId(String value) => copyWith(seriesId: value);
 
+  /// Clears [RangeAnnotation.seriesId] to `null`.
+  RangeAnnotation clearSeriesId() => copyWith(clearSeriesId: true);
+
   /// Replaces [RangeAnnotation.fillColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAnnotation.fillColor]; construct a new instance to reset it.
   RangeAnnotation withFillColor(Color value) => copyWith(fillColor: value);
 
+  /// Clears [RangeAnnotation.fillColor] to `null`.
+  RangeAnnotation clearFillColor() => copyWith(clearFillColor: true);
+
   /// Replaces [RangeAnnotation.borderColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAnnotation.borderColor]; construct a new instance to reset it.
   RangeAnnotation withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Clears [RangeAnnotation.borderColor] to `null`.
+  RangeAnnotation clearBorderColor() => copyWith(clearBorderColor: true);
 
   /// Replaces [RangeAnnotation.labelPosition] with [value].
   RangeAnnotation withLabelPosition(AnnotationLabelPosition value) =>
@@ -129,10 +129,10 @@ extension RangeAnnotationFluent on RangeAnnotation {
 /// Generated fluent modifiers for [TextAnnotation].
 extension TextAnnotationFluent on TextAnnotation {
   /// Replaces [TextAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TextAnnotation.label]; construct a new instance to reset it.
   TextAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [TextAnnotation.label] to `null`.
+  TextAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [TextAnnotation.style] with [value].
   TextAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -169,26 +169,26 @@ extension TextAnnotationFluent on TextAnnotation {
   TextAnnotation withAnchor(AnnotationAnchor value) => copyWith(anchor: value);
 
   /// Replaces [TextAnnotation.backgroundColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TextAnnotation.backgroundColor]; construct a new instance to reset it.
   TextAnnotation withBackgroundColor(Color value) =>
       copyWith(backgroundColor: value);
 
+  /// Clears [TextAnnotation.backgroundColor] to `null`.
+  TextAnnotation clearBackgroundColor() => copyWith(clearBackgroundColor: true);
+
   /// Replaces [TextAnnotation.borderColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TextAnnotation.borderColor]; construct a new instance to reset it.
   TextAnnotation withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Clears [TextAnnotation.borderColor] to `null`.
+  TextAnnotation clearBorderColor() => copyWith(clearBorderColor: true);
 }
 
 /// Generated fluent modifiers for [ThresholdAnnotation].
 extension ThresholdAnnotationFluent on ThresholdAnnotation {
   /// Replaces [ThresholdAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ThresholdAnnotation.label]; construct a new instance to reset it.
   ThresholdAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [ThresholdAnnotation.label] to `null`.
+  ThresholdAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [ThresholdAnnotation.style] with [value].
   ThresholdAnnotation withStyle(AnnotationStyle value) =>
@@ -220,10 +220,10 @@ extension ThresholdAnnotationFluent on ThresholdAnnotation {
   ThresholdAnnotation withValue(double value) => copyWith(value: value);
 
   /// Replaces [ThresholdAnnotation.seriesId] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ThresholdAnnotation.seriesId]; construct a new instance to reset it.
   ThresholdAnnotation withSeriesId(String value) => copyWith(seriesId: value);
+
+  /// Clears [ThresholdAnnotation.seriesId] to `null`.
+  ThresholdAnnotation clearSeriesId() => copyWith(clearSeriesId: true);
 
   /// Replaces [ThresholdAnnotation.lineColor] with [value].
   ThresholdAnnotation withLineColor(Color value) => copyWith(lineColor: value);
@@ -232,11 +232,11 @@ extension ThresholdAnnotationFluent on ThresholdAnnotation {
   ThresholdAnnotation withLineWidth(double value) => copyWith(lineWidth: value);
 
   /// Replaces [ThresholdAnnotation.dashPattern] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ThresholdAnnotation.dashPattern]; construct a new instance to reset it.
   ThresholdAnnotation withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
+
+  /// Clears [ThresholdAnnotation.dashPattern] to `null`.
+  ThresholdAnnotation clearDashPattern() => copyWith(clearDashPattern: true);
 
   /// Replaces [ThresholdAnnotation.labelPosition] with [value].
   ThresholdAnnotation withLabelPosition(AnnotationLabelPosition value) =>
@@ -253,10 +253,10 @@ extension ThresholdAnnotationFluent on ThresholdAnnotation {
 /// Generated fluent modifiers for [PinAnnotation].
 extension PinAnnotationFluent on PinAnnotation {
   /// Replaces [PinAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [PinAnnotation.label]; construct a new instance to reset it.
   PinAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [PinAnnotation.label] to `null`.
+  PinAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [PinAnnotation.style] with [value].
   PinAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -301,10 +301,10 @@ extension PinAnnotationFluent on PinAnnotation {
 /// Generated fluent modifiers for [TrendAnnotation].
 extension TrendAnnotationFluent on TrendAnnotation {
   /// Replaces [TrendAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TrendAnnotation.label]; construct a new instance to reset it.
   TrendAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [TrendAnnotation.label] to `null`.
+  TrendAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [TrendAnnotation.style] with [value].
   TrendAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -375,18 +375,20 @@ extension TrendAnnotationFluent on TrendAnnotation {
       copyWith(confidenceLevel: value);
 
   /// Replaces [TrendAnnotation.confidenceBandColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TrendAnnotation.confidenceBandColor]; construct a new instance to reset it.
   TrendAnnotation withConfidenceBandColor(Color value) =>
       copyWith(confidenceBandColor: value);
 
+  /// Clears [TrendAnnotation.confidenceBandColor] to `null`.
+  TrendAnnotation clearConfidenceBandColor() =>
+      copyWith(clearConfidenceBandColor: true);
+
   /// Replaces [TrendAnnotation.predictionBandColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TrendAnnotation.predictionBandColor]; construct a new instance to reset it.
   TrendAnnotation withPredictionBandColor(Color value) =>
       copyWith(predictionBandColor: value);
+
+  /// Clears [TrendAnnotation.predictionBandColor] to `null`.
+  TrendAnnotation clearPredictionBandColor() =>
+      copyWith(clearPredictionBandColor: true);
 
   /// Replaces [TrendAnnotation.confidenceBandOpacity] with [value].
   TrendAnnotation withConfidenceBandOpacity(double value) =>
@@ -403,11 +405,11 @@ extension TrendAnnotationFluent on TrendAnnotation {
   TrendAnnotation withLineWidth(double value) => copyWith(lineWidth: value);
 
   /// Replaces [TrendAnnotation.dashPattern] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [TrendAnnotation.dashPattern]; construct a new instance to reset it.
   TrendAnnotation withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
+
+  /// Clears [TrendAnnotation.dashPattern] to `null`.
+  TrendAnnotation clearDashPattern() => copyWith(clearDashPattern: true);
 
   /// Replaces [TrendAnnotation.elevation] with [value].
   TrendAnnotation withElevation(double value) => copyWith(elevation: value);
@@ -425,10 +427,10 @@ extension TrendAnnotationFluent on TrendAnnotation {
 /// Generated fluent modifiers for [ErrorBarAnnotation].
 extension ErrorBarAnnotationFluent on ErrorBarAnnotation {
   /// Replaces [ErrorBarAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ErrorBarAnnotation.label]; construct a new instance to reset it.
   ErrorBarAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [ErrorBarAnnotation.label] to `null`.
+  ErrorBarAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [ErrorBarAnnotation.style] with [value].
   ErrorBarAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -468,10 +470,10 @@ extension ErrorBarAnnotationFluent on ErrorBarAnnotation {
 /// Generated fluent modifiers for [ChordAnnotation].
 extension ChordAnnotationFluent on ChordAnnotation {
   /// Replaces [ChordAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.label]; construct a new instance to reset it.
   ChordAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [ChordAnnotation.label] to `null`.
+  ChordAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [ChordAnnotation.style] with [value].
   ChordAnnotation withStyle(AnnotationStyle value) => copyWith(style: value);
@@ -504,67 +506,74 @@ extension ChordAnnotationFluent on ChordAnnotation {
   ChordAnnotation withLineWidth(double value) => copyWith(lineWidth: value);
 
   /// Replaces [ChordAnnotation.dashPattern] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.dashPattern]; construct a new instance to reset it.
   ChordAnnotation withDashPattern(List<double> value) =>
       copyWith(dashPattern: value);
+
+  /// Clears [ChordAnnotation.dashPattern] to `null`.
+  ChordAnnotation clearDashPattern() => copyWith(clearDashPattern: true);
 
   /// Replaces [ChordAnnotation.elevation] with [value].
   ChordAnnotation withElevation(double value) => copyWith(elevation: value);
 
   /// Replaces [ChordAnnotation.perpendicularIndex] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularIndex]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularIndex(int value) =>
       copyWith(perpendicularIndex: value);
 
+  /// Clears [ChordAnnotation.perpendicularIndex] to `null`.
+  ChordAnnotation clearPerpendicularIndex() =>
+      copyWith(clearPerpendicularIndex: true);
+
   /// Replaces [ChordAnnotation.perpendicularLabel] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularLabel]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularLabel(String value) =>
       copyWith(perpendicularLabel: value);
+
+  /// Clears [ChordAnnotation.perpendicularLabel] to `null`.
+  ChordAnnotation clearPerpendicularLabel() =>
+      copyWith(clearPerpendicularLabel: true);
 
   /// Replaces [ChordAnnotation.perpendicularLabelOffset] with [value].
   ChordAnnotation withPerpendicularLabelOffset(Offset value) =>
       copyWith(perpendicularLabelOffset: value);
 
   /// Replaces [ChordAnnotation.perpendicularLabelStyle] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularLabelStyle]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularLabelStyle(AnnotationStyle value) =>
       copyWith(perpendicularLabelStyle: value);
 
+  /// Clears [ChordAnnotation.perpendicularLabelStyle] to `null`.
+  ChordAnnotation clearPerpendicularLabelStyle() =>
+      copyWith(clearPerpendicularLabelStyle: true);
+
   /// Replaces [ChordAnnotation.perpendicularLineColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularLineColor]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularLineColor(Color value) =>
       copyWith(perpendicularLineColor: value);
 
+  /// Clears [ChordAnnotation.perpendicularLineColor] to `null`.
+  ChordAnnotation clearPerpendicularLineColor() =>
+      copyWith(clearPerpendicularLineColor: true);
+
   /// Replaces [ChordAnnotation.perpendicularLineWidth] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularLineWidth]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularLineWidth(double value) =>
       copyWith(perpendicularLineWidth: value);
 
+  /// Clears [ChordAnnotation.perpendicularLineWidth] to `null`.
+  ChordAnnotation clearPerpendicularLineWidth() =>
+      copyWith(clearPerpendicularLineWidth: true);
+
   /// Replaces [ChordAnnotation.perpendicularDashPattern] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularDashPattern]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularDashPattern(List<double> value) =>
       copyWith(perpendicularDashPattern: value);
 
+  /// Clears [ChordAnnotation.perpendicularDashPattern] to `null`.
+  ChordAnnotation clearPerpendicularDashPattern() =>
+      copyWith(clearPerpendicularDashPattern: true);
+
   /// Replaces [ChordAnnotation.perpendicularElevation] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChordAnnotation.perpendicularElevation]; construct a new instance to reset it.
   ChordAnnotation withPerpendicularElevation(double value) =>
       copyWith(perpendicularElevation: value);
+
+  /// Clears [ChordAnnotation.perpendicularElevation] to `null`.
+  ChordAnnotation clearPerpendicularElevation() =>
+      copyWith(clearPerpendicularElevation: true);
 
   /// Replaces [ChordAnnotation.startIndex] and [ChordAnnotation.endIndex] together.
   ///
@@ -576,10 +585,10 @@ extension ChordAnnotationFluent on ChordAnnotation {
 /// Generated fluent modifiers for [LegendAnnotation].
 extension LegendAnnotationFluent on LegendAnnotation {
   /// Replaces [LegendAnnotation.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LegendAnnotation.label]; construct a new instance to reset it.
   LegendAnnotation withLabel(String value) => copyWith(label: value);
+
+  /// Clears [LegendAnnotation.label] to `null`.
+  LegendAnnotation clearLabel() => copyWith(clearLabel: true);
 
   /// Replaces [LegendAnnotation.zIndex] with [value].
   LegendAnnotation withZIndex(int value) => copyWith(zIndex: value);

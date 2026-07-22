@@ -24,11 +24,12 @@ extension AutoScrollConfigFluent on AutoScrollConfig {
       copyWith(pauseOnUserInteraction: value);
 
   /// Replaces [AutoScrollConfig.resumeAfterInteractionDelay] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [AutoScrollConfig.resumeAfterInteractionDelay]; construct a new instance to reset it.
   AutoScrollConfig withResumeAfterInteractionDelay(Duration value) =>
       copyWith(resumeAfterInteractionDelay: value);
+
+  /// Clears [AutoScrollConfig.resumeAfterInteractionDelay] to `null`.
+  AutoScrollConfig clearResumeAfterInteractionDelay() =>
+      copyWith(clearResumeAfterInteractionDelay: true);
 
   /// Replaces [AutoScrollConfig.animateIncomingData] with [value].
   AutoScrollConfig withAnimateIncomingData(bool value) =>

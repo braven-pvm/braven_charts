@@ -10,46 +10,46 @@ import 'package:flutter/widgets.dart' show Color;
 /// Generated fluent modifiers for [CandlestickChartSeries].
 extension CandlestickChartSeriesFluent on CandlestickChartSeries {
   /// Replaces [CandlestickChartSeries.name] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.name]; construct a new instance to reset it.
   CandlestickChartSeries withName(String value) => copyWith(name: value);
 
+  /// Clears [CandlestickChartSeries.name] to `null`.
+  CandlestickChartSeries clearName() => copyWith(clearName: true);
+
   /// Replaces [CandlestickChartSeries.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.color]; construct a new instance to reset it.
   CandlestickChartSeries withColor(Color value) => copyWith(color: value);
 
+  /// Clears [CandlestickChartSeries.color] to `null`.
+  CandlestickChartSeries clearColor() => copyWith(clearColor: true);
+
   /// Replaces [CandlestickChartSeries.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.metadata]; construct a new instance to reset it.
   CandlestickChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
+
+  /// Clears [CandlestickChartSeries.metadata] to `null`.
+  CandlestickChartSeries clearMetadata() => copyWith(clearMetadata: true);
 
   /// Replaces [CandlestickChartSeries.annotations] with [value].
   CandlestickChartSeries withAnnotations(List<ChartAnnotation> value) =>
       copyWith(annotations: value);
 
   /// Replaces [CandlestickChartSeries.yAxisId] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.yAxisId]; construct a new instance to reset it.
   CandlestickChartSeries withYAxisId(String value) => copyWith(yAxisId: value);
 
+  /// Clears [CandlestickChartSeries.yAxisId] to `null`.
+  CandlestickChartSeries clearYAxisId() => copyWith(clearYAxisId: true);
+
   /// Replaces [CandlestickChartSeries.yAxisConfig] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.yAxisConfig]; construct a new instance to reset it.
   CandlestickChartSeries withYAxisConfig(YAxisConfig value) =>
       copyWith(yAxisConfig: value);
 
+  /// Clears [CandlestickChartSeries.yAxisConfig] to `null`.
+  CandlestickChartSeries clearYAxisConfig() => copyWith(clearYAxisConfig: true);
+
   /// Replaces [CandlestickChartSeries.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickChartSeries.unit]; construct a new instance to reset it.
   CandlestickChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Clears [CandlestickChartSeries.unit] to `null`.
+  CandlestickChartSeries clearUnit() => copyWith(clearUnit: true);
 
   /// Replaces [CandlestickChartSeries.candlestickStyle] with [value].
   CandlestickChartSeries withCandlestickStyle(CandlestickChartStyle value) =>

@@ -10,33 +10,33 @@ import 'package:flutter/widgets.dart' show Color;
 /// Generated fluent modifiers for [DonutChartSeries].
 extension DonutChartSeriesFluent on DonutChartSeries {
   /// Replaces [DonutChartSeries.name] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DonutChartSeries.name]; construct a new instance to reset it.
   DonutChartSeries withName(String value) => copyWith(name: value);
+
+  /// Clears [DonutChartSeries.name] to `null`.
+  DonutChartSeries clearName() => copyWith(clearName: true);
 
   /// Replaces [DonutChartSeries.points] with [value].
   DonutChartSeries withPoints(List<ChartDataPoint> value) =>
       copyWith(points: value);
 
   /// Replaces [DonutChartSeries.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DonutChartSeries.color]; construct a new instance to reset it.
   DonutChartSeries withColor(Color value) => copyWith(color: value);
 
+  /// Clears [DonutChartSeries.color] to `null`.
+  DonutChartSeries clearColor() => copyWith(clearColor: true);
+
   /// Replaces [DonutChartSeries.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DonutChartSeries.metadata]; construct a new instance to reset it.
   DonutChartSeries withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
 
+  /// Clears [DonutChartSeries.metadata] to `null`.
+  DonutChartSeries clearMetadata() => copyWith(clearMetadata: true);
+
   /// Replaces [DonutChartSeries.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DonutChartSeries.unit]; construct a new instance to reset it.
   DonutChartSeries withUnit(String value) => copyWith(unit: value);
+
+  /// Clears [DonutChartSeries.unit] to `null`.
+  DonutChartSeries clearUnit() => copyWith(clearUnit: true);
 
   /// Replaces [DonutChartSeries.donutStyle] with [value].
   DonutChartSeries withDonutStyle(DonutChartStyle value) =>

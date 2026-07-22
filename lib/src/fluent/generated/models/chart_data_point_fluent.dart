@@ -47,23 +47,23 @@ extension ChartDataPointFluent on ChartDataPoint {
   ChartDataPoint clearCategoryValue() => copyWith(clearCategoryValue: true);
 
   /// Replaces [ChartDataPoint.timestamp] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataPoint.timestamp]; construct a new instance to reset it.
   ChartDataPoint withTimestamp(DateTime value) => copyWith(timestamp: value);
 
+  /// Clears [ChartDataPoint.timestamp] to `null`.
+  ChartDataPoint clearTimestamp() => copyWith(clearTimestamp: true);
+
   /// Replaces [ChartDataPoint.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataPoint.label]; construct a new instance to reset it.
   ChartDataPoint withLabel(String value) => copyWith(label: value);
 
+  /// Clears [ChartDataPoint.label] to `null`.
+  ChartDataPoint clearLabel() => copyWith(clearLabel: true);
+
   /// Replaces [ChartDataPoint.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDataPoint.metadata]; construct a new instance to reset it.
   ChartDataPoint withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
+
+  /// Clears [ChartDataPoint.metadata] to `null`.
+  ChartDataPoint clearMetadata() => copyWith(clearMetadata: true);
 
   /// Replaces [ChartDataPoint.segmentStyle] with [value].
   ChartDataPoint withSegmentStyle(SegmentStyle value) =>

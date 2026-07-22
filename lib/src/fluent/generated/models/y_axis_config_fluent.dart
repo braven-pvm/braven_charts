@@ -13,34 +13,34 @@ extension YAxisConfigFluent on YAxisConfig {
   YAxisConfig withPosition(YAxisPosition value) => copyWith(position: value);
 
   /// Replaces [YAxisConfig.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.color]; construct a new instance to reset it.
   YAxisConfig withColor(Color value) => copyWith(color: value);
 
+  /// Clears [YAxisConfig.color] to `null`.
+  YAxisConfig clearColor() => copyWith(clearColor: true);
+
   /// Replaces [YAxisConfig.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.label]; construct a new instance to reset it.
   YAxisConfig withLabel(String value) => copyWith(label: value);
 
+  /// Clears [YAxisConfig.label] to `null`.
+  YAxisConfig clearLabel() => copyWith(clearLabel: true);
+
   /// Replaces [YAxisConfig.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.unit]; construct a new instance to reset it.
   YAxisConfig withUnit(String value) => copyWith(unit: value);
 
+  /// Clears [YAxisConfig.unit] to `null`.
+  YAxisConfig clearUnit() => copyWith(clearUnit: true);
+
   /// Replaces [YAxisConfig.renderMin] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.renderMin]; construct a new instance to reset it.
   YAxisConfig withRenderMin(double value) => copyWith(renderMin: value);
 
+  /// Clears [YAxisConfig.renderMin] to `null`.
+  YAxisConfig clearRenderMin() => copyWith(clearRenderMin: true);
+
   /// Replaces [YAxisConfig.renderMax] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.renderMax]; construct a new instance to reset it.
   YAxisConfig withRenderMax(double value) => copyWith(renderMax: value);
+
+  /// Clears [YAxisConfig.renderMax] to `null`.
+  YAxisConfig clearRenderMax() => copyWith(clearRenderMax: true);
 
   /// Replaces [YAxisConfig.visible] with [value].
   YAxisConfig withVisible(bool value) => copyWith(visible: value);
@@ -78,10 +78,10 @@ extension YAxisConfigFluent on YAxisConfig {
   YAxisConfig withAxisMargin(double value) => copyWith(axisMargin: value);
 
   /// Replaces [YAxisConfig.tickCount] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [YAxisConfig.tickCount]; construct a new instance to reset it.
   YAxisConfig withTickCount(int value) => copyWith(tickCount: value);
+
+  /// Clears [YAxisConfig.tickCount] to `null`.
+  YAxisConfig clearTickCount() => copyWith(clearTickCount: true);
 
   /// Replaces [YAxisConfig.showMinorTicks] with [value].
   YAxisConfig withShowMinorTicks(bool value) => copyWith(showMinorTicks: value);
@@ -96,10 +96,13 @@ extension YAxisConfigFluent on YAxisConfig {
   /// Replaces [YAxisConfig.min] and [YAxisConfig.max] together.
   ///
   /// The parameters are assert-coupled, so they only move as a pair.
-  ///
-  /// No clear verb: this class's copyWith cannot unset them;
-  /// construct a new instance to reset.
   YAxisConfig withRange(double min, double max) => copyWith(min: min, max: max);
+
+  /// Clears [YAxisConfig.min] to `null`.
+  YAxisConfig clearMin() => copyWith(clearMin: true);
+
+  /// Clears [YAxisConfig.max] to `null`.
+  YAxisConfig clearMax() => copyWith(clearMax: true);
 
   /// Replaces [YAxisConfig.minWidth] and [YAxisConfig.maxWidth] together.
   ///

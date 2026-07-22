@@ -369,15 +369,22 @@ class LineChartSeries extends ChartSeries {
   LineChartSeries copyWith({
     String? id,
     String? name,
+    bool clearName = false,
     List<ChartDataPoint>? points,
     Color? color,
+    bool clearColor = false,
     SeriesStyle? style,
+    bool clearStyle = false,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
+    bool clearYAxisId = false,
     YAxisConfig? yAxisConfig,
+    bool clearYAxisConfig = false,
     String? unit,
+    bool clearUnit = false,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -387,22 +394,26 @@ class LineChartSeries extends ChartSeries {
     Color? dataPointMarkerBackground,
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
+    bool clearDataPointLabels = false,
     SeriesInlineLabelConfig? inlineLabel,
+    bool clearInlineLabel = false,
     PathAnimationStyle? pathAnimation,
     List<double>? dashPattern,
   }) {
     return LineChartSeries(
       id: id ?? this.id,
-      name: name ?? this.name,
+      name: clearName ? null : (name ?? this.name),
       points: points ?? this.points,
-      color: color ?? this.color,
+      color: clearColor ? null : (color ?? this.color),
       isXOrdered: isXOrdered ?? this.isXOrdered,
-      metadata: metadata ?? this.metadata,
-      style: style ?? this.style,
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
+      style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
-      yAxisId: yAxisId ?? this.yAxisId,
-      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
-      unit: unit ?? this.unit,
+      yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
+      yAxisConfig: clearYAxisConfig
+          ? null
+          : (yAxisConfig ?? this.yAxisConfig),
+      unit: clearUnit ? null : (unit ?? this.unit),
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -413,8 +424,12 @@ class LineChartSeries extends ChartSeries {
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
-      dataPointLabels: dataPointLabels ?? this.dataPointLabels,
-      inlineLabel: inlineLabel ?? this.inlineLabel,
+      dataPointLabels: clearDataPointLabels
+          ? null
+          : (dataPointLabels ?? this.dataPointLabels),
+      inlineLabel: clearInlineLabel
+          ? null
+          : (inlineLabel ?? this.inlineLabel),
       pathAnimation: pathAnimation ?? this.pathAnimation,
       dashPattern: dashPattern ?? this.dashPattern,
     );
@@ -516,15 +531,22 @@ class ScatterChartSeries extends ChartSeries {
   ScatterChartSeries copyWith({
     String? id,
     String? name,
+    bool clearName = false,
     List<ChartDataPoint>? points,
     Color? color,
+    bool clearColor = false,
     SeriesStyle? style,
+    bool clearStyle = false,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
+    bool clearYAxisId = false,
     YAxisConfig? yAxisConfig,
+    bool clearYAxisConfig = false,
     String? unit,
+    bool clearUnit = false,
     double? markerRadius,
     SeriesMarkerShape? markerShape,
     ScatterMarkerStyle? markerStyle,
@@ -548,16 +570,18 @@ class ScatterChartSeries extends ChartSeries {
   }) {
     return ScatterChartSeries(
       id: id ?? this.id,
-      name: name ?? this.name,
+      name: clearName ? null : (name ?? this.name),
       points: points ?? this.points,
-      color: color ?? this.color,
+      color: clearColor ? null : (color ?? this.color),
       isXOrdered: isXOrdered ?? this.isXOrdered,
-      metadata: metadata ?? this.metadata,
-      style: style ?? this.style,
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
+      style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
-      yAxisId: yAxisId ?? this.yAxisId,
-      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
-      unit: unit ?? this.unit,
+      yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
+      yAxisConfig: clearYAxisConfig
+          ? null
+          : (yAxisConfig ?? this.yAxisConfig),
+      unit: clearUnit ? null : (unit ?? this.unit),
       markerRadius: markerRadius ?? this.markerRadius,
       markerShape: markerShape ?? this.markerShape,
       markerStyle: clearMarkerStyle ? null : (markerStyle ?? this.markerStyle),
@@ -756,15 +780,22 @@ class AreaChartSeries extends ChartSeries {
   AreaChartSeries copyWith({
     String? id,
     String? name,
+    bool clearName = false,
     List<ChartDataPoint>? points,
     Color? color,
+    bool clearColor = false,
     SeriesStyle? style,
+    bool clearStyle = false,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
+    bool clearYAxisId = false,
     YAxisConfig? yAxisConfig,
+    bool clearYAxisConfig = false,
     String? unit,
+    bool clearUnit = false,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -777,27 +808,32 @@ class AreaChartSeries extends ChartSeries {
     Color? dataPointMarkerBackground,
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
+    bool clearDataPointLabels = false,
     SeriesInlineLabelConfig? inlineLabel,
-    // NOTE: passing null for the three baseline fields preserves the current
-    // value (null ?? this.field). To clear them, construct a new instance.
+    bool clearInlineLabel = false,
     double? baselineValue,
+    bool clearBaselineValue = false,
     Color? aboveBaselineFillColor,
+    bool clearAboveBaselineFillColor = false,
     Color? belowBaselineFillColor,
+    bool clearBelowBaselineFillColor = false,
     PathAnimationStyle? pathAnimation,
     List<double>? dashPattern,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
-      name: name ?? this.name,
+      name: clearName ? null : (name ?? this.name),
       points: points ?? this.points,
-      color: color ?? this.color,
+      color: clearColor ? null : (color ?? this.color),
       isXOrdered: isXOrdered ?? this.isXOrdered,
-      metadata: metadata ?? this.metadata,
-      style: style ?? this.style,
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
+      style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
-      yAxisId: yAxisId ?? this.yAxisId,
-      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
-      unit: unit ?? this.unit,
+      yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
+      yAxisConfig: clearYAxisConfig
+          ? null
+          : (yAxisConfig ?? this.yAxisConfig),
+      unit: clearUnit ? null : (unit ?? this.unit),
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -812,13 +848,21 @@ class AreaChartSeries extends ChartSeries {
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
-      dataPointLabels: dataPointLabels ?? this.dataPointLabels,
-      inlineLabel: inlineLabel ?? this.inlineLabel,
-      baselineValue: baselineValue ?? this.baselineValue,
-      aboveBaselineFillColor:
-          aboveBaselineFillColor ?? this.aboveBaselineFillColor,
-      belowBaselineFillColor:
-          belowBaselineFillColor ?? this.belowBaselineFillColor,
+      dataPointLabels: clearDataPointLabels
+          ? null
+          : (dataPointLabels ?? this.dataPointLabels),
+      inlineLabel: clearInlineLabel
+          ? null
+          : (inlineLabel ?? this.inlineLabel),
+      baselineValue: clearBaselineValue
+          ? null
+          : (baselineValue ?? this.baselineValue),
+      aboveBaselineFillColor: clearAboveBaselineFillColor
+          ? null
+          : (aboveBaselineFillColor ?? this.aboveBaselineFillColor),
+      belowBaselineFillColor: clearBelowBaselineFillColor
+          ? null
+          : (belowBaselineFillColor ?? this.belowBaselineFillColor),
       pathAnimation: pathAnimation ?? this.pathAnimation,
       dashPattern: dashPattern ?? this.dashPattern,
     );
@@ -1293,15 +1337,22 @@ class BarChartSeries extends ChartSeries {
   BarChartSeries copyWith({
     String? id,
     String? name,
+    bool clearName = false,
     List<ChartDataPoint>? points,
     Color? color,
+    bool clearColor = false,
     SeriesStyle? style,
+    bool clearStyle = false,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
+    bool clearYAxisId = false,
     YAxisConfig? yAxisConfig,
+    bool clearYAxisConfig = false,
     String? unit,
+    bool clearUnit = false,
     double? barWidthPercent,
     double? barWidthPixels,
     double? minWidth,
@@ -1340,16 +1391,18 @@ class BarChartSeries extends ChartSeries {
   }) {
     return BarChartSeries(
       id: id ?? this.id,
-      name: name ?? this.name,
+      name: clearName ? null : (name ?? this.name),
       points: points ?? this.points,
-      color: color ?? this.color,
+      color: clearColor ? null : (color ?? this.color),
       isXOrdered: isXOrdered ?? this.isXOrdered,
-      metadata: metadata ?? this.metadata,
-      style: style ?? this.style,
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
+      style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
-      yAxisId: yAxisId ?? this.yAxisId,
-      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
-      unit: unit ?? this.unit,
+      yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
+      yAxisConfig: clearYAxisConfig
+          ? null
+          : (yAxisConfig ?? this.yAxisConfig),
+      unit: clearUnit ? null : (unit ?? this.unit),
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       minWidth: minWidth ?? this.minWidth,

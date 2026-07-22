@@ -231,10 +231,11 @@ class PointAnnotation extends ChartAnnotation {
     double? markerSize,
     Color? markerColor,
     double? labelMargin,
+    bool clearLabel = false,
   }) {
     return PointAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -418,10 +419,14 @@ class RangeAnnotation extends ChartAnnotation {
     Color? borderColor,
     AnnotationLabelPosition? labelPosition,
     double? labelMargin,
+    bool clearLabel = false,
+    bool clearSeriesId = false,
+    bool clearFillColor = false,
+    bool clearBorderColor = false,
   }) {
     return RangeAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -433,9 +438,11 @@ class RangeAnnotation extends ChartAnnotation {
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
       endY: endY ?? this.endY,
-      seriesId: seriesId ?? this.seriesId,
-      fillColor: fillColor ?? this.fillColor,
-      borderColor: borderColor ?? this.borderColor,
+      seriesId: clearSeriesId ? null : (seriesId ?? this.seriesId),
+      fillColor: clearFillColor ? null : (fillColor ?? this.fillColor),
+      borderColor: clearBorderColor
+          ? null
+          : (borderColor ?? this.borderColor),
       labelPosition: labelPosition ?? this.labelPosition,
       labelMargin: labelMargin ?? this.labelMargin,
     );
@@ -966,10 +973,13 @@ class TextAnnotation extends ChartAnnotation {
     AnnotationAnchor? anchor,
     Color? backgroundColor,
     Color? borderColor,
+    bool clearLabel = false,
+    bool clearBackgroundColor = false,
+    bool clearBorderColor = false,
   }) {
     return TextAnnotation._internal(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -978,8 +988,12 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: richTextDelta ?? this.richTextDelta,
       position: position ?? this.position,
       anchor: anchor ?? this.anchor,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      borderColor: borderColor ?? this.borderColor,
+      backgroundColor: clearBackgroundColor
+          ? null
+          : (backgroundColor ?? this.backgroundColor),
+      borderColor: clearBorderColor
+          ? null
+          : (borderColor ?? this.borderColor),
     );
   }
 }
@@ -1128,20 +1142,23 @@ class ThresholdAnnotation extends ChartAnnotation {
     AnnotationLabelPosition? labelPosition,
     double? labelMargin,
     double? elevation,
+    bool clearLabel = false,
+    bool clearSeriesId = false,
+    bool clearDashPattern = false,
   }) {
     return ThresholdAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
       zIndex: zIndex ?? this.zIndex,
       axis: axis ?? this.axis,
       value: value ?? this.value,
-      seriesId: seriesId ?? this.seriesId,
+      seriesId: clearSeriesId ? null : (seriesId ?? this.seriesId),
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
-      dashPattern: dashPattern ?? this.dashPattern,
+      dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
       labelPosition: labelPosition ?? this.labelPosition,
       labelMargin: labelMargin ?? this.labelMargin,
       elevation: elevation ?? this.elevation,
@@ -1247,10 +1264,11 @@ class PinAnnotation extends ChartAnnotation {
     double? markerSize,
     Color? markerColor,
     double? labelMargin,
+    bool clearLabel = false,
   }) {
     return PinAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -1543,10 +1561,14 @@ class TrendAnnotation extends ChartAnnotation {
     double? lineWidth,
     List<double>? dashPattern,
     double? elevation,
+    bool clearLabel = false,
+    bool clearConfidenceBandColor = false,
+    bool clearPredictionBandColor = false,
+    bool clearDashPattern = false,
   }) {
     return TrendAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -1569,15 +1591,19 @@ class TrendAnnotation extends ChartAnnotation {
       showConfidenceBand: showConfidenceBand ?? this.showConfidenceBand,
       showPredictionBand: showPredictionBand ?? this.showPredictionBand,
       confidenceLevel: confidenceLevel ?? this.confidenceLevel,
-      confidenceBandColor: confidenceBandColor ?? this.confidenceBandColor,
-      predictionBandColor: predictionBandColor ?? this.predictionBandColor,
+      confidenceBandColor: clearConfidenceBandColor
+          ? null
+          : (confidenceBandColor ?? this.confidenceBandColor),
+      predictionBandColor: clearPredictionBandColor
+          ? null
+          : (predictionBandColor ?? this.predictionBandColor),
       confidenceBandOpacity:
           confidenceBandOpacity ?? this.confidenceBandOpacity,
       predictionBandOpacity:
           predictionBandOpacity ?? this.predictionBandOpacity,
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
-      dashPattern: dashPattern ?? this.dashPattern,
+      dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
       elevation: elevation ?? this.elevation,
     );
   }
@@ -1689,6 +1715,7 @@ class ErrorBarAnnotation extends ChartAnnotation {
     Color? lineColor,
     double? lineWidth,
     double? capSize,
+    bool clearLabel = false,
   }) => ErrorBarAnnotation(
     id: id ?? this.id,
     label: label ?? this.label,
@@ -1921,10 +1948,19 @@ class ChordAnnotation extends ChartAnnotation {
     double? perpendicularLineWidth,
     List<double>? perpendicularDashPattern,
     double? perpendicularElevation,
+    bool clearLabel = false,
+    bool clearDashPattern = false,
+    bool clearPerpendicularIndex = false,
+    bool clearPerpendicularLabel = false,
+    bool clearPerpendicularLabelStyle = false,
+    bool clearPerpendicularLineColor = false,
+    bool clearPerpendicularLineWidth = false,
+    bool clearPerpendicularDashPattern = false,
+    bool clearPerpendicularElevation = false,
   }) {
     return ChordAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       style: style ?? this.style,
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
@@ -1934,22 +1970,31 @@ class ChordAnnotation extends ChartAnnotation {
       endIndex: endIndex ?? this.endIndex,
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
-      dashPattern: dashPattern ?? this.dashPattern,
+      dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
       elevation: elevation ?? this.elevation,
-      perpendicularIndex: perpendicularIndex ?? this.perpendicularIndex,
-      perpendicularLabel: perpendicularLabel ?? this.perpendicularLabel,
+      perpendicularIndex: clearPerpendicularIndex
+          ? null
+          : (perpendicularIndex ?? this.perpendicularIndex),
+      perpendicularLabel: clearPerpendicularLabel
+          ? null
+          : (perpendicularLabel ?? this.perpendicularLabel),
       perpendicularLabelOffset:
           perpendicularLabelOffset ?? this.perpendicularLabelOffset,
-      perpendicularLabelStyle:
-          perpendicularLabelStyle ?? this.perpendicularLabelStyle,
-      perpendicularLineColor:
-          perpendicularLineColor ?? this.perpendicularLineColor,
-      perpendicularLineWidth:
-          perpendicularLineWidth ?? this.perpendicularLineWidth,
-      perpendicularDashPattern:
-          perpendicularDashPattern ?? this.perpendicularDashPattern,
-      perpendicularElevation:
-          perpendicularElevation ?? this.perpendicularElevation,
+      perpendicularLabelStyle: clearPerpendicularLabelStyle
+          ? null
+          : (perpendicularLabelStyle ?? this.perpendicularLabelStyle),
+      perpendicularLineColor: clearPerpendicularLineColor
+          ? null
+          : (perpendicularLineColor ?? this.perpendicularLineColor),
+      perpendicularLineWidth: clearPerpendicularLineWidth
+          ? null
+          : (perpendicularLineWidth ?? this.perpendicularLineWidth),
+      perpendicularDashPattern: clearPerpendicularDashPattern
+          ? null
+          : (perpendicularDashPattern ?? this.perpendicularDashPattern),
+      perpendicularElevation: clearPerpendicularElevation
+          ? null
+          : (perpendicularElevation ?? this.perpendicularElevation),
     );
   }
 }
@@ -2331,6 +2376,7 @@ class LegendAnnotation extends ChartAnnotation {
   LegendAnnotation copyWith({
     String? id,
     String? label,
+    bool clearLabel = false,
     int? zIndex,
     List<ChartSeries>? series,
     List<TrendAnnotation>? trendAnnotations,
@@ -2351,7 +2397,7 @@ class LegendAnnotation extends ChartAnnotation {
   }) {
     return LegendAnnotation(
       id: id ?? this.id,
-      label: label ?? this.label,
+      label: clearLabel ? null : (label ?? this.label),
       zIndex: zIndex ?? this.zIndex,
       series: series ?? this.series,
       trendAnnotations: trendAnnotations ?? this.trendAnnotations,
