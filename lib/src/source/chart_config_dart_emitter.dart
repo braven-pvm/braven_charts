@@ -32,6 +32,7 @@ import '../models/candlestick_data_point.dart';
 import '../models/candlestick_density_grouping.dart';
 import '../models/cartesian_value_summary_config.dart';
 import '../models/cartesian_value_summary_style.dart';
+import '../models/category_axis_config.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_overlay_placement.dart';
@@ -1856,6 +1857,12 @@ class ChartConfigDartEmitter {
       series.dataPointMarkerStyle.name,
       defaultName: 'filled',
     );
+    _colorIf(
+      writer,
+      'dataPointMarkerBackground',
+      series.dataPointMarkerBackground,
+      Colors.white,
+    );
     _numberIf(writer, 'lineGlow', series.lineGlow, 0);
     _optionalNumberList(writer, 'dashPattern', series.dashPattern);
     _emitSeriesLabelConfig(
@@ -1912,6 +1919,12 @@ class ChartConfigDartEmitter {
       'DataPointMarkerStyle',
       series.dataPointMarkerStyle.name,
       defaultName: 'filled',
+    );
+    _colorIf(
+      writer,
+      'dataPointMarkerBackground',
+      series.dataPointMarkerBackground,
+      Colors.white,
     );
     _numberIf(writer, 'lineGlow', series.lineGlow, 0);
     _optionalNumberList(writer, 'dashPattern', series.dashPattern);
@@ -3065,7 +3078,65 @@ class ChartConfigDartEmitter {
 
   void _emitXAxis(DartSourceWriter writer, XAxisConfig axis) {
     writer.writeLine('xAxisConfig: XAxisConfig(');
-    writer.indented(() => _emitAxisFields(writer, axis));
+    writer.indented(() {
+      _emitAxisFields(writer, axis);
+      _emitCategoryAxisConfig(writer, axis.categoryAxis);
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `categoryAxis: CategoryAxisConfig(...)` when the x-axis carries a
+  /// category configuration. The x-axis codec captures and round-trips this
+  /// sub-config, so omitting it here silently dropped the entire category
+  /// setup (labels, density, rotation) of a categorical chart.
+  void _emitCategoryAxisConfig(
+    DartSourceWriter writer,
+    CategoryAxisConfig? config,
+  ) {
+    if (config == null) return;
+    writer.writeLine('categoryAxis: CategoryAxisConfig(');
+    writer.indented(() {
+      if (config.categories.isNotEmpty) {
+        writer.namedArgument(
+          'categories',
+          '[${config.categories.map(DartSourceWriter.stringLiteral).join(', ')}]',
+        );
+      }
+      _enumIf(
+        writer,
+        'labelDensity',
+        'CategoryLabelDensity',
+        config.labelDensity.name,
+        defaultName: 'auto',
+      );
+      _enumIf(
+        writer,
+        'labelOverflow',
+        'CategoryLabelOverflow',
+        config.labelOverflow.name,
+        defaultName: 'wrap',
+      );
+      _numberIf(
+        writer,
+        'minimumCategoryExtent',
+        config.minimumCategoryExtent,
+        56,
+      );
+      _numberIf(writer, 'maximumLabelExtent', config.maximumLabelExtent, 104);
+      _numberIf(writer, 'maxLabelLines', config.maxLabelLines, 2);
+      _numberIf(
+        writer,
+        'labelRotationDegrees',
+        config.labelRotationDegrees,
+        0,
+      );
+      _valueIf(
+        writer,
+        'autoViewport',
+        config.autoViewport,
+        defaultValue: true,
+      );
+    });
     writer.writeLine('),');
   }
 

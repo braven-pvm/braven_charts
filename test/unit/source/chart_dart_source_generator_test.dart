@@ -1502,6 +1502,86 @@ void main() {
         isNot(contains(ChartArtifactDiagnosticCodes.unregisteredFormatter)),
       );
     });
+
+    // ------------------------------------------------------------------
+    // Source-emitter drift-gap fixes (Convergence slice 2).
+    //
+    // Each of these asserts that a modelled config property which round-trips
+    // through the document codecs is now present in the generated source for a
+    // NON-DEFAULT value. Before the fix the emitter silently dropped them: the
+    // property was modelled, captured and persisted, but had no `_emit*` line.
+    // ------------------------------------------------------------------
+
+    test('emits dataPointMarkerBackground for a line series', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const LineChartSeries(
+              id: 'line',
+              points: [ChartDataPoint(x: 0, y: 1)],
+              showDataPointMarkers: true,
+              dataPointMarkerBackground: Color(0xFF102030),
+            ),
+          ),
+        ),
+      );
+      expect(
+        generated.source,
+        contains('dataPointMarkerBackground: Color(0xFF102030),'),
+      );
+    });
+
+    test('emits dataPointMarkerBackground for an area series', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const AreaChartSeries(
+              id: 'area',
+              points: [ChartDataPoint(x: 0, y: 2)],
+              showDataPointMarkers: true,
+              dataPointMarkerBackground: Color(0xFF405060),
+            ),
+          ),
+        ),
+      );
+      expect(
+        generated.source,
+        contains('dataPointMarkerBackground: Color(0xFF405060),'),
+      );
+    });
+
+    test('emits the categorical x-axis configuration', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const BarChartSeries(
+              id: 'bar',
+              barWidthPercent: 0.7,
+              points: [ChartDataPoint(x: 0, y: 1)],
+            ),
+            xAxis: const XAxisConfig(
+              label: 'Quarter',
+              categoryAxis: CategoryAxisConfig(
+                categories: ['Q1', 'Q2', 'Q3'],
+                labelDensity: CategoryLabelDensity.showAll,
+                maxLabelLines: 3,
+                labelRotationDegrees: 45,
+                autoViewport: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(generated.source, contains('categoryAxis: CategoryAxisConfig('));
+      expect(generated.source, contains("categories: ['Q1', 'Q2', 'Q3'],"));
+      expect(
+        generated.source,
+        contains('labelDensity: CategoryLabelDensity.showAll,'),
+      );
+      expect(generated.source, contains('maxLabelLines: 3,'));
+      expect(generated.source, contains('labelRotationDegrees: 45.0,'));
+      expect(generated.source, contains('autoViewport: false,'));
+    });
   });
 }
 
@@ -1525,6 +1605,7 @@ ChartDocumentSnapshot _snapshot(
   InteractionConfig interaction = const InteractionConfig(),
   Map<String, JsonObjectValue> interactionBindingDescriptors = const {},
   JsonObjectValue? xAxisFormatter,
+  XAxisConfig xAxis = const XAxisConfig(label: 'Elapsed interval'),
 }) {
   final encodedSeries = [
     for (final item in [series, ...additionalSeries])
@@ -1541,7 +1622,7 @@ ChartDocumentSnapshot _snapshot(
     runtimeBindingDescriptors: interactionBindingDescriptors,
   );
   final encodedXAxis = ChartAxisDocumentCodec.encodeXAxis(
-    const XAxisConfig(label: 'Elapsed interval'),
+    xAxis,
     formatter: xAxisFormatter,
   );
   final encodedYAxis = ChartAxisDocumentCodec.encodeYAxis(
