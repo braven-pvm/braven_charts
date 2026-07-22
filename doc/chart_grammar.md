@@ -543,10 +543,10 @@ channels it populates.
 
 **`GrammarRow` is not — and can never be — your row type.** A document keeps
 the numbers a chart was built from, never the objects they were read out of.
-That is the honest limit of this direction, and it is why the Chart Grammar
-showcase page keeps its hand-written *Authoring code* card: that card shows the
-real `GrammarSample` authoring, and the contrast with the generated chain is
-the point.
+That is the honest limit of this direction. The Chart Grammar showcase page
+surfaces the generated chain through the workbench Source tab's Grammar form,
+whose synthesised `GrammarRow` stands in for the author's own type — and that
+substitution is exactly the contrast that makes the limit visible.
 
 Every synthesised field is **non-nullable and required**. That follows from the
 x-alignment rule below rather than being a style choice: accessors are

@@ -212,76 +212,6 @@ void main() {
     },
   );
 
-  testWidgets('the authoring-code card renders the chain for every preset', (
-    tester,
-  ) async {
-    await pumpPage(tester);
-
-    // The card renders through the package's ChartCodeBlock — the same
-    // renderer the workbench Source tab uses — so the code is read off that
-    // widget rather than off a bare SelectableText.
-    String code() => tester
-        .widget<ChartCodeBlock>(
-          find.byKey(const ValueKey('chart-grammar-authoring-code')),
-        )
-        .code;
-
-    const expected = <String, String>{
-      'lineTrend': '.geomLine(',
-      'multiAxis': '.geomArea(',
-      'scatterChannels': '.geomPoint(',
-      'candlestick': '.geomCandlestick(',
-      'barTransposed': '.geomBar(',
-      'referenceLines': '.threshold(',
-    };
-
-    // The preamble is the point of the card: it names the author's OWN typed
-    // rows the chain consumes, so `BravenChart.of(candleRows)` is not read as
-    // some chart-specific row type.
-    const preamble = <String, String>{
-      'lineTrend': '// rideRows — List<GrammarSample>, 13 rows',
-      'multiAxis': '// rideRows — List<GrammarSample>, 13 rows',
-      'scatterChannels': '// rideRows — List<GrammarSample>, 13 rows',
-      'candlestick': '// candleRows — List<GrammarSample>, 10 OHLC sessions',
-      'barTransposed': '// zoneRows — List<GrammarSample>, 5 training zones',
-      'referenceLines': '// rideRows — List<GrammarSample>, 13 rows',
-    };
-
-    for (final preset in presets) {
-      await selectPreset(tester, preset);
-      expect(
-        find.byKey(const ValueKey('chart-grammar-authoring-card')),
-        findsOneWidget,
-      );
-      final source = code();
-      expect(
-        source,
-        startsWith(preamble[preset]!),
-        reason: '$preset card should name the data constant it consumes',
-      );
-      expect(
-        source,
-        contains('(GrammarSample r) =>'),
-        reason: '$preset card should show the accessor tear-offs',
-      );
-      expect(source, contains('BravenChart.of('));
-      expect(
-        source,
-        contains(expected[preset]),
-        reason: '$preset card should show its geometry verb',
-      );
-      // The card shows the FACADE chain, never a config-level construction.
-      expect(source, isNot(contains('ChartSeries(')));
-      // The live-parameter note keeps the const chain from being read as a
-      // claim about the current knob values.
-      expect(
-        find.byKey(const ValueKey('chart-grammar-live-parameters')),
-        findsOneWidget,
-      );
-    }
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('per-preset controls hide where they cannot apply', (
     tester,
   ) async {
@@ -467,9 +397,10 @@ void main() {
       expect(tester.takeException(), isNull);
 
       // The Source pane's second reading: the same chart, written back as the
-      // chain. It is emitted over a SYNTHESISED row type, which is exactly the
-      // contrast the hand-written Authoring code card exists to show — the
-      // card's chain reads GrammarSample, this one cannot.
+      // chain. It is emitted over a SYNTHESISED row type — a chart document
+      // keeps the numbers a chart was built from, never the GrammarSample
+      // objects the chain was authored over, so the generated chain reads a
+      // synthesised GrammarRow rather than the author's own type.
       // The options panel also has a section titled "Grammar", so the tap is
       // scoped to the Source pane's own toggle key.
       final formToggle = find.byKey(const ValueKey('chart-source-form-toggle'));
