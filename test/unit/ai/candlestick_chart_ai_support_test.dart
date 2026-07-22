@@ -90,6 +90,34 @@ void main() {
     );
   });
 
+  test('tool schema advertises candlestick style keys at a discoverable path', () {
+    final input =
+        ChartToolSchema.createChartTool['input_schema']!
+            as Map<String, dynamic>;
+    final style =
+        (input['properties']! as Map<String, dynamic>)['style']!
+            as Map<String, dynamic>;
+    final styleProperties = style['properties']! as Map<String, dynamic>;
+
+    // An LLM reads style keys from `style.properties` — the same position
+    // scatter_*/bar_*/pie_* use. All ten candlestick style keys must be here.
+    expect(
+      styleProperties.keys,
+      containsAll(<String>[
+        'candlestick_body_fill',
+        'candlestick_body_width_factor',
+        'candlestick_border_width',
+        'candlestick_wick_width',
+        'candlestick_corner_radius',
+        'candlestick_animation_mode',
+        'candlestick_animation_stagger',
+        'candlestick_density_grouping',
+        'candlestick_target_group_width',
+        'candlestick_minimum_points_per_group',
+      ]),
+    );
+  });
+
   test('tool schema advertises conditional OHLC requirements', () {
     final input =
         ChartToolSchema.createChartTool['input_schema']!

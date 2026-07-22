@@ -81,50 +81,18 @@ const Map<String, String> _documentedButNotParsed = <String, String>{
           'chart, so no config is built from it.',
   'series_ids':
       'explain_data protocol key, scoping the analysis; same reason.',
-  'line_interpolation':
-      'REAL GAP: documented as an enum on create_chart.style, but '
-          '_parseLineSeries hardcodes LineInterpolation.linear and never reads '
-          'the key. An agent that sets it gets a straight-line chart and no '
-          'error. Tracked with the candlestick gap below.',
 };
 
 /// Parsed by `ChartConfigBuilder`, absent from the tool schema.
 ///
-/// All ten are the same product gap: candlestick styling the builder has
-/// supported for some time and that an LLM cannot discover, because the tool
-/// schema never offers the vocabulary. Seven of them DO appear in
-/// `chart_tool_schema.dart` — but as siblings of `properties` and `required`
-/// inside an `if` subschema, a position where JSON Schema ignores unknown
-/// keywords outright. Source-present and consumer-invisible is the same thing
-/// as absent, and this gate treats it as absent.
-///
-/// Fixing the schema literals is deliberately NOT part of this change (see
-/// the convergence section of
-/// `docs/superpowers/specs/2026-07-21-chart-grammar-design.md`); recording the
-/// gap so it cannot widen is.
-const Map<String, String> _parsedButNotDocumented = <String, String>{
-  'candlestick_body_fill':
-      'CandlestickChartStyle.bodyFillMode (hollow_rising | filled) — misplaced '
-          'as a sibling of `properties` inside the create_chart `if` subschema.',
-  'candlestick_body_width_factor':
-      'CandlestickChartStyle.bodyWidthFactor — same misplacement.',
-  'candlestick_border_width':
-      'CandlestickChartStyle.borderWidth — same misplacement.',
-  'candlestick_wick_width':
-      'CandlestickChartStyle.wickWidth — same misplacement.',
-  'candlestick_corner_radius':
-      'CandlestickChartStyle.cornerRadius — same misplacement.',
-  'candlestick_animation_mode':
-      'CandlestickAnimation.mode (none | reveal) — same misplacement.',
-  'candlestick_animation_stagger':
-      'CandlestickAnimation.stagger — same misplacement.',
-  'candlestick_density_grouping':
-      'CandlestickDensityGrouping.enabled — absent from the schema entirely.',
-  'candlestick_target_group_width':
-      'CandlestickDensityGrouping.targetGroupWidth — absent entirely.',
-  'candlestick_minimum_points_per_group':
-      'CandlestickDensityGrouping.minimumPointsPerGroup — absent entirely.',
-};
+/// Empty by design. The ten candlestick style keys that once lived here —
+/// parsed by the builder but undiscoverable to an LLM because seven were
+/// misplaced as siblings of `properties` inside an `if` subschema and three
+/// were absent entirely — are now advertised in `create_chart`'s
+/// `style.properties`, the same position every other family's style keys use.
+/// The REVERSE gate below now enforces, with no exemptions, that every key the
+/// builder subscripts is documented in the tool schema.
+const Map<String, String> _parsedButNotDocumented = <String, String>{};
 
 /// Config classes `ChartConfigBuilder` constructs that the surface model
 /// cannot see.
@@ -143,30 +111,12 @@ const Map<String, String> _parsedButNotDocumented = <String, String>{
 ///
 /// The list may SHRINK (a class gains a `copyWith` and gets annotated); it may
 /// not grow unnoticed.
-const Set<String> _builderTargetsOutsideSurfaceModel = <String>{
-  'BarBorderStyle',
-  'BarBulletRange',
-  'BarBulletStyle',
-  'BarChartStyle',
-  'BarDivergingStyle',
-  'BarErrorBarStyle',
-  'BarGradient',
-  'BarInteractionStyle',
-  'BarLabelCalloutStyle',
-  'BarLabelStyle',
-  'BarLollipopStyle',
-  'BarMotionStyle',
-  'BarPatternStyle',
-  'BarTargetMarkerStyle',
-  'BarTrackStyle',
-  'BarWaterfallConnectorStyle',
-  'BarWaterfallStyle',
-  'CandlestickAnimationStyle',
-  'CandlestickChartStyle',
-  'ScatterBinConfig',
-  'ScatterClusterConfig',
-  'ScatterDensityConfig',
-};
+///
+/// Now EMPTY: all 22 classes that once lived here (the `Bar*Style` /
+/// `Candlestick*Style` / `Scatter*Config` families) gained a `copyWith` and a
+/// `@chartSurface` annotation in convergence slice 3a, so they are modelled in
+/// the surface manifest and no longer construction targets outside it.
+const Set<String> _builderTargetsOutsideSurfaceModel = <String>{};
 
 /// Types the builder names that are not config at all — the widget it builds,
 /// its own result type, and Flutter/dart:core values.
@@ -328,19 +278,20 @@ void main() {
     );
   });
 
-  test('the pinned candlestick gap is exactly the ten keys reviewed', () {
-    final candlestick = parsed
+  test('every candlestick style key the builder parses stays documented', () {
+    // Regression guard for the closed reverse gap: the ten candlestick style
+    // keys the builder subscripts must remain discoverable in the tool schema.
+    final undocumentedCandlestick = parsed
         .difference(documented)
         .where((key) => key.startsWith('candlestick_'))
         .toList()
       ..sort();
-    expect(candlestick, hasLength(10));
     expect(
-      candlestick,
-      unorderedEquals(
-        _parsedButNotDocumented.keys
-            .where((key) => key.startsWith('candlestick_')),
-      ),
+      undocumentedCandlestick,
+      isEmpty,
+      reason: 'candlestick style keys must stay advertised in create_chart '
+          'style.properties; these are parsed but not documented:\n'
+          '${undocumentedCandlestick.join('\n')}',
     );
   });
 

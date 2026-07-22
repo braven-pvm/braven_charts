@@ -1620,6 +1620,64 @@ same radial interaction contract.
               'description':
                   'Horizontal logical-pixel gap between the Pie/Donut and outside labels. Zero keeps labels tight to the chart.',
             },
+            'candlestick_body_fill': {
+              'type': 'string',
+              'enum': ['hollow_rising', 'filled'],
+              'description':
+                  'Candlestick-only: body fill treatment. hollow_rising draws rising candles hollow; filled fills every body.',
+            },
+            'candlestick_body_width_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 1,
+              'description':
+                  'Candlestick-only: candle body width relative to its X slot.',
+            },
+            'candlestick_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick-only: candle body outline width.',
+            },
+            'candlestick_wick_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick-only: candle wick stroke width.',
+            },
+            'candlestick_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick-only: candle body corner radius.',
+            },
+            'candlestick_animation_mode': {
+              'type': 'string',
+              'enum': ['none', 'reveal'],
+              'description':
+                  'Candlestick-only: entrance animation behavior.',
+            },
+            'candlestick_animation_stagger': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description':
+                  'Candlestick-only: fraction of the reveal timeline used to stagger candles.',
+            },
+            'candlestick_density_grouping': {
+              'type': 'boolean',
+              'description':
+                  'Candlestick-only: combine dense visible candles into OHLC groups. Source points are unchanged; grouping is a render/interaction projection.',
+            },
+            'candlestick_target_group_width': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description':
+                  'Candlestick-only: desired plot-space width in logical pixels per grouped candle. Grouping activates only when visible density would fall below this.',
+            },
+            'candlestick_minimum_points_per_group': {
+              'type': 'integer',
+              'minimum': 2,
+              'description':
+                  'Candlestick-only: smallest number of source candles represented by a grouped candle.',
+            },
           },
         },
       },
@@ -1628,44 +1686,6 @@ same radial interaction contract.
           'if': {
             'properties': {
               'chart_type': {'const': 'candlestick'},
-            },
-            'candlestick_body_fill': {
-              'type': 'string',
-              'enum': ['hollow_rising', 'filled'],
-              'description': 'Candlestick body fill treatment.',
-            },
-            'candlestick_body_width_factor': {
-              'type': 'number',
-              'exclusiveMinimum': 0,
-              'maximum': 1,
-              'description': 'Candle body width relative to its X slot.',
-            },
-            'candlestick_border_width': {
-              'type': 'number',
-              'minimum': 0,
-              'description': 'Candlestick body outline width.',
-            },
-            'candlestick_wick_width': {
-              'type': 'number',
-              'minimum': 0,
-              'description': 'Candlestick wick stroke width.',
-            },
-            'candlestick_corner_radius': {
-              'type': 'number',
-              'minimum': 0,
-              'description': 'Candlestick body corner radius.',
-            },
-            'candlestick_animation_mode': {
-              'type': 'string',
-              'enum': ['none', 'reveal'],
-              'description': 'Candlestick entrance animation behavior.',
-            },
-            'candlestick_animation_stagger': {
-              'type': 'number',
-              'minimum': 0,
-              'maximum': 1,
-              'description':
-                  'Fraction of the reveal timeline used to stagger candles.',
             },
             'required': ['chart_type'],
           },
