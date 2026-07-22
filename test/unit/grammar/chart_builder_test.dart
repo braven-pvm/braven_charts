@@ -687,6 +687,61 @@ void main() {
     });
   });
 
+  group('chart-level options reach the spec', () {
+    test('.grid, .title and .legend equal the hand-written spec', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power')
+          .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+          .title('Session', subtitle: 'Power over time')
+          .legend(false)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+            ),
+          ],
+          grid: GridConfig(horizontal: false, verticalStrokeWidth: 1.5),
+          title: 'Session',
+          subtitle: 'Power over time',
+          showLegend: false,
+        ),
+      );
+    });
+
+    test('.title without a subtitle leaves the subtitle unset', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .title('Only a title')
+          .toSpec();
+
+      expect(spec.title, 'Only a title');
+      expect(spec.subtitle, isNull);
+    });
+
+    test('chart-level options default to unset when no verb is called', () {
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().toSpec();
+
+      expect(spec.grid, isNull);
+      expect(spec.title, isNull);
+      expect(spec.subtitle, isNull);
+      expect(spec.showLegend, isNull);
+    });
+  });
+
   group('build', () {
     testWidgets('build() returns a BravenPlot over the same spec', (
       tester,

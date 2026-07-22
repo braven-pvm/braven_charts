@@ -12,6 +12,7 @@ import '../models/chart_series.dart' show LineInterpolation;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/scatter_marker_style.dart'
     show
@@ -84,6 +85,10 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    GridConfig? grid,
+    String? title,
+    String? subtitle,
+    bool? showLegend,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -94,7 +99,11 @@ final class BravenChart<T> {
        _transposed = transposed,
        _theme = theme,
        _interaction = interaction,
-       _xAxis = xAxis;
+       _xAxis = xAxis,
+       _grid = grid,
+       _title = title,
+       _subtitle = subtitle,
+       _showLegend = showLegend;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -114,6 +123,10 @@ final class BravenChart<T> {
   final ChartTheme? _theme;
   final InteractionConfig? _interaction;
   final XAxisConfig? _xAxis;
+  final GridConfig? _grid;
+  final String? _title;
+  final String? _subtitle;
+  final bool? _showLegend;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -126,6 +139,10 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    GridConfig? grid,
+    String? title,
+    String? subtitle,
+    bool? showLegend,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -138,6 +155,10 @@ final class BravenChart<T> {
     theme: theme ?? _theme,
     interaction: interaction ?? _interaction,
     xAxis: xAxis ?? _xAxis,
+    grid: grid ?? _grid,
+    title: title ?? _title,
+    subtitle: subtitle ?? _subtitle,
+    showLegend: showLegend ?? _showLegend,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -464,6 +485,16 @@ final class BravenChart<T> {
   BravenChart<T> yAxis(YAxisConfig config) =>
       _copy(yAxes: <YAxisConfig>[..._yAxes, config]);
 
+  /// Sets the chart's grid configuration, forwarded to the chart unchanged.
+  BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
+
+  /// Sets the chart [title], and optionally a [subtitle] beneath it.
+  BravenChart<T> title(String title, {String? subtitle}) =>
+      _copy(title: title, subtitle: subtitle);
+
+  /// Shows or hides the chart legend.
+  BravenChart<T> legend(bool show) => _copy(showLegend: show);
+
   /// The specification this chain describes.
   PlotSpec<T> toSpec() {
     final xLabel = _xLabel;
@@ -480,6 +511,10 @@ final class BravenChart<T> {
           : <YAxisConfig>[
               YAxisConfig(position: YAxisPosition.left, label: yLabel),
             ],
+      grid: _grid,
+      title: _title,
+      subtitle: _subtitle,
+      showLegend: _showLegend,
     );
   }
 
