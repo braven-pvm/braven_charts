@@ -157,6 +157,52 @@ const Map<String, String> _classAwareResidualClasses = <String, String>{
 /// inside a block that IS correctly attributed.
 const Map<String, String> _classAwareExpectedGaps = <String, String>{};
 
+// ===========================================================================
+// PER-SERIES gate (see the per-series group's docstring below).
+//
+// The concrete series subclasses are constructed through the SHARED
+// `writer.writeLine('$constructor(')` opener in `_emitSeries` (a `$constructor`
+// dispatch), so the class-aware block attributor skips them entirely — they
+// never get a literal-ClassName construction block. That auto-residual bucket
+// is exactly where adversarial verification of slice 3c found the
+// line/area-series-emitter drops hiding (a same-named field on
+// RangeAreaChartSeries covered them in the flat union). This gate attributes
+// each series' emitted names EXPLICITLY, by method, closing that hole.
+// ===========================================================================
+
+/// Every manifest series subclass keyed to the emit method(s) whose bodies —
+/// unioned with the shared `_emitSeries` base slice ([_sharedSeriesBaseSlice])
+/// — NAME that series' modelled fields. Read off the `switch (series)` type
+/// dispatch in `_emitSeries` (chart_config_dart_emitter.dart).
+///
+/// A field whose VALUE is passed at the call site (`_emitX(writer,
+/// series.foo)`) is named in the entry method directly. A field emitted inside
+/// a helper that receives the WHOLE `series` object (so it reads `series.foo`
+/// internally) needs that helper listed too — that is why area lists
+/// `_emitLineLikeAreaOptions` and pie/donut list `_emitAdvancedRadial`.
+///
+/// `ScatterChartSeries` is the one series emitted INLINE in the `_emitSeries`
+/// switch (no dedicated `_emit…Options` method); it maps to the empty list and
+/// is covered by the scatter-case slice ([_scatterCaseSlice]).
+const Map<String, List<String>> _seriesEmitMethods = <String, List<String>>{
+  'LineChartSeries': <String>['_emitLineOptions'],
+  'AreaChartSeries': <String>['_emitAreaOptions', '_emitLineLikeAreaOptions'],
+  'RangeAreaChartSeries': <String>['_emitRangeAreaOptions'],
+  'CandlestickChartSeries': <String>['_emitCandlestickOptions'],
+  'BarChartSeries': <String>['_emitBarOptions'],
+  'PieChartSeries': <String>['_emitPieOptions', '_emitAdvancedRadial'],
+  'DonutChartSeries': <String>['_emitDonutOptions', '_emitAdvancedRadial'],
+  'PolarColumnChartSeries': <String>['_emitPolarColumnOptions'],
+  'ScatterChartSeries': <String>[],
+};
+
+/// `Series.property` pairs the per-series slice reports as a gap and that are
+/// deliberately NOT emitted, one reviewed reason each. Kept empty unless a
+/// series genuinely cannot round-trip a field through direct construction; a
+/// slice that reports MANY gaps means [_seriesEmitMethods] is missing a
+/// delegated helper, not that the gaps should be pinned.
+const Map<String, String> _seriesExpectedGaps = <String, String>{};
+
 /// Every `@chartSurface` class keyed to its modelled property names, from the
 /// generated manifest.
 Map<String, Set<String>> _surfaceProperties() {
@@ -244,6 +290,69 @@ Set<String> _emitterMentions(String source) => <String>{
     blocks[className] = (blocks[className] ?? 0) + 1;
   }
   return (mentions: mentions, blocks: blocks);
+}
+
+/// Slices a single emitter method body by brace depth: from its
+/// `void <name>(` opener to the matching method-close (`^  }` at brace depth 0,
+/// the same 2-space method boundary [_attributeConstructionBlocks] uses).
+/// Returns '' if the method is not found.
+String _methodSlice(String source, String methodName) {
+  final lines = source.replaceAll('\r\n', '\n').split('\n');
+  final startRe = RegExp('void ${RegExp.escape(methodName)}\\(');
+  final methodEndRe = RegExp(r'^  \}$');
+  for (var i = 0; i < lines.length; i++) {
+    if (!startRe.hasMatch(lines[i])) continue;
+    for (var j = i + 1; j < lines.length; j++) {
+      if (methodEndRe.hasMatch(lines[j])) {
+        return lines.sublist(i, j + 1).join('\n');
+      }
+    }
+  }
+  return '';
+}
+
+/// The fields every series emits: the `_emitSeries` body BEFORE its
+/// `switch (series)` type dispatch, plus the shared `_emitPoints` and
+/// `_emitSeriesStyle` helpers (points and the style discriminator are written
+/// through those helpers, not inline in `_emitSeries`).
+String _sharedSeriesBaseSlice(String source) {
+  final emitSeries = _methodSlice(source, '_emitSeries');
+  // Two `switch (series)` occur: the `final constructor = switch (series)`
+  // class-name expression at the top, then the type-dispatch `switch (series)`
+  // that runs the per-series emit. The shared base is everything before the
+  // dispatch (the LAST occurrence) — including the base-field emission between
+  // the two switches.
+  final switchIdx = emitSeries.lastIndexOf('switch (series)');
+  final base = switchIdx == -1 ? emitSeries : emitSeries.substring(0, switchIdx);
+  return <String>[
+    base,
+    _methodSlice(source, '_emitPoints'),
+    _methodSlice(source, '_emitSeriesStyle'),
+  ].join('\n');
+}
+
+/// `ScatterChartSeries` is emitted INLINE in the `_emitSeries` switch (no
+/// dedicated `_emit…Options` method). Slices its `case ScatterChartSeries():`
+/// arm up to the next `case` label.
+String _scatterCaseSlice(String source) {
+  final emitSeries = _methodSlice(source, '_emitSeries');
+  const marker = 'case ScatterChartSeries():';
+  final start = emitSeries.indexOf(marker);
+  if (start == -1) return '';
+  final rest = emitSeries.substring(start + marker.length);
+  final nextCase = RegExp(r'\n\s*case ').firstMatch(rest);
+  return nextCase == null ? rest : rest.substring(0, nextCase.start);
+}
+
+/// The union of emitted names for a series: shared base + its mapped method
+/// bodies (+ the scatter-case slice for the inline scatter series).
+Set<String> _seriesEmittedNames(String source, String className) {
+  final parts = <String>[_sharedSeriesBaseSlice(source)];
+  if (className == 'ScatterChartSeries') parts.add(_scatterCaseSlice(source));
+  for (final method in _seriesEmitMethods[className] ?? const <String>[]) {
+    parts.add(_methodSlice(source, method));
+  }
+  return _emitterMentions(parts.join('\n'));
 }
 
 void main() {
@@ -515,13 +624,178 @@ void main() {
       '  in-scope gated classes:           $gatedClasses\n'
       '  residual (parser-miss) classes:   ${_classAwareResidualClasses.length}\n'
       '  per-property pinned gaps:         ${_classAwareExpectedGaps.length}\n'
-      '  RESIDUAL SCOPE: series/annotations (\$constructor dispatch), Pie/Donut '
+      '  RESIDUAL SCOPE: annotations (\$constructor dispatch), Pie/Donut '
       'styles (_emitRadialStyle),\n'
       '  sealed-union named constructors, the *Fields-helper classes above, and '
       'the not-emitted\n'
-      '  classes all stay on the flat-union gate — this check does not pretend '
-      'to attribute them.',
+      '  classes stay on the flat-union gate — this check does not pretend '
+      'to attribute them.\n'
+      '  The series subclasses (also \$constructor dispatch) are now covered by '
+      'the per-series gate below.',
     );
     expect(attributed.mentions, isNotEmpty);
+  });
+
+  // =========================================================================
+  // PER-SERIES gate (ADDITIVE — closes the $constructor-dispatch blind spot)
+  //
+  // Every concrete series is emitted through the shared
+  // `writer.writeLine('$constructor(')` opener in `_emitSeries`, so the
+  // class-aware attributor above skips them (no literal-ClassName block) and
+  // they were left to the flat-union gate — where a same-named field on a
+  // sibling series hid the line/area-emitter drops slice 3c missed. This gate
+  // attributes each series' emitted names by an EXPLICIT method map
+  // ([_seriesEmitMethods], read off the `switch (series)` dispatch) unioned
+  // with the shared `_emitSeries` base, and checks each series' modelled
+  // properties against ITS OWN slice. Annotations remain residual (the same
+  // pattern could extend to them — a follow-up slice).
+  // =========================================================================
+
+  test('the per-series map covers every manifest series subclass', () {
+    final manifestSeries =
+        surface.keys.where((c) => c.endsWith('Series')).toSet();
+    final unmapped =
+        manifestSeries.difference(_seriesEmitMethods.keys.toSet()).toList()
+          ..sort();
+    expect(
+      unmapped,
+      isEmpty,
+      reason: 'these manifest series subclasses are NOT mapped in '
+          '_seriesEmitMethods — add each with the emit method(s) that name its '
+          'fields. This is the maintenance guard: a new series must be wired '
+          'into the per-series gate or it silently escapes coverage:\n'
+          '${unmapped.join('\n')}',
+    );
+    final stale =
+        _seriesEmitMethods.keys.toSet().difference(manifestSeries).toList()
+          ..sort();
+    expect(
+      stale,
+      isEmpty,
+      reason: 'these _seriesEmitMethods keys are not @chartSurface series '
+          'classes in the manifest — delete them:\n${stale.join('\n')}',
+    );
+    // Every method the slicer names must resolve to a real, non-empty body, or
+    // a rename would make the gate silently vacuous.
+    final source = _emitterSource;
+    final missing = <String>[];
+    for (final method in <String>{
+      '_emitSeries',
+      '_emitPoints',
+      '_emitSeriesStyle',
+      for (final methods in _seriesEmitMethods.values) ...methods,
+    }) {
+      if (_methodSlice(source, method).isEmpty) missing.add(method);
+    }
+    missing.sort();
+    expect(
+      missing,
+      isEmpty,
+      reason: 'these methods named by the per-series slicer no longer exist in '
+          'chart_config_dart_emitter.dart (renamed?) — update '
+          '_seriesEmitMethods / the slicers:\n${missing.join('\n')}',
+    );
+    expect(
+      _scatterCaseSlice(source),
+      isNotEmpty,
+      reason: 'the inline ScatterChartSeries case in _emitSeries was not found '
+          '— the scatter-case slicer needs revisiting.',
+    );
+  });
+
+  test('every series subclass emits all its modelled fields', () {
+    final source = _emitterSource;
+    final gaps = <String>[];
+    for (final entry in _seriesEmitMethods.entries) {
+      final className = entry.key;
+      final props = surface[className];
+      if (props == null) continue; // completeness asserted separately.
+      final names = _seriesEmittedNames(source, className);
+      for (final property in props) {
+        if (names.contains(property)) continue;
+        if (_seriesExpectedGaps.containsKey('$className.$property')) continue;
+        gaps.add('$className.$property');
+      }
+    }
+    gaps.sort();
+    expect(
+      gaps,
+      isEmpty,
+      reason: 'NEW per-series source-emitter drift: these modelled series '
+          "properties are NOT named inside their own series' emit method(s) "
+          'plus the shared _emitSeries base, even though a same-named property '
+          'on another series can hide this from the flat-union gate (the '
+          "slice-3c blind spot). Add the _emit line to that series' method "
+          '(with a source-generator round-trip test); or, if a delegated '
+          'helper that reads series.<field> internally is missing from the '
+          'slice, add it to _seriesEmitMethods (do NOT pin a batch of gaps — '
+          'that means the slice is wrong). A genuine structural non-emit goes '
+          'in _seriesExpectedGaps with a reason:\n${gaps.join('\n')}',
+    );
+  });
+
+  test('per-series expected gaps name real series/properties with reasons', () {
+    for (final key in _seriesExpectedGaps.keys) {
+      final parts = key.split('.');
+      expect(
+        _seriesEmitMethods.containsKey(parts[0]),
+        isTrue,
+        reason: '$key pins a property on ${parts[0]}, which is not a mapped '
+            'series in _seriesEmitMethods.',
+      );
+      expect(
+        surface[parts[0]]?.contains(parts[1]) ?? false,
+        isTrue,
+        reason: '$key pins property "${parts[1]}", which ${parts[0]} does not '
+            'model — delete it from _seriesExpectedGaps.',
+      );
+    }
+    for (final reason in _seriesExpectedGaps.values) {
+      expect(
+        reason.length,
+        greaterThanOrEqualTo(20),
+        reason: 'a per-series expected gap has a placeholder reason',
+      );
+    }
+  });
+
+  test('per-series expected gaps have no stale entries', () {
+    final source = _emitterSource;
+    final stale = _seriesExpectedGaps.keys.where((key) {
+      final parts = key.split('.');
+      return _seriesEmittedNames(source, parts[0]).contains(parts[1]);
+    }).toList()
+      ..sort();
+    expect(
+      stale,
+      isEmpty,
+      reason: 'these per-series gaps are now named by their series slice but '
+          'still pinned. Delete them from _seriesExpectedGaps:\n'
+          '${stale.join('\n')}',
+    );
+  });
+
+  test('COVERAGE REPORT (not a gate): per-series slice attribution', () {
+    final source = _emitterSource;
+    var modelled = 0;
+    var named = 0;
+    for (final className in _seriesEmitMethods.keys) {
+      final props = surface[className];
+      if (props == null) continue;
+      final names = _seriesEmittedNames(source, className);
+      for (final property in props) {
+        modelled++;
+        if (names.contains(property)) named++;
+      }
+    }
+    // ignore: avoid_print
+    print(
+      '\n[per-series source emitter coverage]\n'
+      '  series subclasses gated:     ${_seriesEmitMethods.length}\n'
+      '  modelled series properties:  $modelled\n'
+      '  named by own series slice:   $named of $modelled\n'
+      '  per-series pinned gaps:      ${_seriesExpectedGaps.length}',
+    );
+    expect(_seriesEmitMethods, isNotEmpty);
   });
 }
