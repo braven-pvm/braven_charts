@@ -4970,6 +4970,18 @@ class ChartConfigDartEmitter {
   }
 
   void _emitTextStyleArguments(DartSourceWriter writer, TextStyle style) {
+    // Emits every TextStyle field the ChartStyleDocumentCodec round-trips (see
+    // _encodeTextStyle / _decodeTextStyle). Each field is CONDITIONAL on a
+    // non-null / non-default value, so a plain text style stays byte-identical
+    // (zero golden drift) and only styles that actually set the richer fields
+    // (shadows, locale, font features/variations, …) emit them. The existing
+    // 13 fields keep their prior relative order so goldens using only them are
+    // unaffected; the new fields are interleaved but emit nothing by default.
+    // foreground / background are intentionally NOT emitted — the codec rejects
+    // them as non-portable Paint values.
+    if (!style.inherit) {
+      writer.namedArgument('inherit', 'false');
+    }
     _optionalColor(writer, 'color', style.color);
     _optionalColor(writer, 'backgroundColor', style.backgroundColor);
     _optionalNumber(writer, 'fontSize', style.fontSize);
@@ -4981,20 +4993,49 @@ class ChartConfigDartEmitter {
     }
     _optionalNumber(writer, 'letterSpacing', style.letterSpacing);
     _optionalNumber(writer, 'wordSpacing', style.wordSpacing);
+    if (style.textBaseline != null) {
+      writer.namedArgument(
+        'textBaseline',
+        'TextBaseline.${style.textBaseline!.name}',
+      );
+    }
     _optionalNumber(writer, 'height', style.height);
+    if (style.leadingDistribution != null) {
+      writer.namedArgument(
+        'leadingDistribution',
+        'TextLeadingDistribution.${style.leadingDistribution!.name}',
+      );
+    }
+    if (style.locale != null) {
+      writer.namedArgument('locale', _localeLiteral(style.locale!));
+    }
     _optionalString(writer, 'fontFamily', style.fontFamily);
+    if (style.fontFamilyFallback != null) {
+      writer.namedArgument(
+        'fontFamilyFallback',
+        _stringListLiteral(style.fontFamilyFallback!),
+      );
+    }
+    if (style.shadows != null) {
+      writer.namedArgument('shadows', _shadowListLiteral(style.shadows!));
+    }
+    if (style.fontFeatures != null) {
+      writer.namedArgument(
+        'fontFeatures',
+        _fontFeatureListLiteral(style.fontFeatures!),
+      );
+    }
+    if (style.fontVariations != null) {
+      writer.namedArgument(
+        'fontVariations',
+        _fontVariationListLiteral(style.fontVariations!),
+      );
+    }
     if (style.decoration != null) {
-      final decoration = _textDecorationLiteral(style.decoration!);
-      if (decoration != null) {
-        writer.namedArgument('decoration', decoration);
-      } else {
-        _warn(
-          code: ChartSourceWarningCodes.unsupportedPortableValue,
-          message:
-              'A combined text decoration was omitted. Reapply it in the generated TextStyle.',
-          path: r'$.style.textStyle.decoration',
-        );
-      }
+      writer.namedArgument(
+        'decoration',
+        _textDecorationLiteral(style.decoration!),
+      );
     }
     _optionalColor(writer, 'decorationColor', style.decorationColor);
     if (style.decorationStyle != null) {
@@ -5004,6 +5045,47 @@ class ChartConfigDartEmitter {
       );
     }
     _optionalNumber(writer, 'decorationThickness', style.decorationThickness);
+    _optionalString(writer, 'debugLabel', style.debugLabel);
+    if (style.overflow != null) {
+      writer.namedArgument('overflow', 'TextOverflow.${style.overflow!.name}');
+    }
+  }
+
+  String _stringListLiteral(List<String> values) =>
+      '[${values.map(DartSourceWriter.stringLiteral).join(', ')}]';
+
+  String _shadowListLiteral(List<Shadow> shadows) =>
+      '[${shadows.map(_shadowLiteral).join(', ')}]';
+
+  String _shadowLiteral(Shadow shadow) =>
+      'Shadow(color: ${DartSourceWriter.colorLiteral(shadow.color)}, '
+      'offset: ${_offsetLiteral(shadow.offset)}, '
+      'blurRadius: ${DartSourceWriter.numberLiteral(shadow.blurRadius)})';
+
+  String _fontFeatureListLiteral(List<FontFeature> features) =>
+      '[${features.map((feature) => 'FontFeature('
+          '${DartSourceWriter.stringLiteral(feature.feature)}, '
+          '${feature.value})').join(', ')}]';
+
+  String _fontVariationListLiteral(List<FontVariation> variations) =>
+      '[${variations.map((variation) => 'FontVariation('
+          '${DartSourceWriter.stringLiteral(variation.axis)}, '
+          '${DartSourceWriter.numberLiteral(variation.value)})').join(', ')}]';
+
+  String _localeLiteral(Locale locale) {
+    final buffer = StringBuffer('Locale.fromSubtags(languageCode: ')
+      ..write(DartSourceWriter.stringLiteral(locale.languageCode));
+    if (locale.scriptCode != null) {
+      buffer.write(
+        ', scriptCode: ${DartSourceWriter.stringLiteral(locale.scriptCode!)}',
+      );
+    }
+    if (locale.countryCode != null) {
+      buffer.write(
+        ', countryCode: ${DartSourceWriter.stringLiteral(locale.countryCode!)}',
+      );
+    }
+    return (buffer..write(')')).toString();
   }
 
   String _fontWeightLiteral(FontWeight weight) => 'FontWeight.w${weight.value}';
@@ -5019,16 +5101,22 @@ class ChartConfigDartEmitter {
     }
   }
 
-  String? _textDecorationLiteral(TextDecoration decoration) {
-    if (decoration == TextDecoration.none) return 'TextDecoration.none';
-    if (decoration == TextDecoration.underline) {
-      return 'TextDecoration.underline';
-    }
-    if (decoration == TextDecoration.overline) return 'TextDecoration.overline';
-    if (decoration == TextDecoration.lineThrough) {
-      return 'TextDecoration.lineThrough';
-    }
-    return null;
+  String _textDecorationLiteral(TextDecoration decoration) {
+    // Mirrors ChartStyleDocumentCodec's decoration encode/decode: the codec
+    // stores the set of contained line components and rebuilds a combined
+    // decoration with TextDecoration.combine, so a combination round-trips.
+    // Single decorations (and none) stay byte-identical to the prior output.
+    final parts = <String>[
+      if (decoration.contains(TextDecoration.underline))
+        'TextDecoration.underline',
+      if (decoration.contains(TextDecoration.overline))
+        'TextDecoration.overline',
+      if (decoration.contains(TextDecoration.lineThrough))
+        'TextDecoration.lineThrough',
+    ];
+    if (parts.isEmpty) return 'TextDecoration.none';
+    if (parts.length == 1) return parts.first;
+    return 'TextDecoration.combine([${parts.join(', ')}])';
   }
 
   String _edgeInsetsLiteral(EdgeInsets value) =>

@@ -652,6 +652,141 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  test(
+    'generated rich-TextStyle annotation Dart (slice-3f) formats and analyzes',
+    () async {
+      // Exercises the full TextStyle field set now emitted for annotation label
+      // styles (Fix A): shadows, fontFamilyFallback, textBaseline,
+      // leadingDistribution, locale, fontFeatures, fontVariations, a combined
+      // decoration, debugLabel, overflow, and inherit:false. Proves the emitted
+      // Dart for every one of these is valid (formats + analyzes clean).
+      final richStyle = AnnotationStyle(
+        textStyle: TextStyle(
+          inherit: false,
+          color: const Color(0xFF102030),
+          fontFamily: 'Inter',
+          fontFamilyFallback: const ['Roboto', 'Arial'],
+          letterSpacing: 0.4,
+          textBaseline: TextBaseline.alphabetic,
+          leadingDistribution: TextLeadingDistribution.even,
+          locale: const Locale.fromSubtags(
+            languageCode: 'en',
+            countryCode: 'ZA',
+          ),
+          shadows: const [
+            Shadow(color: Color(0x55000000), offset: Offset(1, 2), blurRadius: 3),
+          ],
+          fontFeatures: const [FontFeature('smcp')],
+          fontVariations: const [FontVariation('wght', 650)],
+          decoration: TextDecoration.combine(const [
+            TextDecoration.underline,
+            TextDecoration.lineThrough,
+          ]),
+          decorationStyle: TextDecorationStyle.dashed,
+          debugLabel: 'label-test',
+          overflow: TextOverflow.fade,
+        ),
+      );
+      final snapshot = ChartDocumentSnapshot(
+        document: ChartDocument(
+          documentId: 'generated-rich-textstyle-compile',
+          revision: 1,
+          series: [
+            _success(
+              ChartSeriesDocumentCodec.encode(
+                const LineChartSeries(
+                  id: 'power',
+                  points: [
+                    ChartDataPoint(x: 0, y: 148),
+                    ChartDataPoint(x: 1, y: 162),
+                  ],
+                ),
+              ),
+            ).value,
+          ],
+          annotations: [
+            _success(
+              ChartAnnotationDocumentCodec.encode(
+                RangeAnnotation(
+                  id: 'window',
+                  label: 'Target window',
+                  startX: 0.5,
+                  endX: 1.5,
+                  style: richStyle,
+                ),
+              ),
+            ).value,
+          ],
+          xAxis: _success(
+            ChartAxisDocumentCodec.encodeXAxis(
+              const XAxisConfig(label: 'Elapsed interval'),
+            ),
+          ).value,
+          axes: [
+            _success(
+              ChartAxisDocumentCodec.encodeYAxis(
+                YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+              ),
+            ).value,
+          ],
+          theme: _success(ChartThemeDocumentCodec.encode(ChartTheme.light)).value,
+          interaction: _success(
+            ChartInteractionDocumentCodec.encode(const InteractionConfig()),
+          ).value,
+        ),
+      );
+      final generated = _success(
+        ChartDartSourceGenerator.generate(snapshot),
+      ).value;
+
+      for (final needle in const [
+        'inherit: false,',
+        'shadows: [Shadow(',
+        "fontFamilyFallback: ['Roboto', 'Arial'],",
+        'locale: Locale.fromSubtags(',
+        "fontFeatures: [FontFeature('smcp', 1)],",
+        "fontVariations: [FontVariation('wght', 650.0)],",
+        'decoration: TextDecoration.combine([',
+        'overflow: TextOverflow.fade,',
+      ]) {
+        expect(generated.source, contains(needle), reason: 'missing $needle');
+      }
+      expect(generated.warnings, isEmpty);
+
+      final fixture = File(
+        '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
+        '${Platform.pathSeparator}rich_textstyle_generated_source_compile_test.dart',
+      );
+      await fixture.writeAsString(
+        '// ignore_for_file: prefer_const_constructors\n${generated.source}',
+      );
+      try {
+        final format = await Process.run(
+          'dart',
+          ['format', '--output=none', fixture.path],
+          workingDirectory: Directory.current.path,
+          runInShell: Platform.isWindows,
+        );
+        expect(format.exitCode, 0, reason: '${format.stdout}\n${format.stderr}');
+
+        final analyze = await Process.run(
+          'dart',
+          ['analyze', '--no-fatal-warnings', fixture.path],
+          workingDirectory: Directory.current.path,
+          runInShell: Platform.isWindows,
+        );
+        expect(
+          analyze.exitCode,
+          0,
+          reason: '${analyze.stdout}\n${analyze.stderr}',
+        );
+      } finally {
+        if (await fixture.exists()) await fixture.delete();
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }
 
 ChartArtifactSuccess<T> _success<T>(ChartArtifactResult<T> result) {

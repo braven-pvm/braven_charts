@@ -627,6 +627,113 @@ void main() {
       expect(generated.source, contains('yPositive: 5.0'));
     });
 
+    test('emits the full TextStyle field set for annotation label styles', () {
+      // Every field here is round-tripped by ChartStyleDocumentCodec but the
+      // emitter previously dropped the richer ones (shadows, fontFamilyFallback,
+      // textBaseline, leadingDistribution, locale, fontFeatures, fontVariations,
+      // debugLabel, overflow, inherit, and combined decorations). RED before
+      // Fix A, GREEN after.
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const LineChartSeries(
+              id: 'power',
+              points: [ChartDataPoint(x: 0, y: 100), ChartDataPoint(x: 1, y: 120)],
+            ),
+            annotations: [
+              RangeAnnotation(
+                id: 'window',
+                label: 'Target window',
+                startX: 0.5,
+                endX: 1.5,
+                style: AnnotationStyle(
+                  textStyle: TextStyle(
+                    inherit: false,
+                    color: Color(0xFF102030),
+                    fontFamily: 'Inter',
+                    fontFamilyFallback: ['Roboto', 'Arial'],
+                    letterSpacing: 1.5,
+                    wordSpacing: 1.2,
+                    textBaseline: TextBaseline.alphabetic,
+                    leadingDistribution: TextLeadingDistribution.even,
+                    locale: Locale.fromSubtags(
+                      languageCode: 'en',
+                      countryCode: 'ZA',
+                    ),
+                    shadows: [
+                      Shadow(
+                        color: Color(0x55000000),
+                        offset: Offset(1, 2),
+                        blurRadius: 3,
+                      ),
+                    ],
+                    fontFeatures: [FontFeature('smcp')],
+                    fontVariations: [FontVariation('wght', 650)],
+                    decoration: TextDecoration.combine([
+                      TextDecoration.underline,
+                      TextDecoration.overline,
+                    ]),
+                    decorationStyle: TextDecorationStyle.dashed,
+                    debugLabel: 'label-test',
+                    overflow: TextOverflow.fade,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Previously-dropped fields now emitted.
+      expect(generated.source, contains('inherit: false,'));
+      expect(
+        generated.source,
+        contains("fontFamilyFallback: ['Roboto', 'Arial'],"),
+      );
+      expect(
+        generated.source,
+        contains('textBaseline: TextBaseline.alphabetic,'),
+      );
+      expect(
+        generated.source,
+        contains('leadingDistribution: TextLeadingDistribution.even,'),
+      );
+      expect(
+        generated.source,
+        contains(
+          "locale: Locale.fromSubtags(languageCode: 'en', countryCode: 'ZA'),",
+        ),
+      );
+      expect(
+        generated.source,
+        contains(
+          'shadows: [Shadow(color: Color(0x55000000), offset: Offset(1.0, 2.0), '
+          'blurRadius: 3.0)],',
+        ),
+      );
+      expect(
+        generated.source,
+        contains("fontFeatures: [FontFeature('smcp', 1)],"),
+      );
+      expect(
+        generated.source,
+        contains("fontVariations: [FontVariation('wght', 650.0)],"),
+      );
+      expect(
+        generated.source,
+        contains(
+          'decoration: TextDecoration.combine([TextDecoration.underline, '
+          'TextDecoration.overline]),',
+        ),
+      );
+      expect(generated.source, contains("debugLabel: 'label-test',"));
+      expect(generated.source, contains('overflow: TextOverflow.fade,'));
+      // A field already emitted before Fix A stays intact.
+      expect(generated.source, contains('letterSpacing: 1.5,'));
+      // No warning is produced for the combined decoration any more.
+      expect(generated.warnings, isEmpty);
+    });
+
     test('emits complete canvas legend content and styling', () {
       final legendSeries = const LineChartSeries(
         id: 'legend-power',
