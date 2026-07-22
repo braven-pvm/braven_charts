@@ -23,6 +23,7 @@ import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
+import 'pages/mobile_showcase_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/pie_charts_page.dart';
 import 'pages/polar_column_page.dart';
@@ -42,8 +43,8 @@ import 'widgets/gallery_flagships.dart';
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
 /// Features adaptive navigation:
-/// - Bottom navigation on mobile (< 600dp width)
-/// - Navigation rail on tablet/desktop (>= 600dp width)
+/// - Focused chart-family browser on phones (< 600dp width)
+/// - Navigation sidebar on tablet/desktop (>= 600dp width)
 /// - Extended rail with labels on wide screens (>= 900dp width)
 class ShowcaseApp extends StatelessWidget {
   const ShowcaseApp({super.key});
@@ -375,12 +376,6 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     if (index >= 0) _selectDestination(index);
   }
 
-  bool _startsNavigationSection(int index) {
-    final section = _destinations[index].navigationSection;
-    if (section == null) return false;
-    return index == 0 || section != _destinations[index - 1].navigationSection;
-  }
-
   @override
   Widget build(BuildContext context) {
     return ChartWorkbenchScope(
@@ -432,90 +427,21 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
 
     // Adaptive layout breakpoints
     if (width < 600) {
-      return _buildMobileLayout();
+      final selectedSlug = _destinations[_selectedIndex].slug;
+      return MobileShowcasePage(
+        initialChartSlug:
+            showcaseChartTypes.any(
+              (chartType) => chartType.slug == selectedSlug,
+            )
+            ? selectedSlug
+            : null,
+        onChartTypeSelected: _selectSlug,
+      );
     } else if (width < 900) {
       return _buildTabletLayout(extended: false);
     } else {
       return _buildTabletLayout(extended: true);
     }
-  }
-
-  /// Mobile layout with a drawer so the complete feature set stays usable.
-  Widget _buildMobileLayout() {
-    final destination = _destinations[_selectedIndex];
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Flexible(child: Text(destination.label)),
-            if (destination.reviewProposal != null) ...[
-              const SizedBox(width: 8),
-              const _ReviewBadge(),
-            ],
-          ],
-        ),
-        scrolledUnderElevation: 1,
-      ),
-      drawer: NavigationDrawer(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          _selectDestination(index);
-          Navigator.of(context).pop();
-        },
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(28, 20, 16, 20),
-            child: BravenBrand(),
-          ),
-          const Divider(),
-          for (var index = 0; index < _destinations.length; index++) ...[
-            if (_startsNavigationSection(index))
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 14, 16, 4),
-                child: Text(_destinations[index].navigationSection!),
-              ),
-            if (index > 0 &&
-                !_destinations[index].isNested &&
-                _destinations[index - 1].isNested)
-              const Divider(indent: 20, endIndent: 20),
-            NavigationDrawerDestination(
-              icon: Padding(
-                padding: EdgeInsets.only(
-                  left: _destinations[index].isNested ? 16 : 0,
-                ),
-                child: Icon(_destinations[index].icon),
-              ),
-              selectedIcon: Padding(
-                padding: EdgeInsets.only(
-                  left: _destinations[index].isNested ? 16 : 0,
-                ),
-                child: Icon(_destinations[index].selectedIcon),
-              ),
-              label: SizedBox(
-                width: 190,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _destinations[index].label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (_destinations[index].reviewProposal != null) ...[
-                      const SizedBox(width: 6),
-                      const _ReviewBadge(compact: true),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-        ],
-      ),
-      body: _buildSelectedPage(),
-    );
   }
 
   /// Tablet/desktop layout with scrollable navigation sidebar.

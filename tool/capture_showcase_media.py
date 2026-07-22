@@ -27,6 +27,7 @@ from selenium.webdriver.chrome.options import Options
 
 
 VIEWPORT = (1440, 900)
+MOBILE_VIEWPORT = (500, 1000)
 INTERACTION_CROP = (280, 12, 1418, 518)
 HERO_CROP = (280, 0, 1418, 688)
 HERO_PANEL_CROP = (444, 228, 996, 672)
@@ -77,14 +78,18 @@ def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 CAPTION_FONT = _font(20, bold=True)
 
 
-def _driver(*, disable_gpu: bool = True) -> webdriver.Chrome:
+def _driver(
+    *,
+    disable_gpu: bool = True,
+    viewport: tuple[int, int] = VIEWPORT,
+) -> webdriver.Chrome:
     options = Options()
     options.binary_location = "C:/Program Files/Google/Chrome/Application/chrome.exe"
     arguments = [
         "--headless=new",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",
-        f"--window-size={VIEWPORT[0]},{VIEWPORT[1]}",
+        f"--window-size={viewport[0]},{viewport[1]}",
         "--no-first-run",
         "--no-default-browser-check",
         "--run-all-compositor-stages-before-draw",
@@ -99,13 +104,32 @@ def _driver(*, disable_gpu: bool = True) -> webdriver.Chrome:
     driver.execute_cdp_cmd(
         "Emulation.setDeviceMetricsOverride",
         {
-            "width": VIEWPORT[0],
-            "height": VIEWPORT[1],
+            "width": viewport[0],
+            "height": viewport[1],
             "deviceScaleFactor": 1,
             "mobile": False,
         },
     )
     return driver
+
+
+def _mobile_showcase_still(base_url: str, output_dir: Path) -> None:
+    """Capture the automatic phone showcase at a repeatable narrow viewport."""
+    driver = _driver(viewport=MOBILE_VIEWPORT)
+    try:
+        _load(driver, f"{base_url}?page=range-area-charts")
+        # Entrance motion is part of the phone showcase. Wait for the settled
+        # frame so labels and geometry are complete in static package media.
+        time.sleep(2)
+        image = Image.open(io.BytesIO(driver.get_screenshot_as_png())).convert("RGB")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        image.save(
+            output_dir / "mobile_showcase.png",
+            format="PNG",
+            optimize=True,
+        )
+    finally:
+        driver.quit()
 
 
 def _load(driver: webdriver.Chrome, url: str) -> None:
@@ -1006,6 +1030,7 @@ def main() -> None:
             "line-area",
             "cartesian-0.10",
             "grammar-0.12",
+            "mobile-0.13",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -1054,6 +1079,9 @@ def main() -> None:
         return
     if args.capture == "grammar-0.12":
         _native_stills(args.output_dir, "grammar-0.12")
+        return
+    if args.capture == "mobile-0.13":
+        _mobile_showcase_still(base_url, args.output_dir)
         return
 
     driver = _driver()

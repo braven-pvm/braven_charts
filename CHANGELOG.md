@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.0 - 2026-07-22
+
+### Added
+- A dedicated phone-width showcase selected automatically below 600 logical
+  pixels. It replaces the compressed desktop rail, workbench chrome, and
+  property panels with a focused mobile header, horizontally scrollable chart
+  family selector, touch-sized presentation controls, and vertically stacked
+  examples while leaving the desktop and tablet showcase unchanged.
+- Three production-shaped but intentionally compact examples for every
+  built-in family: Line, Area, Range Area, Bar, Scatter, Candlestick, Pie,
+  Donut, Concentric Donut, and Polar Column/Rose. The mobile compositions cover
+  forecast boundaries, comparison lines, baseline fills, nested forecast
+  bands, diverging and overlaid bars, bubbles and generated cohorts, technical
+  OHLC overlays, dense radial categories, partial and variable-radius rings,
+  independent concentric totals, and layered radial values without importing
+  desktop-only multi-axis analysis.
+- Vivid, Midnight, and Calm mobile presentation presets. Theme changes retain
+  the selected family, update every visible chart consistently, and preserve
+  the chart family configurations rather than replacing examples with generic
+  colour swaps.
+- Entrance and update motion throughout the mobile tour, with reduced-motion
+  handling inherited from the package's animation policies. Lazy vertical
+  mounting limits initial work while keeping the page naturally scrollable.
+- Direct mobile routing for every existing chart-family URL, so links from
+  pub.dev and the README open the matching family whether the visitor arrives
+  on a phone or desktop viewport.
+- Repeatable `mobile-0.13` package-media capture support in
+  `tool/capture_showcase_media.py`, including a deterministic narrow viewport
+  and a settled post-animation frame for `mobile_showcase.png`.
+
+### Changed
+- The package README and pub.dev screenshot manifest now document the
+  responsive showcase as a first-class public surface. The mobile capture
+  replaces the second, redundant Grammar screenshot in the ten-slot pub.dev
+  gallery; the full Workbench Grammar image remains in the README beside its
+  technical explanation.
+- The showcase documentation now distinguishes the focused phone tour from the
+  full desktop workbench and describes the automatic breakpoint, mobile chart
+  coverage, themes, motion, and touch interaction contract.
+
 ## 0.12.0 - 2026-07-22
 
 ### Added
