@@ -370,10 +370,10 @@ class _GrammarChainEmitter {
     final unsupportedChartOptions = _unsupportedChartOptions();
     if (unsupportedChartOptions.isNotEmpty) {
       block(
-        'Grammar chain not emitted: BravenPlot forwards only series, '
-        'annotations, the X axis, interaction and the theme, so these '
-        'chart-level options would be lost: '
-        '${unsupportedChartOptions.join(', ')}.',
+        'Grammar chain not emitted: BravenPlot forwards series, annotations, '
+        'the X axis, interaction, the theme, the grid, the title, the subtitle '
+        'and legend visibility, so these remaining chart-level options would be '
+        'lost: ${unsupportedChartOptions.join(', ')}.',
         path: r'$.layout',
       );
       return null;
@@ -520,6 +520,10 @@ class _GrammarChainEmitter {
       interaction: configuration.interaction,
       xAxis: configuration.xAxis,
       yAxes: configuration.axes,
+      grid: configuration.grid,
+      title: configuration.title,
+      subtitle: configuration.subtitle,
+      showLegend: configuration.showLegend,
     );
     final LoweredPlot lowered;
     try {
@@ -568,11 +572,18 @@ class _GrammarChainEmitter {
 
   /// Chart-level options `BravenPlot` leaves at their `BravenChartPlus`
   /// defaults, and which a chain therefore cannot carry.
+  ///
+  /// Grid, title, subtitle and legend visibility are NOT here: `PlotSpec`
+  /// carries them and the chain emits `.grid(...)` / `.title(...)` /
+  /// `.legend(...)` below. The one carried-but-inexpressible corner is a
+  /// subtitle with no title — the `.title(String, {String? subtitle})` verb can
+  /// only attach a subtitle to a title — so that alone stays gated rather than
+  /// being dropped silently.
   List<String> _unsupportedChartOptions() {
     final lost = <String>[];
-    if (configuration.title != null) lost.add('title');
-    if (configuration.subtitle != null) lost.add('subtitle');
-    if (!configuration.showLegend) lost.add('showLegend: false');
+    if (configuration.subtitle != null && configuration.title == null) {
+      lost.add('a subtitle with no title');
+    }
     if (configuration.showToolbar) lost.add('showToolbar: true');
     if (!configuration.interactiveAnnotations) {
       lost.add('interactiveAnnotations: false');
@@ -593,14 +604,6 @@ class _GrammarChainEmitter {
     // lost when they were overridden away from those defaults.
     if (configuration.backgroundColor != _chartPlusDefaultBackground) {
       lost.add('backgroundColor');
-    }
-    // A DEFAULT grid is reproduced anyway: `BravenChartPlus` resolves its
-    // unset grid to exactly `const GridConfig()` (unlike `backgroundColor` and
-    // `legendStyle`, which resolve to concrete theme values), so the chain — by
-    // carrying no grid — lands on the same default. Only a NON-default grid is
-    // genuinely lost, because `PlotSpec` carries no grid at all.
-    if (configuration.grid != const GridConfig()) {
-      lost.add('a non-default grid');
     }
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
@@ -723,6 +726,22 @@ class _GrammarChainEmitter {
         subject: 'the interaction configuration',
         detail: _genericLossDetail,
       );
+    }
+    // Grid, title, subtitle and legend visibility are carried verbatim by
+    // lowering too, so — like the X axis, theme and interaction above — they are
+    // compared here to keep the "emitted == faithful" guarantee covering every
+    // field a LoweredPlot carries, rather than dropping any of them.
+    if (lowered.grid != configuration.grid) {
+      return (subject: 'the grid', detail: _genericLossDetail);
+    }
+    if (lowered.title != configuration.title) {
+      return (subject: 'the title', detail: _genericLossDetail);
+    }
+    if (lowered.subtitle != configuration.subtitle) {
+      return (subject: 'the subtitle', detail: _genericLossDetail);
+    }
+    if (lowered.showLegend != configuration.showLegend) {
+      return (subject: 'the legend visibility', detail: _genericLossDetail);
     }
     return null;
   }
@@ -1493,6 +1512,9 @@ class _GrammarChainEmitter {
         if (transposed) writer.writeLine('.transposed()');
         _emitTheme(writer);
         _emitInteraction(writer);
+        _emitGrid(writer);
+        _emitTitle(writer);
+        _emitLegend(writer);
         writer.writeLine('.build();');
       });
     });
@@ -1815,6 +1837,71 @@ class _GrammarChainEmitter {
     });
     writer.writeLine(')');
     _absorbConfigWarnings();
+  }
+
+  /// Emits `.grid(GridConfig(...))`, but only when the grid differs from the
+  /// default. A default grid is reproduced by carrying none — `BravenChartPlus`
+  /// resolves an unset grid to exactly `const GridConfig()` — so the verb is
+  /// omitted, exactly as `_emitInteraction` omits a default interaction. Only
+  /// the fields that differ from their defaults are written, so re-lowering the
+  /// chain reconstructs the same `GridConfig`.
+  void _emitGrid(DartSourceWriter writer) {
+    final grid = configuration.grid;
+    if (grid == const GridConfig() && !options.includeDefaultValues) return;
+    const defaults = GridConfig();
+    void valueIf(String name, Object value, Object defaultValue) {
+      if (options.includeDefaultValues || value != defaultValue) {
+        writer.namedArgument(name, '$value');
+      }
+    }
+
+    writer.writeLine('.grid(');
+    writer.indented(() {
+      writer.writeLine('GridConfig(');
+      writer.indented(() {
+        valueIf('horizontal', grid.horizontal, defaults.horizontal);
+        valueIf('vertical', grid.vertical, defaults.vertical);
+        _optionalColor(writer, 'horizontalColor', grid.horizontalColor);
+        _optionalColor(writer, 'verticalColor', grid.verticalColor);
+        if (options.includeDefaultValues ||
+            grid.horizontalStrokeWidth != defaults.horizontalStrokeWidth) {
+          writer.namedArgument(
+            'horizontalStrokeWidth',
+            DartSourceWriter.numberLiteral(grid.horizontalStrokeWidth),
+          );
+        }
+        if (options.includeDefaultValues ||
+            grid.verticalStrokeWidth != defaults.verticalStrokeWidth) {
+          writer.namedArgument(
+            'verticalStrokeWidth',
+            DartSourceWriter.numberLiteral(grid.verticalStrokeWidth),
+          );
+        }
+      });
+      writer.writeLine('),');
+    });
+    writer.writeLine(')');
+  }
+
+  /// Emits `.title(title, subtitle: subtitle)` when a title is set. A subtitle
+  /// with no title cannot reach this point: it is refused by the chart-option
+  /// gate, because the verb can only attach a subtitle to a title.
+  void _emitTitle(DartSourceWriter writer) {
+    final title = configuration.title;
+    if (title == null) return;
+    writer.writeLine('.title(');
+    writer.indented(() {
+      writer.writeLine('${DartSourceWriter.stringLiteral(title)},');
+      _optionalString(writer, 'subtitle', configuration.subtitle);
+    });
+    writer.writeLine(')');
+  }
+
+  /// Emits `.legend(false)` only when the legend is hidden; a shown legend is
+  /// the chart default and needs no verb.
+  void _emitLegend(DartSourceWriter writer) {
+    if (configuration.showLegend) return;
+    writer.writeLine('.legend(false)');
   }
 
   // =========================================================================

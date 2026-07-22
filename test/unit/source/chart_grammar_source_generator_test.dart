@@ -848,6 +848,55 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 11: chart-level grid, title and legend are emitted', (
+      tester,
+    ) async {
+      // The "Bar" diagnostic the owner saw was "chart-level options would be
+      // lost: grid". A non-default grid — with a title, a subtitle and a hidden
+      // legend — must now EMIT `.grid(` / `.title(` / `.legend(false)` and
+      // round-trip to the same document, not block.
+      await expectRoundTrip(
+        tester,
+        name: 'chart_options',
+        fragments: <String>[
+          '.grid(',
+          'GridConfig(',
+          'horizontal: false',
+          '.title(',
+          "'Session'",
+          "subtitle: 'Power over time'",
+          '.legend(false)',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+            .title('Session', subtitle: 'Power over time')
+            .legend(false)
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+            .title('Session', subtitle: 'Power over time')
+            .legend(false)
+            .build(bravenChartController: controller),
+      );
+    });
   });
 
   group('fidelity matrix diagnostics', () {
@@ -1169,17 +1218,18 @@ void main() {
       );
     });
 
-    testWidgets('a non-default grid is named precisely, default grid is not', (
+    testWidgets('grid and legend never trip the chart-option gate', (
       tester,
     ) async {
-      // A NON-default grid is genuinely un-carried by the grammar (PlotSpec
-      // has no grid), so it blocks — with wording that says it is the
-      // non-default grid, not that all grids block.
-      final nonDefault = await snapshotOf(
+      // Grid and legend are now carried by PlotSpec, so they must NOT appear in
+      // any chart-option block reason. These single-axis charts still block —
+      // on the single-axis path — but never for `grid` or `legend`.
+      final nonDefaultGrid = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
           grid: const GridConfig(horizontal: false),
+          showLegend: false,
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -1191,20 +1241,22 @@ void main() {
           ],
         ),
       );
-      final blockedGrid = generateGrammar(nonDefault);
-      expect(emittedChain(blockedGrid), isFalse);
+      final gridResult = generateGrammar(nonDefaultGrid);
       expect(
-        blockedReason(blockedGrid),
-        allOf(contains('would be lost'), contains('non-default grid')),
+        blockedReason(gridResult),
+        allOf(isNot(contains('grid')), isNot(contains('legend'))),
       );
+    });
 
-      // A DEFAULT grid must NOT trip the chart-option gate. The chart still
-      // blocks (single-axis path), but never for `grid`.
-      final defaultGrid = await snapshotOf(
+    testWidgets('a subtitle with no title stays gated', (tester) async {
+      // The chain's .title(String, {String? subtitle}) verb can only carry a
+      // subtitle alongside a title, so a subtitle with no title is the one
+      // carried-but-inexpressible corner and must be named, not dropped.
+      final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
-          grid: const GridConfig(),
+          subtitle: 'Orphan subtitle',
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -1216,8 +1268,41 @@ void main() {
           ],
         ),
       );
-      final defaultGridResult = generateGrammar(defaultGrid);
-      expect(blockedReason(defaultGridResult), isNot(contains('grid')));
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(contains('would be lost'), contains('subtitle with no title')),
+      );
+    });
+
+    testWidgets('a genuinely-uncarried chart option still blocks and is named', (
+      tester,
+    ) async {
+      // The gate still fires for options no V1 chain verb expresses — here, the
+      // toolbar — even though grid, title, subtitle and legend now pass.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showToolbar: true,
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(contains('would be lost'), contains('showToolbar')),
+      );
     });
 
     testWidgets('a runtime interaction binding is reported like Config does', (
