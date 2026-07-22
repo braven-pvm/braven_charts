@@ -158,6 +158,19 @@ class ChartConfigDartEmitter {
     ScatterMarkerStyle style,
   ) => _emitScatterMarkerStyle(writer, argument, style);
 
+  /// Writes `dataPointLabels: DataPointLabelConfig(...)`, the argument name the
+  /// line and area geometry verbs use too.
+  void emitDataPointLabels(
+    DartSourceWriter writer,
+    DataPointLabelConfig config,
+  ) => _emitDataPointLabelsArgument(writer, config);
+
+  /// Writes `labelStyle: BarLabelStyle(...)`, the argument name the bar
+  /// geometry verb uses too. Unconditional: the caller decides when the style
+  /// is non-default and worth emitting.
+  void emitBarLabelStyle(DartSourceWriter writer, BarLabelStyle style) =>
+      _emitBarLabelStyle(writer, style, 0);
+
   ChartGeneratedSource generate() {
     _captureKnownLimitations();
     final body = DartSourceWriter();
@@ -1910,126 +1923,140 @@ class ChartConfigDartEmitter {
     required SeriesInlineLabelConfig? inlineLabel,
   }) {
     if (dataPointLabels != null) {
-      writer.writeLine('dataPointLabels: DataPointLabelConfig(');
-      writer.indented(() {
-        _valueIf(writer, 'show', dataPointLabels.show, defaultValue: false);
-        _enumIf(
-          writer,
-          'position',
-          'DataPointLabelPosition',
-          dataPointLabels.position.name,
-          defaultName: 'above',
-        );
-        _enumIf(
-          writer,
-          'content',
-          'DataPointLabelContent',
-          dataPointLabels.content.name,
-          defaultName: 'value',
-        );
-        _numberIf(writer, 'offsetX', dataPointLabels.offsetX, 0);
-        _numberIf(writer, 'offsetY', dataPointLabels.offsetY, 0);
-        _numberIf(writer, 'markerGap', dataPointLabels.markerGap, 4);
-        _enumIf(
-          writer,
-          'collisionPolicy',
-          'DataPointLabelCollisionPolicy',
-          dataPointLabels.collisionPolicy.name,
-          defaultName: 'none',
-        );
-        _numberIf(
-          writer,
-          'collisionPadding',
-          dataPointLabels.collisionPadding,
-          2,
-        );
-        _valueIf(
-          writer,
-          'plotEdgeAware',
-          dataPointLabels.plotEdgeAware,
-          defaultValue: true,
-        );
-        _optionalColor(writer, 'labelColor', dataPointLabels.labelColor);
-        _numberIf(writer, 'fontSize', dataPointLabels.fontSize, 10);
-        _fontWeightIf(
-          writer,
-          'fontWeight',
-          dataPointLabels.fontWeight,
-          FontWeight.w600,
-        );
-        _valueIf(
-          writer,
-          'showUnit',
-          dataPointLabels.showUnit,
-          defaultValue: false,
-        );
-        _optionalColor(writer, 'background', dataPointLabels.background);
-        _numberIf(
-          writer,
-          'backgroundOpacity',
-          dataPointLabels.backgroundOpacity,
-          0.85,
-        );
-        if (dataPointLabels.formatter != null) {
-          writer.writeLine(
-            '// formatter: (point) => ..., // Supply application formatting.',
-          );
-          _warn(
-            code: ChartSourceWarningCodes.runtimeValueOmitted,
-            message:
-                'A data-point label formatter callback was omitted. Provide it from your application.',
-            path: r'$.series[*].style.dataPointLabels.formatter',
-          );
-        }
-      });
-      writer.writeLine('),');
+      _emitDataPointLabelsArgument(writer, dataPointLabels);
     }
     if (inlineLabel != null) {
-      writer.writeLine('inlineLabel: SeriesInlineLabelConfig(');
-      writer.indented(() {
-        writer.namedArgument(
-          'text',
-          DartSourceWriter.stringLiteral(inlineLabel.text),
-        );
-        _enumIf(
-          writer,
-          'position',
-          'SeriesLabelPosition',
-          inlineLabel.position.name,
-          defaultName: 'right',
-        );
-        _numberIf(writer, 'offsetY', inlineLabel.offsetY, 0);
-        _optionalColor(writer, 'color', inlineLabel.color);
-        _numberIf(writer, 'fontSize', inlineLabel.fontSize, 11);
-        _fontWeightIf(
-          writer,
-          'fontWeight',
-          inlineLabel.fontWeight,
-          FontWeight.w500,
-        );
-        final background = inlineLabel.background;
-        if (background != null) {
-          writer.writeLine('background: SeriesLabelBackground(');
-          writer.indented(() {
-            writer.namedArgument(
-              'color',
-              DartSourceWriter.colorLiteral(background.color),
-            );
-            _optionalNumber(writer, 'cornerRadius', background.cornerRadius);
-            _edgeInsetsIf(
-              writer,
-              'padding',
-              background.padding,
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            );
-            _optionalColor(writer, 'borderColor', background.borderColor);
-            _numberIf(writer, 'borderWidth', background.borderWidth, 1);
-          });
-          writer.writeLine('),');
-        }
-      });
-      writer.writeLine('),');
+      _emitInlineLabelArgument(writer, inlineLabel);
     }
+  }
+
+  void _emitDataPointLabelsArgument(
+    DartSourceWriter writer,
+    DataPointLabelConfig dataPointLabels,
+  ) {
+    writer.writeLine('dataPointLabels: DataPointLabelConfig(');
+    writer.indented(() {
+      _valueIf(writer, 'show', dataPointLabels.show, defaultValue: false);
+      _enumIf(
+        writer,
+        'position',
+        'DataPointLabelPosition',
+        dataPointLabels.position.name,
+        defaultName: 'above',
+      );
+      _enumIf(
+        writer,
+        'content',
+        'DataPointLabelContent',
+        dataPointLabels.content.name,
+        defaultName: 'value',
+      );
+      _numberIf(writer, 'offsetX', dataPointLabels.offsetX, 0);
+      _numberIf(writer, 'offsetY', dataPointLabels.offsetY, 0);
+      _numberIf(writer, 'markerGap', dataPointLabels.markerGap, 4);
+      _enumIf(
+        writer,
+        'collisionPolicy',
+        'DataPointLabelCollisionPolicy',
+        dataPointLabels.collisionPolicy.name,
+        defaultName: 'none',
+      );
+      _numberIf(
+        writer,
+        'collisionPadding',
+        dataPointLabels.collisionPadding,
+        2,
+      );
+      _valueIf(
+        writer,
+        'plotEdgeAware',
+        dataPointLabels.plotEdgeAware,
+        defaultValue: true,
+      );
+      _optionalColor(writer, 'labelColor', dataPointLabels.labelColor);
+      _numberIf(writer, 'fontSize', dataPointLabels.fontSize, 10);
+      _fontWeightIf(
+        writer,
+        'fontWeight',
+        dataPointLabels.fontWeight,
+        FontWeight.w600,
+      );
+      _valueIf(
+        writer,
+        'showUnit',
+        dataPointLabels.showUnit,
+        defaultValue: false,
+      );
+      _optionalColor(writer, 'background', dataPointLabels.background);
+      _numberIf(
+        writer,
+        'backgroundOpacity',
+        dataPointLabels.backgroundOpacity,
+        0.85,
+      );
+      if (dataPointLabels.formatter != null) {
+        writer.writeLine(
+          '// formatter: (point) => ..., // Supply application formatting.',
+        );
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'A data-point label formatter callback was omitted. Provide it from your application.',
+          path: r'$.series[*].style.dataPointLabels.formatter',
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitInlineLabelArgument(
+    DartSourceWriter writer,
+    SeriesInlineLabelConfig inlineLabel,
+  ) {
+    writer.writeLine('inlineLabel: SeriesInlineLabelConfig(');
+    writer.indented(() {
+      writer.namedArgument(
+        'text',
+        DartSourceWriter.stringLiteral(inlineLabel.text),
+      );
+      _enumIf(
+        writer,
+        'position',
+        'SeriesLabelPosition',
+        inlineLabel.position.name,
+        defaultName: 'right',
+      );
+      _numberIf(writer, 'offsetY', inlineLabel.offsetY, 0);
+      _optionalColor(writer, 'color', inlineLabel.color);
+      _numberIf(writer, 'fontSize', inlineLabel.fontSize, 11);
+      _fontWeightIf(
+        writer,
+        'fontWeight',
+        inlineLabel.fontWeight,
+        FontWeight.w500,
+      );
+      final background = inlineLabel.background;
+      if (background != null) {
+        writer.writeLine('background: SeriesLabelBackground(');
+        writer.indented(() {
+          writer.namedArgument(
+            'color',
+            DartSourceWriter.colorLiteral(background.color),
+          );
+          _optionalNumber(writer, 'cornerRadius', background.cornerRadius);
+          _edgeInsetsIf(
+            writer,
+            'padding',
+            background.padding,
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          );
+          _optionalColor(writer, 'borderColor', background.borderColor);
+          _numberIf(writer, 'borderWidth', background.borderWidth, 1);
+        });
+        writer.writeLine('),');
+      }
+    });
+    writer.writeLine('),');
   }
 
   void _emitBarOptions(

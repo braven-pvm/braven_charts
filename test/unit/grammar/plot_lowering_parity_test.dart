@@ -244,6 +244,95 @@ void main() {
       );
     });
 
+    test('line mark data-point markers and labels reach the series', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        position: DataPointLabelPosition.below,
+      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        LineChartSeries(
+          id: 'power',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          showDataPointMarkers: true,
+          dataPointLabels: labels,
+        ),
+      );
+    });
+
+    test('area mark data-point markers and labels reach the series', () {
+      const labels = DataPointLabelConfig(show: true);
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          AreaMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'load',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        AreaChartSeries(
+          id: 'load',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          showDataPointMarkers: true,
+          dataPointLabels: labels,
+        ),
+      );
+    });
+
+    test('bar mark label style reaches the series', () {
+      const barLabels = BarLabelStyle(show: true, showUnit: true);
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'load',
+            labelStyle: barLabels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        BarChartSeries(
+          id: 'load',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          barWidthPercent: 0.8,
+          labelStyle: barLabels,
+        ),
+      );
+    });
+
     test('scatter mark solo lowers to a plain ScatterChartSeries', () {
       final lowered = (PlotSpec<Sample>(
         data: rows,
@@ -718,6 +807,148 @@ void main() {
           windowSize: 2,
         ).toJson(),
       );
+    });
+  });
+
+  group('parity: reference marks', () {
+    test('a threshold mark lowers to a ThresholdAnnotation', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          ThresholdMark<Sample>(
+            value: 250,
+            axis: AnnotationAxis.y,
+            id: 'ftp',
+            label: 'FTP',
+            color: Color(0xFFFF9800),
+            strokeWidth: 1.5,
+            dashPattern: <double>[6, 3],
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(lowered.annotations, hasLength(1));
+      // ChartAnnotation has identity equality, so parity is asserted on the
+      // serialized form the artifact codec reads — the same approach the trend
+      // parity case above uses. The lowered id is deterministic.
+      expect(
+        (lowered.annotations.single as ThresholdAnnotation).toJson(),
+        ThresholdAnnotation(
+          id: 'ftp',
+          label: 'FTP',
+          axis: AnnotationAxis.y,
+          value: 250,
+          lineColor: const Color(0xFFFF9800),
+          lineWidth: 1.5,
+          dashPattern: const <double>[6, 3],
+        ).toJson(),
+      );
+    });
+
+    test('a band mark lowers to a RangeAnnotation on the Y axis', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          BandMark<Sample>(
+            start: 200,
+            end: 260,
+            axis: AnnotationAxis.y,
+            id: 'zone',
+            label: 'Threshold zone',
+            color: Color(0x332563EB),
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(
+        (lowered.annotations.single as RangeAnnotation).toJson(),
+        RangeAnnotation(
+          id: 'zone',
+          label: 'Threshold zone',
+          startY: 200,
+          endY: 260,
+          fillColor: const Color(0x332563EB),
+        ).toJson(),
+      );
+    });
+
+    test('a band mark on the X axis fills startX/endX only', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          BandMark<Sample>(start: 1, end: 2, axis: AnnotationAxis.x, id: 'win'),
+        ],
+      )).lower();
+
+      final range = lowered.annotations.single as RangeAnnotation;
+      expect(range.startX, 1);
+      expect(range.endX, 2);
+      expect(range.startY, isNull);
+      expect(range.endY, isNull);
+    });
+
+    test('a point mark lowers to a PointAnnotation on its series', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          PointMark<Sample>(
+            seriesId: 'power',
+            dataPointIndex: 2,
+            id: 'peak',
+            label: 'Peak',
+            color: Color(0xFFDC2626),
+            markerSize: 12,
+            markerShape: MarkerShape.star,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(
+        (lowered.annotations.single as PointAnnotation).toJson(),
+        PointAnnotation(
+          id: 'peak',
+          label: 'Peak',
+          seriesId: 'power',
+          dataPointIndex: 2,
+          markerColor: const Color(0xFFDC2626),
+          markerSize: 12,
+          markerShape: MarkerShape.star,
+        ).toJson(),
+      );
+    });
+
+    test('an unlabelled reference mark is numbered like any other mark', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+          ThresholdMark<Sample>(value: 250),
+        ],
+      )).lower();
+
+      expect(lowered.series.single.id, 'mark-0');
+      expect(lowered.annotations.single.id, 'mark-1');
+    });
+
+    test('reference marks bind no Y axis of their own', () {
+      // A threshold + a single geometry must not declare a second axis, and
+      // must not leave the geometry's axis unbound.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+          ThresholdMark<Sample>(value: 250),
+        ],
+      )).lower();
+
+      expect(lowered.yAxes, hasLength(1));
     });
   });
 

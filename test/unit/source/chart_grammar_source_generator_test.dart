@@ -658,6 +658,110 @@ void main() {
       );
     });
 
+    testWidgets('shape 9: per-mark data-point markers and labels round-trip', (
+      tester,
+    ) async {
+      // The headline V2.0 fix: line and area marks now carry
+      // showDataPointMarkers and a dataPointLabels configuration, so a chart
+      // using them round-trips through the emitted chain instead of blocking.
+      await expectRoundTrip(
+        tester,
+        name: 'data_point_markers',
+        fragments: <String>[
+          'showDataPointMarkers: true',
+          'dataPointLabels: DataPointLabelConfig(',
+          'position: DataPointLabelPosition.below',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Watts')
+            .geomArea(
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: const DataPointLabelConfig(
+                show: true,
+                position: DataPointLabelPosition.below,
+              ),
+            )
+            .geomLine(
+              y: sampleHeartRate,
+              name: 'Heart rate',
+              showDataPointMarkers: true,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Watts',
+              ),
+            )
+            .geomArea(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: const DataPointLabelConfig(
+                show: true,
+                position: DataPointLabelPosition.below,
+              ),
+              yAxisId: 'axis-0',
+            )
+            .geomLine(
+              id: 'mark-1',
+              y: (row) => row.heartRate,
+              name: 'Heart rate',
+              showDataPointMarkers: true,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 10: a bar label style round-trips', (tester) async {
+      // Bars have no per-point marker toggle; their inline-label field is
+      // `labelStyle` (BarLabelStyle). BarMark now carries it, so a bar chart
+      // with a non-default label style round-trips instead of blocking.
+      await expectRoundTrip(
+        tester,
+        name: 'bar_label_style',
+        fragments: <String>[
+          'labelStyle: BarLabelStyle(',
+          'show: true',
+          'showUnit: true',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Zone')
+            .y(samplePower, label: 'Minutes')
+            .geomBar(
+              name: 'Time in zone',
+              barWidthPercent: 0.7,
+              labelStyle: const BarLabelStyle(show: true, showUnit: true),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Zone')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Minutes',
+              ),
+            )
+            .geomBar(
+              id: 'mark-0',
+              y: (row) => row.timeInZone,
+              name: 'Time in zone',
+              barWidthPercent: 0.7,
+              labelStyle: const BarLabelStyle(show: true, showUnit: true),
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
       tester,
     ) async {
@@ -692,6 +796,208 @@ void main() {
               method: TrendType.linear,
               name: 'Trend',
             )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 8: a threshold annotation becomes .threshold(', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'threshold',
+        fragments: <String>[
+          '.threshold(',
+          'value: 250',
+          'axis: AnnotationAxis.y',
+          "label: 'FTP'",
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .threshold(
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .threshold(
+              id: 'mark-1',
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 9: a range annotation becomes .band(', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'band',
+        fragments: <String>[
+          '.band(',
+          'start: 200',
+          'end: 260',
+          'axis: AnnotationAxis.y',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .band(
+              start: 200,
+              end: 260,
+              axis: AnnotationAxis.y,
+              label: 'Zone',
+              color: const Color(0x332563EB),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .band(
+              id: 'mark-1',
+              start: 200,
+              end: 260,
+              axis: AnnotationAxis.y,
+              label: 'Zone',
+              color: const Color(0x332563EB),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 10: a point annotation becomes .pointAt(', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'point',
+        fragments: <String>[
+          '.pointAt(',
+          "seriesId: 'mark-0'",
+          'dataPointIndex: 1',
+          'markerShape: MarkerShape.star',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .pointAt(
+              seriesId: 'mark-0',
+              dataPointIndex: 1,
+              label: 'Peak',
+              color: const Color(0xFFDC2626),
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .pointAt(
+              id: 'mark-1',
+              seriesId: 'mark-0',
+              dataPointIndex: 1,
+              label: 'Peak',
+              color: const Color(0xFFDC2626),
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 11: chart-level grid, title and legend are emitted', (
+      tester,
+    ) async {
+      // The "Bar" diagnostic the owner saw was "chart-level options would be
+      // lost: grid". A non-default grid — with a title, a subtitle and a hidden
+      // legend — must now EMIT `.grid(` / `.title(` / `.legend(false)` and
+      // round-trip to the same document, not block.
+      await expectRoundTrip(
+        tester,
+        name: 'chart_options',
+        fragments: <String>[
+          '.grid(',
+          'GridConfig(',
+          'horizontal: false',
+          '.title(',
+          "'Session'",
+          "subtitle: 'Power over time'",
+          '.legend(false)',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+            .title('Session', subtitle: 'Power over time')
+            .legend(false)
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+            .title('Session', subtitle: 'Power over time')
+            .legend(false)
             .build(bravenChartController: controller),
       );
     });
@@ -770,6 +1076,9 @@ void main() {
     testWidgets('an annotation the chain cannot express is listed', (
       tester,
     ) async {
+      // PinAnnotation is an arbitrary-coordinate marker with no chain verb (its
+      // series-bound cousin, PointAnnotation, is what .pointAt() expresses), so
+      // it stays gated after Grammar V2.0 mapped trend/threshold/band/point.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -784,7 +1093,7 @@ void main() {
             ),
           ],
           annotations: <ChartAnnotation>[
-            ThresholdAnnotation(id: 'ftp', value: 1.5, axis: AnnotationAxis.y),
+            PinAnnotation(id: 'here', x: 0.5, y: 1.5),
           ],
         ),
       );
@@ -793,9 +1102,9 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(
-          contains('TrendAnnotation only'),
-          contains('ThresholdAnnotation'),
-          contains('ftp'),
+          contains('trend, threshold, band and point'),
+          contains('PinAnnotation'),
+          contains('here'),
         ),
       );
     });
@@ -944,39 +1253,31 @@ void main() {
       );
     });
 
-    testWidgets('the round-trip diagnostic names a lost series style field', (
-      tester,
-    ) async {
-      // An area series with data-point markers on: `AreaMark` has no marker
-      // channel, so the round trip fails — and the diagnostic must say which
-      // field it was, not just "does not reproduce exactly".
-      final snapshot = await snapshotOf(
-        tester,
-        (controller) => BravenChartPlus(
-          bravenChartController: controller,
-          series: const <ChartSeries>[
-            AreaChartSeries(
-              id: 'sessions',
-              points: <ChartDataPoint>[
-                ChartDataPoint(x: 0, y: 1),
-                ChartDataPoint(x: 1, y: 2),
-              ],
-              showDataPointMarkers: true,
-            ),
-          ],
-        ),
-      );
-      final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('does not reproduce'),
-          contains('sessions'),
-          contains('showDataPointMarkers'),
-        ),
-      );
-    });
+    testWidgets(
+      'the Layered case (area+line data-point markers) now emits, not blocks',
+      (tester) async {
+        // The exact "Layered" case the owner saw: an area+line chart with
+        // data-point markers on the area. AreaMark/LineMark now CARRY
+        // showDataPointMarkers, so the round trip reproduces it and the chain
+        // is emitted with the flag set, instead of being blocked by a "does
+        // not reproduce ... showDataPointMarkers" diagnostic.
+        final snapshot = await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT, label: 'Elapsed')
+              .y(samplePower, label: 'Power')
+              .geomArea(name: 'Sessions', showDataPointMarkers: true)
+              .geomLine(y: sampleHeartRate, name: 'Heart rate')
+              .build(bravenChartController: controller),
+        );
+        final generated = generateGrammar(snapshot);
+        expect(emittedChain(generated), isTrue);
+        expect(blockedReason(generated), isNull);
+        expect(generated.isComplete, isTrue);
+        expect(generated.warnings, isEmpty);
+        expect(generated.source, contains('showDataPointMarkers: true'));
+      },
+    );
 
     testWidgets('a single-axis config chart explains the axis binding', (
       tester,
@@ -1013,17 +1314,18 @@ void main() {
       );
     });
 
-    testWidgets('a non-default grid is named precisely, default grid is not', (
+    testWidgets('grid and legend never trip the chart-option gate', (
       tester,
     ) async {
-      // A NON-default grid is genuinely un-carried by the grammar (PlotSpec
-      // has no grid), so it blocks — with wording that says it is the
-      // non-default grid, not that all grids block.
-      final nonDefault = await snapshotOf(
+      // Grid and legend are now carried by PlotSpec, so they must NOT appear in
+      // any chart-option block reason. These single-axis charts still block —
+      // on the single-axis path — but never for `grid` or `legend`.
+      final nonDefaultGrid = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
           grid: const GridConfig(horizontal: false),
+          showLegend: false,
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -1035,20 +1337,22 @@ void main() {
           ],
         ),
       );
-      final blockedGrid = generateGrammar(nonDefault);
-      expect(emittedChain(blockedGrid), isFalse);
+      final gridResult = generateGrammar(nonDefaultGrid);
       expect(
-        blockedReason(blockedGrid),
-        allOf(contains('would be lost'), contains('non-default grid')),
+        blockedReason(gridResult),
+        allOf(isNot(contains('grid')), isNot(contains('legend'))),
       );
+    });
 
-      // A DEFAULT grid must NOT trip the chart-option gate. The chart still
-      // blocks (single-axis path), but never for `grid`.
-      final defaultGrid = await snapshotOf(
+    testWidgets('a subtitle with no title stays gated', (tester) async {
+      // The chain's .title(String, {String? subtitle}) verb can only carry a
+      // subtitle alongside a title, so a subtitle with no title is the one
+      // carried-but-inexpressible corner and must be named, not dropped.
+      final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
-          grid: const GridConfig(),
+          subtitle: 'Orphan subtitle',
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -1060,8 +1364,41 @@ void main() {
           ],
         ),
       );
-      final defaultGridResult = generateGrammar(defaultGrid);
-      expect(blockedReason(defaultGridResult), isNot(contains('grid')));
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(contains('would be lost'), contains('subtitle with no title')),
+      );
+    });
+
+    testWidgets('a genuinely-uncarried chart option still blocks and is named', (
+      tester,
+    ) async {
+      // The gate still fires for options no V1 chain verb expresses — here, the
+      // toolbar — even though grid, title, subtitle and legend now pass.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showToolbar: true,
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(contains('would be lost'), contains('showToolbar')),
+      );
     });
 
     testWidgets('a runtime interaction binding is reported like Config does', (

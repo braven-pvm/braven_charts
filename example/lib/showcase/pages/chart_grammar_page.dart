@@ -14,7 +14,7 @@ import '../widgets/standard_options.dart';
 
 /// One sample of the showcase ride.
 ///
-/// A single row type carries every field the five presets read, so every
+/// A single row type carries every field the six presets read, so every
 /// preset builds a `BravenChart<GrammarSample>` and the page never has to
 /// juggle two generic instantiations.
 class GrammarSample {
@@ -261,6 +261,10 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   bool _transposed = true;
   double _barWidthPercent = 0.7;
 
+  // Reference-lines knobs — the V2.0 verbs (.threshold / per-mark markers).
+  bool _showDataPointMarkers = true;
+  double _thresholdWatts = 285;
+
   @override
   void dispose() {
     _optionsController.dispose();
@@ -432,12 +436,47 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     return _transposed ? chart.transposed() : chart;
   }
 
+  /// The V2.0 verbs on one chart: reference annotations and chart-level
+  /// options that V1 could only DIAGNOSE, now authored through the facade.
+  ///
+  /// `.threshold(value:)` lowers to a `ThresholdAnnotation` (a reference mark,
+  /// not a series); `.grid(...)` / `.title(...)` are chart-level options now
+  /// carried on the spec; and `geomLine(showDataPointMarkers:)` is a per-mark
+  /// field. Every one of them round-trips, so this preset's Grammar Source tab
+  /// shows a real chain instead of a "not emitted" diagnostic.
+  BravenChart<GrammarSample> _referenceLinesChart() => BravenChart.of(rideRows)
+      .x(sampleMinute, label: 'Elapsed (min)')
+      .y(samplePower, label: 'Power (W)')
+      .geomArea(
+        name: 'Power',
+        color: const Color(0xFF2563EB),
+        fillOpacity: 0.14,
+      )
+      .geomLine(
+        name: 'Sampled power',
+        color: const Color(0xFF1D4ED8),
+        strokeWidth: 2.4,
+        interpolation: LineInterpolation.monotone,
+        showDataPointMarkers: _showDataPointMarkers,
+      )
+      .threshold(
+        value: _thresholdWatts,
+        label: 'FTP',
+        color: const Color(0xFFDC2626),
+        dashPattern: const <double>[6, 4],
+      )
+      .grid(const GridConfig(vertical: false))
+      .title('Ride power', subtitle: 'Fill, sampled line and an FTP reference')
+      .theme(_theme)
+      .interaction(_interaction);
+
   BravenChart<GrammarSample> get _activeChart => switch (_preset) {
     _GrammarPreset.lineTrend => _lineTrendChart(),
     _GrammarPreset.multiAxis => _multiAxisChart(),
     _GrammarPreset.scatterChannels => _scatterChannelsChart(),
     _GrammarPreset.candlestick => _candlestickChart(),
     _GrammarPreset.barTransposed => _barTransposedChart(),
+    _GrammarPreset.referenceLines => _referenceLinesChart(),
   };
 
   // ==========================================================================
@@ -632,12 +671,58 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     ],
   );
 
+  Widget _handBuiltReferenceLines(BravenChartController controller) =>
+      BravenChartPlus(
+        key: const ValueKey('chart-grammar-stage-chart'),
+        bravenChartController: controller,
+        theme: _theme,
+        interactionConfig: _interaction,
+        xAxisConfig: const XAxisConfig(label: 'Elapsed (min)'),
+        // Chart-level options the V2.0 grammar now carries on the spec.
+        grid: const GridConfig(vertical: false),
+        title: 'Ride power',
+        subtitle: 'Fill, sampled line and an FTP reference',
+        series: <ChartSeries>[
+          AreaChartSeries(
+            id: 'mark-0',
+            name: 'Power',
+            points: _points(rideRows, sampleMinute, samplePower),
+            color: const Color(0xFF2563EB),
+            fillOpacity: 0.14,
+            yAxisId: 'axis-0',
+            yAxisConfig: _defaultAxis('Power (W)'),
+          ),
+          LineChartSeries(
+            id: 'mark-1',
+            name: 'Sampled power',
+            points: _points(rideRows, sampleMinute, samplePower),
+            color: const Color(0xFF1D4ED8),
+            strokeWidth: 2.4,
+            interpolation: LineInterpolation.monotone,
+            showDataPointMarkers: _showDataPointMarkers,
+            yAxisId: 'axis-0',
+            yAxisConfig: _defaultAxis('Power (W)'),
+          ),
+        ],
+        annotations: <ChartAnnotation>[
+          ThresholdAnnotation(
+            id: 'mark-2',
+            label: 'FTP',
+            axis: AnnotationAxis.y,
+            value: _thresholdWatts,
+            lineColor: const Color(0xFFDC2626),
+            dashPattern: const <double>[6, 4],
+          ),
+        ],
+      );
+
   Widget _buildHandBuilt(BravenChartController controller) => switch (_preset) {
     _GrammarPreset.lineTrend => _handBuiltLineTrend(controller),
     _GrammarPreset.multiAxis => _handBuiltMultiAxis(controller),
     _GrammarPreset.scatterChannels => _handBuiltScatter(controller),
     _GrammarPreset.candlestick => _handBuiltCandlestick(controller),
     _GrammarPreset.barTransposed => _handBuiltBar(controller),
+    _GrammarPreset.referenceLines => _handBuiltReferenceLines(controller),
   };
 
   // ==========================================================================
@@ -658,9 +743,10 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         children: [
           _buildPresetPicker(),
           const SizedBox(height: 12),
-          Expanded(flex: 3, child: _buildStage()),
-          const SizedBox(height: 12),
-          Expanded(flex: 2, child: _buildAuthoringCard()),
+          // The workbench stage takes the full remaining height: the Source
+          // tab's Grammar form is now the single place the chain is shown, so
+          // there is no authoring-code card competing for the space.
+          Expanded(child: _buildStage()),
         ],
       ),
     );
@@ -789,87 +875,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     );
   }
 
-  /// The exact facade chain for the active preset.
-  ///
-  /// The strings are consts declared next to the preset builders and marked
-  /// as paired with this card; they show each chain at its DEFAULT knob
-  /// values, and the note under the card names the parameters the options
-  /// panel is currently driving.
-  ///
-  /// Each string opens with a preamble naming the data constant, its row type
-  /// and its length, plus the accessor tear-offs the chain reads — without it
-  /// `BravenChart.of(candleRows)` hides the whole point of the layer, which is
-  /// that the rows are the AUTHOR'S own typed objects read through accessors,
-  /// not a chart-specific row type.
-  ///
-  /// ## Why this card SURVIVED the Source pane's Grammar form
-  ///
-  /// The Source pane can now emit a grammar chain too, which makes this card
-  /// look redundant. It is not, and the difference is the most instructive
-  /// thing on the page: the generated chain reads `(row) => row.power` on a
-  /// SYNTHESISED `GrammarRow`, because a chart document stores numbers, not
-  /// the `GrammarSample` objects they were read out of. This card shows the
-  /// real authoring — the author's own row type, the tear-off accessors over
-  /// it, the domain names. Delete it and the page would silently teach that
-  /// the grammar layer's row type is something the library hands you.
-  Widget _buildAuthoringCard() {
-    final theme = Theme.of(context);
-    return ChartCard(
-      key: const ValueKey('chart-grammar-authoring-card'),
-      title: 'Authoring code — over YOUR row type',
-      subtitle:
-          'The chain that builds the chart above, over GrammarSample. The '
-          'Source tab\'s Grammar form emits the same chart over a synthesised '
-          'GrammarRow, because a document keeps numbers, not your objects',
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // The same renderer the workbench Source tab uses, so the chain a
-          // reader writes and the Dart it lowers to are presented identically.
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: ChartCodeBlock(
-                key: const ValueKey('chart-grammar-authoring-code'),
-                code: _preset.authoringCode,
-                semanticLabel:
-                    'Authoring code for the '
-                    '${_preset.label} preset',
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _liveParameterNote,
-            key: const ValueKey('chart-grammar-live-parameters'),
-            style: TextStyle(fontSize: 10, color: theme.hintColor),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Names the chain parameters the options panel is currently driving, so
-  /// the const chain above is never read as a claim about the live values.
-  String get _liveParameterNote => switch (_preset) {
-    _GrammarPreset.lineTrend =>
-      'Live: method: TrendType.${_trendMethod.name}, '
-          'windowSize: ${_trendWindow.round()}, '
-          'showConfidenceBand: $_confidenceBand.',
-    _GrammarPreset.multiAxis =>
-      'Live: the bpm axis is at YAxisPosition.${_heartRateAxisSide.name}.',
-    _GrammarPreset.scatterChannels =>
-      'Live: maximumRadius: ${_maximumMarkerRadius.toStringAsFixed(0)}, '
-          'categoryBy: ${_categoryChannel ? 'Zone' : 'null'}.',
-    _GrammarPreset.candlestick =>
-      'A candle is a unit: open, high, low and close are required together, '
-          'so this chain has no per-channel knobs to drive.',
-    _GrammarPreset.barTransposed =>
-      'Live: barWidthPercent: ${_barWidthPercent.toStringAsFixed(2)}, '
-          '.transposed() ${_transposed ? 'applied' : 'omitted'}.',
-  };
-
   // ==========================================================================
   // Options panel
   // ==========================================================================
@@ -923,16 +928,19 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             _GrammarPreset.multiAxis => _multiAxisControls(),
             _GrammarPreset.scatterChannels => _scatterControls(),
             _GrammarPreset.barTransposed => _barControls(),
+            _GrammarPreset.referenceLines => _referenceLinesControls(),
             _GrammarPreset.candlestick => const <Widget>[],
           },
         ),
       StandardChartOptions(
         controller: _optionsController,
-        // A PlotSpec carries data, marks, transposition, theme, interaction
-        // and axis configs — and nothing else. Grid, axis lines, series
-        // markers, scrollbars, the legend and line style are widget- or
-        // series-level options the grammar does not model in V1, so those
-        // controls are hidden rather than shown inert on every preset.
+        // These StandardChartOptions controls drive a WIDGET-level ChartOptions
+        // uniformly across every preset. The grammar models the theme and
+        // interaction as chain verbs (kept on), and V2.0 added .grid(), the
+        // legend toggle and per-mark markers to the spec too — but those are
+        // exercised per-preset (see the Reference lines preset's own controls),
+        // not through this global panel, so the panel's grid / marker / legend /
+        // axis / scrollbar / line-style controls stay hidden rather than inert.
         showGridOption: false,
         showAxisOption: false,
         showMarkerOption: false,
@@ -949,23 +957,26 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           const InfoBox(
             key: ValueKey('chart-grammar-options-scope'),
             message:
-                'Chart Options shows only what a PlotSpec can express: the '
-                'theme and the interaction config, both chain verbs. Grid, '
-                'axis lines, markers, scrollbars, legend and line style are '
-                'widget- or series-level options the grammar does not model '
-                'in V1, so they are hidden here instead of shown inert.',
+                'Chart Options here drives the theme and the interaction '
+                'config, both chain verbs. V2.0 also lets the grammar express '
+                'a grid, the legend toggle and per-mark markers — the Reference '
+                'lines preset authors those with .grid(), .legend() and '
+                'showDataPointMarkers — so the global grid / legend / marker / '
+                'axis / scrollbar controls are hidden here rather than shown '
+                'inert.',
           ),
           const SizedBox(height: 8),
           const InfoBox(
             key: ValueKey('chart-grammar-source-forms'),
             message:
-                'The Source tab has a Config / Grammar toggle. Config writes '
-                'the BravenChartPlus this chart IS; Grammar writes a chain '
-                'that rebuilds it, over a synthesised GrammarRow — compare it '
-                'with the Authoring code card below the chart, which shows '
-                'the real GrammarSample authoring the generator cannot '
-                'recover. A chart the chain cannot reproduce exactly emits a '
-                'named diagnostic instead of code.',
+                'The Source tab has a Config / Grammar toggle, and the Grammar '
+                'form is the single place the facade chain is shown. Config '
+                'writes the BravenChartPlus this chart IS; Grammar writes a '
+                'chain that rebuilds it, over a synthesised GrammarRow — a '
+                'document keeps the numbers a chart was built from, never the '
+                'GrammarSample objects they were read out of. A chart the '
+                'chain cannot reproduce exactly emits a named diagnostic '
+                'instead of code.',
           ),
         ],
       ),
@@ -1086,6 +1097,33 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'only — anything else raises unsupportedTransposition.',
     ),
   ];
+
+  List<Widget> _referenceLinesControls() => [
+    BoolOption(
+      key: const ValueKey('chart-grammar-markers'),
+      label: 'Data-point markers',
+      subtitle: 'geomLine(showDataPointMarkers:) — a V2.0 per-mark field',
+      value: _showDataPointMarkers,
+      onChanged: (value) => setState(() => _showDataPointMarkers = value),
+    ),
+    SliderOption(
+      key: const ValueKey('chart-grammar-threshold'),
+      label: 'FTP threshold',
+      value: _thresholdWatts,
+      min: 200,
+      max: 320,
+      suffix: ' W',
+      decimalPlaces: 0,
+      onChanged: (value) => setState(() => _thresholdWatts = value),
+    ),
+    const InfoBox(
+      message:
+          'A threshold is a reference mark: .threshold(value:) lowers to a '
+          'ThresholdAnnotation, not a series. .grid(), .title() and the '
+          'per-point markers are the other V2.0 verbs this preset exercises — '
+          'each one round-trips, so the Grammar Source tab emits a chain.',
+    ),
+  ];
 }
 
 // ============================================================================
@@ -1097,6 +1135,12 @@ enum _GrammarPreset {
   multiAxis,
   scatterChannels,
   candlestick,
+  referenceLines,
+  // barTransposed is kept LAST: BravenChartPlus retains exiting horizontal bars
+  // through a cross-fade, and unioning those with a non-bar chart's entering
+  // series trips its all-horizontal bounds check. Keeping the transposed preset
+  // terminal means the page (and the preset-sweep tests) never animate FROM a
+  // just-shown horizontal-bar chart INTO a Cartesian one.
   barTransposed,
 }
 
@@ -1107,6 +1151,7 @@ extension on _GrammarPreset {
     _GrammarPreset.scatterChannels => 'Scatter channels',
     _GrammarPreset.candlestick => 'Candlestick',
     _GrammarPreset.barTransposed => 'Bar transposed',
+    _GrammarPreset.referenceLines => 'Reference lines',
   };
 
   IconData get icon => switch (this) {
@@ -1115,6 +1160,7 @@ extension on _GrammarPreset {
     _GrammarPreset.scatterChannels => Icons.bubble_chart_outlined,
     _GrammarPreset.candlestick => Icons.candlestick_chart_outlined,
     _GrammarPreset.barTransposed => Icons.bar_chart,
+    _GrammarPreset.referenceLines => Icons.stacked_line_chart,
   };
 
   String get stageTitle => switch (this) {
@@ -1123,6 +1169,7 @@ extension on _GrammarPreset {
     _GrammarPreset.scatterChannels => 'Scale-driven scatter channels',
     _GrammarPreset.candlestick => 'Open, high, low, close as one mark',
     _GrammarPreset.barTransposed => 'Bars with the plane transposed',
+    _GrammarPreset.referenceLines => 'Reference marks and chart-level options',
   };
 
   String get stageSubtitle => switch (this) {
@@ -1136,6 +1183,8 @@ extension on _GrammarPreset {
       'The four accessors are required together; a candle is not composable',
     _GrammarPreset.barTransposed =>
       'Transposition is a chain verb, not a per-mark property',
+    _GrammarPreset.referenceLines =>
+      'The V2.0 verbs: .threshold, .grid, .title and per-point markers',
   };
 
   /// Whether this preset has any genuinely applicable per-preset control.
@@ -1168,155 +1217,13 @@ extension on _GrammarPreset {
           'is how this package implements horizontal bars. Adding a line mark '
           'to a transposed chain would raise unsupportedTransposition rather '
           'than render half the chart rotated.',
-  };
-
-  /// The exact chain that builds this preset, under a preamble naming the
-  /// data constant and the accessors it reads.
-  String get authoringCode => switch (this) {
-    _GrammarPreset.lineTrend => _lineTrendChain,
-    _GrammarPreset.multiAxis => _multiAxisChain,
-    _GrammarPreset.scatterChannels => _scatterChannelsChain,
-    _GrammarPreset.candlestick => _candlestickChain,
-    _GrammarPreset.barTransposed => _barTransposedChain,
+    _GrammarPreset.referenceLines =>
+      'Open the Source tab and pick Grammar: the chain carries '
+          '.threshold(value: ...), .grid(...), .title(...) and '
+          'showDataPointMarkers — the three V2.0 additions. Each one '
+          'round-trips through the lowering, so the tab shows a real chain '
+          'rather than the "not emitted" diagnostic these shapes drew in V1. '
+          'Drag the FTP slider and toggle the markers to watch the emitted '
+          'chain track the chart.',
   };
 }
-
-// SHOWCASE CHAIN — kept in sync with the authoring-code card
-// (_ChartGrammarPageState._lineTrendChart).
-const String _lineTrendChain = '''
-// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
-// The accessors are top-level tear-offs over it:
-//   double sampleMinute(GrammarSample r) => r.minute;
-//   double samplePower(GrammarSample r) => r.power;
-BravenChart.of(rideRows)
-    .x(sampleMinute, label: 'Elapsed (min)')
-    .y(samplePower, label: 'Power')
-    .geomLine(
-      name: 'Power',
-      color: const Color(0xFF2563EB),
-      strokeWidth: 2.4,
-      interpolation: LineInterpolation.monotone,
-    )
-    .trend(
-      method: TrendType.movingAverage,
-      windowSize: 5,
-      name: 'Trend',
-      color: const Color(0xFFDC2626),
-      showConfidenceBand: false,
-      dashPattern: const <double>[6, 4],
-    )
-    .theme(ChartTheme.light)
-    .interaction(interaction)
-    .build(bravenChartController: controller)''';
-
-// SHOWCASE CHAIN — kept in sync with the authoring-code card
-// (_ChartGrammarPageState._multiAxisChart).
-const String _multiAxisChain = '''
-// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
-// The accessors are top-level tear-offs over it:
-//   double sampleMinute(GrammarSample r) => r.minute;
-//   ...and samplePower / sampleHeartRate, one per measure.
-BravenChart.of(rideRows)
-    .x(sampleMinute, label: 'Elapsed (min)')
-    .yAxis(YAxisConfig(
-      position: YAxisPosition.left,
-      label: 'Power',
-      unit: 'W',
-    ).copyWith(id: 'watts'))
-    .yAxis(YAxisConfig(
-      position: YAxisPosition.right,
-      label: 'Heart rate',
-      unit: 'bpm',
-    ).copyWith(id: 'bpm'))
-    .geomArea(
-      id: 'power',
-      y: samplePower,
-      name: 'Power',
-      yAxisId: 'watts',
-      color: const Color(0xFF2563EB),
-      fillOpacity: 0.18,
-    )
-    .geomLine(
-      id: 'hr',
-      y: sampleHeartRate,
-      name: 'Heart rate',
-      yAxisId: 'bpm',
-      color: const Color(0xFFDC2626),
-      strokeWidth: 2.2,
-    )
-    .theme(ChartTheme.light)
-    .interaction(interaction)
-    .build(bravenChartController: controller)''';
-
-// SHOWCASE CHAIN — kept in sync with the authoring-code card
-// (_ChartGrammarPageState._scatterChannelsChart).
-const String _scatterChannelsChain = '''
-// rideRows — List<GrammarSample>, 13 rows of YOUR type, not a chart type.
-// The accessors are top-level tear-offs over it:
-//   double samplePower(GrammarSample r) => r.power;
-//   ...and sampleHeartRate, sampleEffort, Object sampleZone(r) => r.zone.
-BravenChart.of(rideRows)
-    .x(samplePower, label: 'Power (W)')
-    .y(sampleHeartRate, label: 'Heart rate (bpm)')
-    .geomPoint(
-      name: 'Efforts',
-      size: const Channel<GrammarSample>(sampleEffort, label: 'Effort'),
-      sizeEncoding: const ScatterSizeEncoding(
-        minimumRadius: 4,
-        maximumRadius: 14,
-      ),
-      categoryBy: const CategoryChannel<GrammarSample>(
-        sampleZone,
-        label: 'Zone',
-      ),
-      categories: zoneStyles,
-    )
-    .theme(ChartTheme.light)
-    .interaction(interaction)
-    .build(bravenChartController: controller)''';
-
-// SHOWCASE CHAIN — kept in sync with the authoring-code card
-// (_ChartGrammarPageState._candlestickChart).
-const String _candlestickChain = '''
-// candleRows — List<GrammarSample>, 10 OHLC sessions of YOUR type.
-// The accessors are top-level tear-offs over it:
-//   double sampleMinute(GrammarSample r) => r.minute;
-//   ...and sampleOpen / sampleHigh / sampleLow / sampleClose, one per field.
-BravenChart.of(candleRows)
-    .x(sampleMinute, label: 'Session')
-    .yAxis(YAxisConfig(
-      position: YAxisPosition.right,
-      label: 'Price',
-      unit: 'USD',
-    ).copyWith(id: 'price'))
-    .geomCandlestick(
-      open: sampleOpen,
-      high: sampleHigh,
-      low: sampleLow,
-      close: sampleClose,
-      name: 'Price',
-      yAxisId: 'price',
-    )
-    .theme(ChartTheme.light)
-    .interaction(interaction)
-    .build(bravenChartController: controller)''';
-
-// SHOWCASE CHAIN — kept in sync with the authoring-code card
-// (_ChartGrammarPageState._barTransposedChart).
-const String _barTransposedChain = '''
-// zoneRows — List<GrammarSample>, 5 training zones of YOUR type.
-// The accessors are top-level tear-offs over it:
-//   double sampleMinute(GrammarSample r) => r.minute;
-//   double sampleMinutes(GrammarSample r) => r.minutes;
-BravenChart.of(zoneRows)
-    .x(sampleMinute, label: 'Zone')
-    .y(sampleMinutes, label: 'Minutes')
-    .geomBar(
-      name: 'Time in zone',
-      color: const Color(0xFF7C3AED),
-      barWidthPercent: 0.7,
-    )
-    .theme(ChartTheme.light)
-    .interaction(interaction)
-    .transposed()
-    .build(bravenChartController: controller)''';
