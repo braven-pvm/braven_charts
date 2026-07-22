@@ -454,21 +454,27 @@ class ChartConfigDartEmitter {
 
   /// Emits the `style` discriminator (`SeriesStyle`) for the series that expose
   /// it as a settable constructor parameter — line, scatter, area and bar, via
-  /// `super.style`. These four are also the ONLY series that model `style` on
-  /// the generated surface. Every other series (candlestick, rangeArea, pie,
-  /// donut, polarColumn) HARDCODES the discriminator in its constructor
-  /// initializer (`super(style: SeriesStyle.…)`) and exposes no settable `style`
-  /// parameter, so emitting it there is both invalid Dart and redundant — the
-  /// constructor re-establishes the correct discriminator on round-trip.
-  /// Null-gated, so the common (unset) case stays byte-identical and produces
-  /// zero golden drift.
+  /// `super.style`, plus a directly-instantiated base [ChartSeries] whose own
+  /// `style` param is settable and round-trips through the codec's `'base'`
+  /// case. Line/scatter/area/bar are also the only CONCRETE series that model
+  /// `style` on the generated surface. Every other concrete series
+  /// (candlestick, rangeArea, pie, donut, polarColumn) HARDCODES the
+  /// discriminator in its constructor initializer (`super(style: SeriesStyle.…)`)
+  /// and exposes no settable `style` parameter, so emitting it there is both
+  /// invalid Dart and redundant — the constructor re-establishes the correct
+  /// discriminator on round-trip. The base type is matched by EXACT runtime
+  /// type (`runtimeType == ChartSeries`), not `is ChartSeries` — an `is` check
+  /// would match every subclass and wrongly emit an invalid `style:` for the
+  /// hardcoded ones. Null-gated, so the common (unset) case stays byte-identical
+  /// and produces zero golden drift.
   void _emitSeriesStyle(DartSourceWriter writer, ChartSeries series) {
     final style = series.style;
     if (style == null) return;
     if (series is LineChartSeries ||
         series is ScatterChartSeries ||
         series is AreaChartSeries ||
-        series is BarChartSeries) {
+        series is BarChartSeries ||
+        series.runtimeType == ChartSeries) {
       writer.namedArgument('style', 'SeriesStyle.${style.name}');
     }
   }

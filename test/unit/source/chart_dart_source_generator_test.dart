@@ -146,6 +146,26 @@ void main() {
       }
     });
 
+    test('emits the settable style discriminator for a base ChartSeries', () {
+      // A directly-instantiated base ChartSeries exposes a settable `style`
+      // param that round-trips through the codec's `'base'` case, but the
+      // _emitSeriesStyle allowlist omitted the base type (Fix B). RED before,
+      // GREEN after.
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ChartSeries(
+              id: 's',
+              points: [ChartDataPoint(x: 0, y: 1), ChartDataPoint(x: 1, y: 2)],
+              style: SeriesStyle.line,
+            ),
+          ),
+        ),
+      );
+      expect(generated.source, contains('ChartSeries('));
+      expect(generated.source, contains('style: SeriesStyle.line,'));
+    });
+
     test('generates deterministic Candlestick OHLC, style, and motion', () {
       final snapshot = _snapshot(
         CandlestickChartSeries(
