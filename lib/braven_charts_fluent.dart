@@ -22,6 +22,7 @@
 library;
 
 export 'braven_charts.dart';
+export 'src/fluent/generated/artifacts/chart_document_extractor_fluent.dart';
 export 'src/fluent/generated/models/annotation_style_fluent.dart';
 export 'src/fluent/generated/models/auto_scroll_config_fluent.dart';
 export 'src/fluent/generated/models/candlestick_chart_series_fluent.dart';

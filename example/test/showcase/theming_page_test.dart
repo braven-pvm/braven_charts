@@ -51,6 +51,15 @@ void main() {
 
     expect(find.text('Theme System'), findsOneWidget);
     expect(find.text('Chart Options'), findsOneWidget);
+    final options = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Actions'),
+      260,
+      scrollable: options,
+    );
     expect(find.text('Actions'), findsOneWidget);
   });
 

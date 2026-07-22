@@ -14,6 +14,12 @@ extension ChartDataPointFluent on ChartDataPoint {
   /// Replaces [ChartDataPoint.y] with [value].
   ChartDataPoint withY(double value) => copyWith(y: value);
 
+  /// Replaces [ChartDataPoint.pointKey] with [value].
+  ChartDataPoint withPointKey(String value) => copyWith(pointKey: value);
+
+  /// Clears [ChartDataPoint.pointKey] to `null`.
+  ChartDataPoint clearPointKey() => copyWith(clearPointKey: true);
+
   /// Replaces [ChartDataPoint.magnitude] with [value].
   ChartDataPoint withMagnitude(double value) => copyWith(magnitude: value);
 

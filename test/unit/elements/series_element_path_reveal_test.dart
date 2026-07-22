@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 import 'dart:typed_data';
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:flutter_test/flutter_test.dart';
 

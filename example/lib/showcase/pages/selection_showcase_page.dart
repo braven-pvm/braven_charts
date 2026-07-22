@@ -525,6 +525,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
                     key: const ValueKey('selection-workbench'),
                     chartController: _chartController,
                     workbenchController: _workbenchController,
+                    showSelectionActions: true,
                     availableDisplayModes: const {
                       ChartDisplayMode.chart,
                       ChartDisplayMode.data,

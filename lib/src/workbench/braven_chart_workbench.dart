@@ -890,7 +890,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.contextActionsBuilder,
     this.chartActionButtonBuilder,
     this.chartActionButtonConfig = const ChartOverlayActionButtonConfig(),
-    this.showSelectionActions = true,
+    this.showSelectionActions = false,
     this.selectionProjection = const ChartSelectionProjectionOptions(),
     this.selectionCsvFileName = 'chart-selection.csv',
     this.onSelectionArtifactCreated,

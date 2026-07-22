@@ -1617,7 +1617,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       effectiveDocumentRevision: _effectiveDocumentRevision,
       onClear: _clearAllSeriesSelection,
     );
-    _syncControllerPointState();
+    // The controller can already have Workbench listeners attached while this
+    // chart is mounting. Publish the initial snapshot after the frame so those
+    // listeners are never dirtied during the build phase.
+    _scheduleControllerPointStateSync();
     _scheduleEffectiveDocumentRevisionPublish();
     _attachInteractionGroup();
   }
@@ -1766,7 +1769,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         effectiveDocumentRevision: _effectiveDocumentRevision,
         onClear: _clearAllSeriesSelection,
       );
-      _syncControllerPointState();
+      _scheduleControllerPointStateSync();
     }
 
     if (widget.interactionGroupController !=
@@ -6461,7 +6464,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _refreshPointSelectionAfterDataChange() {
     final result = _buildPointSelectionResult();
-    _syncControllerPointState(selectionResult: result);
+    // Element rebuilding can run while Flutter is mounting or rebuilding the
+    // chart. Controller listeners commonly include Workbench builders, so a
+    // synchronous notification here would attempt to dirty those listeners
+    // during the same build phase. Coalesce the mirror update after the frame;
+    // direct interaction-driven updates continue to publish synchronously.
+    _scheduleControllerPointStateSync();
     if (result == _lastPublishedSelectionResult ||
         result == _pendingDataSelectionResult) {
       return;

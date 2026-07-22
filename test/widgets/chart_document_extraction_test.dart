@@ -850,7 +850,7 @@ void main() {
     final points =
         (extracted.document.series.single.data as InlinePointPayload).points;
     expect(points.map((point) => point.x.asDouble), [0.5, 1, 1.5]);
-      expect(points.map((point) => point.y.asDouble), [7.5, 10, 5]);
+    expect(points.map((point) => point.y.asDouble), [7.5, 10, 5]);
   });
 
   testWidgets('radial selection recomputes shares from retained raw values', (

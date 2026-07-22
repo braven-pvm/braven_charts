@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/cartesian_value_summary_config.dart';
 import '../models/candlestick_data_point.dart';
@@ -113,6 +114,7 @@ class ChartSelectionProjectionOptions {
 }
 
 /// Controls synchronous extraction of a live chart document.
+@chartSurface
 @immutable
 class ChartDocumentExtractOptions {
   const ChartDocumentExtractOptions({

@@ -11,6 +11,12 @@ extension RangeAreaDataPointFluent on RangeAreaDataPoint {
   /// Replaces [RangeAreaDataPoint.x] with [value].
   RangeAreaDataPoint withX(double value) => copyWith(x: value);
 
+  /// Replaces [RangeAreaDataPoint.pointKey] with [value].
+  RangeAreaDataPoint withPointKey(String value) => copyWith(pointKey: value);
+
+  /// Clears [RangeAreaDataPoint.pointKey] to `null`.
+  RangeAreaDataPoint clearPointKey() => copyWith(clearPointKey: true);
+
   /// Replaces [RangeAreaDataPoint.magnitude] with [value].
   RangeAreaDataPoint withMagnitude(double value) => copyWith(magnitude: value);
 

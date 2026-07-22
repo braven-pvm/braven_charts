@@ -22,7 +22,9 @@ import 'segment_style.dart';
 // consistent, which `copyWith` independently refuses to let drift. `x` is
 // only checked for finiteness, which no sibling value can influence.
 @ChartSurface(
-  combinedSetters: [CombinedSetter('withInterval', ['low', 'high'])],
+  combinedSetters: [
+    CombinedSetter('withInterval', ['low', 'high']),
+  ],
   bodyValidated: [
     BodyValidated(
       'validateInterval() rejects a non-finite x. That is a single-parameter '

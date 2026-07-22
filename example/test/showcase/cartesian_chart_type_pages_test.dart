@@ -23,6 +23,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  Future<void> revealOptionSection(WidgetTester tester, String title) async {
+    final optionsScroll = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text(title),
+      240,
+      scrollable: optionsScroll,
+    );
+    await tester.pumpAndSettle();
+  }
+
   final subjects = <String, Widget>{
     'line': const LineChartsPage(),
     'area': const AreaChartsPage(),
@@ -542,6 +555,7 @@ void main() {
         expect(chart.yAxis!.showCrosshairLabel, isTrue);
       }
 
+      await revealOptionSection(tester, 'Chart composition');
       await tester.tap(find.text('Chart composition'));
       await tester.pumpAndSettle();
       final elevationToggle = find.descendant(
@@ -645,6 +659,7 @@ void main() {
       await tester.ensureVisible(synchronized);
       await tester.tap(synchronized);
       await tester.pumpAndSettle();
+      await revealOptionSection(tester, 'Chart composition');
       await tester.tap(find.text('Chart composition'));
       await tester.pumpAndSettle();
 
@@ -723,11 +738,14 @@ void main() {
       expect(find.text('15000'), findsOneWidget);
       expect(identical(visibleSeriesPoints()[1], firstStressPoints[1]), isTrue);
 
-      final dataUpdatesHeader = find.ancestor(
-        of: find.text('Data updates'),
+      await revealOptionSection(tester, 'Data updates');
+      final dataUpdatesHeader = find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) => widget is OptionSection && widget.title == 'Data updates',
+        ),
         matching: find.byType(InkWell),
       );
-      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      tester.widgetList<InkWell>(dataUpdatesHeader).first.onTap!();
       await tester.pumpAndSettle();
       final updateButton = find.byKey(
         const ValueKey('synchronized-update-data'),
@@ -828,11 +846,14 @@ void main() {
           renderBox.debugSynchronizedTrackingState!.seriesValues.single.y,
       ];
 
-      final dataUpdatesHeader = find.ancestor(
-        of: find.text('Data updates'),
+      await revealOptionSection(tester, 'Data updates');
+      final dataUpdatesHeader = find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) => widget is OptionSection && widget.title == 'Data updates',
+        ),
         matching: find.byType(InkWell),
       );
-      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      tester.widgetList<InkWell>(dataUpdatesHeader).first.onTap!();
       await tester.pumpAndSettle();
       final updateButton = find.byKey(
         const ValueKey('synchronized-update-data'),
@@ -1995,7 +2016,12 @@ void main() {
       find.byKey(const ValueKey('scatter-selection-summary')),
       findsOneWidget,
     );
-    expect(find.textContaining('1 series · X'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('scatter-selection-summary')))
+          .data,
+      contains('1 series · X'),
+    );
     expect(
       chart.bravenChartController?.selectionResult.statistics.pointCount,
       1,
@@ -3108,7 +3134,7 @@ void main() {
 
     final update = find.byKey(const ValueKey('line-update-values'));
     await tester.ensureVisible(update);
-    await tester.tap(update);
+    tester.widget<OutlinedButton>(update).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3127,7 +3153,7 @@ void main() {
 
     final addPoint = find.byKey(const ValueKey('line-add-point'));
     await tester.ensureVisible(addPoint);
-    await tester.tap(addPoint);
+    tester.widget<OutlinedButton>(addPoint).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3143,7 +3169,7 @@ void main() {
 
     final removePoint = find.byKey(const ValueKey('line-remove-point'));
     await tester.ensureVisible(removePoint);
-    await tester.tap(removePoint);
+    tester.widget<OutlinedButton>(removePoint).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3160,7 +3186,7 @@ void main() {
     final backfill = find.byKey(const ValueKey('line-backfill-point'));
     await tester.ensureVisible(backfill);
     expect(find.text('Add backfill'), findsOneWidget);
-    await tester.tap(backfill);
+    tester.widget<OutlinedButton>(backfill).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3178,7 +3204,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Remove backfill'), findsOneWidget);
 
-    await tester.tap(backfill);
+    tester.widget<OutlinedButton>(backfill).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3214,7 +3240,7 @@ void main() {
     );
     await tester.pump();
     await tester.ensureVisible(rollWindow);
-    await tester.tap(rollWindow);
+    tester.widget<OutlinedButton>(rollWindow).onPressed!();
     await tester.pump();
     await tester.pump();
     expect(controller.selectedPointRefs, {
@@ -3233,7 +3259,7 @@ void main() {
 
     final replay = find.byKey(const ValueKey('line-replay-entrance'));
     await tester.ensureVisible(replay);
-    await tester.tap(replay);
+    tester.widget<OutlinedButton>(replay).onPressed!();
     await tester.pump();
     expect(tester.hasRunningAnimations, isTrue);
     await tester.pumpAndSettle();

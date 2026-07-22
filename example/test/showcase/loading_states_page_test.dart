@@ -106,8 +106,9 @@ void main() {
       260,
       scrollable: options,
     );
-    final customActionSwitch = tester.widget<Switch>(find.byType(Switch).last);
-    customActionSwitch.onChanged!(true);
+    tester
+        .widget<BoolOption>(find.byKey(const ValueKey('custom-empty-action')))
+        .onChanged(true);
     await tester.pump(const Duration(milliseconds: 250));
     chart = _mainChart(tester, 'empty');
     expect(chart.emptyStateConfig.customBuilder, isNotNull);

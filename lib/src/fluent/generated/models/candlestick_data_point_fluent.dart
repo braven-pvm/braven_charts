@@ -11,6 +11,12 @@ extension CandlestickDataPointFluent on CandlestickDataPoint {
   /// Replaces [CandlestickDataPoint.x] with [value].
   CandlestickDataPoint withX(double value) => copyWith(x: value);
 
+  /// Replaces [CandlestickDataPoint.pointKey] with [value].
+  CandlestickDataPoint withPointKey(String value) => copyWith(pointKey: value);
+
+  /// Clears [CandlestickDataPoint.pointKey] to `null`.
+  CandlestickDataPoint clearPointKey() => copyWith(clearPointKey: true);
+
   /// Replaces [CandlestickDataPoint.magnitude] with [value].
   CandlestickDataPoint withMagnitude(double value) =>
       copyWith(magnitude: value);

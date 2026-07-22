@@ -269,7 +269,10 @@ void main() {
       // low is 0.5 < 1 but close is 3 > 1. The combined verb states the whole
       // candle, so no intermediate value exists for the body validation to
       // reject.
-      expect(point().withOhlc(open: 0.8, high: 1, low: 0.5, close: 0.9).high, 1);
+      expect(
+        point().withOhlc(open: 0.8, high: 1, low: 0.5, close: 0.9).high,
+        1,
+      );
     });
 
     test('every derived clear verb unsets its field', () {
@@ -718,8 +721,8 @@ void main() {
     test('ChartSelectionConfig: withX equals the copyWith equivalent', () {
       const base = ChartSelectionConfig();
       expect(
-        base.withMode(ChartSelectionMode.lasso),
-        base.copyWith(mode: ChartSelectionMode.lasso),
+        base.withAcquisitionMode(ChartSelectionAcquisitionMode.lasso),
+        base.copyWith(acquisitionMode: ChartSelectionAcquisitionMode.lasso),
       );
     });
 
@@ -805,7 +808,7 @@ void main() {
 
     test('withOverlayPresentation builds the overlay variant', () {
       final config = base.withOverlayPresentation(
-        placement: ChartOverlayPlacement(anchor: Alignment.bottomRight),
+        placement: const ChartOverlayPlacement(anchor: Alignment.bottomRight),
       );
       expect(config.presentation, isA<CartesianValueSummaryOverlay>());
       expect(
@@ -1234,18 +1237,20 @@ void main() {
       expect(base.markerSize, 8.0);
     });
 
-    test('PointAnnotation updateStyle rebuilds the nested annotation style',
-        () {
-      final base = PointAnnotation(
-        seriesId: 's',
-        dataPointIndex: 0,
-      ).withStyle(const AnnotationStyle(borderWidth: 1));
-      final updated = base.updateStyle(
-        (current) => current.withBorderWidth(5),
-      );
-      expect(updated.style.borderWidth, 5);
-      expect(base.style.borderWidth, 1);
-    });
+    test(
+      'PointAnnotation updateStyle rebuilds the nested annotation style',
+      () {
+        final base = PointAnnotation(
+          seriesId: 's',
+          dataPointIndex: 0,
+        ).withStyle(const AnnotationStyle(borderWidth: 1));
+        final updated = base.updateStyle(
+          (current) => current.withBorderWidth(5),
+        );
+        expect(updated.style.borderWidth, 5);
+        expect(base.style.borderWidth, 1);
+      },
+    );
 
     test('RangeAnnotation bounds are construction-only — a band must stay a '
         'band', () {
@@ -1269,10 +1274,7 @@ void main() {
     test('RangeAnnotation: the invalid intermediate is unreachable', () {
       final base = RangeAnnotation(startX: 0, endX: 1);
       // Inverting a single bound throws on the raw config API...
-      expect(
-        () => base.copyWith(startX: 50),
-        throwsA(isA<AssertionError>()),
-      );
+      expect(() => base.copyWith(startX: 50), throwsA(isA<AssertionError>()));
       // ...and no verb exists for any coupled bound, combined or individual.
       final source = _generatedSource('chart_annotation_fluent.dart');
       expect(source, isNot(contains('RangeAnnotation withStartX(')));
@@ -1292,28 +1294,30 @@ void main() {
       );
     });
 
-    test('TextAnnotation withText SAYS it does nothing on a rich annotation',
-        () {
-      // The reader models the public plain-text constructor while copyWith
-      // rebuilds through `_internal`, so `withText` type-checks on a rich
-      // annotation, stores the text, and is never drawn: `isRichText` stays
-      // true and the Delta keeps winning. The class cannot be fixed from the
-      // fluent layer, so the generated verb states the limitation.
-      final rich = TextAnnotation.rich(
-        richTextDelta: const [
-          {'insert': 'bold\n'},
-        ],
-        position: const Offset(4, 4),
-      );
-      final retexted = rich.withText('plain');
-      expect(retexted.isRichText, isTrue);
-      expect(retexted.richTextDelta, isNotNull);
+    test(
+      'TextAnnotation withText SAYS it does nothing on a rich annotation',
+      () {
+        // The reader models the public plain-text constructor while copyWith
+        // rebuilds through `_internal`, so `withText` type-checks on a rich
+        // annotation, stores the text, and is never drawn: `isRichText` stays
+        // true and the Delta keeps winning. The class cannot be fixed from the
+        // fluent layer, so the generated verb states the limitation.
+        final rich = TextAnnotation.rich(
+          richTextDelta: const [
+            {'insert': 'bold\n'},
+          ],
+          position: const Offset(4, 4),
+        );
+        final retexted = rich.withText('plain');
+        expect(retexted.isRichText, isTrue);
+        expect(retexted.richTextDelta, isNotNull);
 
-      final source = _generatedSource('chart_annotation_fluent.dart');
-      expect(source, contains('No effect on a RICH annotation'));
-      // The rich half itself is construction-only.
-      expect(source, isNot(contains('withRichTextDelta(')));
-    });
+        final source = _generatedSource('chart_annotation_fluent.dart');
+        expect(source, contains('No effect on a RICH annotation'));
+        // The rich half itself is construction-only.
+        expect(source, isNot(contains('withRichTextDelta(')));
+      },
+    );
 
     test('ThresholdAnnotation withValue equals the copyWith equivalent', () {
       final base = ThresholdAnnotation(axis: AnnotationAxis.y, value: 100);
@@ -1365,10 +1369,7 @@ void main() {
     test('ChordAnnotation: the invalid intermediate is unreachable', () {
       final base = ChordAnnotation(seriesId: 's', startIndex: 0, endIndex: 1);
       // Collapsing the chord onto one point throws...
-      expect(
-        () => base.copyWith(endIndex: 0),
-        throwsA(isA<AssertionError>()),
-      );
+      expect(() => base.copyWith(endIndex: 0), throwsA(isA<AssertionError>()));
       // ...and neither index has an individual verb.
       final source = _generatedSource('chart_annotation_fluent.dart');
       expect(source, isNot(contains('ChordAnnotation withStartIndex(')));
@@ -1441,10 +1442,7 @@ void main() {
 
     test('a 3-step chain equals the single copyWith', () {
       expect(
-        base
-            .withBorderWidth(2)
-            .withItemSpacing(9)
-            .withAllowDragging(false),
+        base.withBorderWidth(2).withItemSpacing(9).withAllowDragging(false),
         base.copyWith(borderWidth: 2, itemSpacing: 9, allowDragging: false),
       );
     });
@@ -1493,10 +1491,7 @@ void main() {
     test('PieChartStyle: a 3-step chain equals the single copyWith', () {
       const base = PieChartStyle();
       expect(
-        base
-            .withRadiusFactor(0.7)
-            .withSliceGap(4)
-            .withClockwise(false),
+        base.withRadiusFactor(0.7).withSliceGap(4).withClockwise(false),
         base.copyWith(radiusFactor: 0.7, sliceGap: 4, clockwise: false),
       );
       expect(base.radiusFactor, 0.9);
@@ -1588,9 +1583,7 @@ void main() {
     test('PolarThreshold: withX and its derived clear verbs', () {
       const base = PolarThreshold(value: 10);
       expect(base.withWidth(3), base.copyWith(width: 3));
-      final loaded = base
-          .withLabel('cap')
-          .withColor(const Color(0xFF223344));
+      final loaded = base.withLabel('cap').withColor(const Color(0xFF223344));
       expect(loaded.clearLabel().label, isNull);
       expect(loaded.clearColor().color, isNull);
     });
@@ -1653,7 +1646,9 @@ void main() {
     test('PolarChartConfig: all four nested updaters reach a leaf', () {
       const base = PolarChartConfig();
       expect(
-        base.updatePane((c) => c.withInnerRadiusFactor(0.2)).pane
+        base
+            .updatePane((c) => c.withInnerRadiusFactor(0.2))
+            .pane
             .innerRadiusFactor,
         0.2,
       );
@@ -1802,12 +1797,16 @@ void main() {
         3,
       );
       expect(
-        base.updateLegendStyle((c) => c.withItemSpacing(11)).legendStyle
+        base
+            .updateLegendStyle((c) => c.withItemSpacing(11))
+            .legendStyle
             .itemSpacing,
         11,
       );
       expect(
-        base.updatePieChartTheme((c) => c.withOpacity(0.5)).pieChartTheme
+        base
+            .updatePieChartTheme((c) => c.withOpacity(0.5))
+            .pieChartTheme
             .opacity,
         0.5,
       );
@@ -1842,17 +1841,23 @@ void main() {
     test('AnnotationTheme: all five nested updaters edit a leaf', () {
       const base = AnnotationTheme.defaultLight;
       expect(
-        base.updatePointDefaults((c) => c.withMarkerSize(20)).pointDefaults
+        base
+            .updatePointDefaults((c) => c.withMarkerSize(20))
+            .pointDefaults
             .markerSize,
         20,
       );
       expect(
-        base.updateRangeDefaults((c) => c.withBorderWidth(4)).rangeDefaults
+        base
+            .updateRangeDefaults((c) => c.withBorderWidth(4))
+            .rangeDefaults
             .borderWidth,
         4,
       );
       expect(
-        base.updateTextDefaults((c) => c.withBorderRadius(21)).textDefaults
+        base
+            .updateTextDefaults((c) => c.withBorderRadius(21))
+            .textDefaults
             .borderRadius,
         21,
       );
@@ -1864,7 +1869,9 @@ void main() {
         6,
       );
       expect(
-        base.updateTrendDefaults((c) => c.withLineWidth(7)).trendDefaults
+        base
+            .updateTrendDefaults((c) => c.withLineWidth(7))
+            .trendDefaults
             .lineWidth,
         7,
       );

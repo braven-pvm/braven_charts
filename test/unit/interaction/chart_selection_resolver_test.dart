@@ -56,8 +56,8 @@ void main() {
 
       expect(targets.seriesIds, isEmpty);
       expect(targets.pointRefs, <ChartPointRef>{
-        ChartPointRef(seriesId: 'first', pointIndex: 0),
-        ChartPointRef(seriesId: 'first', pointIndex: 2),
+        const ChartPointRef(seriesId: 'first', pointIndex: 0),
+        const ChartPointRef(seriesId: 'first', pointIndex: 2),
       });
     });
 
@@ -68,14 +68,14 @@ void main() {
         series: <ChartSeries>[
           bar(id: 'first'),
           bar(id: 'second'),
-          LineChartSeries(id: 'trend', points: sharedPoints),
+          const LineChartSeries(id: 'trend', points: sharedPoints),
         ],
       );
 
       expect(targets.pointRefs, <ChartPointRef>{
-        ChartPointRef(seriesId: 'first', pointIndex: 1),
-        ChartPointRef(seriesId: 'second', pointIndex: 1),
-        ChartPointRef(seriesId: 'trend', pointIndex: 1),
+        const ChartPointRef(seriesId: 'first', pointIndex: 1),
+        const ChartPointRef(seriesId: 'second', pointIndex: 1),
+        const ChartPointRef(seriesId: 'trend', pointIndex: 1),
       });
     });
 
@@ -97,8 +97,8 @@ void main() {
       );
 
       expect(targets.pointRefs, <ChartPointRef>{
-        ChartPointRef(seriesId: 'first', pointIndex: 1),
-        ChartPointRef(seriesId: 'second', pointIndex: 1),
+        const ChartPointRef(seriesId: 'first', pointIndex: 1),
+        const ChartPointRef(seriesId: 'second', pointIndex: 1),
       });
     });
 
@@ -117,7 +117,7 @@ void main() {
         );
 
         expect(targets.pointRefs, <ChartPointRef>{
-          ChartPointRef(seriesId: 'first', pointIndex: 1),
+          const ChartPointRef(seriesId: 'first', pointIndex: 1),
         });
       }
     });
@@ -138,7 +138,7 @@ void main() {
       );
 
       expect(targets.pointRefs, <ChartPointRef>{
-        ChartPointRef(seriesId: 'first', pointIndex: 1),
+        const ChartPointRef(seriesId: 'first', pointIndex: 1),
       });
     });
 
