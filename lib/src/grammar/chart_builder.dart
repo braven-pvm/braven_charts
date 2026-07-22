@@ -5,12 +5,15 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:flutter/widgets.dart' show Key;
 
 import '../controllers/chart_interaction_group_controller.dart';
-import '../models/bar_chart_style.dart' show BarLayoutMode;
+import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/braven_chart_controller.dart';
-import '../models/chart_annotation.dart' show TrendType;
+import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
+import '../models/data_point_label_config.dart' show DataPointLabelConfig;
+import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/scatter_marker_style.dart'
     show
@@ -83,6 +86,10 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    GridConfig? grid,
+    String? title,
+    String? subtitle,
+    bool? showLegend,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -93,7 +100,11 @@ final class BravenChart<T> {
        _transposed = transposed,
        _theme = theme,
        _interaction = interaction,
-       _xAxis = xAxis;
+       _xAxis = xAxis,
+       _grid = grid,
+       _title = title,
+       _subtitle = subtitle,
+       _showLegend = showLegend;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -113,6 +124,10 @@ final class BravenChart<T> {
   final ChartTheme? _theme;
   final InteractionConfig? _interaction;
   final XAxisConfig? _xAxis;
+  final GridConfig? _grid;
+  final String? _title;
+  final String? _subtitle;
+  final bool? _showLegend;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -125,6 +140,10 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    GridConfig? grid,
+    String? title,
+    String? subtitle,
+    bool? showLegend,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -137,6 +156,10 @@ final class BravenChart<T> {
     theme: theme ?? _theme,
     interaction: interaction ?? _interaction,
     xAxis: xAxis ?? _xAxis,
+    grid: grid ?? _grid,
+    title: title ?? _title,
+    subtitle: subtitle ?? _subtitle,
+    showLegend: showLegend ?? _showLegend,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -144,8 +167,16 @@ final class BravenChart<T> {
 
   String _idFor(String? id) => id ?? 'mark-${_marks.length}';
 
-  Iterable<String> get _geometryIds =>
-      _marks.where((mark) => mark is! TrendMark<T>).map((mark) => mark.id!);
+  Iterable<String> get _geometryIds => _marks
+      .where(
+        (mark) =>
+            mark is LineMark<T> ||
+            mark is AreaMark<T> ||
+            mark is BarMark<T> ||
+            mark is ScatterMark<T> ||
+            mark is CandlestickMark<T>,
+      )
+      .map((mark) => mark.id!);
 
   FieldAccessor<T, num> _resolveX(String verb, FieldAccessor<T, num>? x) =>
       x ?? _defaultX ?? (throw GrammarSpecException.missingEncoding(verb, 'x'));
@@ -177,6 +208,8 @@ final class BravenChart<T> {
     double? strokeWidth,
     List<double>? dashPattern,
     LineInterpolation? interpolation,
+    bool? showDataPointMarkers,
+    DataPointLabelConfig? dataPointLabels,
     String? yAxisId,
   }) => _append(
     LineMark<T>(
@@ -188,6 +221,8 @@ final class BravenChart<T> {
       strokeWidth: strokeWidth,
       dashPattern: dashPattern,
       interpolation: interpolation,
+      showDataPointMarkers: showDataPointMarkers,
+      dataPointLabels: dataPointLabels,
       yAxisId: yAxisId,
     ),
   );
@@ -204,6 +239,8 @@ final class BravenChart<T> {
     double? strokeWidth,
     List<double>? dashPattern,
     LineInterpolation? interpolation,
+    bool? showDataPointMarkers,
+    DataPointLabelConfig? dataPointLabels,
     String? yAxisId,
   }) => _append(
     AreaMark<T>(
@@ -217,6 +254,8 @@ final class BravenChart<T> {
       strokeWidth: strokeWidth,
       dashPattern: dashPattern,
       interpolation: interpolation,
+      showDataPointMarkers: showDataPointMarkers,
+      dataPointLabels: dataPointLabels,
       yAxisId: yAxisId,
     ),
   );
@@ -237,6 +276,7 @@ final class BravenChart<T> {
     BarLayoutMode? layoutMode,
     String? groupId,
     double? baselineValue,
+    BarLabelStyle? labelStyle,
     String? yAxisId,
   }) => _append(
     BarMark<T>(
@@ -251,6 +291,7 @@ final class BravenChart<T> {
       layoutMode: layoutMode,
       groupId: groupId,
       baselineValue: baselineValue,
+      labelStyle: labelStyle,
       yAxisId: yAxisId,
     ),
   );
@@ -364,6 +405,78 @@ final class BravenChart<T> {
     );
   }
 
+  /// Appends a reference line at [value] on [axis].
+  ///
+  /// A threshold produces no geometry: it lowers to a `ThresholdAnnotation`.
+  /// It binds no Y axis — the line is drawn in axis-value space — so there is
+  /// no `yAxisId` here.
+  BravenChart<T> threshold({
+    required double value,
+    AnnotationAxis axis = AnnotationAxis.y,
+    String? id,
+    String? label,
+    Color? color,
+    double? strokeWidth,
+    List<double>? dashPattern,
+  }) => _append(
+    ThresholdMark<T>(
+      id: _idFor(id),
+      value: value,
+      axis: axis,
+      label: label,
+      color: color,
+      strokeWidth: strokeWidth,
+      dashPattern: dashPattern,
+    ),
+  );
+
+  /// Appends a shaded band from [start] to [end] on [axis].
+  ///
+  /// A band produces no geometry: it lowers to a 1-D `RangeAnnotation` (an X
+  /// band or a Y band, never a 2-D box). [color] is the fill.
+  BravenChart<T> band({
+    required double start,
+    required double end,
+    AnnotationAxis axis = AnnotationAxis.y,
+    String? id,
+    String? label,
+    Color? color,
+  }) => _append(
+    BandMark<T>(
+      id: _idFor(id),
+      start: start,
+      end: end,
+      axis: axis,
+      label: label,
+      color: color,
+    ),
+  );
+
+  /// Appends a marker on point [dataPointIndex] of the series [seriesId].
+  ///
+  /// This annotates ONE point of a geometry already in the chain (it lowers to
+  /// a `PointAnnotation`), and is not the scatter geometry. [seriesId] names
+  /// the geometry's mark id, and [dataPointIndex] its row index.
+  BravenChart<T> pointAt({
+    required String seriesId,
+    required int dataPointIndex,
+    String? id,
+    String? label,
+    Color? color,
+    double? markerSize,
+    MarkerShape? markerShape,
+  }) => _append(
+    PointMark<T>(
+      id: _idFor(id),
+      seriesId: seriesId,
+      dataPointIndex: dataPointIndex,
+      label: label,
+      color: color,
+      markerSize: markerSize,
+      markerShape: markerShape,
+    ),
+  );
+
   /// Transposes the Cartesian plane. Legal on an all-bar chain only.
   BravenChart<T> transposed() => _copy(transposed: true);
 
@@ -383,6 +496,16 @@ final class BravenChart<T> {
   BravenChart<T> yAxis(YAxisConfig config) =>
       _copy(yAxes: <YAxisConfig>[..._yAxes, config]);
 
+  /// Sets the chart's grid configuration, forwarded to the chart unchanged.
+  BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
+
+  /// Sets the chart [title], and optionally a [subtitle] beneath it.
+  BravenChart<T> title(String title, {String? subtitle}) =>
+      _copy(title: title, subtitle: subtitle);
+
+  /// Shows or hides the chart legend.
+  BravenChart<T> legend(bool show) => _copy(showLegend: show);
+
   /// The specification this chain describes.
   PlotSpec<T> toSpec() {
     final xLabel = _xLabel;
@@ -399,6 +522,10 @@ final class BravenChart<T> {
           : <YAxisConfig>[
               YAxisConfig(position: YAxisPosition.left, label: yLabel),
             ],
+      grid: _grid,
+      title: _title,
+      subtitle: _subtitle,
+      showLegend: _showLegend,
     );
   }
 

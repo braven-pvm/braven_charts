@@ -401,6 +401,48 @@ void main() {
     );
   });
 
+  testWidgets('shape 7: chart-level grid, title, subtitle and legend', (
+    tester,
+  ) async {
+    // A spec that carries the chart-level options `BravenPlot` forwards must
+    // build a document IDENTICAL to the hand-written `BravenChartPlus` that
+    // sets the same grid, title, subtitle and legend visibility. This is the
+    // document-level proof that PlotSpec's chart-level fields are genuinely
+    // forwarded, not dropped.
+    await expectArtifactParity(
+      tester,
+      spec: (controller) => BravenPlot<Row>(
+        const PlotSpec<Row>(
+          data: rows,
+          marks: <Mark<Row>>[
+            LineMark<Row>(x: rowT, y: rowPower, name: 'Power'),
+          ],
+          grid: GridConfig(horizontal: false, verticalStrokeWidth: 1.5),
+          title: 'Session',
+          subtitle: 'Power over time',
+          showLegend: false,
+        ),
+        bravenChartController: controller,
+      ),
+      handBuilt: (controller) => BravenChartPlus(
+        bravenChartController: controller,
+        grid: const GridConfig(horizontal: false, verticalStrokeWidth: 1.5),
+        title: 'Session',
+        subtitle: 'Power over time',
+        showLegend: false,
+        series: <ChartSeries>[
+          LineChartSeries(
+            id: 'mark-0',
+            name: 'Power',
+            points: points(rowPower),
+            yAxisId: 'axis-0',
+            yAxisConfig: defaultAxis(),
+          ),
+        ],
+      ),
+    );
+  });
+
   testWidgets('shape 6: transposed bars', (tester) async {
     await expectArtifactParity(
       tester,

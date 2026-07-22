@@ -189,6 +189,94 @@ void main() {
       );
     });
 
+    test('geomLine threads data-point markers and labels into the mark', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        position: DataPointLabelPosition.below,
+      );
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(
+            name: 'Power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: labels,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('geomArea threads data-point markers and labels into the mark', () {
+      const labels = DataPointLabelConfig(show: true);
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomArea(
+            name: 'Power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            AreaMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: labels,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('geomBar threads a label style into the mark', () {
+      const barLabels = BarLabelStyle(show: true, showUnit: true);
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomBar(name: 'Power', labelStyle: barLabels)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            BarMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              labelStyle: barLabels,
+            ),
+          ],
+        ),
+      );
+    });
+
     test('geomPoint with every channel and its encoding template', () {
       final spec = BravenChart.of(rows)
           .x(sampleTime)
@@ -306,6 +394,122 @@ void main() {
           .toSpec();
 
       expect((spec.marks.last as TrendMark<Sample>).sourceMarkId, 'power');
+    });
+  });
+
+  group('reference marks', () {
+    test('threshold appends a ThresholdMark with an explicit id', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power')
+          .threshold(
+            value: 250,
+            axis: AnnotationAxis.y,
+            label: 'FTP',
+            color: const Color(0xFFFF9800),
+            strokeWidth: 1.5,
+            dashPattern: const <double>[6, 3],
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+            ),
+            ThresholdMark<Sample>(
+              id: 'mark-1',
+              value: 250,
+              axis: AnnotationAxis.y,
+              label: 'FTP',
+              color: Color(0xFFFF9800),
+              strokeWidth: 1.5,
+              dashPattern: <double>[6, 3],
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('band appends a BandMark with an explicit id', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .band(
+            start: 200,
+            end: 260,
+            label: 'Zone',
+            color: const Color(0x332563EB),
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(id: 'mark-0', x: sampleTime, y: samplePower),
+            BandMark<Sample>(
+              id: 'mark-1',
+              start: 200,
+              end: 260,
+              label: 'Zone',
+              color: Color(0x332563EB),
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('pointAt appends a PointMark bound to a series point', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .geomLine(id: 'power', y: samplePower)
+          .pointAt(
+            seriesId: 'power',
+            dataPointIndex: 2,
+            label: 'Peak',
+            markerSize: 12,
+            markerShape: MarkerShape.star,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(id: 'power', x: sampleTime, y: samplePower),
+            PointMark<Sample>(
+              id: 'mark-1',
+              seriesId: 'power',
+              dataPointIndex: 2,
+              label: 'Peak',
+              markerSize: 12,
+              markerShape: MarkerShape.star,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('a threshold is not a valid trend source', () {
+      // Reference marks are excluded from the geometry set, so a trend cannot
+      // fit over one.
+      expect(
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).threshold(value: 250).trend(),
+        throwsA(isA<GrammarSpecException>()),
+      );
     });
   });
 
@@ -566,6 +770,58 @@ void main() {
       expect(spec.theme, ChartTheme.dark);
       expect(spec.interaction, interaction);
       expect(spec.xAxis, xAxis);
+    });
+  });
+
+  group('chart-level options reach the spec', () {
+    test('.grid, .title and .legend equal the hand-written spec', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power')
+          .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
+          .title('Session', subtitle: 'Power over time')
+          .legend(false)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+            ),
+          ],
+          grid: GridConfig(horizontal: false, verticalStrokeWidth: 1.5),
+          title: 'Session',
+          subtitle: 'Power over time',
+          showLegend: false,
+        ),
+      );
+    });
+
+    test('.title without a subtitle leaves the subtitle unset', () {
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().title('Only a title').toSpec();
+
+      expect(spec.title, 'Only a title');
+      expect(spec.subtitle, isNull);
+    });
+
+    test('chart-level options default to unset when no verb is called', () {
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().toSpec();
+
+      expect(spec.grid, isNull);
+      expect(spec.title, isNull);
+      expect(spec.subtitle, isNull);
+      expect(spec.showLegend, isNull);
     });
   });
 

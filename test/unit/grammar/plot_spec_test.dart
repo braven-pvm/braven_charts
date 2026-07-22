@@ -54,6 +54,9 @@ String geomOf(Mark<Sample> mark) => switch (mark) {
   ScatterMark<Sample>() => 'scatter',
   CandlestickMark<Sample>() => 'candlestick',
   TrendMark<Sample>() => 'trend',
+  ThresholdMark<Sample>() => 'threshold',
+  BandMark<Sample>() => 'band',
+  PointMark<Sample>() => 'point',
 };
 
 const _line = LineMark<Sample>(x: sampleTime, y: samplePower);
@@ -68,6 +71,9 @@ const _candle = CandlestickMark<Sample>(
   close: sampleClose,
 );
 const _trend = TrendMark<Sample>(sourceMarkId: 'mark-0');
+const _threshold = ThresholdMark<Sample>(value: 250);
+const _band = BandMark<Sample>(start: 200, end: 260);
+const _point = PointMark<Sample>(seriesId: 'mark-0', dataPointIndex: 0);
 
 void main() {
   group('const-ness', () {
@@ -110,6 +116,21 @@ void main() {
         identical(_trend, const TrendMark<Sample>(sourceMarkId: 'mark-0')),
         isTrue,
       );
+      expect(
+        identical(_threshold, const ThresholdMark<Sample>(value: 250)),
+        isTrue,
+      );
+      expect(
+        identical(_band, const BandMark<Sample>(start: 200, end: 260)),
+        isTrue,
+      );
+      expect(
+        identical(
+          _point,
+          const PointMark<Sample>(seriesId: 'mark-0', dataPointIndex: 0),
+        ),
+        isTrue,
+      );
     });
 
     test('channels are const-constructible', () {
@@ -150,6 +171,9 @@ void main() {
       expect(geomOf(_scatter), 'scatter');
       expect(geomOf(_candle), 'candlestick');
       expect(geomOf(_trend), 'trend');
+      expect(geomOf(_threshold), 'threshold');
+      expect(geomOf(_band), 'band');
+      expect(geomOf(_point), 'point');
     });
   });
 

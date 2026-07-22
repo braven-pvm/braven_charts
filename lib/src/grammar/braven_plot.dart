@@ -89,6 +89,13 @@ class BravenPlot<T> extends StatelessWidget {
       xAxisConfig: spec.xAxis,
       interactionConfig: lowered?.interaction ?? spec.interaction,
       theme: spec.theme,
+      // Chart-level options are data-independent, so they are read straight off
+      // the spec — they must reach the chart even on the emptyData path, where
+      // `lowered` is null and the chart renders its empty state.
+      grid: spec.grid,
+      title: spec.title,
+      subtitle: spec.subtitle,
+      showLegend: spec.showLegend ?? true,
       emptyStateConfig: emptyStateConfig,
       bravenChartController: bravenChartController,
       interactionGroupController: interactionGroupController,

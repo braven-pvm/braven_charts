@@ -89,6 +89,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an authoring error surfaces even against a momentarily-empty dataset; empty
   data alone is treated as a runtime state and renders the standard empty
   state instead of throwing from `build`.
+- Grammar V2.0 — the three most common charts V1 could only diagnose now
+  round-trip. **Reference annotation marks:** `.threshold(value:)`,
+  `.band(start:, end:)` and `.pointAt(seriesId:, dataPointIndex:)` (new
+  `ThresholdMark` / `BandMark` / `PointMark`) lower to `ThresholdAnnotation`,
+  a 1-D `RangeAnnotation` and `PointAnnotation`. **Chart-level options:**
+  `PlotSpec` carries a `grid`, `title`/`subtitle` and `showLegend`, forwarded
+  by `BravenPlot`, with `.grid(...)` / `.title(...)` / `.legend(...)` verbs; a
+  null grid or legend reproduces the chart default. **Per-mark data-point
+  markers and inline labels:** `showDataPointMarkers` and `dataPointLabels` on
+  `geomLine`/`geomArea`, and `labelStyle` on `geomBar`. The grammar-source
+  emitter emits every one of these — the reference verbs, `.grid`/`.title`/
+  `.legend`, and the marker/label fields — so charts that previously drew a
+  "not emitted" diagnostic in the Workbench Grammar form now emit a chain,
+  proven by the round-trip fidelity guarantee. Marks stay `copyWith`-free.
 
 ## 0.11.0 - 2026-07-21
 
