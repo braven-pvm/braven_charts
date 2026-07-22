@@ -346,6 +346,7 @@ class ChartConfigDartEmitter {
       _optionalString(writer, 'name', series.name);
       _emitPoints(writer, series, seriesIndex);
       _optionalColor(writer, 'color', series.color);
+      _emitSeriesStyle(writer, series);
       if (series.metadata != null && series.metadata!.isNotEmpty) {
         writer.namedArgument('metadata', _dynamicLiteral(series.metadata!));
       }
@@ -449,6 +450,27 @@ class ChartConfigDartEmitter {
       }
     });
     writer.writeLine('),');
+  }
+
+  /// Emits the `style` discriminator (`SeriesStyle`) for the series that expose
+  /// it as a settable constructor parameter — line, scatter, area and bar, via
+  /// `super.style`. These four are also the ONLY series that model `style` on
+  /// the generated surface. Every other series (candlestick, rangeArea, pie,
+  /// donut, polarColumn) HARDCODES the discriminator in its constructor
+  /// initializer (`super(style: SeriesStyle.…)`) and exposes no settable `style`
+  /// parameter, so emitting it there is both invalid Dart and redundant — the
+  /// constructor re-establishes the correct discriminator on round-trip.
+  /// Null-gated, so the common (unset) case stays byte-identical and produces
+  /// zero golden drift.
+  void _emitSeriesStyle(DartSourceWriter writer, ChartSeries series) {
+    final style = series.style;
+    if (style == null) return;
+    if (series is LineChartSeries ||
+        series is ScatterChartSeries ||
+        series is AreaChartSeries ||
+        series is BarChartSeries) {
+      writer.namedArgument('style', 'SeriesStyle.${style.name}');
+    }
   }
 
   void _emitPoints(
@@ -1616,6 +1638,38 @@ class ChartConfigDartEmitter {
     }
   }
 
+  /// Emits `fillGradient: AreaGradient(...)` for the plot-bound interior
+  /// gradient shared by area and range-area series. Null-gated, so series
+  /// without a gradient stay byte-identical.
+  void _emitFillGradient(DartSourceWriter writer, AreaGradient? gradient) {
+    if (gradient == null) return;
+    writer.writeLine('fillGradient: AreaGradient(');
+    writer.indented(() {
+      writer.writeLine('colors: [');
+      writer.indented(() {
+        for (final color in gradient.colors) {
+          writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
+        }
+      });
+      writer.writeLine('],');
+      if (gradient.stops case final stops?) {
+        writer.namedArgument(
+          'stops',
+          '[${stops.map(DartSourceWriter.numberLiteral).join(', ')}]',
+        );
+      }
+      if (options.includeDefaultValues ||
+          gradient.begin != Alignment.topCenter) {
+        writer.namedArgument('begin', _alignmentLiteral(gradient.begin));
+      }
+      if (options.includeDefaultValues ||
+          gradient.end != Alignment.bottomCenter) {
+        writer.namedArgument('end', _alignmentLiteral(gradient.end));
+      }
+    });
+    writer.writeLine('),');
+  }
+
   void _emitRangeAreaOptions(
     DartSourceWriter writer,
     RangeAreaChartSeries series,
@@ -1629,33 +1683,7 @@ class ChartConfigDartEmitter {
     );
     _numberIf(writer, 'tension', series.tension, .25);
     _numberIf(writer, 'fillOpacity', series.fillOpacity, .28);
-    if (series.fillGradient case final gradient?) {
-      writer.writeLine('fillGradient: AreaGradient(');
-      writer.indented(() {
-        writer.writeLine('colors: [');
-        writer.indented(() {
-          for (final color in gradient.colors) {
-            writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
-          }
-        });
-        writer.writeLine('],');
-        if (gradient.stops case final stops?) {
-          writer.namedArgument(
-            'stops',
-            '[${stops.map(DartSourceWriter.numberLiteral).join(', ')}]',
-          );
-        }
-        if (options.includeDefaultValues ||
-            gradient.begin != Alignment.topCenter) {
-          writer.namedArgument('begin', _alignmentLiteral(gradient.begin));
-        }
-        if (options.includeDefaultValues ||
-            gradient.end != Alignment.bottomCenter) {
-          writer.namedArgument('end', _alignmentLiteral(gradient.end));
-        }
-      });
-      writer.writeLine('),');
-    }
+    _emitFillGradient(writer, series.fillGradient);
     _enumIf(
       writer,
       'borderMode',
@@ -1874,11 +1902,13 @@ class ChartConfigDartEmitter {
       dataPointLabels: series.dataPointLabels,
       inlineLabel: series.inlineLabel,
     );
+    _emitPathAnimationStyle(writer, series.pathAnimation);
   }
 
   void _emitAreaOptions(DartSourceWriter writer, AreaChartSeries series) {
     _emitLineLikeAreaOptions(writer, series);
     _numberIf(writer, 'fillOpacity', series.fillOpacity, 0.3);
+    _emitFillGradient(writer, series.fillGradient);
     _optionalNumber(writer, 'baselineValue', series.baselineValue);
     _optionalColor(
       writer,
@@ -1895,6 +1925,7 @@ class ChartConfigDartEmitter {
       dataPointLabels: series.dataPointLabels,
       inlineLabel: series.inlineLabel,
     );
+    _emitPathAnimationStyle(writer, series.pathAnimation);
   }
 
   void _emitLineLikeAreaOptions(

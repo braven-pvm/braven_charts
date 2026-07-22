@@ -1755,6 +1755,60 @@ void main() {
       expect(generated.source, contains("categoryValue: 'Q1',"));
     });
   });
+
+  group('Series-emitter drift-gap fixes (Convergence slice 3e)', () {
+    // The line/area SERIES emitters dropped fields that only
+    // _emitRangeAreaOptions emitted. Each was round-tripped by the codec, so
+    // the source generator silently lost it. Non-default values force emission.
+    test('emits LineChartSeries.pathAnimation', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const LineChartSeries(
+          id: 'l',
+          points: [ChartDataPoint(x: 0, y: 1)],
+          pathAnimation: PathAnimationStyle(
+            entranceMode: PathEntranceAnimationMode.reveal,
+          ),
+        ),
+      )));
+      expect(generated.source, contains('pathAnimation: PathAnimationStyle('));
+      expect(
+        generated.source,
+        contains('entranceMode: PathEntranceAnimationMode.reveal,'),
+      );
+    });
+
+    test('emits AreaChartSeries.pathAnimation + fillGradient', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const AreaChartSeries(
+          id: 'a',
+          points: [ChartDataPoint(x: 0, y: 1)],
+          pathAnimation: PathAnimationStyle(
+            entranceMode: PathEntranceAnimationMode.reveal,
+          ),
+          fillGradient: AreaGradient(
+            colors: [Color(0xFFAA0000), Color(0xFF0000AA)],
+          ),
+        ),
+      )));
+      final src = generated.source;
+      expect(src, contains('pathAnimation: PathAnimationStyle('));
+      expect(src, contains('entranceMode: PathEntranceAnimationMode.reveal,'));
+      expect(src, contains('fillGradient: AreaGradient('));
+      expect(src, contains('Color(0xFFAA0000),'));
+      expect(src, contains('Color(0xFF0000AA),'));
+    });
+
+    test('emits the shared ChartSeries.style discriminator', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const LineChartSeries(
+          id: 'l',
+          points: [ChartDataPoint(x: 0, y: 1)],
+          style: SeriesStyle.area,
+        ),
+      )));
+      expect(generated.source, contains('style: SeriesStyle.area,'));
+    });
+  });
 }
 
 ChartGeneratedSource _success(
