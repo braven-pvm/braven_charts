@@ -168,6 +168,28 @@ See the [Donut guide](../doc/donut_charts.md).
 
 Represents a single data point.
 
+### Selection API
+
+`ChartSelectionConfig` combines an acquisition geometry with a semantic scope:
+
+- `ChartSelectionAcquisitionMode`: direct point, X interval, Y interval,
+  rectangle, or lasso;
+- `ChartSelectionScope`: mark, category, compatible category stack, whole
+  series, or exclusive mark-or-whole-series targeting;
+- `ChartSelectionOperation`: replace, add, subtract, or toggle, with optional
+  Shift, Alt, and Ctrl/Command modifier overrides;
+- configurable mark/path hit radii, hover and selected marker scales, complete
+  path stroke scales, background clearing, and tracking-popup visibility.
+
+`BravenChartController` exposes `selectedPointRefs`, `selectedSeriesIds`,
+`selectionExpression`, `selectionResult`, and the lazy revision-bound
+`selectionSnapshot`. Commands include point/series/expression selection,
+inversion, clearing, selection zoom, and document extraction. Use
+`ChartDocumentExtractOptions(dataScope: ChartDataScope.selection)` to create a
+portable chart from the selected data; `ChartSelectionProjectionOptions`
+controls series completion, annotation clipping, and continuous Line/Area
+boundary interpolation.
+
 ### `ChartAnnotation`
 
 Annotation model for points, ranges, text, thresholds, trends, and chords.

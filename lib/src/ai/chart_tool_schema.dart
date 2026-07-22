@@ -332,6 +332,12 @@ same radial interaction contract.
                       'description':
                           'Optional Cartesian point label. Required and non-empty for every Pie or Donut category.',
                     },
+                    'point_key': {
+                      'type': 'string',
+                      'minLength': 1,
+                      'description':
+                          'Optional stable point identity, unique within its series. Preserves selection across reorder or stream eviction.',
+                    },
                     'color': {
                       'type': 'string',
                       'description':
@@ -499,7 +505,19 @@ same radial interaction contract.
             },
             'enable_selection': {
               'type': 'boolean',
-              'description': 'Allow durable point selection (default: true)',
+              'description': 'Allow durable chart selection (default: true)',
+            },
+            'selection_scope': {
+              'type': 'string',
+              'enum': [
+                'mark',
+                'category',
+                'category_stack',
+                'whole_series',
+                'mark_or_whole_series',
+              ],
+              'description':
+                  'Select one represented mark, every compatible mark at its category, contributors in that category stack, the complete owning series, or whichever of a mark or complete series the pointer targets.',
             },
             'selection_operation': {
               'type': 'string',
@@ -509,7 +527,7 @@ same radial interaction contract.
             },
             'selection_drag_activation': {
               'type': 'string',
-              'enum': ['primary', 'shift_primary'],
+              'enum': ['primary_button', 'shift_primary_button'],
               'description':
                   'Primary-button chord reserved by rectangle or lasso selection. Point selection remains tap-only.',
             },
@@ -522,6 +540,41 @@ same radial interaction contract.
               'type': 'boolean',
               'description':
                   'Let Ctrl/Command toggle, Shift add, and Alt/Option subtract.',
+            },
+            'selection_data_point_hit_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Screen-space hover and selection radius around data points.',
+            },
+            'selection_complete_series_hit_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Screen-space hover and selection radius around complete Line or Area paths.',
+            },
+            'selection_data_point_hover_scale': {
+              'type': 'number',
+              'minimum': 1,
+              'description': 'Hover scale for Line or Area data-point markers.',
+            },
+            'selection_data_point_selection_scale': {
+              'type': 'number',
+              'minimum': 1,
+              'description':
+                  'Durable selection-halo scale for Line or Area data points.',
+            },
+            'selection_complete_series_hover_stroke_scale': {
+              'type': 'number',
+              'minimum': 1,
+              'description':
+                  'Stroke-width scale for a hovered complete Line or Area series.',
+            },
+            'selection_complete_series_selection_stroke_scale': {
+              'type': 'number',
+              'minimum': 1,
+              'description':
+                  'Stroke-width scale for a selected complete Line or Area series.',
             },
           },
         },

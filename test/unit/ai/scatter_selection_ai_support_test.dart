@@ -9,13 +9,14 @@ void main() {
         {
           'id': 'accounts',
           'data': [
-            {'x': 2, 'y': 3, 'label': 'Atlas'},
+            {'x': 2, 'y': 3, 'point_key': 'account-atlas', 'label': 'Atlas'},
             {'x': 8, 'y': 7, 'label': 'Beacon'},
           ],
         },
       ],
       'interactions': {
         'enable_selection': true,
+        'selection_scope': 'category',
         'selection_operation': 'toggle',
         'selection_drag_activation': 'shift_primary',
         'selection_clear_on_background_tap': false,
@@ -24,15 +25,42 @@ void main() {
     });
 
     final interaction = result.interactionConfig!;
+    expect(result.series.single.points.first.pointKey, 'account-atlas');
     expect(interaction.enableSelection, isTrue);
-    expect(interaction.selection.mode, ChartSelectionMode.point);
+    expect(
+      interaction.selection.acquisitionMode,
+      ChartSelectionAcquisitionMode.point,
+    );
+    expect(interaction.selection.scope, ChartSelectionScope.category);
     expect(interaction.selection.operation, ChartSelectionOperation.toggle);
     expect(
       interaction.selection.dragActivation,
-      ChartSelectionDragActivation.shiftPrimary,
+      ChartSelectionDragActivation.shiftPrimaryButton,
     );
     expect(interaction.selection.clearOnBackgroundTap, isFalse);
     expect(interaction.selection.useModifierKeys, isFalse);
+  });
+
+  test('tool schema advertises stable point identity', () {
+    final input =
+        ChartToolSchema.createChartTool['input_schema']!
+            as Map<String, dynamic>;
+    final properties = input['properties']! as Map<String, dynamic>;
+    final series = properties['series']! as Map<String, dynamic>;
+    final seriesItem = series['items']! as Map<String, dynamic>;
+    final data =
+        (seriesItem['properties']! as Map<String, dynamic>)['data']!
+            as Map<String, dynamic>;
+    final point = data['items']! as Map<String, dynamic>;
+    final pointProperties = point['properties']! as Map<String, dynamic>;
+
+    expect(pointProperties['point_key'], {
+      'type': 'string',
+      'minLength': 1,
+      'description':
+          'Optional stable point identity, unique within its series. '
+          'Preserves selection across reorder or stream eviction.',
+    });
   });
 
   test('rejects unknown selection operations', () {

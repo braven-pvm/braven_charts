@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/chart_point_identity.dart';
+
 /// X-only data-space viewport shared by synchronized Cartesian charts.
 @immutable
 class ChartXViewport {
@@ -35,6 +37,7 @@ class ChartInteractionGroupOptions {
   const ChartInteractionGroupOptions({
     this.synchronizeCursor = true,
     this.synchronizeViewport = true,
+    this.synchronizeSelection = false,
   });
 
   /// Whether this chart sends and receives shared data-X cursor changes.
@@ -43,30 +46,41 @@ class ChartInteractionGroupOptions {
   /// Whether this chart sends and receives shared X viewport changes.
   final bool synchronizeViewport;
 
+  /// Whether keyed durable selections are shared with other participants.
+  ///
+  /// Selection linking is opt-in because it changes durable chart state.
+  /// Only explicit [ChartDataPoint.pointKey] identities are transported.
+  final bool synchronizeSelection;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ChartInteractionGroupOptions &&
           other.synchronizeCursor == synchronizeCursor &&
-          other.synchronizeViewport == synchronizeViewport;
+          other.synchronizeViewport == synchronizeViewport &&
+          other.synchronizeSelection == synchronizeSelection;
 
   @override
-  int get hashCode => Object.hash(synchronizeCursor, synchronizeViewport);
+  int get hashCode =>
+      Object.hash(synchronizeCursor, synchronizeViewport, synchronizeSelection);
 }
 
 /// Coordinates transient data-X interaction across independent charts.
 ///
 /// Supply the same caller-owned controller to multiple `BravenChartPlus`
-/// widgets. The charts keep independent Y domains, tooltips, selection,
-/// annotations, and artifacts. Dispose this controller when its host is
-/// disposed.
+/// widgets. The charts keep independent Y domains, tooltips, annotations, and
+/// artifacts. Durable selection also remains independent unless a participant
+/// explicitly enables [ChartInteractionGroupOptions.synchronizeSelection].
+/// Dispose this controller when its host is disposed.
 class ChartInteractionGroupController {
   final Map<Object, _ChartInteractionGroupMember> _members = {};
   double? _cursorX;
   ChartXViewport? _viewport;
+  Set<ChartPointKeyRef>? _selection;
   final ValueNotifier<ChartXViewport?> _viewportNotifier = ValueNotifier(null);
   bool _broadcastingCursor = false;
   bool _broadcastingViewport = false;
+  bool _broadcastingSelection = false;
   bool _disposed = false;
 
   /// Current shared data-X cursor, or null when no interaction is active.
@@ -77,6 +91,9 @@ class ChartInteractionGroupController {
 
   /// Observable viewport state for navigator and range-control composition.
   ValueListenable<ChartXViewport?> get viewportListenable => _viewportNotifier;
+
+  /// Most recently shared stable-key selection, or null before publication.
+  Set<ChartPointKeyRef>? get selection => _selection;
 
   /// Applies one host-owned X viewport to every synchronized participant.
   ///
@@ -120,23 +137,41 @@ class ChartInteractionGroupController {
   void reset() {
     if (_disposed) return;
     final hadCursor = _cursorX != null;
+    final hadSelection = _selection != null;
     _cursorX = null;
     _viewport = null;
+    _selection = null;
     _viewportNotifier.value = null;
-    if (!hadCursor || _broadcastingCursor) return;
-    _broadcastingCursor = true;
+    if (hadCursor && !_broadcastingCursor) {
+      _broadcastingCursor = true;
+      try {
+        for (final entry
+            in List<MapEntry<Object, _ChartInteractionGroupMember>>.of(
+              _members.entries,
+            )) {
+          if (identical(_members[entry.key], entry.value) &&
+              entry.value.options.synchronizeCursor) {
+            entry.value.onCursorChanged(null);
+          }
+        }
+      } finally {
+        _broadcastingCursor = false;
+      }
+    }
+    if (!hadSelection || _broadcastingSelection) return;
+    _broadcastingSelection = true;
     try {
       for (final entry
           in List<MapEntry<Object, _ChartInteractionGroupMember>>.of(
             _members.entries,
           )) {
         if (identical(_members[entry.key], entry.value) &&
-            entry.value.options.synchronizeCursor) {
-          entry.value.onCursorChanged(null);
+            entry.value.options.synchronizeSelection) {
+          entry.value.onSelectionChanged(const <ChartPointKeyRef>{});
         }
       }
     } finally {
-      _broadcastingCursor = false;
+      _broadcastingSelection = false;
     }
   }
 
@@ -149,6 +184,7 @@ class ChartInteractionGroupController {
     ChartInteractionGroupOptions options = const ChartInteractionGroupOptions(),
     required ValueChanged<double?> onCursorChanged,
     required ValueChanged<ChartXViewport> onViewportChanged,
+    ValueChanged<Set<ChartPointKeyRef>>? onSelectionChanged,
   }) {
     if (_disposed) {
       throw StateError(
@@ -160,6 +196,7 @@ class ChartInteractionGroupController {
       options: options,
       onCursorChanged: onCursorChanged,
       onViewportChanged: onViewportChanged,
+      onSelectionChanged: onSelectionChanged ?? (_) {},
     );
     _members[attachment] = member;
     final participant = ChartInteractionGroupParticipant._(
@@ -171,6 +208,9 @@ class ChartInteractionGroupController {
     }
     if (options.synchronizeViewport && _viewport != null) {
       onViewportChanged(_viewport!);
+    }
+    if (options.synchronizeSelection && _selection != null) {
+      member.onSelectionChanged(_selection!);
     }
     return participant;
   }
@@ -230,6 +270,32 @@ class ChartInteractionGroupController {
     }
   }
 
+  void _publishSelection(
+    Object attachment,
+    Iterable<ChartPointKeyRef> selection,
+  ) {
+    if (_disposed || !_members.containsKey(attachment)) return;
+    final source = _members[attachment]!;
+    if (!source.options.synchronizeSelection || _broadcastingSelection) return;
+    final next = Set<ChartPointKeyRef>.unmodifiable(selection);
+    if (_selection != null && setEquals(_selection, next)) return;
+    _selection = next;
+    _broadcastingSelection = true;
+    try {
+      for (final entry
+          in List<MapEntry<Object, _ChartInteractionGroupMember>>.of(
+            _members.entries,
+          )) {
+        if (identical(_members[entry.key], entry.value) &&
+            entry.value.options.synchronizeSelection) {
+          entry.value.onSelectionChanged(next);
+        }
+      }
+    } finally {
+      _broadcastingSelection = false;
+    }
+  }
+
   void _detach(Object attachment) {
     if (_disposed) return;
     _members.remove(attachment);
@@ -242,6 +308,7 @@ class ChartInteractionGroupController {
     _members.clear();
     _cursorX = null;
     _viewport = null;
+    _selection = null;
     _viewportNotifier.dispose();
   }
 }
@@ -275,6 +342,11 @@ class ChartInteractionGroupParticipant {
   void publishViewport(ChartXViewport viewport) =>
       _controller?._publishViewport(_attachment, viewport);
 
+  /// Publishes durable point selection using stable semantic identities.
+  @internal
+  void publishSelection(Iterable<ChartPointKeyRef> selection) =>
+      _controller?._publishSelection(_attachment, selection);
+
   /// Detaches this chart immediately. Safe to call more than once.
   @internal
   void dispose() {
@@ -288,9 +360,11 @@ class _ChartInteractionGroupMember {
     required this.options,
     required this.onCursorChanged,
     required this.onViewportChanged,
+    required this.onSelectionChanged,
   });
 
   final ChartInteractionGroupOptions options;
   final ValueChanged<double?> onCursorChanged;
   final ValueChanged<ChartXViewport> onViewportChanged;
+  final ValueChanged<Set<ChartPointKeyRef>> onSelectionChanged;
 }

@@ -25,6 +25,24 @@ void main() {
     expect(ChartDataStorage.inlineColumns.wireName, 'inlineColumns');
   });
 
+  test('selection projection policies are available from the public barrel', () {
+    const options = ChartDocumentExtractOptions(
+      dataScope: ChartDataScope.selection,
+      selectionProjection: ChartSelectionProjectionOptions(
+        seriesProjection:
+            ChartSelectionSeriesProjection.completeParticipatingSeries,
+        annotationProjection:
+            ChartSelectionAnnotationProjection.retainContained,
+      ),
+    );
+
+    expect(options.dataScope, ChartDataScope.selection);
+    expect(
+      options.selectionProjection.annotationProjection,
+      ChartSelectionAnnotationProjection.retainContained,
+    );
+  });
+
   test('referenced payload resolution is available from the public API', () {
     final resolver = _PublicResolver();
     final reference = ReferencedPayload(

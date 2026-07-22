@@ -48,6 +48,7 @@ class StandardChartOptions extends StatelessWidget
     this.showXScrollbarOption = true,
     this.showYScrollbarOption = true,
     this.showLegendOption = true,
+    this.showCrosshairOption = true,
     this.showInteractionOptions = true,
     this.showLineStyleOption = true,
     this.sectionTitle = 'Chart Options',
@@ -65,6 +66,7 @@ class StandardChartOptions extends StatelessWidget
   final bool showXScrollbarOption;
   final bool showYScrollbarOption;
   final bool showLegendOption;
+  final bool showCrosshairOption;
   final bool showInteractionOptions;
   final bool showLineStyleOption;
   final String sectionTitle;
@@ -87,6 +89,8 @@ class StandardChartOptions extends StatelessWidget
       if (showXScrollbarOption) 'x scrollbar horizontal navigation',
       if (showYScrollbarOption) 'y scrollbar vertical navigation',
       if (showLegendOption) 'legend series key',
+      if (showCrosshairOption)
+        'crosshair tracking cursor guide axis values intersection',
       if (showInteractionOptions) 'zoom pan interaction navigation',
       if (showLineStyleOption) 'line style stroke pattern',
     ],
@@ -162,6 +166,17 @@ class StandardChartOptions extends StatelessWidget
                 label: 'Show Legend',
                 value: controller.showLegend,
                 onChanged: (v) => controller.showLegend = v,
+              ),
+
+            // Crosshair and tracking
+            if (showCrosshairOption)
+              BoolOption(
+                key: const ValueKey('standard-show-crosshair'),
+                label: 'Show Crosshair / Tracking',
+                subtitle:
+                    'Hide crosshair guides, axis values, intersections, and the tracking panel together',
+                value: controller.showCrosshair,
+                onChanged: (v) => controller.showCrosshair = v,
               ),
 
             // Interactions

@@ -73,11 +73,18 @@ void main() {
         enablePan: false,
         enableSelection: false,
         selection: ChartSelectionConfig(
-          mode: ChartSelectionMode.lasso,
+          acquisitionMode: ChartSelectionAcquisitionMode.lasso,
+          scope: ChartSelectionScope.markOrWholeSeries,
           operation: ChartSelectionOperation.subtract,
-          dragActivation: ChartSelectionDragActivation.shiftPrimary,
+          dragActivation: ChartSelectionDragActivation.shiftPrimaryButton,
           clearOnBackgroundTap: false,
           useModifierKeys: false,
+          dataPointHitRadius: 14,
+          completeSeriesHitRadius: 30,
+          dataPointHoverScale: 1.8,
+          dataPointSelectionScale: 3.2,
+          completeSeriesHoverStrokeScale: 2.1,
+          completeSeriesSelectionStrokeScale: 1.9,
         ),
         showFocusBorder: true,
         enableFocusOnHover: false,
@@ -95,6 +102,140 @@ void main() {
 
       expect(decoded, source);
       expect(document.requiredBindings, isEmpty);
+    });
+
+    test('defaults older selection documents to mark scope', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            selection: ChartSelectionConfig(
+              scope: ChartSelectionScope.wholeSeries,
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final selection = Map<String, Object?>.from(
+        configuration['selection']! as Map,
+      )..remove('scope');
+      configuration['selection'] = selection;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.selection.scope, ChartSelectionScope.mark);
+    });
+
+    test('decodes legacy selection field and scope names', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            selection: ChartSelectionConfig(
+              acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+              scope: ChartSelectionScope.categoryStack,
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final selection = Map<String, Object?>.from(
+        configuration['selection']! as Map,
+      );
+      selection['mode'] = selection.remove('acquisitionMode');
+      selection['scope'] = 'stack';
+      selection['dragActivation'] = 'shiftPrimary';
+      configuration['selection'] = selection;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(
+        decoded.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.rectangle,
+      );
+      expect(decoded.selection.scope, ChartSelectionScope.categoryStack);
+      expect(
+        decoded.selection.dragActivation,
+        ChartSelectionDragActivation.shiftPrimaryButton,
+      );
+    });
+
+    test('maps the legacy combined scope to exclusive dual targeting', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            selection: ChartSelectionConfig(
+              scope: ChartSelectionScope.markOrWholeSeries,
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final selection = Map<String, Object?>.from(
+        configuration['selection']! as Map,
+      )..['scope'] = 'mark_and_series';
+      configuration['selection'] = selection;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.selection.scope, ChartSelectionScope.markOrWholeSeries);
+    });
+
+    test('round-trips every implemented semantic group scope', () {
+      for (final scope in const <ChartSelectionScope>[
+        ChartSelectionScope.category,
+        ChartSelectionScope.categoryStack,
+      ]) {
+        final document = _success(
+          ChartInteractionDocumentCodec.encode(
+            InteractionConfig(selection: ChartSelectionConfig(scope: scope)),
+          ),
+        );
+        final decoded = _success(
+          ChartInteractionDocumentCodec.decode(document),
+        );
+
+        expect(decoded.selection.scope, scope);
+      }
+    });
+
+    test('round-trips every acquisition geometry', () {
+      for (final acquisitionMode in ChartSelectionAcquisitionMode.values) {
+        final document = _success(
+          ChartInteractionDocumentCodec.encode(
+            InteractionConfig(
+              selection: ChartSelectionConfig(acquisitionMode: acquisitionMode),
+            ),
+          ),
+        );
+        final decoded = _success(
+          ChartInteractionDocumentCodec.decode(document),
+        );
+
+        expect(decoded.selection.acquisitionMode, acquisitionMode);
+      }
     });
 
     test('requires explicit descriptors for executable callbacks', () {

@@ -56,6 +56,7 @@ void main() {
           x: ChartNumberDocument.fromDouble(double.nan),
           y: ChartNumberDocument.fromDouble(double.infinity),
           timestamp: DateTime.parse('2026-07-15T08:30:00+02:00'),
+          pointKey: 'surge-reading',
           label: 'surge',
           metadata: JsonObjectValue({'lap': JsonNumberValue(3)}),
           segmentStyle: JsonObjectValue({'strokeWidth': JsonNumberValue(2.5)}),

@@ -18,6 +18,7 @@ void main() {
             ChartDataPoint(
               x: 0,
               y: 148,
+              pointKey: 'power-start',
               label: 'Start',
               segmentStyle: SegmentStyle(dashPattern: [8, 4]),
             ),
@@ -52,6 +53,7 @@ void main() {
       expect(first.source, contains('dashPattern: [2.0, 6.0],'));
       expect(first.source, contains('yAxisConfig: YAxisConfig('));
       expect(first.source, contains("label: 'Start',"));
+      expect(first.source, contains("pointKey: 'power-start',"));
       expect(first.source, contains('segmentStyle: SegmentStyle('));
       expect(first.source, contains('dashPattern: [8.0, 4.0],'));
       expect(first.source, contains('theme: ChartTheme.light,'));
@@ -152,6 +154,7 @@ void main() {
           points: [
             CandlestickDataPoint(
               x: 1,
+              pointKey: 'price-session-1',
               open: 100,
               high: 112,
               low: 98,
@@ -180,6 +183,7 @@ void main() {
       expect(second.source, first.source);
       expect(first.source, contains('CandlestickChartSeries('));
       expect(first.source, contains('CandlestickDataPoint('));
+      expect(first.source, contains("pointKey: 'price-session-1',"));
       expect(first.source, contains('open: 100.0,'));
       expect(first.source, contains('high: 112.0,'));
       expect(first.source, contains('low: 98.0,'));
@@ -205,8 +209,17 @@ void main() {
           id: 'confidence',
           unit: '%',
           points: [
-            RangeAreaDataPoint(x: 1, low: 42, high: 58),
-            RangeAreaDataPoint.gap(x: 2, label: 'Missing'),
+            RangeAreaDataPoint(
+              x: 1,
+              pointKey: 'confidence-1',
+              low: 42,
+              high: 58,
+            ),
+            RangeAreaDataPoint.gap(
+              x: 2,
+              pointKey: 'confidence-2',
+              label: 'Missing',
+            ),
           ],
           color: const Color(0xFF2563EB),
           interpolation: LineInterpolation.monotone,
@@ -237,9 +250,11 @@ void main() {
       expect(second.source, first.source);
       expect(first.source, contains('RangeAreaChartSeries('));
       expect(first.source, contains('RangeAreaDataPoint('));
+      expect(first.source, contains("pointKey: 'confidence-1',"));
       expect(first.source, contains('low: 42.0,'));
       expect(first.source, contains('high: 58.0,'));
       expect(first.source, contains('RangeAreaDataPoint.gap('));
+      expect(first.source, contains("pointKey: 'confidence-2',"));
       expect(first.source, contains("label: 'Missing',"));
       expect(first.source, contains('fillGradient: AreaGradient('));
       expect(first.source, contains('borderMode: RangeAreaBorderMode.closed,'));
@@ -959,6 +974,7 @@ void main() {
               ),
               hiddenSeriesIds: const {'recovery'},
               selectedSeriesId: 'power',
+              selectedSeriesIds: const {'power', 'heart-rate'},
               selectedPointRefs: const [
                 ChartPointRef(seriesId: 'power', pointIndex: 0),
               ],
@@ -983,6 +999,10 @@ void main() {
       expect(generated.source, contains('void restoreChartViewState()'));
       expect(generated.source, contains('ChartBoundsDocument('));
       expect(generated.source, contains("hiddenSeriesIds: {'recovery'}"));
+      expect(
+        generated.source,
+        contains("selectedSeriesIds: {'heart-rate', 'power'}"),
+      );
       expect(generated.source, contains('ChartPointRef('));
       expect(generated.source, contains("selectedAnnotationId: 'target'"));
       expect(generated.source, contains('ChartPositionDocument('));
@@ -1343,11 +1363,18 @@ void main() {
             ),
             interaction: const InteractionConfig(
               selection: ChartSelectionConfig(
-                mode: ChartSelectionMode.rectangle,
+                acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                scope: ChartSelectionScope.markOrWholeSeries,
                 operation: ChartSelectionOperation.add,
-                dragActivation: ChartSelectionDragActivation.shiftPrimary,
+                dragActivation: ChartSelectionDragActivation.shiftPrimaryButton,
                 clearOnBackgroundTap: false,
                 useModifierKeys: false,
+                dataPointHitRadius: 14,
+                completeSeriesHitRadius: 30,
+                dataPointHoverScale: 1.8,
+                dataPointSelectionScale: 3.2,
+                completeSeriesHoverStrokeScale: 2.1,
+                completeSeriesSelectionStrokeScale: 1.9,
               ),
             ),
           ),
@@ -1355,17 +1382,35 @@ void main() {
       );
 
       expect(generated.source, contains('selection: ChartSelectionConfig('));
-      expect(generated.source, contains('mode: ChartSelectionMode.rectangle'));
+      expect(
+        generated.source,
+        contains('acquisitionMode: ChartSelectionAcquisitionMode.xInterval'),
+      );
+      expect(
+        generated.source,
+        contains('scope: ChartSelectionScope.markOrWholeSeries'),
+      );
       expect(
         generated.source,
         contains('operation: ChartSelectionOperation.add'),
       );
       expect(
         generated.source,
-        contains('dragActivation: ChartSelectionDragActivation.shiftPrimary'),
+        contains(
+          'dragActivation: ChartSelectionDragActivation.shiftPrimaryButton',
+        ),
       );
       expect(generated.source, contains('clearOnBackgroundTap: false'));
       expect(generated.source, contains('useModifierKeys: false'));
+      expect(generated.source, contains('dataPointHitRadius: 14.0'));
+      expect(generated.source, contains('completeSeriesHitRadius: 30.0'));
+      expect(generated.source, contains('dataPointHoverScale: 1.8'));
+      expect(generated.source, contains('dataPointSelectionScale: 3.2'));
+      expect(generated.source, contains('completeSeriesHoverStrokeScale: 2.1'));
+      expect(
+        generated.source,
+        contains('completeSeriesSelectionStrokeScale: 1.9'),
+      );
     });
 
     test('emits grouped Polar Column composition settings', () {

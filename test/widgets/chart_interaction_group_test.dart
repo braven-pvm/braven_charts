@@ -200,6 +200,84 @@ void main() {
     expect(second.transform!.dataYMax, secondYMax);
   });
 
+  testWidgets('links durable selection by stable point key across reorder', (
+    tester,
+  ) async {
+    final group = ChartInteractionGroupController();
+    final firstController = BravenChartController();
+    final secondController = BravenChartController();
+    addTearDown(group.dispose);
+    addTearDown(firstController.dispose);
+    addTearDown(secondController.dispose);
+    const options = ChartInteractionGroupOptions(
+      synchronizeCursor: false,
+      synchronizeViewport: false,
+      synchronizeSelection: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Row(
+          children: [
+            Expanded(
+              child: BravenChartPlus(
+                bravenChartController: firstController,
+                interactionGroupController: group,
+                interactionGroupOptions: options,
+                showLegend: false,
+                series: const [
+                  LineChartSeries(
+                    id: 'orders',
+                    points: [
+                      ChartDataPoint(x: 0, y: 10, pointKey: 'alpha'),
+                      ChartDataPoint(x: 1, y: 20, pointKey: 'beta'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: BravenChartPlus(
+                bravenChartController: secondController,
+                interactionGroupController: group,
+                interactionGroupOptions: options,
+                showLegend: false,
+                series: const [
+                  BarChartSeries(
+                    id: 'orders',
+                    barWidthPercent: 0.6,
+                    points: [
+                      ChartDataPoint(x: 0, y: 200, pointKey: 'beta'),
+                      ChartDataPoint(x: 1, y: 100, pointKey: 'alpha'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    firstController.selectPoint(
+      const ChartPointRef(seriesId: 'orders', pointIndex: 0),
+      revision: firstController.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+
+    expect(group.selection, {
+      const ChartPointKeyRef(seriesId: 'orders', pointKey: 'alpha'),
+    });
+    expect(secondController.selectionSnapshot!.pointRefs, {
+      const ChartPointRef(seriesId: 'orders', pointIndex: 1),
+    });
+
+    firstController.clearPointSelection();
+    await tester.pump();
+    expect(secondController.selectionSnapshot!.isEmpty, isTrue);
+  });
+
   testWidgets('reports the complete two-dimensional viewport to callers', (
     tester,
   ) async {

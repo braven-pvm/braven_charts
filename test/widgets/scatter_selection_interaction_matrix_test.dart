@@ -59,8 +59,8 @@ void main() {
     });
 
     for (final mode in const [
-      ChartSelectionMode.rectangle,
-      ChartSelectionMode.lasso,
+      ChartSelectionAcquisitionMode.rectangle,
+      ChartSelectionAcquisitionMode.lasso,
     ]) {
       testWidgets('touch ${mode.name} selects the enclosed marker set', (
         tester,
@@ -70,7 +70,10 @@ void main() {
         await _pumpScatter(
           tester,
           controller: controller,
-          selection: ChartSelectionConfig(mode: mode, useModifierKeys: false),
+          selection: ChartSelectionConfig(
+            acquisitionMode: mode,
+            useModifierKeys: false,
+          ),
         );
 
         final atlas = _pointPosition(tester, 0);
@@ -90,7 +93,7 @@ void main() {
           path.first,
           kind: PointerDeviceKind.touch,
         );
-        if (mode == ChartSelectionMode.rectangle) {
+        if (mode == ChartSelectionAcquisitionMode.rectangle) {
           await touch.moveTo(path[2]);
           await tester.pump();
         } else {
@@ -118,7 +121,9 @@ void main() {
         await _pumpScatter(
           tester,
           controller: controller,
-          selection: const ChartSelectionConfig(mode: ChartSelectionMode.lasso),
+          selection: const ChartSelectionConfig(
+            acquisitionMode: ChartSelectionAcquisitionMode.lasso,
+          ),
         );
 
         const beacon = ChartPointRef(seriesId: 'accounts', pointIndex: 1);

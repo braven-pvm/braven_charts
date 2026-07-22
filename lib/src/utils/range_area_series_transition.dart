@@ -43,6 +43,7 @@ abstract final class RangeAreaSeriesTransition {
     if (from.isGap && to.isGap) {
       return RangeAreaDataPoint.gap(
         x: x,
+        pointKey: to.pointKey,
         timestamp: to.timestamp,
         label: to.label,
         metadata: to.metadata,
@@ -55,6 +56,7 @@ abstract final class RangeAreaSeriesTransition {
     final toHigh = to.isGap ? from.midpoint! : to.high!;
     return RangeAreaDataPoint(
       x: x,
+      pointKey: to.pointKey,
       low: _lerp(fromLow, toLow, t),
       high: _lerp(fromHigh, toHigh, t),
       timestamp: to.timestamp,

@@ -23,6 +23,11 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const tableProjectionFailed = 'table_projection_failed';
   static const stalePointReference = 'stale_point_reference';
   static const invalidPointReference = 'invalid_point_reference';
+  static const selectionEmpty = 'selection_empty';
+  static const selectionViewportUnavailable = 'selection_viewport_unavailable';
+  static const selectionAnnotationOmitted = 'selection_annotation_omitted';
+  static const selectionAnnotationComponentOmitted =
+      'selection_annotation_component_omitted';
   static const comparisonInvalidInput = 'comparison_invalid_input';
   static const comparisonAmbiguousMapping = 'comparison_ambiguous_mapping';
   static const comparisonSeriesNotFound = 'comparison_series_not_found';

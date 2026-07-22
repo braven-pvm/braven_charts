@@ -162,7 +162,7 @@ void main() {
                     series: const [
                       LineChartSeries(
                         id: 'live',
-                        points: const [],
+                        points: [],
                         interpolation: LineInterpolation.monotone,
                       ),
                     ],
@@ -212,4 +212,74 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('navigator gestures preserve durable chart selection', (
+    tester,
+  ) async {
+    final group = ChartInteractionGroupController();
+    final chart = BravenChartController();
+    addTearDown(group.dispose);
+    addTearDown(chart.dispose);
+    final points = <ChartDataPoint>[
+      for (var x = 0; x <= 10; x += 2)
+        ChartDataPoint(x: x.toDouble(), y: 20 + x.toDouble()),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              SizedBox(
+                height: 260,
+                child: BravenChartPlus(
+                  bravenChartController: chart,
+                  interactionGroupController: group,
+                  showLegend: false,
+                  series: [LineChartSeries(id: 'signal', points: points)],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 96,
+                child: CartesianNavigator(
+                  interactionGroupController: group,
+                  fullDomain: const ChartXViewport(min: 0, max: 10),
+                  initialViewport: const ChartXViewport(min: 2, max: 8),
+                  overviewSeries: AreaChartSeries(
+                    id: 'overview',
+                    points: points,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const selected = ChartPointRef(seriesId: 'signal', pointIndex: 2);
+    chart.selectPoint(
+      selected,
+      revision: chart.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+    final before = group.viewport;
+
+    await tester.drag(
+      find.byKey(const ValueKey('cartesian-navigator-window')),
+      const Offset(42, 0),
+    );
+    await tester.pump();
+
+    expect(group.viewport, isNot(before));
+    expect(chart.selectedPointRefs, {selected});
+    expect(chart.selectionResult.points.single.point.x, 4);
+  });
 }

@@ -483,6 +483,7 @@ class ChartConfigDartEmitter {
       _optionalNumber(writer, 'colorValue', point.colorValue);
       _optionalNumber(writer, 'opacityValue', point.opacityValue);
       _optionalString(writer, 'categoryValue', point.categoryValue);
+      _optionalString(writer, 'pointKey', point.pointKey);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',
@@ -520,6 +521,7 @@ class ChartConfigDartEmitter {
         _optionalNumber(writer, 'opacityValue', point.opacityValue);
         _optionalString(writer, 'categoryValue', point.categoryValue);
       }
+      _optionalString(writer, 'pointKey', point.pointKey);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',
@@ -557,6 +559,7 @@ class ChartConfigDartEmitter {
       _optionalNumber(writer, 'magnitude', point.magnitude);
       _optionalNumber(writer, 'colorValue', point.colorValue);
       _optionalNumber(writer, 'opacityValue', point.opacityValue);
+      _optionalString(writer, 'pointKey', point.pointKey);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',
@@ -3211,6 +3214,13 @@ class ChartConfigDartEmitter {
             );
           }
           _optionalString(writer, 'selectedSeriesId', state.selectedSeriesId);
+          if (state.selectedSeriesIds.isNotEmpty) {
+            final selectedIds = state.selectedSeriesIds.toList()..sort();
+            writer.namedArgument(
+              'selectedSeriesIds',
+              '{${selectedIds.map(DartSourceWriter.stringLiteral).join(', ')}}',
+            );
+          }
           if (state.selectedPointRefs.isNotEmpty) {
             writer.writeLine('selectedPointRefs: [');
             writer.indented(() {
@@ -3904,10 +3914,18 @@ class ChartConfigDartEmitter {
     if (interaction.selection != const ChartSelectionConfig()) {
       writer.writeLine('selection: ChartSelectionConfig(');
       writer.indented(() {
-        if (interaction.selection.mode != ChartSelectionMode.point) {
+        if (interaction.selection.acquisitionMode !=
+            ChartSelectionAcquisitionMode.point) {
           writer.namedArgument(
-            'mode',
-            'ChartSelectionMode.${interaction.selection.mode.name}',
+            'acquisitionMode',
+            'ChartSelectionAcquisitionMode.'
+                '${interaction.selection.acquisitionMode.name}',
+          );
+        }
+        if (interaction.selection.scope != ChartSelectionScope.mark) {
+          writer.namedArgument(
+            'scope',
+            'ChartSelectionScope.${interaction.selection.scope.name}',
           );
         }
         if (interaction.selection.operation !=
@@ -3918,7 +3936,7 @@ class ChartConfigDartEmitter {
           );
         }
         if (interaction.selection.dragActivation !=
-            ChartSelectionDragActivation.primary) {
+            ChartSelectionDragActivation.primaryButton) {
           writer.namedArgument(
             'dragActivation',
             'ChartSelectionDragActivation.'
@@ -3930,6 +3948,42 @@ class ChartConfigDartEmitter {
           'clearOnBackgroundTap',
           interaction.selection.clearOnBackgroundTap,
           defaultValue: true,
+        );
+        _valueIf(
+          writer,
+          'dataPointHitRadius',
+          interaction.selection.dataPointHitRadius,
+          defaultValue: 20,
+        );
+        _valueIf(
+          writer,
+          'completeSeriesHitRadius',
+          interaction.selection.completeSeriesHitRadius,
+          defaultValue: 22,
+        );
+        _valueIf(
+          writer,
+          'dataPointHoverScale',
+          interaction.selection.dataPointHoverScale,
+          defaultValue: 1.5,
+        );
+        _valueIf(
+          writer,
+          'dataPointSelectionScale',
+          interaction.selection.dataPointSelectionScale,
+          defaultValue: 2.67,
+        );
+        _valueIf(
+          writer,
+          'completeSeriesHoverStrokeScale',
+          interaction.selection.completeSeriesHoverStrokeScale,
+          defaultValue: 1.75,
+        );
+        _valueIf(
+          writer,
+          'completeSeriesSelectionStrokeScale',
+          interaction.selection.completeSeriesSelectionStrokeScale,
+          defaultValue: 1.5,
         );
         _valueIf(
           writer,

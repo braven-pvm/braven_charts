@@ -92,19 +92,35 @@ class ChartViewState {
     this.visibleBounds,
     Set<String> hiddenSeriesIds = const {},
     this.selectedSeriesId,
+    Iterable<String>? selectedSeriesIds,
     Iterable<ChartPointRef> selectedPointRefs = const [],
     Iterable<String> visibleAxisIds = const [],
     Iterable<String> overflowAxisIds = const [],
     this.selectedAnnotationId,
     this.legendPosition,
   }) : hiddenSeriesIds = Set.unmodifiable(hiddenSeriesIds),
+       selectedSeriesIds = Set.unmodifiable(
+         selectedSeriesIds ??
+             (selectedSeriesId == null
+                 ? const <String>{}
+                 : <String>{selectedSeriesId}),
+       ),
        selectedPointRefs = List.unmodifiable(selectedPointRefs),
        visibleAxisIds = List.unmodifiable(visibleAxisIds),
        overflowAxisIds = List.unmodifiable(overflowAxisIds);
 
   final ChartBoundsDocument? visibleBounds;
   final Set<String> hiddenSeriesIds;
+
+  /// Legacy singular series activation used by Y-axis slot promotion.
+  ///
+  /// New consumers should use [selectedSeriesIds] for durable chart
+  /// selection. The field remains portable so older artifacts and axis-slot
+  /// restoration keep their established behavior.
   final String? selectedSeriesId;
+
+  /// Durable semantic series selection captured and restored with this view.
+  final Set<String> selectedSeriesIds;
 
   /// Durable linked-point selection captured and restored with this view.
   final List<ChartPointRef> selectedPointRefs;
@@ -117,6 +133,8 @@ class ChartViewState {
     if (visibleBounds != null) 'visibleBounds': visibleBounds!.toJson(),
     'hiddenSeriesIds': hiddenSeriesIds.toList()..sort(),
     if (selectedSeriesId != null) 'selectedSeriesId': selectedSeriesId,
+    if (selectedSeriesIds.isNotEmpty || selectedSeriesId != null)
+      'selectedSeriesIds': selectedSeriesIds.toList()..sort(),
     'selectedPointRefs': selectedPointRefs.map((ref) => ref.toJson()).toList(),
     'visibleAxisIds': visibleAxisIds,
     'overflowAxisIds': overflowAxisIds,
@@ -131,6 +149,9 @@ class ChartViewState {
         : ChartBoundsDocument.fromJson(readRequiredMap(json, 'visibleBounds')),
     hiddenSeriesIds: readOptionalStringSet(json, 'hiddenSeriesIds'),
     selectedSeriesId: readOptionalString(json, 'selectedSeriesId'),
+    selectedSeriesIds: json.containsKey('selectedSeriesIds')
+        ? readOptionalStringSet(json, 'selectedSeriesIds')
+        : null,
     selectedPointRefs: readOptionalList(json, 'selectedPointRefs').map(
       (item) => ChartPointRef.fromJson(readStringMap(item, 'point reference')),
     ),

@@ -10,6 +10,7 @@ void main() {
       points: [
         RangeAreaDataPoint.atTime(
           timestamp: DateTime.utc(2026, 7, 21),
+          pointKey: 'observed-2026-07-21',
           low: 8.25,
           high: 12.75,
           label: 'Observed',
@@ -17,6 +18,7 @@ void main() {
         ),
         RangeAreaDataPoint.gap(
           x: DateTime.utc(2026, 7, 22).millisecondsSinceEpoch.toDouble(),
+          pointKey: 'missing-2026-07-22',
           label: 'Missing',
         ),
         RangeAreaDataPoint(

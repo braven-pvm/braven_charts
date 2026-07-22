@@ -57,8 +57,13 @@ class DataConverter {
     ChartTheme? theme,
     Set<ChartPointRef> focusedPointRefs = const {},
     Set<ChartPointRef> selectedPointRefs = const {},
+    Set<String> selectedSeriesIds = const {},
     Map<String, double> pathRevealProgressBySeries = const {},
     Map<String, PathSeriesPointMap> pathPointMapsBySeries = const {},
+    double dataPointHoverScale = 1.5,
+    double dataPointSelectionScale = 2.67,
+    double completeSeriesHoverStrokeScale = 1.75,
+    double completeSeriesSelectionStrokeScale = 1.5,
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
     TextDirection textDirection = TextDirection.ltr,
@@ -66,6 +71,12 @@ class DataConverter {
     _validateHorizontalBarChart(series);
     final barSeries = series.whereType<BarChartSeries>().toList();
     final barComposition = BarCompositionEngine.resolve(barSeries);
+    final selectedBarSeriesIds = <String>{
+      for (final candidate in barSeries)
+        if (selectedSeriesIds.contains(candidate.id)) candidate.id,
+    };
+    final hasAnyRenderedPointSelection =
+        selectedPointRefs.isNotEmpty || selectedBarSeriesIds.isNotEmpty;
 
     // Use theme.seriesTheme if available, otherwise backward compatibility mode
     return series.asMap().entries.map((entry) {
@@ -79,6 +90,7 @@ class DataConverter {
       return SeriesElement(
         series: s,
         transform: transform,
+        isSelected: selectedSeriesIds.contains(s.id),
         seriesTheme: theme?.seriesTheme,
         candlestickTheme: theme?.candlestickTheme ?? CandlestickTheme.light,
         rangeAreaTheme: theme?.rangeAreaTheme ?? RangeAreaTheme.light,
@@ -92,13 +104,20 @@ class DataConverter {
         selectedPointIndices: {
           for (final ref in selectedPointRefs)
             if (ref.seriesId == s.id) ref.pointIndex,
+          if (s is BarChartSeries && selectedBarSeriesIds.contains(s.id))
+            for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++)
+              if (s.points[pointIndex].isValid) pointIndex,
         },
         pointFocusColor: theme?.interactionTheme.crosshairColor,
         pointSelectionColor: theme?.interactionTheme.selectionColor,
         fontFamily: theme?.typographyTheme.fontFamily,
-        hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
+        hasAnySelectedPoints: hasAnyRenderedPointSelection,
         revealProgress: pathRevealProgressBySeries[s.id] ?? 1,
         pathPointMap: pathPointMapsBySeries[s.id],
+        dataPointHoverScale: dataPointHoverScale,
+        dataPointSelectionScale: dataPointSelectionScale,
+        completeSeriesHoverStrokeScale: completeSeriesHoverStrokeScale,
+        completeSeriesSelectionStrokeScale: completeSeriesSelectionStrokeScale,
         textDirection: textDirection,
       );
     }).toList();

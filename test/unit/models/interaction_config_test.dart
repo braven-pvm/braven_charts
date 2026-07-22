@@ -5,5 +5,6 @@ void main() {
   test('focus border is opt-in by default', () {
     expect(const InteractionConfig().showFocusBorder, isFalse);
     expect(InteractionConfig.defaultConfig().showFocusBorder, isFalse);
+    expect(InteractionConfig.all().showFocusBorder, isFalse);
   });
 }

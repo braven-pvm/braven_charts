@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- Renderer-neutral durable selection across all built-in families: point,
+  X/Y interval, rectangle, and lasso acquisition; point, category,
+  composition-stack, complete-series, and exclusive point-or-series scopes;
+  Shift/Ctrl-or-Command/Alt set operations; configurable path hit corridors
+  and focus/selection feedback; scope-aware keyboard and screen-reader
+  traversal for every built-in family, ordered Shift+Space extension, and
+  bounded Ctrl/Command+A; compact expression snapshots with extents and
+  statistics; linked
+  brushing by stable point key; selection-scoped chart extraction with exact
+  continuous Line/Area boundaries and annotation projection; and Workbench
+  Create chart, Zoom, Copy, CSV, Invert, and Clear actions. The dedicated
+  Selection Lab compares the same policies across every chart family.
 - Opt-in fluent modifier surface behind a new barrel,
   `package:braven_charts/braven_charts_fluent.dart`: 98 generated extensions
   carrying ~1160 chained verbs over the existing config classes, with a

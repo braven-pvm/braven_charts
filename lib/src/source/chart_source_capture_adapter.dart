@@ -112,6 +112,7 @@ abstract final class ChartSourceCaptureAdapter {
     final adaptedOptions = ChartDocumentExtractOptions(
       documentId: options.documentId,
       dataScope: options.dataScope,
+      selectionProjection: options.selectionProjection,
       includeViewState: options.includeViewState,
       dataStorage: options.dataStorage,
       themeMode: options.themeMode,
@@ -225,6 +226,7 @@ abstract final class ChartSourceCaptureAdapter {
       height: source.height,
       concentricDonutConfig: source.concentricDonutConfig,
       polarChartConfig: source.polarChartConfig,
+      selectionSnapshot: source.selectionSnapshot,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,
       interactiveAnnotations: source.interactiveAnnotations,

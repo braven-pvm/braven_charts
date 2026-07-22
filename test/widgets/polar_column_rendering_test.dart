@@ -128,6 +128,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('stack scope selects matching signed Polar contributors', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox.square(
+              dimension: 360,
+              child: BravenChartPlus(
+                key: const ValueKey('polar-stack-selection'),
+                bravenChartController: controller,
+                series: [
+                  PolarColumnChartSeries.fromMap(
+                    id: 'base',
+                    values: const {'Search': 30, 'Social': 20},
+                  ),
+                  PolarColumnChartSeries.fromMap(
+                    id: 'increment',
+                    values: const {'Search': 12, 'Social': 8},
+                  ),
+                  PolarColumnChartSeries.fromMap(
+                    id: 'decrease',
+                    values: const {'Search': -6, 'Social': -4},
+                  ),
+                ],
+                polarChartConfig: const PolarChartConfig(
+                  angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                  composition: PolarColumnCompositionConfig(
+                    mode: PolarColumnCompositionMode.stacked,
+                  ),
+                ),
+                interactionConfig: const InteractionConfig(
+                  enableSelection: true,
+                  selection: ChartSelectionConfig(
+                    scope: ChartSelectionScope.categoryStack,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final baseElement = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .singleWhere((element) => element.series.id == 'base');
+    final target = renderBox.plotToWidget(
+      baseElement.geometry.marks.first.tooltipAnchor,
+    );
+    await tester.tapAt(
+      tester.getTopLeft(find.byKey(const ValueKey('polar-stack-selection'))) +
+          target,
+    );
+    await tester.pump();
+
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'base', pointIndex: 0),
+      const ChartPointRef(seriesId: 'increment', pointIndex: 0),
+    });
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('layers compatible series on one scale in declaration order', (
     tester,
   ) async {

@@ -6,11 +6,18 @@ void main() {
     test('defaults to direct replacement with portable modifiers', () {
       const config = ChartSelectionConfig();
 
-      expect(config.mode, ChartSelectionMode.point);
+      expect(config.acquisitionMode, ChartSelectionAcquisitionMode.point);
+      expect(config.scope, ChartSelectionScope.mark);
       expect(config.operation, ChartSelectionOperation.replace);
-      expect(config.dragActivation, ChartSelectionDragActivation.primary);
+      expect(config.dragActivation, ChartSelectionDragActivation.primaryButton);
       expect(config.clearOnBackgroundTap, isTrue);
       expect(config.useModifierKeys, isTrue);
+      expect(config.dataPointHitRadius, 20);
+      expect(config.completeSeriesHitRadius, 22);
+      expect(config.dataPointHoverScale, 1.5);
+      expect(config.dataPointSelectionScale, 2.67);
+      expect(config.completeSeriesHoverStrokeScale, 1.75);
+      expect(config.completeSeriesSelectionStrokeScale, 1.5);
       expect(config.ownsPrimaryDrag(), isFalse);
       expect(
         config.resolveOperation(controlOrMeta: true),
@@ -38,7 +45,8 @@ void main() {
 
     test('can preserve an explicit operation when modifiers are disabled', () {
       const config = ChartSelectionConfig(
-        mode: ChartSelectionMode.lasso,
+        acquisitionMode: ChartSelectionAcquisitionMode.lasso,
+        scope: ChartSelectionScope.wholeSeries,
         operation: ChartSelectionOperation.add,
         clearOnBackgroundTap: false,
         useModifierKeys: false,
@@ -49,8 +57,35 @@ void main() {
         ChartSelectionOperation.add,
       );
       expect(
-        config.copyWith(mode: ChartSelectionMode.rectangle).mode,
-        ChartSelectionMode.rectangle,
+        config
+            .copyWith(acquisitionMode: ChartSelectionAcquisitionMode.rectangle)
+            .acquisitionMode,
+        ChartSelectionAcquisitionMode.rectangle,
+      );
+      expect(config.copyWith().scope, ChartSelectionScope.wholeSeries);
+      expect(
+        config.copyWith(
+          scope: ChartSelectionScope.markOrWholeSeries,
+          dataPointHitRadius: 14,
+          completeSeriesHitRadius: 30,
+          dataPointHoverScale: 1.8,
+          dataPointSelectionScale: 3.2,
+          completeSeriesHoverStrokeScale: 2.1,
+          completeSeriesSelectionStrokeScale: 1.9,
+        ),
+        const ChartSelectionConfig(
+          acquisitionMode: ChartSelectionAcquisitionMode.lasso,
+          scope: ChartSelectionScope.markOrWholeSeries,
+          operation: ChartSelectionOperation.add,
+          clearOnBackgroundTap: false,
+          useModifierKeys: false,
+          dataPointHitRadius: 14,
+          completeSeriesHitRadius: 30,
+          dataPointHoverScale: 1.8,
+          dataPointSelectionScale: 3.2,
+          completeSeriesHoverStrokeScale: 2.1,
+          completeSeriesSelectionStrokeScale: 1.9,
+        ),
       );
     });
 
@@ -58,11 +93,11 @@ void main() {
       'drag ownership is explicit and independent from viewport gestures',
       () {
         const rectangle = ChartSelectionConfig(
-          mode: ChartSelectionMode.rectangle,
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
         );
         const modifiedRectangle = ChartSelectionConfig(
-          mode: ChartSelectionMode.rectangle,
-          dragActivation: ChartSelectionDragActivation.shiftPrimary,
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+          dragActivation: ChartSelectionDragActivation.shiftPrimaryButton,
         );
 
         expect(rectangle.ownsPrimaryDrag(), isTrue);
@@ -71,10 +106,22 @@ void main() {
         expect(modifiedRectangle.ownsPrimaryDrag(shift: true), isTrue);
         expect(
           modifiedRectangle.copyWith(
-            dragActivation: ChartSelectionDragActivation.primary,
+            dragActivation: ChartSelectionDragActivation.primaryButton,
           ),
           rectangle,
         );
+        for (final acquisitionMode in const [
+          ChartSelectionAcquisitionMode.xInterval,
+          ChartSelectionAcquisitionMode.yInterval,
+          ChartSelectionAcquisitionMode.lasso,
+        ]) {
+          expect(
+            ChartSelectionConfig(
+              acquisitionMode: acquisitionMode,
+            ).ownsPrimaryDrag(),
+            isTrue,
+          );
+        }
       },
     );
   });

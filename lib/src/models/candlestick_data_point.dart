@@ -32,6 +32,7 @@ import 'segment_style.dart';
 final class CandlestickDataPoint extends ChartDataPoint {
   CandlestickDataPoint({
     required super.x,
+    super.pointKey,
     required this.open,
     required this.high,
     required this.low,
@@ -53,6 +54,7 @@ final class CandlestickDataPoint extends ChartDataPoint {
   /// Creates an elapsed-time candle whose X value is UTC epoch milliseconds.
   factory CandlestickDataPoint.atTime({
     required DateTime timestamp,
+    String? pointKey,
     required double open,
     required double high,
     required double low,
@@ -64,6 +66,7 @@ final class CandlestickDataPoint extends ChartDataPoint {
     final utcTimestamp = timestamp.toUtc();
     return CandlestickDataPoint(
       x: utcTimestamp.millisecondsSinceEpoch.toDouble(),
+      pointKey: pointKey,
       open: open,
       high: high,
       low: low,
@@ -139,6 +142,8 @@ final class CandlestickDataPoint extends ChartDataPoint {
   CandlestickDataPoint copyWith({
     double? x,
     double? y,
+    String? pointKey,
+    bool clearPointKey = false,
     double? magnitude,
     bool clearMagnitude = false,
     double? colorValue,
@@ -169,6 +174,7 @@ final class CandlestickDataPoint extends ChartDataPoint {
     final resolvedClose = close ?? y ?? this.close;
     return CandlestickDataPoint(
       x: x ?? this.x,
+      pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
       open: open ?? this.open,
       high: high ?? this.high,
       low: low ?? this.low,

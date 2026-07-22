@@ -414,23 +414,83 @@ GestureConfig _decodeGesture(Map<String, Object?> map) => GestureConfig(
 );
 
 Map<String, Object?> _encodeSelection(ChartSelectionConfig value) => {
-  'mode': value.mode.name,
+  'acquisitionMode': value.acquisitionMode.name,
+  'scope': value.scope.name,
   'operation': value.operation.name,
   'dragActivation': value.dragActivation.name,
   'clearOnBackgroundTap': value.clearOnBackgroundTap,
   'useModifierKeys': value.useModifierKeys,
+  'dataPointHitRadius': _n(value.dataPointHitRadius),
+  'completeSeriesHitRadius': _n(value.completeSeriesHitRadius),
+  'dataPointHoverScale': _n(value.dataPointHoverScale),
+  'dataPointSelectionScale': _n(value.dataPointSelectionScale),
+  'completeSeriesHoverStrokeScale': _n(value.completeSeriesHoverStrokeScale),
+  'completeSeriesSelectionStrokeScale': _n(
+    value.completeSeriesSelectionStrokeScale,
+  ),
 };
 
 ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
     ChartSelectionConfig(
-      mode: _enum(map, 'mode', ChartSelectionMode.values),
+      acquisitionMode: _decodeSelectionAcquisitionMode(map),
+      scope: _decodeSelectionScope(map),
       operation: _enum(map, 'operation', ChartSelectionOperation.values),
-      dragActivation: map['dragActivation'] == null
-          ? ChartSelectionDragActivation.primary
-          : _enum(map, 'dragActivation', ChartSelectionDragActivation.values),
+      dragActivation: _decodeSelectionDragActivation(map),
       clearOnBackgroundTap: _bool(map, 'clearOnBackgroundTap'),
       useModifierKeys: _bool(map, 'useModifierKeys'),
+      dataPointHitRadius: map['dataPointHitRadius'] == null
+          ? 20
+          : _double(map, 'dataPointHitRadius'),
+      completeSeriesHitRadius: map['completeSeriesHitRadius'] == null
+          ? 22
+          : _double(map, 'completeSeriesHitRadius'),
+      dataPointHoverScale: map['dataPointHoverScale'] == null
+          ? 1.5
+          : _double(map, 'dataPointHoverScale'),
+      dataPointSelectionScale: map['dataPointSelectionScale'] == null
+          ? 2.67
+          : _double(map, 'dataPointSelectionScale'),
+      completeSeriesHoverStrokeScale:
+          map['completeSeriesHoverStrokeScale'] == null
+          ? 1.75
+          : _double(map, 'completeSeriesHoverStrokeScale'),
+      completeSeriesSelectionStrokeScale:
+          map['completeSeriesSelectionStrokeScale'] == null
+          ? 1.5
+          : _double(map, 'completeSeriesSelectionStrokeScale'),
     );
+
+ChartSelectionAcquisitionMode _decodeSelectionAcquisitionMode(
+  Map<String, Object?> map,
+) {
+  final key = map['acquisitionMode'] == null ? 'mode' : 'acquisitionMode';
+  return _enum(map, key, ChartSelectionAcquisitionMode.values);
+}
+
+ChartSelectionScope _decodeSelectionScope(Map<String, Object?> map) {
+  final raw = map['scope'];
+  if (raw == null) return ChartSelectionScope.mark;
+  return switch (raw) {
+    'stack' => ChartSelectionScope.categoryStack,
+    'series' => ChartSelectionScope.wholeSeries,
+    'mark_and_series' ||
+    'markAndWholeSeries' ||
+    'mark_or_series' => ChartSelectionScope.markOrWholeSeries,
+    _ => _enum(map, 'scope', ChartSelectionScope.values),
+  };
+}
+
+ChartSelectionDragActivation _decodeSelectionDragActivation(
+  Map<String, Object?> map,
+) {
+  final raw = map['dragActivation'];
+  if (raw == null) return ChartSelectionDragActivation.primaryButton;
+  return switch (raw) {
+    'primary' => ChartSelectionDragActivation.primaryButton,
+    'shiftPrimary' => ChartSelectionDragActivation.shiftPrimaryButton,
+    _ => _enum(map, 'dragActivation', ChartSelectionDragActivation.values),
+  };
+}
 
 Map<String, Object?> _encodeKeyboard(KeyboardConfig value) => {
   'enabled': value.enabled,
@@ -658,24 +718,23 @@ Map<String, Object?> _encodeValueSummaryStyle(
   ..._styleEntry('labelValueGap', value.labelValueGap, _n),
 };
 
-CartesianValueSummaryStyle _decodeValueSummaryStyle(
-  Map<String, Object?> map,
-) => CartesianValueSummaryStyle(
-  backgroundColor: _styleValue(map, 'backgroundColor', _colorPayload),
-  backgroundOpacity: _styleValue(map, 'backgroundOpacity', _doublePayload),
-  borderColor: _styleValue(map, 'borderColor', _colorPayload),
-  borderWidth: _styleValue(map, 'borderWidth', _doublePayload),
-  borderRadius: _styleValue(map, 'borderRadius', _borderRadiusPayload),
-  padding: _styleValue(map, 'padding', _insetsPayload),
-  textStyle: _styleValue(map, 'textStyle', _textStylePayload),
-  labelStyle: _styleValue(map, 'labelStyle', _textStylePayload),
-  accentColor: _styleValue(map, 'accentColor', _colorPayload),
-  shadow: _styleValue(map, 'shadow', _boxShadowPayload),
-  minWidth: _styleValue(map, 'minWidth', _doublePayload),
-  maxWidth: _styleValue(map, 'maxWidth', _doublePayload),
-  rowGap: _styleValue(map, 'rowGap', _doublePayload),
-  labelValueGap: _styleValue(map, 'labelValueGap', _doublePayload),
-);
+CartesianValueSummaryStyle _decodeValueSummaryStyle(Map<String, Object?> map) =>
+    CartesianValueSummaryStyle(
+      backgroundColor: _styleValue(map, 'backgroundColor', _colorPayload),
+      backgroundOpacity: _styleValue(map, 'backgroundOpacity', _doublePayload),
+      borderColor: _styleValue(map, 'borderColor', _colorPayload),
+      borderWidth: _styleValue(map, 'borderWidth', _doublePayload),
+      borderRadius: _styleValue(map, 'borderRadius', _borderRadiusPayload),
+      padding: _styleValue(map, 'padding', _insetsPayload),
+      textStyle: _styleValue(map, 'textStyle', _textStylePayload),
+      labelStyle: _styleValue(map, 'labelStyle', _textStylePayload),
+      accentColor: _styleValue(map, 'accentColor', _colorPayload),
+      shadow: _styleValue(map, 'shadow', _boxShadowPayload),
+      minWidth: _styleValue(map, 'minWidth', _doublePayload),
+      maxWidth: _styleValue(map, 'maxWidth', _doublePayload),
+      rowGap: _styleValue(map, 'rowGap', _doublePayload),
+      labelValueGap: _styleValue(map, 'labelValueGap', _doublePayload),
+    );
 
 /// Tri-state artifact form: an absent key is [ChartStyleValue.inherit], the
 /// explicit `"none"` token is [ChartStyleValue.none], anything else is the

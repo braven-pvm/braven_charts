@@ -14,12 +14,18 @@ void main() {
           'data': [
             {
               'x': 1,
+              'point_key': 'forecast-1',
               'low': 8.5,
               'high': 13.5,
               'timestamp': '2026-07-21T09:30:00Z',
               'label': 'Morning',
             },
-            {'x': 2, 'gap': true, 'label': 'Missing'},
+            {
+              'x': 2,
+              'point_key': 'forecast-2',
+              'gap': true,
+              'label': 'Missing',
+            },
             {'x': 3, 'low': 10, 'high': 16},
           ],
         },
@@ -38,10 +44,12 @@ void main() {
     final band = result.series.first as RangeAreaChartSeries;
     expect(band.intervals, hasLength(3));
     expect(band.intervals.first.low, 8.5);
+    expect(band.intervals.first.pointKey, 'forecast-1');
     expect(band.intervals.first.high, 13.5);
     expect(band.intervals.first.midpoint, 11);
     expect(band.intervals.first.timestamp, DateTime.utc(2026, 7, 21, 9, 30));
     expect(band.intervals[1].isGap, isTrue);
+    expect(band.intervals[1].pointKey, 'forecast-2');
     expect(band.intervals.last.span, 6);
     expect(result.series.last, isA<LineChartSeries>());
   });

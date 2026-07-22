@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/foundation.dart'
+    show ValueListenable, ValueNotifier, setEquals;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart' show SchedulerPhase;
+import 'package:flutter/scheduler.dart' show SchedulerBinding, SchedulerPhase;
 import 'package:flutter/services.dart';
 
 import '../artifacts/chart_artifact.dart';
@@ -13,6 +14,7 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/braven_chart_controller.dart';
 import '../models/chart_context_action.dart';
+import '../models/chart_selection_expression.dart';
 import '../source/chart_dart_source_generator.dart';
 import '../source/chart_grammar_source_generator.dart';
 import '../source/chart_source_models.dart';
@@ -20,6 +22,8 @@ import '../source/chart_source_view.dart';
 import '../table/chart_data_table.dart';
 import '../table/chart_data_table_theme.dart';
 import '../table/chart_table_controller.dart';
+import '../table/chart_table_csv_download.dart';
+import '../table/chart_table_export.dart';
 import '../table/chart_table_model.dart';
 import '../table/chart_table_options.dart';
 import 'chart_workbench_models.dart';
@@ -51,6 +55,13 @@ typedef ChartWorkbenchOverlayActionBuilder =
       BuildContext context,
       ChartWorkbenchHandle handle,
     );
+
+/// Receives a portable chart artifact created from the durable selection.
+typedef ChartWorkbenchSelectionArtifactCallback = ValueChanged<ChartArtifact>;
+
+/// Receives a selection-only tabular projection before package delivery.
+typedef ChartWorkbenchSelectionExportCallback =
+    ValueChanged<ChartTableCsvExport>;
 
 /// Stable, observable access to a mounted chart workbench.
 abstract interface class ChartWorkbenchHandle implements Listenable {
@@ -879,6 +890,12 @@ class BravenChartWorkbench extends StatefulWidget {
     this.contextActionsBuilder,
     this.chartActionButtonBuilder,
     this.chartActionButtonConfig = const ChartOverlayActionButtonConfig(),
+    this.showSelectionActions = true,
+    this.selectionProjection = const ChartSelectionProjectionOptions(),
+    this.selectionCsvFileName = 'chart-selection.csv',
+    this.onSelectionArtifactCreated,
+    this.onSelectionCopied,
+    this.onSelectionCsvExported,
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
     this.onTableRowFocusCleared,
@@ -901,6 +918,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.onSplitRatioChanged,
     this.onStatusChanged,
   }) : assert(availableDisplayModes.length > 0),
+       assert(selectionCsvFileName != ''),
        assert(splitBreakpoint > 0),
        assert(splitRatio > 0 && splitRatio < 1),
        assert(minimumChartPaneExtent >= 0),
@@ -977,6 +995,27 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Placement and Material presentation of [chartActionButtonBuilder].
   final ChartOverlayActionButtonConfig chartActionButtonConfig;
+
+  /// Whether a summary and action strip is shown for durable selections.
+  final bool showSelectionActions;
+
+  /// Data-boundary rules used by selection-only artifacts and exports.
+  final ChartSelectionProjectionOptions selectionProjection;
+
+  /// Browser download name used by the package-owned CSV action.
+  final String selectionCsvFileName;
+
+  /// Receives the portable selection-only artifact created by "Create chart".
+  ///
+  /// The artifact also remains available through
+  /// [ChartWorkbenchHandle.artifactState].
+  final ChartWorkbenchSelectionArtifactCallback? onSelectionArtifactCreated;
+
+  /// Overrides package-owned clipboard delivery for selection data.
+  final ChartWorkbenchSelectionExportCallback? onSelectionCopied;
+
+  /// Overrides package-owned web CSV delivery for selection data.
+  final ChartWorkbenchSelectionExportCallback? onSelectionCsvExported;
 
   /// Enables revision-safe keyboard focus and activation linking by default.
   final bool linkTableRowsToChart;
@@ -1068,6 +1107,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   _TablePointFocus? _hoveredTableFocus;
   double? _manualSplitRatio;
   ChartWorkbenchGroupController? _groupController;
+  final ValueNotifier<bool> _selectionActionInProgress = ValueNotifier(false);
 
   @override
   void initState() {
@@ -1186,6 +1226,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     if (_ownsWorkbenchController) _workbenchController.dispose();
     if (_ownsTableController) _tableController.dispose();
     if (_ownsChartController) _chartController.dispose();
+    _selectionActionInProgress.dispose();
     super.dispose();
   }
 
@@ -1225,6 +1266,12 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
           children: [
             if (_showModeSwitcher || actions.isNotEmpty)
               _buildControls(context, actions),
+            if (widget.showSelectionActions)
+              _ChartSelectionActionsHost(
+                controller: _chartController,
+                busy: _selectionActionInProgress,
+                builder: _buildSelectionActions,
+              ),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -1332,6 +1379,263 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         },
       ),
     );
+  }
+
+  Widget _buildSelectionActions(BuildContext context) {
+    final snapshot = _chartController.selectionSnapshot;
+    final hasSelection = snapshot != null && snapshot.isNotEmpty;
+    final colors = Theme.of(context).colorScheme;
+    final summary = hasSelection
+        ? _selectionSummary(snapshot)
+        : 'Nothing selected';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Semantics(
+        container: true,
+        liveRegion: true,
+        label: 'Chart selection actions. $summary',
+        child: Material(
+          key: const ValueKey('chart-selection-action-strip'),
+          color: colors.secondaryContainer.withValues(alpha: 0.42),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: colors.outlineVariant),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 176),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.select_all_outlined,
+                        size: 20,
+                        color: colors.onSecondaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          summary,
+                          key: const ValueKey('chart-selection-summary'),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: colors.onSecondaryContainer),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('chart-selection-create-chart'),
+                  onPressed: !hasSelection || _selectionActionInProgress.value
+                      ? null
+                      : _createChartFromSelection,
+                  icon: _selectionActionInProgress.value
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_chart_outlined),
+                  label: Text(
+                    _selectionActionInProgress.value
+                        ? 'Creating…'
+                        : 'Create chart',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('chart-selection-zoom'),
+                  onPressed: hasSelection ? _zoomToSelection : null,
+                  icon: const Icon(Icons.zoom_in_map_outlined),
+                  label: const Text('Zoom'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('chart-selection-copy'),
+                  onPressed: hasSelection ? _copySelection : null,
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Copy'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('chart-selection-export-csv'),
+                  onPressed: hasSelection ? _exportSelectionCsv : null,
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('CSV'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('chart-selection-invert'),
+                  onPressed: hasSelection ? _invertSelection : null,
+                  icon: const Icon(Icons.flip_outlined),
+                  label: const Text('Invert'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('chart-selection-clear'),
+                  onPressed: hasSelection ? _clearSelection : null,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Clear'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _selectionSummary(ChartSelectionSnapshot snapshot) {
+    final statistics = snapshot.statistics;
+    final pointCount = statistics.pointCount;
+    final seriesCount = statistics.seriesCount;
+    final parts = <String>[
+      pointCount == 1 ? '1 point' : '$pointCount points',
+      seriesCount == 1 ? '1 series' : '$seriesCount series',
+    ];
+    final extents = snapshot.extents;
+    if (extents != null) {
+      parts.add(
+        'X ${_compactNumber(extents.minimumX)}–${_compactNumber(extents.maximumX)}',
+      );
+    }
+    return parts.join(' · ');
+  }
+
+  String _compactNumber(double value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2);
+  }
+
+  ChartDocumentExtractOptions get _selectionDocumentOptions =>
+      widget.documentOptions.copyWith(
+        dataScope: ChartDataScope.selection,
+        selectionProjection: widget.selectionProjection,
+        includeViewState: true,
+      );
+
+  Future<void> _createChartFromSelection() async {
+    _selectionActionInProgress.value = true;
+    final result = await _workbenchController.extractArtifact(
+      ChartArtifactExtractOptions(documentOptions: _selectionDocumentOptions),
+    );
+    if (!mounted) return;
+    _selectionActionInProgress.value = false;
+    switch (result) {
+      case ChartArtifactFailure<ChartArtifact>():
+        _showSelectionError(result.error);
+      case ChartArtifactSuccess<ChartArtifact>():
+        widget.onSelectionArtifactCreated?.call(result.value);
+        _showSelectionMessage('Selection chart ready');
+    }
+  }
+
+  void _zoomToSelection() =>
+      _handleSelectionCommand(_chartController.zoomToSelection());
+
+  void _invertSelection() =>
+      _handleSelectionCommand(_chartController.invertSelection());
+
+  void _clearSelection() {
+    _chartController
+      ..clearSelection()
+      ..clearPointSelection();
+  }
+
+  void _handleSelectionCommand(ChartArtifactResult<void> result) {
+    if (result case ChartArtifactFailure<void>()) {
+      _showSelectionError(result.error);
+    }
+  }
+
+  Future<void> _copySelection() async {
+    final result = _selectionExport();
+    switch (result) {
+      case ChartArtifactFailure<ChartTableCsvExport>():
+        _showSelectionError(result.error);
+      case ChartArtifactSuccess<ChartTableCsvExport>():
+        final callback = widget.onSelectionCopied;
+        if (callback != null) {
+          callback(result.value);
+        } else {
+          await Clipboard.setData(
+            ClipboardData(text: result.value.tabSeparatedText),
+          );
+        }
+        if (mounted) _showSelectionMessage('Selection copied');
+    }
+  }
+
+  Future<void> _exportSelectionCsv() async {
+    final result = _selectionExport();
+    switch (result) {
+      case ChartArtifactFailure<ChartTableCsvExport>():
+        _showSelectionError(result.error);
+      case ChartArtifactSuccess<ChartTableCsvExport>():
+        final callback = widget.onSelectionCsvExported;
+        if (callback != null) {
+          callback(result.value);
+          _showSelectionMessage('Selection CSV ready');
+          return;
+        }
+        final downloaded = await downloadChartTableCsv(
+          csv: result.value.csv,
+          fileName: widget.selectionCsvFileName,
+        );
+        if (!mounted) return;
+        _showSelectionMessage(
+          downloaded
+              ? 'Selection CSV downloaded'
+              : 'CSV download is unavailable on this platform',
+        );
+    }
+  }
+
+  ChartArtifactResult<ChartTableCsvExport> _selectionExport() {
+    final result = _chartController.extractDocument(_selectionDocumentOptions);
+    switch (result) {
+      case ChartArtifactFailure<ChartDocumentSnapshot>():
+        return ChartArtifactFailure(
+          error: result.error,
+          warnings: result.warnings,
+        );
+      case ChartArtifactSuccess<ChartDocumentSnapshot>():
+        try {
+          final model = ChartTableModel.fromDocument(
+            result.value.document,
+            viewState: result.value.viewState,
+            options: widget.tableOptions,
+          );
+          return ChartArtifactSuccess(
+            value: ChartTableExporter.csvForDisplayedRows(
+              model,
+              longRows: model.longRows,
+              wideRows: model.wideRows,
+              pieRows: model.pieRows,
+              polarRows: model.polarRows,
+              candlestickRows: model.candlestickRows,
+            ),
+            warnings: result.warnings,
+          );
+        } on Object catch (error) {
+          return ChartArtifactFailure(
+            error: ChartArtifactError(
+              code: ChartArtifactDiagnosticCodes.invalidArtifact,
+              message: 'Selection export could not be prepared: $error',
+            ),
+            warnings: result.warnings,
+          );
+        }
+    }
+  }
+
+  void _showSelectionError(ChartArtifactError error) =>
+      _showSelectionMessage(error.message);
+
+  void _showSelectionMessage(String message) {
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool get _showModeSwitcher =>
@@ -1713,7 +2017,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                         state.phase == ChartWorkbenchTablePhase.loading),
                 errorMessage: model == null ? state.error?.message : null,
                 focusedPointRefs: _chartController.focusedPointRefs,
-                selectedPointRefs: _chartController.selectedPointRefs,
+                selectedPointRefs: model == null
+                    ? _chartController.selectedPointRefs
+                    : _effectiveTableSelectedPointRefs(model),
                 onSelectAllPoints:
                     widget.onTableSelectAllPoints ??
                     (widget.linkTableRowsToChart
@@ -1745,6 +2051,19 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         ),
       ],
     );
+  }
+
+  Set<ChartPointRef> _effectiveTableSelectedPointRefs(ChartTableModel model) {
+    final selectedRefs = <ChartPointRef>{..._chartController.selectedPointRefs};
+    final selectedSeriesIds = _chartController.selectedSeriesIds;
+    if (selectedSeriesIds.isEmpty) return selectedRefs;
+
+    for (final row in model.longRows) {
+      if (selectedSeriesIds.contains(row.reference.seriesId)) {
+        selectedRefs.add(row.reference);
+      }
+    }
+    return selectedRefs;
   }
 
   void _focusTablePoints(List<ChartPointRef> points) {
@@ -1889,6 +2208,70 @@ class _WorkbenchSplitHandle extends StatefulWidget {
 
   @override
   State<_WorkbenchSplitHandle> createState() => _WorkbenchSplitHandleState();
+}
+
+class _ChartSelectionActionsHost extends StatefulWidget {
+  const _ChartSelectionActionsHost({
+    required this.controller,
+    required this.busy,
+    required this.builder,
+  });
+
+  final BravenChartController controller;
+  final ValueListenable<bool> busy;
+  final WidgetBuilder builder;
+
+  @override
+  State<_ChartSelectionActionsHost> createState() =>
+      _ChartSelectionActionsHostState();
+}
+
+class _ChartSelectionActionsHostState
+    extends State<_ChartSelectionActionsHost> {
+  bool _rebuildScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleChanged);
+    widget.busy.addListener(_handleChanged);
+  }
+
+  @override
+  void didUpdateWidget(_ChartSelectionActionsHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.removeListener(_handleChanged);
+      widget.controller.addListener(_handleChanged);
+    }
+    if (!identical(oldWidget.busy, widget.busy)) {
+      oldWidget.busy.removeListener(_handleChanged);
+      widget.busy.addListener(_handleChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleChanged);
+    widget.busy.removeListener(_handleChanged);
+    super.dispose();
+  }
+
+  void _handleChanged() {
+    if (!mounted || _rebuildScheduled) return;
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      setState(() {});
+      return;
+    }
+    _rebuildScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _rebuildScheduled = false;
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context);
 }
 
 class _WorkbenchSplitHandleState extends State<_WorkbenchSplitHandle> {

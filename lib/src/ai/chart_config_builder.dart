@@ -240,7 +240,8 @@ class ChartConfigBuilder {
         ? _parseCandlestickPoints(dataList)
         : style == SeriesStyle.rangeArea
         ? _parseRangeAreaPoints(dataList)
-        : dataList.map((d) {
+        : dataList.indexed.map((entry) {
+            final (index, d) = entry;
             final pointJson = d as Map<String, dynamic>;
             final x = pointJson['x'];
             final y = pointJson['y'];
@@ -261,6 +262,7 @@ class ChartConfigBuilder {
             return ChartDataPoint(
               x: x.toDouble(),
               y: y.toDouble(),
+              pointKey: _parseOptionalPointKey(pointJson, index),
               label: pointJson['label'] as String?,
               timestamp: pointJson['timestamp'] != null
                   ? DateTime.tryParse(pointJson['timestamp'] as String)
@@ -421,6 +423,7 @@ class ChartConfigBuilder {
       }
       return RangeAreaDataPoint.gap(
         x: xValue.toDouble(),
+        pointKey: _parseOptionalPointKey(value, index),
         timestamp: timestamp,
         label: value['label'] as String?,
       );
@@ -445,6 +448,7 @@ class ChartConfigBuilder {
     }
     return RangeAreaDataPoint(
       x: xValue.toDouble(),
+      pointKey: _parseOptionalPointKey(value, index),
       low: lowValue.toDouble(),
       high: highValue.toDouble(),
       timestamp: timestamp,
@@ -472,6 +476,17 @@ class ChartConfigBuilder {
     return timestamp;
   }
 
+  static String? _parseOptionalPointKey(Map<String, dynamic> value, int index) {
+    final pointKey = value['point_key'];
+    if (pointKey == null) return null;
+    if (pointKey is! String || pointKey.isEmpty) {
+      throw FormatException(
+        'Data point $index point_key must be a non-empty string.',
+      );
+    }
+    return pointKey;
+  }
+
   static CandlestickDataPoint _parseCandlestickPoint(dynamic value, int index) {
     if (value is! Map<String, dynamic>) {
       throw FormatException('Candlestick data point $index must be an object.');
@@ -493,6 +508,7 @@ class ChartConfigBuilder {
     );
     return CandlestickDataPoint(
       x: requiredNumber('x'),
+      pointKey: _parseOptionalPointKey(value, index),
       open: requiredNumber('open'),
       high: requiredNumber('high'),
       low: requiredNumber('low'),
@@ -1550,10 +1566,24 @@ class ChartConfigBuilder {
         'Unknown selection_operation "$value".',
       ),
     };
+    final selectionScope = switch (json?['selection_scope']) {
+      null || 'mark' => ChartSelectionScope.mark,
+      'category' => ChartSelectionScope.category,
+      'category_stack' || 'stack' => ChartSelectionScope.categoryStack,
+      'whole_series' || 'series' => ChartSelectionScope.wholeSeries,
+      'mark_or_whole_series' ||
+      'mark_or_series' ||
+      'mark_and_whole_series' ||
+      'mark_and_series' => ChartSelectionScope.markOrWholeSeries,
+      final value => throw FormatException('Unknown selection_scope "$value".'),
+    };
     final selectionDragActivation =
         switch (json?['selection_drag_activation']) {
-          null || 'primary' => ChartSelectionDragActivation.primary,
-          'shift_primary' => ChartSelectionDragActivation.shiftPrimary,
+          null ||
+          'primary' ||
+          'primary_button' => ChartSelectionDragActivation.primaryButton,
+          'shift_primary' || 'shift_primary_button' =>
+            ChartSelectionDragActivation.shiftPrimaryButton,
           final value => throw FormatException(
             'Unknown selection_drag_activation "$value".',
           ),
@@ -1564,11 +1594,34 @@ class ChartConfigBuilder {
       enableZoom: isPie ? false : (json?['enable_zoom'] as bool? ?? true),
       enableSelection: json?['enable_selection'] as bool? ?? true,
       selection: ChartSelectionConfig(
+        scope: selectionScope,
         operation: selectionOperation,
         dragActivation: selectionDragActivation,
         clearOnBackgroundTap:
             json?['selection_clear_on_background_tap'] as bool? ?? true,
         useModifierKeys: json?['selection_use_modifier_keys'] as bool? ?? true,
+        dataPointHitRadius:
+            (json?['selection_data_point_hit_radius'] as num?)?.toDouble() ??
+            20,
+        completeSeriesHitRadius:
+            (json?['selection_complete_series_hit_radius'] as num?)
+                ?.toDouble() ??
+            22,
+        dataPointHoverScale:
+            (json?['selection_data_point_hover_scale'] as num?)?.toDouble() ??
+            1.5,
+        dataPointSelectionScale:
+            (json?['selection_data_point_selection_scale'] as num?)
+                ?.toDouble() ??
+            2.67,
+        completeSeriesHoverStrokeScale:
+            (json?['selection_complete_series_hover_stroke_scale'] as num?)
+                ?.toDouble() ??
+            1.75,
+        completeSeriesSelectionStrokeScale:
+            (json?['selection_complete_series_selection_stroke_scale'] as num?)
+                ?.toDouble() ??
+            1.5,
       ),
       crosshair: CrosshairConfig(enabled: isPie ? false : showCrosshair),
       tooltip: TooltipConfig(enabled: showTooltip),

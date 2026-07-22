@@ -1383,7 +1383,12 @@ void main() {
     await tester.tap(find.text('Clear selection'));
     await tester.pumpAndSettle();
     expect(chartController.selectedPointRefs, isEmpty);
-    expect(find.textContaining('selected'), findsNothing);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('chart-selection-summary')))
+          .data,
+      'Nothing selected',
+    );
     expect(workbenchController.tableIsStale, isFalse);
 
     await tester.tap(rowAt(0));
@@ -2123,10 +2128,7 @@ void main() {
       // attachment — never a duplicate.
       workbenchController.setDisplayMode(ChartDisplayMode.split);
       await tester.pumpAndSettle();
-      expect(
-        tester.allRenderObjects.whereType<ChartRenderBox>(),
-        hasLength(1),
-      );
+      expect(tester.allRenderObjects.whereType<ChartRenderBox>(), hasLength(1));
       expect(renderBox().debugValueSummaryModel, isNotNull);
       expect(summaryController.attachedListenerCount, 1);
       expect(workbenchController.effectiveMode, ChartDisplayMode.split);
@@ -2221,6 +2223,191 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'selection actions keep a stable footprint across selection and modes',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          width: 1100,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          splitBreakpoint: 800,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.data,
+            ChartDisplayMode.split,
+            ChartDisplayMode.source,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('chart-selection-action-strip')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('chart-selection-summary')))
+            .data,
+        'Nothing selected',
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('chart-selection-create-chart')),
+            )
+            .onPressed,
+        isNull,
+      );
+      final emptySelectionChartHeight = tester
+          .getSize(find.byKey(const ValueKey('chart-workbench-chart')))
+          .height;
+      final revision = chartController.effectiveDocumentRevision.value!;
+      chartController.selectPoints(const [
+        ChartPointRef(seriesId: 'signal', pointIndex: 0),
+        ChartPointRef(seriesId: 'signal', pointIndex: 1),
+      ], revision: revision);
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('chart-selection-action-strip')),
+        findsOneWidget,
+      );
+      expect(find.text('2 points · 1 series · X 0–1'), findsOneWidget);
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('chart-workbench-chart')))
+            .height,
+        emptySelectionChartHeight,
+        reason: 'Selection actions must not resize the chart stage',
+      );
+
+      for (final mode in const [
+        ChartDisplayMode.data,
+        ChartDisplayMode.split,
+        ChartDisplayMode.source,
+        ChartDisplayMode.chart,
+      ]) {
+        workbenchController.setDisplayMode(mode);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('chart-selection-action-strip')),
+          findsOneWidget,
+          reason: 'Selection actions should remain visible in $mode.',
+        );
+      }
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('chart-selection-clear')),
+      );
+      await tester.tap(find.byKey(const ValueKey('chart-selection-clear')));
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('chart-selection-action-strip')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('chart-selection-summary')))
+            .data,
+        'Nothing selected',
+      );
+    },
+  );
+
+  testWidgets('selection actions operate on selection-only data', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    ChartArtifact? createdArtifact;
+    ChartTableCsvExport? copied;
+    ChartTableCsvExport? exported;
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        width: 1100,
+        chartController: chartController,
+        workbenchController: workbenchController,
+        onSelectionArtifactCreated: (value) => createdArtifact = value,
+        onSelectionCopied: (value) => copied = value,
+        onSelectionCsvExported: (value) => exported = value,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    chartController.selectPoint(
+      const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+      revision: chartController.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-copy')),
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-selection-copy')));
+    await tester.pump();
+    expect(copied, isNotNull);
+    expect(copied!.rows, hasLength(1));
+    expect(copied!.tabSeparatedText, contains('12'));
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-export-csv')),
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-selection-export-csv')));
+    await tester.pump();
+    expect(exported, isNotNull);
+    expect(exported!.rows, hasLength(1));
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-create-chart')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('chart-selection-create-chart')),
+    );
+    await tester.pumpAndSettle();
+    expect(createdArtifact, isNotNull);
+    final payload = createdArtifact!.document.series.single.data;
+    expect(payload, isA<InlineChartDataPayload>());
+    expect((payload as InlineChartDataPayload).points, hasLength(1));
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-zoom')),
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-selection-zoom')));
+    await tester.pump();
+    final zoomed = chartController.extractDocument(
+      const ChartDocumentExtractOptions(includeViewState: true),
+    );
+    expect(zoomed, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+    final bounds = (zoomed as ChartArtifactSuccess<ChartDocumentSnapshot>)
+        .value
+        .viewState!
+        .visibleBounds!;
+    expect(bounds.xMin, lessThan(1));
+    expect(bounds.xMax, greaterThan(1));
+    expect(bounds.xMax - bounds.xMin, lessThan(2));
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-invert')),
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-selection-invert')));
+    await tester.pump();
+    expect(chartController.selectionSnapshot!.statistics.pointCount, 2);
+    expect(
+      chartController.selectionSnapshot!.pointRefs,
+      isNot(contains(const ChartPointRef(seriesId: 'signal', pointIndex: 1))),
+    );
+  });
 }
 
 Widget _host({
@@ -2233,6 +2420,10 @@ Widget _host({
   ChartWorkbenchActionsBuilder? actionsBuilder,
   ChartWorkbenchContextActionsBuilder? contextActionsBuilder,
   ChartWorkbenchOverlayActionBuilder? chartActionButtonBuilder,
+  bool showSelectionActions = true,
+  ChartWorkbenchSelectionArtifactCallback? onSelectionArtifactCreated,
+  ChartWorkbenchSelectionExportCallback? onSelectionCopied,
+  ChartWorkbenchSelectionExportCallback? onSelectionCsvExported,
   double splitBreakpoint = 900,
   Set<ChartDisplayMode> availableDisplayModes = const {
     ChartDisplayMode.chart,
@@ -2275,6 +2466,10 @@ Widget _host({
           actionsBuilder: actionsBuilder,
           contextActionsBuilder: contextActionsBuilder,
           chartActionButtonBuilder: chartActionButtonBuilder,
+          showSelectionActions: showSelectionActions,
+          onSelectionArtifactCreated: onSelectionArtifactCreated,
+          onSelectionCopied: onSelectionCopied,
+          onSelectionCsvExported: onSelectionCsvExported,
           splitBreakpoint: splitBreakpoint,
           availableDisplayModes: availableDisplayModes,
           tableRefreshPolicy: tableRefreshPolicy,
@@ -2340,7 +2535,8 @@ Widget _summaryChart(
   ],
 );
 
-class _CountingSummaryController extends DefaultCartesianValueSummaryController {
+class _CountingSummaryController
+    extends DefaultCartesianValueSummaryController {
   int _addListenerCount = 0;
   int _removeListenerCount = 0;
 

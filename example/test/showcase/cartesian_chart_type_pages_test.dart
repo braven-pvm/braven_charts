@@ -2025,21 +2025,21 @@ void main() {
           ({
             String label,
             String title,
-            ChartSelectionMode mode,
+            ChartSelectionAcquisitionMode acquisitionMode,
             String guidance,
           })
         >[
           (
             label: 'Brush',
             title: 'Account portfolio brush',
-            mode: ChartSelectionMode.rectangle,
+            acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
             guidance:
                 'Drag a rectangle across account markers to select every enclosed point. Middle-drag still pans the viewport.',
           ),
           (
             label: 'Lasso',
             title: 'Account portfolio lasso',
-            mode: ChartSelectionMode.lasso,
+            acquisitionMode: ChartSelectionAcquisitionMode.lasso,
             guidance:
                 'Draw a free-form boundary around irregular account clusters. The live preview shows which points will be selected.',
           ),
@@ -2057,7 +2057,10 @@ void main() {
       );
       expect(find.text(preset.title), findsOneWidget);
       expect(find.text(preset.guidance), findsOneWidget);
-      expect(chart.interactionConfig?.selection.mode, preset.mode);
+      expect(
+        chart.interactionConfig?.selection.acquisitionMode,
+        preset.acquisitionMode,
+      );
       expect(chart.series.whereType<ScatterChartSeries>(), hasLength(2));
       expect(
         find.byKey(const ValueKey('scatter-selection-operation')),
@@ -3320,6 +3323,179 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Line and Area Selection expose acquisition tools and scopes', (
+    tester,
+  ) async {
+    for (final entry in const <({String family, Widget page})>[
+      (family: 'line', page: LineChartsPage()),
+      (family: 'area', page: AreaChartsPage()),
+    ]) {
+      await pumpPage(
+        tester,
+        KeyedSubtree(key: ValueKey(entry.family), child: entry.page),
+      );
+      final selectionPreset = find.descendant(
+        of: find.byKey(ValueKey('${entry.family}-preset-picker')),
+        matching: find.text('Selection'),
+      );
+      await tester.ensureVisible(selectionPreset);
+      await tester.tap(selectionPreset);
+      await tester.pumpAndSettle();
+
+      final scopeFinder = find.byKey(const ValueKey('path-selection-scope'));
+      final acquisitionFinder = find.byKey(
+        const ValueKey('path-selection-acquisition-mode'),
+      );
+      expect(scopeFinder, findsOneWidget);
+      expect(acquisitionFinder, findsOneWidget);
+      for (final mode in ChartSelectionAcquisitionMode.values) {
+        expect(
+          find.byKey(ValueKey('path-selection-tool-${mode.name}')),
+          findsOneWidget,
+        );
+      }
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.point,
+      );
+      expect(
+        chart.interactionConfig!.selection.scope,
+        ChartSelectionScope.mark,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('path-selection-tool-xInterval')),
+      );
+      await tester.pumpAndSettle();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.xInterval,
+      );
+      expect(
+        tester
+            .widget<EnumOption<ChartSelectionAcquisitionMode>>(
+              acquisitionFinder,
+            )
+            .value,
+        ChartSelectionAcquisitionMode.xInterval,
+      );
+
+      tester
+          .widget<EnumOption<ChartSelectionScope>>(scopeFinder)
+          .onChanged(ChartSelectionScope.markOrWholeSeries);
+      await tester.pumpAndSettle();
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-hit-radius')),
+          )
+          .onChanged(14);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-complete-series-hit-radius')),
+          )
+          .onChanged(30);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-hover-scale')),
+          )
+          .onChanged(1.8);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-selection-scale')),
+          )
+          .onChanged(3.2);
+      tester
+          .widget<SliderOption>(
+            find.byKey(
+              const ValueKey('path-complete-series-hover-stroke-scale'),
+            ),
+          )
+          .onChanged(2.1);
+      tester
+          .widget<SliderOption>(
+            find.byKey(
+              const ValueKey('path-complete-series-selection-stroke-scale'),
+            ),
+          )
+          .onChanged(1.9);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('path-show-point-tooltip')),
+          )
+          .onChanged(false);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('path-show-tracking-tooltip')),
+          )
+          .onChanged(false);
+      await tester.pumpAndSettle();
+
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.scope,
+        ChartSelectionScope.markOrWholeSeries,
+      );
+      expect(chart.interactionConfig!.selection.dataPointHitRadius, 14);
+      expect(chart.interactionConfig!.selection.completeSeriesHitRadius, 30);
+      expect(chart.interactionConfig!.selection.dataPointHoverScale, 1.8);
+      expect(chart.interactionConfig!.selection.dataPointSelectionScale, 3.2);
+      expect(
+        chart.interactionConfig!.selection.completeSeriesHoverStrokeScale,
+        2.1,
+      );
+      expect(
+        chart.interactionConfig!.selection.completeSeriesSelectionStrokeScale,
+        1.9,
+      );
+      expect(chart.interactionConfig!.tooltip.enabled, isFalse);
+      expect(chart.interactionConfig!.crosshair.enabled, isTrue);
+      expect(chart.interactionConfig!.crosshair.showTrackingTooltip, isFalse);
+      expect(chart.series, hasLength(3));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'shared crosshair option gates synchronized and marginal compositions',
+    (tester) async {
+      for (final entry in const <({Widget page, String family, String preset})>[
+        (page: LineChartsPage(), family: 'line', preset: 'Synchronized'),
+        (page: ScatterChartsPage(), family: 'scatter', preset: 'Marginals'),
+      ]) {
+        await pumpPage(
+          tester,
+          KeyedSubtree(key: ValueKey(entry.family), child: entry.page),
+        );
+        final preset = find.descendant(
+          of: find.byKey(ValueKey('${entry.family}-preset-picker')),
+          matching: find.text(entry.preset),
+        );
+        await tester.ensureVisible(preset);
+        await tester.tap(preset);
+        await tester.pumpAndSettle();
+
+        final toggle = find.byKey(const ValueKey('standard-show-crosshair'));
+        expect(toggle, findsOneWidget);
+        tester.widget<BoolOption>(toggle).onChanged(false);
+        await tester.pumpAndSettle();
+
+        final charts = tester.widgetList<BravenChartPlus>(
+          find.byType(BravenChartPlus),
+        );
+        expect(charts, isNotEmpty);
+        expect(
+          charts.every(
+            (chart) => chart.interactionConfig?.crosshair.enabled == false,
+          ),
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('Line and Area remain usable on a compact viewport', (
     tester,
   ) async {
@@ -3374,6 +3550,7 @@ void main() {
         'Envelope': 'capacity-envelope',
         'Spotlight': 'spotlight-signal',
         'Forecast': 'forecast-continuous',
+        'Selection': 'selection-observed',
       };
       const families = <({String name, Widget page, List<String> presets})>[
         (
@@ -3389,6 +3566,7 @@ void main() {
             'Spotlight',
             'Forecast',
             'Synchronized',
+            'Selection',
           ],
         ),
         (
@@ -3402,6 +3580,7 @@ void main() {
             'Gradient',
             'Composition',
             'Pulse',
+            'Selection',
           ],
         ),
       ];
@@ -3541,6 +3720,7 @@ void main() {
           'Spotlight',
           'Forecast',
           'Synchronized',
+          'Selection',
         ],
       ),
       (
@@ -3554,6 +3734,7 @@ void main() {
           'Gradient',
           'Composition',
           'Pulse',
+          'Selection',
         ],
       ),
     ];

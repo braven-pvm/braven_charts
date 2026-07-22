@@ -41,6 +41,43 @@ void main() {
     expect(_alphaAt(bytes, 75, 50), 0);
   });
 
+  test('thin Line paths expose measurable screen-space distance', () {
+    const series = LineChartSeries(
+      id: 'line',
+      points: [ChartDataPoint(x: 0, y: 5), ChartDataPoint(x: 10, y: 5)],
+      strokeWidth: 1,
+    );
+    final element = SeriesElement(series: series, transform: transform);
+
+    expect(element.pathHitDistance(const ui.Offset(50, 59)), 9);
+    expect(element.hitTest(const ui.Offset(50, 59)), isFalse);
+  });
+
+  test('Line hover feedback visibly expands the painted path', () async {
+    const series = LineChartSeries(
+      id: 'line',
+      points: [ChartDataPoint(x: 0, y: 5), ChartDataPoint(x: 10, y: 5)],
+      color: ui.Color(0xFFFF0000),
+      strokeWidth: 2,
+    );
+    final normal = await _paint(
+      SeriesElement(series: series, transform: transform),
+    );
+    final hovered = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        isHovered: true,
+        completeSeriesHoverStrokeScale: 2.5,
+      ),
+    );
+
+    expect(
+      _paintedPixelCountAtX(hovered, 50),
+      greaterThan(_paintedPixelCountAtX(normal, 50)),
+    );
+  });
+
   test('Area fill and stroke share the reveal boundary', () async {
     const series = AreaChartSeries(
       id: 'area',
@@ -72,3 +109,11 @@ Future<ByteData> _paint(SeriesElement element) async {
 
 int _alphaAt(ByteData bytes, int x, int y) =>
     bytes.getUint8(((y * 100) + x) * 4 + 3);
+
+int _paintedPixelCountAtX(ByteData bytes, int x) {
+  var count = 0;
+  for (var y = 0; y < 100; y++) {
+    if (_alphaAt(bytes, x, y) > 0) count++;
+  }
+  return count;
+}

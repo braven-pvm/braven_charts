@@ -433,8 +433,12 @@ void main() {
 - [ ] **Tooltip Check**: Tooltip text has 4.5:1 contrast on tooltip background
 - [ ] **Series Differentiation**: Series use different shapes/patterns, not just colors
 - [ ] **Colorblind Simulation**: Test with protanopia, deuteranopia, tritanopia simulations
-- [ ] **Screen Reader**: Chart has descriptive labels (future: ARIA support)
-- [ ] **Keyboard Navigation**: All interactive elements are keyboard accessible (future)
+- [ ] **Screen Reader**: Verify the chart-family summary and focused mark or
+  interval description announce the intended value and selection state
+- [ ] **Keyboard Navigation**: Verify family traversal, scope-aware Enter/Space
+  selection, ordered Shift+Space extension, bounded Ctrl/Command+A,
+  point-and-series Escape clearing, zoom, and viewport reset without pointer
+  input
 - [ ] **Zoom Test**: Chart remains readable at 200% zoom
 - [ ] **Grayscale Test**: Convert to grayscale and verify information is still clear
 
