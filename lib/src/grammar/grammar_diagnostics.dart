@@ -41,6 +41,9 @@ enum GrammarDiagnosticCode {
   /// A channel was supplied without the encoding it needs to resolve a scale.
   missingChannelEncoding,
 
+  /// An encoding was supplied with no channel to drive it, so it would be inert.
+  orphanChannelEncoding,
+
   /// A channel asked for a scale the render pipeline does not implement.
   unsupportedChannelScale,
 
@@ -141,6 +144,19 @@ final class GrammarSpecException implements Exception {
     GrammarDiagnosticCode.missingChannelEncoding,
     'The mark "$markId" encodes $channel but supplied no scale for it. '
     '$remedy',
+  );
+
+  /// An encoding was supplied with no channel to drive it.
+  factory GrammarSpecException.orphanChannelEncoding(
+    String markId,
+    String encoding,
+    String channel,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.orphanChannelEncoding,
+    'The mark "$markId" supplied $encoding but no $channel channel to drive '
+    'it, so the encoding would be silently inert. Pass $channel: '
+    'Channel((row) => ...) to activate it, or drop the $encoding. (The '
+    'grammar layer never keeps a dropped or defaulted binding.)',
   );
 
   /// A channel asked for a scale the render pipeline does not implement.

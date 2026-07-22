@@ -962,6 +962,61 @@ void main() {
       );
     });
 
+    test('an orphan color encoding (no colorBy) is rejected', () {
+      // The mirror image of the missing-encoding check: an encoding with no
+      // channel to drive it would be silently inert, which the module's
+      // fail-fast contract forbids.
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              colorEncoding: ScatterColorEncoding(
+                colors: <Color>[Color(0xFF16A34A), Color(0xFFDC2626)],
+              ),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.orphanChannelEncoding),
+      );
+    });
+
+    test('an orphan size encoding (no size) is rejected', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              sizeEncoding: ScatterSizeEncoding(label: 'Effort'),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.orphanChannelEncoding),
+      );
+    });
+
+    test('an orphan category style list (no categoryBy) is rejected', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              categories: <ScatterCategoryStyle>[
+                ScatterCategoryStyle(key: 'easy', color: Color(0xFF16A34A)),
+              ],
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.orphanChannelEncoding),
+      );
+    });
+
     test('a non-native channel scale is rejected', () {
       expect(
         () => (const PlotSpec<Sample>(
@@ -1018,6 +1073,113 @@ void main() {
       expect(missing.code, GrammarDiagnosticCode.missingEncoding);
       expect(missing.message, contains('geomLine'));
       expect(missing.message, contains('y'));
+    });
+  });
+
+  group('structural errors surface even when the data is empty', () {
+    // The emptyData guard runs AFTER every data-INDEPENDENT structural check,
+    // so a spec wired against an initially-empty dataset (a cleared filter, a
+    // pending fetch) still reports its authoring errors instead of masquerading
+    // as a clean chart that only throws once real rows arrive. BravenPlot may
+    // therefore swallow ONLY an empty-but-otherwise-well-formed spec.
+    const emptyRows = <Sample>[];
+
+    test('duplicate mark ids beat the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'same'),
+            LineMark<Sample>(x: sampleTime, y: sampleHeartRate, id: 'same'),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateMarkId),
+      );
+    });
+
+    test('an unknown trend source beats the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, id: 'power'),
+            TrendMark<Sample>(sourceMarkId: 'nope'),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unknownTrendSource),
+      );
+    });
+
+    test('a channel without its encoding beats the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            ScatterMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              colorBy: Channel<Sample>(sampleHeartRate),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.missingChannelEncoding),
+      );
+    });
+
+    test('an unbound axis beats the empty-data guard', () {
+      expect(
+        () => (PlotSpec<Sample>(
+          data: emptyRows,
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'a'),
+          ],
+          yAxes: <YAxisConfig>[
+            YAxisConfig.withId(id: 'a', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'b', position: YAxisPosition.right),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unboundAxis),
+      );
+    });
+
+    test('an unknown axis binding beats the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower, yAxisId: 'nowhere'),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unknownAxisId),
+      );
+    });
+
+    test('an unsupported transposition beats the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            BarMark<Sample>(x: sampleTime, y: samplePower),
+            LineMark<Sample>(x: sampleTime, y: sampleHeartRate),
+          ],
+          transposed: true,
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unsupportedTransposition),
+      );
+    });
+
+    test('an empty-but-well-formed spec still reports emptyData', () {
+      // The one case BravenPlot is allowed to swallow: nothing structurally
+      // wrong, just no rows yet.
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: emptyRows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
     });
   });
 }

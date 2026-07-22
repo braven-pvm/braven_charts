@@ -217,7 +217,8 @@ void main() {
       final series = seriesElements(tester).single.series as ScatterChartSeries;
       expect(series.sizeEncoding?.label, 'Effort');
       expect(series.colorEncoding?.label, 'HR');
-      expect(series.opacityEncoding, isNotNull);
+      // opacityBy carries no label, so the ramp is the package default.
+      expect(series.opacityEncoding, const ScatterOpacityEncoding());
       expect(series.categoryEncoding?.label, 'Zone');
       expect(series.points.first.magnitude, 1);
       expect(series.points.first.categoryValue, 'easy');
@@ -458,6 +459,68 @@ void main() {
           (error) => error.code,
           'code',
           GrammarDiagnosticCode.emptyMarks,
+        ),
+      );
+    });
+
+    testWidgets('a typo\'d trend source still surfaces with no rows', (
+      tester,
+    ) async {
+      // The doc-comment promises "an unknown trend source" still surfaces from
+      // build even with no rows. A structural error must not hide behind the
+      // empty-state path until real data arrives.
+      await tester.pumpWidget(
+        host(
+          const BravenPlot<Row>(
+            PlotSpec<Row>(
+              data: <Row>[],
+              marks: <Mark<Row>>[
+                LineMark<Row>(x: rowT, y: rowPower, id: 'power'),
+                TrendMark<Row>(sourceMarkId: 'typo'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.takeException(),
+        isA<GrammarSpecException>().having(
+          (error) => error.code,
+          'code',
+          GrammarDiagnosticCode.unknownTrendSource,
+        ),
+      );
+    });
+
+    testWidgets('a channel without its encoding still surfaces with no rows', (
+      tester,
+    ) async {
+      // The doc-comment promises "a channel without its encoding" still
+      // surfaces from build even with no rows.
+      await tester.pumpWidget(
+        host(
+          const BravenPlot<Row>(
+            PlotSpec<Row>(
+              data: <Row>[],
+              marks: <Mark<Row>>[
+                ScatterMark<Row>(
+                  x: rowT,
+                  y: rowPower,
+                  colorBy: Channel<Row>(rowHeartRate),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.takeException(),
+        isA<GrammarSpecException>().having(
+          (error) => error.code,
+          'code',
+          GrammarDiagnosticCode.missingChannelEncoding,
         ),
       );
     });

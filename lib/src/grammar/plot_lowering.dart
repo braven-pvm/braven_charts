@@ -116,7 +116,9 @@ final TrendAnnotation _trendDefaults = TrendAnnotation(
 ///   geometries.
 /// * Nothing is dropped or defaulted silently: anything the config surface
 ///   cannot express raises a [GrammarSpecException] with a
-///   [GrammarDiagnosticCode].
+///   [GrammarDiagnosticCode]. This is symmetric — a channel without its
+///   encoding AND an encoding with no channel to drive it both raise, rather
+///   than one throwing and the other going quietly inert.
 ///
 /// ## Non-finite values
 ///
@@ -137,8 +139,14 @@ final TrendAnnotation _trendDefaults = TrendAnnotation(
 /// ## Validation order
 ///
 /// Deterministic, so a spec with several problems always reports the same one
-/// first: empty marks, empty data, mark ids, axis ids, transposition, then
-/// each mark in spec order, then unbound axes.
+/// first. All DATA-INDEPENDENT structural checks run before the emptyData
+/// guard, so an authoring error surfaces even against a momentarily-empty
+/// dataset (which is what lets `BravenPlot` swallow ONLY emptyData): empty
+/// marks, mark ids, axis ids, transposition, then each mark's structural
+/// checks in spec order (axis binding, scatter channel/encoding pairing,
+/// trend source), then unbound axes. Only then comes empty data, followed by
+/// the DATA-DEPENDENT materialization — the per-row candlestick validation
+/// that cannot run on an empty dataset.
 extension PlotSpecLowering<T> on PlotSpec<T> {
   /// Lowers this spec onto ordinary chart config objects.
   LoweredPlot lower() => _lower<T>(this);
@@ -146,7 +154,6 @@ extension PlotSpecLowering<T> on PlotSpec<T> {
 
 LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
-  if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
 
   final markIds = _resolveMarkIds(spec.marks);
   final axes = _resolveAxes(spec.yAxes);
@@ -167,52 +174,89 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
       if (spec.marks[index] is! TrendMark<T>) markIds[index],
   };
 
-  final series = <ChartSeries>[];
-  final annotations = <ChartAnnotation>[];
+  // ---- Data-INDEPENDENT structural validation --------------------------
+  // Everything decidable from the spec's SHAPE — not its rows — is checked
+  // here, and it runs BEFORE the emptyData guard below. A spec wired against
+  // an initially-empty dataset (a cleared filter, a pending fetch) therefore
+  // still surfaces its authoring errors — a duplicate mark id, an unknown or
+  // unbound axis, a channel without its encoding, a typo'd trend source —
+  // rather than reading as a clean chart that only throws once real rows
+  // arrive. This is exactly the contract BravenPlot relies on: it may swallow
+  // an emptyData diagnostic and render the empty state, so emptyData must be
+  // reachable ONLY for a spec that is otherwise well formed.
+  //
+  // Each geometry's resolved axis is captured now and reused during
+  // materialization, so binding is validated (and reported) exactly once.
+  final boundAxes = List<YAxisConfig?>.filled(spec.marks.length, null);
   final boundAxisIds = <String>{};
-
-  YAxisConfig bind(Mark<T> mark, String markId) {
-    final axisId = mark.yAxisId ?? axes.first.id;
-    final axis = axesById[axisId];
-    if (axis == null) {
-      throw GrammarSpecException.unknownAxisId(markId, axisId, axesById.keys);
-    }
-    boundAxisIds.add(axisId);
-    return axis;
-  }
-
   for (var index = 0; index < spec.marks.length; index++) {
     final mark = spec.marks[index];
     final markId = markIds[index];
     switch (mark) {
-      case LineMark<T>():
-        series.add(_lowerLine(mark, markId, bind(mark, markId), spec.data));
-      case AreaMark<T>():
-        series.add(_lowerArea(mark, markId, bind(mark, markId), spec.data));
-      case BarMark<T>():
-        series.add(
-          _lowerBar(
-            mark,
-            markId,
-            bind(mark, markId),
-            spec.data,
-            transposed: spec.transposed,
-          ),
-        );
-      case ScatterMark<T>():
-        series.add(_lowerScatter(mark, markId, bind(mark, markId), spec.data));
-      case CandlestickMark<T>():
-        series.add(
-          _lowerCandlestick(mark, markId, bind(mark, markId), spec.data),
-        );
       case TrendMark<T>():
-        annotations.add(_lowerTrend(mark, markId, geometryIds));
+        _validateTrend(mark, markId, geometryIds);
+      case ScatterMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
+        _validateScatterChannels(mark, markId);
+      case LineMark<T>() ||
+          AreaMark<T>() ||
+          BarMark<T>() ||
+          CandlestickMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
     }
   }
 
   for (final axis in axes) {
     if (!boundAxisIds.contains(axis.id)) {
       throw GrammarSpecException.unboundAxis(axis.id);
+    }
+  }
+
+  // ---- Data-DEPENDENT materialization ----------------------------------
+  // Only reached once the spec is structurally sound. Anything that iterates
+  // points — building the series, validating candlestick rows — lives below
+  // the emptyData guard because it cannot run on an empty dataset.
+  if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
+
+  final series = <ChartSeries>[];
+  final annotations = <ChartAnnotation>[];
+  for (var index = 0; index < spec.marks.length; index++) {
+    final mark = spec.marks[index];
+    final markId = markIds[index];
+    final axis = boundAxes[index];
+    switch (mark) {
+      case LineMark<T>():
+        series.add(_lowerLine(mark, markId, axis!, spec.data));
+      case AreaMark<T>():
+        series.add(_lowerArea(mark, markId, axis!, spec.data));
+      case BarMark<T>():
+        series.add(
+          _lowerBar(
+            mark,
+            markId,
+            axis!,
+            spec.data,
+            transposed: spec.transposed,
+          ),
+        );
+      case ScatterMark<T>():
+        series.add(_lowerScatter(mark, markId, axis!, spec.data));
+      case CandlestickMark<T>():
+        series.add(_lowerCandlestick(mark, markId, axis!, spec.data));
+      case TrendMark<T>():
+        annotations.add(_lowerTrend(mark, markId));
     }
   }
 
@@ -224,6 +268,112 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     interaction: spec.interaction ?? const InteractionConfig(),
     theme: spec.theme,
   );
+}
+
+/// Resolves and records the Y axis a geometry [mark] binds to.
+///
+/// Data-independent: a mark's axis binding is a property of the spec's shape,
+/// so this is validated up front, before any rows are read.
+YAxisConfig _bindAxis<T>(
+  Mark<T> mark,
+  String markId,
+  List<YAxisConfig> axes,
+  Map<String, YAxisConfig> axesById,
+  Set<String> boundAxisIds,
+) {
+  final axisId = mark.yAxisId ?? axes.first.id;
+  final axis = axesById[axisId];
+  if (axis == null) {
+    throw GrammarSpecException.unknownAxisId(markId, axisId, axesById.keys);
+  }
+  boundAxisIds.add(axisId);
+  return axis;
+}
+
+/// Validates a scatter mark's channel/encoding pairing, without touching rows.
+///
+/// Every check here is decidable from the mark alone. A channel that names a
+/// non-native scale, a channel missing the encoding it needs, and — the
+/// mirror image — an encoding with no channel to drive it, are all authoring
+/// errors that must surface even when the dataset is momentarily empty.
+void _validateScatterChannels<T>(ScatterMark<T> mark, String markId) {
+  _requireScale(markId, 'size', mark.size?.scale, ChannelScale.sqrt);
+  _requireScale(markId, 'colorBy', mark.colorBy?.scale, ChannelScale.linear);
+  _requireScale(
+    markId,
+    'opacityBy',
+    mark.opacityBy?.scale,
+    ChannelScale.linear,
+  );
+
+  if (mark.colorBy != null && mark.colorEncoding == null) {
+    throw GrammarSpecException.missingChannelEncoding(
+      markId,
+      'colorBy',
+      'Supply colorEncoding: ScatterColorEncoding(colors: [...]). The package '
+          'ships no default color ramp.',
+    );
+  }
+  if (mark.categoryBy != null && mark.categories.isEmpty) {
+    throw GrammarSpecException.missingChannelEncoding(
+      markId,
+      'categoryBy',
+      'Supply categories: [ScatterCategoryStyle(key: ..., color: ...)]. Each '
+          'category must change a color or a shape, and the package ships no '
+          'categorical palette.',
+    );
+  }
+
+  // Orphan encodings: the reverse of the checks above. An encoding with no
+  // channel to drive it is inert, and the module's contract is that nothing
+  // is dropped or defaulted silently, so it is reported rather than ignored.
+  if (mark.size == null && mark.sizeEncoding != null) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'sizeEncoding',
+      'size',
+    );
+  }
+  if (mark.colorBy == null && mark.colorEncoding != null) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'colorEncoding',
+      'colorBy',
+    );
+  }
+  if (mark.opacityBy == null && mark.opacityEncoding != null) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'opacityEncoding',
+      'opacityBy',
+    );
+  }
+  if (mark.categoryBy == null && mark.categories.isNotEmpty) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'categories',
+      'categoryBy',
+    );
+  }
+}
+
+/// Validates a trend mark against the geometry ids in the plot, without rows.
+void _validateTrend<T>(
+  TrendMark<T> mark,
+  String markId,
+  Set<String> geometryIds,
+) {
+  if (!geometryIds.contains(mark.sourceMarkId)) {
+    throw GrammarSpecException.unknownTrendSource(
+      mark.sourceMarkId,
+      geometryIds,
+    );
+  }
+  // Mirrors TrendAnnotation's own assert rather than inventing a rule.
+  if (mark.trendType == TrendType.movingAverage &&
+      (mark.windowSize == null || mark.windowSize! <= 0)) {
+    throw GrammarSpecException.invalidTrendWindow(markId);
+  }
 }
 
 List<String> _resolveMarkIds<T>(List<Mark<T>> marks) {
@@ -340,6 +490,10 @@ BarChartSeries _lowerBar<T>(
   );
 }
 
+/// Materializes a scatter series. The mark's channel/encoding pairing has
+/// already been validated by [_validateScatterChannels] in the structural
+/// pass, so `mark.colorEncoding!` here is guaranteed non-null when `colorBy`
+/// is present.
 ScatterChartSeries _lowerScatter<T>(
   ScatterMark<T> mark,
   String id,
@@ -350,28 +504,6 @@ ScatterChartSeries _lowerScatter<T>(
   final colorBy = mark.colorBy;
   final opacityBy = mark.opacityBy;
   final categoryBy = mark.categoryBy;
-
-  _requireScale(id, 'size', size?.scale, ChannelScale.sqrt);
-  _requireScale(id, 'colorBy', colorBy?.scale, ChannelScale.linear);
-  _requireScale(id, 'opacityBy', opacityBy?.scale, ChannelScale.linear);
-
-  if (colorBy != null && mark.colorEncoding == null) {
-    throw GrammarSpecException.missingChannelEncoding(
-      id,
-      'colorBy',
-      'Supply colorEncoding: ScatterColorEncoding(colors: [...]). The package '
-          'ships no default color ramp.',
-    );
-  }
-  if (categoryBy != null && mark.categories.isEmpty) {
-    throw GrammarSpecException.missingChannelEncoding(
-      id,
-      'categoryBy',
-      'Supply categories: [ScatterCategoryStyle(key: ..., color: ...)]. Each '
-          'category must change a color or a shape, and the package ships no '
-          'categorical palette.',
-    );
-  }
 
   return ScatterChartSeries(
     id: id,
@@ -466,22 +598,9 @@ CandlestickChartSeries _lowerCandlestick<T>(
   );
 }
 
-TrendAnnotation _lowerTrend<T>(
-  TrendMark<T> mark,
-  String id,
-  Set<String> geometryIds,
-) {
-  if (!geometryIds.contains(mark.sourceMarkId)) {
-    throw GrammarSpecException.unknownTrendSource(
-      mark.sourceMarkId,
-      geometryIds,
-    );
-  }
-  // Mirrors TrendAnnotation's own assert rather than inventing a rule.
-  if (mark.trendType == TrendType.movingAverage &&
-      (mark.windowSize == null || mark.windowSize! <= 0)) {
-    throw GrammarSpecException.invalidTrendWindow(id);
-  }
+/// Materializes a trend annotation. The source-mark and window validation has
+/// already run in the structural pass ([_validateTrend]).
+TrendAnnotation _lowerTrend<T>(TrendMark<T> mark, String id) {
   return TrendAnnotation(
     id: id,
     label: mark.name,
