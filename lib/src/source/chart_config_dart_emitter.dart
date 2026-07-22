@@ -2112,8 +2112,17 @@ class ChartConfigDartEmitter {
     }
     _emitBarWaterfallStyle(writer, series.waterfallStyle);
     _emitBarChartStyle(writer, series.barStyle);
+    _enumIf(writer, 'divergingRole', 'BarDivergingRole',
+        series.divergingRole.name, defaultName: 'positive');
+    _emitBarDivergingStyle(writer, series.divergingStyle);
     if (series.trackStyle != null) {
       _emitBarTrackStyle(writer, series.trackStyle!);
+    }
+    if (series.lollipopStyle != null) {
+      _emitBarLollipopStyle(writer, series.lollipopStyle!);
+    }
+    if (series.bulletStyle != null) {
+      _emitBarBulletStyle(writer, series.bulletStyle!);
     }
     _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
     _emitBarTargetMarkerStyle(writer, series.targetMarkerStyle);
@@ -2154,6 +2163,9 @@ class ChartConfigDartEmitter {
         });
         writer.writeLine('),');
       }
+      if (style.pattern != null) {
+        _emitBarPatternStyle(writer, style.pattern!);
+      }
       if (style.border != null) {
         _emitBarBorder(writer, 'border', style.border!);
       }
@@ -2166,6 +2178,7 @@ class ChartConfigDartEmitter {
         style.animationMode.name,
         defaultName: 'grow',
       );
+      _emitBarMotionStyle(writer, style.motion);
     });
     writer.writeLine('),');
   }
@@ -2227,6 +2240,97 @@ class ChartConfigDartEmitter {
         });
         writer.writeLine('),');
       }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarPatternStyle(DartSourceWriter writer, BarPatternStyle style) {
+    writer.writeLine('pattern: BarPatternStyle(');
+    writer.indented(() {
+      writer.namedArgument('pattern', 'BarFillPattern.${style.pattern.name}');
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'spacing', style.spacing, 8);
+      _numberIf(writer, 'strokeWidth', style.strokeWidth, 1.5);
+      _numberIf(writer, 'opacity', style.opacity, 0.55);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarMotionStyle(DartSourceWriter writer, BarMotionStyle style) {
+    if (!options.includeDefaultValues && style == const BarMotionStyle()) return;
+    writer.writeLine('motion: BarMotionStyle(');
+    writer.indented(() {
+      _enumIf(writer, 'order', 'BarAnimationOrder', style.order.name,
+          defaultName: 'together');
+      _numberIf(writer, 'staggerFraction', style.staggerFraction, 0);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarLabelCalloutStyle(
+      DartSourceWriter writer, BarLabelCalloutStyle style) {
+    if (!options.includeDefaultValues && style == const BarLabelCalloutStyle()) {
+      return;
+    }
+    writer.writeLine('callout: BarLabelCalloutStyle(');
+    writer.indented(() {
+      _valueIf(writer, 'show', style.show, defaultValue: false);
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'width', style.width, 1);
+      _numberIf(writer, 'minimumLength', style.minimumLength, 4);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarDivergingStyle(DartSourceWriter writer, BarDivergingStyle style) {
+    if (!options.includeDefaultValues && style == const BarDivergingStyle()) {
+      return;
+    }
+    writer.writeLine('divergingStyle: BarDivergingStyle(');
+    writer.indented(() {
+      _valueIf(writer, 'showCenterLine', style.showCenterLine, defaultValue: true);
+      _colorIf(writer, 'centerLineColor', style.centerLineColor,
+          const Color(0xFF64748B));
+      _numberIf(writer, 'centerLineWidth', style.centerLineWidth, 1.25);
+      _numberIf(writer, 'centerLineOpacity', style.centerLineOpacity, 0.7);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarLollipopStyle(DartSourceWriter writer, BarLollipopStyle style) {
+    writer.writeLine('lollipopStyle: BarLollipopStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'stemWidth', style.stemWidth, 3);
+      _numberIf(writer, 'headRadius', style.headRadius, 7);
+      _optionalColor(writer, 'stemColor', style.stemColor);
+      _optionalColor(writer, 'headColor', style.headColor);
+      if (style.headBorder != null) {
+        _emitBarBorder(writer, 'headBorder', style.headBorder!);
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitBarBulletStyle(DartSourceWriter writer, BarBulletStyle style) {
+    writer.writeLine('bulletStyle: BarBulletStyle(');
+    writer.indented(() {
+      writer.writeLine('ranges: [');
+      writer.indented(() {
+        for (final range in style.ranges) {
+          writer.writeLine('BarBulletRange(');
+          writer.indented(() {
+            writer.namedArgument(
+                'endValue', DartSourceWriter.numberLiteral(range.endValue));
+            writer.namedArgument(
+                'color', DartSourceWriter.colorLiteral(range.color));
+            _optionalString(writer, 'label', range.label);
+          });
+          writer.writeLine('),');
+        }
+      });
+      writer.writeLine('],');
+      _numberIf(writer, 'measureThicknessFactor', style.measureThicknessFactor, 0.45);
+      _numberIf(writer, 'cornerRadius', style.cornerRadius, 3);
     });
     writer.writeLine('),');
   }
@@ -2316,6 +2420,17 @@ class ChartConfigDartEmitter {
       _fontWeightIf(writer, 'fontWeight', style.fontWeight, FontWeight.w600);
       _valueIf(writer, 'showUnit', style.showUnit, defaultValue: false);
       _numberIf(writer, 'padding', style.padding, 4);
+      _enumIf(writer, 'collisionPolicy', 'BarLabelCollisionPolicy',
+          style.collisionPolicy.name, defaultName: 'none');
+      _valueIf(writer, 'plotEdgeAware', style.plotEdgeAware, defaultValue: true);
+      _numberIf(writer, 'collisionPadding', style.collisionPadding, 2);
+      _optionalColor(writer, 'backgroundColor', style.backgroundColor);
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _numberIf(writer, 'borderWidth', style.borderWidth, 0);
+      _numberIf(writer, 'borderRadius', style.borderRadius, 4);
+      _numberIf(writer, 'backgroundPadding', style.backgroundPadding, 3);
+      _emitBarLabelCalloutStyle(writer, style.callout);
+      _valueIf(writer, 'showStackTotal', style.showStackTotal, defaultValue: false);
       if (style.formatter != null) {
         writer.writeLine(
           '// formatter: (point) => ..., // Supply application formatting.',

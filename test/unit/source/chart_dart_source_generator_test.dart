@@ -1583,6 +1583,119 @@ void main() {
       expect(generated.source, contains('autoViewport: false,'));
     });
   });
+
+  group('Source-emitter drift-gap fixes (Convergence slice 3b)', () {
+    test('emits barStyle.pattern (BarPatternStyle)', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          barStyle: BarChartStyle(
+            pattern: BarPatternStyle(pattern: BarFillPattern.crosshatch, spacing: 10),
+          ),
+        ),
+      )));
+      expect(generated.source, contains('pattern: BarPatternStyle('));
+      expect(generated.source, contains('pattern: BarFillPattern.crosshatch,'));
+      expect(generated.source, contains('spacing: 10'));
+    });
+
+    test('emits barStyle.motion (BarMotionStyle)', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          barStyle: BarChartStyle(
+            motion: BarMotionStyle(order: BarAnimationOrder.centerOut, staggerFraction: 0.2),
+          ),
+        ),
+      )));
+      expect(generated.source, contains('motion: BarMotionStyle('));
+      expect(generated.source, contains('order: BarAnimationOrder.centerOut,'));
+      expect(generated.source, contains('staggerFraction: 0.2'));
+    });
+
+    test('emits the 10 previously-dropped labelStyle fields', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          labelStyle: BarLabelStyle(
+            show: true,
+            collisionPolicy: BarLabelCollisionPolicy.hide,
+            plotEdgeAware: false,
+            collisionPadding: 5,
+            backgroundColor: Color(0xFF102030),
+            borderColor: Color(0xFF405060),
+            borderWidth: 2,
+            borderRadius: 8,
+            backgroundPadding: 6,
+            callout: BarLabelCalloutStyle(show: true, minimumLength: 9),
+            showStackTotal: true,
+          ),
+        ),
+      )));
+      final src = generated.source;
+      expect(src, contains('collisionPolicy: BarLabelCollisionPolicy.hide,'));
+      expect(src, contains('plotEdgeAware: false,'));
+      expect(src, contains('collisionPadding: 5'));
+      expect(src, contains('backgroundColor: Color(0xFF102030),'));
+      expect(src, contains('borderColor: Color(0xFF405060),'));
+      expect(src, contains('borderWidth: 2'));
+      expect(src, contains('borderRadius: 8'));
+      expect(src, contains('backgroundPadding: 6'));
+      expect(src, contains('callout: BarLabelCalloutStyle('));
+      expect(src, contains('showStackTotal: true,'));
+    });
+
+    test('emits series divergingRole + divergingStyle', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          layoutMode: BarLayoutMode.divergingStacked,
+          divergingRole: BarDivergingRole.negative,
+          divergingStyle: BarDivergingStyle(showCenterLine: false, centerLineWidth: 2),
+        ),
+      )));
+      expect(generated.source, contains('divergingRole: BarDivergingRole.negative,'));
+      expect(generated.source, contains('divergingStyle: BarDivergingStyle('));
+      expect(generated.source, contains('showCenterLine: false,'));
+    });
+
+    test('emits series lollipopStyle (with nested headBorder)', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          lollipopStyle: BarLollipopStyle(
+            stemWidth: 4, headRadius: 9,
+            headBorder: BarBorderStyle(color: Color(0xFF010203), width: 2),
+          ),
+        ),
+      )));
+      expect(generated.source, contains('lollipopStyle: BarLollipopStyle('));
+      expect(generated.source, contains('stemWidth: 4'));
+      expect(generated.source, contains('headBorder: BarBorderStyle('));
+    });
+
+    test('emits series bulletStyle (with BarBulletRange list)', () {
+      final generated = _success(ChartDartSourceGenerator.generate(_snapshot(
+        const BarChartSeries(
+          id: 'b', barWidthPercent: 0.7, points: [ChartDataPoint(x: 0, y: 1)],
+          bulletStyle: BarBulletStyle(
+            ranges: [
+              BarBulletRange(endValue: 5, color: Color(0xFFAA0000), label: 'low'),
+              BarBulletRange(endValue: 10, color: Color(0xFF00AA00)),
+            ],
+            cornerRadius: 4,
+          ),
+        ),
+      )));
+      final src = generated.source;
+      expect(src, contains('bulletStyle: BarBulletStyle('));
+      expect(src, contains('ranges: ['));
+      expect(src, contains('BarBulletRange('));
+      expect(src, contains('endValue: 5'));
+      expect(src, contains('color: Color(0xFFAA0000),'));
+      expect(src, contains("label: 'low',"));
+    });
+  });
 }
 
 ChartGeneratedSource _success(
