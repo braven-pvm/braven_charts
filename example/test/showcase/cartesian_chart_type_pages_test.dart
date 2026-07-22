@@ -23,6 +23,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  Future<void> revealOptionSection(WidgetTester tester, String title) async {
+    final optionsScroll = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text(title),
+      240,
+      scrollable: optionsScroll,
+    );
+    await tester.pumpAndSettle();
+  }
+
   final subjects = <String, Widget>{
     'line': const LineChartsPage(),
     'area': const AreaChartsPage(),
@@ -542,6 +555,7 @@ void main() {
         expect(chart.yAxis!.showCrosshairLabel, isTrue);
       }
 
+      await revealOptionSection(tester, 'Chart composition');
       await tester.tap(find.text('Chart composition'));
       await tester.pumpAndSettle();
       final elevationToggle = find.descendant(
@@ -645,6 +659,7 @@ void main() {
       await tester.ensureVisible(synchronized);
       await tester.tap(synchronized);
       await tester.pumpAndSettle();
+      await revealOptionSection(tester, 'Chart composition');
       await tester.tap(find.text('Chart composition'));
       await tester.pumpAndSettle();
 
@@ -723,11 +738,14 @@ void main() {
       expect(find.text('15000'), findsOneWidget);
       expect(identical(visibleSeriesPoints()[1], firstStressPoints[1]), isTrue);
 
-      final dataUpdatesHeader = find.ancestor(
-        of: find.text('Data updates'),
+      await revealOptionSection(tester, 'Data updates');
+      final dataUpdatesHeader = find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) => widget is OptionSection && widget.title == 'Data updates',
+        ),
         matching: find.byType(InkWell),
       );
-      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      tester.widgetList<InkWell>(dataUpdatesHeader).first.onTap!();
       await tester.pumpAndSettle();
       final updateButton = find.byKey(
         const ValueKey('synchronized-update-data'),
@@ -828,11 +846,14 @@ void main() {
           renderBox.debugSynchronizedTrackingState!.seriesValues.single.y,
       ];
 
-      final dataUpdatesHeader = find.ancestor(
-        of: find.text('Data updates'),
+      await revealOptionSection(tester, 'Data updates');
+      final dataUpdatesHeader = find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) => widget is OptionSection && widget.title == 'Data updates',
+        ),
         matching: find.byType(InkWell),
       );
-      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      tester.widgetList<InkWell>(dataUpdatesHeader).first.onTap!();
       await tester.pumpAndSettle();
       final updateButton = find.byKey(
         const ValueKey('synchronized-update-data'),
@@ -1995,7 +2016,12 @@ void main() {
       find.byKey(const ValueKey('scatter-selection-summary')),
       findsOneWidget,
     );
-    expect(find.textContaining('1 series · X'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('scatter-selection-summary')))
+          .data,
+      contains('1 series · X'),
+    );
     expect(
       chart.bravenChartController?.selectionResult.statistics.pointCount,
       1,
@@ -2025,21 +2051,21 @@ void main() {
           ({
             String label,
             String title,
-            ChartSelectionMode mode,
+            ChartSelectionAcquisitionMode acquisitionMode,
             String guidance,
           })
         >[
           (
             label: 'Brush',
             title: 'Account portfolio brush',
-            mode: ChartSelectionMode.rectangle,
+            acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
             guidance:
                 'Drag a rectangle across account markers to select every enclosed point. Middle-drag still pans the viewport.',
           ),
           (
             label: 'Lasso',
             title: 'Account portfolio lasso',
-            mode: ChartSelectionMode.lasso,
+            acquisitionMode: ChartSelectionAcquisitionMode.lasso,
             guidance:
                 'Draw a free-form boundary around irregular account clusters. The live preview shows which points will be selected.',
           ),
@@ -2057,7 +2083,10 @@ void main() {
       );
       expect(find.text(preset.title), findsOneWidget);
       expect(find.text(preset.guidance), findsOneWidget);
-      expect(chart.interactionConfig?.selection.mode, preset.mode);
+      expect(
+        chart.interactionConfig?.selection.acquisitionMode,
+        preset.acquisitionMode,
+      );
       expect(chart.series.whereType<ScatterChartSeries>(), hasLength(2));
       expect(
         find.byKey(const ValueKey('scatter-selection-operation')),
@@ -3105,7 +3134,7 @@ void main() {
 
     final update = find.byKey(const ValueKey('line-update-values'));
     await tester.ensureVisible(update);
-    await tester.tap(update);
+    tester.widget<OutlinedButton>(update).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3124,7 +3153,7 @@ void main() {
 
     final addPoint = find.byKey(const ValueKey('line-add-point'));
     await tester.ensureVisible(addPoint);
-    await tester.tap(addPoint);
+    tester.widget<OutlinedButton>(addPoint).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3140,7 +3169,7 @@ void main() {
 
     final removePoint = find.byKey(const ValueKey('line-remove-point'));
     await tester.ensureVisible(removePoint);
-    await tester.tap(removePoint);
+    tester.widget<OutlinedButton>(removePoint).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3157,7 +3186,7 @@ void main() {
     final backfill = find.byKey(const ValueKey('line-backfill-point'));
     await tester.ensureVisible(backfill);
     expect(find.text('Add backfill'), findsOneWidget);
-    await tester.tap(backfill);
+    tester.widget<OutlinedButton>(backfill).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3175,7 +3204,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Remove backfill'), findsOneWidget);
 
-    await tester.tap(backfill);
+    tester.widget<OutlinedButton>(backfill).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -3211,7 +3240,7 @@ void main() {
     );
     await tester.pump();
     await tester.ensureVisible(rollWindow);
-    await tester.tap(rollWindow);
+    tester.widget<OutlinedButton>(rollWindow).onPressed!();
     await tester.pump();
     await tester.pump();
     expect(controller.selectedPointRefs, {
@@ -3230,7 +3259,7 @@ void main() {
 
     final replay = find.byKey(const ValueKey('line-replay-entrance'));
     await tester.ensureVisible(replay);
-    await tester.tap(replay);
+    tester.widget<OutlinedButton>(replay).onPressed!();
     await tester.pump();
     expect(tester.hasRunningAnimations, isTrue);
     await tester.pumpAndSettle();
@@ -3320,6 +3349,179 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Line and Area Selection expose acquisition tools and scopes', (
+    tester,
+  ) async {
+    for (final entry in const <({String family, Widget page})>[
+      (family: 'line', page: LineChartsPage()),
+      (family: 'area', page: AreaChartsPage()),
+    ]) {
+      await pumpPage(
+        tester,
+        KeyedSubtree(key: ValueKey(entry.family), child: entry.page),
+      );
+      final selectionPreset = find.descendant(
+        of: find.byKey(ValueKey('${entry.family}-preset-picker')),
+        matching: find.text('Selection'),
+      );
+      await tester.ensureVisible(selectionPreset);
+      await tester.tap(selectionPreset);
+      await tester.pumpAndSettle();
+
+      final scopeFinder = find.byKey(const ValueKey('path-selection-scope'));
+      final acquisitionFinder = find.byKey(
+        const ValueKey('path-selection-acquisition-mode'),
+      );
+      expect(scopeFinder, findsOneWidget);
+      expect(acquisitionFinder, findsOneWidget);
+      for (final mode in ChartSelectionAcquisitionMode.values) {
+        expect(
+          find.byKey(ValueKey('path-selection-tool-${mode.name}')),
+          findsOneWidget,
+        );
+      }
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.point,
+      );
+      expect(
+        chart.interactionConfig!.selection.scope,
+        ChartSelectionScope.mark,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('path-selection-tool-xInterval')),
+      );
+      await tester.pumpAndSettle();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.xInterval,
+      );
+      expect(
+        tester
+            .widget<EnumOption<ChartSelectionAcquisitionMode>>(
+              acquisitionFinder,
+            )
+            .value,
+        ChartSelectionAcquisitionMode.xInterval,
+      );
+
+      tester
+          .widget<EnumOption<ChartSelectionScope>>(scopeFinder)
+          .onChanged(ChartSelectionScope.markOrWholeSeries);
+      await tester.pumpAndSettle();
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-hit-radius')),
+          )
+          .onChanged(14);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-complete-series-hit-radius')),
+          )
+          .onChanged(30);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-hover-scale')),
+          )
+          .onChanged(1.8);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('path-data-point-selection-scale')),
+          )
+          .onChanged(3.2);
+      tester
+          .widget<SliderOption>(
+            find.byKey(
+              const ValueKey('path-complete-series-hover-stroke-scale'),
+            ),
+          )
+          .onChanged(2.1);
+      tester
+          .widget<SliderOption>(
+            find.byKey(
+              const ValueKey('path-complete-series-selection-stroke-scale'),
+            ),
+          )
+          .onChanged(1.9);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('path-show-point-tooltip')),
+          )
+          .onChanged(false);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('path-show-tracking-tooltip')),
+          )
+          .onChanged(false);
+      await tester.pumpAndSettle();
+
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        chart.interactionConfig!.selection.scope,
+        ChartSelectionScope.markOrWholeSeries,
+      );
+      expect(chart.interactionConfig!.selection.dataPointHitRadius, 14);
+      expect(chart.interactionConfig!.selection.completeSeriesHitRadius, 30);
+      expect(chart.interactionConfig!.selection.dataPointHoverScale, 1.8);
+      expect(chart.interactionConfig!.selection.dataPointSelectionScale, 3.2);
+      expect(
+        chart.interactionConfig!.selection.completeSeriesHoverStrokeScale,
+        2.1,
+      );
+      expect(
+        chart.interactionConfig!.selection.completeSeriesSelectionStrokeScale,
+        1.9,
+      );
+      expect(chart.interactionConfig!.tooltip.enabled, isFalse);
+      expect(chart.interactionConfig!.crosshair.enabled, isTrue);
+      expect(chart.interactionConfig!.crosshair.showTrackingTooltip, isFalse);
+      expect(chart.series, hasLength(3));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'shared crosshair option gates synchronized and marginal compositions',
+    (tester) async {
+      for (final entry in const <({Widget page, String family, String preset})>[
+        (page: LineChartsPage(), family: 'line', preset: 'Synchronized'),
+        (page: ScatterChartsPage(), family: 'scatter', preset: 'Marginals'),
+      ]) {
+        await pumpPage(
+          tester,
+          KeyedSubtree(key: ValueKey(entry.family), child: entry.page),
+        );
+        final preset = find.descendant(
+          of: find.byKey(ValueKey('${entry.family}-preset-picker')),
+          matching: find.text(entry.preset),
+        );
+        await tester.ensureVisible(preset);
+        await tester.tap(preset);
+        await tester.pumpAndSettle();
+
+        final toggle = find.byKey(const ValueKey('standard-show-crosshair'));
+        expect(toggle, findsOneWidget);
+        tester.widget<BoolOption>(toggle).onChanged(false);
+        await tester.pumpAndSettle();
+
+        final charts = tester.widgetList<BravenChartPlus>(
+          find.byType(BravenChartPlus),
+        );
+        expect(charts, isNotEmpty);
+        expect(
+          charts.every(
+            (chart) => chart.interactionConfig?.crosshair.enabled == false,
+          ),
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('Line and Area remain usable on a compact viewport', (
     tester,
   ) async {
@@ -3374,6 +3576,7 @@ void main() {
         'Envelope': 'capacity-envelope',
         'Spotlight': 'spotlight-signal',
         'Forecast': 'forecast-continuous',
+        'Selection': 'selection-observed',
       };
       const families = <({String name, Widget page, List<String> presets})>[
         (
@@ -3389,6 +3592,7 @@ void main() {
             'Spotlight',
             'Forecast',
             'Synchronized',
+            'Selection',
           ],
         ),
         (
@@ -3402,6 +3606,7 @@ void main() {
             'Gradient',
             'Composition',
             'Pulse',
+            'Selection',
           ],
         ),
       ];
@@ -3541,6 +3746,7 @@ void main() {
           'Spotlight',
           'Forecast',
           'Synchronized',
+          'Selection',
         ],
       ),
       (
@@ -3554,6 +3760,7 @@ void main() {
           'Gradient',
           'Composition',
           'Pulse',
+          'Selection',
         ],
       ),
     ];

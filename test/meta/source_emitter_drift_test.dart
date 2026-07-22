@@ -92,6 +92,11 @@ const Map<String, String> _classesNotEmittedBySource = <String, String>{
       'Runtime auto-scroll config. Like StreamingConfig it is a live '
           'BravenChartPlus parameter absent from the captured document, so '
           'there is nothing for the emitter to reconstruct.',
+  'ChartDocumentExtractOptions':
+      'Artifact extraction policy supplied to ChartDocumentExtractor at '
+          'capture time. It controls how an existing chart is projected into '
+          'a document; it is not part of the hydrated chart configuration that '
+          'ChartConfigDartEmitter reconstructs.',
   'CartesianValueSummaryTheme':
       'Theme-level value-summary defaults. The theme document codec does not '
           'persist this component, so the hydrated ChartTheme never carries a '

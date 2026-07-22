@@ -78,8 +78,9 @@ abstract class EventHandlerDelegate {
   /// Callback invoked after visible viewport bounds change.
   VoidCallback? get onViewportChanged;
 
-  /// Callback invoked when a brush or lasso resolves durable data hits.
-  void Function(List<ChartDataHit> hits)? get onSelectionGestureComplete;
+  /// Callback invoked when a drag acquisition resolves durable data hits.
+  void Function(ChartSelectionGestureResult result)?
+  get onSelectionGestureComplete;
 
   // ==================== Delegated Operations ====================
 
@@ -89,13 +90,19 @@ abstract class EventHandlerDelegate {
   /// Hit tests elements at the given position.
   ChartElement? hitTestElements(Offset widgetPosition);
 
+  /// Resolves a primary-button annotation manipulation target.
+  ///
+  /// Resize handles and draggable annotation bodies own the press before data
+  /// marks and active selection tools, even when their painted areas overlap.
+  ChartElement? hitTestAnnotationInteractionTarget(Offset widgetPosition);
+
   /// Hit tests elements within a rectangle.
   List<ChartElement> hitTestRect(Rect widgetRect);
 
-  /// Resolves Scatter data hits enclosed by a widget-space rectangle.
+  /// Resolves Cartesian data hits enclosed by a widget-space rectangle.
   List<ChartDataHit> hitTestDataRect(Rect widgetRect);
 
-  /// Resolves Scatter data hits enclosed by a widget-space polygon.
+  /// Resolves Cartesian data hits enclosed by a widget-space polygon.
   List<ChartDataHit> hitTestDataPolygon(List<Offset> widgetPolygon);
 
   /// Rebuilds the spatial index after element changes.
@@ -217,6 +224,29 @@ abstract class EventHandlerDelegate {
   ///
   /// Returns whether the focus state actually changed.
   bool setValueSummaryFocus(bool focused);
+}
+
+/// Exact data-space intent and resolved hits produced by one drag acquisition.
+///
+/// Keeping the acquisition bounds alongside the resolved source identities lets
+/// document extraction reproduce continuous interval boundaries instead of
+/// guessing them from the first and last enclosed marker.
+class ChartSelectionGestureResult {
+  const ChartSelectionGestureResult({
+    required this.acquisitionMode,
+    required this.hits,
+    this.minimumXInclusive,
+    this.maximumXInclusive,
+    this.minimumYInclusive,
+    this.maximumYInclusive,
+  });
+
+  final ChartSelectionAcquisitionMode acquisitionMode;
+  final List<ChartDataHit> hits;
+  final double? minimumXInclusive;
+  final double? maximumXInclusive;
+  final double? minimumYInclusive;
+  final double? maximumYInclusive;
 }
 
 /// Manages all pointer event handling for the chart.
@@ -423,7 +453,7 @@ class EventHandlerManager {
     _cursorPosition = null;
     _delegate.coordinator.setHoveredMarker(null);
     _delegate.coordinator.setPressedMarker(null);
-    _delegate.coordinator.setHoveredElement(null);
+    _setHoveredElement(null);
     _delegate.markNeedsPaint();
   }
 
@@ -538,9 +568,15 @@ class EventHandlerManager {
     }
 
     // Touch and stylus input do not produce a preceding hover event. Resolve
-    // the datum on pointer-down so tap selection and tap tooltips use the same
-    // precise data-hit contract as mouse hover.
-    _updateHoveredMarker(position);
+    // the datum on pointer-down only when the semantic scope includes marks;
+    // complete-series-only selection must never flash marker feedback.
+    final selection =
+        _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+    if (selection.scope.includesMarks) {
+      _updateHoveredMarker(position);
+    } else {
+      coordinator.setHoveredMarker(null);
+    }
 
     // PRIORITY 1: Check if pointer is on scrollbar (highest priority)
     if (_delegate.hitTestScrollbars(
@@ -555,8 +591,14 @@ class EventHandlerManager {
       return; // Scrollbar claimed the event
     }
 
-    // Use unified hit testing with priority-based conflict resolution
-    final hitElement = _delegate.hitTestElements(position);
+    // Annotation manipulation has explicit ownership over data activation and
+    // selection acquisition. Resolve that primary-button-only surface before
+    // falling back to ordinary paint/hit priority.
+    final annotationInteractionTarget = event.buttons == kPrimaryMouseButton
+        ? _delegate.hitTestAnnotationInteractionTarget(position)
+        : null;
+    final hitElement =
+        annotationInteractionTarget ?? _delegate.hitTestElements(position);
 
     coordinator.startInteraction(position, element: hitElement);
 
@@ -1114,7 +1156,7 @@ class EventHandlerManager {
         final ownsSelectionDrag =
             interaction.enabled &&
             interaction.enableSelection &&
-            selection.mode != ChartSelectionMode.point &&
+            selection.acquisitionMode != ChartSelectionAcquisitionMode.point &&
             selection.ownsPrimaryDrag(shift: coordinator.isShiftPressed);
         if (ownsSelectionDrag) {
           coordinator.claimMode(InteractionMode.boxSelecting);
@@ -1127,24 +1169,63 @@ class EventHandlerManager {
 
   void _updateDragSelectionPreview(Offset start, Offset current) {
     final coordinator = _delegate.coordinator;
-    final mode = (_delegate.interactionConfig ?? const InteractionConfig())
-        .selection
-        .mode;
-    final hits = switch (mode) {
-      ChartSelectionMode.rectangle => () {
+    final acquisitionMode =
+        (_delegate.interactionConfig ?? const InteractionConfig())
+            .selection
+            .acquisitionMode;
+    final hits = switch (acquisitionMode) {
+      ChartSelectionAcquisitionMode.xInterval => () {
+        final rect = _intervalSelectionRect(start, current, selectsDataX: true);
+        coordinator.updateSelectionRect(rect);
+        return _delegate.hitTestDataRect(rect);
+      }(),
+      ChartSelectionAcquisitionMode.yInterval => () {
+        final rect = _intervalSelectionRect(
+          start,
+          current,
+          selectsDataX: false,
+        );
+        coordinator.updateSelectionRect(rect);
+        return _delegate.hitTestDataRect(rect);
+      }(),
+      ChartSelectionAcquisitionMode.rectangle => () {
         coordinator.updateBoxSelection(start, current);
         final rect = coordinator.boxSelectionRect;
         return rect == null
             ? const <ChartDataHit>[]
             : _delegate.hitTestDataRect(rect);
       }(),
-      ChartSelectionMode.lasso => () {
+      ChartSelectionAcquisitionMode.lasso => () {
         coordinator.updateLassoSelection(start, current);
         return _delegate.hitTestDataPolygon(coordinator.lassoSelectionPath);
       }(),
-      ChartSelectionMode.point => const <ChartDataHit>[],
+      ChartSelectionAcquisitionMode.point => const <ChartDataHit>[],
     };
     coordinator.updatePreviewDataHits(hits);
+  }
+
+  Rect _intervalSelectionRect(
+    Offset start,
+    Offset current, {
+    required bool selectsDataX,
+  }) {
+    final plotArea = _delegate.plotArea;
+    final transposed = _delegate.transform?.transposed ?? false;
+    final usesScreenX = selectsDataX ? !transposed : transposed;
+    if (usesScreenX) {
+      return Rect.fromLTRB(
+        math.min(start.dx, current.dx).clamp(plotArea.left, plotArea.right),
+        plotArea.top,
+        math.max(start.dx, current.dx).clamp(plotArea.left, plotArea.right),
+        plotArea.bottom,
+      );
+    }
+    return Rect.fromLTRB(
+      plotArea.left,
+      math.min(start.dy, current.dy).clamp(plotArea.top, plotArea.bottom),
+      plotArea.right,
+      math.max(start.dy, current.dy).clamp(plotArea.top, plotArea.bottom),
+    );
   }
 
   void _cancelDeferredEmptyAreaClick() {
@@ -1261,9 +1342,36 @@ class EventHandlerManager {
 
   void _completeBoxSelection() {
     final coordinator = _delegate.coordinator;
-    final hits = coordinator.previewDataHits;
+    final hits = List<ChartDataHit>.unmodifiable(coordinator.previewDataHits);
+    final selection =
+        (_delegate.interactionConfig ?? const InteractionConfig()).selection;
+    final boxRect = coordinator.boxSelectionRect;
+    final transform = _delegate.transform;
+    double? minimumX;
+    double? maximumX;
+    double? minimumY;
+    double? maximumY;
+    if (boxRect != null && transform != null) {
+      final firstPlot = _delegate.widgetToPlot(boxRect.topLeft);
+      final secondPlot = _delegate.widgetToPlot(boxRect.bottomRight);
+      final first = transform.plotToData(firstPlot.dx, firstPlot.dy);
+      final second = transform.plotToData(secondPlot.dx, secondPlot.dy);
+      minimumX = math.min(first.dx, second.dx);
+      maximumX = math.max(first.dx, second.dx);
+      minimumY = math.min(first.dy, second.dy);
+      maximumY = math.max(first.dy, second.dy);
+    }
     coordinator.clearPreviewSelection();
-    _delegate.onSelectionGestureComplete?.call(hits);
+    _delegate.onSelectionGestureComplete?.call(
+      ChartSelectionGestureResult(
+        acquisitionMode: selection.acquisitionMode,
+        hits: hits,
+        minimumXInclusive: minimumX,
+        maximumXInclusive: maximumX,
+        minimumYInclusive: minimumY,
+        maximumYInclusive: maximumY,
+      ),
+    );
   }
 
   void _completeRangeAnnotationCreation() {
@@ -1857,14 +1965,42 @@ class EventHandlerManager {
 
     // Hover is passive during panning
     if (coordinator.isPanning) {
-      coordinator.setHoveredElement(null);
+      _setHoveredElement(null);
       coordinator.setHoveredMarker(null);
       _delegate.onCursorChange?.call(SystemMouseCursors.basic);
       return;
     }
 
-    // Immediate marker highlighting
-    _updateHoveredMarker(position);
+    final selection =
+        _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+
+    // Resolve marker feedback first. In the dual-target scope a marker inside
+    // its configured radius wins exclusively; only the remaining path corridor
+    // may expose complete-series feedback.
+    if (selection.scope.includesMarks) {
+      _updateHoveredMarker(position);
+    } else {
+      coordinator.setHoveredMarker(null);
+    }
+
+    if (selection.scope == ChartSelectionScope.markOrWholeSeries &&
+        coordinator.hoveredMarker != null) {
+      _hitTestDebounceTimer?.cancel();
+      _pendingHitTestPosition = null;
+      _setHoveredElement(null);
+      _delegate.markNeedsPaint();
+      return;
+    }
+
+    if (selection.scope.includesWholeSeries &&
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.point) {
+      // Series selection needs immediate enter/exit feedback. A debounce waits
+      // until pointer movement stops and leaves the old path highlighted.
+      _hitTestDebounceTimer?.cancel();
+      _pendingHitTestPosition = position;
+      _performDeferredHitTest();
+      return;
+    }
 
     // Throttle expensive hit testing
     _pendingHitTestPosition = position;
@@ -1885,17 +2021,45 @@ class EventHandlerManager {
     if (hitElement is ResizeHandleElement) {
       final cursor = _getCursorForResizeDirection(hitElement.direction);
       _delegate.onCursorChange?.call(cursor);
-      _delegate.coordinator.setHoveredElement(hitElement.parentAnnotation);
+      _setHoveredElement(hitElement.parentAnnotation);
       _delegate.onElementHover?.call(hitElement.parentAnnotation);
       _delegate.markNeedsPaint();
       return;
     }
 
     _delegate.onCursorChange?.call(_cursorForHoveredElement(hitElement));
-    _delegate.coordinator.setHoveredElement(hitElement);
+    _setHoveredElement(hitElement);
     _delegate.onElementHover?.call(hitElement);
     _delegate.markNeedsPaint();
   }
+
+  void _setHoveredElement(ChartElement? element) {
+    final previous = _delegate.coordinator.hoveredElement;
+    final previousHadPathFeedback = _usesPathHoverFeedback(previous);
+    _delegate.coordinator.setHoveredElement(element);
+    final current = _delegate.coordinator.hoveredElement;
+    if (current is SeriesElement &&
+        !(_delegate.interactionConfig?.selection.scope.includesWholeSeries ??
+            false)) {
+      current.onHoverExit();
+    }
+    final currentHasPathFeedback = _usesPathHoverFeedback(current);
+    if (identical(previous, current) &&
+        previousHadPathFeedback == currentHasPathFeedback) {
+      return;
+    }
+    if (previousHadPathFeedback || currentHasPathFeedback) {
+      // Line and Area paths live in the cached series picture. Invalidate only
+      // when the hovered path identity changes, never for pointer movement
+      // within the same 44 logical-pixel acquisition corridor.
+      _delegate.invalidateSeriesCache();
+    }
+  }
+
+  bool _usesPathHoverFeedback(ChartElement? element) =>
+      element is SeriesElement &&
+      element.isHovered &&
+      (element.series is LineChartSeries || element.series is AreaChartSeries);
 
   void _updateHoveredMarker(Offset widgetPosition) {
     if (!(_delegate.interactionConfig?.enabled ?? true)) {
@@ -1908,7 +2072,8 @@ class EventHandlerManager {
     }
 
     final plotPosition = _delegate.widgetToPlot(widgetPosition);
-    const snapRadius = 20.0;
+    final snapRadius =
+        _delegate.interactionConfig?.selection.dataPointHitRadius ?? 20;
 
     HoveredMarkerInfo? nearestMarker;
     double minDistance = snapRadius;

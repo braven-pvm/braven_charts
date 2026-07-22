@@ -3,6 +3,7 @@ import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/bar_lab_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
+import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1140,6 +1141,7 @@ void main() {
         .whereType<BarChartSeries>()
         .toList();
     expect(find.text('Interactive bar states'), findsOneWidget);
+    expect(find.text('Selection scope', skipOffstage: false), findsOneWidget);
     expect(find.text('Inactive opacity', skipOffstage: false), findsOneWidget);
     expect(bars, hasLength(3));
     expect(
@@ -1149,6 +1151,32 @@ void main() {
     expect(
       bars.expand((series) => series.points).every((point) => point.hasLabel),
       isTrue,
+    );
+    var statesChart = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus),
+    );
+    expect(
+      statesChart.interactionConfig!.selection.scope,
+      ChartSelectionScope.wholeSeries,
+    );
+    final interactionSection = tester
+        .widget<ChartPageLayout>(find.byType(ChartPageLayout))
+        .optionsChildren
+        .whereType<OptionSection>()
+        .singleWhere((section) => section.title == 'Interaction');
+    final selectionScopeOption = interactionSection.children
+        .whereType<EnumOption<ChartSelectionScope>>()
+        .single;
+    expect(
+      selectionScopeOption.values,
+      isNot(contains(ChartSelectionScope.categoryStack)),
+    );
+    selectionScopeOption.onChanged(ChartSelectionScope.mark);
+    await tester.pump();
+    statesChart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(
+      statesChart.interactionConfig!.selection.scope,
+      ChartSelectionScope.mark,
     );
 
     await tapPreset('Stacked');
@@ -1235,6 +1263,56 @@ void main() {
     element = renderBox.debugElements.whereType<SeriesElement>().single;
     geometry = element.barGeometryForPoint(0)!;
     expect(geometry.targetStart!.dx, closeTo(geometry.targetEnd!.dx, 0.001));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selects every mark in a bar series with one click', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-states')));
+    await tester.pumpAndSettle();
+
+    final interactionSection = tester
+        .widget<ChartPageLayout>(find.byType(ChartPageLayout))
+        .optionsChildren
+        .whereType<OptionSection>()
+        .singleWhere((section) => section.title == 'Interaction');
+    interactionSection.children
+        .whereType<EnumOption<ChartSelectionScope>>()
+        .single
+        .onChanged(ChartSelectionScope.wholeSeries);
+    await tester.pumpAndSettle();
+
+    var renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    var actual = renderBox.debugElements.whereType<SeriesElement>().singleWhere(
+      (element) => element.series.id == 'series-1',
+    );
+    final geometry = actual.barGeometryForPoint(1)!;
+    await tester.tapAt(
+      renderBox.localToGlobal(renderBox.plotToWidget(geometry.rect.center)),
+    );
+    await tester.pumpAndSettle();
+
+    renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    final elements = renderBox.debugElements
+        .whereType<SeriesElement>()
+        .toList();
+    actual = elements.singleWhere((element) => element.series.id == 'series-1');
+    expect(actual.selectedPointIndices, <int>{0, 1, 2, 3, 4, 5, 6});
+    expect(
+      elements
+          .where((element) => element.series.id != 'series-1')
+          .every((element) => element.selectedPointIndices.isEmpty),
+      isTrue,
+    );
+    expect(find.textContaining('7 selected'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -824,6 +824,7 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
     ChartPointDocument(
       x: ChartNumberDocument.fromDouble(point.x),
       y: ChartNumberDocument.fromDouble(point.y),
+      pointKey: point.pointKey,
       magnitude: point.magnitude == null
           ? null
           : ChartNumberDocument.fromDouble(point.magnitude!),
@@ -895,6 +896,7 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
   return ChartDataPoint(
     x: point.x.asDouble,
     y: point.y.asDouble,
+    pointKey: point.pointKey,
     magnitude: point.magnitude?.asDouble,
     colorValue: point.colorValue?.asDouble,
     opacityValue: point.opacityValue?.asDouble,
@@ -951,6 +953,7 @@ CandlestickDataPoint _decodeCandlestickPoint(ChartPointDocument point) {
   }
   return CandlestickDataPoint(
     x: base.x,
+    pointKey: base.pointKey,
     open: _requiredExtensionDouble(values, 'open'),
     high: _requiredExtensionDouble(values, 'high'),
     low: _requiredExtensionDouble(values, 'low'),
@@ -995,6 +998,7 @@ RangeAreaDataPoint _decodeRangeAreaPoint(ChartPointDocument point) {
     }
     return RangeAreaDataPoint.gap(
       x: base.x,
+      pointKey: base.pointKey,
       timestamp: base.timestamp,
       label: base.label,
       metadata: base.metadata,
@@ -1010,6 +1014,7 @@ RangeAreaDataPoint _decodeRangeAreaPoint(ChartPointDocument point) {
   }
   return RangeAreaDataPoint(
     x: base.x,
+    pointKey: base.pointKey,
     low: low,
     high: high,
     magnitude: base.magnitude,

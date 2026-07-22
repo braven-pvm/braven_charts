@@ -240,7 +240,15 @@ class ChartSeries {
     return {
       'id': id,
       if (name != null) 'name': name,
-      'points': points.map((p) => {'x': p.x, 'y': p.y}).toList(),
+      'points': points
+          .map(
+            (p) => {
+              'x': p.x,
+              'y': p.y,
+              if (p.pointKey != null) 'pointKey': p.pointKey,
+            },
+          )
+          .toList(),
       if (color != null) 'color': color!.toARGB32(),
       if (style != null) 'style': style!.name,
       'isXOrdered': isXOrdered,
@@ -288,6 +296,7 @@ class ChartSeries {
                 (p) => ChartDataPoint(
                   x: (p['x'] as num).toDouble(),
                   y: (p['y'] as num).toDouble(),
+                  pointKey: p['pointKey'] as String?,
                 ),
               )
               .toList() ??

@@ -1,19 +1,28 @@
 import 'dart:math' as math;
 
 import 'package:braven_charts/src/models/auto_scroll_config.dart';
+import 'package:braven_charts/src/models/bar_chart_style.dart';
 import 'package:braven_charts/src/artifacts/chart_artifact_diagnostics.dart';
 import 'package:braven_charts/src/artifacts/chart_view_state.dart';
+import 'package:braven_charts/src/elements/annotation_elements.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/interaction/core/interaction_mode.dart';
 import 'package:braven_charts/src/models/braven_chart_controller.dart';
+import 'package:braven_charts/src/models/chart_annotation.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:braven_charts/src/models/chart_point_identity.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/candlestick_chart_series.dart';
 import 'package:braven_charts/src/models/candlestick_data_point.dart';
+import 'package:braven_charts/src/models/chart_context_action.dart';
 import 'package:braven_charts/src/models/chart_selection_result.dart';
+import 'package:braven_charts/src/models/chart_selection_expression.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
+import 'package:braven_charts/src/models/normalization_mode.dart';
 import 'package:braven_charts/src/models/range_area_chart_series.dart';
 import 'package:braven_charts/src/models/range_area_data_point.dart';
+import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/models/y_axis_position.dart';
 import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
@@ -70,6 +79,318 @@ void main() {
       expect(hoveredPoint == null || hoveredPoint != null, isTrue);
       expect(hoveredSeriesId == null || hoveredSeriesId != null, isTrue);
     });
+
+    testWidgets(
+      'whole-series Line selection uses a forgiving hover and tap corridor',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  yAxis: YAxisConfig(
+                    position: YAxisPosition.left,
+                    min: 0,
+                    max: 10,
+                  ),
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      scope: ChartSelectionScope.wholeSeries,
+                      completeSeriesHitRadius: 22,
+                    ),
+                  ),
+                  series: const [
+                    LineChartSeries(
+                      id: 'signal',
+                      points: [
+                        ChartDataPoint(x: 0, y: 5),
+                        ChartDataPoint(x: 10, y: 5),
+                      ],
+                      strokeWidth: 1,
+                      showDataPointMarkers: false,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final line = renderBox.debugElements.whereType<SeriesElement>().single;
+        final nearPath = line.dataToCurrentPlot(5, 5) + const Offset(0, 20);
+        expect(line.hitTest(nearPath), isFalse);
+        expect(
+          renderBox.hitTestElements(renderBox.plotToWidget(nearPath))?.id,
+          'signal',
+        );
+        final outsidePath = line.dataToCurrentPlot(5, 5) + const Offset(0, 23);
+        expect(
+          renderBox.hitTestElements(renderBox.plotToWidget(outsidePath)),
+          isNull,
+        );
+
+        final globalPosition =
+            tester.getTopLeft(renderFinder) + renderBox.plotToWidget(nearPath);
+        expect(tester.getRect(renderFinder).contains(globalPosition), isTrue);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await tester.pump();
+        final unhoveredPicture = renderBox.debugSeriesCachePicture;
+        expect(unhoveredPicture, isNotNull);
+        await mouse.moveTo(globalPosition);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+
+        final hoveredLine = renderBox.coordinator.hoveredElement;
+        expect(hoveredLine, isA<SeriesElement>());
+        expect(hoveredLine?.id, 'signal');
+        expect((hoveredLine! as SeriesElement).isHovered, isTrue);
+        expect(renderBox.coordinator.hoveredMarker, isNull);
+        expect(
+          hoveredLine,
+          same(renderBox.debugElements.whereType<SeriesElement>().single),
+        );
+        expect(
+          renderBox.debugSeriesCachePicture,
+          isNot(same(unhoveredPicture)),
+        );
+        await mouse.down(globalPosition);
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedSeriesIds, {'signal'});
+        expect(renderBox.coordinator.hoveredMarker, isNull);
+
+        await mouse.moveTo(
+          tester.getTopLeft(renderFinder) + renderBox.plotToWidget(outsidePath),
+        );
+        await tester.pump();
+        expect(renderBox.coordinator.hoveredElement, isNull);
+        expect(
+          renderBox.debugElements.whereType<SeriesElement>().single.isHovered,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets(
+      'mark-or-series scope resolves one exclusive hover and selection target',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        Future<ChartRenderBox> pumpScope(ChartSelectionScope scope) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 520,
+                  height: 360,
+                  child: BravenChartPlus(
+                    key: ValueKey<ChartSelectionScope>(scope),
+                    bravenChartController: controller,
+                    showLegend: false,
+                    yAxis: YAxisConfig(
+                      position: YAxisPosition.left,
+                      min: 0,
+                      max: 10,
+                    ),
+                    interactionConfig: InteractionConfig(
+                      selection: ChartSelectionConfig(
+                        scope: scope,
+                        dataPointHitRadius: 18,
+                        completeSeriesHitRadius: 24,
+                        dataPointHoverScale: 1.8,
+                        dataPointSelectionScale: 3.2,
+                        completeSeriesHoverStrokeScale: 2.1,
+                        completeSeriesSelectionStrokeScale: 1.9,
+                      ),
+                    ),
+                    series: const [
+                      LineChartSeries(
+                        id: 'signal',
+                        points: [
+                          ChartDataPoint(x: 0, y: 5),
+                          ChartDataPoint(x: 10, y: 5),
+                        ],
+                        strokeWidth: 1,
+                        showDataPointMarkers: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          return tester.renderObject<ChartRenderBox>(_chartRenderFinder());
+        }
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await tester.pump();
+
+        var renderBox = await pumpScope(ChartSelectionScope.mark);
+        var renderFinder = _chartRenderFinder();
+        var line = renderBox.debugElements.whereType<SeriesElement>().single;
+        var markerPosition =
+            tester.getTopLeft(renderFinder) +
+            renderBox.plotToWidget(
+              line.dataHitForPointIndex(0)!.plotPosition + const Offset(0, 12),
+            );
+        await mouse.moveTo(markerPosition);
+        await tester.pump();
+        expect(renderBox.coordinator.hoveredMarker?.seriesId, 'signal');
+        expect(line.isHovered, isFalse);
+        expect(line.dataPointHoverScale, 1.8);
+        expect(line.dataPointSelectionScale, 3.2);
+        await mouse.down(markerPosition);
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+        });
+        expect(controller.selectedSeriesIds, isEmpty);
+
+        controller.clearPointSelection();
+        renderBox = await pumpScope(ChartSelectionScope.markOrWholeSeries);
+        renderFinder = _chartRenderFinder();
+        line = renderBox.debugElements.whereType<SeriesElement>().single;
+        markerPosition =
+            tester.getTopLeft(renderFinder) +
+            renderBox.plotToWidget(
+              line.dataHitForPointIndex(0)!.plotPosition + const Offset(0, 12),
+            );
+        await mouse.moveTo(markerPosition);
+        await tester.pump();
+        expect(renderBox.coordinator.hoveredMarker?.seriesId, 'signal');
+        expect(renderBox.coordinator.hoveredElement, isNull);
+        expect(line.completeSeriesHoverStrokeScale, 2.1);
+        expect(line.completeSeriesSelectionStrokeScale, 1.9);
+        await mouse.down(markerPosition);
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+        });
+        expect(controller.selectedSeriesIds, isEmpty);
+
+        final pathPosition =
+            tester.getTopLeft(renderFinder) +
+            renderBox.plotToWidget(
+              line.dataHitForPointIndex(0)!.plotPosition + const Offset(0, 19),
+            );
+        await mouse.moveTo(pathPosition);
+        await tester.pump();
+        expect(renderBox.coordinator.hoveredMarker, isNull);
+        expect(renderBox.coordinator.hoveredElement, isA<SeriesElement>());
+        expect(
+          (renderBox.coordinator.hoveredElement! as SeriesElement).isHovered,
+          isTrue,
+        );
+        await tester.tapAt(pathPosition);
+        await tester.pump();
+        expect(controller.selectedSeriesIds, const {'signal'});
+        expect(controller.selectedPointRefs, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'Area forwards configurable point and complete-series feedback',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  yAxis: YAxisConfig(
+                    position: YAxisPosition.left,
+                    min: 0,
+                    max: 10,
+                  ),
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      scope: ChartSelectionScope.markOrWholeSeries,
+                      dataPointHitRadius: 18,
+                      completeSeriesHitRadius: 24,
+                      dataPointHoverScale: 1.8,
+                      dataPointSelectionScale: 3.2,
+                      completeSeriesHoverStrokeScale: 2.1,
+                      completeSeriesSelectionStrokeScale: 1.9,
+                    ),
+                  ),
+                  series: const [
+                    AreaChartSeries(
+                      id: 'area-signal',
+                      points: [
+                        ChartDataPoint(x: 0, y: 5),
+                        ChartDataPoint(x: 10, y: 5),
+                      ],
+                      strokeWidth: 1,
+                      showDataPointMarkers: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final area = renderBox.debugElements.whereType<SeriesElement>().single;
+        expect(area.dataPointHoverScale, 1.8);
+        expect(area.dataPointSelectionScale, 3.2);
+        expect(area.completeSeriesHoverStrokeScale, 2.1);
+        expect(area.completeSeriesSelectionStrokeScale, 1.9);
+
+        final pathPosition =
+            tester.getTopLeft(renderFinder) +
+            renderBox.plotToWidget(
+              area.dataHitForPointIndex(0)!.plotPosition + const Offset(0, 19),
+            );
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(pathPosition);
+        await tester.pump();
+
+        expect(renderBox.coordinator.hoveredMarker, isNull);
+        expect(renderBox.coordinator.hoveredElement, isA<SeriesElement>());
+        expect(renderBox.coordinator.hoveredElement?.id, 'area-signal');
+        expect(
+          (renderBox.coordinator.hoveredElement! as SeriesElement).isHovered,
+          isTrue,
+        );
+
+        await tester.tapAt(pathPosition);
+        await tester.pump();
+        expect(controller.selectedSeriesIds, const {'area-signal'});
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(
+          renderBox.debugElements.whereType<SeriesElement>().single.isSelected,
+          isTrue,
+        );
+      },
+    );
 
     testWidgets(
       'onCrosshairChanged publishes nearest Candlestick points between marks',
@@ -249,6 +570,298 @@ void main() {
     });
 
     testWidgets(
+      'line keyboard navigation changes series and honors whole-series scope',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      scope: ChartSelectionScope.wholeSeries,
+                    ),
+                  ),
+                  series: const [
+                    LineChartSeries(
+                      id: 'observed',
+                      name: 'Observed',
+                      unit: 'kg',
+                      points: [
+                        ChartDataPoint(x: 0, y: 42, label: 'Monday'),
+                        ChartDataPoint(x: 1, y: 61, label: 'Tuesday'),
+                      ],
+                    ),
+                    LineChartSeries(
+                      id: 'capacity',
+                      name: 'Capacity',
+                      unit: 'kg',
+                      points: [
+                        ChartDataPoint(x: 0, y: 55, label: 'Monday'),
+                        ChartDataPoint(x: 1, y: 72, label: 'Tuesday'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        controller.clearSelection();
+        controller.clearPointSelection();
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'capacity', pointIndex: 1),
+        });
+
+        var semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive line chart',
+          ),
+        );
+        expect(
+          semantics.properties.value,
+          'Capacity, Tuesday, 72.00 kg, point 2 of 2, not selected',
+        );
+        expect(semantics.properties.liveRegion, isTrue);
+        expect(semantics.properties.selected, isFalse);
+        expect(semantics.properties.onTap, isNotNull);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(controller.selectedSeriesIds, <String>{'capacity'});
+        expect(controller.selectedPointRefs, isEmpty);
+        semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive line chart',
+          ),
+        );
+        expect(semantics.properties.value, endsWith(', series selected'));
+        expect(semantics.properties.selected, isTrue);
+      },
+    );
+
+    testWidgets(
+      'area keyboard navigation skips gaps and selects the focused point',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    AreaChartSeries(
+                      id: 'forecast',
+                      name: 'Forecast',
+                      unit: 'MW',
+                      points: [
+                        ChartDataPoint(x: 0, y: 18, label: 'Monday'),
+                        ChartDataPoint(x: 1, y: double.nan),
+                        ChartDataPoint(x: 2, y: 26, label: 'Wednesday'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        controller.clearPointSelection();
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'forecast', pointIndex: 2),
+        });
+
+        var semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive area chart',
+          ),
+        );
+        expect(
+          semantics.properties.value,
+          'Forecast, Wednesday, 26.00 MW, point 2 of 2, not selected',
+        );
+        expect(semantics.properties.onIncrease, isNotNull);
+        expect(semantics.properties.onDecrease, isNotNull);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'forecast', pointIndex: 2),
+        });
+        semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive area chart',
+          ),
+        );
+        expect(semantics.properties.value, endsWith(', point selected'));
+        expect(semantics.properties.selected, isTrue);
+      },
+    );
+
+    testWidgets(
+      'line Shift+Space extends an ordered selection from its keyboard anchor',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    LineChartSeries(
+                      id: 'observed',
+                      points: [
+                        ChartDataPoint(x: 0, y: 10),
+                        ChartDataPoint(x: 1, y: 20),
+                        ChartDataPoint(x: 2, y: 30),
+                        ChartDataPoint(x: 3, y: 40),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'observed', pointIndex: 0),
+          const ChartPointRef(seriesId: 'observed', pointIndex: 1),
+          const ChartPointRef(seriesId: 'observed', pointIndex: 2),
+        });
+      },
+    );
+
+    testWidgets(
+      'Ctrl+A selects every bounded mark or every whole series by scope',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        var scope = ChartSelectionScope.mark;
+        late StateSetter rebuild;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  rebuild = setState;
+                  return SizedBox(
+                    width: 520,
+                    height: 360,
+                    child: BravenChartPlus(
+                      key: ValueKey<ChartSelectionScope>(scope),
+                      bravenChartController: controller,
+                      showLegend: false,
+                      interactionConfig: InteractionConfig(
+                        selection: ChartSelectionConfig(scope: scope),
+                      ),
+                      series: const [
+                        LineChartSeries(
+                          id: 'observed',
+                          points: [
+                            ChartDataPoint(x: 0, y: 10),
+                            ChartDataPoint(x: 1, y: 20),
+                          ],
+                        ),
+                        LineChartSeries(
+                          id: 'plan',
+                          points: [
+                            ChartDataPoint(x: 0, y: 12),
+                            ChartDataPoint(x: 1, y: 22),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'observed', pointIndex: 0),
+          const ChartPointRef(seriesId: 'observed', pointIndex: 1),
+          const ChartPointRef(seriesId: 'plan', pointIndex: 0),
+          const ChartPointRef(seriesId: 'plan', pointIndex: 1),
+        });
+
+        controller.clearPointSelection();
+        rebuild(() => scope = ChartSelectionScope.wholeSeries);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(controller.selectedSeriesIds, {'observed', 'plan'});
+      },
+    );
+
+    testWidgets(
       'bar keyboard navigation focuses, describes, and selects points',
       (tester) async {
         final controller = BravenChartController();
@@ -328,6 +941,178 @@ void main() {
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'actual', pointIndex: 1),
         });
+      },
+    );
+
+    testWidgets(
+      'bar keyboard activation honors category scope and modifier operations',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      scope: ChartSelectionScope.category,
+                    ),
+                  ),
+                  series: const [
+                    BarChartSeries(
+                      id: 'actual',
+                      barWidthPercent: 0.6,
+                      points: [
+                        ChartDataPoint(x: 0, y: 42, label: 'Monday'),
+                        ChartDataPoint(x: 1, y: 61, label: 'Tuesday'),
+                      ],
+                    ),
+                    BarChartSeries(
+                      id: 'plan',
+                      barWidthPercent: 0.6,
+                      points: [
+                        ChartDataPoint(x: 0, y: 40, label: 'Monday'),
+                        ChartDataPoint(x: 1, y: 65, label: 'Tuesday'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'actual', pointIndex: 0),
+          const ChartPointRef(seriesId: 'plan', pointIndex: 0),
+        });
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+        await tester.pump();
+        expect(controller.selectedPointRefs, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'bar category and stack scopes resolve durable source identities',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        const points = <ChartDataPoint>[
+          ChartDataPoint(x: 0, y: 20, label: 'Monday'),
+          ChartDataPoint(x: 1, y: 30, label: 'Tuesday'),
+        ];
+
+        Future<void> pumpScope(ChartSelectionScope scope) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 560,
+                  height: 380,
+                  child: BravenChartPlus(
+                    key: ValueKey<ChartSelectionScope>(scope),
+                    bravenChartController: controller,
+                    showLegend: false,
+                    interactionConfig: InteractionConfig(
+                      selection: ChartSelectionConfig(scope: scope),
+                    ),
+                    series: const <ChartSeries>[
+                      BarChartSeries(
+                        id: 'current',
+                        points: points,
+                        barWidthPercent: 0.7,
+                        layoutMode: BarLayoutMode.stacked,
+                        groupId: 'actual',
+                      ),
+                      BarChartSeries(
+                        id: 'forecast',
+                        points: points,
+                        barWidthPercent: 0.7,
+                        layoutMode: BarLayoutMode.stacked,
+                        groupId: 'actual',
+                      ),
+                      BarChartSeries(
+                        id: 'benchmark',
+                        points: points,
+                        barWidthPercent: 0.7,
+                        layoutMode: BarLayoutMode.stacked,
+                        groupId: 'reference',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        Future<void> tapCurrentMonday() async {
+          final renderFinder = _chartRenderFinder();
+          final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+          final element = renderBox.debugElements
+              .whereType<SeriesElement>()
+              .where((candidate) => candidate.series.id == 'current')
+              .single;
+          final center =
+              tester.getTopLeft(renderFinder) +
+              renderBox.plotToWidget(
+                element.barGeometryForPoint(0)!.rect.center,
+              );
+          await tester.tapAt(center);
+          await tester.pumpAndSettle();
+        }
+
+        await pumpScope(ChartSelectionScope.category);
+        await tapCurrentMonday();
+        expect(controller.selectedPointRefs, <ChartPointRef>{
+          const ChartPointRef(seriesId: 'current', pointIndex: 0),
+          const ChartPointRef(seriesId: 'forecast', pointIndex: 0),
+          const ChartPointRef(seriesId: 'benchmark', pointIndex: 0),
+        });
+
+        controller.clearPointSelection();
+        await pumpScope(ChartSelectionScope.categoryStack);
+        await tapCurrentMonday();
+        expect(controller.selectedPointRefs, <ChartPointRef>{
+          const ChartPointRef(seriesId: 'current', pointIndex: 0),
+          const ChartPointRef(seriesId: 'forecast', pointIndex: 0),
+        });
+
+        controller.clearPointSelection();
+        await pumpScope(ChartSelectionScope.wholeSeries);
+        await tapCurrentMonday();
+        expect(controller.selectedSeriesIds, <String>{'current'});
+        expect(controller.selectedPointRefs, isEmpty);
+        final renderBox = tester.renderObject<ChartRenderBox>(
+          _chartRenderFinder(),
+        );
+        final elementsById = <String, SeriesElement>{
+          for (final element
+              in renderBox.debugElements.whereType<SeriesElement>())
+            element.series.id: element,
+        };
+        expect(elementsById['current']!.selectedPointIndices, <int>{0, 1});
+        expect(elementsById['forecast']!.selectedPointIndices, isEmpty);
+        expect(elementsById['benchmark']!.selectedPointIndices, isEmpty);
+        expect(
+          elementsById.values.map((element) => element.hasAnySelectedPoints),
+          everyElement(isTrue),
+        );
       },
     );
 
@@ -640,6 +1425,18 @@ void main() {
       );
       expect(semantics.properties.liveRegion, isFalse);
       expect(controller.focusedPointRefs, isEmpty);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(
+        location: tester.getTopLeft(find.byType(BravenChartPlus)),
+      );
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(controller.selectedPointRefs, isEmpty);
     });
 
     testWidgets('scatter point selection applies every configured operation', (
@@ -761,7 +1558,7 @@ void main() {
                 ],
                 interactionConfig: const InteractionConfig(
                   selection: ChartSelectionConfig(
-                    mode: ChartSelectionMode.rectangle,
+                    acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
                     clearOnBackgroundTap: false,
                   ),
                 ),
@@ -817,7 +1614,7 @@ void main() {
                   ],
                   interactionConfig: const InteractionConfig(
                     selection: ChartSelectionConfig(
-                      mode: ChartSelectionMode.point,
+                      acquisitionMode: ChartSelectionAcquisitionMode.point,
                     ),
                   ),
                 ),
@@ -894,8 +1691,9 @@ void main() {
                 ],
                 interactionConfig: InteractionConfig(
                   selection: ChartSelectionConfig(
-                    mode: ChartSelectionMode.rectangle,
-                    dragActivation: ChartSelectionDragActivation.shiftPrimary,
+                    acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                    dragActivation:
+                        ChartSelectionDragActivation.shiftPrimaryButton,
                   ),
                 ),
               ),
@@ -938,6 +1736,328 @@ void main() {
       renderBox.coordinator.removeModifierKey(LogicalKeyboardKey.shift);
     });
 
+    testWidgets(
+      'scrollbar drag wins over rectangle selection and preserves selection',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 560,
+                height: 420,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  showXScrollbar: true,
+                  series: const [
+                    ScatterChartSeries(
+                      id: 'accounts',
+                      points: [
+                        ChartDataPoint(x: 2, y: 3),
+                        ChartDataPoint(x: 5, y: 6),
+                        ChartDataPoint(x: 8, y: 7),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        const selected = ChartPointRef(seriesId: 'accounts', pointIndex: 1);
+        controller.selectPoint(
+          selected,
+          revision: controller.effectiveDocumentRevision.value!,
+        );
+        await tester.pump();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final scrollbarRect = renderBox.debugXScrollbarRect;
+        expect(scrollbarRect, isNotNull);
+        final scrollbarCenter =
+            tester.getTopLeft(renderFinder) + scrollbarRect!.center;
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(scrollbarCenter);
+        await mouse.down(scrollbarCenter);
+
+        expect(
+          renderBox.coordinator.currentMode,
+          InteractionMode.scrollbarDragging,
+        );
+        await mouse.moveTo(scrollbarCenter + const Offset(42, 0));
+        await tester.pump();
+        expect(renderBox.coordinator.previewDataHits, isEmpty);
+        await mouse.up();
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, {selected});
+        expect(renderBox.coordinator.currentMode, InteractionMode.idle);
+      },
+    );
+
+    testWidgets(
+      'draggable annotation wins over rectangle selection and preserves data selection',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 560,
+                height: 400,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    LineChartSeries(
+                      id: 'signal',
+                      points: [
+                        ChartDataPoint(x: 0, y: 2),
+                        ChartDataPoint(x: 5, y: 5),
+                        ChartDataPoint(x: 10, y: 8),
+                      ],
+                    ),
+                  ],
+                  annotations: [
+                    RangeAnnotation(
+                      id: 'window',
+                      startX: 3,
+                      endX: 7,
+                      fillColor: const Color(0x221976D2),
+                      borderColor: const Color(0xFF1976D2),
+                      allowDragging: true,
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        const selected = ChartPointRef(seriesId: 'signal', pointIndex: 1);
+        controller.selectPoint(
+          selected,
+          revision: controller.effectiveDocumentRevision.value!,
+        );
+        await tester.pump();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final annotation = renderBox.debugElements
+            .whereType<RangeAnnotationElement>()
+            .single;
+        final annotationCenter =
+            tester.getTopLeft(renderFinder) +
+            renderBox.plotToWidget(annotation.bounds.center);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(annotationCenter);
+        await mouse.down(annotationCenter);
+        await mouse.moveTo(annotationCenter + const Offset(36, 0));
+        await tester.pump();
+
+        expect(
+          renderBox.coordinator.currentMode,
+          InteractionMode.draggingAnnotation,
+        );
+        expect(renderBox.coordinator.previewDataHits, isEmpty);
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {selected});
+      },
+    );
+
+    testWidgets(
+      'secondary click owns the gesture without mutating durable selection',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  contextActionsBuilder: (context, invocation) => [
+                    ChartContextAction(
+                      id: 'inspect',
+                      label: 'Inspect selection',
+                      onSelected: () {},
+                    ),
+                  ],
+                  series: const [
+                    ScatterChartSeries(
+                      id: 'accounts',
+                      points: [
+                        ChartDataPoint(x: 2, y: 3),
+                        ChartDataPoint(x: 8, y: 7),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        const selected = ChartPointRef(seriesId: 'accounts', pointIndex: 0);
+        controller.selectPoint(
+          selected,
+          revision: controller.effectiveDocumentRevision.value!,
+        );
+        await tester.pump();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final position = tester.getCenter(renderFinder);
+        final mouse = await tester.startGesture(
+          position,
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton,
+        );
+        await tester.pump();
+        expect(
+          renderBox.coordinator.currentMode,
+          InteractionMode.contextMenuOpen,
+        );
+        expect(renderBox.coordinator.previewDataHits, isEmpty);
+        expect(controller.selectedPointRefs, {selected});
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {selected});
+      },
+    );
+
+    testWidgets(
+      'Y interval acquisition resolves points through each series axis',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        final lowAxis = YAxisConfig.withId(
+          id: 'low',
+          position: YAxisPosition.left,
+          min: 0,
+          max: 10,
+        );
+        final highAxis = YAxisConfig.withId(
+          id: 'high',
+          position: YAxisPosition.right,
+          min: 100,
+          max: 200,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 560,
+                height: 400,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  normalizationMode: NormalizationMode.perSeries,
+                  series: [
+                    LineChartSeries(
+                      id: 'low-signal',
+                      yAxisId: 'low',
+                      yAxisConfig: lowAxis,
+                      points: const [
+                        ChartDataPoint(x: 2, y: 2),
+                        ChartDataPoint(x: 5, y: 5),
+                        ChartDataPoint(x: 8, y: 8),
+                      ],
+                    ),
+                    LineChartSeries(
+                      id: 'high-signal',
+                      yAxisId: 'high',
+                      yAxisConfig: highAxis,
+                      points: const [
+                        ChartDataPoint(x: 2, y: 120),
+                        ChartDataPoint(x: 5, y: 150),
+                        ChartDataPoint(x: 8, y: 180),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.yInterval,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        renderBox.hitTestElements(renderBox.debugPlotArea.center);
+        final elements = renderBox.debugElements.whereType<SeriesElement>();
+        final low = elements.singleWhere(
+          (element) => element.id == 'low-signal',
+        );
+        final high = elements.singleWhere(
+          (element) => element.id == 'high-signal',
+        );
+        final lowPoint = low.dataToCurrentPlot(5, 5);
+        final highPoint = high.dataToCurrentPlot(5, 150);
+        expect(lowPoint.dy, closeTo(highPoint.dy, 0.01));
+        final centerY = (lowPoint.dy + highPoint.dy) / 2;
+        final x = renderBox.plotWidth / 2;
+        final start = origin + renderBox.plotToWidget(Offset(x, centerY - 10));
+        final end = origin + renderBox.plotToWidget(Offset(x, centerY + 10));
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+
+        expect(renderBox.coordinator.previewDataHits, hasLength(2));
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'low-signal', pointIndex: 1),
+          const ChartPointRef(seriesId: 'high-signal', pointIndex: 1),
+        });
+      },
+    );
+
     testWidgets('rectangle selection commits every enclosed scatter point', (
       tester,
     ) async {
@@ -967,7 +2087,7 @@ void main() {
                 ],
                 interactionConfig: InteractionConfig(
                   selection: const ChartSelectionConfig(
-                    mode: ChartSelectionMode.rectangle,
+                    acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
                     useModifierKeys: false,
                   ),
                   onSelectionResultChanged: (result) {
@@ -1021,6 +2141,283 @@ void main() {
       expect(callbackResult.extents?.maximumX, 4);
     });
 
+    testWidgets(
+      'X and Y interval acquisition span the orthogonal Line dimension',
+      (tester) async {
+        for (final acquisitionMode in const [
+          ChartSelectionAcquisitionMode.xInterval,
+          ChartSelectionAcquisitionMode.yInterval,
+        ]) {
+          final controller = BravenChartController();
+          addTearDown(controller.dispose);
+          var callbackCount = 0;
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 520,
+                  height: 360,
+                  child: BravenChartPlus(
+                    key: ValueKey(acquisitionMode),
+                    bravenChartController: controller,
+                    showLegend: false,
+                    series: const [
+                      LineChartSeries(
+                        id: 'signal',
+                        showDataPointMarkers: true,
+                        points: [
+                          ChartDataPoint(x: 2, y: 3),
+                          ChartDataPoint(x: 4, y: 5),
+                          ChartDataPoint(x: 8, y: 8),
+                        ],
+                      ),
+                    ],
+                    interactionConfig: InteractionConfig(
+                      selection: ChartSelectionConfig(
+                        acquisitionMode: acquisitionMode,
+                        useModifierKeys: false,
+                      ),
+                      onSelectionResultChanged: (_) => callbackCount++,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          callbackCount = 0;
+
+          final renderFinder = _chartRenderFinder();
+          final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+          final origin = tester.getTopLeft(renderFinder);
+          final element = renderBox.debugElements
+              .whereType<SeriesElement>()
+              .single;
+          final first = renderBox.plotToWidget(
+            element.dataHitForPointIndex(0)!.plotPosition,
+          );
+          final second = renderBox.plotToWidget(
+            element.dataHitForPointIndex(1)!.plotPosition,
+          );
+          final start =
+              acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+              ? origin +
+                    Offset(
+                      math.min(first.dx, second.dx) - 8,
+                      renderBox.debugPlotArea.bottom - 8,
+                    )
+              : origin +
+                    Offset(
+                      renderBox.debugPlotArea.right - 8,
+                      math.max(first.dy, second.dy) + 8,
+                    );
+          final end = acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+              ? origin +
+                    Offset(
+                      math.max(first.dx, second.dx) + 8,
+                      renderBox.debugPlotArea.bottom - 8,
+                    )
+              : origin +
+                    Offset(
+                      renderBox.debugPlotArea.right - 8,
+                      math.min(first.dy, second.dy) - 8,
+                    );
+          final mouse = await tester.createGesture(
+            kind: PointerDeviceKind.mouse,
+          );
+          await mouse.addPointer(location: Offset.zero);
+          await mouse.moveTo(start);
+          await mouse.down(start);
+          await mouse.moveTo(end);
+          await tester.pump();
+
+          expect(
+            renderBox.coordinator.currentMode,
+            InteractionMode.boxSelecting,
+          );
+          expect(renderBox.coordinator.previewDataHits, hasLength(2));
+          expect(callbackCount, 0);
+          await mouse.up();
+          await tester.pump();
+
+          expect(controller.selectedPointRefs, {
+            const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+            const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+          });
+          final intent = controller.selectionExpression.clauses.single;
+          if (acquisitionMode == ChartSelectionAcquisitionMode.xInterval) {
+            expect(intent, isA<ChartSelectionXIntervalClause>());
+            final interval = intent as ChartSelectionXIntervalClause;
+            expect(interval.minimumXInclusive, lessThan(2));
+            expect(interval.maximumXInclusive, greaterThan(4));
+            expect(interval.seriesIds, {'signal'});
+          } else {
+            expect(intent, isA<ChartSelectionYIntervalClause>());
+            final interval = intent as ChartSelectionYIntervalClause;
+            expect(interval.minimumYInclusive, lessThan(3));
+            expect(interval.maximumYInclusive, greaterThan(5));
+            expect(interval.seriesIds, {'signal'});
+          }
+          expect(callbackCount, 1);
+          await mouse.removePointer();
+        }
+      },
+    );
+
+    testWidgets(
+      'X interval acquisition follows the category axis for horizontal Bars',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    BarChartSeries(
+                      id: 'volume',
+                      orientation: BarOrientation.horizontal,
+                      barWidthPercent: 0.7,
+                      points: [
+                        ChartDataPoint(x: 0, y: 30),
+                        ChartDataPoint(x: 1, y: 50),
+                        ChartDataPoint(x: 2, y: 70),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final first = renderBox.plotToWidget(
+          element.dataHitForPointIndex(0)!.plotPosition,
+        );
+        final second = renderBox.plotToWidget(
+          element.dataHitForPointIndex(1)!.plotPosition,
+        );
+        final start =
+            origin +
+            Offset(
+              renderBox.debugPlotArea.right - 8,
+              math.min(first.dy, second.dy) - 8,
+            );
+        final end =
+            origin +
+            Offset(
+              renderBox.debugPlotArea.right - 8,
+              math.max(first.dy, second.dy) + 8,
+            );
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+
+        expect(renderBox.coordinator.previewDataHits, hasLength(2));
+        await mouse.up();
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'volume', pointIndex: 0),
+          const ChartPointRef(seriesId: 'volume', pointIndex: 1),
+        });
+        await mouse.removePointer();
+      },
+    );
+
+    testWidgets(
+      'Escape cancels interval preview without committing selection',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        var callbackCount = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    AreaChartSeries(
+                      id: 'signal',
+                      points: [
+                        ChartDataPoint(x: 2, y: 3),
+                        ChartDataPoint(x: 4, y: 5),
+                        ChartDataPoint(x: 8, y: 8),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: InteractionConfig(
+                    selection: const ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                    ),
+                    onSelectionResultChanged: (_) => callbackCount++,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        final plotArea = renderBox.debugPlotArea;
+        await tester.tapAt(origin + plotArea.bottomCenter - const Offset(0, 8));
+        await tester.pump();
+        callbackCount = 0;
+
+        final start = origin + plotArea.bottomLeft + const Offset(24, -8);
+        final end = origin + plotArea.bottomRight + const Offset(-24, -8);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+        expect(renderBox.coordinator.currentMode, InteractionMode.boxSelecting);
+        expect(renderBox.coordinator.previewDataHits, isNotEmpty);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(renderBox.coordinator.currentMode, InteractionMode.idle);
+        expect(renderBox.coordinator.previewDataHits, isEmpty);
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(callbackCount, 0);
+
+        await mouse.up();
+        await mouse.removePointer();
+        await tester.pump();
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(callbackCount, 0);
+      },
+    );
+
     testWidgets('lasso selection follows the drawn polygon', (tester) async {
       final controller = BravenChartController();
       addTearDown(controller.dispose);
@@ -1047,7 +2444,7 @@ void main() {
                 ],
                 interactionConfig: const InteractionConfig(
                   selection: ChartSelectionConfig(
-                    mode: ChartSelectionMode.lasso,
+                    acquisitionMode: ChartSelectionAcquisitionMode.lasso,
                     useModifierKeys: false,
                   ),
                 ),
@@ -1208,6 +2605,251 @@ void main() {
         expect(controller.selectionResult, callbackResult);
       },
     );
+
+    testWidgets(
+      'Line and Area paths select their nearest canonical mark with hidden markers',
+      (tester) async {
+        final seriesCases = <ChartSeries>[
+          const LineChartSeries(
+            id: 'line',
+            points: [
+              ChartDataPoint(x: 0, y: 2),
+              ChartDataPoint(x: 1, y: 6),
+              ChartDataPoint(x: 2, y: 4),
+            ],
+          ),
+          const AreaChartSeries(
+            id: 'area',
+            points: [
+              ChartDataPoint(x: 0, y: 3),
+              ChartDataPoint(x: 1, y: 7),
+              ChartDataPoint(x: 2, y: 5),
+            ],
+          ),
+        ];
+
+        for (final series in seriesCases) {
+          final controller = BravenChartController();
+          addTearDown(controller.dispose);
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 520,
+                  height: 360,
+                  child: BravenChartPlus(
+                    bravenChartController: controller,
+                    showLegend: false,
+                    series: [series],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final renderFinder = _chartRenderFinder();
+          final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+          final element = renderBox.debugElements
+              .whereType<SeriesElement>()
+              .single;
+          final target =
+              tester.getTopLeft(renderFinder) +
+              renderBox.plotToWidget(
+                element.dataHitForPointIndex(1)!.plotPosition,
+              );
+
+          await tester.tapAt(target);
+          await tester.pump();
+
+          expect(controller.selectedPointRefs, {
+            ChartPointRef(seriesId: series.id, pointIndex: 1),
+          });
+        }
+      },
+    );
+
+    testWidgets('series scope and controller operations are independent', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 520,
+              height: 360,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: false,
+                interactionConfig: const InteractionConfig(
+                  selection: ChartSelectionConfig(
+                    scope: ChartSelectionScope.wholeSeries,
+                  ),
+                ),
+                series: const [
+                  LineChartSeries(
+                    id: 'actual',
+                    points: [
+                      ChartDataPoint(x: 0, y: 2),
+                      ChartDataPoint(x: 1, y: 6),
+                    ],
+                  ),
+                  LineChartSeries(
+                    id: 'target',
+                    points: [
+                      ChartDataPoint(x: 0, y: 4),
+                      ChartDataPoint(x: 1, y: 8),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderFinder = _chartRenderFinder();
+      final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      final actual = renderBox.debugElements
+          .whereType<SeriesElement>()
+          .firstWhere((element) => element.series.id == 'actual');
+      final actualPosition =
+          tester.getTopLeft(renderFinder) +
+          renderBox.plotToWidget(actual.dataHitForPointIndex(1)!.plotPosition);
+      await tester.tapAt(actualPosition);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'actual'});
+      expect(controller.selectedSeriesId, isNull);
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(controller.selectionExpression.clauses, const [
+        ChartSelectionWholeSeriesClause(seriesId: 'actual'),
+      ]);
+      expect(
+        controller.selectionSnapshot?.revision,
+        controller.effectiveDocumentRevision.value,
+      );
+      expect(controller.selectionSnapshot?.statistics.pointCount, 2);
+
+      final target = renderBox.debugElements
+          .whereType<SeriesElement>()
+          .firstWhere((element) => element.series.id == 'target');
+      final targetPosition =
+          tester.getTopLeft(renderFinder) +
+          renderBox.plotToWidget(target.dataHitForPointIndex(1)!.plotPosition);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tapAt(targetPosition);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'actual', 'target'});
+      expect(controller.selectedSeriesId, isNull);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.tapAt(actualPosition);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'target'});
+      expect(controller.selectedSeriesId, isNull);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.tapAt(targetPosition);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, isEmpty);
+      expect(controller.selectedSeriesId, isNull);
+      expect(controller.selectionExpression.isEmpty, isTrue);
+
+      controller.selectSeries('target');
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'target'});
+      expect(controller.selectedSeriesId, 'target');
+
+      controller.selectSeriesIds(const [
+        'actual',
+      ], operation: ChartSelectionOperation.add);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'actual', 'target'});
+      expect(controller.selectedSeriesId, 'target');
+
+      controller.selectSeriesIds(const [
+        'actual',
+      ], operation: ChartSelectionOperation.subtract);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'target'});
+      expect(controller.selectedSeriesId, 'target');
+
+      controller.selectSeriesIds(const [
+        'actual',
+        'target',
+      ], operation: ChartSelectionOperation.toggle);
+      await tester.pump();
+      expect(controller.selectedSeriesIds, {'actual'});
+      expect(controller.selectedSeriesId, 'target');
+
+      controller.clearSelection();
+      await tester.pump();
+      expect(controller.selectedSeriesIds, isEmpty);
+      expect(controller.selectedSeriesId, isNull);
+    });
+
+    testWidgets('stable point keys preserve selection through source reorder', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      Widget host(List<ChartDataPoint> points) => MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 520,
+            height: 360,
+            child: BravenChartPlus(
+              key: const ValueKey('stable-key-chart'),
+              bravenChartController: controller,
+              showLegend: false,
+              series: [LineChartSeries(id: 'signal', points: points)],
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        host(const [
+          ChartDataPoint(x: 0, y: 10, pointKey: 'alpha'),
+          ChartDataPoint(x: 1, y: 20, pointKey: 'beta'),
+        ]),
+      );
+      await tester.pumpAndSettle();
+      controller.selectPoint(
+        const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+        revision: controller.effectiveDocumentRevision.value!,
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(
+        host(const [
+          ChartDataPoint(x: 1, y: 22, pointKey: 'beta'),
+          ChartDataPoint(x: 0, y: 12, pointKey: 'alpha'),
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+      });
+      expect(controller.selectionExpression.clauses, hasLength(1));
+      expect(
+        (controller.selectionExpression.clauses.single
+                as ChartSelectionPointKeysClause)
+            .pointKeys,
+        {'alpha'},
+      );
+      expect(controller.selectionSnapshot?.pointKeyRefs, {
+        const ChartPointKeyRef(seriesId: 'signal', pointKey: 'alpha'),
+      });
+      expect(controller.selectionSnapshot?.result.points.single.point.y, 12);
+    });
   });
 }
 

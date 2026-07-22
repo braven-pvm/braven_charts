@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 120 of 120 classes have a synthesizable subject: every verb they
+// 121 of 121 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1343 verbs total; 7 of them have an argument type with no
+// 1369 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,10 +62,74 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 120;
+const int _executedClasses = 121;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
+
+/// Smoke coverage for [ChartDocumentExtractOptions]'s 11 executable verb(s).
+void _smokeChartDocumentExtractOptions(
+  _Verb verb,
+  ChartDocumentExtractOptions subject,
+) {
+  verb(
+    'ChartDocumentExtractOptionsFluent.withDocumentId',
+    () => subject.withDocumentId('y'),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withDataScope',
+    () => subject.withDataScope(ChartDataScope.effectiveFull),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withSelectionProjection',
+    () => subject.withSelectionProjection(
+      const ChartSelectionProjectionOptions(),
+    ),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withIncludeViewState',
+    () => subject.withIncludeViewState(true),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withDataStorage',
+    () => subject.withDataStorage(ChartDataStorage.inlinePoints),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withThemeMode',
+    () => subject.withThemeMode(ChartThemeCaptureMode.referenceAndResolved),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withThemeReference',
+    () => subject.withThemeReference('y'),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withYAxisFormatterDescriptors',
+    () => subject.withYAxisFormatterDescriptors(const {}),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withInteractionBindingDescriptors',
+    () => subject.withInteractionBindingDescriptors(const {}),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withRadialFormatterDescriptors',
+    () => subject.withRadialFormatterDescriptors(const {}),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.withMaxSnapshotAttempts',
+    () => subject.withMaxSnapshotAttempts(3),
+  );
+}
+
+/// Compile-only coverage for [ChartDocumentExtractOptions]'s 2 verb(s)
+/// whose argument type has no synthesizable value.
+void _compileChartDocumentExtractOptions(
+  ChartDocumentExtractOptions subject,
+  JsonObjectValue a0,
+  JsonObjectValue a1,
+) {
+  subject.withXAxisFormatterDescriptor(a0);
+  subject.withConcentricCenterFormatterDescriptor(a1);
+}
 
 /// Smoke coverage for [AnnotationStyle]'s 6 executable verb(s).
 void _smokeAnnotationStyle(_Verb verb, AnnotationStyle subject) {
@@ -771,9 +835,17 @@ void _smokeCandlestickAnimationStyle(
   );
 }
 
-/// Smoke coverage for [CandlestickDataPoint]'s 18 executable verb(s).
+/// Smoke coverage for [CandlestickDataPoint]'s 20 executable verb(s).
 void _smokeCandlestickDataPoint(_Verb verb, CandlestickDataPoint subject) {
   verb('CandlestickDataPointFluent.withX', () => subject.withX(1.0));
+  verb(
+    'CandlestickDataPointFluent.withPointKey',
+    () => subject.withPointKey('y'),
+  );
+  verb(
+    'CandlestickDataPointFluent.clearPointKey',
+    () => subject.clearPointKey(),
+  );
   verb(
     'CandlestickDataPointFluent.withMagnitude',
     () => subject.withMagnitude(1.0),
@@ -1665,10 +1737,12 @@ void _smokeLegendAnnotation(_Verb verb, LegendAnnotation subject) {
   );
 }
 
-/// Smoke coverage for [ChartDataPoint]'s 17 executable verb(s).
+/// Smoke coverage for [ChartDataPoint]'s 19 executable verb(s).
 void _smokeChartDataPoint(_Verb verb, ChartDataPoint subject) {
   verb('ChartDataPointFluent.withX', () => subject.withX(1.0));
   verb('ChartDataPointFluent.withY', () => subject.withY(1.0));
+  verb('ChartDataPointFluent.withPointKey', () => subject.withPointKey('y'));
+  verb('ChartDataPointFluent.clearPointKey', () => subject.clearPointKey());
   verb('ChartDataPointFluent.withMagnitude', () => subject.withMagnitude(1.0));
   verb('ChartDataPointFluent.clearMagnitude', () => subject.clearMagnitude());
   verb(
@@ -3015,11 +3089,15 @@ void _smokeKeyboardConfig(_Verb verb, KeyboardConfig subject) {
   );
 }
 
-/// Smoke coverage for [ChartSelectionConfig]'s 5 executable verb(s).
+/// Smoke coverage for [ChartSelectionConfig]'s 12 executable verb(s).
 void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
-    'ChartSelectionConfigFluent.withMode',
-    () => subject.withMode(ChartSelectionMode.point),
+    'ChartSelectionConfigFluent.withAcquisitionMode',
+    () => subject.withAcquisitionMode(ChartSelectionAcquisitionMode.point),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withScope',
+    () => subject.withScope(ChartSelectionScope.mark),
   );
   verb(
     'ChartSelectionConfigFluent.withOperation',
@@ -3027,7 +3105,8 @@ void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   );
   verb(
     'ChartSelectionConfigFluent.withDragActivation',
-    () => subject.withDragActivation(ChartSelectionDragActivation.primary),
+    () =>
+        subject.withDragActivation(ChartSelectionDragActivation.primaryButton),
   );
   verb(
     'ChartSelectionConfigFluent.withClearOnBackgroundTap',
@@ -3036,6 +3115,30 @@ void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
     'ChartSelectionConfigFluent.withUseModifierKeys',
     () => subject.withUseModifierKeys(true),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withDataPointHitRadius',
+    () => subject.withDataPointHitRadius(20),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withCompleteSeriesHitRadius',
+    () => subject.withCompleteSeriesHitRadius(22),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withDataPointHoverScale',
+    () => subject.withDataPointHoverScale(1.5),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withDataPointSelectionScale',
+    () => subject.withDataPointSelectionScale(2.67),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withCompleteSeriesHoverStrokeScale',
+    () => subject.withCompleteSeriesHoverStrokeScale(1.75),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withCompleteSeriesSelectionStrokeScale',
+    () => subject.withCompleteSeriesSelectionStrokeScale(1.5),
   );
 }
 
@@ -4280,9 +4383,14 @@ void _compileRangeAreaChartSeries(
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [RangeAreaDataPoint]'s 17 executable verb(s).
+/// Smoke coverage for [RangeAreaDataPoint]'s 19 executable verb(s).
 void _smokeRangeAreaDataPoint(_Verb verb, RangeAreaDataPoint subject) {
   verb('RangeAreaDataPointFluent.withX', () => subject.withX(1.0));
+  verb(
+    'RangeAreaDataPointFluent.withPointKey',
+    () => subject.withPointKey('y'),
+  );
+  verb('RangeAreaDataPointFluent.clearPointKey', () => subject.clearPointKey());
   verb(
     'RangeAreaDataPointFluent.withMagnitude',
     () => subject.withMagnitude(1.0),
@@ -5751,6 +5859,7 @@ void _smokeLabelStyle(_Verb verb, LabelStyle subject) {
 
 /// Every compile-only case, referenced so none of them is dead code.
 const List<Function> _compileOnlyCases = <Function>[
+  _compileChartDocumentExtractOptions,
   _compileCandlestickDataPoint,
   _compileScatterChartSeries,
   _compileAreaChartSeries,
@@ -5759,6 +5868,8 @@ const List<Function> _compileOnlyCases = <Function>[
 
 /// Verbs that cannot be executed, recorded rather than silently dropped.
 const List<String> _compileOnlyVerbs = <String>[
+  'ChartDocumentExtractOptionsFluent.withXAxisFormatterDescriptor — no synthesizable value for JsonObjectValue',
+  'ChartDocumentExtractOptionsFluent.withConcentricCenterFormatterDescriptor — no synthesizable value for JsonObjectValue',
   'CandlestickDataPointFluent.withCandlestickStyle — no synthesizable value for CandlestickPointStyle',
   'ScatterChartSeriesFluent.withSizeEncoding — no synthesizable value for ScatterSizeEncoding',
   'ScatterChartSeriesFluent.withColorEncoding — no synthesizable value for ScatterColorEncoding',
@@ -5770,6 +5881,15 @@ const List<String> _compileOnlyVerbs = <String>[
 
 void main() {
   group('generated fluent verbs run without throwing', () {
+    test('ChartDocumentExtractOptions', () {
+      final subject = _subject(() => ChartDocumentExtractOptions());
+      if (subject == null) return;
+      expect(
+        _record(_smokeChartDocumentExtractOptions, subject),
+        isEmpty,
+        reason: 'generated ChartDocumentExtractOptionsFluent verb(s) threw',
+      );
+    });
     test('AnnotationStyle', () {
       final subject = _subject(() => AnnotationStyle());
       if (subject == null) return;
@@ -7326,9 +7446,9 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 120);
+    expect(_executedClasses, 121);
     expect(_skippedClasses, 0);
-    expect(_compileOnlyCases, hasLength(4));
-    expect(_compileOnlyVerbs, hasLength(7));
+    expect(_compileOnlyCases, hasLength(5));
+    expect(_compileOnlyVerbs, hasLength(9));
   });
 }

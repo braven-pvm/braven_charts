@@ -57,6 +57,7 @@ class ChartPointDocument {
   ChartPointDocument({
     required this.x,
     required this.y,
+    this.pointKey,
     this.magnitude,
     this.colorValue,
     this.opacityValue,
@@ -71,6 +72,7 @@ class ChartPointDocument {
 
   final ChartNumberDocument x;
   final ChartNumberDocument y;
+  final String? pointKey;
   final ChartNumberDocument? magnitude;
   final ChartNumberDocument? colorValue;
   final ChartNumberDocument? opacityValue;
@@ -85,6 +87,7 @@ class ChartPointDocument {
   Map<String, Object?> toJson() => {
     'x': x.toJson(),
     'y': y.toJson(),
+    if (pointKey != null) 'pointKey': pointKey,
     if (magnitude != null) 'magnitude': magnitude!.toJson(),
     if (colorValue != null) 'colorValue': colorValue!.toJson(),
     if (opacityValue != null) 'opacityValue': opacityValue!.toJson(),
@@ -101,6 +104,7 @@ class ChartPointDocument {
       ChartPointDocument(
         x: ChartNumberDocument.fromJson(json['x']),
         y: ChartNumberDocument.fromJson(json['y']),
+        pointKey: readOptionalString(json, 'pointKey'),
         magnitude: json.containsKey('magnitude') && json['magnitude'] != null
             ? ChartNumberDocument.fromJson(json['magnitude'])
             : null,
@@ -296,6 +300,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     Iterable<String?>? categoryValues,
     Iterable<DateTime?>? timestamps,
     Iterable<String?>? labels,
+    Iterable<String?>? pointKeys,
     Iterable<JsonObjectValue?>? metadata,
     Iterable<JsonObjectValue?>? segmentStyles,
     Iterable<JsonObjectValue?>? pointStyles,
@@ -308,6 +313,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
        categoryValues = _immutableOptionalColumn(categoryValues),
        timestamps = _immutableOptionalColumn(timestamps),
        labels = _immutableOptionalColumn(labels),
+       pointKeys = _immutableOptionalColumn(pointKeys),
        metadata = _immutableOptionalColumn(metadata),
        segmentStyles = _immutableOptionalColumn(segmentStyles),
        pointStyles = _immutableOptionalColumn(pointStyles),
@@ -327,6 +333,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     _validateColumnLength('opacityValues', this.opacityValues?.length);
     _validateColumnLength('categoryValues', this.categoryValues?.length);
     _validateColumnLength('labels', this.labels?.length);
+    _validateColumnLength('pointKeys', this.pointKeys?.length);
     _validateColumnLength('metadata', this.metadata?.length);
     _validateColumnLength('segmentStyles', this.segmentStyles?.length);
     _validateColumnLength('pointStyles', this.pointStyles?.length);
@@ -352,6 +359,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       ),
       timestamps: _optionalPointColumn(points, (point) => point.timestamp),
       labels: _optionalPointColumn(points, (point) => point.label),
+      pointKeys: _optionalPointColumn(points, (point) => point.pointKey),
       metadata: _optionalPointColumn(points, (point) => point.metadata),
       segmentStyles: _optionalPointColumn(
         points,
@@ -373,6 +381,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
   final List<String?>? categoryValues;
   final List<DateTime?>? timestamps;
   final List<String?>? labels;
+  final List<String?>? pointKeys;
   final List<JsonObjectValue?>? metadata;
   final List<JsonObjectValue?>? segmentStyles;
   final List<JsonObjectValue?>? pointStyles;
@@ -396,6 +405,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
         categoryValue: categoryValues?[index],
         timestamp: timestamps?[index],
         label: labels?[index],
+        pointKey: pointKeys?[index],
         metadata: metadata?[index],
         segmentStyle: segmentStyles?[index],
         pointStyle: pointStyles?[index],
@@ -420,6 +430,7 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
         for (final value in timestamps!) value?.toUtc().toIso8601String(),
       ],
     if (labels != null) 'labels': labels,
+    if (pointKeys != null) 'pointKeys': pointKeys,
     if (metadata != null)
       'metadata': [for (final value in metadata!) value?.toJson()],
     if (segmentStyles != null)
@@ -487,6 +498,13 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       if (value == null) return null;
       if (value is! String) {
         throw FormatException('$path must be a string or null');
+      }
+      return value;
+    }),
+    pointKeys: _readOptionalColumn(optionalColumns, 'pointKeys', (value, path) {
+      if (value == null) return null;
+      if (value is! String || value.isEmpty) {
+        throw FormatException('$path must be a non-empty string or null');
       }
       return value;
     }),

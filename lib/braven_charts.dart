@@ -53,6 +53,10 @@ export 'src/artifacts/chart_document_hydrator.dart';
 export 'src/artifacts/chart_document_extractor.dart'
     show
         ChartDataScope,
+        ChartSelectionProjectionOptions,
+        ChartSelectionAnnotationProjection,
+        ChartSelectionIntervalBoundaryProjection,
+        ChartSelectionSeriesProjection,
         ChartDocumentExtractOptions,
         ChartDocumentExtractionHandler,
         ChartDocumentRevision,
@@ -131,6 +135,8 @@ export 'src/models/series_inline_label_config.dart';
 export 'src/models/chart_series.dart';
 export 'src/models/chart_state_config.dart';
 export 'src/models/chart_selection_result.dart';
+export 'src/models/chart_selection_expression.dart';
+export 'src/models/chart_point_identity.dart';
 export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/concentric_donut_config.dart';

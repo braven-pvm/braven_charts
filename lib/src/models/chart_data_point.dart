@@ -10,7 +10,7 @@ import 'scatter_marker_style.dart';
 /// ChartDataPoint is an immutable data structure representing a point
 /// in 2D space, with optional timestamp and label for rich data visualization.
 ///
-/// Equality is based on x, y, magnitude, colorValue, opacityValue,
+/// Equality is based on pointKey, x, y, magnitude, colorValue, opacityValue,
 /// categoryValue, timestamp, label, segmentStyle, and pointStyle.
 /// Metadata is excluded from equality comparisons for performance optimization.
 ///
@@ -46,6 +46,7 @@ class ChartDataPoint {
   const ChartDataPoint({
     required this.x,
     required this.y,
+    this.pointKey,
     this.magnitude,
     this.colorValue,
     this.opacityValue,
@@ -55,7 +56,14 @@ class ChartDataPoint {
     this.metadata,
     this.segmentStyle,
     this.pointStyle,
-  });
+  }) : assert(pointKey == null || pointKey != '', 'pointKey must not be empty');
+
+  /// Optional stable identity for this logical observation within its series.
+  ///
+  /// Keys must be unique among the keyed points in one series. Unlike the
+  /// source point index, this identity survives reorder, insertion, and
+  /// bounded-stream eviction. Leave it null when the host has no durable key.
+  final String? pointKey;
 
   /// X-axis value (horizontal position).
   final double x;
@@ -176,6 +184,8 @@ class ChartDataPoint {
   ChartDataPoint copyWith({
     double? x,
     double? y,
+    String? pointKey,
+    bool clearPointKey = false,
     double? magnitude,
     bool clearMagnitude = false,
     double? colorValue,
@@ -195,6 +205,7 @@ class ChartDataPoint {
     return ChartDataPoint(
       x: x ?? this.x,
       y: y ?? this.y,
+      pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
       magnitude: clearMagnitude ? null : (magnitude ?? this.magnitude),
       colorValue: clearColorValue ? null : (colorValue ?? this.colorValue),
       opacityValue: clearOpacityValue
@@ -218,6 +229,7 @@ class ChartDataPoint {
       identical(this, other) ||
       other is ChartDataPoint &&
           runtimeType == other.runtimeType &&
+          pointKey == other.pointKey &&
           x == other.x &&
           y == other.y &&
           magnitude == other.magnitude &&
@@ -232,6 +244,7 @@ class ChartDataPoint {
 
   @override
   int get hashCode => Object.hash(
+    pointKey,
     x,
     y,
     magnitude,
@@ -248,6 +261,9 @@ class ChartDataPoint {
   String toString() {
     final buffer = StringBuffer('ChartDataPoint(');
     buffer.write('x: $x, y: $y');
+    if (pointKey != null) {
+      buffer.write(', pointKey: "$pointKey"');
+    }
     if (magnitude != null) {
       buffer.write(', magnitude: $magnitude');
     }

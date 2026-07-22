@@ -50,6 +50,69 @@ stable ordering ordinal, `y` is the contribution, and `label` is the category.
 `ChartPointRef(seriesId, pointIndex)` remains the portable identity across
 charts, tables, artifacts, and restored runtimes.
 
+## Durable selection and extraction
+
+Selection separates acquisition geometry from semantic meaning. A direct
+point, X/Y interval, rectangle, or lasso first acquires rendered marks;
+`ChartSelectionScope` then resolves those hits as individual data marks, a
+shared category, one compatible composition stack, or a complete series.
+`markOrWholeSeries` permits either a nearby mark or the surrounding Line/Area
+path to win, but never selects both from one action.
+
+```dart
+final controller = BravenChartController();
+
+BravenChartPlus(
+  bravenChartController: controller,
+  interactionConfig: const InteractionConfig(
+    selection: ChartSelectionConfig(
+      acquisitionMode: ChartSelectionAcquisitionMode.point,
+      scope: ChartSelectionScope.markOrWholeSeries,
+    ),
+  ),
+  series: series,
+);
+```
+
+Shift adds, Ctrl/Command toggles, Alt subtracts, and an unmodified action uses
+the configured `ChartSelectionOperation`. Enter or Space commits through the
+same semantic resolver as pointer input, so Bar category/stack, complete
+series, Candlestick OHLC, Range Area tuples, Scatter marks, radial slices, and
+Polar columns retain the same meaning from either input path. Shift+Space
+extends an ordered Line, Area, Bar, Candlestick, Range Area, radial, or Polar
+selection from its keyboard anchor. Ctrl/Command+A selects every mark only
+when the result is bounded (2,000 ordinary observations, or 200 Scatter
+observations), while complete-series scope selects every series compactly.
+
+Line and Area use Left/Right to move between valid points and Up/Down to move
+between series. Bar arrows follow visual category and series directions,
+Scatter arrows choose the nearest point in the requested plot direction,
+Candlestick and Range Area use Left/Right, and radial families traverse their
+visible category order. Escape clears both focus and durable point/series
+selection. Screen-reader semantics announce the family, series, observation,
+formatted value, ordinal, and current selection state.
+
+The mounted controller exposes durable references, compact expression intent,
+extents, and statistics. It can also produce a detached chart document from
+the current selection:
+
+```dart
+final selectedChart = controller.extractDocument(
+  const ChartDocumentExtractOptions(
+    dataScope: ChartDataScope.selection,
+    selectionProjection: ChartSelectionProjectionOptions(
+      annotationProjection:
+          ChartSelectionAnnotationProjection.clipToSelectionBounds,
+    ),
+  ),
+);
+```
+
+Line and Area interval extraction interpolates exact continuous boundaries by
+default. Candlestick OHLC tuples and Range Area low/high intervals remain
+atomic. The Selection Lab (`?page=selection`) provides one comparable test
+surface for every built-in family.
+
 ## Line charts
 
 Line series support linear, Bezier, stepped, and monotone interpolation.

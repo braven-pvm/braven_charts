@@ -213,9 +213,14 @@ extension KeyboardConfigFluent on KeyboardConfig {
 
 /// Generated fluent modifiers for [ChartSelectionConfig].
 extension ChartSelectionConfigFluent on ChartSelectionConfig {
-  /// Replaces [ChartSelectionConfig.mode] with [value].
-  ChartSelectionConfig withMode(ChartSelectionMode value) =>
-      copyWith(mode: value);
+  /// Replaces [ChartSelectionConfig.acquisitionMode] with [value].
+  ChartSelectionConfig withAcquisitionMode(
+    ChartSelectionAcquisitionMode value,
+  ) => copyWith(acquisitionMode: value);
+
+  /// Replaces [ChartSelectionConfig.scope] with [value].
+  ChartSelectionConfig withScope(ChartSelectionScope value) =>
+      copyWith(scope: value);
 
   /// Replaces [ChartSelectionConfig.operation] with [value].
   ChartSelectionConfig withOperation(ChartSelectionOperation value) =>
@@ -232,6 +237,30 @@ extension ChartSelectionConfigFluent on ChartSelectionConfig {
   /// Replaces [ChartSelectionConfig.useModifierKeys] with [value].
   ChartSelectionConfig withUseModifierKeys(bool value) =>
       copyWith(useModifierKeys: value);
+
+  /// Replaces [ChartSelectionConfig.dataPointHitRadius] with [value].
+  ChartSelectionConfig withDataPointHitRadius(double value) =>
+      copyWith(dataPointHitRadius: value);
+
+  /// Replaces [ChartSelectionConfig.completeSeriesHitRadius] with [value].
+  ChartSelectionConfig withCompleteSeriesHitRadius(double value) =>
+      copyWith(completeSeriesHitRadius: value);
+
+  /// Replaces [ChartSelectionConfig.dataPointHoverScale] with [value].
+  ChartSelectionConfig withDataPointHoverScale(double value) =>
+      copyWith(dataPointHoverScale: value);
+
+  /// Replaces [ChartSelectionConfig.dataPointSelectionScale] with [value].
+  ChartSelectionConfig withDataPointSelectionScale(double value) =>
+      copyWith(dataPointSelectionScale: value);
+
+  /// Replaces [ChartSelectionConfig.completeSeriesHoverStrokeScale] with [value].
+  ChartSelectionConfig withCompleteSeriesHoverStrokeScale(double value) =>
+      copyWith(completeSeriesHoverStrokeScale: value);
+
+  /// Replaces [ChartSelectionConfig.completeSeriesSelectionStrokeScale] with [value].
+  ChartSelectionConfig withCompleteSeriesSelectionStrokeScale(double value) =>
+      copyWith(completeSeriesSelectionStrokeScale: value);
 }
 
 /// Generated fluent modifiers for [InteractionConfig].

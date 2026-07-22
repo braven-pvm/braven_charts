@@ -454,6 +454,910 @@ void main() {
     expect(configuration.document.revision, declared.document.revision + 1);
   });
 
+  testWidgets(
+    'selection scope projects exact points or complete participating series',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'actual',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                  ChartDataPoint(x: 2, y: 30),
+                ],
+              ),
+              LineChartSeries(
+                id: 'plan',
+                points: [
+                  ChartDataPoint(x: 0, y: 12),
+                  ChartDataPoint(x: 1, y: 22),
+                  ChartDataPoint(x: 2, y: 32),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectPoints(const [
+          ChartPointRef(seriesId: 'actual', pointIndex: 1),
+          ChartPointRef(seriesId: 'plan', pointIndex: 2),
+        ], revision: revision),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final selectedOnly = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      final participating = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+            selectionProjection: ChartSelectionProjectionOptions(
+              seriesProjection:
+                  ChartSelectionSeriesProjection.completeParticipatingSeries,
+            ),
+          ),
+        ),
+      ).value;
+
+      expect(selectedOnly.document.series.map((series) => series.id), [
+        'actual',
+        'plan',
+      ]);
+      expect(
+        selectedOnly.document.series.map(
+          (series) =>
+              (series.data as InlinePointPayload).points.single.x.asDouble,
+        ),
+        [1, 2],
+      );
+      expect(
+        participating.document.series.map(
+          (series) => (series.data as InlinePointPayload).points.length,
+        ),
+        [3, 3],
+      );
+      expect(selectedOnly.viewState?.visibleBounds, isNull);
+      expect(selectedOnly.viewState?.selectedSeriesIds, isEmpty);
+      expect(selectedOnly.viewState?.selectedPointRefs, isEmpty);
+
+      controller.clearPointSelection();
+      controller.selectSeriesIds(const ['actual']);
+      await tester.pump();
+      final wholeSeries = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      expect(wholeSeries.document.series.single.id, 'actual');
+      expect(
+        (wholeSeries.document.series.single.data as InlinePointPayload).points,
+        hasLength(3),
+      );
+    },
+  );
+
+  testWidgets(
+    'X-interval selection preserves exact Line boundaries using renderer interpolation',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'signal',
+                interpolation: LineInterpolation.linear,
+                isXOrdered: true,
+                points: [
+                  ChartDataPoint(x: 0, y: 0),
+                  ChartDataPoint(x: 1, y: 10),
+                  ChartDataPoint(x: 2, y: 20),
+                  ChartDataPoint(x: 3, y: 30),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 0.5,
+                maximumXInclusive: 2.5,
+                seriesIds: const {'signal'},
+              ),
+            ],
+          ),
+          revision: revision,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final interpolated = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      final sourceOnly = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+            selectionProjection: ChartSelectionProjectionOptions(
+              intervalBoundaryProjection:
+                  ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
+            ),
+          ),
+        ),
+      ).value;
+      final interpolatedPoints =
+          (interpolated.document.series.single.data as InlinePointPayload)
+              .points;
+      final sourcePoints =
+          (sourceOnly.document.series.single.data as InlinePointPayload).points;
+
+      expect(interpolatedPoints.map((point) => point.x.asDouble), [
+        0.5,
+        1,
+        2,
+        2.5,
+      ]);
+      expect(interpolatedPoints.map((point) => point.y.asDouble), [
+        5,
+        10,
+        20,
+        25,
+      ]);
+      expect(sourcePoints.map((point) => point.x.asDouble), [1, 2]);
+      expect(
+        controller.selectionExpression.clauses.single,
+        isA<ChartSelectionXIntervalClause>(),
+      );
+    },
+  );
+
+  testWidgets(
+    'selection extraction keeps complete OHLC and Range Area tuples',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: [
+              CandlestickChartSeries(
+                id: 'ohlc',
+                points: [
+                  CandlestickDataPoint(
+                    x: 0,
+                    open: 10,
+                    high: 14,
+                    low: 8,
+                    close: 12,
+                  ),
+                  CandlestickDataPoint(
+                    x: 1,
+                    open: 12,
+                    high: 16,
+                    low: 11,
+                    close: 15,
+                  ),
+                ],
+              ),
+              RangeAreaChartSeries(
+                id: 'range',
+                points: [
+                  RangeAreaDataPoint(x: 0, low: 20, high: 30),
+                  RangeAreaDataPoint(x: 1, low: 22, high: 35),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 0.5,
+                maximumXInclusive: 1.5,
+                seriesIds: const {'ohlc', 'range'},
+              ),
+            ],
+          ),
+          revision: revision,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final snapshot = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      final hydrated = _artifactSuccess(
+        ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      ).value;
+      final candle = hydrated.series.whereType<CandlestickChartSeries>().single;
+      final range = hydrated.series.whereType<RangeAreaChartSeries>().single;
+
+      expect(candle.points.single, isA<CandlestickDataPoint>());
+      final candlePoint = candle.points.single as CandlestickDataPoint;
+      expect(
+        (
+          candlePoint.x,
+          candlePoint.open,
+          candlePoint.high,
+          candlePoint.low,
+          candlePoint.close,
+        ),
+        (1, 12, 16, 11, 15),
+      );
+      expect(range.points.single, isA<RangeAreaDataPoint>());
+      final rangePoint = range.points.single as RangeAreaDataPoint;
+      expect((rangePoint.x, rangePoint.low, rangePoint.high), (1, 22, 35));
+    },
+  );
+
+  testWidgets(
+    'X interval between sparse Line markers still extracts exact boundaries',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'sparse',
+                interpolation: LineInterpolation.linear,
+                isXOrdered: true,
+                points: [
+                  ChartDataPoint(x: 0, y: 0),
+                  ChartDataPoint(x: 1, y: 20),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 0.25,
+                maximumXInclusive: 0.75,
+                seriesIds: const {'sparse'},
+              ),
+            ],
+          ),
+          revision: revision,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final extracted = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      final points =
+          (extracted.document.series.single.data as InlinePointPayload).points;
+      expect(points.map((point) => point.x.asDouble), [0.25, 0.75]);
+      expect(points.map((point) => point.y.asDouble), [5, 15]);
+
+      final sourceOnly = controller.extractDocument(
+        const ChartDocumentExtractOptions(
+          dataScope: ChartDataScope.selection,
+          selectionProjection: ChartSelectionProjectionOptions(
+            intervalBoundaryProjection:
+                ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
+          ),
+        ),
+      );
+      expect(sourceOnly, isA<ChartArtifactFailure<ChartDocumentSnapshot>>());
+    },
+  );
+
+  testWidgets('Area interval boundaries follow the configured monotone curve', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          series: const [
+            AreaChartSeries(
+              id: 'area',
+              interpolation: LineInterpolation.monotone,
+              isXOrdered: true,
+              points: [
+                ChartDataPoint(x: 0, y: 0),
+                ChartDataPoint(x: 1, y: 10),
+                ChartDataPoint(x: 2, y: 0),
+                ChartDataPoint(x: 3, y: 10),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump();
+    final revision = controller.effectiveDocumentRevision.value!;
+    expect(
+      controller.selectExpression(
+        ChartSelectionExpression(
+          clauses: [
+            ChartSelectionXIntervalClause(
+              minimumXInclusive: 0.5,
+              maximumXInclusive: 1.5,
+              seriesIds: const {'area'},
+            ),
+          ],
+        ),
+        revision: revision,
+      ),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pump();
+
+    final extracted = _success(
+      controller.extractDocument(
+        const ChartDocumentExtractOptions(dataScope: ChartDataScope.selection),
+      ),
+    ).value;
+    final points =
+        (extracted.document.series.single.data as InlinePointPayload).points;
+    expect(points.map((point) => point.x.asDouble), [0.5, 1, 1.5]);
+    expect(points.map((point) => point.y.asDouble), [7.5, 10, 5]);
+  });
+
+  testWidgets('radial selection recomputes shares from retained raw values', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          series: [
+            PieChartSeries(
+              id: 'mix',
+              points: [
+                const ChartDataPoint(x: 0, y: 10, label: 'A'),
+                const ChartDataPoint(x: 1, y: 20, label: 'B'),
+                const ChartDataPoint(x: 2, y: 70, label: 'C'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump();
+    final revision = controller.effectiveDocumentRevision.value!;
+    expect(
+      controller.selectExpression(
+        ChartSelectionExpression(
+          clauses: const [
+            ChartSelectionPointIndexSpanClause(
+              seriesId: 'mix',
+              startPointIndexInclusive: 0,
+              endPointIndexInclusive: 1,
+            ),
+          ],
+        ),
+        revision: revision,
+      ),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pump();
+
+    final snapshot = _success(
+      controller.extractDocument(
+        const ChartDocumentExtractOptions(dataScope: ChartDataScope.selection),
+      ),
+    ).value;
+    final hydrated = _artifactSuccess(
+      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+    ).value;
+    final pie = hydrated.series.whereType<PieChartSeries>().single;
+
+    expect(pie.points.map((point) => point.y), [10, 20]);
+    expect(pie.total, 30);
+    expect(pie.points.first.y / pie.total, closeTo(1 / 3, 1e-9));
+    expect(pie.points.last.y / pie.total, closeTo(2 / 3, 1e-9));
+  });
+
+  testWidgets('selection scope fails clearly when nothing is selected', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(bravenChartController: controller, series: [_series()]),
+      ),
+    );
+    await tester.pump();
+
+    final result = controller.extractDocument(
+      const ChartDocumentExtractOptions(dataScope: ChartDataScope.selection),
+    );
+
+    expect(result, isA<ChartArtifactFailure<ChartDocumentSnapshot>>());
+    expect(
+      (result as ChartArtifactFailure<ChartDocumentSnapshot>).error.code,
+      ChartArtifactDiagnosticCodes.selectionEmpty,
+    );
+  });
+
+  testWidgets(
+    'selection scope rebases point annotations and clips data-space annotations',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig.withId(
+              id: 'primary',
+              position: YAxisPosition.left,
+            ),
+            series: [
+              const LineChartSeries(
+                id: 'actual',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                  ChartDataPoint(x: 2, y: 30),
+                  ChartDataPoint(x: 3, y: 40),
+                ],
+              ),
+              LineChartSeries(
+                id: 'other',
+                yAxisConfig: YAxisConfig(
+                  position: YAxisPosition.right,
+                  label: 'Other',
+                ),
+                points: const [ChartDataPoint(x: 0, y: 100)],
+              ),
+            ],
+            annotations: [
+              PointAnnotation(
+                id: 'selected-point',
+                seriesId: 'actual',
+                dataPointIndex: 3,
+              ),
+              PointAnnotation(
+                id: 'omitted-point',
+                seriesId: 'actual',
+                dataPointIndex: 0,
+              ),
+              ChordAnnotation(
+                id: 'selected-chord',
+                seriesId: 'actual',
+                startIndex: 1,
+                endIndex: 3,
+                perpendicularIndex: 0,
+              ),
+              ErrorBarAnnotation(
+                id: 'selected-errors',
+                seriesId: 'actual',
+                values: const [
+                  ErrorBarDatum.symmetric(pointIndex: 1, y: 2),
+                  ErrorBarDatum.symmetric(pointIndex: 2, y: 3),
+                ],
+              ),
+              RangeAnnotation(
+                id: 'clipped-range',
+                startX: 0.5,
+                endX: 4,
+                startY: 15,
+                endY: 45,
+                seriesId: 'actual',
+              ),
+              ThresholdAnnotation(
+                id: 'retained-threshold',
+                axis: AnnotationAxis.y,
+                value: 30,
+                seriesId: 'actual',
+              ),
+              ThresholdAnnotation(
+                id: 'omitted-threshold',
+                axis: AnnotationAxis.y,
+                value: 90,
+                seriesId: 'actual',
+              ),
+              TrendAnnotation(
+                id: 'omitted-derived-trend',
+                seriesId: 'actual',
+                trendType: TrendType.linear,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectPoints(const [
+          ChartPointRef(seriesId: 'actual', pointIndex: 1),
+          ChartPointRef(seriesId: 'actual', pointIndex: 3),
+        ], revision: revision),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final result = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      );
+      final hydratedResult = ChartDocumentHydrator.hydrateDocument(
+        result.value.document,
+      );
+      expect(
+        hydratedResult,
+        isA<ChartArtifactSuccess<HydratedChartConfiguration>>(),
+      );
+      final hydrated =
+          (hydratedResult as ChartArtifactSuccess<HydratedChartConfiguration>)
+              .value;
+
+      expect(result.value.document.axes.map((axis) => axis.id), ['primary']);
+      expect(hydrated.annotations.map((annotation) => annotation.id), [
+        'selected-point',
+        'selected-chord',
+        'selected-errors',
+        'clipped-range',
+        'retained-threshold',
+      ]);
+      final point = hydrated.annotations.whereType<PointAnnotation>().single;
+      expect(point.dataPointIndex, 1);
+      final chord = hydrated.annotations.whereType<ChordAnnotation>().single;
+      expect((chord.startIndex, chord.endIndex), (0, 1));
+      expect(chord.perpendicularIndex, isNull);
+      final errorBars = hydrated.annotations
+          .whereType<ErrorBarAnnotation>()
+          .single;
+      expect(errorBars.values.single.pointIndex, 0);
+      final range = hydrated.annotations.whereType<RangeAnnotation>().single;
+      expect((range.startX, range.endX), (1, 3));
+      expect((range.startY, range.endY), (20, 40));
+      expect(
+        result.warnings
+            .where(
+              (warning) =>
+                  warning.code ==
+                  ChartArtifactDiagnosticCodes.selectionAnnotationOmitted,
+            )
+            .map((warning) => warning.path),
+        containsAll([
+          r'$.annotations[omitted-point]',
+          r'$.annotations[omitted-threshold]',
+          r'$.annotations[omitted-derived-trend]',
+        ]),
+      );
+      expect(
+        result.warnings.map((warning) => warning.code),
+        contains(
+          ChartArtifactDiagnosticCodes.selectionAnnotationComponentOmitted,
+        ),
+      );
+      expect(
+        ChartDocument.fromJson(result.value.document.toJson()).toJson(),
+        result.value.document.toJson(),
+      );
+
+      controller.clearPointSelection();
+      controller.selectSeriesIds(const ['actual']);
+      await tester.pump();
+      final completeSeries = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      expect(
+        completeSeries.document.annotations.map((annotation) => annotation.id),
+        contains('omitted-derived-trend'),
+      );
+    },
+  );
+
+  testWidgets('selection annotation projection can omit every annotation', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          series: const [
+            LineChartSeries(
+              id: 'series',
+              points: [ChartDataPoint(x: 1, y: 10)],
+            ),
+          ],
+          annotations: [
+            ThresholdAnnotation(
+              id: 'threshold',
+              axis: AnnotationAxis.y,
+              value: 10,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump();
+    controller.selectSeriesIds(const ['series']);
+    await tester.pump();
+
+    final snapshot = _success(
+      controller.extractDocument(
+        const ChartDocumentExtractOptions(
+          dataScope: ChartDataScope.selection,
+          selectionProjection: ChartSelectionProjectionOptions(
+            annotationProjection: ChartSelectionAnnotationProjection.omitAll,
+          ),
+        ),
+      ),
+    ).value;
+
+    expect(snapshot.document.annotations, isEmpty);
+  });
+
+  testWidgets(
+    'selection annotation bounds resolve on the referenced series axis',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: [
+              const LineChartSeries(
+                id: 'temperature',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                ],
+              ),
+              LineChartSeries(
+                id: 'pressure',
+                yAxisConfig: YAxisConfig(
+                  position: YAxisPosition.right,
+                  label: 'Pressure',
+                ),
+                points: const [
+                  ChartDataPoint(x: 0, y: 100),
+                  ChartDataPoint(x: 1, y: 200),
+                ],
+              ),
+            ],
+            annotations: [
+              ThresholdAnnotation(
+                id: 'temperature-outside',
+                axis: AnnotationAxis.y,
+                value: 150,
+                seriesId: 'temperature',
+              ),
+              ThresholdAnnotation(
+                id: 'pressure-inside',
+                axis: AnnotationAxis.y,
+                value: 150,
+                seriesId: 'pressure',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      controller.selectSeriesIds(const ['temperature', 'pressure']);
+      await tester.pump();
+
+      final result = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      );
+
+      expect(result.value.document.annotations.map((item) => item.id), [
+        'pressure-inside',
+      ]);
+      expect(
+        result.warnings.map((warning) => warning.path),
+        contains(r'$.annotations[temperature-outside]'),
+      );
+    },
+  );
+
+  testWidgets(
+    'implicit first-series annotations retain their original series identity',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'first',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                ],
+              ),
+              LineChartSeries(
+                id: 'second',
+                points: [
+                  ChartDataPoint(x: 0, y: 100),
+                  ChartDataPoint(x: 1, y: 200),
+                ],
+              ),
+            ],
+            annotations: [
+              TrendAnnotation(
+                id: 'implicit-trend',
+                trendType: TrendType.linear,
+              ),
+              ErrorBarAnnotation(
+                id: 'implicit-errors',
+                values: const [ErrorBarDatum.symmetric(pointIndex: 1, y: 2)],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      controller.selectSeriesIds(const ['first']);
+      await tester.pump();
+      final firstSeries = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      expect(firstSeries.document.annotations.map((item) => item.id), [
+        'implicit-trend',
+        'implicit-errors',
+      ]);
+
+      controller.selectSeriesIds(const ['second']);
+      await tester.pump();
+      final secondSeries = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      );
+      expect(secondSeries.value.document.annotations, isEmpty);
+      expect(
+        secondSeries.warnings.map((warning) => warning.path),
+        containsAll([
+          r'$.annotations[implicit-trend]',
+          r'$.annotations[implicit-errors]',
+        ]),
+      );
+    },
+  );
+
+  testWidgets(
+    'retain-contained annotation projection omits intersecting ranges',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'series',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                  ChartDataPoint(x: 2, y: 30),
+                ],
+              ),
+            ],
+            annotations: [
+              RangeAnnotation(
+                id: 'intersecting-range',
+                startX: 0,
+                endX: 2,
+                startY: 10,
+                endY: 30,
+                seriesId: 'series',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectPoints(const [
+          ChartPointRef(seriesId: 'series', pointIndex: 1),
+        ], revision: revision),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final result = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+            selectionProjection: ChartSelectionProjectionOptions(
+              annotationProjection:
+                  ChartSelectionAnnotationProjection.retainContained,
+            ),
+          ),
+        ),
+      );
+
+      expect(result.value.document.annotations, isEmpty);
+      expect(
+        result.warnings.map((warning) => warning.path),
+        contains(r'$.annotations[intersecting-range]'),
+      );
+    },
+  );
+
   testWidgets('columnar extraction hydrates and projects to the native table', (
     tester,
   ) async {
@@ -824,6 +1728,11 @@ ChartArtifactSuccess<ChartDocumentSnapshot> _success(
 ) {
   expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
   return result as ChartArtifactSuccess<ChartDocumentSnapshot>;
+}
+
+ChartArtifactSuccess<T> _artifactSuccess<T>(ChartArtifactResult<T> result) {
+  expect(result, isA<ChartArtifactSuccess<T>>());
+  return result as ChartArtifactSuccess<T>;
 }
 
 class _UnstableLiveStreamController extends LiveStreamController {

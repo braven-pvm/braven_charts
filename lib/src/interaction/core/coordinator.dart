@@ -452,6 +452,16 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces the active drag-selection geometry with an explicit rectangle.
+  ///
+  /// Interval acquisition uses this to span the complete orthogonal plot
+  /// dimension while preserving the same preview and atomic commit lifecycle
+  /// as a free rectangle.
+  void updateSelectionRect(Rect rect) {
+    _boxSelectionRect = rect;
+    notifyListeners();
+  }
+
   /// Starts or extends a free-form lasso path.
   ///
   /// Points closer than two logical pixels are coalesced to bound memory and

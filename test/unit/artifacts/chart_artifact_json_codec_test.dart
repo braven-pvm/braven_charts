@@ -34,6 +34,10 @@ void main() {
       expect(decoded.migrationsApplied, isEmpty);
       expect(decoded.artifact.createdAt.isUtc, isTrue);
       expect(decoded.artifact.document.pointCount, 3);
+      expect(decoded.artifact.viewState!.selectedSeriesIds, {
+        'heart-rate',
+        'power',
+      });
       expect(
         decoded.artifact.document.series.single.data,
         isA<InlinePointPayload>(),
@@ -83,6 +87,34 @@ void main() {
         canonicalJsonEncode(jsonDecode(fixture)),
       );
     });
+
+    test('promotes a legacy selected series into the semantic set', () {
+      final json = _buildArtifact().viewState!.toJson()
+        ..remove('selectedSeriesIds');
+
+      final restored = ChartViewState.fromJson(json);
+
+      expect(restored.selectedSeriesId, 'power');
+      expect(restored.selectedSeriesIds, {'power'});
+    });
+
+    test(
+      'keeps explicit semantic selection independent from axis promotion',
+      () {
+        final state = ChartViewState(
+          selectedSeriesId: 'power',
+          selectedSeriesIds: const {},
+        );
+
+        expect(state.selectedSeriesId, 'power');
+        expect(state.selectedSeriesIds, isEmpty);
+        expect(state.toJson()['selectedSeriesIds'], isEmpty);
+        expect(
+          ChartViewState.fromJson(state.toJson()).selectedSeriesIds,
+          isEmpty,
+        );
+      },
+    );
 
     test('returns structured failures for invalid and future schemas', () {
       final invalid = ChartArtifactJsonCodec.decode('{not-json');
@@ -341,6 +373,7 @@ ChartArtifact _buildArtifact({
         yMax: 300,
       ),
       selectedSeriesId: 'power',
+      selectedSeriesIds: const {'power', 'heart-rate'},
       selectedPointRefs: const [
         ChartPointRef(seriesId: 'power', pointIndex: 0),
       ],

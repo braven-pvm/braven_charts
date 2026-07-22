@@ -8,6 +8,15 @@ import '../artifacts/chart_preview.dart';
 import '../artifacts/chart_preview_capture.dart';
 import '../artifacts/chart_view_state.dart';
 import 'chart_selection_result.dart';
+import 'chart_selection_expression.dart';
+import 'interaction_config.dart' show ChartSelectionOperation;
+
+/// Internal chart-state bridge for semantic multi-series selection commands.
+typedef ChartSeriesCommandHandler =
+    void Function(
+      Iterable<String> seriesIds,
+      ChartSelectionOperation operation,
+    );
 
 /// Internal chart-state bridge for revision-bound point commands.
 typedef ChartPointCommandHandler =
@@ -17,6 +26,21 @@ typedef ChartPointCommandHandler =
       required bool reveal,
       required bool additive,
     });
+
+/// Internal chart-state bridge for one revision-bound selection expression.
+typedef ChartSelectionExpressionCommandHandler =
+    ChartArtifactResult<void> Function(
+      ChartSelectionExpression expression,
+      ChartDocumentRevision revision, {
+      required bool reveal,
+    });
+
+/// Internal chart-state bridge for selection-wide commands.
+typedef ChartSelectionCommandHandler = ChartArtifactResult<void> Function();
+
+/// Internal chart-state bridge for fitting the viewport to durable selection.
+typedef ChartSelectionZoomCommandHandler =
+    ChartArtifactResult<void> Function(double paddingFraction);
 
 /// Programmatic control over series, point linking, and Y-axis slot state.
 ///
@@ -45,6 +69,7 @@ typedef ChartPointCommandHandler =
 class BravenChartController extends ChangeNotifier {
   // Internal hook set by _BravenChartPlusState in initState/didUpdateWidget.
   void Function(String seriesId)? _selectHandler;
+  ChartSeriesCommandHandler? _selectSeriesIdsHandler;
   void Function(String seriesId)? _deselectHandler;
   void Function()? _clearHandler;
   void Function(String seriesId, bool visible)? _setVisibilityHandler;
@@ -54,6 +79,9 @@ class BravenChartController extends ChangeNotifier {
   ChartPreviewCaptureHandler? _capturePreviewHandler;
   ChartPointCommandHandler? _focusPointsHandler;
   ChartPointCommandHandler? _selectPointsHandler;
+  ChartSelectionExpressionCommandHandler? _selectExpressionHandler;
+  ChartSelectionCommandHandler? _invertSelectionHandler;
+  ChartSelectionZoomCommandHandler? _zoomToSelectionHandler;
   void Function()? _clearPointFocusHandler;
   void Function()? _clearPointSelectionHandler;
   void Function()? _replayRadialEntranceHandler;
@@ -65,17 +93,28 @@ class BravenChartController extends ChangeNotifier {
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
   String? _selectedSeriesId;
+  Set<String> _selectedSeriesIds = const {};
   List<String> _visibleAxisIds = const [];
   List<String> _overflowAxisIds = const [];
   Set<String> _hiddenSeriesIds = const {};
   Set<ChartPointRef> _focusedPointRefs = const {};
   Set<ChartPointRef> _selectedPointRefs = const {};
   ChartSelectionResult _selectionResult = const ChartSelectionResult.empty();
+  ChartSelectionExpression _selectionExpression =
+      const ChartSelectionExpression.empty();
+  ChartSelectionSnapshot? _selectionSnapshot;
 
   // ---- Public read API ----
 
   /// Currently selected series ID, or null if nothing is selected.
+  ///
+  /// This legacy singular value identifies the series currently active for
+  /// Y-axis slot promotion. Use [selectedSeriesIds] for durable chart
+  /// selection.
   String? get selectedSeriesId => _selectedSeriesId;
+
+  /// Series currently included in durable semantic selection.
+  Set<String> get selectedSeriesIds => Set.unmodifiable(_selectedSeriesIds);
 
   /// Axis IDs currently occupying visible slots, in slot order.
   List<String> get visibleAxisIds => List.unmodifiable(_visibleAxisIds);
@@ -97,6 +136,12 @@ class BravenChartController extends ChangeNotifier {
   /// Latest stable identities, extents, and statistics for point selection.
   ChartSelectionResult get selectionResult => _selectionResult;
 
+  /// Compact renderer-neutral intent for the current durable selection.
+  ChartSelectionExpression get selectionExpression => _selectionExpression;
+
+  /// Current revision-bound selection, resolved lazily on demand.
+  ChartSelectionSnapshot? get selectionSnapshot => _selectionSnapshot;
+
   /// Opaque revision of the effective document source attached to this chart.
   ///
   /// The value is null while the controller is detached. Compare a non-null
@@ -113,6 +158,12 @@ class BravenChartController extends ChangeNotifier {
   /// [BravenChartPlus.onAxisSwapped]. No-op if the controller is not
   /// attached to a mounted chart.
   void selectSeries(String seriesId) => _selectHandler?.call(seriesId);
+
+  /// Applies [operation] to every supplied series in one atomic command.
+  void selectSeriesIds(
+    Iterable<String> seriesIds, {
+    ChartSelectionOperation operation = ChartSelectionOperation.replace,
+  }) => _selectSeriesIdsHandler?.call(seriesIds, operation);
 
   /// Deselects [seriesId]. If [BravenChartPlus.axisSwapMode] is
   /// [AxisSwapMode.revert], restores the original slot order for that side.
@@ -181,6 +232,49 @@ class BravenChartController extends ChangeNotifier {
     final handler = _selectPointsHandler;
     if (handler == null) return _pointCommandDetachedFailure();
     return handler(points, revision, reveal: reveal, additive: additive);
+  }
+
+  /// Replaces durable selection with renderer-neutral [expression] intent.
+  ///
+  /// Interval clauses retain their exact boundaries, allowing a subsequent
+  /// selection-scoped document extraction to interpolate continuous Line/Area
+  /// edges rather than reducing the range to enclosed source observations.
+  ChartArtifactResult<void> selectExpression(
+    ChartSelectionExpression expression, {
+    required ChartDocumentRevision revision,
+    bool reveal = false,
+  }) {
+    final handler = _selectExpressionHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(expression, revision, reveal: reveal);
+  }
+
+  /// Selects every valid source datum not currently selected.
+  ///
+  /// The complement is resolved atomically against the mounted chart's
+  /// current effective document revision.
+  ChartArtifactResult<void> invertSelection() {
+    final handler = _invertSelectionHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler();
+  }
+
+  /// Fits the Cartesian viewport to the current durable selection.
+  ///
+  /// [paddingFraction] is applied independently to the selected X and Y spans.
+  /// Single-point selections receive a stable viewport-relative minimum span.
+  ChartArtifactResult<void> zoomToSelection({double paddingFraction = 0.08}) {
+    if (!paddingFraction.isFinite || paddingFraction < 0) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Selection zoom padding must be finite and non-negative.',
+        ),
+      );
+    }
+    final handler = _zoomToSelectionHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(paddingFraction);
   }
 
   /// Clears transient point focus.
@@ -297,6 +391,7 @@ class BravenChartController extends ChangeNotifier {
   void attach({
     Object? attachment,
     required void Function(String) onSelect,
+    required ChartSeriesCommandHandler onSelectSeriesIds,
     required void Function(String) onDeselect,
     required void Function() onClear,
     void Function(String, bool)? onSetSeriesVisibility,
@@ -306,6 +401,9 @@ class BravenChartController extends ChangeNotifier {
     ChartPreviewCaptureHandler? onCapturePreview,
     ChartPointCommandHandler? onFocusPoints,
     ChartPointCommandHandler? onSelectPoints,
+    ChartSelectionExpressionCommandHandler? onSelectExpression,
+    ChartSelectionCommandHandler? onInvertSelection,
+    ChartSelectionZoomCommandHandler? onZoomToSelection,
     void Function()? onClearPointFocus,
     void Function()? onClearPointSelection,
     void Function()? onReplayRadialEntrance,
@@ -314,6 +412,7 @@ class BravenChartController extends ChangeNotifier {
   }) {
     _attachment = attachment;
     _selectHandler = onSelect;
+    _selectSeriesIdsHandler = onSelectSeriesIds;
     _deselectHandler = onDeselect;
     _clearHandler = onClear;
     _setVisibilityHandler = onSetSeriesVisibility;
@@ -323,6 +422,9 @@ class BravenChartController extends ChangeNotifier {
     _capturePreviewHandler = onCapturePreview;
     _focusPointsHandler = onFocusPoints;
     _selectPointsHandler = onSelectPoints;
+    _selectExpressionHandler = onSelectExpression;
+    _invertSelectionHandler = onInvertSelection;
+    _zoomToSelectionHandler = onZoomToSelection;
     _clearPointFocusHandler = onClearPointFocus;
     _clearPointSelectionHandler = onClearPointSelection;
     _replayRadialEntranceHandler = onReplayRadialEntrance;
@@ -340,6 +442,7 @@ class BravenChartController extends ChangeNotifier {
     if (attachment != null && !identical(_attachment, attachment)) return;
     _attachment = null;
     _selectHandler = null;
+    _selectSeriesIdsHandler = null;
     _deselectHandler = null;
     _clearHandler = null;
     _setVisibilityHandler = null;
@@ -349,10 +452,14 @@ class BravenChartController extends ChangeNotifier {
     _capturePreviewHandler = null;
     _focusPointsHandler = null;
     _selectPointsHandler = null;
+    _selectExpressionHandler = null;
+    _invertSelectionHandler = null;
+    _zoomToSelectionHandler = null;
     _clearPointFocusHandler = null;
     _clearPointSelectionHandler = null;
     _replayRadialEntranceHandler = null;
     _replaySeriesEntranceHandler = null;
+    _selectionSnapshot = null;
     if (!_disposed) _effectiveDocumentRevision.value = null;
   }
 
@@ -371,11 +478,21 @@ class BravenChartController extends ChangeNotifier {
   /// Updates mirrored slot state (called after every swap or selection change).
   void updateSlotState({
     required String? selectedSeriesId,
+    required Set<String> selectedSeriesIds,
     required List<String> visibleAxisIds,
     required List<String> overflowAxisIds,
     Set<String> hiddenSeriesIds = const {},
   }) {
+    if (_disposed) return;
+    if (_selectedSeriesId == selectedSeriesId &&
+        setEquals(_selectedSeriesIds, selectedSeriesIds) &&
+        listEquals(_visibleAxisIds, visibleAxisIds) &&
+        listEquals(_overflowAxisIds, overflowAxisIds) &&
+        setEquals(_hiddenSeriesIds, hiddenSeriesIds)) {
+      return;
+    }
     _selectedSeriesId = selectedSeriesId;
+    _selectedSeriesIds = Set.unmodifiable(selectedSeriesIds);
     _visibleAxisIds = visibleAxisIds;
     _overflowAxisIds = overflowAxisIds;
     _hiddenSeriesIds = Set.unmodifiable(hiddenSeriesIds);
@@ -398,6 +515,19 @@ class BravenChartController extends ChangeNotifier {
     _focusedPointRefs = Set.unmodifiable(focusedPointRefs);
     _selectedPointRefs = Set.unmodifiable(selectedPointRefs);
     _selectionResult = selectionResult;
+    notifyListeners();
+  }
+
+  /// Mirrors compact selection intent from the mounted chart.
+  @internal
+  void updateSelectionSnapshot(ChartSelectionSnapshot snapshot) {
+    if (_disposed) return;
+    if (_selectionExpression == snapshot.expression &&
+        _selectionSnapshot?.revision == snapshot.revision) {
+      return;
+    }
+    _selectionExpression = snapshot.expression;
+    _selectionSnapshot = snapshot;
     notifyListeners();
   }
 

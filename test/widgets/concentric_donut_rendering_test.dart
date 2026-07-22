@@ -549,6 +549,121 @@ void main() {
   );
 
   testWidgets(
+    'category scope expands a concentric legend activation across rings',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 760,
+              height: 620,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: true,
+                interactionConfig: const InteractionConfig(
+                  enableSelection: true,
+                  selection: ChartSelectionConfig(
+                    scope: ChartSelectionScope.category,
+                  ),
+                ),
+                theme: ChartTheme.light.copyWith(
+                  pieChartTheme: const PieChartTheme(
+                    animationMode: PieAnimationMode.none,
+                  ),
+                ),
+                series: [
+                  DonutChartSeries.fromMap(
+                    id: 'outer',
+                    values: const {'Subscriptions': 60, 'Services': 40},
+                    dataLabels: const PieDataLabelConfig(isVisible: false),
+                  ),
+                  DonutChartSeries.fromMap(
+                    id: 'inner',
+                    values: const {'Services': 55, 'Subscriptions': 45},
+                    dataLabels: const PieDataLabelConfig(isVisible: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('pie-legend-item-outer-0')));
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'outer', pointIndex: 0),
+        const ChartPointRef(seriesId: 'inner', pointIndex: 1),
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('series scope selects and toggles one concentric ring', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 760,
+            height: 620,
+            child: BravenChartPlus(
+              bravenChartController: controller,
+              showLegend: true,
+              interactionConfig: const InteractionConfig(
+                enableSelection: true,
+                selection: ChartSelectionConfig(
+                  scope: ChartSelectionScope.wholeSeries,
+                ),
+              ),
+              theme: ChartTheme.light.copyWith(
+                pieChartTheme: const PieChartTheme(
+                  animationMode: PieAnimationMode.none,
+                ),
+              ),
+              series: [
+                DonutChartSeries.fromMap(
+                  id: 'outer',
+                  values: const {'Subscriptions': 60, 'Services': 40},
+                  dataLabels: const PieDataLabelConfig(isVisible: false),
+                ),
+                DonutChartSeries.fromMap(
+                  id: 'inner',
+                  values: const {'Subscriptions': 45, 'Services': 55},
+                  dataLabels: const PieDataLabelConfig(isVisible: false),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final innerSubscriptions = find.byKey(
+      const ValueKey('pie-legend-item-inner-0'),
+    );
+    await tester.tap(innerSubscriptions);
+    await tester.pumpAndSettle();
+    expect(controller.selectedSeriesIds, {'inner'});
+    expect(controller.selectedPointRefs, isEmpty);
+
+    await tester.tap(innerSubscriptions);
+    await tester.pumpAndSettle();
+    expect(controller.selectedSeriesIds, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'grouped Other selection stays inside its ring across table legend and restore',
     (tester) async {
       tester.view.physicalSize = const Size(1200, 720);

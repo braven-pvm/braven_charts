@@ -845,8 +845,15 @@ class GestureConfig {
 
 /// Configuration for keyboard navigation.
 ///
-/// Controls keyboard-based chart interaction including arrow key panning,
-/// plus/minus zoom, and home/end navigation.
+/// Controls keyboard-based chart interaction. Arrow keys traverse selectable
+/// marks for Bar, Scatter, Candlestick, Range Area, Line, and Area charts;
+/// Line/Area use left/right for points and up/down for series. When a family
+/// does not own point navigation, arrows pan the Cartesian viewport. Plus and
+/// minus zoom, while Home or `R` restores the live viewport. Enter or Space
+/// applies the configured semantic scope, Shift+Space extends an ordered
+/// selection from its keyboard anchor, Ctrl/Command+A selects all marks only
+/// when the result is bounded (or every complete series for whole-series
+/// scope), and Escape clears focus plus durable selection.
 ///
 /// Example:
 /// ```dart
@@ -1005,10 +1012,52 @@ class KeyboardConfig {
 /// - All properties validated on construction
 /// Geometry used to acquire chart points.
 ///
-/// [point] is activated by a direct marker tap. [rectangle] acquires marker
-/// centers inside a dragged box, while [lasso] follows a free-form polygon.
-/// Every mode commits through the same durable point-reference contract.
-enum ChartSelectionMode { point, rectangle, lasso }
+/// [point] is activated by a direct marker tap. [xInterval] and [yInterval]
+/// acquire marks by one data-domain dimension while spanning the complete
+/// orthogonal plot dimension. [rectangle] acquires marker centers inside a
+/// dragged box, while [lasso] follows a free-form polygon. Every acquisition
+/// mode commits through the same durable selection contract.
+enum ChartSelectionAcquisitionMode {
+  point,
+  xInterval,
+  yInterval,
+  rectangle,
+  lasso,
+}
+
+/// Semantic target resolved from an acquired chart hit.
+///
+/// [mark] selects the source datum or source rows represented by one visual
+/// mark. [category] selects every compatible datum sharing the acquired
+/// semantic X/category identity. [categoryStack] selects contributors sharing
+/// one category and composition stack. [wholeSeries] selects every mark owned
+/// by the acquired series. [markOrWholeSeries] enables both direct-mark and
+/// complete-series acquisition, but each gesture resolves to exactly one target
+/// type. A mark inside [ChartSelectionConfig.dataPointHitRadius] wins; otherwise
+/// the complete path may win inside
+/// [ChartSelectionConfig.completeSeriesHitRadius].
+///
+/// Scope is independent from acquisition geometry: a tap, rectangle, or lasso
+/// first acquires hits and then resolves each hit through this policy.
+enum ChartSelectionScope {
+  mark,
+  category,
+  categoryStack,
+  wholeSeries,
+  markOrWholeSeries,
+}
+
+extension ChartSelectionScopeCapabilities on ChartSelectionScope {
+  /// Whether hover and activation target individual data marks.
+  bool get includesMarks =>
+      this == ChartSelectionScope.mark ||
+      this == ChartSelectionScope.markOrWholeSeries;
+
+  /// Whether hover and activation target complete series paths.
+  bool get includesWholeSeries =>
+      this == ChartSelectionScope.wholeSeries ||
+      this == ChartSelectionScope.markOrWholeSeries;
+}
 
 /// Set operation applied when a selection gesture resolves point references.
 enum ChartSelectionOperation { replace, add, subtract, toggle }
@@ -1017,26 +1066,46 @@ enum ChartSelectionOperation { replace, add, subtract, toggle }
 ///
 /// This policy is deliberately separate from viewport pan and zoom gestures.
 /// Point selection never owns drag, regardless of this value.
-enum ChartSelectionDragActivation { primary, shiftPrimary }
+enum ChartSelectionDragActivation { primaryButton, shiftPrimaryButton }
 
 /// Portable policy for chart point selection.
 @chartSurface
 class ChartSelectionConfig {
   const ChartSelectionConfig({
-    this.mode = ChartSelectionMode.point,
+    this.acquisitionMode = ChartSelectionAcquisitionMode.point,
+    this.scope = ChartSelectionScope.mark,
     this.operation = ChartSelectionOperation.replace,
-    this.dragActivation = ChartSelectionDragActivation.primary,
+    this.dragActivation = ChartSelectionDragActivation.primaryButton,
     this.clearOnBackgroundTap = true,
     this.useModifierKeys = true,
-  });
+    this.dataPointHitRadius = 20,
+    this.completeSeriesHitRadius = 22,
+    this.dataPointHoverScale = 1.5,
+    this.dataPointSelectionScale = 2.67,
+    this.completeSeriesHoverStrokeScale = 1.75,
+    this.completeSeriesSelectionStrokeScale = 1.5,
+  }) : assert(dataPointHitRadius >= 0),
+       assert(completeSeriesHitRadius >= 0),
+       assert(dataPointHoverScale >= 1),
+       assert(dataPointHoverScale < double.infinity),
+       assert(dataPointSelectionScale >= 1),
+       assert(dataPointSelectionScale < double.infinity),
+       assert(completeSeriesHoverStrokeScale >= 1),
+       assert(completeSeriesHoverStrokeScale < double.infinity),
+       assert(completeSeriesSelectionStrokeScale >= 1),
+       assert(completeSeriesSelectionStrokeScale < double.infinity);
 
   /// Geometry used to acquire points.
-  final ChartSelectionMode mode;
+  final ChartSelectionAcquisitionMode acquisitionMode;
+
+  /// Semantic target resolved after [acquisitionMode] acquires a hit.
+  final ChartSelectionScope scope;
 
   /// Default set operation for a completed selection gesture.
   final ChartSelectionOperation operation;
 
-  /// Pointer chord that activates drag selection for drag-capable [mode]s.
+  /// Pointer chord that activates drag selection for drag-capable
+  /// [acquisitionMode] values.
   final ChartSelectionDragActivation dragActivation;
 
   /// Whether tapping outside a data point clears durable selection.
@@ -1048,15 +1117,36 @@ class ChartSelectionConfig {
   /// highest precedence, followed by Shift and then Ctrl/Command.
   final bool useModifierKeys;
 
+  /// Screen-space radius around a data marker used for hover and direct
+  /// point acquisition.
+  final double dataPointHitRadius;
+
+  /// Screen-space radius around a rendered Line or Area path used when
+  /// [scope] includes complete-series selection.
+  final double completeSeriesHitRadius;
+
+  /// Scale applied to a Line or Area data-point marker while it is hovered.
+  final double dataPointHoverScale;
+
+  /// Scale applied to the durable selection halo around a Line or Area point.
+  final double dataPointSelectionScale;
+
+  /// Stroke-width scale applied to a hovered complete Line or Area series.
+  final double completeSeriesHoverStrokeScale;
+
+  /// Stroke-width scale applied to a selected complete Line or Area series.
+  final double completeSeriesSelectionStrokeScale;
+
   /// Whether this selection policy owns the current primary-button drag.
   ///
-  /// Direct point selection is tap-only. Rectangle and lasso policies can
-  /// reserve either every primary drag or only Shift+primary drag.
+  /// Direct point selection is tap-only. Interval, rectangle, and lasso
+  /// policies can reserve either every primary drag or only Shift+primary
+  /// drag.
   bool ownsPrimaryDrag({bool shift = false}) {
-    if (mode == ChartSelectionMode.point) return false;
+    if (acquisitionMode == ChartSelectionAcquisitionMode.point) return false;
     return switch (dragActivation) {
-      ChartSelectionDragActivation.primary => true,
-      ChartSelectionDragActivation.shiftPrimary => shift,
+      ChartSelectionDragActivation.primaryButton => true,
+      ChartSelectionDragActivation.shiftPrimaryButton => shift,
     };
   }
 
@@ -1074,36 +1164,71 @@ class ChartSelectionConfig {
   }
 
   ChartSelectionConfig copyWith({
-    ChartSelectionMode? mode,
+    ChartSelectionAcquisitionMode? acquisitionMode,
+    ChartSelectionScope? scope,
     ChartSelectionOperation? operation,
     ChartSelectionDragActivation? dragActivation,
     bool? clearOnBackgroundTap,
     bool? useModifierKeys,
+    double? dataPointHitRadius,
+    double? completeSeriesHitRadius,
+    double? dataPointHoverScale,
+    double? dataPointSelectionScale,
+    double? completeSeriesHoverStrokeScale,
+    double? completeSeriesSelectionStrokeScale,
   }) => ChartSelectionConfig(
-    mode: mode ?? this.mode,
+    acquisitionMode: acquisitionMode ?? this.acquisitionMode,
+    scope: scope ?? this.scope,
     operation: operation ?? this.operation,
     dragActivation: dragActivation ?? this.dragActivation,
     clearOnBackgroundTap: clearOnBackgroundTap ?? this.clearOnBackgroundTap,
     useModifierKeys: useModifierKeys ?? this.useModifierKeys,
+    dataPointHitRadius: dataPointHitRadius ?? this.dataPointHitRadius,
+    completeSeriesHitRadius:
+        completeSeriesHitRadius ?? this.completeSeriesHitRadius,
+    dataPointHoverScale: dataPointHoverScale ?? this.dataPointHoverScale,
+    dataPointSelectionScale:
+        dataPointSelectionScale ?? this.dataPointSelectionScale,
+    completeSeriesHoverStrokeScale:
+        completeSeriesHoverStrokeScale ?? this.completeSeriesHoverStrokeScale,
+    completeSeriesSelectionStrokeScale:
+        completeSeriesSelectionStrokeScale ??
+        this.completeSeriesSelectionStrokeScale,
   );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ChartSelectionConfig &&
-          other.mode == mode &&
+          other.acquisitionMode == acquisitionMode &&
+          other.scope == scope &&
           other.operation == operation &&
           other.dragActivation == dragActivation &&
           other.clearOnBackgroundTap == clearOnBackgroundTap &&
-          other.useModifierKeys == useModifierKeys;
+          other.useModifierKeys == useModifierKeys &&
+          other.dataPointHitRadius == dataPointHitRadius &&
+          other.completeSeriesHitRadius == completeSeriesHitRadius &&
+          other.dataPointHoverScale == dataPointHoverScale &&
+          other.dataPointSelectionScale == dataPointSelectionScale &&
+          other.completeSeriesHoverStrokeScale ==
+              completeSeriesHoverStrokeScale &&
+          other.completeSeriesSelectionStrokeScale ==
+              completeSeriesSelectionStrokeScale;
 
   @override
   int get hashCode => Object.hash(
-    mode,
+    acquisitionMode,
+    scope,
     operation,
     dragActivation,
     clearOnBackgroundTap,
     useModifierKeys,
+    dataPointHitRadius,
+    completeSeriesHitRadius,
+    dataPointHoverScale,
+    dataPointSelectionScale,
+    completeSeriesHoverStrokeScale,
+    completeSeriesSelectionStrokeScale,
   );
 }
 
@@ -1172,7 +1297,7 @@ class InteractionConfig {
     enableZoom: true,
     enablePan: true,
     enableSelection: true,
-    showFocusBorder: true,
+    showFocusBorder: false,
     enableFocusOnHover: true,
     showXScrollbar: true,
     showYScrollbar: true,

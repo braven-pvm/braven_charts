@@ -74,6 +74,24 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Selection route mounts the cross-family test lab', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ShowcaseHome(requestedPageOverride: 'selection')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selection lab'), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-family-grid')), findsOneWidget);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow showcase uses a drawer for the complete feature list', (
     tester,
   ) async {
@@ -120,6 +138,7 @@ void main() {
     expect(find.byType(BravenBrand), findsOneWidget);
     expect(find.text('Tracking Lab'), findsNothing);
     expect(find.text('Interaction'), findsOneWidget);
+    expect(find.text('Selection'), findsOneWidget);
     expect(find.text('Line Charts'), findsOneWidget);
     expect(find.text('Area Charts'), findsOneWidget);
     expect(find.text('Bar Charts'), findsOneWidget);

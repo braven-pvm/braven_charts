@@ -284,6 +284,7 @@ class _BarLabPageState extends State<BarLabPage> {
   int _stackGroupCount = 1;
   BarLayoutMode _layoutMode = BarLayoutMode.grouped;
   BarOrientation _orientation = BarOrientation.vertical;
+  ChartSelectionScope _selectionScope = ChartSelectionScope.mark;
   double _barWidth = 0.72;
   double _barGap = 4;
   double _overlayWidthStep = 22;
@@ -871,6 +872,7 @@ class _BarLabPageState extends State<BarLabPage> {
         tickCount: 7,
       ),
       interactionConfig: InteractionConfig(
+        selection: ChartSelectionConfig(scope: _selectionScope),
         tooltip: const TooltipConfig(),
         crosshair: CrosshairConfig(
           mode: CrosshairMode.both,
@@ -944,7 +946,13 @@ class _BarLabPageState extends State<BarLabPage> {
                 .where((mode) => _supportsLayout(_preset, mode))
                 .toList(growable: false),
             labelBuilder: _layoutLabel,
-            onChanged: (value) => setState(() => _layoutMode = value),
+            onChanged: (value) => setState(() {
+              _layoutMode = value;
+              if (_selectionScope == ChartSelectionScope.categoryStack &&
+                  !_layoutHasComposableStacks) {
+                _selectionScope = ChartSelectionScope.wholeSeries;
+              }
+            }),
           ),
           EnumOption<BarOrientation>(
             key: const ValueKey('bar-lab-orientation'),
@@ -1556,6 +1564,18 @@ class _BarLabPageState extends State<BarLabPage> {
         title: 'Interaction',
         icon: Icons.touch_app_outlined,
         children: [
+          EnumOption<ChartSelectionScope>(
+            key: const ValueKey('bar-lab-selection-scope'),
+            label: 'Selection scope',
+            value: _selectionScope,
+            values: _availableSelectionScopes,
+            labelBuilder: _selectionScopeLabel,
+            description:
+                'Choose one mark, every mark at a category, or the same '
+                'series across every category. A category stack is available '
+                'only for stacked layouts.',
+            onChanged: (value) => setState(() => _selectionScope = value),
+          ),
           SliderOption(
             label: 'Inactive opacity',
             value: _dimmedOpacity,
@@ -2774,6 +2794,7 @@ class _BarLabPageState extends State<BarLabPage> {
     _bulletRangeRadius = 4;
     _showDivergingCenterLine = true;
     _divergingCenterLineWidth = 1.25;
+    _selectionScope = ChartSelectionScope.mark;
     switch (preset) {
       case _BarLabPreset.capacity:
         _seriesCount = 2;
@@ -3144,6 +3165,7 @@ class _BarLabPageState extends State<BarLabPage> {
         _showLabels = true;
         _labelPosition = BarLabelPosition.insideEnd;
         _dimmedOpacity = 0.32;
+        _selectionScope = ChartSelectionScope.wholeSeries;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.stacked:
         _seriesCount = 6;
@@ -3326,7 +3348,7 @@ class _BarLabPageState extends State<BarLabPage> {
       if (_preset == _BarLabPreset.motion && !_motionIncludeForecast)
         'forecast exiting',
       if (_preset == _BarLabPreset.states)
-        '${_chartController.selectedPointRefs.length} selected',
+        '${_effectiveSelectedBarPointRefs.length} selected',
       if (_showLabels)
         _layoutMode == BarLayoutMode.overlaid
             ? 'front-layer ${_labelPosition.name} labels'
@@ -3343,6 +3365,48 @@ class _BarLabPageState extends State<BarLabPage> {
     BarLayoutMode.divergingStacked => 'Diverging',
     BarLayoutMode.waterfall => 'Waterfall',
   };
+
+  String _selectionScopeLabel(ChartSelectionScope scope) => switch (scope) {
+    ChartSelectionScope.mark => 'Single mark',
+    ChartSelectionScope.category => 'All series at this category',
+    ChartSelectionScope.categoryStack => 'Stack at this category',
+    ChartSelectionScope.wholeSeries => 'Same series across all categories',
+    ChartSelectionScope.markOrWholeSeries => 'Mark or complete series',
+  };
+
+  bool get _layoutHasComposableStacks =>
+      _layoutMode == BarLayoutMode.stacked ||
+      _layoutMode == BarLayoutMode.normalizedStacked ||
+      _layoutMode == BarLayoutMode.divergingStacked;
+
+  List<ChartSelectionScope> get _availableSelectionScopes => [
+    ChartSelectionScope.mark,
+    ChartSelectionScope.category,
+    if (_layoutHasComposableStacks) ChartSelectionScope.categoryStack,
+    ChartSelectionScope.wholeSeries,
+    ChartSelectionScope.markOrWholeSeries,
+  ];
+
+  Set<ChartPointRef> get _effectiveSelectedBarPointRefs {
+    final selectedRefs = <ChartPointRef>{..._chartController.selectedPointRefs};
+    final selectedSeriesIds = _chartController.selectedSeriesIds;
+    if (selectedSeriesIds.isEmpty) return selectedRefs;
+
+    for (final series in _buildSeries().whereType<BarChartSeries>()) {
+      if (!selectedSeriesIds.contains(series.id)) continue;
+      for (
+        var pointIndex = 0;
+        pointIndex < series.points.length;
+        pointIndex++
+      ) {
+        if (!series.points[pointIndex].isValid) continue;
+        selectedRefs.add(
+          ChartPointRef(seriesId: series.id, pointIndex: pointIndex),
+        );
+      }
+    }
+    return selectedRefs;
+  }
 
   String _histogramMethodLabel(HistogramBinningMethod method) =>
       switch (method) {

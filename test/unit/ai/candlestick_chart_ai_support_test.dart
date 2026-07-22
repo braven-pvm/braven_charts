@@ -13,6 +13,7 @@ void main() {
           'data': [
             {
               'x': 1,
+              'point_key': 'price-session-1',
               'open': 100,
               'high': 112,
               'low': 98,
@@ -34,6 +35,7 @@ void main() {
     expect(result.chartType, ChartType.candlestick);
     final series = result.series.single as CandlestickChartSeries;
     final point = series.candles.single;
+    expect(point.pointKey, 'price-session-1');
     expect(
       [point.open, point.high, point.low, point.close],
       [100, 112, 98, 110],

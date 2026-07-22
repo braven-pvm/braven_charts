@@ -18,6 +18,7 @@ class ChartOptions {
     this.showXScrollbar = false,
     this.showYScrollbar = false,
     this.showLegend = true,
+    this.showCrosshair = true,
     this.enableZoom = true,
     this.enablePan = true,
     this.lineStyle = LineStyle.smooth,
@@ -45,6 +46,9 @@ class ChartOptions {
   /// Show legend
   final bool showLegend;
 
+  /// Show the complete crosshair and shared tracking layer.
+  final bool showCrosshair;
+
   /// Enable zoom interactions
   final bool enableZoom;
 
@@ -66,6 +70,7 @@ class ChartOptions {
     bool? showXScrollbar,
     bool? showYScrollbar,
     bool? showLegend,
+    bool? showCrosshair,
     bool? enableZoom,
     bool? enablePan,
     LineStyle? lineStyle,
@@ -79,6 +84,7 @@ class ChartOptions {
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
       showYScrollbar: showYScrollbar ?? this.showYScrollbar,
       showLegend: showLegend ?? this.showLegend,
+      showCrosshair: showCrosshair ?? this.showCrosshair,
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       lineStyle: lineStyle ?? this.lineStyle,
@@ -96,6 +102,7 @@ class ChartOptions {
     enablePan: enablePan,
     showXScrollbar: showXScrollbar,
     showYScrollbar: showYScrollbar,
+    crosshair: CrosshairConfig(enabled: showCrosshair),
   );
 }
 
@@ -126,6 +133,7 @@ class ChartOptionsController extends ChangeNotifier {
     bool? showXScrollbar,
     bool? showYScrollbar,
     bool? showLegend,
+    bool? showCrosshair,
     bool? enableZoom,
     bool? enablePan,
     LineStyle? lineStyle,
@@ -140,6 +148,7 @@ class ChartOptionsController extends ChangeNotifier {
         showXScrollbar: showXScrollbar,
         showYScrollbar: showYScrollbar,
         showLegend: showLegend,
+        showCrosshair: showCrosshair,
         enableZoom: enableZoom,
         enablePan: enablePan,
         lineStyle: lineStyle,
@@ -156,6 +165,7 @@ class ChartOptionsController extends ChangeNotifier {
   set showXScrollbar(bool value) => updateWith(showXScrollbar: value);
   set showYScrollbar(bool value) => updateWith(showYScrollbar: value);
   set showLegend(bool value) => updateWith(showLegend: value);
+  set showCrosshair(bool value) => updateWith(showCrosshair: value);
   set enableZoom(bool value) => updateWith(enableZoom: value);
   set enablePan(bool value) => updateWith(enablePan: value);
   set lineStyle(LineStyle value) => updateWith(lineStyle: value);
@@ -169,6 +179,7 @@ class ChartOptionsController extends ChangeNotifier {
   bool get showXScrollbar => _options.showXScrollbar;
   bool get showYScrollbar => _options.showYScrollbar;
   bool get showLegend => _options.showLegend;
+  bool get showCrosshair => _options.showCrosshair;
   bool get enableZoom => _options.enableZoom;
   bool get enablePan => _options.enablePan;
   LineStyle get lineStyle => _options.lineStyle;

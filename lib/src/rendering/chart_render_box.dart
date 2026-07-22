@@ -310,7 +310,7 @@ class ChartRenderBox extends RenderBox {
   onRangeCreationComplete;
 
   /// Callback for completed rectangle or lasso data acquisition.
-  void Function(List<ChartDataHit> hits)? onSelectionGestureComplete;
+  void Function(ChartSelectionGestureResult result)? onSelectionGestureComplete;
 
   /// Callback for manual viewport interactions such as wheel zoom or scrollbar drag.
   void Function()? onViewportInteracted;
@@ -941,8 +941,7 @@ class ChartRenderBox extends RenderBox {
             interaction.valueSummary.enabled
         ? interaction.valueSummary
         : null;
-    final suspended =
-        coordinator.isDragging || coordinator.isPanningOrZooming;
+    final suspended = coordinator.isDragging || coordinator.isPanningOrZooming;
 
     // Live tracking feeds every policy chain except explicitOnly. The
     // resolution goes through the chart's shared pointer-path resolver
@@ -976,7 +975,8 @@ class ChartRenderBox extends RenderBox {
     _valueSummaryCoordinator.update(
       config: summaryConfig,
       theme:
-          _theme?.cartesianValueSummaryTheme ?? CartesianValueSummaryTheme.light,
+          _theme?.cartesianValueSummaryTheme ??
+          CartesianValueSummaryTheme.light,
       tracking: tracking,
       suspended: suspended,
       plotArea: _plotArea,
@@ -1128,6 +1128,16 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   Rect get debugPlotArea => _plotArea;
 
+  /// The laid-out horizontal scrollbar bounds, for interaction ownership
+  /// tests. The bounds are chart-local and null while the scrollbar is hidden.
+  @visibleForTesting
+  Rect? get debugXScrollbarRect => _scrollbarManager.xScrollbarRect;
+
+  /// The laid-out vertical scrollbar bounds, for interaction ownership tests.
+  /// The bounds are chart-local and null while the scrollbar is hidden.
+  @visibleForTesting
+  Rect? get debugYScrollbarRect => _scrollbarManager.yScrollbarRect;
+
   // ==========================================================================
   // Value summary annotation drag + keyboard surface
   // ==========================================================================
@@ -1272,7 +1282,11 @@ class ChartRenderBox extends RenderBox {
       node = node.parent!;
     }
     if (node is! RenderView) return;
-    SemanticsService.sendAnnouncement(node.flutterView, message, _textDirection);
+    SemanticsService.sendAnnouncement(
+      node.flutterView,
+      message,
+      _textDirection,
+    );
   }
 
   // ==========================================================================
@@ -1309,10 +1323,14 @@ class ChartRenderBox extends RenderBox {
 
     // Preserve selection state: get IDs of currently selected elements
     final selectedIds = coordinator.selectedElements.map((e) => e.id).toSet();
+    final hoveredSeriesId = coordinator.hoveredElement is SeriesElement
+        ? coordinator.hoveredElement!.id
+        : null;
 
     // Replace elements
     _elements = elements;
     _seriesCacheManager.invalidate(); // Invalidate cache - data changed
+    _restoreHoveredSeriesElement(hoveredSeriesId);
 
     // Restore selection state on new elements that match by ID
     if (selectedIds.isNotEmpty) {
@@ -1612,9 +1630,7 @@ class ChartRenderBox extends RenderBox {
     // The value summary controller and placement callback are excluded from
     // config equality, so they must be (re)attached by reference before the
     // equality early-return below.
-    _valueSummaryCoordinator.attachController(
-      config?.valueSummary.controller,
-    );
+    _valueSummaryCoordinator.attachController(config?.valueSummary.controller);
     _valueSummaryCoordinator.onPlacementChanged =
         config?.valueSummary.onPlacementChanged;
     if (_interactionConfig == config) return;
@@ -2326,9 +2342,13 @@ class ChartRenderBox extends RenderBox {
 
     // Preserve selection state: get IDs of currently selected elements
     final selectedIds = coordinator.selectedElements.map((e) => e.id).toSet();
+    final hoveredSeriesId = coordinator.hoveredElement is SeriesElement
+        ? coordinator.hoveredElement!.id
+        : null;
 
     // Generate new elements using current transform
     _elements = generator(transform);
+    _restoreHoveredSeriesElement(hoveredSeriesId);
 
     // Restore selection state on new elements that match by ID
     if (selectedIds.isNotEmpty) {
@@ -2349,6 +2369,21 @@ class ChartRenderBox extends RenderBox {
     // Mark for repaint to show updated elements
     markNeedsPaint();
     markNeedsSemanticsUpdate();
+  }
+
+  void _restoreHoveredSeriesElement(String? seriesId) {
+    if (seriesId == null) return;
+    SeriesElement? replacement;
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.id == seriesId) {
+        replacement = element;
+        break;
+      }
+    }
+    coordinator.setHoveredElement(replacement);
+    if (!(_interactionConfig?.selection.scope.includesWholeSeries ?? false)) {
+      replacement?.onHoverExit();
+    }
   }
 
   // ============================================================================
@@ -2675,6 +2710,10 @@ class ChartRenderBox extends RenderBox {
 
     // Convert widget coordinates to plot coordinates
     final plotPosition = widgetToPlot(widgetPosition);
+    final selection = _interactionConfig?.selection;
+    final usesWholePathCorridor =
+        (selection?.scope.includesWholeSeries ?? false) &&
+        selection?.acquisitionMode == ChartSelectionAcquisitionMode.point;
 
     // In perSeries normalization mode, QuadTree bounds for SeriesElements are
     // incorrect because they were computed with the initial global transform.
@@ -2700,6 +2739,18 @@ class ChartRenderBox extends RenderBox {
     } else {
       // Standard mode: use spatial index normally
       candidates = _spatialIndex!.query(plotPosition, radius: 18);
+      if (usesWholePathCorridor) {
+        final pathSeries = _elements
+            .whereType<SeriesElement>()
+            .where(
+              (element) =>
+                  element.series is LineChartSeries ||
+                  element.series is AreaChartSeries,
+            )
+            .toList();
+        _ensureSeriesTransformsUpdated(pathSeries.cast<ChartElement>());
+        candidates = <ChartElement>{...candidates, ...pathSeries}.toList();
+      }
     }
 
     if (candidates.isEmpty) return null;
@@ -2707,6 +2758,21 @@ class ChartRenderBox extends RenderBox {
     // Filter to elements that pass precise hit test
     // Elements use plot coordinates, so pass plot position
     final hits = candidates.where((e) => e.hitTest(plotPosition)).toList();
+
+    // Whole-series point selection deliberately exposes a wider invisible
+    // corridor around Line and Area paths. Other acquisition modes retain
+    // their precise hit geometry so a nearby path cannot steal an interval,
+    // rectangle, or lasso drag.
+    if (usesWholePathCorridor) {
+      for (final candidate in candidates.whereType<SeriesElement>()) {
+        if (hits.contains(candidate)) continue;
+        final distance = candidate.pathHitDistance(plotPosition);
+        if (distance != null &&
+            distance <= selection!.completeSeriesHitRadius) {
+          hits.add(candidate);
+        }
+      }
+    }
 
     if (hits.isEmpty) return null;
 
@@ -2718,6 +2784,14 @@ class ChartRenderBox extends RenderBox {
       if (priorityCompare != 0) return priorityCompare;
 
       if (a is DataSeriesElement && b is DataSeriesElement) {
+        if (a is SeriesElement && b is SeriesElement) {
+          final aDistance = a.pathHitDistance(plotPosition);
+          final bDistance = b.pathHitDistance(plotPosition);
+          if (aDistance != null && bDistance != null) {
+            final distanceCompare = aDistance.compareTo(bDistance);
+            if (distanceCompare != 0) return distanceCompare;
+          }
+        }
         return b.seriesIndex.compareTo(a.seriesIndex);
       }
 
@@ -2733,8 +2807,37 @@ class ChartRenderBox extends RenderBox {
     return hits.first;
   }
 
+  /// Resolves primary-button annotation manipulation independently of the
+  /// ordinary paint-order hit priority used for passive hover.
+  ChartElement? hitTestAnnotationInteractionTarget(Offset widgetPosition) {
+    if (_spatialIndexDirty) {
+      _rebuildSpatialIndex();
+      _spatialIndexDirty = false;
+    }
+    final plotPosition = widgetToPlot(widgetPosition);
+    final hits = _elements.where((element) {
+      final ownsAnnotationGesture =
+          element is ResizeHandleElement ||
+          (element.elementType == ChartElementType.annotation &&
+              element.isDraggable);
+      return ownsAnnotationGesture && element.hitTest(plotPosition);
+    }).toList();
+    if (hits.isEmpty) return null;
+    hits.sort((a, b) {
+      final aIsHandle = a is ResizeHandleElement;
+      final bIsHandle = b is ResizeHandleElement;
+      if (aIsHandle != bIsHandle) return aIsHandle ? -1 : 1;
+      final renderOrder = b.renderOrder.compareTo(a.renderOrder);
+      return renderOrder != 0 ? renderOrder : b.priority.compareTo(a.priority);
+    });
+    return hits.first;
+  }
+
   /// Resolves one renderer-neutral datum from widget-local coordinates.
-  ChartDataHit? dataHitAtWidgetPosition(Offset widgetPosition) {
+  ChartDataHit? dataHitAtWidgetPosition(
+    Offset widgetPosition, {
+    double maxDistance = 20,
+  }) {
     final plotPosition = widgetToPlot(widgetPosition);
     final elements = _elements.whereType<DataHitElement>().toList()
       ..sort((a, b) {
@@ -2744,10 +2847,63 @@ class ChartRenderBox extends RenderBox {
             : b.seriesIndex.compareTo(a.seriesIndex);
       });
     for (final element in elements) {
-      final hit = element.dataHitAt(plotPosition);
+      final hit = element.dataHitAt(plotPosition, maxDistance: maxDistance);
       if (hit != null) return hit;
     }
     return null;
+  }
+
+  /// Resolves the nearest visible Line/Area datum owned by [seriesId].
+  ///
+  /// Normal hover hit testing still respects hidden marker configuration. This
+  /// opt-in path is used only after the owning path itself won tap hit testing
+  /// under mark-selection policy.
+  ChartDataHit? nearestPathDataHitAtWidgetPosition(
+    String seriesId,
+    Offset widgetPosition,
+  ) {
+    final element = _elements
+        .whereType<SeriesElement>()
+        .where((candidate) => candidate.series.id == seriesId)
+        .firstOrNull;
+    if (element == null) return null;
+    _ensureSeriesTransformsUpdated(<ChartElement>[element]);
+    return element.nearestPathDataHitAt(widgetToPlot(widgetPosition));
+  }
+
+  /// Resolves the nearest Line or Area path inside [maxDistance].
+  ///
+  /// This is the direct-activation counterpart to the passive path hover
+  /// corridor. It deliberately ignores point markers so a dual-target scope
+  /// can try mark acquisition first, then fall back to exactly one series.
+  String? nearestPathSeriesIdAtWidgetPosition(
+    Offset widgetPosition, {
+    required double maxDistance,
+  }) {
+    final plotPosition = widgetToPlot(widgetPosition);
+    final candidates = _elements
+        .whereType<SeriesElement>()
+        .where(
+          (element) =>
+              element.series is LineChartSeries ||
+              element.series is AreaChartSeries,
+        )
+        .toList();
+    _ensureSeriesTransformsUpdated(candidates.cast<ChartElement>());
+
+    SeriesElement? nearest;
+    var nearestDistance = maxDistance;
+    for (final candidate in candidates) {
+      final distance = candidate.pathHitDistance(plotPosition);
+      if (distance == null || distance > nearestDistance) continue;
+      if (distance < nearestDistance ||
+          nearest == null ||
+          candidate.seriesIndex > nearest.seriesIndex) {
+        nearest = candidate;
+        nearestDistance = distance;
+      }
+    }
+    return nearest?.series.id;
   }
 
   /// Resolves one visible datum by stable series ID and source point index.
@@ -2826,37 +2982,35 @@ class ChartRenderBox extends RenderBox {
         .toList();
   }
 
-  /// Resolves visible Scatter data enclosed by a widget-space rectangle.
+  /// Resolves visible Cartesian data enclosed by a widget-space rectangle.
   List<ChartDataHit> dataHitsInWidgetRect(Rect widgetRect) {
     final plotRect = Rect.fromPoints(
       widgetToPlot(widgetRect.topLeft),
       widgetToPlot(widgetRect.bottomRight),
     );
-    final seriesElements = _elements
-        .whereType<SeriesElement>()
-        .where((element) => element.series is ScatterChartSeries)
-        .toList(growable: false);
+    final seriesElements = _elements.whereType<SeriesElement>().toList(
+      growable: false,
+    );
     _ensureSeriesTransformsUpdated(seriesElements);
     return [
       for (final element in seriesElements)
-        ...element.scatterDataHitsInPlotRect(plotRect),
+        ...element.dataHitsInPlotRect(plotRect),
     ];
   }
 
-  /// Resolves visible Scatter data enclosed by a widget-space polygon.
+  /// Resolves visible Cartesian data enclosed by a widget-space polygon.
   List<ChartDataHit> dataHitsInWidgetPolygon(List<Offset> widgetPolygon) {
     if (widgetPolygon.length < 3) return const [];
     final plotPolygon = [
       for (final point in widgetPolygon) widgetToPlot(point),
     ];
-    final seriesElements = _elements
-        .whereType<SeriesElement>()
-        .where((element) => element.series is ScatterChartSeries)
-        .toList(growable: false);
+    final seriesElements = _elements.whereType<SeriesElement>().toList(
+      growable: false,
+    );
     _ensureSeriesTransformsUpdated(seriesElements);
     return [
       for (final element in seriesElements)
-        ...element.scatterDataHitsInPlotPolygon(plotPolygon),
+        ...element.dataHitsInPlotPolygon(plotPolygon),
     ];
   }
 
@@ -3232,7 +3386,8 @@ class ChartRenderBox extends RenderBox {
       for (final hit in coordinator.previewDataHits) {
         final widgetCenter = plotToWidget(hit.plotPosition);
         final radius =
-            math.max(hit.semanticBounds.width, hit.semanticBounds.height) / 2;
+            (math.max(hit.semanticBounds.width, hit.semanticBounds.height) / 2)
+                .clamp(4.0, 10.0);
         final interactionTheme = _theme?.interactionTheme;
         final previewPaint = Paint()
           ..color =
@@ -3258,20 +3413,23 @@ class ChartRenderBox extends RenderBox {
                 const Color(0x4000AAFF)
             ..style = PaintingStyle.fill,
         );
+        final selectionColor =
+            interactionTheme?.selectionColor ?? const Color(0xFF0088FF);
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color =
-                interactionTheme?.selectionColor ?? const Color(0xFF0088FF)
+            ..color = selectionColor
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1,
         );
+        _paintIntervalSelectionHandles(canvas, boxRect, selectionColor);
       }
     }
 
     // Paint free-form lasso geometry when lasso owns the active drag.
     if (coordinator.currentMode == InteractionMode.boxSelecting &&
-        _interactionConfig?.selection.mode == ChartSelectionMode.lasso) {
+        _interactionConfig?.selection.acquisitionMode ==
+            ChartSelectionAcquisitionMode.lasso) {
       final points = coordinator.lassoSelectionPath;
       if (points.length >= 2) {
         final interactionTheme = _theme?.interactionTheme;
@@ -3813,15 +3971,13 @@ class ChartRenderBox extends RenderBox {
     // NOTE: renderOrder is SEPARATE from hit test priority!
     final foregroundElements = _elements
         .where(
-          (e) =>
-              e is! DataSeriesElement && e.renderOrder >= RenderOrder.series,
+          (e) => e is! DataSeriesElement && e.renderOrder >= RenderOrder.series,
         )
         .toList();
     // The value summary overlay joins the foreground pass for paint ordering
     // only (RenderOrder.valueSummary); it never enters _elements, the
     // spatial index, or any hit-testing/selection flow.
-    final valueSummaryElement =
-        _valueSummaryCoordinator.overlayElementForPaint;
+    final valueSummaryElement = _valueSummaryCoordinator.overlayElementForPaint;
     if (valueSummaryElement != null) {
       foregroundElements.add(valueSummaryElement);
     }
@@ -3957,6 +4113,37 @@ class ChartRenderBox extends RenderBox {
     if (_scrollbarManager.setShowXScrollbar(show)) {
       // Need layout to recalculate scrollbar rects
       markNeedsLayout();
+    }
+  }
+
+  void _paintIntervalSelectionHandles(
+    Canvas canvas,
+    Rect selectionRect,
+    Color color,
+  ) {
+    final acquisitionMode = _interactionConfig?.selection.acquisitionMode;
+    if (acquisitionMode != ChartSelectionAcquisitionMode.xInterval &&
+        acquisitionMode != ChartSelectionAcquisitionMode.yInterval) {
+      return;
+    }
+    final handlePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final outlinePaint = Paint()
+      ..color = _theme?.backgroundColor ?? const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final transposed = _transform?.transposed ?? false;
+    final usesScreenX =
+        acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+        ? !transposed
+        : transposed;
+    final centers = usesScreenX
+        ? <Offset>[selectionRect.centerLeft, selectionRect.centerRight]
+        : <Offset>[selectionRect.topCenter, selectionRect.bottomCenter];
+    for (final center in centers) {
+      canvas.drawCircle(center, 5, handlePaint);
+      canvas.drawCircle(center, 5, outlinePaint);
     }
   }
 
@@ -4493,7 +4680,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   VoidCallback? get onViewportChanged => _renderBox.onViewportChanged;
 
   @override
-  void Function(List<ChartDataHit>)? get onSelectionGestureComplete =>
+  void Function(ChartSelectionGestureResult)? get onSelectionGestureComplete =>
       _renderBox.onSelectionGestureComplete;
 
   // ============================================================================
@@ -4503,6 +4690,11 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   ChartElement? hitTestElements(Offset position) {
     return _renderBox.hitTestElements(position);
+  }
+
+  @override
+  ChartElement? hitTestAnnotationInteractionTarget(Offset position) {
+    return _renderBox.hitTestAnnotationInteractionTarget(position);
   }
 
   @override

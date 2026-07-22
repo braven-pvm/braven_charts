@@ -199,6 +199,20 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   Color? _scatterFocusColorOverride;
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
+  ChartSelectionAcquisitionMode _pathSelectionAcquisitionMode =
+      ChartSelectionAcquisitionMode.point;
+  ChartSelectionScope _pathSelectionScope = ChartSelectionScope.mark;
+  ChartSelectionOperation _pathSelectionOperation =
+      ChartSelectionOperation.replace;
+  bool _pathClearSelectionOnBackgroundTap = true;
+  double _pathDataPointHitRadius = 20;
+  double _pathCompleteSeriesHitRadius = 22;
+  double _pathDataPointHoverScale = 1.5;
+  double _pathDataPointSelectionScale = 2.67;
+  double _pathCompleteSeriesHoverStrokeScale = 1.75;
+  double _pathCompleteSeriesSelectionStrokeScale = 1.5;
+  bool _pathShowTrackingTooltip = true;
+  bool _pathShowPointTooltip = true;
   bool _showBaselineFill = true;
   bool _useAreaGradient = true;
   bool _animatePaths = true;
@@ -242,6 +256,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   List<ChartDataPoint> _playgroundPrimaryPoints = const [];
   List<ChartDataPoint> _playgroundSecondaryPoints = const [];
   ChartDisplayMode _initialDisplayMode = ChartDisplayMode.chart;
+  bool _chartControllerRefreshScheduled = false;
 
   @override
   void initState() {
@@ -283,7 +298,21 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   }
 
   void _handleChartControllerChanged() {
-    if (mounted && _isScatterSelectionPreset) setState(() {});
+    if (!mounted || (!_isScatterSelectionPreset && !_isPathSelectionPreset)) {
+      return;
+    }
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      setState(() {});
+      return;
+    }
+    if (_chartControllerRefreshScheduled) return;
+    _chartControllerRefreshScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _chartControllerRefreshScheduled = false;
+      if (mounted && (_isScatterSelectionPreset || _isPathSelectionPreset)) {
+        setState(() {});
+      }
+    });
   }
 
   void _selectPreset(int index) {
@@ -293,6 +322,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _interactionGroupController.reset();
     _chartController.clearPointFocus();
     _chartController.clearPointSelection();
+    _chartController.clearSelection();
     setState(() {
       _playgroundActive = false;
       _authoredPresetIndex = index;
@@ -536,11 +566,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           final compact = constraints.maxWidth < 600;
           final preferredHeight = switch ((widget.family, compact)) {
             (_CartesianFamily.line, true) =>
-              _isLineSynchronized ? 1960.0 : 1040.0,
+              _isLineSynchronized ? 2060.0 : 1040.0,
             (_CartesianFamily.line, false) =>
-              _isLineSynchronized ? 1536.0 : 992.0,
+              _isLineSynchronized ? 1640.0 : 1100.0,
             (_CartesianFamily.area, true) => 1040.0,
-            (_CartesianFamily.area, false) => 992.0,
+            (_CartesianFamily.area, false) => 1100.0,
             (_CartesianFamily.scatter, true) => 1500.0,
             _ => constraints.maxHeight,
           };
@@ -643,6 +673,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         description:
             'Three local scales share one distance cursor and viewport.',
       ),
+      _ChartTypePreset(
+        label: 'Selection',
+        icon: Icons.ads_click_outlined,
+        description:
+            'Select canonical points or complete series. Shift adds, Ctrl/Cmd toggles, Alt subtracts, and a background tap clears.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -680,6 +716,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.auto_graph,
         description:
             'Gradient magnitude meets a target window and marked peak.',
+      ),
+      _ChartTypePreset(
+        label: 'Selection',
+        icon: Icons.ads_click_outlined,
+        description:
+            'Select canonical points or complete filled series without changing the source data.',
       ),
     ],
     _CartesianFamily.scatter => const [
@@ -847,6 +889,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _presetIndex >= 15 &&
       _presetIndex <= 17;
 
+  bool get _isLineSelectionPreset =>
+      widget.family == _CartesianFamily.line && _presetIndex == 9;
+
+  bool get _isAreaSelectionPreset =>
+      widget.family == _CartesianFamily.area && _presetIndex == 7;
+
+  bool get _isPathSelectionPreset =>
+      _isLineSelectionPreset || _isAreaSelectionPreset;
+
   bool get _isScatterRegressionPreset =>
       widget.family == _CartesianFamily.scatter && _presetIndex == 18;
 
@@ -874,11 +925,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool get _isScatterMarginalPreset =>
       widget.family == _CartesianFamily.scatter && _presetIndex == 25;
 
-  ChartSelectionMode get _scatterSelectionMode => switch (_presetIndex) {
-    16 => ChartSelectionMode.rectangle,
-    17 => ChartSelectionMode.lasso,
-    _ => ChartSelectionMode.point,
-  };
+  ChartSelectionAcquisitionMode get _scatterSelectionAcquisitionMode =>
+      switch (_presetIndex) {
+        16 => ChartSelectionAcquisitionMode.rectangle,
+        17 => ChartSelectionAcquisitionMode.lasso,
+        _ => ChartSelectionAcquisitionMode.point,
+      };
 
   Widget _buildPresetPicker({required bool compact}) {
     final theme = Theme.of(context);
@@ -1008,39 +1060,200 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           );
         }
+        final workbench = BravenChartWorkbench(
+          key: ValueKey('${widget.family.name}-workbench'),
+          chartController: _chartController,
+          workbenchController: _workbenchController,
+          initialDisplayMode: _initialDisplayMode,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.data,
+            ChartDisplayMode.split,
+            ChartDisplayMode.source,
+          },
+          documentOptions: _workbenchDocumentOptions,
+          sourceOptions: ChartDartSourceOptions(
+            variableName: '${widget.family.name}Chart',
+          ),
+          tableOptions: widget.family == _CartesianFamily.scatter
+              ? const ChartTableOptions(rowLayout: ChartTableRowLayout.long)
+              : const ChartTableOptions(),
+          tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+          splitBreakpoint: 760,
+          autoFitTablePane: true,
+          minimumChartPaneExtent: 360,
+          minimumTablePaneExtent: 360,
+          maximumAutoTablePaneExtent: 520,
+          chartBuilder: (context, controller) =>
+              _buildWorkbenchChart(options, controller),
+        );
         return ChartCard(
           title: _chartTitle,
           subtitle: _chartSummary,
           padding: const EdgeInsets.all(8),
-          child: BravenChartWorkbench(
-            key: ValueKey('${widget.family.name}-workbench'),
-            chartController: _chartController,
-            workbenchController: _workbenchController,
-            initialDisplayMode: _initialDisplayMode,
-            availableDisplayModes: const {
-              ChartDisplayMode.chart,
-              ChartDisplayMode.data,
-              ChartDisplayMode.split,
-              ChartDisplayMode.source,
-            },
-            documentOptions: _workbenchDocumentOptions,
-            sourceOptions: ChartDartSourceOptions(
-              variableName: '${widget.family.name}Chart',
-            ),
-            tableOptions: widget.family == _CartesianFamily.scatter
-                ? const ChartTableOptions(rowLayout: ChartTableRowLayout.long)
-                : const ChartTableOptions(),
-            tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
-            splitBreakpoint: 760,
-            autoFitTablePane: true,
-            minimumChartPaneExtent: 360,
-            minimumTablePaneExtent: 360,
-            maximumAutoTablePaneExtent: 520,
-            chartBuilder: (context, controller) =>
-                _buildWorkbenchChart(options, controller),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_isPathSelectionPreset) ...[
+                _buildPathSelectionToolbar(),
+                const SizedBox(height: 8),
+              ],
+              Expanded(child: workbench),
+            ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPathSelectionToolbar() {
+    final theme = Theme.of(context);
+    final tools =
+        <({ChartSelectionAcquisitionMode mode, String label, IconData icon})>[
+          (
+            mode: ChartSelectionAcquisitionMode.point,
+            label: 'Point',
+            icon: Icons.ads_click_outlined,
+          ),
+          (
+            mode: ChartSelectionAcquisitionMode.xInterval,
+            label: 'X range',
+            icon: Icons.swap_horiz,
+          ),
+          (
+            mode: ChartSelectionAcquisitionMode.yInterval,
+            label: 'Y range',
+            icon: Icons.swap_vert,
+          ),
+          (
+            mode: ChartSelectionAcquisitionMode.rectangle,
+            label: 'Box',
+            icon: Icons.crop_free,
+          ),
+          (
+            mode: ChartSelectionAcquisitionMode.lasso,
+            label: 'Lasso',
+            icon: Icons.gesture,
+          ),
+        ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLowest,
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 4 : 8,
+              vertical: compact ? 3 : 6,
+            ),
+            child: compact
+                ? Row(
+                    children: [
+                      for (final tool in tools)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: _buildCompactPathSelectionTool(tool),
+                          ),
+                        ),
+                    ],
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 2),
+                        child: Text(
+                          'Selection tool',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      for (final tool in tools)
+                        ChoiceChip(
+                          key: ValueKey(
+                            'path-selection-tool-${tool.mode.name}',
+                          ),
+                          selected: _pathSelectionAcquisitionMode == tool.mode,
+                          showCheckmark: false,
+                          avatar: Icon(tool.icon, size: 17),
+                          label: Text(tool.label),
+                          tooltip: _formatChartSelectionAcquisitionMode(
+                            tool.mode,
+                          ),
+                          onSelected: (_) => setState(
+                            () => _pathSelectionAcquisitionMode = tool.mode,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCompactPathSelectionTool(
+    ({ChartSelectionAcquisitionMode mode, String label, IconData icon}) tool,
+  ) {
+    final theme = Theme.of(context);
+    final selected = _pathSelectionAcquisitionMode == tool.mode;
+    final tooltip = _formatChartSelectionAcquisitionMode(tool.mode);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$tooltip selection tool',
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: selected
+              ? theme.colorScheme.secondaryContainer
+              : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(5),
+            side: BorderSide(
+              color: selected
+                  ? theme.colorScheme.secondary
+                  : theme.colorScheme.outlineVariant,
+            ),
+          ),
+          child: InkWell(
+            key: ValueKey('path-selection-tool-${tool.mode.name}'),
+            borderRadius: BorderRadius.circular(5),
+            onTap: () =>
+                setState(() => _pathSelectionAcquisitionMode = tool.mode),
+            child: SizedBox(
+              height: 30,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(tool.icon, size: 15),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      tool.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1255,19 +1468,38 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         showXScrollbar: options.showXScrollbar,
         showYScrollbar: options.showYScrollbar,
         crosshair: CrosshairConfig(
-          enabled: true,
+          enabled: options.showCrosshair,
           mode: _isScatterUncertaintyPreset
               ? CrosshairMode.vertical
               : CrosshairMode.both,
           snapToDataPoint: true,
           displayMode: CrosshairDisplayMode.tracking,
+          showTrackingTooltip:
+              !_isPathSelectionPreset || _pathShowTrackingTooltip,
         ),
-        tooltip: const TooltipConfig(enabled: true),
+        tooltip: TooltipConfig(
+          enabled: !_isPathSelectionPreset || _pathShowPointTooltip,
+        ),
         selection: _isScatterSelectionPreset
             ? ChartSelectionConfig(
-                mode: _scatterSelectionMode,
+                acquisitionMode: _scatterSelectionAcquisitionMode,
                 operation: _scatterSelectionOperation,
                 clearOnBackgroundTap: _scatterClearSelectionOnBackgroundTap,
+              )
+            : _isPathSelectionPreset
+            ? ChartSelectionConfig(
+                acquisitionMode: _pathSelectionAcquisitionMode,
+                scope: _pathSelectionScope,
+                operation: _pathSelectionOperation,
+                clearOnBackgroundTap: _pathClearSelectionOnBackgroundTap,
+                dataPointHitRadius: _pathDataPointHitRadius,
+                completeSeriesHitRadius: _pathCompleteSeriesHitRadius,
+                dataPointHoverScale: _pathDataPointHoverScale,
+                dataPointSelectionScale: _pathDataPointSelectionScale,
+                completeSeriesHoverStrokeScale:
+                    _pathCompleteSeriesHoverStrokeScale,
+                completeSeriesSelectionStrokeScale:
+                    _pathCompleteSeriesSelectionStrokeScale,
               )
             : const ChartSelectionConfig(),
         onSelectionResultChanged: _isScatterSelectionPreset
@@ -1317,11 +1549,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     }
     return switch (widget.family) {
       _CartesianFamily.line =>
-        _isLineForecast
+        _isPathSelectionPreset
+            ? '${_buildSeries().length} series · ${_formatChartSelectionAcquisitionMode(_pathSelectionAcquisitionMode).toLowerCase()} · ${_formatChartSelectionScope(_pathSelectionScope).toLowerCase()} scope · ${_formatChartSelectionOperation(_pathSelectionOperation).toLowerCase()} operation · $_pathSelectionCount selected'
+            : _isLineForecast
             ? 'Observed + prognosis · dotted forecast · current-time boundary'
             : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
       _CartesianFamily.area =>
-        '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
+        _isPathSelectionPreset
+            ? '${_buildSeries().length} series · ${_formatChartSelectionAcquisitionMode(_pathSelectionAcquisitionMode).toLowerCase()} · ${_formatChartSelectionScope(_pathSelectionScope).toLowerCase()} scope · ${_formatChartSelectionOperation(_pathSelectionOperation).toLowerCase()} operation · $_pathSelectionCount selected'
+            : '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
       _CartesianFamily.scatter =>
         _presetIndex == 8
             ? 'X: revenue growth · Y: customer retention · Bubble area: active accounts · Shape: market type'
@@ -1338,7 +1574,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             : _presetIndex == 14
             ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} named accounts · ${_formatDataPointLabelPosition(_scatterLabelPosition).toLowerCase()} labels · ${_formatDataPointLabelCollisionPolicy(_scatterLabelCollisionPolicy).toLowerCase()} collisions'
             : _isScatterSelectionPreset
-            ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} accounts · ${_scatterSelectionMode.name} acquisition · ${_formatChartSelectionOperation(_scatterSelectionOperation).toLowerCase()} operation · ${_scatterSelectionResult.statistics.pointCount} selected'
+            ? '2 cohorts · ${_scatterPriorityAccounts.length + _scatterMonitorAccounts.length} accounts · ${_formatChartSelectionAcquisitionMode(_scatterSelectionAcquisitionMode).toLowerCase()} · ${_formatChartSelectionOperation(_scatterSelectionOperation).toLowerCase()} operation · ${_scatterSelectionResult.statistics.pointCount} selected'
             : _isScatterRegressionPreset
             ? '1 cohort · ${_scatterCampaignResponse.length} observations · robust LOESS · ${(_scatterLoessSpan * 100).round()}% neighborhood · $_scatterLoessRobustnessIterations robust passes'
             : _isScatterUncertaintyPreset
@@ -1400,6 +1636,14 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _ => _presets[_presetIndex].label,
     };
   }
+
+  int get _pathSelectionCount =>
+      (_pathSelectionScope.includesMarks
+          ? _chartController.selectedPointRefs.length
+          : 0) +
+      (_pathSelectionScope.includesWholeSeries
+          ? _chartController.selectedSeriesIds.length
+          : 0);
 
   int get _scatterEffectiveSeriesCount => _presetIndex == 0
       ? (_showSecondSeries ? 3 : 1)
@@ -1556,6 +1800,154 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   List<Widget> _buildOptions() {
     final typeOptions = <Widget>[
+      if (_isPathSelectionPreset) ...[
+        EnumOption<ChartSelectionAcquisitionMode>(
+          key: const ValueKey('path-selection-acquisition-mode'),
+          label: 'Acquisition geometry',
+          value: _pathSelectionAcquisitionMode,
+          values: ChartSelectionAcquisitionMode.values,
+          labelBuilder: _formatChartSelectionAcquisitionMode,
+          onChanged: (value) =>
+              setState(() => _pathSelectionAcquisitionMode = value),
+        ),
+        EnumOption<ChartSelectionScope>(
+          key: const ValueKey('path-selection-scope'),
+          label: 'Selection scope',
+          description:
+              'Choose whether activation targets a data point, a complete series, or whichever target the pointer reaches.',
+          value: _pathSelectionScope,
+          values: const <ChartSelectionScope>[
+            ChartSelectionScope.mark,
+            ChartSelectionScope.wholeSeries,
+            ChartSelectionScope.markOrWholeSeries,
+          ],
+          labelBuilder: _formatChartSelectionScope,
+          onChanged: (value) {
+            _chartController.clearPointSelection();
+            _chartController.clearSelection();
+            setState(() => _pathSelectionScope = value);
+          },
+        ),
+        EnumOption<ChartSelectionOperation>(
+          key: const ValueKey('path-selection-operation'),
+          label: 'Selection operation',
+          value: _pathSelectionOperation,
+          values: ChartSelectionOperation.values,
+          labelBuilder: _formatChartSelectionOperation,
+          onChanged: (value) => setState(() => _pathSelectionOperation = value),
+        ),
+        BoolOption(
+          key: const ValueKey('path-selection-background-clear'),
+          label: 'Clear on background tap',
+          value: _pathClearSelectionOnBackgroundTap,
+          onChanged: (value) =>
+              setState(() => _pathClearSelectionOnBackgroundTap = value),
+        ),
+        SliderOption(
+          key: const ValueKey('path-data-point-hit-radius'),
+          label: 'Data point hit radius',
+          description:
+              'Screen-space hover and click radius around each canonical data point.',
+          value: _pathDataPointHitRadius,
+          min: 4,
+          max: 40,
+          divisions: 18,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _pathDataPointHitRadius = value),
+        ),
+        SliderOption(
+          key: const ValueKey('path-complete-series-hit-radius'),
+          label: 'Complete series hit radius',
+          description:
+              'Screen-space hover and click corridor around the rendered Line or Area path.',
+          value: _pathCompleteSeriesHitRadius,
+          min: 4,
+          max: 40,
+          divisions: 18,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) =>
+              setState(() => _pathCompleteSeriesHitRadius = value),
+        ),
+        if (_pathSelectionScope.includesMarks) ...[
+          SliderOption(
+            key: const ValueKey('path-data-point-hover-scale'),
+            label: 'Data point hover scale',
+            description:
+                'Marker-size multiplier while a selectable data point is hovered.',
+            value: _pathDataPointHoverScale,
+            min: 1,
+            max: 3,
+            divisions: 20,
+            suffix: '×',
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _pathDataPointHoverScale = value),
+          ),
+          SliderOption(
+            key: const ValueKey('path-data-point-selection-scale'),
+            label: 'Data point selection scale',
+            description:
+                'Marker-size multiplier for the durable point-selection halo.',
+            value: _pathDataPointSelectionScale,
+            min: 1,
+            max: 4,
+            divisions: 30,
+            suffix: '×',
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _pathDataPointSelectionScale = value),
+          ),
+        ],
+        if (_pathSelectionScope.includesWholeSeries) ...[
+          SliderOption(
+            key: const ValueKey('path-complete-series-hover-stroke-scale'),
+            label: 'Series hover stroke scale',
+            description:
+                'Stroke-width multiplier while a complete series is hovered.',
+            value: _pathCompleteSeriesHoverStrokeScale,
+            min: 1,
+            max: 3,
+            divisions: 20,
+            suffix: '×',
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _pathCompleteSeriesHoverStrokeScale = value),
+          ),
+          SliderOption(
+            key: const ValueKey('path-complete-series-selection-stroke-scale'),
+            label: 'Series selection stroke scale',
+            description:
+                'Stroke-width multiplier for a durably selected complete series.',
+            value: _pathCompleteSeriesSelectionStrokeScale,
+            min: 1,
+            max: 3,
+            divisions: 20,
+            suffix: '×',
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _pathCompleteSeriesSelectionStrokeScale = value),
+          ),
+        ],
+        BoolOption(
+          key: const ValueKey('path-show-point-tooltip'),
+          label: 'Show data point hover popup',
+          subtitle:
+              'Hide the standard single-point popup without changing crosshair or tracking information',
+          value: _pathShowPointTooltip,
+          onChanged: (value) => setState(() => _pathShowPointTooltip = value),
+        ),
+        BoolOption(
+          key: const ValueKey('path-show-tracking-tooltip'),
+          label: 'Show tracking information panel',
+          subtitle:
+              'Keep crosshair lines and axis values while hiding the floating series summary',
+          value: _pathShowTrackingTooltip,
+          onChanged: (value) =>
+              setState(() => _pathShowTrackingTooltip = value),
+        ),
+      ],
       if (widget.family != _CartesianFamily.scatter &&
           (_playgroundActive || (!_isLineSpotlight && !_isAreaPulse)))
         EnumOption<LineInterpolation>(
@@ -2977,12 +3369,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 ),
               ),
             Text(
-              switch (_scatterSelectionMode) {
-                ChartSelectionMode.point =>
+              switch (_scatterSelectionAcquisitionMode) {
+                ChartSelectionAcquisitionMode.point =>
                   'Click a marker to apply the chosen operation. Ctrl/Command toggles, Shift adds, and Alt/Option subtracts.',
-                ChartSelectionMode.rectangle =>
+                ChartSelectionAcquisitionMode.xInterval =>
+                  'Drag across an X interval to acquire every point in that domain span.',
+                ChartSelectionAcquisitionMode.yInterval =>
+                  'Drag across a Y interval to acquire every point in that value span.',
+                ChartSelectionAcquisitionMode.rectangle =>
                   'Drag a rectangle on empty chart space. Ctrl/Command toggles and Alt/Option subtracts; middle-drag pans.',
-                ChartSelectionMode.lasso =>
+                ChartSelectionAcquisitionMode.lasso =>
                   'Draw around a cluster on empty chart space. Ctrl/Command toggles and Alt/Option subtracts; middle-drag pans.',
               },
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -3337,6 +3733,33 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           ),
       ];
     }
+    if (_isLineSelectionPreset) {
+      return [
+        _line(
+          id: 'selection-observed',
+          name: 'Observed',
+          unit: 'W',
+          points: _primaryPoints,
+          color: const Color(0xFF2563EB),
+        ),
+        if (_showSecondSeries)
+          _line(
+            id: 'selection-plan',
+            name: 'Plan',
+            unit: 'W',
+            points: _secondaryPoints,
+            color: const Color(0xFFF97316),
+          ),
+        if (_showSecondSeries)
+          _line(
+            id: 'selection-capacity',
+            name: 'Capacity',
+            unit: 'W',
+            points: _offsetPoints(_primaryPoints, 12),
+            color: const Color(0xFF0F9F8F),
+          ),
+      ];
+    }
     if (_isLineForecast) {
       const forecastColor = Color(0xFF4F8CFF);
       return [
@@ -3613,6 +4036,33 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             points: _playgroundSecondaryPoints,
             color: const Color(0xFF0891B2),
             fillOpacity: (_fillOpacity * 0.72).clamp(0.04, 0.7),
+          ),
+      ];
+    }
+    if (_isAreaSelectionPreset) {
+      return [
+        _area(
+          id: 'selection-total',
+          name: 'Total demand',
+          points: _offsetPoints(_secondaryPoints, 18),
+          color: const Color(0xFF6366F1),
+          fillOpacity: (_fillOpacity * 0.65).clamp(0.08, 0.48),
+        ),
+        if (_showSecondSeries)
+          _area(
+            id: 'selection-active',
+            name: 'Active demand',
+            points: _primaryPoints,
+            color: const Color(0xFF06B6D4),
+            fillOpacity: _fillOpacity,
+          ),
+        if (_showSecondSeries)
+          _area(
+            id: 'selection-forecast',
+            name: 'Forecast',
+            points: _secondaryPoints,
+            color: const Color(0xFFF97316),
+            fillOpacity: (_fillOpacity * 0.5).clamp(0.06, 0.36),
           ),
       ];
     }
@@ -4861,6 +5311,26 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ChartSelectionOperation.toggle => 'Toggle',
       };
 
+  String _formatChartSelectionAcquisitionMode(
+    ChartSelectionAcquisitionMode acquisitionMode,
+  ) => switch (acquisitionMode) {
+    ChartSelectionAcquisitionMode.point => 'Direct point',
+    ChartSelectionAcquisitionMode.xInterval => 'X interval',
+    ChartSelectionAcquisitionMode.yInterval => 'Y interval',
+    ChartSelectionAcquisitionMode.rectangle => 'Rectangle',
+    ChartSelectionAcquisitionMode.lasso => 'Free-form lasso',
+  };
+
+  String _formatChartSelectionScope(ChartSelectionScope scope) =>
+      switch (scope) {
+        ChartSelectionScope.mark => 'Data point',
+        ChartSelectionScope.category => 'Shared category',
+        ChartSelectionScope.categoryStack => 'Composition stack',
+        ChartSelectionScope.wholeSeries => 'Complete series',
+        ChartSelectionScope.markOrWholeSeries =>
+          'Data point or complete series',
+      };
+
   String _formatScatterBinAggregate(ScatterBinAggregate aggregate) =>
       switch (aggregate) {
         ScatterBinAggregate.count => 'Count',
@@ -5383,6 +5853,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _scatterFocusColorOverride = null;
       _showSecondSeries = true;
       _showPointLabels = false;
+      _pathSelectionAcquisitionMode = ChartSelectionAcquisitionMode.point;
+      _pathSelectionScope = ChartSelectionScope.mark;
+      _pathSelectionOperation = ChartSelectionOperation.replace;
+      _pathClearSelectionOnBackgroundTap = true;
+      _pathDataPointHitRadius = 20;
+      _pathCompleteSeriesHitRadius = 22;
+      _pathDataPointHoverScale = 1.5;
+      _pathDataPointSelectionScale = 2.67;
+      _pathCompleteSeriesHoverStrokeScale = 1.75;
+      _pathCompleteSeriesSelectionStrokeScale = 1.5;
+      _pathShowTrackingTooltip = true;
+      _pathShowPointTooltip = true;
       _showBaselineFill = true;
       _useAreaGradient = true;
       _animatePaths = true;
@@ -5414,6 +5896,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _resetMotionData();
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));
+    _chartController.clearPointSelection();
+    _chartController.clearSelection();
   }
 
   String _synchronizedMetricLabel(_SynchronizedMetric metric) =>
@@ -6097,7 +6581,8 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 showAxisLine: options.showAxisLines,
                 showTicks: !compact || showDistanceAxis,
                 showTickLabels: !compact || showDistanceAxis,
-                showCrosshairLabel: trackingEnabled && showAxisValues,
+                showCrosshairLabel:
+                    options.showCrosshair && trackingEnabled && showAxisValues,
                 labelDisplay: AxisLabelDisplay.labelWithUnit,
                 tickCount: compact ? 4 : 6,
                 maxHeight: showDistanceAxis ? 52 : 36,
@@ -6107,7 +6592,8 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 color: color,
                 unit: series.unit,
                 showAxisLine: options.showAxisLines,
-                showCrosshairLabel: trackingEnabled && showAxisValues,
+                showCrosshairLabel:
+                    options.showCrosshair && trackingEnabled && showAxisValues,
                 labelDisplay: AxisLabelDisplay.tickOnly,
                 tickCount: compact ? 3 : 4,
                 minWidth: yAxisGutterWidth,
@@ -6117,16 +6603,23 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 enableZoom: options.enableZoom,
                 enablePan: options.enablePan,
                 crosshair: CrosshairConfig(
-                  enabled: trackingEnabled,
+                  enabled: options.showCrosshair && trackingEnabled,
                   mode: showHorizontalGuide
                       ? CrosshairMode.both
                       : CrosshairMode.vertical,
                   displayMode: CrosshairDisplayMode.tracking,
                   interpolateValues: interpolateValues,
-                  showTrackingTooltip: trackingEnabled && showTrackingTooltip,
-                  showIntersectionMarkers: showIntersectionMarkers,
+                  showTrackingTooltip:
+                      options.showCrosshair &&
+                      trackingEnabled &&
+                      showTrackingTooltip,
+                  showIntersectionMarkers:
+                      options.showCrosshair && showIntersectionMarkers,
                   intersectionMarkerRadius: intersectionMarkerRadius,
-                  showCoordinateLabels: trackingEnabled && showAxisValues,
+                  showCoordinateLabels:
+                      options.showCrosshair &&
+                      trackingEnabled &&
+                      showAxisValues,
                 ),
                 tooltip: const TooltipConfig(enabled: true),
               ),
@@ -6770,8 +7263,8 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
           showXScrollbar: widget.options.showXScrollbar,
           showYScrollbar: widget.options.showYScrollbar,
           onViewportChanged: _handleViewportChanged,
-          crosshair: const CrosshairConfig(
-            enabled: true,
+          crosshair: CrosshairConfig(
+            enabled: widget.options.showCrosshair,
             mode: CrosshairMode.both,
             snapToDataPoint: true,
             displayMode: CrosshairDisplayMode.tracking,
@@ -7103,6 +7596,17 @@ class _FeatureCoverage extends StatelessWidget {
             'Chart/data workbench',
           ],
         ),
+        _FeatureGroup(
+          id: 'selection',
+          label: 'Selection',
+          icon: Icons.ads_click_outlined,
+          features: [
+            'Point selection',
+            'Series selection',
+            'Set operations',
+            'Portable view state',
+          ],
+        ),
       ],
       _CartesianFamily.area => const [
         _FeatureGroup(
@@ -7130,6 +7634,17 @@ class _FeatureCoverage extends StatelessWidget {
             'Entrance reveal',
             'Data-update motion',
             'Chart/data workbench',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'selection',
+          label: 'Selection',
+          icon: Icons.ads_click_outlined,
+          features: [
+            'Point selection',
+            'Series selection',
+            'Set operations',
+            'Portable view state',
           ],
         ),
       ],

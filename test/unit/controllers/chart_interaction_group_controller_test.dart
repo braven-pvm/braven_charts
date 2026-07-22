@@ -195,6 +195,78 @@ void main() {
       expect(viewportValues, const [ChartXViewport(min: 3, max: 9)]);
     });
 
+    test('stable-key selection is opt-in and suppresses feedback loops', () {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      final linkedValues = <Set<ChartPointKeyRef>>[];
+      final unlinkedValues = <Set<ChartPointKeyRef>>[];
+      late ChartInteractionGroupParticipant linked;
+      final source = group.attachChart(
+        attachment: Object(),
+        options: const ChartInteractionGroupOptions(synchronizeSelection: true),
+        onCursorChanged: (_) {},
+        onViewportChanged: (_) {},
+      );
+      linked = group.attachChart(
+        attachment: Object(),
+        options: const ChartInteractionGroupOptions(synchronizeSelection: true),
+        onCursorChanged: (_) {},
+        onViewportChanged: (_) {},
+        onSelectionChanged: (selection) {
+          linkedValues.add(selection);
+          linked.publishSelection(selection);
+        },
+      );
+      final unlinked = group.attachChart(
+        attachment: Object(),
+        onCursorChanged: (_) {},
+        onViewportChanged: (_) {},
+        onSelectionChanged: unlinkedValues.add,
+      );
+      addTearDown(source.dispose);
+      addTearDown(linked.dispose);
+      addTearDown(unlinked.dispose);
+
+      final selection = {
+        const ChartPointKeyRef(seriesId: 'orders', pointKey: '2026-07-21'),
+      };
+      source.publishSelection(selection);
+
+      expect(group.selection, selection);
+      expect(linkedValues, [selection]);
+      expect(unlinkedValues, isEmpty);
+    });
+
+    test('late linked participants receive selection and reset clears it', () {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      final source = group.attachChart(
+        attachment: Object(),
+        options: const ChartInteractionGroupOptions(synchronizeSelection: true),
+        onCursorChanged: (_) {},
+        onViewportChanged: (_) {},
+      );
+      addTearDown(source.dispose);
+      final selection = {
+        const ChartPointKeyRef(seriesId: 'orders', pointKey: 'north'),
+      };
+      source.publishSelection(selection);
+      final values = <Set<ChartPointKeyRef>>[];
+      final late = group.attachChart(
+        attachment: Object(),
+        options: const ChartInteractionGroupOptions(synchronizeSelection: true),
+        onCursorChanged: (_) {},
+        onViewportChanged: (_) {},
+        onSelectionChanged: values.add,
+      );
+      addTearDown(late.dispose);
+
+      expect(values, [selection]);
+      group.reset();
+      expect(group.selection, isNull);
+      expect(values, [selection, const <ChartPointKeyRef>{}]);
+    });
+
     test('reset clears remembered state and active cursors', () {
       final group = ChartInteractionGroupController();
       addTearDown(group.dispose);

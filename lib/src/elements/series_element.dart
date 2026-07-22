@@ -250,7 +250,7 @@ class SeriesElement implements DataHitElement {
     required this.series,
     required this.transform,
     this.isSelected = false,
-    this.isHovered = false,
+    bool isHovered = false,
     this.seriesTheme,
     this.candlestickTheme = CandlestickTheme.light,
     this.rangeAreaTheme = RangeAreaTheme.light,
@@ -265,10 +265,15 @@ class SeriesElement implements DataHitElement {
     this.hasAnySelectedPoints = false,
     this.revealProgress = 1,
     this.pathPointMap,
+    this.dataPointHoverScale = 1.5,
+    this.dataPointSelectionScale = 2.67,
+    this.completeSeriesHoverStrokeScale = 1.75,
+    this.completeSeriesSelectionStrokeScale = 1.5,
     this.textDirection = TextDirection.ltr,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
-  }) : _deprecatedStrokeWidth = strokeWidth,
+  }) : _isHovered = isHovered,
+       _deprecatedStrokeWidth = strokeWidth,
        _deprecatedThemeColor = themeColor,
        _currentTransform = transform {
     _computeBounds();
@@ -307,6 +312,18 @@ class SeriesElement implements DataHitElement {
 
   /// Point indices receiving durable linked selection from another surface.
   final Set<int> selectedPointIndices;
+
+  /// Visual scale for hovered Line and Area data-point markers.
+  final double dataPointHoverScale;
+
+  /// Visual scale for selected Line and Area data-point halos.
+  final double dataPointSelectionScale;
+
+  /// Stroke-width scale for a hovered complete Line or Area series.
+  final double completeSeriesHoverStrokeScale;
+
+  /// Stroke-width scale for a selected complete Line or Area series.
+  final double completeSeriesSelectionStrokeScale;
 
   final Color? pointFocusColor;
   final Color? pointSelectionColor;
@@ -414,6 +431,75 @@ class SeriesElement implements DataHitElement {
     return seriesTheme?.markerSizeAt(seriesIndex) ?? 6.0;
   }
 
+  /// Distance from [position] to this Line or Area path in plot pixels.
+  ///
+  /// The interpolated Y value is resolved through the same shared geometry as
+  /// painting, so monotone and Bezier paths do not fall back to the straight
+  /// chord between source points. Other series families return null because
+  /// they own shape-specific hit geometry.
+  double? pathHitDistance(Offset position) {
+    final pathSeries = series;
+    final (interpolation, tension) = switch (pathSeries) {
+      LineChartSeries() => (pathSeries.interpolation, pathSeries.tension),
+      AreaChartSeries() => (pathSeries.interpolation, pathSeries.tension),
+      _ => (null, null),
+    };
+    if (interpolation == null || tension == null || pathSeries.isEmpty) {
+      return null;
+    }
+    if (_supportsReveal && position.dx > _revealEdge) return null;
+
+    final points = pathSeries.points
+        .map((point) => _currentTransform.dataToPlot(point.x, point.y))
+        .toList(growable: false);
+    if (points.length == 1) return (position - points.single).distance;
+
+    var nearest = double.infinity;
+    for (var index = 0; index < points.length - 1; index++) {
+      final start = points[index];
+      final end = points[index + 1];
+      final segmentDistance = switch (interpolation) {
+        LineInterpolation.linear => _distanceToLineSegment(
+          position,
+          start,
+          end,
+        ),
+        LineInterpolation.stepped => math.min(
+          _distanceToLineSegment(position, start, Offset(end.dx, start.dy)),
+          _distanceToLineSegment(position, Offset(end.dx, start.dy), end),
+        ),
+        LineInterpolation.bezier || LineInterpolation.monotone => () {
+          final minimumX = math.min(start.dx, end.dx);
+          final maximumX = math.max(start.dx, end.dx);
+          if (position.dx < minimumX || position.dx > maximumX) {
+            return math.min(
+              (position - start).distance,
+              (position - end).distance,
+            );
+          }
+          final curveY = InterpolationGeometry.interpolateYForX<Offset>(
+            points: points,
+            startIndex: index,
+            targetX: position.dx,
+            interpolation: interpolation,
+            getX: (point) => point.dx,
+            getY: (point) => point.dy,
+            tension: tension,
+          );
+          return (position.dy - curveY).abs();
+        }(),
+      };
+      nearest = math.min(nearest, segmentDistance);
+    }
+    return nearest;
+  }
+
+  double get _pathInteractionStrokeScale => isHovered
+      ? completeSeriesHoverStrokeScale
+      : isSelected
+      ? completeSeriesSelectionStrokeScale
+      : 1.0;
+
   // Get effective marker shape from theme or default
   SeriesMarkerShape get markerShape =>
       seriesTheme?.markerShapeAt(seriesIndex) ?? SeriesMarkerShape.circle;
@@ -517,8 +603,10 @@ class SeriesElement implements DataHitElement {
   @override
   final bool isSelected;
 
+  bool _isHovered;
+
   @override
-  final bool isHovered;
+  bool get isHovered => _isHovered;
 
   late Rect _bounds;
 
@@ -1331,30 +1419,8 @@ class SeriesElement implements DataHitElement {
           null;
     }
 
-    // For line series: check if position is near any line segment
-    // For scatter: check if near any point
-    // For now: simple line segment hit testing
-    final threshold = strokeWidth * 2; // Hit detection tolerance
-
-    for (int i = 0; i < series.points.length - 1; i++) {
-      final p1 = series.points[i];
-      final p2 = series.points[i + 1];
-
-      // CRITICAL: Use _currentTransform, not transform!
-      // In perSeries normalization mode, _currentTransform has the correct
-      // per-series Y bounds (set via updateTransform before hit testing).
-      // Using the initial 'transform' would use global Y bounds, causing
-      // hit detection to fail when series have different Y scales.
-      final plotP1 = _currentTransform.dataToPlot(p1.x, p1.y);
-      final plotP2 = _currentTransform.dataToPlot(p2.x, p2.y);
-
-      final distance = _distanceToLineSegment(position, plotP1, plotP2);
-      if (distance <= threshold) {
-        return true;
-      }
-    }
-
-    return false;
+    final distance = pathHitDistance(position);
+    return distance != null && distance <= strokeWidth * 2;
   }
 
   @override
@@ -1494,6 +1560,37 @@ class SeriesElement implements DataHitElement {
       isSelected: selectedPointIndices.contains(geometry.sourceIndex),
       isFocused: focusedPointIndices.contains(geometry.sourceIndex),
     );
+  }
+
+  /// Resolves the nearest visible Line or Area datum to [position].
+  ///
+  /// This is intentionally separate from [dataHitAt]. Hidden path markers do
+  /// not become hover targets, while an explicit mark-selection policy can
+  /// still snap a stroke/fill activation to canonical source data.
+  ChartDataHit? nearestPathDataHitAt(Offset position) {
+    if (series is! LineChartSeries && series is! AreaChartSeries) return null;
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    ChartDataHit? nearest;
+    var nearestDistance = double.infinity;
+    for (
+      var renderIndex = 0;
+      renderIndex < series.points.length;
+      renderIndex++
+    ) {
+      final hit = _dataHitForRenderPointIndex(renderIndex);
+      if (hit == null || !plotBounds.contains(hit.plotPosition)) continue;
+      final distance = (position - hit.plotPosition).distanceSquared;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = hit;
+      }
+    }
+    return nearest;
   }
 
   ChartDataHit? _scatterDataHitAt(
@@ -2168,6 +2265,19 @@ class SeriesElement implements DataHitElement {
     return _scatterDataHitsInPlotBounds(plotRect, contains: plotRect.contains);
   }
 
+  /// Resolves visible data whose semantic mark centers fall inside [plotRect].
+  ///
+  /// Scatter keeps its indexed lookup. Other Cartesian families resolve their
+  /// source-point geometry through [dataHitForPointIndex], which preserves
+  /// complete OHLC, range, and aggregate source identities.
+  List<ChartDataHit> dataHitsInPlotRect(Rect plotRect) {
+    if (plotRect.isEmpty) return const [];
+    if (series is ScatterChartSeries) {
+      return scatterDataHitsInPlotRect(plotRect);
+    }
+    return _dataHitsWhere(plotRect.contains);
+  }
+
   /// Resolves visible Scatter data whose rendered marker centers fall inside
   /// the closed [plotPolygon].
   ///
@@ -2181,6 +2291,29 @@ class SeriesElement implements DataHitElement {
     final bounds = path.getBounds();
     if (bounds.isEmpty) return const [];
     return _scatterDataHitsInPlotBounds(bounds, contains: path.contains);
+  }
+
+  /// Resolves visible data whose semantic mark centers fall inside the closed
+  /// [plotPolygon].
+  List<ChartDataHit> dataHitsInPlotPolygon(List<Offset> plotPolygon) {
+    if (plotPolygon.length < 3) return const [];
+    if (series is ScatterChartSeries) {
+      return scatterDataHitsInPlotPolygon(plotPolygon);
+    }
+    final path = Path()..addPolygon(plotPolygon, true);
+    return _dataHitsWhere(path.contains);
+  }
+
+  List<ChartDataHit> _dataHitsWhere(bool Function(Offset center) contains) {
+    final hits = <ChartDataHit>[];
+    final seen = <(String seriesId, int pointIndex)>{};
+    for (var pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+      final hit = dataHitForPointIndex(pointIndex);
+      if (hit == null || !contains(hit.plotPosition)) continue;
+      final identity = (hit.seriesId, hit.pointIndex);
+      if (seen.add(identity)) hits.add(hit);
+    }
+    return hits;
   }
 
   List<ChartDataHit> _scatterDataHitsInPlotBounds(
@@ -2464,8 +2597,13 @@ class SeriesElement implements DataHitElement {
       final point = series.points[renderIndex];
       if (!point.isValid) continue;
       final offset = _currentTransform.dataToPlot(point.x, point.y);
-      canvas.drawCircle(offset, markerSize + 5, selectionFill);
-      canvas.drawCircle(offset, markerSize + 3, selectionBorder);
+      final selectionRadius = markerSize * dataPointSelectionScale;
+      canvas.drawCircle(offset, selectionRadius, selectionFill);
+      canvas.drawCircle(
+        offset,
+        math.max(markerSize, selectionRadius - 2),
+        selectionBorder,
+      );
       canvas.drawCircle(offset, math.max(2, markerSize * 0.5), pointFill);
     }
     for (final index in focusedPointIndices) {
@@ -3404,7 +3542,7 @@ class SeriesElement implements DataHitElement {
         ? 0.8
         : 0.7;
     // Use theme-based stroke width with selection multiplier
-    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    final effectiveStrokeWidth = strokeWidth * _pathInteractionStrokeScale;
 
     final paint = Paint()
       ..color = baseColor.withValues(alpha: opacity)
@@ -3560,7 +3698,7 @@ class SeriesElement implements DataHitElement {
     Color baseColor,
   ) {
     final opacity = _getOpacity();
-    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    final effectiveStrokeWidth = strokeWidth * _pathInteractionStrokeScale;
 
     // Filter to visible points (same optimization as single-color path)
     final visiblePoints = <ChartDataPoint>[];
@@ -4365,7 +4503,7 @@ class SeriesElement implements DataHitElement {
         ? 0.8
         : 0.7;
     // Use theme-based stroke width with selection multiplier
-    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    final effectiveStrokeWidth = strokeWidth * _pathInteractionStrokeScale;
 
     // Baseline fill remains continuous while its outline can use per-segment
     // stroke styling. Each outline region retains full interpolation context.
@@ -5856,9 +5994,10 @@ class SeriesElement implements DataHitElement {
       final originalIndex = originalIndices?[i] ?? i;
       final targetIndex = _targetIndexForRenderIndex(originalIndex);
       if (isThisSeriesHovered && targetIndex == hoveredMarker!.markerIndex) {
-        if (isHollow) canvas.drawCircle(plotPos, radius * 1.5, maskPaint);
-        canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
-        if (!isHollow) canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
+        final hoverRadius = radius * dataPointHoverScale;
+        if (isHollow) canvas.drawCircle(plotPos, hoverRadius, maskPaint);
+        canvas.drawCircle(plotPos, hoverRadius, hoverPaint);
+        if (!isHollow) canvas.drawCircle(plotPos, hoverRadius, borderPaint);
       } else {
         if (isHollow) canvas.drawCircle(plotPos, radius, maskPaint);
         canvas.drawCircle(plotPos, radius, normalPaint);
@@ -5984,12 +6123,12 @@ class SeriesElement implements DataHitElement {
 
   @override
   void onHoverEnter() {
-    // Notify parent widget via callback if needed
+    _isHovered = true;
   }
 
   @override
   void onHoverExit() {
-    // Notify parent widget via callback if needed
+    _isHovered = false;
   }
 
   @override
@@ -6013,6 +6152,10 @@ class SeriesElement implements DataHitElement {
       hasAnySelectedPoints: hasAnySelectedPoints,
       revealProgress: revealProgress,
       pathPointMap: pathPointMap,
+      dataPointHoverScale: dataPointHoverScale,
+      dataPointSelectionScale: dataPointSelectionScale,
+      completeSeriesHoverStrokeScale: completeSeriesHoverStrokeScale,
+      completeSeriesSelectionStrokeScale: completeSeriesSelectionStrokeScale,
       textDirection: textDirection,
     );
   }

@@ -22,7 +22,9 @@ import 'segment_style.dart';
 // consistent, which `copyWith` independently refuses to let drift. `x` is
 // only checked for finiteness, which no sibling value can influence.
 @ChartSurface(
-  combinedSetters: [CombinedSetter('withInterval', ['low', 'high'])],
+  combinedSetters: [
+    CombinedSetter('withInterval', ['low', 'high']),
+  ],
   bodyValidated: [
     BodyValidated(
       'validateInterval() rejects a non-finite x. That is a single-parameter '
@@ -35,6 +37,7 @@ import 'segment_style.dart';
 final class RangeAreaDataPoint extends ChartDataPoint {
   RangeAreaDataPoint({
     required super.x,
+    super.pointKey,
     required double low,
     required double high,
     super.magnitude,
@@ -55,6 +58,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
 
   RangeAreaDataPoint.gap({
     required super.x,
+    super.pointKey,
     super.timestamp,
     super.label,
     super.metadata,
@@ -68,6 +72,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
   /// Creates an elapsed-time interval whose X is UTC epoch milliseconds.
   factory RangeAreaDataPoint.atTime({
     required DateTime timestamp,
+    String? pointKey,
     required double low,
     required double high,
     String? label,
@@ -76,6 +81,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
     final utcTimestamp = timestamp.toUtc();
     return RangeAreaDataPoint(
       x: utcTimestamp.millisecondsSinceEpoch.toDouble(),
+      pointKey: pointKey,
       low: low,
       high: high,
       timestamp: utcTimestamp,
@@ -138,6 +144,8 @@ final class RangeAreaDataPoint extends ChartDataPoint {
   RangeAreaDataPoint copyWith({
     double? x,
     double? y,
+    String? pointKey,
+    bool clearPointKey = false,
     double? magnitude,
     bool clearMagnitude = false,
     double? colorValue,
@@ -163,6 +171,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
       }
       return RangeAreaDataPoint.gap(
         x: x ?? this.x,
+        pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
         timestamp: timestamp ?? this.timestamp,
         label: label ?? this.label,
         metadata: metadata ?? this.metadata,
@@ -182,6 +191,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
       }
       return RangeAreaDataPoint.gap(
         x: x ?? this.x,
+        pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
         timestamp: timestamp ?? this.timestamp,
         label: label ?? this.label,
         metadata: metadata ?? this.metadata,
@@ -196,6 +206,7 @@ final class RangeAreaDataPoint extends ChartDataPoint {
     }
     return RangeAreaDataPoint(
       x: x ?? this.x,
+      pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
       low: resolvedLow,
       high: resolvedHigh,
       magnitude: clearMagnitude ? null : (magnitude ?? this.magnitude),

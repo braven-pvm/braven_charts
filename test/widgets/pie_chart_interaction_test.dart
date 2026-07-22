@@ -113,6 +113,126 @@ void main() {
   );
 
   testWidgets(
+    'radial keyboard whole-series selection clears completely on Escape',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          interactionConfig: const InteractionConfig(
+            selection: ChartSelectionConfig(
+              scope: ChartSelectionScope.wholeSeries,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final chart = find.byKey(const ValueKey('interactive-pie'));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: tester.getTopLeft(chart));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(controller.selectedSeriesIds, {'revenue'});
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(controller.selectedSeriesIds, isEmpty);
+      expect(controller.selectedPointRefs, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'radial Shift+Space extends slice order and Ctrl+A selects all slices',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_host(controller: controller));
+      await tester.pumpAndSettle();
+
+      final chart = find.byKey(const ValueKey('interactive-pie'));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: tester.getTopLeft(chart));
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pumpAndSettle();
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+      });
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 2),
+      });
+    },
+  );
+
+  testWidgets('canvas selection honors add, toggle, and subtract modifiers', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_host(controller: controller));
+    await tester.pumpAndSettle();
+
+    final chart = find.byKey(const ValueKey('interactive-pie'));
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    Offset target(int pointIndex) {
+      final hit = renderBox.dataHitForPointIndex('revenue', pointIndex)!;
+      return tester.getTopLeft(chart) +
+          renderBox.plotToWidget(hit.plotPosition);
+    }
+
+    await tester.tapAt(target(0));
+    await tester.pumpAndSettle();
+    expect(controller.selectedPointRefs, <ChartPointRef>{
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tapAt(target(1));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(controller.selectedPointRefs, <ChartPointRef>{
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tapAt(target(0));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(controller.selectedPointRefs, <ChartPointRef>{
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.tapAt(target(1));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.pumpAndSettle();
+    expect(controller.selectedPointRefs, isEmpty);
+  });
+
+  testWidgets(
     'controller selection updates pie rendering and interaction callbacks',
     (tester) async {
       final controller = BravenChartController();
@@ -420,6 +540,72 @@ void main() {
     });
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('stable point keys preserve radial selection through reorder', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _host(
+        controller: controller,
+        series: PieChartSeries(
+          id: 'revenue',
+          points: const [
+            ChartDataPoint(
+              x: 0,
+              y: 60,
+              label: 'Subscriptions',
+              pointKey: 'subscriptions',
+            ),
+            ChartDataPoint(
+              x: 1,
+              y: 40,
+              label: 'Services',
+              pointKey: 'services',
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    controller.selectPoint(
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+      revision: controller.effectiveDocumentRevision.value!,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(
+      _host(
+        controller: controller,
+        series: PieChartSeries(
+          id: 'revenue',
+          points: const [
+            ChartDataPoint(
+              x: 0,
+              y: 42,
+              label: 'Consulting',
+              pointKey: 'services',
+            ),
+            ChartDataPoint(
+              x: 1,
+              y: 58,
+              label: 'Recurring',
+              pointKey: 'subscriptions',
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+    });
+    expect(controller.selectionSnapshot?.pointKeyRefs, {
+      const ChartPointKeyRef(seriesId: 'revenue', pointKey: 'subscriptions'),
+    });
+  });
 }
 
 Widget _host({
@@ -431,6 +617,7 @@ Widget _host({
   RadialLegendItemBuilder? radialLegendItemBuilder,
   bool disableAnimations = false,
   TextScaler textScaler = TextScaler.noScaling,
+  PieChartSeries? series,
 }) {
   return MaterialApp(
     home: MediaQuery(
@@ -453,15 +640,16 @@ Widget _host({
               onPointTap: onPointTap,
               onPointHover: onPointHover,
               series: [
-                PieChartSeries.fromMap(
-                  id: 'revenue',
-                  unit: 'USD',
-                  values: const {
-                    'Subscriptions': 42,
-                    'Services': 31,
-                    'Hardware': 27,
-                  },
-                ),
+                series ??
+                    PieChartSeries.fromMap(
+                      id: 'revenue',
+                      unit: 'USD',
+                      values: const {
+                        'Subscriptions': 42,
+                        'Services': 31,
+                        'Hardware': 27,
+                      },
+                    ),
               ],
             ),
           ),

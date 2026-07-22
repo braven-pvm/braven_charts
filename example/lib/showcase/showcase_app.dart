@@ -28,6 +28,7 @@ import 'pages/pie_charts_page.dart';
 import 'pages/polar_column_page.dart';
 import 'pages/range_area_charts_page.dart';
 import 'pages/scientific_page.dart';
+import 'pages/selection_showcase_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
@@ -208,6 +209,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.touch_app_outlined,
       selectedIcon: Icons.touch_app,
       page: InteractionPage(),
+    ),
+    const NavDestination(
+      label: 'Selection',
+      icon: Icons.select_all_outlined,
+      selectedIcon: Icons.select_all,
+      page: SelectionShowcasePage(),
+      routeSlug: 'selection',
     ),
     const NavDestination(
       label: 'Tracking & Value Display',

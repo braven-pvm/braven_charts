@@ -98,7 +98,7 @@ extension InteractionModeExtensions on InteractionMode {
   /// - 10: Modal (contextMenuOpen)
   /// - 9: Resize handles, edit mode (resizingAnnotation, editingAnnotation)
   /// - 8: Annotation drag (draggingAnnotation)
-  /// - 7: Datapoint drag (draggingDataPoint)
+  /// - 7: Datapoint drag and scrollbar ownership
   /// - 6: Selection (selecting, boxSelecting)
   /// - 3: Pan (panning)
   /// - 1: Zoom (zooming)
@@ -114,12 +114,11 @@ extension InteractionModeExtensions on InteractionMode {
       case InteractionMode.draggingAnnotation:
         return 8;
       case InteractionMode.draggingDataPoint:
+      case InteractionMode.scrollbarDragging:
         return 7;
       case InteractionMode.selecting:
       case InteractionMode.boxSelecting:
         return 6;
-      case InteractionMode.scrollbarDragging:
-        return 4;
       case InteractionMode.panning:
         return 3;
       case InteractionMode.zooming:

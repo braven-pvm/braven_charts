@@ -549,6 +549,7 @@ class _LoadingStatesPageState extends State<LoadingStatesPage> {
               onChanged: (value) => setState(() => _showEmptyIcon = value),
             ),
             BoolOption(
+              key: const ValueKey('custom-empty-action'),
               label: 'Custom Action State',
               subtitle: 'Replaces the complete empty presentation',
               value: _customEmptyAction,

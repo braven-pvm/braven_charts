@@ -13,6 +13,7 @@ void main() {
             x: double.nan,
             y: double.infinity,
             timestamp: DateTime.utc(2026, 7, 14, 9, 15),
+            pointKey: 'power-surge',
             label: 'surge',
             metadata: const {'quality': 'verified', 'lap': 3},
             segmentStyle: const SegmentStyle(
@@ -133,6 +134,7 @@ void main() {
       expect(decoded.points.single.x.isNaN, isTrue);
       expect(decoded.points.single.y, double.infinity);
       expect(decoded.points.single.timestamp, source.points.single.timestamp);
+      expect(decoded.points.single.pointKey, 'power-surge');
       expect(decoded.points.single.label, 'surge');
       expect(decoded.points.single.metadata, source.points.single.metadata);
       expect(
@@ -1826,6 +1828,7 @@ void main() {
         points: [
           CandlestickDataPoint.atTime(
             timestamp: DateTime.utc(2026, 7, 18, 9, 30),
+            pointKey: 'aapl-2026-07-18',
             open: 218.25,
             high: 224.75,
             low: 216.5,
