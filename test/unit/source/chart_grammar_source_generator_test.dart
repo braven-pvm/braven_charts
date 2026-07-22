@@ -604,6 +604,60 @@ void main() {
       );
     });
 
+    testWidgets('shape 8: a non-default interaction round-trips', (
+      tester,
+    ) async {
+      // xAxis, theme and interaction are carried verbatim through lowering, so
+      // the round-trip proof must ALSO compare them (not just series /
+      // annotations / Y-axes). This shape sets a non-default interaction so the
+      // chain emits `.interaction(...)` and the emitted-source round trip is
+      // what guards its fidelity.
+      await expectRoundTrip(
+        tester,
+        name: 'interaction',
+        fragments: <String>[
+          '.interaction(',
+          'InteractionConfig(',
+          'CrosshairDisplayMode.tracking',
+        ],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomLine(name: 'Power')
+            .interaction(
+              const InteractionConfig(
+                crosshair: CrosshairConfig(
+                  displayMode: CrosshairDisplayMode.tracking,
+                ),
+              ),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              yAxisId: 'axis-0',
+            )
+            .interaction(
+              const InteractionConfig(
+                crosshair: CrosshairConfig(
+                  displayMode: CrosshairDisplayMode.tracking,
+                ),
+              ),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
       tester,
     ) async {
@@ -769,6 +823,51 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(contains('efforts'), contains('magnitude'), contains('total')),
+      );
+    });
+
+    testWidgets('a partial candlestick timestamp is diagnosed, not crashed', (
+      tester,
+    ) async {
+      // A candlestick series that carries a timestamp on SOME candles but not
+      // all cannot be expressed: a Channel/accessor is total, so it either
+      // reads a timestamp for every row or none. Before the gate this crashed
+      // the generator with an opaque null-check TypeError during the round-trip
+      // proof; it must instead block with a NAMED diagnostic, exactly like a
+      // partial scatter channel.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            CandlestickChartSeries(
+              id: 'price',
+              points: <CandlestickDataPoint>[
+                CandlestickDataPoint(
+                  x: 0,
+                  open: 10,
+                  high: 14,
+                  low: 9,
+                  close: 12,
+                  timestamp: DateTime.utc(2026, 1, 1),
+                ),
+                CandlestickDataPoint(
+                  x: 1,
+                  open: 12,
+                  high: 16,
+                  low: 11,
+                  close: 15,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(contains('price'), contains('timestamp'), contains('1 of 2')),
       );
     });
 

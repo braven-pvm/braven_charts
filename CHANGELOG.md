@@ -43,14 +43,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contributing open/high/low/close and scatter channels their own fields.
   Fidelity is proven rather than asserted: before emitting anything the
   generator lowers the spec it is about to write and compares the resulting
-  series, annotations and axes to the ones the document hydrated to, so a
+  series, annotations, Y-axes AND the X axis, theme and interaction to the
+  ones the document hydrated to, so a
   chain that would render a different chart is refused with a named diagnostic
   and no code — one that identifies the specific series, annotation or axis
   option a V1 mark cannot carry (a lost series field, or the single-axis
   binding a config-authored chart leaves implicit) rather than only reporting
   that the chart "does not reproduce exactly". Non-Cartesian families,
   misaligned x domains, partially
-  populated scatter channels, mixed bar orientations, annotations other than
+  populated scatter channels, partial candlestick timestamps, mixed bar
+  orientations, annotations other than
   `TrendAnnotation` and chart-level options `BravenPlot` does not forward are
   each diagnosed by name; runtime bindings and over-budget data are warned
   about and emitted, exactly as the config form does. Both forms read the same
@@ -68,8 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the render pipeline, artifact codecs, generated Source and the Workbench are
   untouched — parity is locked by config-equality and artifact-document
   equality suites. Failures are fail-fast and carry a machine-readable
-  `GrammarDiagnosticCode`; empty data is treated as a runtime state and
-  renders the standard empty state instead of throwing from `build`.
+  `GrammarDiagnosticCode`, and nothing is dropped silently — a channel without
+  its encoding AND an encoding with no channel to drive it both raise. Every
+  data-independent structural check (mark/axis ids, axis binding, channel
+  pairing, trend source, transposition) runs BEFORE the empty-data check, so
+  an authoring error surfaces even against a momentarily-empty dataset; empty
+  data alone is treated as a runtime state and renders the standard empty
+  state instead of throwing from `build`.
 
 ## 0.11.0 - 2026-07-21
 

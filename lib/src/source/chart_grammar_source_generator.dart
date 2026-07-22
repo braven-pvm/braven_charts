@@ -46,11 +46,11 @@
 /// Before emitting anything, the generator BUILDS THE SPEC IT IS ABOUT TO
 /// WRITE — over an internal row type carrying the same synthesised values —
 /// lowers it with the real `PlotSpecLowering`, and compares the resulting
-/// `ChartSeries` / `ChartAnnotation` / axis configs to the ones the document
-/// hydrated to. Anything that does not compare equal is refused. So "the
-/// generator emitted a chain" already means "this chain reproduces this
-/// chart", without the emitter having to enumerate every option a V1 mark
-/// happens not to carry.
+/// `ChartSeries`, `ChartAnnotation`s, Y-axis configs AND the X axis, theme and
+/// interaction to the ones the document hydrated to. Anything that does not
+/// compare equal is refused. So "the generator emitted a chain" already means
+/// "this chain reproduces this chart", without the emitter having to enumerate
+/// every option a V1 mark happens not to carry.
 library;
 
 import 'dart:ui' show Color;
@@ -458,6 +458,32 @@ class _GrammarChainEmitter {
       return null;
     }
 
+    // ---- 6b. candlestick timestamp totality -------------------------------
+    // A candlestick's optional timestamp is expressed as a total
+    // DateTime Function(T) accessor, exactly like a scatter channel, so a
+    // timestamp present on SOME candles but not all cannot be reproduced. This
+    // MUST gate before geometry planning: `_planGeometry` would otherwise
+    // synthesise a timestamp field (on `.any`) and the round-trip proof's
+    // lowering would dereference a null slot for the timestamp-less rows,
+    // crashing the generator with an opaque null-check TypeError instead of
+    // reporting a clean diagnostic.
+    for (final item in series) {
+      if (item is! CandlestickChartSeries) continue;
+      final total = item.candles.length;
+      final stamped = item.candles
+          .where((candle) => candle.timestamp != null)
+          .length;
+      if (stamped == 0 || stamped == total) continue;
+      block(
+        'Grammar chain not emitted: series "${item.id}" carries a timestamp on '
+        '$stamped of $total candles. A Channel/accessor is total '
+        '(DateTime Function(T)), so a partial timestamp cannot be expressed — '
+        'give every candle a timestamp, or none.',
+        path: r'$.series[*].data',
+      );
+      return null;
+    }
+
     // ---- 7. build the synthesised fields and the candidate marks ----------
     _usedNames.add(options.rowsVariableName);
     final xField = _addField('x', _FieldKind.number);
@@ -565,7 +591,9 @@ class _GrammarChainEmitter {
     // `legendStyle`, which resolve to concrete theme values), so the chain — by
     // carrying no grid — lands on the same default. Only a NON-default grid is
     // genuinely lost, because `PlotSpec` carries no grid at all.
-    if (configuration.grid != const GridConfig()) lost.add('a non-default grid');
+    if (configuration.grid != const GridConfig()) {
+      lost.add('a non-default grid');
+    }
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
     }
@@ -627,11 +655,12 @@ class _GrammarChainEmitter {
   /// The first part of the lowered plot that does not match the captured
   /// chart, described for a diagnostic, or null when everything matches.
   ///
-  /// [subject] names what differs (a series, annotation or axis); [detail]
-  /// says WHY it differs — naming the specific option a V1 mark cannot carry
-  /// whenever that can be identified cheaply from the round-trip comparison
-  /// the emitter already runs, so the reader learns the boundary instead of
-  /// only reading "does not reproduce exactly".
+  /// [subject] names what differs (a series, annotation, Y axis, the X axis,
+  /// the theme or the interaction configuration); [detail] says WHY it differs
+  /// — naming the specific option a V1 mark cannot carry whenever that can be
+  /// identified cheaply from the round-trip comparison the emitter already
+  /// runs, so the reader learns the boundary instead of only reading "does not
+  /// reproduce exactly".
   ({String subject, String detail})? _firstMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
@@ -654,7 +683,10 @@ class _GrammarChainEmitter {
       if (expected is! TrendAnnotation ||
           actual is! TrendAnnotation ||
           !_sameTrend(expected, actual)) {
-        return (subject: 'annotation "${expected.id}"', detail: _genericLossDetail);
+        return (
+          subject: 'annotation "${expected.id}"',
+          detail: _genericLossDetail,
+        );
       }
     }
     if (lowered.yAxes.length != configuration.axes.length) {
@@ -667,6 +699,24 @@ class _GrammarChainEmitter {
           detail: _genericLossDetail,
         );
       }
+    }
+    // The X axis, theme and interaction are carried verbatim by lowering and
+    // re-emitted by the shared config emitter. Comparing them here closes the
+    // loop so the "emitted == faithful" guarantee genuinely covers every field
+    // a LoweredPlot carries — not only series, annotations and Y-axes. Each is
+    // guarded by a complete operator==, so a captured value the chain cannot
+    // reproduce is refused rather than silently diverging.
+    if (lowered.xAxis != configuration.xAxis) {
+      return (subject: 'the X axis', detail: _genericLossDetail);
+    }
+    if (lowered.theme != configuration.theme) {
+      return (subject: 'the theme', detail: _genericLossDetail);
+    }
+    if (lowered.interaction != configuration.interaction) {
+      return (
+        subject: 'the interaction configuration',
+        detail: _genericLossDetail,
+      );
     }
     return null;
   }
@@ -1238,10 +1288,26 @@ class _GrammarChainEmitter {
     _FieldKind.string => DartSourceWriter.stringLiteral(
       row.strings[field.slot],
     ),
-    _FieldKind.timestamp =>
-      'DateTime.parse('
-          '${DartSourceWriter.stringLiteral(row.stamps[field.slot]!.toIso8601String())})',
+    _FieldKind.timestamp => _timestampLiteral(row.stamps[field.slot], field),
   };
+
+  /// Writes a `DateTime.parse(...)` literal for a timestamp slot.
+  ///
+  /// A timestamp field is only synthesised once the partial-timestamp gate has
+  /// proven every candle in its series carries one, so [stamp] is never null
+  /// here. The explicit guard keeps a future regression from surfacing as an
+  /// opaque null-check crash in the Workbench Source pane; it fails loudly with
+  /// a named cause instead, in the same spirit as the `unreachable` guards.
+  static String _timestampLiteral(DateTime? stamp, _Field field) {
+    if (stamp == null) {
+      throw StateError(
+        'timestamp field "${field.name}" has no value at a row despite the '
+        'partial-timestamp gate; this is a chart-grammar generator bug.',
+      );
+    }
+    return 'DateTime.parse('
+        '${DartSourceWriter.stringLiteral(stamp.toIso8601String())})';
+  }
 
   void _emitChain(
     DartSourceWriter writer, {
