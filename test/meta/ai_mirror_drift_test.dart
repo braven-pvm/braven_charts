@@ -81,11 +81,6 @@ const Map<String, String> _documentedButNotParsed = <String, String>{
           'chart, so no config is built from it.',
   'series_ids':
       'explain_data protocol key, scoping the analysis; same reason.',
-  'line_interpolation':
-      'REAL GAP: documented as an enum on create_chart.style, but '
-          '_parseLineSeries hardcodes LineInterpolation.linear and never reads '
-          'the key. An agent that sets it gets a straight-line chart and no '
-          'error. Tracked with the candlestick gap below.',
 };
 
 /// Parsed by `ChartConfigBuilder`, absent from the tool schema.

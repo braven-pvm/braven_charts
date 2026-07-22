@@ -294,7 +294,7 @@ class ChartConfigBuilder {
         color: color,
         unit: unit,
         yAxisConfig: yAxisConfig,
-        interpolation: LineInterpolation.linear,
+        interpolation: _parseLineInterpolation(chartStyle),
         strokeWidth: 2.0,
       ),
       SeriesStyle.area => AreaChartSeries(
@@ -304,7 +304,7 @@ class ChartConfigBuilder {
         color: color,
         unit: unit,
         yAxisConfig: yAxisConfig,
-        interpolation: LineInterpolation.linear,
+        interpolation: _parseLineInterpolation(chartStyle),
         fillOpacity: 0.3,
       ),
       SeriesStyle.rangeArea => RangeAreaChartSeries(
@@ -375,6 +375,25 @@ class ChartConfigBuilder {
       ),
     };
   }
+
+  /// Reads the shared `line_interpolation` style key into a
+  /// [LineInterpolation] for Line and Area series.
+  ///
+  /// An absent key defaults to [LineInterpolation.linear], preserving the
+  /// historical straight-line behavior; an unknown value is a hard
+  /// [FormatException] like every other enum-valued key in this builder, so an
+  /// agent that misspells the option is told rather than silently ignored.
+  static LineInterpolation _parseLineInterpolation(
+    Map<String, dynamic>? style,
+  ) => switch (style?['line_interpolation']) {
+    null || 'linear' => LineInterpolation.linear,
+    'bezier' => LineInterpolation.bezier,
+    'stepped' => LineInterpolation.stepped,
+    'monotone' => LineInterpolation.monotone,
+    final value => throw FormatException(
+      'Unknown line_interpolation "$value".',
+    ),
+  };
 
   static List<CandlestickDataPoint> _parseCandlestickPoints(
     List<dynamic> data,
