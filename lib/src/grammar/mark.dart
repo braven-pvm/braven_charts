@@ -4,9 +4,10 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/painting.dart' show Color;
 
-import '../models/bar_chart_style.dart' show BarLayoutMode;
+import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
+import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/scatter_marker_style.dart'
     show
@@ -75,6 +76,8 @@ final class LineMark<T> extends Mark<T> {
     this.strokeWidth,
     this.dashPattern,
     this.interpolation,
+    this.showDataPointMarkers,
+    this.dataPointLabels,
   });
 
   /// Horizontal position accessor.
@@ -92,6 +95,14 @@ final class LineMark<T> extends Mark<T> {
   /// Path interpolation. Null keeps the series default.
   final LineInterpolation? interpolation;
 
+  /// Whether to draw a marker at each data point. Null keeps the series
+  /// default (`LineChartSeries.showDataPointMarkers`, which is `false`).
+  final bool? showDataPointMarkers;
+
+  /// Inline data-point label configuration. Null keeps the series default
+  /// (`LineChartSeries.dataPointLabels`, which is unset).
+  final DataPointLabelConfig? dataPointLabels;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -104,7 +115,9 @@ final class LineMark<T> extends Mark<T> {
           other.yAxisId == yAxisId &&
           other.strokeWidth == strokeWidth &&
           listEquals(other.dashPattern, dashPattern) &&
-          other.interpolation == interpolation;
+          other.interpolation == interpolation &&
+          other.showDataPointMarkers == showDataPointMarkers &&
+          other.dataPointLabels == dataPointLabels;
 
   @override
   int get hashCode => Object.hash(
@@ -117,6 +130,8 @@ final class LineMark<T> extends Mark<T> {
     strokeWidth,
     dashPattern == null ? null : Object.hashAll(dashPattern!),
     interpolation,
+    showDataPointMarkers,
+    dataPointLabels,
   );
 
   @override
@@ -138,6 +153,8 @@ final class AreaMark<T> extends Mark<T> {
     this.strokeWidth,
     this.dashPattern,
     this.interpolation,
+    this.showDataPointMarkers,
+    this.dataPointLabels,
   });
 
   /// Horizontal position accessor.
@@ -161,6 +178,14 @@ final class AreaMark<T> extends Mark<T> {
   /// Path interpolation. Null keeps the series default.
   final LineInterpolation? interpolation;
 
+  /// Whether to draw a marker at each data point. Null keeps the series
+  /// default (`AreaChartSeries.showDataPointMarkers`, which is `false`).
+  final bool? showDataPointMarkers;
+
+  /// Inline data-point label configuration. Null keeps the series default
+  /// (`AreaChartSeries.dataPointLabels`, which is unset).
+  final DataPointLabelConfig? dataPointLabels;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -175,7 +200,9 @@ final class AreaMark<T> extends Mark<T> {
           other.fillOpacity == fillOpacity &&
           other.strokeWidth == strokeWidth &&
           listEquals(other.dashPattern, dashPattern) &&
-          other.interpolation == interpolation;
+          other.interpolation == interpolation &&
+          other.showDataPointMarkers == showDataPointMarkers &&
+          other.dataPointLabels == dataPointLabels;
 
   @override
   int get hashCode => Object.hash(
@@ -190,6 +217,8 @@ final class AreaMark<T> extends Mark<T> {
     strokeWidth,
     dashPattern == null ? null : Object.hashAll(dashPattern!),
     interpolation,
+    showDataPointMarkers,
+    dataPointLabels,
   );
 
   @override
@@ -215,6 +244,7 @@ final class BarMark<T> extends Mark<T> {
     this.layoutMode,
     this.groupId,
     this.baselineValue,
+    this.labelStyle,
   });
 
   /// Horizontal position accessor.
@@ -244,6 +274,12 @@ final class BarMark<T> extends Mark<T> {
   /// Value bars grow from. Null keeps the series default.
   final double? baselineValue;
 
+  /// Inline bar-label configuration. Bars have no per-point marker toggle —
+  /// a bar is its own mark — so this is the bar family's equivalent of the
+  /// data-point labels the line and area marks carry. Null keeps the series
+  /// default (`BarChartSeries.labelStyle`, which is `const BarLabelStyle()`).
+  final BarLabelStyle? labelStyle;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -259,7 +295,8 @@ final class BarMark<T> extends Mark<T> {
           other.barGap == barGap &&
           other.layoutMode == layoutMode &&
           other.groupId == groupId &&
-          other.baselineValue == baselineValue;
+          other.baselineValue == baselineValue &&
+          other.labelStyle == labelStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -275,6 +312,7 @@ final class BarMark<T> extends Mark<T> {
     layoutMode,
     groupId,
     baselineValue,
+    labelStyle,
   );
 
   @override

@@ -491,6 +491,9 @@ LineChartSeries _lowerLine<T>(
   interpolation: mark.interpolation ?? _lineDefaults.interpolation,
   strokeWidth: mark.strokeWidth ?? _lineDefaults.strokeWidth,
   dashPattern: mark.dashPattern ?? _lineDefaults.dashPattern,
+  showDataPointMarkers:
+      mark.showDataPointMarkers ?? _lineDefaults.showDataPointMarkers,
+  dataPointLabels: mark.dataPointLabels ?? _lineDefaults.dataPointLabels,
 );
 
 AreaChartSeries _lowerArea<T>(
@@ -510,6 +513,9 @@ AreaChartSeries _lowerArea<T>(
   fillOpacity: mark.fillOpacity ?? _areaDefaults.fillOpacity,
   baselineValue: mark.baseline,
   dashPattern: mark.dashPattern ?? _areaDefaults.dashPattern,
+  showDataPointMarkers:
+      mark.showDataPointMarkers ?? _areaDefaults.showDataPointMarkers,
+  dataPointLabels: mark.dataPointLabels ?? _areaDefaults.dataPointLabels,
 );
 
 BarChartSeries _lowerBar<T>(
@@ -537,6 +543,7 @@ BarChartSeries _lowerBar<T>(
     layoutMode: mark.layoutMode ?? _barDefaults.layoutMode,
     groupId: mark.groupId,
     baselineValue: mark.baselineValue ?? _barDefaults.baselineValue,
+    labelStyle: mark.labelStyle ?? _barDefaults.labelStyle,
     orientation: transposed
         ? BarOrientation.horizontal
         : _barDefaults.orientation,

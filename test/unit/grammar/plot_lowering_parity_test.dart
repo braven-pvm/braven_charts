@@ -244,6 +244,95 @@ void main() {
       );
     });
 
+    test('line mark data-point markers and labels reach the series', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        position: DataPointLabelPosition.below,
+      );
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        LineChartSeries(
+          id: 'power',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          showDataPointMarkers: true,
+          dataPointLabels: labels,
+        ),
+      );
+    });
+
+    test('area mark data-point markers and labels reach the series', () {
+      const labels = DataPointLabelConfig(show: true);
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          AreaMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'load',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        AreaChartSeries(
+          id: 'load',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          showDataPointMarkers: true,
+          dataPointLabels: labels,
+        ),
+      );
+    });
+
+    test('bar mark label style reaches the series', () {
+      const barLabels = BarLabelStyle(show: true, showUnit: true);
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          BarMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'load',
+            labelStyle: barLabels,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        BarChartSeries(
+          id: 'load',
+          points: xyPoints(),
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+          barWidthPercent: 0.8,
+          labelStyle: barLabels,
+        ),
+      );
+    });
+
     test('scatter mark solo lowers to a plain ScatterChartSeries', () {
       final lowered = (PlotSpec<Sample>(
         data: rows,

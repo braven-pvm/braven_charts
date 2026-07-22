@@ -189,6 +189,94 @@ void main() {
       );
     });
 
+    test('geomLine threads data-point markers and labels into the mark', () {
+      const labels = DataPointLabelConfig(
+        show: true,
+        position: DataPointLabelPosition.below,
+      );
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(
+            name: 'Power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: labels,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('geomArea threads data-point markers and labels into the mark', () {
+      const labels = DataPointLabelConfig(show: true);
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomArea(
+            name: 'Power',
+            showDataPointMarkers: true,
+            dataPointLabels: labels,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            AreaMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              showDataPointMarkers: true,
+              dataPointLabels: labels,
+            ),
+          ],
+        ),
+      );
+    });
+
+    test('geomBar threads a label style into the mark', () {
+      const barLabels = BarLabelStyle(show: true, showUnit: true);
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomBar(name: 'Power', labelStyle: barLabels)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            BarMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              labelStyle: barLabels,
+            ),
+          ],
+        ),
+      );
+    });
+
     test('geomPoint with every channel and its encoding template', () {
       final spec = BravenChart.of(rows)
           .x(sampleTime)
@@ -417,11 +505,9 @@ void main() {
       // Reference marks are excluded from the geometry set, so a trend cannot
       // fit over one.
       expect(
-        () => BravenChart.of(rows)
-            .x(sampleTime)
-            .y(samplePower)
-            .threshold(value: 250)
-            .trend(),
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).threshold(value: 250).trend(),
         throwsA(isA<GrammarSpecException>()),
       );
     });
@@ -719,12 +805,9 @@ void main() {
     });
 
     test('.title without a subtitle leaves the subtitle unset', () {
-      final spec = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .title('Only a title')
-          .toSpec();
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().title('Only a title').toSpec();
 
       expect(spec.title, 'Only a title');
       expect(spec.subtitle, isNull);

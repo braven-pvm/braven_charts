@@ -5,10 +5,11 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:flutter/widgets.dart' show Key;
 
 import '../controllers/chart_interaction_group_controller.dart';
-import '../models/bar_chart_style.dart' show BarLayoutMode;
+import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
+import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
@@ -207,6 +208,8 @@ final class BravenChart<T> {
     double? strokeWidth,
     List<double>? dashPattern,
     LineInterpolation? interpolation,
+    bool? showDataPointMarkers,
+    DataPointLabelConfig? dataPointLabels,
     String? yAxisId,
   }) => _append(
     LineMark<T>(
@@ -218,6 +221,8 @@ final class BravenChart<T> {
       strokeWidth: strokeWidth,
       dashPattern: dashPattern,
       interpolation: interpolation,
+      showDataPointMarkers: showDataPointMarkers,
+      dataPointLabels: dataPointLabels,
       yAxisId: yAxisId,
     ),
   );
@@ -234,6 +239,8 @@ final class BravenChart<T> {
     double? strokeWidth,
     List<double>? dashPattern,
     LineInterpolation? interpolation,
+    bool? showDataPointMarkers,
+    DataPointLabelConfig? dataPointLabels,
     String? yAxisId,
   }) => _append(
     AreaMark<T>(
@@ -247,6 +254,8 @@ final class BravenChart<T> {
       strokeWidth: strokeWidth,
       dashPattern: dashPattern,
       interpolation: interpolation,
+      showDataPointMarkers: showDataPointMarkers,
+      dataPointLabels: dataPointLabels,
       yAxisId: yAxisId,
     ),
   );
@@ -267,6 +276,7 @@ final class BravenChart<T> {
     BarLayoutMode? layoutMode,
     String? groupId,
     double? baselineValue,
+    BarLabelStyle? labelStyle,
     String? yAxisId,
   }) => _append(
     BarMark<T>(
@@ -281,6 +291,7 @@ final class BravenChart<T> {
       layoutMode: layoutMode,
       groupId: groupId,
       baselineValue: baselineValue,
+      labelStyle: labelStyle,
       yAxisId: yAxisId,
     ),
   );
