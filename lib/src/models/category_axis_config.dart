@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
+
 /// Controls how categorical axis labels are reduced when space is constrained.
 enum CategoryLabelDensity {
   /// Preserve readable spacing by showing a representative subset of labels.
@@ -25,6 +27,7 @@ enum CategoryLabelOverflow {
 /// using numeric X coordinates. Category at index `i` maps to data X value `i`.
 /// This lets existing zoom, pan, selection, annotations, and table linking keep
 /// one coordinate contract without requiring hosts to write label formatters.
+@chartSurface
 class CategoryAxisConfig {
   const CategoryAxisConfig({
     required this.categories,

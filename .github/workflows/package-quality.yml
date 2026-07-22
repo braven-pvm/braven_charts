@@ -24,6 +24,32 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      # The generator enforces the whole config surface, so it is verified
+      # before it is trusted to regenerate anything.
+      - name: Analyze surface generator
+        working-directory: tool/surface_gen
+        run: dart pub get && dart analyze
+
+      - name: Test surface generator
+        working-directory: tool/surface_gen
+        run: dart test
+
+      - name: Regenerate surface_gen outputs
+        run: dart run build_runner build
+
+      # `git diff` IGNORES UNTRACKED FILES, so annotating a new class and
+      # forgetting to `git add` its generated output would pass. `git status
+      # --porcelain --untracked-files=all` sees both stale and uncommitted
+      # files; any output at all is a failure.
+      - name: Verify generated surface is committed
+        run: |
+          DIRTY=$(git status --porcelain --untracked-files=all -- lib/src/fluent/generated lib/src/ai/generated lib/braven_charts_fluent.dart test/fluent/fluent_smoke_generated_test.dart)
+          if [ -n "$DIRTY" ]; then
+            echo "$DIRTY"
+            echo "::error::Generated surface is stale or uncommitted. The files under lib/src/fluent/generated (and lib/src/ai/generated), the generated opt-in barrel lib/braven_charts_fluent.dart, and the generated smoke test test/fluent/fluent_smoke_generated_test.dart do not match what surface_gen produces from the current @chartSurface annotations. Run 'dart run build_runner build' locally and commit the result (including any NEW generated files)."
+            exit 1
+          fi
+
       - name: Analyze package library
         run: flutter analyze lib
 

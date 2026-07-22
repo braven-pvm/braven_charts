@@ -2,6 +2,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
 import 'pie_chart_config.dart';
 import '../theming/styles/label_style.dart';
 
@@ -25,6 +26,7 @@ enum DonutCenterValueMode {
 /// This model deliberately excludes arbitrary widgets and builders so chart
 /// artifacts, previews, and restored charts retain the same center meaning.
 @immutable
+@chartSurface
 class DonutCenterContent {
   /// Creates a center summary.
   const DonutCenterContent({
@@ -122,6 +124,7 @@ class DonutCenterContent {
 /// Donut reuses the established radial slice appearance contract while adding
 /// a required circular opening and an optional partial sweep.
 @immutable
+@chartSurface
 class DonutChartStyle extends PieChartStyle {
   /// Creates Donut geometry and optional theme overrides.
   const DonutChartStyle({

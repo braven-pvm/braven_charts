@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Position where the legend can be anchored within the chart area.
 enum LegendPosition {
   /// Top-left corner of the chart area.
@@ -74,6 +76,7 @@ enum LegendMarkerShape {
 /// )
 /// ```
 @immutable
+@chartSurface
 class LegendStyle {
   /// Creates a legend style.
   const LegendStyle({

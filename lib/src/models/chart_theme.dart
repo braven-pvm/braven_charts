@@ -5,6 +5,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
@@ -47,6 +48,7 @@ import 'pie_chart_config.dart';
 ///   legendStyle: LegendStyle.light,
 /// );
 /// ```
+@chartSurface
 class ChartTheme {
   const ChartTheme({
     required this.backgroundColor,

@@ -6,6 +6,7 @@ import 'dart:ui' show Color;
 import 'package:flutter/painting.dart'
     show BorderRadius, BoxShadow, EdgeInsets, TextStyle;
 
+import '../meta/chart_surface.dart';
 import 'chart_style_value.dart';
 
 /// Visual overrides for the Cartesian value summary panel.
@@ -32,6 +33,7 @@ import 'chart_style_value.dart';
 ///   borderColor: ChartStyleValue.none(),
 /// );
 /// ```
+@chartSurface
 class CartesianValueSummaryStyle {
   /// Creates a summary style. Every field defaults to
   /// [ChartStyleValue.inherit].

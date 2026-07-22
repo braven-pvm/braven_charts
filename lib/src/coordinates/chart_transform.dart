@@ -3,6 +3,8 @@
 
 import 'dart:ui';
 
+import '../meta/chart_surface.dart';
+
 /// Handles bidirectional conversion between DATA space and PLOT space.
 ///
 /// **Purpose**: Manages viewport (visible data range) and provides all
@@ -34,6 +36,14 @@ import 'dart:ui';
 /// Use `copyWith()` for partial updates or `zoom()`/`pan()` for viewport changes.
 ///
 /// See COORDINATE_SPACE_ARCHITECTURE.md for complete design documentation.
+@ChartSurfaceExempt(
+  'Runtime coordinate mapping, not an authoring config: every field is derived '
+  'by the render pipeline from the resolved viewport and plot rect, and the '
+  'value moves through zoom()/pan(), never through a consumer-written chain. '
+  'Its data bounds are assert-coupled in both axes, so a fluent '
+  'withDataXMin/withDataYMax surface would offer a chart author nothing but '
+  'two ways to throw.',
+)
 class ChartTransform {
   /// Creates a chart transform with specified data viewport and plot dimensions.
   ///

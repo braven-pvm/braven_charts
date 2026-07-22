@@ -12,6 +12,8 @@
 /// - Google Gemini (function_declarations)
 library;
 
+import 'generated/surface_definitions.dart' as generated;
+
 /// Tool definitions for AI chart generation.
 ///
 /// These can be passed directly to LLM APIs that support function calling.
@@ -31,6 +33,36 @@ abstract final class ChartToolSchema {
     modifyChartTool,
     explainDataTool,
   ];
+
+  /// Structural JSON-Schema definitions for the config surface, keyed by
+  /// class name — GENERATED from the `@chartSurface` annotations.
+  ///
+  /// This is ADDITIVE and changes nothing about [tools]. The two describe
+  /// different things and are keyed differently on purpose:
+  ///
+  /// - [tools] is the CALLING vocabulary. Its properties are flat snake_case
+  ///   keys (`bar_waterfall_connector_color`, `pie_label_minimum_sweep`)
+  ///   invented for the agent protocol and consumed literally by
+  ///   `ChartConfigBuilder`. One `style` bag flattens dozens of nested config
+  ///   classes, so those names have no mechanical relationship to any class.
+  /// - [surfaceDefinitions] is the STRUCTURAL vocabulary: what the config
+  ///   classes actually are, in their own Dart parameter names, with defaults,
+  ///   enum members, `$ref`s between nested configs, tri-state
+  ///   `{value | "none" | "inherit"}` unions, and the constructor couplings a
+  ///   schema can soundly express. An agent consults it to reason about the
+  ///   surface; it still CALLS [tools].
+  ///
+  /// Because it is generated it cannot drift from the classes. Mount it at the
+  /// `$defs` of a root schema — every cross-reference is a
+  /// `{'$ref': '#/$defs/<ClassName>'}` pointer.
+  ///
+  /// ```dart
+  /// final barSeries =
+  ///     ChartToolSchema.surfaceDefinitions['BarChartSeries']! as Map;
+  /// final schema = {r'$defs': ChartToolSchema.surfaceDefinitions, ...barSeries};
+  /// ```
+  static const Map<String, Object?> surfaceDefinitions =
+      generated.surfaceDefinitions;
 
   /// Tool for creating a new chart from data.
   static const Map<String, dynamic> createChartTool = {

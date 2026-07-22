@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import '../meta/chart_surface.dart';
 import 'candlestick_chart_style.dart';
 import 'candlestick_data_point.dart';
 import 'candlestick_density_grouping.dart';
@@ -12,6 +13,37 @@ import 'chart_series.dart';
 import 'y_axis_config.dart';
 
 /// A first-class Cartesian open-high-low-close series.
+///
+/// There is no generated `withPoints` verb. [points] is force-excluded from
+/// the fluent surface because a candlestick series' point list is not a
+/// value a single setter can safely replace: every element must be a
+/// [CandlestickDataPoint] (the `copyWith` parameter is the wider
+/// `List<ChartDataPoint>`), and the whole list must be STRICTLY increasing in
+/// `x`. `withPoints([...])` threw `ArgumentError` for any list that broke
+/// either rule. Rebuild the series with the constructor — construction stays
+/// the complete path — or edit candles through [copyWith] where the
+/// validation message names the offending index.
+// The constructor validates in its BODY via validateConfiguration(), which
+// names no parameter, so every emitted parameter is nominally in scope.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(
+  excluded: ['id', 'points'],
+  bodyValidated: [
+    BodyValidated(
+      'validateConfiguration() re-runs candlestickStyle.validate(), '
+      'animation.validate() and densityGrouping.validate() on every '
+      'construction, so withCandlestickStyle / withAnimation / '
+      'withDensityGrouping throw ArgumentError for a nested config that is '
+      'individually constructible but invalid inside this series. The check '
+      'reads fields, not parameters, so surface_gen cannot narrow the scope '
+      'below the whole class.',
+    ),
+  ],
+)
 final class CandlestickChartSeries extends ChartSeries {
   CandlestickChartSeries({
     required super.id,

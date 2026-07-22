@@ -7,6 +7,8 @@ import 'package:flutter/painting.dart' show FontWeight;
 
 import 'chart_data_point.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Position of a data-point label relative to its marker.
 enum DataPointLabelPosition { above, below, left, right }
 
@@ -30,6 +32,7 @@ enum DataPointLabelCollisionPolicy {
 /// Attach to line, area, or Scatter series through their `dataPointLabels`
 /// property.
 /// Labels are hidden by default — set [show] to true to enable.
+@chartSurface
 class DataPointLabelConfig {
   const DataPointLabelConfig({
     this.show = false,

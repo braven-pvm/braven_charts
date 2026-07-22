@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:parchment/parchment.dart';
 
+import '../meta/chart_surface.dart';
 import 'annotation_style.dart';
 import 'chart_series.dart';
 import 'enums.dart';
@@ -145,6 +146,13 @@ enum AnnotationLabelPosition {
 ///   markerColor: Colors.red,
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class PointAnnotation extends ChartAnnotation {
   /// Creates a point annotation.
   PointAnnotation({
@@ -254,6 +262,22 @@ class PointAnnotation extends ChartAnnotation {
 ///   label: 'Weekend',
 /// )
 /// ```
+/// The BOUNDS are construction-only: there is no generated verb for
+/// [startX], [endX], [startY] or [endY], individually or together. A range is
+/// an X band, a Y band, or a 2-D box — the constructor's
+/// `startX != null || startY != null` is an OR — while `copyWith` merges each
+/// bound with `??` and exposes no clear flag, so nothing can put a bound
+/// BACK to null. The combined `withBounds(startX, endX, startY, endY)` this
+/// class used to generate therefore took all four non-nullable and silently
+/// converted an X-only band into a box; an `withXRange` pair could never
+/// convert a box back into a band. Construct the range you want.
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(excluded: ['id', 'startX', 'endX', 'startY', 'endY'])
 class RangeAnnotation extends ChartAnnotation {
   /// Creates a range annotation.
   ///
@@ -443,6 +467,31 @@ class RangeAnnotation extends ChartAnnotation {
 ///   position: Offset(100, 50),
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+///
+/// The RICH half of this class has no fluent surface. `surface_gen` models
+/// the public plain-text constructor — [richTextDelta] is not one of its
+/// parameters, so no `withRichTextDelta` exists — while [copyWith] rebuilds
+/// through the private `_internal` constructor, which accepts both. The
+/// consequence is stated on the generated `withText` verb: on a rich
+/// annotation [isRichText] stays `true` and every renderer keeps reading the
+/// Delta, so the new plain text is never drawn. Build rich content with
+/// [TextAnnotation.rich].
+@ChartSurface(
+  excluded: ['id'],
+  paramNotes: {
+    'text':
+        'No effect on a RICH annotation (one built with '
+        'TextAnnotation.rich): richTextDelta keeps winning at render time, '
+        'so the new text is stored but never drawn. The rich half is '
+        'construction-only.',
+  },
+)
 class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {
@@ -960,6 +1009,13 @@ enum AnnotationAxis {
 ///   lineWidth: 2.0,
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class ThresholdAnnotation extends ChartAnnotation {
   /// Creates a threshold annotation.
   ThresholdAnnotation({
@@ -1111,6 +1167,13 @@ class ThresholdAnnotation extends ChartAnnotation {
 ///   markerColor: Colors.red,
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class PinAnnotation extends ChartAnnotation {
   /// Creates a pin annotation at the specified x/y coordinates.
   PinAnnotation({
@@ -1235,6 +1298,21 @@ enum TrendType {
 ///   dashPattern: [5, 5],
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(
+  excluded: ['id'],
+  combinedSetters: [
+    // `trendType != movingAverage || (windowSize != null && windowSize > 0)`
+    // — switching to a moving average without a window throws, so the pair
+    // moves together. `windowSize` is ignored by the other trend types.
+    CombinedSetter('withTrend', ['trendType', 'windowSize']),
+  ],
+)
 class TrendAnnotation extends ChartAnnotation {
   /// Creates a trend annotation.
   TrendAnnotation({
@@ -1548,6 +1626,13 @@ class ErrorBarDatum {
 /// Error magnitudes are expressed in data units. Each side can be configured
 /// independently, enabling both symmetric and asymmetric error bars without
 /// changing the source observations.
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class ErrorBarAnnotation extends ChartAnnotation {
   ErrorBarAnnotation({
     String? id,
@@ -1653,6 +1738,20 @@ class ErrorBarAnnotation extends ChartAnnotation {
 ///   perpendicularLabel: 'D',
 /// )
 /// ```
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(
+  excluded: ['id'],
+  combinedSetters: [
+    // `startIndex != endIndex` — a chord needs two distinct data points, so
+    // the endpoints only move as a pair.
+    CombinedSetter('withEndpoints', ['startIndex', 'endIndex']),
+  ],
+)
 class ChordAnnotation extends ChartAnnotation {
   /// Creates a chord annotation.
   ChordAnnotation({
@@ -2117,6 +2216,21 @@ class LegendCategoryScale {
   int get hashCode => Object.hash(label, Object.hashAll(items));
 }
 
+///
+/// [id] is force-excluded from the fluent surface: an annotation id is a
+/// JOIN KEY — selection state, hit-testing and artifact documents bind to
+/// it — so a verb that rewrites it mid-chain silently detaches the
+/// annotation from everything that references it. Construct the annotation
+/// with the id it should carry.
+@ChartSurface(
+  // The four scales are MUTUALLY EXCLUSIVE (`assert(... .length <= 1)`): a
+  // quantitative or categorical key lives on its own LegendAnnotation. A
+  // combined setter cannot express that — it takes its members non-nullable,
+  // which is precisely the state the assert rejects — and an individual
+  // `withColorScale` on a legend that already carries a size scale throws.
+  // Construct the keyed legend directly instead.
+  excluded: ['id', 'sizeScale', 'colorScale', 'opacityScale', 'categoryScale'],
+)
 class LegendAnnotation extends ChartAnnotation {
   /// Creates a legend annotation.
   ///

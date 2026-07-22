@@ -1,0 +1,553 @@
+// Copyright 2025 Braven Charts
+// SPDX-License-Identifier: MIT
+
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/painting.dart' show Color;
+
+import '../models/bar_chart_style.dart' show BarLayoutMode;
+import '../models/chart_annotation.dart' show TrendType;
+import '../models/chart_series.dart' show LineInterpolation;
+import '../models/scatter_marker_style.dart'
+    show
+        ScatterCategoryStyle,
+        ScatterColorEncoding,
+        ScatterMarkerStyle,
+        ScatterOpacityEncoding,
+        ScatterSizeEncoding;
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import 'channel.dart';
+
+/// One geometry (or one derived statistic) in a [PlotSpec].
+///
+/// The hierarchy is `sealed`: a `switch` over a `Mark<T>` that misses a
+/// variant does not compile, so every dispatch site — the lowering, the
+/// facade, a future emitter — is checked when a variant is added.
+///
+/// ## V1 scope
+///
+/// Marks are Cartesian only: [LineMark], [AreaMark], [BarMark], [ScatterMark],
+/// [CandlestickMark] and [TrendMark]. Radial and polar geometries, faceting,
+/// log/time scale objects and string-column data adapters are deliberately V2.
+///
+/// ## Marks have no `copyWith`
+///
+/// This is a decision, not an omission. A `copyWith` would make marks
+/// config-shaped, which the package's surface enforcement reads as "must carry
+/// `@chartSurface`", which would in turn generate a fluent verb surface over
+/// the grammar layer — a second vocabulary for the same objects. Marks are
+/// small; modify one by constructing a new one, or author through the chained
+/// facade.
+sealed class Mark<T> {
+  /// Shared identity and axis-binding fields.
+  const Mark({this.id, this.name, this.color, this.yAxisId});
+
+  /// Stable id for this mark.
+  ///
+  /// It becomes the lowered series id, so annotations and axes bind to it.
+  /// When omitted, the lowering assigns `mark-<index>` using the mark's
+  /// position in [PlotSpec.marks].
+  final String? id;
+
+  /// Display name used by legends and tooltips.
+  final String? name;
+
+  /// Base color for this geometry. Null inherits the theme's series color.
+  final Color? color;
+
+  /// Id of the [YAxisConfig] in [PlotSpec.yAxes] this mark measures against.
+  ///
+  /// Null binds to the first axis. An id that matches no axis is rejected with
+  /// `GrammarDiagnosticCode.unknownAxisId`.
+  final String? yAxisId;
+}
+
+/// A connected line through `(x, y)`.
+final class LineMark<T> extends Mark<T> {
+  /// Creates a line geometry.
+  const LineMark({
+    required this.x,
+    required this.y,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.strokeWidth,
+    this.dashPattern,
+    this.interpolation,
+  });
+
+  /// Horizontal position accessor.
+  final FieldAccessor<T, num> x;
+
+  /// Vertical position accessor.
+  final FieldAccessor<T, num> y;
+
+  /// Stroke width in logical pixels. Null keeps the series default.
+  final double? strokeWidth;
+
+  /// Alternating painted/skipped distances. Null keeps the series default.
+  final List<double>? dashPattern;
+
+  /// Path interpolation. Null keeps the series default.
+  final LineInterpolation? interpolation;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LineMark<T> &&
+          other.x == x &&
+          other.y == y &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.strokeWidth == strokeWidth &&
+          listEquals(other.dashPattern, dashPattern) &&
+          other.interpolation == interpolation;
+
+  @override
+  int get hashCode => Object.hash(
+    x,
+    y,
+    id,
+    name,
+    color,
+    yAxisId,
+    strokeWidth,
+    dashPattern == null ? null : Object.hashAll(dashPattern!),
+    interpolation,
+  );
+
+  @override
+  String toString() => 'LineMark(id: $id, name: $name)';
+}
+
+/// A filled band between `y` and a baseline.
+final class AreaMark<T> extends Mark<T> {
+  /// Creates an area geometry.
+  const AreaMark({
+    required this.x,
+    required this.y,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.baseline,
+    this.fillOpacity,
+    this.strokeWidth,
+    this.dashPattern,
+    this.interpolation,
+  });
+
+  /// Horizontal position accessor.
+  final FieldAccessor<T, num> x;
+
+  /// Vertical position accessor.
+  final FieldAccessor<T, num> y;
+
+  /// Value the fill is anchored to. Null fills to the axis floor.
+  final double? baseline;
+
+  /// Fill opacity in `[0, 1]`. Null keeps the series default.
+  final double? fillOpacity;
+
+  /// Stroke width in logical pixels. Null keeps the series default.
+  final double? strokeWidth;
+
+  /// Alternating painted/skipped distances. Null keeps the series default.
+  final List<double>? dashPattern;
+
+  /// Path interpolation. Null keeps the series default.
+  final LineInterpolation? interpolation;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AreaMark<T> &&
+          other.x == x &&
+          other.y == y &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.baseline == baseline &&
+          other.fillOpacity == fillOpacity &&
+          other.strokeWidth == strokeWidth &&
+          listEquals(other.dashPattern, dashPattern) &&
+          other.interpolation == interpolation;
+
+  @override
+  int get hashCode => Object.hash(
+    x,
+    y,
+    id,
+    name,
+    color,
+    yAxisId,
+    baseline,
+    fillOpacity,
+    strokeWidth,
+    dashPattern == null ? null : Object.hashAll(dashPattern!),
+    interpolation,
+  );
+
+  @override
+  String toString() => 'AreaMark(id: $id, name: $name)';
+}
+
+/// A rectangular bar per row.
+///
+/// Orientation is NOT a per-mark property: transposing a Cartesian chart is a
+/// whole-chart operation in this package, expressed by [PlotSpec.transposed].
+final class BarMark<T> extends Mark<T> {
+  /// Creates a bar geometry.
+  const BarMark({
+    required this.x,
+    required this.y,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.barWidthPercent,
+    this.barWidthPixels,
+    this.barGap,
+    this.layoutMode,
+    this.groupId,
+    this.baselineValue,
+  });
+
+  /// Horizontal position accessor.
+  final FieldAccessor<T, num> x;
+
+  /// Vertical position accessor.
+  final FieldAccessor<T, num> y;
+
+  /// Bar width as a fraction of the slot, `0..1`.
+  ///
+  /// `BarChartSeries` requires exactly one of width percent or width pixels.
+  /// When both are null the lowering supplies `0.8`, the package default.
+  final double? barWidthPercent;
+
+  /// Fixed bar width in logical pixels.
+  final double? barWidthPixels;
+
+  /// Gap between bars in logical pixels. Null keeps the series default.
+  final double? barGap;
+
+  /// Grouped, stacked, overlay or waterfall layout. Null keeps the default.
+  final BarLayoutMode? layoutMode;
+
+  /// Group key that ties this mark to sibling bars in the same slot.
+  final String? groupId;
+
+  /// Value bars grow from. Null keeps the series default.
+  final double? baselineValue;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarMark<T> &&
+          other.x == x &&
+          other.y == y &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.barWidthPercent == barWidthPercent &&
+          other.barWidthPixels == barWidthPixels &&
+          other.barGap == barGap &&
+          other.layoutMode == layoutMode &&
+          other.groupId == groupId &&
+          other.baselineValue == baselineValue;
+
+  @override
+  int get hashCode => Object.hash(
+    x,
+    y,
+    id,
+    name,
+    color,
+    yAxisId,
+    barWidthPercent,
+    barWidthPixels,
+    barGap,
+    layoutMode,
+    groupId,
+    baselineValue,
+  );
+
+  @override
+  String toString() => 'BarMark(id: $id, name: $name)';
+}
+
+/// A marker per row, the only V1 geometry with scale-driven channels.
+///
+/// ## Channels and their encoding templates
+///
+/// A channel says WHICH field to read; the matching `Scatter*Encoding` says
+/// how the scale is configured. Two of the three quantitative encodings have
+/// a usable all-default configuration, so the template is optional:
+///
+/// | channel      | template          | required? |
+/// |--------------|-------------------|-----------|
+/// | [size]       | [sizeEncoding]    | optional — defaults to `ScatterSizeEncoding()` |
+/// | [opacityBy]  | [opacityEncoding] | optional — defaults to `ScatterOpacityEncoding()` |
+/// | [colorBy]    | [colorEncoding]   | REQUIRED — a color ramp has no sensible default |
+/// | [categoryBy] | [categories]      | REQUIRED — each category must set a color or a shape |
+///
+/// A channel without its required template is rejected with
+/// `GrammarDiagnosticCode.missingChannelEncoding`. The package ships no
+/// categorical palette and no default color ramp, and inventing one here would
+/// mint design surface the rest of the library does not have.
+final class ScatterMark<T> extends Mark<T> {
+  /// Creates a scatter geometry.
+  const ScatterMark({
+    required this.x,
+    required this.y,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.size,
+    this.sizeEncoding,
+    this.colorBy,
+    this.colorEncoding,
+    this.opacityBy,
+    this.opacityEncoding,
+    this.categoryBy,
+    this.categories = const <ScatterCategoryStyle>[],
+    this.markerRadius,
+    this.markerShape,
+    this.markerStyle,
+  });
+
+  /// Horizontal position accessor.
+  final FieldAccessor<T, num> x;
+
+  /// Vertical position accessor.
+  final FieldAccessor<T, num> y;
+
+  /// Marker-area channel. Lowers to `ChartDataPoint.magnitude`.
+  final Channel<T>? size;
+
+  /// Scale configuration for [size].
+  final ScatterSizeEncoding? sizeEncoding;
+
+  /// Continuous color channel. Lowers to `ChartDataPoint.colorValue`.
+  final Channel<T>? colorBy;
+
+  /// Scale configuration for [colorBy]. Required whenever [colorBy] is set.
+  final ScatterColorEncoding? colorEncoding;
+
+  /// Opacity channel. Lowers to `ChartDataPoint.opacityValue`.
+  final Channel<T>? opacityBy;
+
+  /// Scale configuration for [opacityBy].
+  final ScatterOpacityEncoding? opacityEncoding;
+
+  /// Categorical channel. Lowers to `ChartDataPoint.categoryValue`.
+  final CategoryChannel<T>? categoryBy;
+
+  /// Category styles for [categoryBy]. Required whenever [categoryBy] is set.
+  final List<ScatterCategoryStyle> categories;
+
+  /// Base marker radius in logical pixels. Null keeps the series default.
+  final double? markerRadius;
+
+  /// Marker silhouette. Null keeps the series default.
+  final SeriesMarkerShape? markerShape;
+
+  /// Marker fill/stroke overrides. Null keeps the series default.
+  final ScatterMarkerStyle? markerStyle;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScatterMark<T> &&
+          other.x == x &&
+          other.y == y &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.size == size &&
+          other.sizeEncoding == sizeEncoding &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
+          other.opacityBy == opacityBy &&
+          other.opacityEncoding == opacityEncoding &&
+          other.categoryBy == categoryBy &&
+          listEquals(other.categories, categories) &&
+          other.markerRadius == markerRadius &&
+          other.markerShape == markerShape &&
+          other.markerStyle == markerStyle;
+
+  @override
+  int get hashCode => Object.hashAll(<Object?>[
+    x,
+    y,
+    id,
+    name,
+    color,
+    yAxisId,
+    size,
+    sizeEncoding,
+    colorBy,
+    colorEncoding,
+    opacityBy,
+    opacityEncoding,
+    categoryBy,
+    Object.hashAll(categories),
+    markerRadius,
+    markerShape,
+    markerStyle,
+  ]);
+
+  @override
+  String toString() => 'ScatterMark(id: $id, name: $name)';
+}
+
+/// An open-high-low-close candle per row.
+final class CandlestickMark<T> extends Mark<T> {
+  /// Creates a candlestick geometry.
+  const CandlestickMark({
+    required this.x,
+    required this.open,
+    required this.high,
+    required this.low,
+    required this.close,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.timestamp,
+  });
+
+  /// Horizontal position accessor. Values must be finite and strictly
+  /// increasing across the data list.
+  final FieldAccessor<T, num> x;
+
+  /// Opening value accessor.
+  final FieldAccessor<T, num> open;
+
+  /// High value accessor.
+  final FieldAccessor<T, num> high;
+
+  /// Low value accessor.
+  final FieldAccessor<T, num> low;
+
+  /// Closing value accessor. Also becomes the point's generic `y`.
+  final FieldAccessor<T, num> close;
+
+  /// Optional wall-clock stamp carried on each candle.
+  final FieldAccessor<T, DateTime>? timestamp;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CandlestickMark<T> &&
+          other.x == x &&
+          other.open == open &&
+          other.high == high &&
+          other.low == low &&
+          other.close == close &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.timestamp == timestamp;
+
+  @override
+  int get hashCode => Object.hash(
+    x,
+    open,
+    high,
+    low,
+    close,
+    id,
+    name,
+    color,
+    yAxisId,
+    timestamp,
+  );
+
+  @override
+  String toString() => 'CandlestickMark(id: $id, name: $name)';
+}
+
+/// A statistical trend derived from another mark's lowered series.
+///
+/// Unlike the other variants this mark produces no geometry of its own: it
+/// lowers to a `TrendAnnotation` bound to [sourceMarkId]. The inherited
+/// [Mark.color] is the trend line's color.
+///
+/// [Mark.yAxisId] is deliberately NOT a constructor parameter here: a trend is
+/// drawn in its source series' coordinate space, so it follows that series'
+/// axis and cannot be bound to a different one.
+final class TrendMark<T> extends Mark<T> {
+  /// Creates a trend statistic over the mark identified by [sourceMarkId].
+  const TrendMark({
+    required this.sourceMarkId,
+    super.id,
+    super.name,
+    super.color,
+    this.trendType = TrendType.linear,
+    this.windowSize,
+    this.showConfidenceBand = false,
+    this.lineWidth,
+    this.dashPattern,
+  });
+
+  /// Id of the geometry mark this trend is computed over.
+  ///
+  /// Must resolve to a non-trend mark in the same [PlotSpec], otherwise
+  /// `GrammarDiagnosticCode.unknownTrendSource` is raised.
+  final String sourceMarkId;
+
+  /// Which statistic to fit.
+  final TrendType trendType;
+
+  /// Window length. Required when [trendType] is a moving average.
+  final int? windowSize;
+
+  /// Whether to draw the two-sided confidence band (linear fits only).
+  final bool showConfidenceBand;
+
+  /// Trend line width in logical pixels. Null keeps the annotation default.
+  final double? lineWidth;
+
+  /// Trend line dash pattern. Null draws a solid line.
+  final List<double>? dashPattern;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrendMark<T> &&
+          other.sourceMarkId == sourceMarkId &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.trendType == trendType &&
+          other.windowSize == windowSize &&
+          other.showConfidenceBand == showConfidenceBand &&
+          other.lineWidth == lineWidth &&
+          listEquals(other.dashPattern, dashPattern);
+
+  @override
+  int get hashCode => Object.hash(
+    sourceMarkId,
+    id,
+    name,
+    color,
+    yAxisId,
+    trendType,
+    windowSize,
+    showConfidenceBand,
+    lineWidth,
+    dashPattern == null ? null : Object.hashAll(dashPattern!),
+  );
+
+  @override
+  String toString() => 'TrendMark(id: $id, source: $sourceMarkId)';
+}

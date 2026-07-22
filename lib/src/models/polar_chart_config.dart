@@ -3,8 +3,11 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show FontWeight;
 
+import '../meta/chart_surface.dart';
+
 /// Pane-wide reference threshold on a Polar Column radial numeric axis.
 @immutable
+@chartSurface
 class PolarThreshold {
   const PolarThreshold({
     required this.value,
@@ -125,6 +128,7 @@ enum PolarColumnCompositionMode {
 
 /// Plot-level composition behavior for multiple Polar Column series.
 @immutable
+@chartSurface
 class PolarColumnCompositionConfig {
   const PolarColumnCompositionConfig({
     this.mode = PolarColumnCompositionMode.layered,
@@ -171,6 +175,7 @@ class PolarColumnCompositionConfig {
 
 /// Geometry shared by every axis-based series in one polar pane.
 @immutable
+@chartSurface
 class PolarPaneConfig {
   const PolarPaneConfig({
     this.startAngleDegrees = -90,
@@ -264,6 +269,7 @@ class PolarPaneConfig {
 /// keeps Polar labels theme-aware while allowing category, value, and radial
 /// axis labels to be styled independently.
 @immutable
+@chartSurface
 class PolarLabelStyle {
   const PolarLabelStyle({this.color, this.fontSize, this.fontWeight});
 
@@ -325,6 +331,7 @@ enum PolarRadialLabelPosition {
 
 /// Angular category-axis behavior for Polar Column V1.
 @immutable
+@chartSurface
 class PolarCategoryAxisConfig {
   const PolarCategoryAxisConfig({
     this.innerPadding = 0.12,
@@ -455,6 +462,7 @@ class PolarCategoryAxisConfig {
 
 /// Radial numeric-axis behavior for Polar Column V1.
 @immutable
+@chartSurface
 class PolarNumericAxisConfig {
   const PolarNumericAxisConfig({
     this.minimum,
@@ -590,6 +598,7 @@ class PolarNumericAxisConfig {
 
 /// Plot-level configuration for axis-based polar charts.
 @immutable
+@chartSurface
 class PolarChartConfig {
   /// Artifact capability required by non-default Polar label presentation.
   static const labelAppearanceCapability = 'chart.polar.labels.v1';

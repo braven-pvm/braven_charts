@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
 import 'segment_style.dart';
 import 'scatter_marker_style.dart';
 
@@ -36,6 +37,7 @@ import 'scatter_marker_style.dart';
 ///   pointStyle: PointStyle.color(Colors.green),
 /// );
 /// ```
+@chartSurface
 class ChartDataPoint {
   /// Creates a chart data point with required x and y coordinates.
   ///

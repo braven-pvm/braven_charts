@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
 import '../styles/label_style.dart';
 
 /// Defines the visual styling for interactive elements in charts.
@@ -24,6 +25,7 @@ import '../styles/label_style.dart';
 ///   selectionColor: Colors.blue.withOpacity(0.3),
 /// );
 /// ```
+@chartSurface
 class InteractionTheme {
   factory InteractionTheme.fromJson(Map<String, dynamic> json) {
     return InteractionTheme(

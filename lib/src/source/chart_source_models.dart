@@ -3,6 +3,23 @@ import 'package:flutter/foundation.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_runtime_bindings.dart';
 
+/// Which FORM the Source pane reads one chart in.
+///
+/// Both forms are readings of the SAME captured chart document, not two
+/// pipelines: switching between them never re-extracts the chart, it only
+/// re-runs the emitter over the snapshot already in hand.
+enum ChartSourceForm {
+  /// The `BravenChartPlus` configuration a reader would hand-assemble.
+  config,
+
+  /// The `BravenChart.of(rows)…` grammar chain, over a synthesised row type.
+  ///
+  /// Not every chart has one — the chain is Cartesian-only in V1 and refuses
+  /// anything it cannot reproduce exactly — so this form may render a named
+  /// diagnostic instead of code.
+  grammar,
+}
+
 /// Whether generated Dart fully represents the captured portable chart.
 enum ChartGeneratedSourceCompleteness {
   /// Every portable value requested by the source options is represented.

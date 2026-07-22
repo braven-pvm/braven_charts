@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'bar_chart_style.dart';
 import 'chart_data_point.dart';
@@ -45,6 +46,15 @@ enum SeriesStyle {
 /// Now concrete to support generic usage like in BravenChart.
 /// Supports optional Y-axis binding via [yAxisId] and value formatting
 /// via [unit].
+@ChartSurfaceExempt(
+  'Base of the series family; the concrete series types are modelled '
+  'individually. ChartSeries.copyWith returns ChartSeries, so every '
+  'ChartSeriesFluent verb would hand back a statically bare ChartSeries and '
+  'end the chain — no line-, bar- or scatter-specific verb could follow, '
+  'which is exactly how series values are usually typed. The runtime value '
+  'would survive (every concrete series overrides copyWith), so this is an '
+  'API-quality exemption, not a data-loss one.',
+)
 class ChartSeries {
   const ChartSeries({
     required this.id,
@@ -291,6 +301,12 @@ class ChartSeries {
 }
 
 /// Line chart series with configurable interpolation.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class LineChartSeries extends ChartSeries {
   const LineChartSeries({
     required super.id,
@@ -437,6 +453,12 @@ class LineChartSeries extends ChartSeries {
 }
 
 /// Scatter plot series with configurable marker size.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class ScatterChartSeries extends ChartSeries {
   const ScatterChartSeries({
     required super.id,
@@ -652,6 +674,12 @@ class AreaGradient {
 }
 
 /// Area chart series with fill and interpolation.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(excluded: ['id'])
 class AreaChartSeries extends ChartSeries {
   const AreaChartSeries({
     required super.id,
@@ -839,6 +867,29 @@ class AreaChartSeries extends ChartSeries {
 }
 
 /// Bar chart series with configurable geometry and presentation.
+///
+/// Bar WIDTH is construction-only: there is no generated verb for
+/// [barWidthPercent] or [barWidthPixels]. The constructor asserts
+/// `barWidthPercent != null || barWidthPixels != null` — an OR, so the two
+/// are alternatives, not a pair — while `copyWith` merges each with `??` and
+/// exposes no clear flag for either. No fluent verb can therefore express
+/// "size in percent INSTEAD of pixels": `withBarWidthPercent` would leave the
+/// pixel width in place and lose to it at render time, and the combined
+/// `withBarWidth(percent, pixels)` this class used to generate required BOTH,
+/// which made its percent argument dead in every possible call. Choose the
+/// sizing mode at construction, where the alternatives are visible.
+///
+/// `id` is force-excluded as well: a series id is a JOIN KEY — axes
+/// ([yAxisId]), annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Rebuild the series with the id it should carry.
+@ChartSurface(
+  excluded: ['id', 'barWidthPercent', 'barWidthPixels'],
+  combinedSetters: [
+    // `maxWidth >= minWidth` — the bounds only move as a pair.
+    CombinedSetter('withWidthBounds', ['maxWidth', 'minWidth']),
+  ],
+)
 class BarChartSeries extends ChartSeries {
   const BarChartSeries({
     required super.id,

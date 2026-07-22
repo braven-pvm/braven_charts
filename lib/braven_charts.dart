@@ -90,6 +90,14 @@ export 'src/comparison/chart_comparison_export.dart';
 export 'src/comparison/chart_comparison_model.dart';
 // Formatting
 export 'src/formatting/multi_axis_value_formatter.dart';
+// Grammar
+export 'src/grammar/braven_plot.dart';
+export 'src/grammar/channel.dart';
+export 'src/grammar/chart_builder.dart';
+export 'src/grammar/grammar_diagnostics.dart';
+export 'src/grammar/mark.dart';
+export 'src/grammar/plot_lowering.dart';
+export 'src/grammar/plot_spec.dart';
 // Interaction
 export 'src/interaction/core/cartesian_tracking_snapshot.dart';
 // Layout
@@ -169,8 +177,12 @@ export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
 // Generated Dart source
 export 'src/source/chart_dart_source_generator.dart';
+export 'src/source/chart_grammar_source_generator.dart';
 export 'src/source/chart_source_models.dart';
 export 'src/source/chart_source_view.dart';
+// The themed Dart renderer the Source tab is built from — reusable anywhere a
+// surface shows Dart (lives in src/widgets, exported here next to its caller).
+export 'src/widgets/chart_code_block.dart';
 // Statistics
 export 'src/statistics/trend_statistics.dart';
 export 'src/statistics/linear_regression_intervals.dart';

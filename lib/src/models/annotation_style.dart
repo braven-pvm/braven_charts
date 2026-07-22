@@ -3,11 +3,14 @@
 
 import 'package:flutter/material.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Immutable annotation style configuration.
 ///
 /// Defines the visual styling for chart annotations including text style,
 /// colors, borders, and padding.
 @immutable
+@chartSurface
 class AnnotationStyle {
   /// Creates an annotation style.
   const AnnotationStyle({

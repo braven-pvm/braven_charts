@@ -1,0 +1,421 @@
+// Copyright 2025 Braven Charts
+// SPDX-License-Identifier: MIT
+
+import 'package:flutter/painting.dart' show Color;
+import 'package:flutter/widgets.dart' show Key;
+
+import '../controllers/chart_interaction_group_controller.dart';
+import '../models/bar_chart_style.dart' show BarLayoutMode;
+import '../models/braven_chart_controller.dart';
+import '../models/chart_annotation.dart' show TrendType;
+import '../models/chart_series.dart' show LineInterpolation;
+import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
+import '../models/chart_theme.dart' show ChartTheme;
+import '../models/interaction_config.dart' show InteractionConfig;
+import '../models/scatter_marker_style.dart'
+    show
+        ScatterCategoryStyle,
+        ScatterColorEncoding,
+        ScatterMarkerStyle,
+        ScatterOpacityEncoding,
+        ScatterSizeEncoding;
+import '../models/x_axis_config.dart' show XAxisConfig;
+import '../models/y_axis_config.dart' show YAxisConfig;
+import '../models/y_axis_position.dart' show YAxisPosition;
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import 'braven_plot.dart';
+import 'channel.dart';
+import 'grammar_diagnostics.dart';
+import 'mark.dart';
+import 'plot_spec.dart';
+
+/// The chained, grammar-of-graphics way to author a chart.
+///
+/// ```dart
+/// BravenChart.of(rides)
+///     .x((r) => r.km, label: 'Distance')
+///     .y((r) => r.power)
+///     .geomLine(name: 'Power')
+///     .trend(method: TrendType.movingAverage, windowSize: 30)
+///     .build()
+/// ```
+///
+/// ## What this class is and is not
+///
+/// It is a [PlotSpec] BUILDER and nothing else. It holds no rendering, no
+/// lowering and no defaults of the render pipeline's — `toSpec()` hands back
+/// the same spec a user could have typed by hand, and `build()` wraps it in a
+/// [BravenPlot]. That is why there is exactly one description of what every
+/// verb means, and why the lowering parity suite covers this facade for free.
+///
+/// ## Immutable
+///
+/// Every verb returns a NEW builder; the receiver is untouched. A chain can
+/// therefore be branched — a shared base with two different geometries on top —
+/// and a builder held in a field cannot be mutated by a caller who chains off
+/// it.
+///
+/// ## Fail-fast
+///
+/// A `geom*` call with no accessor to use — neither an explicit one nor a chain
+/// default set by [x]/[y] — throws [GrammarSpecException] with
+/// [GrammarDiagnosticCode.missingEncoding] AT THAT CALL, naming the verb and
+/// the channel. A [trend] with nothing to fit throws
+/// [GrammarDiagnosticCode.unknownTrendSource] at its call. Neither waits for
+/// `build()`, so the stack trace points at the line that is wrong.
+///
+/// ## Mark ids
+///
+/// Each geometry is given an explicit id as it is appended: the one passed to
+/// the verb, or `mark-<index>` using its position in the chain. That is what
+/// lets [trend] default its source to the geometry immediately before it, and
+/// it matches the id the lowering would have assigned anyway.
+final class BravenChart<T> {
+  const BravenChart._({
+    required List<T> rows,
+    required List<Mark<T>> marks,
+    required List<YAxisConfig> yAxes,
+    FieldAccessor<T, num>? defaultX,
+    FieldAccessor<T, num>? defaultY,
+    String? xLabel,
+    String? yLabel,
+    bool transposed = false,
+    ChartTheme? theme,
+    InteractionConfig? interaction,
+    XAxisConfig? xAxis,
+  }) : _rows = rows,
+       _marks = marks,
+       _yAxes = yAxes,
+       _defaultX = defaultX,
+       _defaultY = defaultY,
+       _xLabel = xLabel,
+       _yLabel = yLabel,
+       _transposed = transposed,
+       _theme = theme,
+       _interaction = interaction,
+       _xAxis = xAxis;
+
+  /// Starts a chain over [rows].
+  static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
+    rows: rows,
+    marks: const [],
+    yAxes: const <YAxisConfig>[],
+  );
+
+  final List<T> _rows;
+  final List<Mark<T>> _marks;
+  final List<YAxisConfig> _yAxes;
+  final FieldAccessor<T, num>? _defaultX;
+  final FieldAccessor<T, num>? _defaultY;
+  final String? _xLabel;
+  final String? _yLabel;
+  final bool _transposed;
+  final ChartTheme? _theme;
+  final InteractionConfig? _interaction;
+  final XAxisConfig? _xAxis;
+
+  BravenChart<T> _copy({
+    List<Mark<T>>? marks,
+    List<YAxisConfig>? yAxes,
+    FieldAccessor<T, num>? defaultX,
+    FieldAccessor<T, num>? defaultY,
+    String? xLabel,
+    String? yLabel,
+    bool? transposed,
+    ChartTheme? theme,
+    InteractionConfig? interaction,
+    XAxisConfig? xAxis,
+  }) => BravenChart<T>._(
+    rows: _rows,
+    marks: marks ?? _marks,
+    yAxes: yAxes ?? _yAxes,
+    defaultX: defaultX ?? _defaultX,
+    defaultY: defaultY ?? _defaultY,
+    xLabel: xLabel ?? _xLabel,
+    yLabel: yLabel ?? _yLabel,
+    transposed: transposed ?? _transposed,
+    theme: theme ?? _theme,
+    interaction: interaction ?? _interaction,
+    xAxis: xAxis ?? _xAxis,
+  );
+
+  BravenChart<T> _append(Mark<T> mark) =>
+      _copy(marks: <Mark<T>>[..._marks, mark]);
+
+  String _idFor(String? id) => id ?? 'mark-${_marks.length}';
+
+  Iterable<String> get _geometryIds =>
+      _marks.where((mark) => mark is! TrendMark<T>).map((mark) => mark.id!);
+
+  FieldAccessor<T, num> _resolveX(String verb, FieldAccessor<T, num>? x) =>
+      x ?? _defaultX ?? (throw GrammarSpecException.missingEncoding(verb, 'x'));
+
+  FieldAccessor<T, num> _resolveY(String verb, FieldAccessor<T, num>? y) =>
+      y ?? _defaultY ?? (throw GrammarSpecException.missingEncoding(verb, 'y'));
+
+  /// Sets the horizontal accessor every later geometry inherits.
+  ///
+  /// [label] names the X axis, unless [xAxis] configures one explicitly —
+  /// explicit configuration always wins.
+  BravenChart<T> x(FieldAccessor<T, num> accessor, {String? label}) =>
+      _copy(defaultX: accessor, xLabel: label);
+
+  /// Sets the vertical accessor every later geometry inherits.
+  ///
+  /// [label] names the default Y axis, unless [yAxis] declares axes
+  /// explicitly — explicit configuration always wins.
+  BravenChart<T> y(FieldAccessor<T, num> accessor, {String? label}) =>
+      _copy(defaultY: accessor, yLabel: label);
+
+  /// Appends a connected line through `(x, y)`.
+  BravenChart<T> geomLine({
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, num>? y,
+    String? id,
+    String? name,
+    Color? color,
+    double? strokeWidth,
+    List<double>? dashPattern,
+    LineInterpolation? interpolation,
+    String? yAxisId,
+  }) => _append(
+    LineMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomLine', x),
+      y: _resolveY('geomLine', y),
+      name: name,
+      color: color,
+      strokeWidth: strokeWidth,
+      dashPattern: dashPattern,
+      interpolation: interpolation,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends a filled band between `y` and a baseline.
+  BravenChart<T> geomArea({
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, num>? y,
+    String? id,
+    String? name,
+    Color? color,
+    double? baseline,
+    double? fillOpacity,
+    double? strokeWidth,
+    List<double>? dashPattern,
+    LineInterpolation? interpolation,
+    String? yAxisId,
+  }) => _append(
+    AreaMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomArea', x),
+      y: _resolveY('geomArea', y),
+      name: name,
+      color: color,
+      baseline: baseline,
+      fillOpacity: fillOpacity,
+      strokeWidth: strokeWidth,
+      dashPattern: dashPattern,
+      interpolation: interpolation,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends one bar per row.
+  ///
+  /// Bars have no orientation of their own: transposing the plane is a
+  /// whole-chart operation, expressed by [transposed].
+  BravenChart<T> geomBar({
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, num>? y,
+    String? id,
+    String? name,
+    Color? color,
+    double? barWidthPercent,
+    double? barWidthPixels,
+    double? barGap,
+    BarLayoutMode? layoutMode,
+    String? groupId,
+    double? baselineValue,
+    String? yAxisId,
+  }) => _append(
+    BarMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomBar', x),
+      y: _resolveY('geomBar', y),
+      name: name,
+      color: color,
+      barWidthPercent: barWidthPercent,
+      barWidthPixels: barWidthPixels,
+      barGap: barGap,
+      layoutMode: layoutMode,
+      groupId: groupId,
+      baselineValue: baselineValue,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends one marker per row — the only geometry with scale-driven channels.
+  ///
+  /// [colorBy] requires [colorEncoding] and [categoryBy] requires a non-empty
+  /// [categories]; the package ships neither a default color ramp nor a
+  /// categorical palette, so a channel without its template is rejected when
+  /// the spec is lowered.
+  BravenChart<T> geomPoint({
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, num>? y,
+    String? id,
+    String? name,
+    Color? color,
+    Channel<T>? size,
+    ScatterSizeEncoding? sizeEncoding,
+    Channel<T>? colorBy,
+    ScatterColorEncoding? colorEncoding,
+    Channel<T>? opacityBy,
+    ScatterOpacityEncoding? opacityEncoding,
+    CategoryChannel<T>? categoryBy,
+    List<ScatterCategoryStyle> categories = const <ScatterCategoryStyle>[],
+    double? markerRadius,
+    SeriesMarkerShape? markerShape,
+    ScatterMarkerStyle? markerStyle,
+    String? yAxisId,
+  }) => _append(
+    ScatterMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomPoint', x),
+      y: _resolveY('geomPoint', y),
+      name: name,
+      color: color,
+      size: size,
+      sizeEncoding: sizeEncoding,
+      colorBy: colorBy,
+      colorEncoding: colorEncoding,
+      opacityBy: opacityBy,
+      opacityEncoding: opacityEncoding,
+      categoryBy: categoryBy,
+      categories: categories,
+      markerRadius: markerRadius,
+      markerShape: markerShape,
+      markerStyle: markerStyle,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends one open-high-low-close candle per row.
+  BravenChart<T> geomCandlestick({
+    required FieldAccessor<T, num> open,
+    required FieldAccessor<T, num> high,
+    required FieldAccessor<T, num> low,
+    required FieldAccessor<T, num> close,
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, DateTime>? timestamp,
+    String? id,
+    String? name,
+    Color? color,
+    String? yAxisId,
+  }) => _append(
+    CandlestickMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomCandlestick', x),
+      open: open,
+      high: high,
+      low: low,
+      close: close,
+      timestamp: timestamp,
+      name: name,
+      color: color,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Fits a statistic over a geometry already in the chain.
+  ///
+  /// [of] names the geometry's mark id; leaving it null uses the geometry
+  /// appended immediately before this call. A trend cannot be fitted over
+  /// another trend.
+  BravenChart<T> trend({
+    String? of,
+    TrendType method = TrendType.linear,
+    int? windowSize,
+    String? id,
+    String? name,
+    Color? color,
+    bool showConfidenceBand = false,
+    double? lineWidth,
+    List<double>? dashPattern,
+  }) {
+    final geometries = _geometryIds.toList();
+    final source = of ?? (geometries.isEmpty ? null : geometries.last);
+    if (source == null || !geometries.contains(source)) {
+      throw GrammarSpecException.unknownTrendSource(source ?? '', geometries);
+    }
+    return _append(
+      TrendMark<T>(
+        id: _idFor(id),
+        sourceMarkId: source,
+        trendType: method,
+        windowSize: windowSize,
+        name: name,
+        color: color,
+        showConfidenceBand: showConfidenceBand,
+        lineWidth: lineWidth,
+        dashPattern: dashPattern,
+      ),
+    );
+  }
+
+  /// Transposes the Cartesian plane. Legal on an all-bar chain only.
+  BravenChart<T> transposed() => _copy(transposed: true);
+
+  /// Sets the theme handed to the chart unchanged.
+  BravenChart<T> theme(ChartTheme theme) => _copy(theme: theme);
+
+  /// Sets the interaction configuration.
+  BravenChart<T> interaction(InteractionConfig config) =>
+      _copy(interaction: config);
+
+  /// Configures the X axis. Wins over the label passed to [x].
+  BravenChart<T> xAxis(XAxisConfig config) => _copy(xAxis: config);
+
+  /// Declares one Y-axis slot. Repeatable; declaration order is axis order.
+  ///
+  /// Marks bind to a slot through the `yAxisId` parameter of their geom verb.
+  BravenChart<T> yAxis(YAxisConfig config) =>
+      _copy(yAxes: <YAxisConfig>[..._yAxes, config]);
+
+  /// The specification this chain describes.
+  PlotSpec<T> toSpec() {
+    final xLabel = _xLabel;
+    final yLabel = _yLabel;
+    return PlotSpec<T>(
+      data: _rows,
+      marks: _marks,
+      transposed: _transposed,
+      theme: _theme,
+      interaction: _interaction,
+      xAxis: _xAxis ?? (xLabel == null ? null : XAxisConfig(label: xLabel)),
+      yAxes: _yAxes.isNotEmpty || yLabel == null
+          ? _yAxes
+          : <YAxisConfig>[
+              YAxisConfig(position: YAxisPosition.left, label: yLabel),
+            ],
+    );
+  }
+
+  /// Renders this chain.
+  ///
+  /// The host-facing parameters are the ones [BravenPlot] exposes; everything
+  /// about the chart itself comes from the chain.
+  BravenPlot<T> build({
+    Key? key,
+    BravenChartController? bravenChartController,
+    ChartInteractionGroupController? interactionGroupController,
+    ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
+  }) => BravenPlot<T>(
+    toSpec(),
+    key: key,
+    bravenChartController: bravenChartController,
+    interactionGroupController: interactionGroupController,
+    emptyStateConfig: emptyStateConfig,
+  );
+}

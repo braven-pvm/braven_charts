@@ -780,6 +780,7 @@ state UX.
 - [Live interactive showcase](https://braven-pvm.github.io/braven_charts/)
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
+- [Chart grammar and the fluent surface](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_grammar.md)
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
 - [Range Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/range_area_charts.md)
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)

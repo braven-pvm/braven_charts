@@ -1,0 +1,64 @@
+# Builder definitions exported by the surface_gen package.
+#
+# The root package enables this builder in its own build.yaml:
+#
+#   targets:
+#     $default:
+#       builders:
+#         surface_gen|surface_gen:
+#           enabled: true
+#           generate_for:
+#             - lib/src/**
+#
+# auto_apply is `none`: the builder never runs implicitly in dependents; the
+# root build.yaml opts in explicitly with the scope above.
+builders:
+  surface_gen:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["surfaceGenBuilder"]
+    build_extensions:
+      "^lib/src/{{}}.dart":
+        - "lib/src/fluent/generated/{{}}_fluent.dart"
+    auto_apply: none
+    build_to: source
+  # Aggregates the generated `*_fluent.dart` files into the opt-in barrel
+  # `lib/braven_charts_fluent.dart`. `required_inputs` puts this builder in a
+  # later phase than `surface_gen`, so `findAssets` sees the freshly written
+  # extensions and an unexported generated file becomes impossible.
+  fluent_barrel:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["fluentBarrelBuilder"]
+    build_extensions:
+      $lib$:
+        - "braven_charts_fluent.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source
+  # Generates test/fluent/fluent_smoke_generated_test.dart: every generated
+  # verb invoked once so that compilation is the assertion. Aggregating, so it
+  # takes the synthetic `$package$` input and runs in a later phase than
+  # `surface_gen`.
+  smoke_test:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["smokeTestBuilder"]
+    build_extensions:
+      $package$:
+        - "test/fluent/fluent_smoke_generated_test.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source
+  # Generates lib/src/ai/generated/surface_definitions.dart: JSON-Schema $defs
+  # for every @chartSurface class, exposed as ChartToolSchema.surfaceDefinitions
+  # ALONGSIDE (never replacing) the hand-written tool literals. Aggregating —
+  # one $defs block spans the whole surface — so it takes $package$ and runs in
+  # a later phase than `surface_gen`, which keeps its output from ever being an
+  # input to the per-file builder.
+  surface_definitions:
+    import: "package:surface_gen/surface_gen.dart"
+    builder_factories: ["surfaceDefinitionsBuilder"]
+    build_extensions:
+      $package$:
+        - "lib/src/ai/generated/surface_definitions.dart"
+    required_inputs: ["_fluent.dart"]
+    auto_apply: none
+    build_to: source

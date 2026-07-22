@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Configuration for a single scrollbar (X or Y axis).
 ///
 /// Immutable data class with copyWith() for customization.
 /// Used by ScrollbarTheme to style both horizontal and vertical scrollbars.
 @immutable
+@chartSurface
 class ScrollbarConfig {
   /// Deserialize from JSON.
   factory ScrollbarConfig.fromJson(Map<String, dynamic> json) =>

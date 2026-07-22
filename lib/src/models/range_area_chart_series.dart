@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -12,6 +13,41 @@ import 'range_area_style.dart';
 import 'y_axis_config.dart';
 
 /// A first-class Cartesian band bounded by paired low/high values.
+///
+/// There is no generated `withPoints` verb. [points] is force-excluded from
+/// the fluent surface because a Range Area series' point list is not a value
+/// a single setter can safely replace: every element must be a
+/// [RangeAreaDataPoint] (the `copyWith` parameter is the wider
+/// `List<ChartDataPoint>`), and the whole list must be STRICTLY increasing in
+/// `x`. `withPoints([...])` would throw `ArgumentError` for any list that
+/// broke either rule. Rebuild the series with the constructor — construction
+/// stays the complete path — or edit intervals through [copyWith] where the
+/// validation message names the offending index.
+// The constructor validates in its BODY via validateConfiguration(), which
+// names no parameter (it reads fields), so every emitted parameter is
+// nominally in scope.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(
+  excluded: ['id', 'points'],
+  bodyValidated: [
+    BodyValidated(
+      'validateConfiguration() re-runs the whole series check on every '
+      'construction: it range-checks tension, fillOpacity and markerRadius, '
+      'walks fillGradient colors/stops, and calls '
+      'upperBoundaryStyle.validate() / lowerBoundaryStyle.validate() plus '
+      'the pathAnimation timing checks. withUpperBoundaryStyle / '
+      'withLowerBoundaryStyle / withFillGradient / withPathAnimation '
+      'therefore throw ArgumentError for a nested config that is '
+      'individually constructible but invalid inside this series. The check '
+      'reads fields, not parameters, so surface_gen cannot narrow the scope '
+      'below the whole class.',
+    ),
+  ],
+)
 final class RangeAreaChartSeries extends ChartSeries {
   RangeAreaChartSeries({
     required super.id,

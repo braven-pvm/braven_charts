@@ -1,5 +1,6 @@
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -15,6 +16,44 @@ import 'y_axis_config.dart';
 /// Cartesian series. Each point requires a finite ordering [ChartDataPoint.x],
 /// a non-negative finite [ChartDataPoint.y], and a non-empty category label.
 /// Zero-valued points remain transportable but do not produce visible slices.
+///
+/// Every generated verb re-validates the whole series, because the
+/// constructor does. In particular the legal range of a [PieChartStyle]
+/// NARROWS inside a pie series: `PieChartStyle(radiusFactor: 2)` is a
+/// perfectly constructible style, and `withPieStyle` / `updatePieStyle`
+/// reject it with `ArgumentError` because a pie's radius factor must be in
+/// `(0, 1]`. That coupling crosses the nested-config boundary, so no
+/// [CombinedSetter] can express it and excluding `pieStyle` would remove the
+/// most useful verb on the class; it is acknowledged instead.
+///
+/// There is no generated `withSliceRadiusConfig` verb either. Variable slice
+/// radii are a PAIR: the config and a `PointStyle.size` on every point. A
+/// setter that supplies only the config threw `ArgumentError` on every series
+/// whose points carry no sizes, which is every series built without them.
+/// Supply both through [PieChartSeries.fromMap]'s `radiusValues`, or through
+/// the constructor.
+// validateRadialConfiguration() reads FIELDS (radialStyle, selectionStyle,
+// points), never the constructor's own parameter names, so surface_gen
+// cannot narrow the scope below the whole class.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(
+  excluded: ['id', 'sliceRadiusConfig'],
+  bodyValidated: [
+    BodyValidated(
+      'validateRadialConfiguration() re-checks the whole series on every '
+      'construction: finite non-negative point values with non-empty labels, '
+      'radialStyle.radiusFactor in (0, 1], non-negative sliceGap and '
+      'borderWidth, and the selectionStyle lift/blur ranges. A verb whose '
+      'argument is individually valid — a PieChartStyle with '
+      'radiusFactor 2 — therefore throws ArgumentError with the failing '
+      'field named.',
+    ),
+  ],
+)
 class PieChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered pie series and validates it in all modes.
   PieChartSeries({

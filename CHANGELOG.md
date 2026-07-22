@@ -5,6 +5,79 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Opt-in fluent modifier surface behind a new barrel,
+  `package:braven_charts/braven_charts_fluent.dart`: 98 generated extensions
+  carrying ~1160 chained verbs over the existing config classes, with a
+  vocabulary that keeps the two kinds of "unset" apart — `withX(v)` replaces,
+  `withoutX()` suppresses a tri-state `ChartStyleValue` field, `inheritX()`
+  defers it to the theme, `clearX()` unsets a nullable parameter back to its
+  default, and `updateX(fn)` edits a nested config in place. The barrel
+  re-exports the core barrel, so one import is enough; the core barrel is
+  untouched, so consumers who never import it never see the verbs. Assert
+  coupled parameters are only reachable through combined setters
+  (`withOhlc(open:, high:, low:, close:)`, `withRange(min, max)`), and
+  cross-object join keys (`id`), OR-coupled bar widths and `RangeAnnotation`
+  bounds are deliberately construction-only.
+- `@chartSurface` surface model and the `tool/surface_gen` build_runner engine
+  that reads it: an analyzer-based, dev-only generator emitting checked-in
+  fluent extensions plus an executing smoke suite, with enforcement that fails
+  when a barrel-reachable, `copyWith`-carrying config class is unannotated
+  (`missing = 0`) and a CI regeneration gate that fails on any diff. Consumers
+  never run `build_runner`. The 0.11.0 Range Area family is covered by the
+  same gate: `RangeAreaChartSeries`, `RangeAreaDataPoint`,
+  `RangeAreaBoundaryStyle`, `RangeAreaLabelConfig` and `RangeAreaTheme` are
+  modelled, with `withInterval(low, high)` keeping the `high >= low`
+  invariant and `id`/`points` construction-only.
+- `ChartToolSchema.surfaceDefinitions`: structural surface definitions
+  generated from the same annotated model that drives the fluent layer, so the
+  AI tool schema and the config builder are derived from one source, guarded
+  by a bidirectional drift gate in both directions.
+- Grammar-chain source generation, and a Config / Grammar toggle in the
+  Workbench Source pane. `ChartGrammarSourceGenerator` reads a captured chart
+  document and writes the `BravenChart.of(rows).x(...).geomLine(...).build()`
+  chain that rebuilds it, over a SYNTHESISED row class — one field for the
+  shared x, one per measure, named after each series, with candlesticks
+  contributing open/high/low/close and scatter channels their own fields.
+  Fidelity is proven rather than asserted: before emitting anything the
+  generator lowers the spec it is about to write and compares the resulting
+  series, annotations, Y-axes AND the X axis, theme and interaction to the
+  ones the document hydrated to, so a
+  chain that would render a different chart is refused with a named diagnostic
+  and no code — one that identifies the specific series, annotation or axis
+  option a V1 mark cannot carry (a lost series field, or the single-axis
+  binding a config-authored chart leaves implicit) rather than only reporting
+  that the chart "does not reproduce exactly". Non-Cartesian families,
+  misaligned x domains, partially
+  populated scatter channels, partial candlestick timestamps, mixed bar
+  orientations, annotations other than
+  `TrendAnnotation` and chart-level options `BravenPlot` does not forward are
+  each diagnosed by name; runtime bindings and over-budget data are warned
+  about and emitted, exactly as the config form does. Both forms read the same
+  captured document, so switching never re-extracts the chart, and the config
+  form's output, keys and tests are byte-for-byte unchanged.
+  `BravenChartWorkbench` gains `grammarSourceOptions` and `initialSourceForm`.
+- Typed grammar-of-graphics authoring layer in the core barrel: `PlotSpec<T>`,
+  the sealed `Mark<T>` hierarchy (`LineMark`, `AreaMark`, `BarMark`,
+  `ScatterMark`, `CandlestickMark`, `TrendMark`), `Channel<T>` and
+  `CategoryChannel<T>` encodings, the `PlotSpecLowering.lower()` extension, the
+  `BravenPlot<T>` widget, and the chained `BravenChart.of(rows)` facade with
+  `x`/`y`/`geomLine`/`geomArea`/`geomBar`/`geomPoint`/`geomCandlestick`/
+  `trend`/`transposed`/`theme`/`interaction`/`xAxis`/`yAxis`/`build`. A spec
+  lowers onto ordinary `ChartSeries`, `ChartAnnotation` and axis configs, so
+  the render pipeline, artifact codecs, generated Source and the Workbench are
+  untouched — parity is locked by config-equality and artifact-document
+  equality suites. Failures are fail-fast and carry a machine-readable
+  `GrammarDiagnosticCode`, and nothing is dropped silently — a channel without
+  its encoding AND an encoding with no channel to drive it both raise. Every
+  data-independent structural check (mark/axis ids, axis binding, channel
+  pairing, trend source, transposition) runs BEFORE the empty-data check, so
+  an authoring error surfaces even against a momentarily-empty dataset; empty
+  data alone is treated as a runtime state and renders the standard empty
+  state instead of throwing from `build`.
+
 ## 0.11.0 - 2026-07-21
 
 ### Added

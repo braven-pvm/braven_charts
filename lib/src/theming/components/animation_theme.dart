@@ -3,6 +3,8 @@
 
 import 'package:flutter/animation.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Defines animation settings for chart transitions and interactions.
 ///
 /// This theme controls:
@@ -21,6 +23,7 @@ import 'package:flutter/animation.dart';
 ///   interactionCurve: Curves.easeOut,
 /// );
 /// ```
+@chartSurface
 class AnimationTheme {
   // ========== Constructor ==========
 

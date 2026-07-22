@@ -3,6 +3,8 @@
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
+
 /// Entrance motion available to path-based Cartesian series.
 enum PathEntranceAnimationMode {
   /// Render the final path immediately.
@@ -33,6 +35,9 @@ enum PathDataUpdateAnimationMode {
 /// durations are non-negative. Reduced motion and a zero-duration chart theme
 /// still render the final series synchronously.
 @immutable
+// `copyWith` spells the unset flag `inheritDuration`, not `clearDuration`,
+// so the derived-clear-flag convention needs an explicit override here.
+@ChartSurface(clearFlags: {'duration': 'inheritDuration'})
 class PathAnimationTiming {
   const PathAnimationTiming({this.delay = Duration.zero, this.duration});
 
@@ -79,6 +84,7 @@ class PathAnimationTiming {
 /// [PathAnimationTiming.duration] overrides it. The chart theme supplies the
 /// easing curve and remains the reduced-motion and zero-duration authority.
 @immutable
+@chartSurface
 class PathAnimationStyle {
   const PathAnimationStyle({
     this.entranceMode = PathEntranceAnimationMode.none,

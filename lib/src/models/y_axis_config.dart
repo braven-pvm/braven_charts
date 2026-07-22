@@ -8,6 +8,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import '../meta/chart_surface.dart';
 import 'y_axis_position.dart';
 
 /// Controls where crosshair Y-value labels appear when hovering over the chart.
@@ -145,6 +146,20 @@ typedef YAxisLabelFormatter = String Function(double value);
 ///   unit: 'bpm',
 /// );
 /// ```
+// The reader selects the const `_internal` constructor (the public one is not
+// const), so `id` — an internal, pipeline-assigned identity — would otherwise
+// surface as a public `withId` that hijacks multi-axis binding.
+@ChartSurface(
+  excluded: ['id'],
+  combinedSetters: [
+    // The public constructor asserts `min < max` and `maxWidth >= minWidth`.
+    // `copyWith` rebuilds through `_internal`, which carries no asserts, so
+    // these pairs are coupled by contract rather than by a runtime throw —
+    // an individual setter would silently produce an inverted axis.
+    CombinedSetter('withRange', ['min', 'max']),
+    CombinedSetter('withWidthBounds', ['minWidth', 'maxWidth']),
+  ],
+)
 class YAxisConfig {
   /// Creates a Y-axis configuration.
   ///

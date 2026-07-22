@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Reusable styling for labels across all chart components.
 ///
 /// This style is used for:
@@ -23,6 +25,7 @@ import 'package:flutter/material.dart';
 ///   padding: EdgeInsets.all(8.0),
 /// );
 /// ```
+@chartSurface
 class LabelStyle {
   /// Creates a LabelStyle from JSON.
   factory LabelStyle.fromJson(Map<String, dynamic> json) {

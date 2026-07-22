@@ -3,12 +3,15 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Theme defaults for native Candlestick rendering.
 ///
 /// Series and point styles may override these colors. Direction is also
 /// communicated by the series' hollow/filled body treatment, so the defaults
 /// never rely on hue alone.
 @immutable
+@chartSurface
 class CandlestickTheme {
   const CandlestickTheme({
     required this.risingBodyFillColor,

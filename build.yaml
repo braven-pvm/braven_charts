@@ -1,34 +1,38 @@
-# Build configuration for generating mocks
-# Run: flutter packages pub run build_runner build
-
+# Build configuration for the chart surface generator (tool/surface_gen).
+#
+# Run: dart run build_runner build --delete-conflicting-outputs
+#
+# Only the surface_gen builder is enabled, scoped to the config surface under
+# lib/src/**. Generated files are checked in; CI regenerates and fails on
+# diff. mockito's auto-applied mock builder is explicitly disabled (the stale
+# test/mocks/mock_definitions.dart predates the current test suite and does
+# not compile).
 targets:
   $default:
     builders:
-      mockito|mockBuilder:
-        generate_for:
-          - test/mocks/mock_definitions.dart
-        options:
-          # Generate mocks in the same directory as the source
-          build_to: test/mocks/
-      json_serializable|jsonSerializable:
-        generate_for:
-          - lib/src/agentic/models/*.dart
-        options:
-          # JSON serialization options for agentic models
-          any_map: false
-          checked: true
-          create_factory: true
-          create_to_json: true
-          disallow_unrecognized_keys: false
-          explicit_to_json: true
-          field_rename: none
-
-  test:
-    dependencies:
-      - $default
-    sources:
-      - test/**
-      - lib/**
-    builders:
-      mockito|mockBuilder:
+      surface_gen|surface_gen:
         enabled: true
+        generate_for:
+          include:
+            - lib/src/**
+          exclude:
+            # The builder's own checked-in outputs are never inputs.
+            - lib/src/fluent/generated/**
+            - lib/src/ai/generated/**
+      # Regenerates lib/braven_charts_fluent.dart from the generated file set
+      # (a later build phase; see tool/surface_gen/build.yaml).
+      surface_gen|fluent_barrel:
+        enabled: true
+      # Regenerates test/fluent/fluent_smoke_generated_test.dart from the
+      # whole surface model (a later build phase; see
+      # tool/surface_gen/build.yaml).
+      surface_gen|smoke_test:
+        enabled: true
+      # Regenerates lib/src/ai/generated/surface_definitions.dart — the
+      # structural JSON-Schema $defs exposed as
+      # ChartToolSchema.surfaceDefinitions ALONGSIDE the hand-written tool
+      # literals (see tool/surface_gen/build.yaml).
+      surface_gen|surface_definitions:
+        enabled: true
+      mockito|mockBuilder:
+        enabled: false

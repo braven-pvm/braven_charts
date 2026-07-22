@@ -5,6 +5,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
 import 'data_point_label_config.dart';
 import 'range_area_data_point.dart';
 
@@ -54,7 +55,13 @@ class RangeAreaLabelDetails {
 typedef RangeAreaLabelFormatter = String Function(RangeAreaLabelDetails);
 
 /// Portable label configuration for one Range Area series.
+///
+/// `formatter` has a generated `withFormatter` verb but no `clearFormatter`:
+/// `copyWith` merges it with `??` and exposes no clear flag, so a label
+/// formatter can be replaced but not removed once set. Drop back to the
+/// generic formatter by rebuilding the config.
 @immutable
+@chartSurface
 class RangeAreaLabelConfig {
   const RangeAreaLabelConfig({
     this.value = RangeAreaLabelValue.none,
@@ -104,7 +111,14 @@ class RangeAreaLabelConfig {
 }
 
 /// Stroke presentation for one Range Area boundary.
+///
+/// The constructor itself validates nothing: [validate] is called by the
+/// OWNING series, so `withStrokeWidth(-1)` builds a boundary style happily
+/// and the `ArgumentError` surfaces when the style is handed to
+/// [RangeAreaChartSeries]. That coupling is modelled on the series, whose
+/// generated verbs re-validate both boundaries.
 @immutable
+@chartSurface
 class RangeAreaBoundaryStyle {
   const RangeAreaBoundaryStyle({
     this.visible = true,

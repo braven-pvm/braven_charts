@@ -14,6 +14,7 @@ import 'pages/chart_workbench_page.dart';
 import 'pages/candlestick_geometry_lab_page.dart';
 import 'pages/candlestick_charts_page.dart';
 import 'pages/cartesian_chart_type_pages.dart';
+import 'pages/chart_grammar_page.dart';
 import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/gallery_page.dart';
@@ -214,6 +215,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.summarize,
       page: ValueSummaryPage(),
       routeSlug: 'value-summary',
+    ),
+    const NavDestination(
+      label: 'Chart Grammar',
+      icon: Icons.auto_awesome_motion_outlined,
+      selectedIcon: Icons.auto_awesome_motion,
+      page: ChartGrammarPage(),
+      routeSlug: 'chart-grammar',
     ),
     const NavDestination(
       label: 'Annotations',

@@ -24,6 +24,37 @@ enum ChartThemeHydrationMode { asCaptured, adaptToHost, hostOverride }
 
 /// Complete resolved codec for every appearance-affecting [ChartTheme] field.
 abstract final class ChartThemeDocumentCodec {
+  /// The `braven.`-namespaced reference for each built-in [ChartTheme].
+  ///
+  /// This is the ONE spelling a built-in theme reference ever has: it is what
+  /// a live extraction mints, what this codec persists — artifacts already on
+  /// disk carry it — and what the Dart source generators read back. A
+  /// reference outside this table is host-owned by definition.
+  static final Map<String, ChartTheme> builtInThemes = Map.unmodifiable({
+    'braven.light': ChartTheme.light,
+    'braven.dark': ChartTheme.dark,
+    'braven.corporateBlue': ChartTheme.corporateBlue,
+    'braven.vibrant': ChartTheme.vibrant,
+    'braven.minimal': ChartTheme.minimal,
+    'braven.highContrast': ChartTheme.highContrast,
+    'braven.colorblindFriendly': ChartTheme.colorblindFriendly,
+  });
+
+  /// The canonical reference naming [theme], or null when it is host-owned.
+  static String? builtInReference(ChartTheme theme) {
+    for (final entry in builtInThemes.entries) {
+      if (identical(entry.value, theme)) return entry.key;
+    }
+    return null;
+  }
+
+  /// The `ChartTheme.<name>` member [reference] names, or null when the
+  /// reference is host-owned and therefore cannot be written as source.
+  static String? builtInThemeMember(String? reference) =>
+      reference != null && builtInThemes.containsKey(reference)
+      ? 'ChartTheme.${reference.substring('braven.'.length)}'
+      : null;
+
   static ChartArtifactResult<ChartThemeDocument> encode(
     ChartTheme theme, {
     ChartThemeCaptureMode captureMode =

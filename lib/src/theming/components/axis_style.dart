@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Styling for chart axes (X and Y).
 ///
 /// Includes line styling, text styling for labels and titles, and tick mark configuration.
@@ -21,6 +23,7 @@ import 'package:flutter/material.dart';
 ///   tickWidth: 1.0,
 /// );
 /// ```
+@chartSurface
 class AxisStyle {
   const AxisStyle({
     required this.lineColor,

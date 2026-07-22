@@ -3,12 +3,15 @@
 
 import 'package:flutter/material.dart';
 
+import '../../meta/chart_surface.dart';
+
 /// Theme defaults for native Range Area rendering.
 ///
 /// Explicit series and boundary values remain authoritative. These values
 /// provide accessible fallback treatment for the fill, paired boundaries,
 /// markers, and linked interaction states.
 @immutable
+@chartSurface
 class RangeAreaTheme {
   const RangeAreaTheme({
     required this.fillOpacity,

@@ -49,6 +49,7 @@ enum ChartWorkbenchSourcePhase {
 class ChartWorkbenchSourceState {
   const ChartWorkbenchSourceState({
     this.phase = ChartWorkbenchSourcePhase.uninitialized,
+    this.form = ChartSourceForm.config,
     this.snapshot,
     this.generated,
     this.isStale = false,
@@ -57,6 +58,9 @@ class ChartWorkbenchSourceState {
   });
 
   final ChartWorkbenchSourcePhase phase;
+
+  /// The form [generated] was emitted in.
+  final ChartSourceForm form;
   final ChartDocumentSnapshot? snapshot;
   final ChartGeneratedSource? generated;
   final bool isStale;

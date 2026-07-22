@@ -2,6 +2,7 @@ import 'dart:ui' show Color, Offset;
 
 import 'package:flutter/foundation.dart';
 
+import '../meta/chart_surface.dart';
 import '../theming/styles/label_style.dart';
 
 /// Formats one numeric component shown by a Pie or Donut surface.
@@ -64,6 +65,7 @@ enum PieGradientType {
 /// preserves category identity while giving the complete Pie one consistent
 /// light source.
 @immutable
+@chartSurface
 class PieGradientStyle {
   /// Creates a Pie gradient fill.
   const PieGradientStyle({
@@ -155,6 +157,7 @@ class PieGradientStyle {
 /// a slice-derived color reads as a glow. When [color] is null, the renderer
 /// derives the layer from the slice color.
 @immutable
+@chartSurface
 class PieElevationStyle {
   /// Creates an elevation layer.
   const PieElevationStyle({
@@ -245,6 +248,7 @@ enum PieCornerTreatment {
 /// precedence. Existing [SeriesTheme], [LegendStyle], and [InteractionTheme]
 /// continue to own palettes, legends, and tooltips respectively.
 @immutable
+@chartSurface
 class PieChartTheme {
   /// Creates radial theme defaults.
   const PieChartTheme({
@@ -465,6 +469,7 @@ enum PieSliceRadiusScale {
 /// value through `PointStyle.size`. The values are normalized across visible
 /// slices and mapped between [minimumFactor] and the series' outer radius.
 @immutable
+@chartSurface
 class PieSliceRadiusConfig {
   /// Creates a variable slice-radius encoding.
   const PieSliceRadiusConfig({
@@ -555,6 +560,7 @@ abstract interface class RadialChartStyle {
 
 /// Immutable per-series Pie geometry and appearance overrides.
 @immutable
+@chartSurface
 class PieChartStyle implements RadialChartStyle {
   /// Creates Pie geometry and optional theme overrides.
   const PieChartStyle({
@@ -784,6 +790,7 @@ class PieChartStyle implements RadialChartStyle {
 
 /// Immutable eligibility, placement, connector, and callout policy for labels.
 @immutable
+@chartSurface
 class PieDataLabelConfig {
   /// Creates pie data-label configuration.
   const PieDataLabelConfig({

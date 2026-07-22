@@ -1,6 +1,8 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Streaming Configuration for BravenChartPlus
 
+import '../meta/chart_surface.dart';
+
 /// Configuration for real-time data streaming in BravenChartPlus.
 ///
 /// Controls buffer limits, auto-scroll behavior, window size, and provides
@@ -34,6 +36,7 @@
 ///   ),
 /// )
 /// ```
+@chartSurface
 class StreamingConfig {
   /// Creates a streaming configuration.
   ///

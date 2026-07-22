@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/foundation.dart' show listEquals;
 
+import '../meta/chart_surface.dart';
 import 'normalization_mode.dart';
 import 'series_axis_binding.dart';
 import 'y_axis_config.dart';
@@ -34,6 +35,7 @@ import 'y_axis_config.dart';
 /// final axisForSeries = config.getAxisForSeries('hr-series');
 /// final hrBindings = config.getBindingsForAxis('hr');
 /// ```
+@chartSurface
 class MultiAxisConfig {
   /// Creates a multi-axis configuration.
   ///

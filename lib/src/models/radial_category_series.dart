@@ -1,5 +1,6 @@
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
 import 'pie_chart_config.dart';
@@ -30,6 +31,7 @@ enum RadialSliceRadiusAggregation {
 /// are projected into one visible slice when at least [minimumSourceCount]
 /// points qualify. The source points remain unchanged for artifacts, tables,
 /// copy/export, callbacks, and controller point references.
+@chartSurface
 class RadialSliceGroupingConfig {
   /// Creates a grouping policy.
   const RadialSliceGroupingConfig({

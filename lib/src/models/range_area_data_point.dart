@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
 import 'chart_data_point.dart';
 import 'segment_style.dart';
 
@@ -9,6 +10,28 @@ import 'segment_style.dart';
 /// For a valid interval, inherited [y] is always the interval midpoint. A gap
 /// uses an internal zero placeholder because [ChartDataPoint] requires a
 /// double, but Range Area-aware surfaces use [isGap] and never treat it as data.
+///
+/// A gap is not reachable through the fluent surface. `copyWith`'s `makeGap`
+/// flag has no constructor parameter behind it, so no verb is generated for
+/// it; build gaps with [RangeAreaDataPoint.gap].
+// The constructor validates the interval in its BODY, so the reader cannot
+// see the coupling in an assert initializer. `low`/`high` are one value —
+// `high >= low` — and an individual `withHigh(1)` on an interval whose `low`
+// is 99 throws ArgumentError; they move together through `withInterval`
+// instead. Replacing them as a pair also keeps the inherited `y` midpoint
+// consistent, which `copyWith` independently refuses to let drift. `x` is
+// only checked for finiteness, which no sibling value can influence.
+@ChartSurface(
+  combinedSetters: [CombinedSetter('withInterval', ['low', 'high'])],
+  bodyValidated: [
+    BodyValidated(
+      'validateInterval() rejects a non-finite x. That is a single-parameter '
+      'check with no sibling coupling: withX(v) throws for exactly the v '
+      'that RangeAreaDataPoint(x: v, ...) would reject.',
+      params: ['x'],
+    ),
+  ],
+)
 final class RangeAreaDataPoint extends ChartDataPoint {
   RangeAreaDataPoint({
     required super.x,

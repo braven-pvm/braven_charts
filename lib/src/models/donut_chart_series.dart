@@ -1,5 +1,6 @@
 import 'dart:ui' show Color;
 
+import '../meta/chart_surface.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -15,6 +16,42 @@ import 'y_axis_config.dart';
 /// A chart may contain exactly one [DonutChartSeries] and may not mix it with
 /// Pie or Cartesian series. The circular opening is configured by
 /// [DonutChartStyle.innerRadiusFactor].
+///
+/// Every generated verb re-validates the whole series, because the
+/// constructor does. As on [PieChartSeries], the legal range of a
+/// [DonutChartStyle] NARROWS inside the series — `innerRadiusFactor` must be
+/// in `(0, 1)` and `sweepAngleDegrees` in `(0, 360]` — so `withDonutStyle` /
+/// `updateDonutStyle` reject a style that is individually constructible. The
+/// coupling crosses the nested-config boundary and cannot be expressed as a
+/// [CombinedSetter]; it is acknowledged instead.
+///
+/// There is no generated `withSliceRadiusConfig` verb either. Variable slice
+/// radii are a PAIR: the config and a `PointStyle.size` on every point. A
+/// setter that supplies only the config threw `ArgumentError` on every series
+/// whose points carry no sizes, which is every series built without them.
+/// Supply both through [DonutChartSeries.fromMap]'s `radiusValues`, or
+/// through the constructor.
+// The body mixes an opaque validateRadialConfiguration() call with named
+// range checks on donutStyle, sliceRadiusConfig and centerContent, so the
+// opaque statement widens the scope to the whole class.
+///
+/// [id] is force-excluded from the fluent surface: a series id is a JOIN
+/// KEY — Y axes, annotations and artifact documents bind to it — so a verb
+/// that rewrites it mid-chain silently detaches the series from everything
+/// that references it. Construct the series with the id it should carry.
+@ChartSurface(
+  excluded: ['id', 'sliceRadiusConfig'],
+  bodyValidated: [
+    BodyValidated(
+      'validateRadialConfiguration() re-checks the whole series, and the '
+      'body then range-checks donutStyle.innerRadiusFactor, '
+      'donutStyle.sweepAngleDegrees, sliceRadiusConfig.minimumFactor and the '
+      'centerContent label/value rules. A verb whose argument is '
+      'individually valid can therefore throw ArgumentError with the failing '
+      'field named.',
+    ),
+  ],
+)
 class DonutChartSeries extends RadialCategorySeries {
   /// Creates an explicitly ordered Donut series and validates it in all modes.
   DonutChartSeries({

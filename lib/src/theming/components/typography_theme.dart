@@ -1,6 +1,8 @@
 // Copyright (c) 2025 Braven Charts
 // Licensed under the MIT License
 
+import '../../meta/chart_surface.dart';
+
 /// Defines typography settings for chart text elements.
 ///
 /// This theme controls:
@@ -21,6 +23,7 @@
 ///   labelMultiplier: 1.0,
 /// );
 /// ```
+@chartSurface
 class TypographyTheme {
   // ========== Constructor ==========
 

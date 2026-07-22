@@ -1,0 +1,21 @@
+name: surface_gen
+description: >-
+  Dev-only build_runner generator for braven_charts. Reads @chartSurface
+  annotations into a SurfaceModel and emits the generated fluent and AI
+  schema surfaces. Wired into the root package as a path dev dependency;
+  never published.
+publish_to: none
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  analyzer: ^12.0.0
+  build: ^4.0.0
+  dart_style: ^3.1.0
+  glob: ^2.1.2
+  source_gen: ^4.0.0
+
+dev_dependencies:
+  build_test: ^3.5.0
+  test: ^1.31.0

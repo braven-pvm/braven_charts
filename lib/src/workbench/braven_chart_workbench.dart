@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter/services.dart';
 
 import '../artifacts/chart_artifact.dart';
@@ -13,6 +14,7 @@ import '../artifacts/chart_view_state.dart';
 import '../models/braven_chart_controller.dart';
 import '../models/chart_context_action.dart';
 import '../source/chart_dart_source_generator.dart';
+import '../source/chart_grammar_source_generator.dart';
 import '../source/chart_source_models.dart';
 import '../source/chart_source_view.dart';
 import '../table/chart_data_table.dart';
@@ -91,6 +93,12 @@ abstract interface class ChartWorkbenchHandle implements Listenable {
   /// Whether [generatedSource] represents an older chart revision.
   bool get sourceIsStale;
 
+  /// Which form the Source pane currently reads the chart in.
+  ChartSourceForm get sourceForm;
+
+  /// Switches the Source form, re-emitting from the snapshot already held.
+  void setSourceForm(ChartSourceForm form);
+
   /// Requests a display [mode] without throwing for a disabled mode.
   ChartArtifactResult<ChartDisplayMode> setDisplayMode(ChartDisplayMode mode);
 
@@ -124,8 +132,11 @@ class ChartWorkbenchController extends ChangeNotifier
   ChartTableOptions _tableOptions = const ChartTableOptions();
   ChartTableRefreshPolicy _refreshPolicy = ChartTableRefreshPolicy.onModeEntry;
   ChartDartSourceOptions _sourceOptions = const ChartDartSourceOptions();
+  ChartGrammarSourceOptions _grammarSourceOptions =
+      const ChartGrammarSourceOptions();
   ChartSourceRefreshPolicy _sourceRefreshPolicy =
       ChartSourceRefreshPolicy.onDocumentRevision;
+  ChartSourceForm _sourceForm = ChartSourceForm.config;
   ValueChanged<ChartWorkbenchStatus>? _onStatusChanged;
   ChartWorkbenchTableState _tableState = const ChartWorkbenchTableState();
   ChartWorkbenchArtifactState _artifactState =
@@ -187,6 +198,53 @@ class ChartWorkbenchController extends ChangeNotifier
 
   @override
   bool get sourceIsStale => _sourceState.isStale;
+
+  @override
+  ChartSourceForm get sourceForm => _sourceForm;
+
+  @override
+  void setSourceForm(ChartSourceForm form) {
+    if (_sourceForm == form) return;
+    _sourceForm = form;
+    final snapshot = _sourceState.snapshot;
+    if (snapshot == null) {
+      unawaited(refreshSource());
+      return;
+    }
+    // Both forms READ one captured document, so a form switch re-emits from
+    // the snapshot already in hand instead of re-extracting the chart. That
+    // keeps staleness meaning exactly what it meant before -- "the chart moved
+    // on since this snapshot" -- rather than being reset by a toggle.
+    final generated = _generateSource(snapshot);
+    switch (generated) {
+      case ChartArtifactFailure<ChartGeneratedSource>():
+        _applySourceFailure(generated.error, generated.warnings, _sourceState);
+      case ChartArtifactSuccess<ChartGeneratedSource>():
+        _sourceState = ChartWorkbenchSourceState(
+          phase: ChartWorkbenchSourcePhase.ready,
+          form: form,
+          snapshot: snapshot,
+          generated: generated.value,
+          isStale: _sourceState.isStale,
+          warnings: generated.warnings,
+        );
+        _notifyStatus();
+    }
+  }
+
+  /// Emits [snapshot] in whichever form the pane is showing.
+  ChartArtifactResult<ChartGeneratedSource> _generateSource(
+    ChartDocumentSnapshot snapshot,
+  ) => switch (_sourceForm) {
+    ChartSourceForm.config => ChartDartSourceGenerator.generate(
+      snapshot,
+      options: _sourceOptions,
+    ),
+    ChartSourceForm.grammar => ChartGrammarSourceGenerator.generate(
+      snapshot,
+      options: _grammarSourceOptions,
+    ),
+  };
 
   /// Current combined status snapshot.
   ChartWorkbenchStatus get status => ChartWorkbenchStatus(
@@ -250,6 +308,7 @@ class ChartWorkbenchController extends ChangeNotifier
       phase: previous.hasUsableSource
           ? ChartWorkbenchSourcePhase.refreshing
           : ChartWorkbenchSourcePhase.loading,
+      form: previous.form,
       snapshot: previous.snapshot,
       generated: previous.generated,
       isStale: previous.isStale,
@@ -282,10 +341,7 @@ class ChartWorkbenchController extends ChangeNotifier
     }
     final snapshot =
         (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
-    final generated = ChartDartSourceGenerator.generate(
-      snapshot,
-      options: _sourceOptions,
-    );
+    final generated = _generateSource(snapshot);
     switch (generated) {
       case ChartArtifactFailure<ChartGeneratedSource>():
         final warnings = [...extracted.warnings, ...generated.warnings];
@@ -295,6 +351,7 @@ class ChartWorkbenchController extends ChangeNotifier
         final warnings = [...extracted.warnings, ...generated.warnings];
         _sourceState = ChartWorkbenchSourceState(
           phase: ChartWorkbenchSourcePhase.ready,
+          form: _sourceForm,
           snapshot: snapshot,
           generated: generated.value,
           isStale: _isSnapshotStale(snapshot),
@@ -317,6 +374,7 @@ class ChartWorkbenchController extends ChangeNotifier
   ) {
     _sourceState = ChartWorkbenchSourceState(
       phase: ChartWorkbenchSourcePhase.failed,
+      form: previous.form,
       snapshot: previous.snapshot,
       generated: previous.generated,
       isStale: previous.hasUsableSource,
@@ -484,7 +542,9 @@ class ChartWorkbenchController extends ChangeNotifier
     required ChartTableOptions tableOptions,
     required ChartTableRefreshPolicy refreshPolicy,
     required ChartDartSourceOptions sourceOptions,
+    required ChartGrammarSourceOptions grammarSourceOptions,
     required ChartSourceRefreshPolicy sourceRefreshPolicy,
+    required ChartSourceForm initialSourceForm,
     required ValueChanged<ChartWorkbenchStatus>? onStatusChanged,
   }) {
     if (_attachment != null && !identical(_attachment, attachment)) {
@@ -503,7 +563,9 @@ class ChartWorkbenchController extends ChangeNotifier
       tableOptions: tableOptions,
       refreshPolicy: refreshPolicy,
       sourceOptions: sourceOptions,
+      grammarSourceOptions: grammarSourceOptions,
       sourceRefreshPolicy: sourceRefreshPolicy,
+      initialSourceForm: initialSourceForm,
     );
   }
 
@@ -514,7 +576,9 @@ class ChartWorkbenchController extends ChangeNotifier
     required ChartTableOptions tableOptions,
     required ChartTableRefreshPolicy refreshPolicy,
     required ChartDartSourceOptions sourceOptions,
+    required ChartGrammarSourceOptions grammarSourceOptions,
     required ChartSourceRefreshPolicy sourceRefreshPolicy,
+    required ChartSourceForm initialSourceForm,
   }) {
     var statusChanged = false;
     _availableModes = Set.unmodifiable(availableModes);
@@ -522,9 +586,11 @@ class ChartWorkbenchController extends ChangeNotifier
     _tableOptions = tableOptions;
     _refreshPolicy = refreshPolicy;
     _sourceOptions = sourceOptions;
+    _grammarSourceOptions = grammarSourceOptions;
     _sourceRefreshPolicy = sourceRefreshPolicy;
     if (!_configured) {
       _configured = true;
+      _sourceForm = initialSourceForm;
       _requestedMode = _availableModes.contains(initialMode)
           ? initialMode
           : _firstAvailableMode(_availableModes);
@@ -562,6 +628,7 @@ class ChartWorkbenchController extends ChangeNotifier
     if (_sourceState.hasUsableSource) {
       _sourceState = ChartWorkbenchSourceState(
         phase: _sourceState.phase,
+        form: _sourceState.form,
         snapshot: _sourceState.snapshot,
         generated: _sourceState.generated,
         isStale: true,
@@ -636,9 +703,33 @@ class ChartWorkbenchController extends ChangeNotifier
 
   void _notifyStatus() {
     if (_disposed) return;
+    // A status change can originate from inside a frame the framework is still
+    // building: a remounted chart attaches its controller from `initState`,
+    // which publishes an effective document revision while this workbench's
+    // own subtree is under construction. Rebuilding a listening widget from
+    // there is illegal, so publish once the frame is finished instead. Every
+    // state change stays synchronous — only the notification moves.
+    if (_isInsideFrame) {
+      _scheduleStatusNotification();
+      return;
+    }
     notifyListeners();
     _onStatusChanged?.call(status);
   }
+
+  /// Whether the framework is currently building, laying out, or painting.
+  ///
+  /// Marking a widget dirty during those phases throws; every other phase
+  /// (idle, transient callbacks, post-frame callbacks) simply schedules the
+  /// next frame.
+  static bool get _isInsideFrame =>
+      switch (WidgetsBinding.instance.schedulerPhase) {
+        SchedulerPhase.persistentCallbacks ||
+        SchedulerPhase.midFrameMicrotasks => true,
+        SchedulerPhase.idle ||
+        SchedulerPhase.transientCallbacks ||
+        SchedulerPhase.postFrameCallbacks => false,
+      };
 
   void _scheduleStatusNotification() {
     if (_statusNotificationFrameScheduled || _disposed) return;
@@ -700,6 +791,7 @@ class ChartWorkbenchController extends ChangeNotifier
     if (sourceSnapshot != null && sourceSnapshot.revision != revision) {
       _sourceState = ChartWorkbenchSourceState(
         phase: _sourceState.phase,
+        form: _sourceState.form,
         snapshot: sourceSnapshot,
         generated: _sourceState.generated,
         isStale: true,
@@ -780,7 +872,9 @@ class BravenChartWorkbench extends StatefulWidget {
     this.tableOptions = const ChartTableOptions(),
     this.tableRefreshPolicy = ChartTableRefreshPolicy.onModeEntry,
     this.sourceOptions = const ChartDartSourceOptions(),
+    this.grammarSourceOptions = const ChartGrammarSourceOptions(),
     this.sourceRefreshPolicy = ChartSourceRefreshPolicy.onDocumentRevision,
+    this.initialSourceForm = ChartSourceForm.config,
     this.actionsBuilder,
     this.contextActionsBuilder,
     this.chartActionButtonBuilder,
@@ -850,11 +944,20 @@ class BravenChartWorkbench extends StatefulWidget {
   /// Formatting, data-volume, and view-state rules for generated Dart.
   final ChartDartSourceOptions sourceOptions;
 
+  /// Naming and data-volume rules for the generated grammar chain.
+  final ChartGrammarSourceOptions grammarSourceOptions;
+
   /// Determines when generated source is refreshed automatically.
   ///
   /// Defaults to [ChartSourceRefreshPolicy.onDocumentRevision] so visible
   /// Source always follows the chart's current effective configuration.
   final ChartSourceRefreshPolicy sourceRefreshPolicy;
+
+  /// The form the Source pane opens in.
+  ///
+  /// The pane always offers BOTH forms; this only chooses which one is shown
+  /// first, so a host whose charts are grammar-authored can open on the chain.
+  final ChartSourceForm initialSourceForm;
 
   /// Builds storage-agnostic host actions with a stable imperative handle.
   final ChartWorkbenchActionsBuilder? actionsBuilder;
@@ -995,7 +1098,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       tableOptions: widget.tableOptions,
       refreshPolicy: widget.tableRefreshPolicy,
       sourceOptions: widget.sourceOptions,
+      grammarSourceOptions: widget.grammarSourceOptions,
       sourceRefreshPolicy: widget.sourceRefreshPolicy,
+      initialSourceForm: widget.initialSourceForm,
       onStatusChanged: widget.onStatusChanged,
     );
   }
@@ -1029,7 +1134,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         tableOptions: widget.tableOptions,
         refreshPolicy: widget.tableRefreshPolicy,
         sourceOptions: widget.sourceOptions,
+        grammarSourceOptions: widget.grammarSourceOptions,
         sourceRefreshPolicy: widget.sourceRefreshPolicy,
+        initialSourceForm: widget.initialSourceForm,
         onStatusChanged: widget.onStatusChanged,
       );
     }
@@ -1064,7 +1171,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         tableOptions: widget.tableOptions,
         refreshPolicy: widget.tableRefreshPolicy,
         sourceOptions: widget.sourceOptions,
+        grammarSourceOptions: widget.grammarSourceOptions,
         sourceRefreshPolicy: widget.sourceRefreshPolicy,
+        initialSourceForm: widget.initialSourceForm,
       );
     _syncGroupController(force: workbenchChanged);
     _groupController?.updateWorkbench(this, widget.availableDisplayModes);
@@ -1335,24 +1444,34 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
             ),
           ),
         ),
+        // A pane that has been requested once stays mounted so returning to it
+        // is instant, but a hidden pane must stop animating: its indeterminate
+        // progress bar would otherwise schedule frames for as long as the
+        // workbench lives.
         if (tableHasBeenRequested)
           Positioned.fromRect(
             rect: tableRect,
-            child: Offstage(
-              offstage: !_modeShowsTable(effective),
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surface,
-                child: _buildTableSurface(context),
+            child: TickerMode(
+              enabled: _modeShowsTable(effective),
+              child: Offstage(
+                offstage: !_modeShowsTable(effective),
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: _buildTableSurface(context),
+                ),
               ),
             ),
           ),
         if (sourceHasBeenRequested)
           Positioned.fill(
-            child: Offstage(
-              offstage: !_modeShowsSource(effective),
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surface,
-                child: _buildSourceSurface(context),
+            child: TickerMode(
+              enabled: _modeShowsSource(effective),
+              child: Offstage(
+                offstage: !_modeShowsSource(effective),
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: _buildSourceSurface(context),
+                ),
               ),
             ),
           ),
@@ -1433,6 +1552,8 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                 )
               : ChartSourceView(
                   generated: generated,
+                  form: state.form,
+                  onFormChanged: _workbenchController.setSourceForm,
                   isStale: state.isStale && !followsDocumentRevision,
                   isRefreshing:
                       state.phase == ChartWorkbenchSourcePhase.refreshing,
