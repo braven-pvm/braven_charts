@@ -23,10 +23,10 @@ Breadth item that lets the grammar express a chart also removes that chart's "no
 in the Source tab.
 
 ### Theme A — Breadth (make the grammar express more charts)
-- **Non-trend annotation marks** — Range/Threshold/Point annotations get chain verbs. *(V2.0)*
-- **Chart-level options on `PlotSpec`** — non-default grid, title/subtitle, legend/toolbar toggles. *(V2.0)*
-- **Per-mark data-point markers + inline labels** on Line/Area/Bar. *(V2.0)*
-- Faceting / small-multiples — `.facet(by:)` lowering to N synchronized widgets. *(V2.x, high cost)*
+- ✅ **Non-trend annotation marks** — Range/Threshold/Point annotations get chain verbs. *(V2.0 — DONE)*
+- ✅ **Chart-level options on `PlotSpec`** — grid, title/subtitle, legend toggle. *(V2.0 — DONE; toolbar/background/axis-swap/normalization/size still deferred)*
+- ✅ **Per-mark data-point markers + inline labels** on Line/Area/Bar. *(V2.0 — DONE)*
+- Faceting / small-multiples — `.facet(by:)` lowering to N synchronized widgets. *(V2.x, high cost — next Breadth item)*
 - Radial/polar marks — Pie/Donut/Polar authorable via the grammar. *(V2.x, high cost — new geometry family)*
 - Scale-driven colour/size/opacity channels on non-scatter families. *(V2.x — needs render-pipeline work)*
 - Log/time scale objects. *(V2.x)*
@@ -48,13 +48,22 @@ mirrors of the config surface. V1 made the model drive the fluent layer + AI sch
 
 ## Sequence (owner-approved 2026-07-22)
 
-1. **V2.0 — Close the emission gaps** *(active)*. The three low-cost Theme-A items above, in one lane.
-   Together they turn most existing charts from "not emitted" into a real grammar chain — the most
-   user-visible next win, and it directly closes what the owner saw in the Source tab. Plan:
+1. ✅ **V2.0 — Close the emission gaps** *(DONE)*. All three low-cost Theme-A items landed in one lane
+   (`feature/grammar-v2`): reference annotation marks, chart-level grid/title/legend, and per-mark
+   markers/labels — each a full vertical slice (mark/`PlotSpec` field → lowering → facade verb →
+   config- & artifact-parity → grammar-source emission), with a *Reference lines* showcase preset whose
+   Grammar Source tab now emits a chain instead of a diagnostic. Together they turn the three charts the
+   owner saw diagnosed in the Source tab into real grammar chains. Plan:
    `docs/superpowers/plans/2026-07-22-grammar-v2.0-emission-gaps.md`.
-2. **Strategic fork** (decided after V2.0):
-   - **Convergence** (Theme B) — finish the single-source-of-truth story and start *deleting* mirrors. Highest long-term leverage.
-   - **Breadth** (rest of Theme A) — radial marks + faceting make `BravenChart.of()` a universal authoring API. More visible, more expensive, some needs render-pipeline changes.
+2. **Strategic fork** *(now pending — decide next)*. With V2.0 shipped, the fork the sequence reserved is
+   live:
+   - **Convergence** (Theme B) — finish the single-source-of-truth story and start *deleting* mirrors
+     (generate the Source config emitter; the 29 `copyWith`-less config classes; AI schema builder-AST
+     convergence + the 2 live AI bugs). Highest long-term leverage.
+   - **Breadth** (rest of Theme A) — the remaining, higher-cost items: faceting / small-multiples,
+     radial/polar marks, scale-driven channels on non-scatter families, log/time scale objects — the
+     path to `BravenChart.of()` as a universal authoring API. More visible, more expensive, some needs
+     render-pipeline changes.
 
 ## Dependency / branch note
 

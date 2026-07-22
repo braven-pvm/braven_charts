@@ -13,9 +13,11 @@ core API, and code that never imports them never sees them.
 They are independent. The fluent layer edits configs; the grammar describes a
 chart and then produces configs. You can use either, both, or neither.
 
-Showcase: **Chart Grammar** (`?page=chart-grammar`) — five presets authored
+Showcase: **Chart Grammar** (`?page=chart-grammar`) — six presets authored
 through the chained facade only, each inside the Chart / Data / Split / Source
-workbench, with a "Compare hand-built" toggle.
+workbench, with a "Compare hand-built" toggle. The *Reference lines* preset
+exercises the V2.0 verbs (`.threshold` / `.grid` / `.title` / per-mark
+markers) so its Grammar Source tab shows a chain, not a diagnostic.
 
 ---
 
@@ -213,8 +215,9 @@ PlotSpec<Ride>(
 ```
 
 `Mark<T>` is a **sealed** hierarchy, so a `switch` that misses a variant does
-not compile — every dispatch site is checked when a variant is added. The V1
-marks are Cartesian only:
+not compile — every dispatch site is checked when a variant is added. The
+geometry marks are Cartesian; the last four lower to annotations rather than a
+series:
 
 | Mark | Lowers to |
 | --- | --- |
@@ -224,6 +227,12 @@ marks are Cartesian only:
 | `ScatterMark<T>` | `ScatterChartSeries` |
 | `CandlestickMark<T>` | `CandlestickChartSeries` |
 | `TrendMark<T>` | `TrendAnnotation` bound to its source series |
+| `ThresholdMark<T>` *(V2.0)* | `ThresholdAnnotation` — a reference line at a value |
+| `BandMark<T>` *(V2.0)* | `RangeAnnotation` — a 1-D shaded band |
+| `PointMark<T>` *(V2.0)* | `PointAnnotation` — a marker on one series' point |
+
+Like `TrendMark`, the three V2.0 reference marks produce no geometry of their
+own — they append an annotation — and carry no `copyWith`.
 
 **Channels exist only where they can be honoured.** `Channel<T>` (quantitative)
 and `CategoryChannel<T>` (categorical) are constructor parameters of
@@ -259,6 +268,69 @@ would generate a fluent verb surface *over the grammar layer*, giving
 second vocabulary for the same objects. Marks are small. Modify one by
 constructing a new one, or author through the chained facade. The same
 reasoning covers `PlotSpec`, `Channel`, `CategoryChannel` and `LoweredPlot`.
+
+### V2.0 verbs — reference marks, chart-level options, per-mark markers
+
+Three additions in V2.0 let the grammar author — *and* round-trip-emit — the
+three most common charts V1 could only diagnose. None changes the render
+pipeline or a config class; each is a mark/`PlotSpec` field that lowers onto
+config the pipeline already understood.
+
+**Reference annotation marks.** Non-trend annotations now have chain verbs.
+Each appends a mark that lowers to an annotation, not a series:
+
+```dart
+// A reference line at a value on one axis → ThresholdAnnotation.
+BravenChart<T> threshold({
+  required double value,
+  AnnotationAxis axis = AnnotationAxis.y,
+  String? id, String? label, Color? color,
+  double? strokeWidth, List<double>? dashPattern,
+});
+
+// A 1-D shaded band between two values on one axis → RangeAnnotation
+// (an X band or a Y band, never a 2-D box).
+BravenChart<T> band({
+  required double start,
+  required double end,
+  AnnotationAxis axis = AnnotationAxis.y,
+  String? id, String? label, Color? color,
+});
+
+// A marker on one existing series' data point → PointAnnotation.
+// This is NOT the scatter geometry: it annotates ONE point of a geometry
+// already in the chain.
+BravenChart<T> pointAt({
+  required String seriesId,
+  required int dataPointIndex,
+  String? id, String? label, Color? color,
+  double? markerSize, MarkerShape? markerShape,
+});
+```
+
+**Chart-level options.** `PlotSpec` now carries a grid, a title/subtitle and
+legend visibility, and `BravenPlot` forwards them to `BravenChartPlus`. A
+`null` grid or `showLegend` reproduces the chart default (`const GridConfig()`
+and a shown legend), so a V1 spec is unchanged:
+
+```dart
+BravenChart<T> grid(GridConfig grid);
+BravenChart<T> title(String title, {String? subtitle});
+BravenChart<T> legend(bool show);
+```
+
+**Per-mark data-point markers and inline labels.** `geomLine` and `geomArea`
+gained `showDataPointMarkers` and `dataPointLabels`; `geomBar` gained
+`labelStyle` (a bar is its own mark, so it has no per-point marker toggle).
+Each defaults to unset and lowers to the matching `ChartSeries` field:
+
+```dart
+// on geomLine / geomArea:
+bool? showDataPointMarkers,          // → *ChartSeries.showDataPointMarkers
+DataPointLabelConfig? dataPointLabels, // → *ChartSeries.dataPointLabels
+// on geomBar:
+BarLabelStyle? labelStyle,           // → BarChartSeries.labelStyle
+```
 
 ### Rendering: `BravenPlot`
 
@@ -516,9 +588,11 @@ runtime-only bindings.
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
 | A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
 | Mixed bar orientations | **Blocked**: `.transposed()` is a whole-chart operation, so a transposed chain may contain horizontal bar marks only. |
-| An annotation other than `TrendAnnotation` | **Blocked and LISTED**, never dropped. `TrendAnnotation` maps to `.trend(of:)`. |
-| A chart-level option `BravenPlot` does not forward — title, subtitle, `showLegend`, `legendStyle`, a **non-default** grid, `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, `axisSwapMode`, `normalizationMode`, width/height, background | **Blocked**, naming each one. `BravenPlot` passes only series, annotations, the X axis, interaction and the theme. A *default* grid is not lost: `BravenChartPlus` resolves an unset grid to exactly `const GridConfig()`, which the chain reproduces by carrying no grid. |
-| Anything else the reconstructed chain would not reproduce exactly | **Blocked** by the round-trip proof, naming the series, annotation or axis that differs — and, where it can be pinned down cheaply, the specific option a V1 mark cannot carry (e.g. `showDataPointMarkers`, a fill gradient, an inline label) or the single-axis binding a config-authored chart leaves implicit. |
+| A `TrendAnnotation`, `ThresholdAnnotation`, a clean 1-D `RangeAnnotation` or a `PointAnnotation` | **EMITTED** *(V2.0)* as `.trend(of:)` / `.threshold(...)` / `.band(...)` / `.pointAt(...)` — the reference-mark verbs. |
+| Any OTHER annotation (text, pin, chord, error-bar, legend), a 2-D or half-open range, or ANY series-level annotation | **Blocked and LISTED**, never dropped. |
+| A grid, a title/subtitle, or a legend toggle | **EMITTED** *(V2.0)* as `.grid(...)` / `.title(...)` / `.legend(...)`. `PlotSpec` now carries them and `BravenPlot` forwards them; a *default* grid or a shown legend carries nothing, reproducing the chart default. A subtitle with **no** title is the one gated corner — the verb only attaches a subtitle to a title. |
+| A chart-level option `BravenPlot` still does not forward — `legendStyle`, `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, `axisSwapMode`, `normalizationMode`, width/height, background | **Blocked**, naming each one. `BravenPlot` passes series, annotations, the X axis, interaction, the theme, and now the grid, title, subtitle and legend visibility. |
+| Anything else the reconstructed chain would not reproduce exactly | **Blocked** by the round-trip proof, naming the series, annotation or axis that differs — and, where it can be pinned down cheaply, the specific option a V1 mark cannot carry (e.g. a fill gradient, a curve tension, an inline series label — `showDataPointMarkers` and inline data-point labels are **carried** as of V2.0) or the single-axis binding a config-authored chart leaves implicit. |
 | A runtime interaction binding | **Emitted with a warning**, exactly as the config form does. |
 | Data above `maxInlinePoints` | **Emitted with a placeholder row list and a warning**, exactly as the config form does. |
 | A host-owned theme reference | **Emitted without `.theme(...)`**, with a warning naming the reference. |
@@ -541,9 +615,23 @@ unchanged.
 
 ---
 
-## Not in V1
+## Added in V2.0
 
-Deferred deliberately, so the V1 mark list is closed:
+Three families of authoring — the three most common charts V1 could only
+diagnose — now round-trip. Each is a `Mark`/`PlotSpec` field lowering onto
+config the pipeline already understood (details under *V2.0 verbs* above):
+
+- **Non-trend reference annotation marks.** `.threshold(value:)`,
+  `.band(start:, end:)` and `.pointAt(seriesId:, dataPointIndex:)` lower to
+  `ThresholdAnnotation` / `RangeAnnotation` / `PointAnnotation`.
+- **Chart-level grid, title/subtitle and legend.** `.grid(...)`, `.title(...)`
+  and `.legend(...)` are carried on `PlotSpec` and forwarded by `BravenPlot`.
+- **Per-mark data-point markers and inline labels.** `showDataPointMarkers`
+  and `dataPointLabels` on `geomLine`/`geomArea`, and `labelStyle` on `geomBar`.
+
+## Not in V1 (still deferred)
+
+Deferred deliberately, so the V1 mark list stays closed:
 
 - **Radial and polar marks.** Pie, Donut, Concentric Donut and Polar Column
   have no grammar geometry; author them with their config APIs.
@@ -557,12 +645,11 @@ Deferred deliberately, so the V1 mark list is closed:
 - **Scale-driven channels on non-scatter families.** Colour/size/opacity
   channels exist only on `ScatterMark`, because scatter is the only family the
   render pipeline scales today.
-- **Non-trend annotation marks.** Only `TrendAnnotation` maps to the grammar,
-  through `.trend(of:)`; Range/Threshold/Point annotations have no chain verb.
-- **Grid and other chart-level options.** A non-default grid, title/subtitle,
-  legend/toolbar toggles, width/height, background and the axis-swap /
-  normalization knobs live on `BravenChartPlus`, not on `PlotSpec` / `BravenPlot`.
-  (A *default* grid IS carried — see the fidelity matrix.)
+- **The remaining chart-level options.** `legendStyle`, the toolbar toggle,
+  `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization
+  knobs, width/height and background live on `BravenChartPlus`, not on
+  `PlotSpec` / `BravenPlot`. (The grid, title/subtitle and legend toggle ARE
+  carried as of V2.0 — see above.)
 - **Grammar-source emission of config-authored single-axis charts.** The
   Workbench Grammar form reproduces charts document-for-document; a chart on the
   widget-level `yAxis:` path (a series whose `yAxisId` is unset) is diagnosed
