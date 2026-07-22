@@ -5,6 +5,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/painting.dart' show FontWeight;
 
+import '../meta/chart_surface.dart';
 import 'chart_data_point.dart';
 
 /// Selects which screen axis carries categories and values for a bar series.
@@ -67,6 +68,7 @@ enum BarDivergingRole {
 }
 
 /// Center-line treatment for a diverging stacked bar composition.
+@chartSurface
 class BarDivergingStyle {
   const BarDivergingStyle({
     this.showCenterLine = true,
@@ -83,6 +85,18 @@ class BarDivergingStyle {
   final Color centerLineColor;
   final double centerLineWidth;
   final double centerLineOpacity;
+
+  BarDivergingStyle copyWith({
+    bool? showCenterLine,
+    Color? centerLineColor,
+    double? centerLineWidth,
+    double? centerLineOpacity,
+  }) => BarDivergingStyle(
+    showCenterLine: showCenterLine ?? this.showCenterLine,
+    centerLineColor: centerLineColor ?? this.centerLineColor,
+    centerLineWidth: centerLineWidth ?? this.centerLineWidth,
+    centerLineOpacity: centerLineOpacity ?? this.centerLineOpacity,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -142,6 +156,7 @@ enum BarAnimationOrder {
 }
 
 /// Serializable choreography for bar entrance and data-update motion.
+@chartSurface
 class BarMotionStyle {
   const BarMotionStyle({
     this.order = BarAnimationOrder.together,
@@ -161,6 +176,14 @@ class BarMotionStyle {
   /// completion point.
   final double staggerFraction;
 
+  BarMotionStyle copyWith({
+    BarAnimationOrder? order,
+    double? staggerFraction,
+  }) => BarMotionStyle(
+    order: order ?? this.order,
+    staggerFraction: staggerFraction ?? this.staggerFraction,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -175,11 +198,21 @@ class BarMotionStyle {
 /// A serializable linear gradient used to fill bars.
 ///
 /// The gradient follows the value axis: baseline to value end for each bar.
+@chartSurface
 class BarGradient {
   const BarGradient({required this.colors, this.stops});
 
   final List<Color> colors;
   final List<double>? stops;
+
+  BarGradient copyWith({
+    List<Color>? colors,
+    List<double>? stops,
+    bool clearStops = false,
+  }) => BarGradient(
+    colors: colors ?? this.colors,
+    stops: clearStops ? null : (stops ?? this.stops),
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -215,6 +248,7 @@ enum BarFillPattern {
 ///
 /// Patterns provide a second visual channel alongside color. When [color] is
 /// null, the renderer chooses black or white from the resolved bar luminance.
+@chartSurface
 class BarPatternStyle {
   const BarPatternStyle({
     required this.pattern,
@@ -235,6 +269,21 @@ class BarPatternStyle {
   final double strokeWidth;
   final double opacity;
 
+  BarPatternStyle copyWith({
+    BarFillPattern? pattern,
+    Color? color,
+    double? spacing,
+    double? strokeWidth,
+    double? opacity,
+    bool clearColor = false,
+  }) => BarPatternStyle(
+    pattern: pattern ?? this.pattern,
+    color: clearColor ? null : (color ?? this.color),
+    spacing: spacing ?? this.spacing,
+    strokeWidth: strokeWidth ?? this.strokeWidth,
+    opacity: opacity ?? this.opacity,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -251,12 +300,21 @@ class BarPatternStyle {
 }
 
 /// Optional border drawn around each bar.
+@chartSurface
 class BarBorderStyle {
   const BarBorderStyle({required this.color, this.width = 1.0})
     : assert(width >= 0, 'Border width must be non-negative');
 
   final Color color;
   final double width;
+
+  BarBorderStyle copyWith({
+    Color? color,
+    double? width,
+  }) => BarBorderStyle(
+    color: color ?? this.color,
+    width: width ?? this.width,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -272,6 +330,7 @@ class BarBorderStyle {
 /// State feedback deliberately combines opacity, fill, and outlines so hover,
 /// press, focus, and selection remain distinguishable without relying on color
 /// alone. Null colors inherit from the bar or chart interaction theme.
+@chartSurface
 class BarInteractionStyle {
   const BarInteractionStyle({
     this.hoverColor,
@@ -317,6 +376,39 @@ class BarInteractionStyle {
   /// Opacity multiplier for unselected bars while any bar point is selected.
   final double dimmedOpacity;
 
+  BarInteractionStyle copyWith({
+    Color? hoverColor,
+    double? hoverOpacity,
+    double? hoverBorderWidth,
+    Color? pressedColor,
+    double? pressedOpacity,
+    Color? selectionColor,
+    double? selectionOpacity,
+    double? selectionBorderWidth,
+    Color? focusColor,
+    double? focusBorderWidth,
+    double? focusGap,
+    double? dimmedOpacity,
+    bool clearHoverColor = false,
+    bool clearSelectionColor = false,
+    bool clearFocusColor = false,
+  }) => BarInteractionStyle(
+    hoverColor: clearHoverColor ? null : (hoverColor ?? this.hoverColor),
+    hoverOpacity: hoverOpacity ?? this.hoverOpacity,
+    hoverBorderWidth: hoverBorderWidth ?? this.hoverBorderWidth,
+    pressedColor: pressedColor ?? this.pressedColor,
+    pressedOpacity: pressedOpacity ?? this.pressedOpacity,
+    selectionColor: clearSelectionColor
+        ? null
+        : (selectionColor ?? this.selectionColor),
+    selectionOpacity: selectionOpacity ?? this.selectionOpacity,
+    selectionBorderWidth: selectionBorderWidth ?? this.selectionBorderWidth,
+    focusColor: clearFocusColor ? null : (focusColor ?? this.focusColor),
+    focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
+    focusGap: focusGap ?? this.focusGap,
+    dimmedOpacity: dimmedOpacity ?? this.dimmedOpacity,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -352,6 +444,7 @@ class BarInteractionStyle {
 }
 
 /// Visual styling shared by all bars in a series.
+@chartSurface
 class BarChartStyle {
   const BarChartStyle({
     this.cornerRadius = 0.0,
@@ -383,6 +476,31 @@ class BarChartStyle {
   /// Optional sequencing applied within this series.
   final BarMotionStyle motion;
 
+  BarChartStyle copyWith({
+    double? cornerRadius,
+    BarCornerRadiusPolicy? cornerRadiusPolicy,
+    BarGradient? gradient,
+    BarPatternStyle? pattern,
+    BarBorderStyle? border,
+    double? opacity,
+    BarInteractionStyle? interaction,
+    BarAnimationMode? animationMode,
+    BarMotionStyle? motion,
+    bool clearGradient = false,
+    bool clearPattern = false,
+    bool clearBorder = false,
+  }) => BarChartStyle(
+    cornerRadius: cornerRadius ?? this.cornerRadius,
+    cornerRadiusPolicy: cornerRadiusPolicy ?? this.cornerRadiusPolicy,
+    gradient: clearGradient ? null : (gradient ?? this.gradient),
+    pattern: clearPattern ? null : (pattern ?? this.pattern),
+    border: clearBorder ? null : (border ?? this.border),
+    opacity: opacity ?? this.opacity,
+    interaction: interaction ?? this.interaction,
+    animationMode: animationMode ?? this.animationMode,
+    motion: motion ?? this.motion,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -412,6 +530,7 @@ class BarChartStyle {
 }
 
 /// A passive capacity or target track rendered behind each bar.
+@chartSurface
 class BarTrackStyle {
   const BarTrackStyle({
     required this.color,
@@ -442,6 +561,23 @@ class BarTrackStyle {
 
   final BarBorderStyle? border;
 
+  BarTrackStyle copyWith({
+    Color? color,
+    double? value,
+    double? opacity,
+    double? cornerRadius,
+    BarBorderStyle? border,
+    bool clearValue = false,
+    bool clearCornerRadius = false,
+    bool clearBorder = false,
+  }) => BarTrackStyle(
+    color: color ?? this.color,
+    value: clearValue ? null : (value ?? this.value),
+    opacity: opacity ?? this.opacity,
+    cornerRadius: clearCornerRadius ? null : (cornerRadius ?? this.cornerRadius),
+    border: clearBorder ? null : (border ?? this.border),
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -462,6 +598,7 @@ class BarTrackStyle {
 /// same canonical value geometry, labels, animation, tooltips, and
 /// interactions. The stem follows the value axis and the circular head marks
 /// the exact value end.
+@chartSurface
 class BarLollipopStyle {
   const BarLollipopStyle({
     this.stemWidth = 3.0,
@@ -487,6 +624,23 @@ class BarLollipopStyle {
   /// Optional outline around the value marker.
   final BarBorderStyle? headBorder;
 
+  BarLollipopStyle copyWith({
+    double? stemWidth,
+    double? headRadius,
+    Color? stemColor,
+    Color? headColor,
+    BarBorderStyle? headBorder,
+    bool clearStemColor = false,
+    bool clearHeadColor = false,
+    bool clearHeadBorder = false,
+  }) => BarLollipopStyle(
+    stemWidth: stemWidth ?? this.stemWidth,
+    headRadius: headRadius ?? this.headRadius,
+    stemColor: clearStemColor ? null : (stemColor ?? this.stemColor),
+    headColor: clearHeadColor ? null : (headColor ?? this.headColor),
+    headBorder: clearHeadBorder ? null : (headBorder ?? this.headBorder),
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -503,6 +657,7 @@ class BarLollipopStyle {
 }
 
 /// One qualitative performance range behind a bullet-chart measure.
+@chartSurface
 class BarBulletRange {
   const BarBulletRange({
     required this.endValue,
@@ -518,6 +673,17 @@ class BarBulletRange {
 
   /// Optional portable description such as `On track` or `Stretch`.
   final String? label;
+
+  BarBulletRange copyWith({
+    double? endValue,
+    Color? color,
+    String? label,
+    bool clearLabel = false,
+  }) => BarBulletRange(
+    endValue: endValue ?? this.endValue,
+    color: color ?? this.color,
+    label: clearLabel ? null : (label ?? this.label),
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -536,6 +702,7 @@ class BarBulletRange {
 /// Ranges are shared by every point in the series and paint behind the actual
 /// measure. The series target values remain the comparative
 /// marker, so the bullet chart does not create synthetic data series.
+@chartSurface
 class BarBulletStyle {
   const BarBulletStyle({
     required this.ranges,
@@ -567,6 +734,17 @@ class BarBulletStyle {
     return null;
   }
 
+  BarBulletStyle copyWith({
+    List<BarBulletRange>? ranges,
+    double? measureThicknessFactor,
+    double? cornerRadius,
+  }) => BarBulletStyle(
+    ranges: ranges ?? this.ranges,
+    measureThicknessFactor:
+        measureThicknessFactor ?? this.measureThicknessFactor,
+    cornerRadius: cornerRadius ?? this.cornerRadius,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -584,6 +762,7 @@ class BarBulletStyle {
 ///
 /// The marker is intentionally a passive reference: the bar remains the
 /// interactive data mark, while tooltips and semantics expose the target.
+@chartSurface
 class BarTargetMarkerStyle {
   const BarTargetMarkerStyle({
     this.color,
@@ -605,6 +784,19 @@ class BarTargetMarkerStyle {
 
   final double opacity;
 
+  BarTargetMarkerStyle copyWith({
+    Color? color,
+    double? width,
+    double? lengthFactor,
+    double? opacity,
+    bool clearColor = false,
+  }) => BarTargetMarkerStyle(
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    lengthFactor: lengthFactor ?? this.lengthFactor,
+    opacity: opacity ?? this.opacity,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -622,6 +814,7 @@ class BarTargetMarkerStyle {
 ///
 /// The interval is a passive analytical reference. Its stem follows the value
 /// axis and its caps cross the rendered bar at the lower and upper endpoints.
+@chartSurface
 class BarErrorBarStyle {
   const BarErrorBarStyle({
     this.color,
@@ -643,6 +836,19 @@ class BarErrorBarStyle {
 
   final double opacity;
 
+  BarErrorBarStyle copyWith({
+    Color? color,
+    double? width,
+    double? capLengthFactor,
+    double? opacity,
+    bool clearColor = false,
+  }) => BarErrorBarStyle(
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    capLengthFactor: capLengthFactor ?? this.capLengthFactor,
+    opacity: opacity ?? this.opacity,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -657,6 +863,7 @@ class BarErrorBarStyle {
 }
 
 /// Connector line drawn between sequential waterfall columns.
+@chartSurface
 class BarWaterfallConnectorStyle {
   const BarWaterfallConnectorStyle({
     this.show = true,
@@ -667,6 +874,16 @@ class BarWaterfallConnectorStyle {
   final bool show;
   final Color color;
   final double width;
+
+  BarWaterfallConnectorStyle copyWith({
+    bool? show,
+    Color? color,
+    double? width,
+  }) => BarWaterfallConnectorStyle(
+    show: show ?? this.show,
+    color: color ?? this.color,
+    width: width ?? this.width,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -681,6 +898,7 @@ class BarWaterfallConnectorStyle {
 }
 
 /// Semantic colors and connector presentation for waterfall bars.
+@chartSurface
 class BarWaterfallStyle {
   const BarWaterfallStyle({
     this.increaseColor,
@@ -699,6 +917,25 @@ class BarWaterfallStyle {
   final Color? totalColor;
 
   final BarWaterfallConnectorStyle connector;
+
+  BarWaterfallStyle copyWith({
+    Color? increaseColor,
+    Color? decreaseColor,
+    Color? totalColor,
+    BarWaterfallConnectorStyle? connector,
+    bool clearIncreaseColor = false,
+    bool clearDecreaseColor = false,
+    bool clearTotalColor = false,
+  }) => BarWaterfallStyle(
+    increaseColor: clearIncreaseColor
+        ? null
+        : (increaseColor ?? this.increaseColor),
+    decreaseColor: clearDecreaseColor
+        ? null
+        : (decreaseColor ?? this.decreaseColor),
+    totalColor: clearTotalColor ? null : (totalColor ?? this.totalColor),
+    connector: connector ?? this.connector,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -763,6 +1000,7 @@ enum BarLabelCollisionPolicy {
 }
 
 /// Optional connector drawn between a displaced label and its bar value end.
+@chartSurface
 class BarLabelCalloutStyle {
   const BarLabelCalloutStyle({
     this.show = false,
@@ -780,6 +1018,19 @@ class BarLabelCalloutStyle {
   final double width;
   final double minimumLength;
 
+  BarLabelCalloutStyle copyWith({
+    bool? show,
+    Color? color,
+    double? width,
+    double? minimumLength,
+    bool clearColor = false,
+  }) => BarLabelCalloutStyle(
+    show: show ?? this.show,
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    minimumLength: minimumLength ?? this.minimumLength,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -794,6 +1045,7 @@ class BarLabelCalloutStyle {
 }
 
 /// Optional value labels rendered using bar geometry rather than marker geometry.
+@ChartSurface(excluded: ['formatter'])
 class BarLabelStyle {
   const BarLabelStyle({
     this.show = false,
@@ -864,6 +1116,54 @@ class BarLabelStyle {
 
   /// Runtime-only formatter. Portable artifacts intentionally omit callbacks.
   final String Function(ChartDataPoint)? formatter;
+
+  BarLabelStyle copyWith({
+    bool? show,
+    BarLabelPosition? position,
+    BarLabelValueMode? valueMode,
+    Color? color,
+    double? fontSize,
+    FontWeight? fontWeight,
+    bool? showUnit,
+    double? padding,
+    BarLabelCollisionPolicy? collisionPolicy,
+    bool? plotEdgeAware,
+    double? collisionPadding,
+    Color? backgroundColor,
+    Color? borderColor,
+    double? borderWidth,
+    double? borderRadius,
+    double? backgroundPadding,
+    BarLabelCalloutStyle? callout,
+    bool? showStackTotal,
+    String Function(ChartDataPoint)? formatter,
+    bool clearColor = false,
+    bool clearBackgroundColor = false,
+    bool clearBorderColor = false,
+    bool clearFormatter = false,
+  }) => BarLabelStyle(
+    show: show ?? this.show,
+    position: position ?? this.position,
+    valueMode: valueMode ?? this.valueMode,
+    color: clearColor ? null : (color ?? this.color),
+    fontSize: fontSize ?? this.fontSize,
+    fontWeight: fontWeight ?? this.fontWeight,
+    showUnit: showUnit ?? this.showUnit,
+    padding: padding ?? this.padding,
+    collisionPolicy: collisionPolicy ?? this.collisionPolicy,
+    plotEdgeAware: plotEdgeAware ?? this.plotEdgeAware,
+    collisionPadding: collisionPadding ?? this.collisionPadding,
+    backgroundColor: clearBackgroundColor
+        ? null
+        : (backgroundColor ?? this.backgroundColor),
+    borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
+    borderWidth: borderWidth ?? this.borderWidth,
+    borderRadius: borderRadius ?? this.borderRadius,
+    backgroundPadding: backgroundPadding ?? this.backgroundPadding,
+    callout: callout ?? this.callout,
+    showStackTotal: showStackTotal ?? this.showStackTotal,
+    formatter: clearFormatter ? null : (formatter ?? this.formatter),
+  );
 
   @override
   bool operator ==(Object other) =>

@@ -238,13 +238,37 @@ extension ScatterChartSeriesFluent on ScatterChartSeries {
   ScatterChartSeries withClusterConfig(ScatterClusterConfig value) =>
       copyWith(clusterConfig: value);
 
+  /// Rebuilds [ScatterChartSeries.clusterConfig] from its current value.
+  ///
+  /// `update` receives the current [ScatterClusterConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ScatterChartSeries updateClusterConfig(
+    ScatterClusterConfig Function(ScatterClusterConfig current) update,
+  ) => copyWith(clusterConfig: update(clusterConfig));
+
   /// Replaces [ScatterChartSeries.binConfig] with [value].
   ScatterChartSeries withBinConfig(ScatterBinConfig value) =>
       copyWith(binConfig: value);
 
+  /// Rebuilds [ScatterChartSeries.binConfig] from its current value.
+  ///
+  /// `update` receives the current [ScatterBinConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ScatterChartSeries updateBinConfig(
+    ScatterBinConfig Function(ScatterBinConfig current) update,
+  ) => copyWith(binConfig: update(binConfig));
+
   /// Replaces [ScatterChartSeries.densityConfig] with [value].
   ScatterChartSeries withDensityConfig(ScatterDensityConfig value) =>
       copyWith(densityConfig: value);
+
+  /// Rebuilds [ScatterChartSeries.densityConfig] from its current value.
+  ///
+  /// `update` receives the current [ScatterDensityConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ScatterChartSeries updateDensityConfig(
+    ScatterDensityConfig Function(ScatterDensityConfig current) update,
+  ) => copyWith(densityConfig: update(densityConfig));
 
   /// Replaces [ScatterChartSeries.dataPointLabels] with [value].
   ScatterChartSeries withDataPointLabels(DataPointLabelConfig value) =>
@@ -497,6 +521,14 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withDivergingStyle(BarDivergingStyle value) =>
       copyWith(divergingStyle: value);
 
+  /// Rebuilds [BarChartSeries.divergingStyle] from its current value.
+  ///
+  /// `update` receives the current [BarDivergingStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateDivergingStyle(
+    BarDivergingStyle Function(BarDivergingStyle current) update,
+  ) => copyWith(divergingStyle: update(divergingStyle));
+
   /// Replaces [BarChartSeries.overlayWidthFactor] with [value].
   BarChartSeries withOverlayWidthFactor(double value) =>
       copyWith(overlayWidthFactor: value);
@@ -521,12 +553,28 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withWaterfallStyle(BarWaterfallStyle value) =>
       copyWith(waterfallStyle: value);
 
+  /// Rebuilds [BarChartSeries.waterfallStyle] from its current value.
+  ///
+  /// `update` receives the current [BarWaterfallStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateWaterfallStyle(
+    BarWaterfallStyle Function(BarWaterfallStyle current) update,
+  ) => copyWith(waterfallStyle: update(waterfallStyle));
+
   /// Replaces [BarChartSeries.minBarLength] with [value].
   BarChartSeries withMinBarLength(double value) =>
       copyWith(minBarLength: value);
 
   /// Replaces [BarChartSeries.barStyle] with [value].
   BarChartSeries withBarStyle(BarChartStyle value) => copyWith(barStyle: value);
+
+  /// Rebuilds [BarChartSeries.barStyle] from its current value.
+  ///
+  /// `update` receives the current [BarChartStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateBarStyle(
+    BarChartStyle Function(BarChartStyle current) update,
+  ) => copyWith(barStyle: update(barStyle));
 
   /// Replaces [BarChartSeries.trackStyle] with [value].
   BarChartSeries withTrackStyle(BarTrackStyle value) =>
@@ -557,6 +605,14 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withTargetMarkerStyle(BarTargetMarkerStyle value) =>
       copyWith(targetMarkerStyle: value);
 
+  /// Rebuilds [BarChartSeries.targetMarkerStyle] from its current value.
+  ///
+  /// `update` receives the current [BarTargetMarkerStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateTargetMarkerStyle(
+    BarTargetMarkerStyle Function(BarTargetMarkerStyle current) update,
+  ) => copyWith(targetMarkerStyle: update(targetMarkerStyle));
+
   /// Replaces [BarChartSeries.errorLowerValues] with [value].
   BarChartSeries withErrorLowerValues(List<double?> value) =>
       copyWith(errorLowerValues: value);
@@ -569,9 +625,25 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withErrorBarStyle(BarErrorBarStyle value) =>
       copyWith(errorBarStyle: value);
 
+  /// Rebuilds [BarChartSeries.errorBarStyle] from its current value.
+  ///
+  /// `update` receives the current [BarErrorBarStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateErrorBarStyle(
+    BarErrorBarStyle Function(BarErrorBarStyle current) update,
+  ) => copyWith(errorBarStyle: update(errorBarStyle));
+
   /// Replaces [BarChartSeries.labelStyle] with [value].
   BarChartSeries withLabelStyle(BarLabelStyle value) =>
       copyWith(labelStyle: value);
+
+  /// Rebuilds [BarChartSeries.labelStyle] from its current value.
+  ///
+  /// `update` receives the current [BarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  BarChartSeries updateLabelStyle(
+    BarLabelStyle Function(BarLabelStyle current) update,
+  ) => copyWith(labelStyle: update(labelStyle));
 
   /// Replaces [BarChartSeries.maxWidth] and [BarChartSeries.minWidth] together.
   ///

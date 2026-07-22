@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 98 of 98 classes have a synthesizable subject: every verb they
+// 120 of 120 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1161 verbs total; 10 of them have an argument type with no
+// 1343 verbs total; 7 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 98;
+const int _executedClasses = 120;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
@@ -136,7 +136,456 @@ void _smokeAutoScrollConfig(_Verb verb, AutoScrollConfig subject) {
   );
 }
 
-/// Smoke coverage for [CandlestickChartSeries]'s 11 executable verb(s).
+/// Smoke coverage for [BarDivergingStyle]'s 4 executable verb(s).
+void _smokeBarDivergingStyle(_Verb verb, BarDivergingStyle subject) {
+  verb(
+    'BarDivergingStyleFluent.withShowCenterLine',
+    () => subject.withShowCenterLine(true),
+  );
+  verb(
+    'BarDivergingStyleFluent.withCenterLineColor',
+    () => subject.withCenterLineColor(const Color(0xFF64748B)),
+  );
+  verb(
+    'BarDivergingStyleFluent.withCenterLineWidth',
+    () => subject.withCenterLineWidth(1.25),
+  );
+  verb(
+    'BarDivergingStyleFluent.withCenterLineOpacity',
+    () => subject.withCenterLineOpacity(0.7),
+  );
+}
+
+/// Smoke coverage for [BarMotionStyle]'s 2 executable verb(s).
+void _smokeBarMotionStyle(_Verb verb, BarMotionStyle subject) {
+  verb(
+    'BarMotionStyleFluent.withOrder',
+    () => subject.withOrder(BarAnimationOrder.together),
+  );
+  verb(
+    'BarMotionStyleFluent.withStaggerFraction',
+    () => subject.withStaggerFraction(0.0),
+  );
+}
+
+/// Smoke coverage for [BarGradient]'s 3 executable verb(s).
+void _smokeBarGradient(_Verb verb, BarGradient subject) {
+  verb(
+    'BarGradientFluent.withColors',
+    () => subject.withColors(const <Color>[]),
+  );
+  verb(
+    'BarGradientFluent.withStops',
+    () => subject.withStops(const <double>[]),
+  );
+  verb('BarGradientFluent.clearStops', () => subject.clearStops());
+}
+
+/// Smoke coverage for [BarPatternStyle]'s 6 executable verb(s).
+void _smokeBarPatternStyle(_Verb verb, BarPatternStyle subject) {
+  verb(
+    'BarPatternStyleFluent.withPattern',
+    () => subject.withPattern(BarFillPattern.values.first),
+  );
+  verb(
+    'BarPatternStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarPatternStyleFluent.clearColor', () => subject.clearColor());
+  verb('BarPatternStyleFluent.withSpacing', () => subject.withSpacing(8.0));
+  verb(
+    'BarPatternStyleFluent.withStrokeWidth',
+    () => subject.withStrokeWidth(1.5),
+  );
+  verb('BarPatternStyleFluent.withOpacity', () => subject.withOpacity(0.55));
+}
+
+/// Smoke coverage for [BarBorderStyle]'s 2 executable verb(s).
+void _smokeBarBorderStyle(_Verb verb, BarBorderStyle subject) {
+  verb(
+    'BarBorderStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarBorderStyleFluent.withWidth', () => subject.withWidth(1.0));
+}
+
+/// Smoke coverage for [BarInteractionStyle]'s 15 executable verb(s).
+void _smokeBarInteractionStyle(_Verb verb, BarInteractionStyle subject) {
+  verb(
+    'BarInteractionStyleFluent.withHoverColor',
+    () => subject.withHoverColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarInteractionStyleFluent.clearHoverColor',
+    () => subject.clearHoverColor(),
+  );
+  verb(
+    'BarInteractionStyleFluent.withHoverOpacity',
+    () => subject.withHoverOpacity(0.12),
+  );
+  verb(
+    'BarInteractionStyleFluent.withHoverBorderWidth',
+    () => subject.withHoverBorderWidth(2.0),
+  );
+  verb(
+    'BarInteractionStyleFluent.withPressedColor',
+    () => subject.withPressedColor(const Color(0xFF000000)),
+  );
+  verb(
+    'BarInteractionStyleFluent.withPressedOpacity',
+    () => subject.withPressedOpacity(0.16),
+  );
+  verb(
+    'BarInteractionStyleFluent.withSelectionColor',
+    () => subject.withSelectionColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarInteractionStyleFluent.clearSelectionColor',
+    () => subject.clearSelectionColor(),
+  );
+  verb(
+    'BarInteractionStyleFluent.withSelectionOpacity',
+    () => subject.withSelectionOpacity(0.14),
+  );
+  verb(
+    'BarInteractionStyleFluent.withSelectionBorderWidth',
+    () => subject.withSelectionBorderWidth(2.5),
+  );
+  verb(
+    'BarInteractionStyleFluent.withFocusColor',
+    () => subject.withFocusColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarInteractionStyleFluent.clearFocusColor',
+    () => subject.clearFocusColor(),
+  );
+  verb(
+    'BarInteractionStyleFluent.withFocusBorderWidth',
+    () => subject.withFocusBorderWidth(2.5),
+  );
+  verb(
+    'BarInteractionStyleFluent.withFocusGap',
+    () => subject.withFocusGap(3.0),
+  );
+  verb(
+    'BarInteractionStyleFluent.withDimmedOpacity',
+    () => subject.withDimmedOpacity(0.42),
+  );
+}
+
+/// Smoke coverage for [BarChartStyle]'s 14 executable verb(s).
+void _smokeBarChartStyle(_Verb verb, BarChartStyle subject) {
+  verb(
+    'BarChartStyleFluent.withCornerRadius',
+    () => subject.withCornerRadius(0.0),
+  );
+  verb(
+    'BarChartStyleFluent.withCornerRadiusPolicy',
+    () => subject.withCornerRadiusPolicy(BarCornerRadiusPolicy.valueEnd),
+  );
+  verb(
+    'BarChartStyleFluent.withGradient',
+    () => subject.withGradient(BarGradient(colors: const <Color>[])),
+  );
+  verb('BarChartStyleFluent.clearGradient', () => subject.clearGradient());
+  verb(
+    'BarChartStyleFluent.withPattern',
+    () => subject.withPattern(
+      BarPatternStyle(pattern: BarFillPattern.values.first),
+    ),
+  );
+  verb('BarChartStyleFluent.clearPattern', () => subject.clearPattern());
+  verb(
+    'BarChartStyleFluent.withBorder',
+    () => subject.withBorder(BarBorderStyle(color: const Color(0xFF2196F3))),
+  );
+  verb('BarChartStyleFluent.clearBorder', () => subject.clearBorder());
+  verb('BarChartStyleFluent.withOpacity', () => subject.withOpacity(1.0));
+  verb(
+    'BarChartStyleFluent.withInteraction',
+    () => subject.withInteraction(const BarInteractionStyle()),
+  );
+  verb(
+    'BarChartStyleFluent.updateInteraction',
+    () => subject.updateInteraction((current) => current),
+  );
+  verb(
+    'BarChartStyleFluent.withAnimationMode',
+    () => subject.withAnimationMode(BarAnimationMode.grow),
+  );
+  verb(
+    'BarChartStyleFluent.withMotion',
+    () => subject.withMotion(const BarMotionStyle()),
+  );
+  verb(
+    'BarChartStyleFluent.updateMotion',
+    () => subject.updateMotion((current) => current),
+  );
+}
+
+/// Smoke coverage for [BarTrackStyle]'s 8 executable verb(s).
+void _smokeBarTrackStyle(_Verb verb, BarTrackStyle subject) {
+  verb(
+    'BarTrackStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarTrackStyleFluent.withValue', () => subject.withValue(1.0));
+  verb('BarTrackStyleFluent.clearValue', () => subject.clearValue());
+  verb('BarTrackStyleFluent.withOpacity', () => subject.withOpacity(1.0));
+  verb(
+    'BarTrackStyleFluent.withCornerRadius',
+    () => subject.withCornerRadius(1.0),
+  );
+  verb(
+    'BarTrackStyleFluent.clearCornerRadius',
+    () => subject.clearCornerRadius(),
+  );
+  verb(
+    'BarTrackStyleFluent.withBorder',
+    () => subject.withBorder(BarBorderStyle(color: const Color(0xFF2196F3))),
+  );
+  verb('BarTrackStyleFluent.clearBorder', () => subject.clearBorder());
+}
+
+/// Smoke coverage for [BarLollipopStyle]'s 8 executable verb(s).
+void _smokeBarLollipopStyle(_Verb verb, BarLollipopStyle subject) {
+  verb(
+    'BarLollipopStyleFluent.withStemWidth',
+    () => subject.withStemWidth(3.0),
+  );
+  verb(
+    'BarLollipopStyleFluent.withHeadRadius',
+    () => subject.withHeadRadius(7.0),
+  );
+  verb(
+    'BarLollipopStyleFluent.withStemColor',
+    () => subject.withStemColor(const Color(0xFF2196F3)),
+  );
+  verb('BarLollipopStyleFluent.clearStemColor', () => subject.clearStemColor());
+  verb(
+    'BarLollipopStyleFluent.withHeadColor',
+    () => subject.withHeadColor(const Color(0xFF2196F3)),
+  );
+  verb('BarLollipopStyleFluent.clearHeadColor', () => subject.clearHeadColor());
+  verb(
+    'BarLollipopStyleFluent.withHeadBorder',
+    () =>
+        subject.withHeadBorder(BarBorderStyle(color: const Color(0xFF2196F3))),
+  );
+  verb(
+    'BarLollipopStyleFluent.clearHeadBorder',
+    () => subject.clearHeadBorder(),
+  );
+}
+
+/// Smoke coverage for [BarBulletRange]'s 4 executable verb(s).
+void _smokeBarBulletRange(_Verb verb, BarBulletRange subject) {
+  verb('BarBulletRangeFluent.withEndValue', () => subject.withEndValue(1.0));
+  verb(
+    'BarBulletRangeFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarBulletRangeFluent.withLabel', () => subject.withLabel('y'));
+  verb('BarBulletRangeFluent.clearLabel', () => subject.clearLabel());
+}
+
+/// Smoke coverage for [BarBulletStyle]'s 3 executable verb(s).
+void _smokeBarBulletStyle(_Verb verb, BarBulletStyle subject) {
+  verb(
+    'BarBulletStyleFluent.withRanges',
+    () => subject.withRanges(const <BarBulletRange>[]),
+  );
+  verb(
+    'BarBulletStyleFluent.withMeasureThicknessFactor',
+    () => subject.withMeasureThicknessFactor(0.45),
+  );
+  verb(
+    'BarBulletStyleFluent.withCornerRadius',
+    () => subject.withCornerRadius(3.0),
+  );
+}
+
+/// Smoke coverage for [BarTargetMarkerStyle]'s 5 executable verb(s).
+void _smokeBarTargetMarkerStyle(_Verb verb, BarTargetMarkerStyle subject) {
+  verb(
+    'BarTargetMarkerStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarTargetMarkerStyleFluent.clearColor', () => subject.clearColor());
+  verb('BarTargetMarkerStyleFluent.withWidth', () => subject.withWidth(2.0));
+  verb(
+    'BarTargetMarkerStyleFluent.withLengthFactor',
+    () => subject.withLengthFactor(1.3),
+  );
+  verb(
+    'BarTargetMarkerStyleFluent.withOpacity',
+    () => subject.withOpacity(1.0),
+  );
+}
+
+/// Smoke coverage for [BarErrorBarStyle]'s 5 executable verb(s).
+void _smokeBarErrorBarStyle(_Verb verb, BarErrorBarStyle subject) {
+  verb(
+    'BarErrorBarStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarErrorBarStyleFluent.clearColor', () => subject.clearColor());
+  verb('BarErrorBarStyleFluent.withWidth', () => subject.withWidth(1.5));
+  verb(
+    'BarErrorBarStyleFluent.withCapLengthFactor',
+    () => subject.withCapLengthFactor(0.6),
+  );
+  verb('BarErrorBarStyleFluent.withOpacity', () => subject.withOpacity(1.0));
+}
+
+/// Smoke coverage for [BarWaterfallConnectorStyle]'s 3 executable verb(s).
+void _smokeBarWaterfallConnectorStyle(
+  _Verb verb,
+  BarWaterfallConnectorStyle subject,
+) {
+  verb(
+    'BarWaterfallConnectorStyleFluent.withShow',
+    () => subject.withShow(true),
+  );
+  verb(
+    'BarWaterfallConnectorStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF9CA3AF)),
+  );
+  verb(
+    'BarWaterfallConnectorStyleFluent.withWidth',
+    () => subject.withWidth(1.0),
+  );
+}
+
+/// Smoke coverage for [BarWaterfallStyle]'s 8 executable verb(s).
+void _smokeBarWaterfallStyle(_Verb verb, BarWaterfallStyle subject) {
+  verb(
+    'BarWaterfallStyleFluent.withIncreaseColor',
+    () => subject.withIncreaseColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarWaterfallStyleFluent.clearIncreaseColor',
+    () => subject.clearIncreaseColor(),
+  );
+  verb(
+    'BarWaterfallStyleFluent.withDecreaseColor',
+    () => subject.withDecreaseColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarWaterfallStyleFluent.clearDecreaseColor',
+    () => subject.clearDecreaseColor(),
+  );
+  verb(
+    'BarWaterfallStyleFluent.withTotalColor',
+    () => subject.withTotalColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarWaterfallStyleFluent.clearTotalColor',
+    () => subject.clearTotalColor(),
+  );
+  verb(
+    'BarWaterfallStyleFluent.withConnector',
+    () => subject.withConnector(const BarWaterfallConnectorStyle()),
+  );
+  verb(
+    'BarWaterfallStyleFluent.updateConnector',
+    () => subject.updateConnector((current) => current),
+  );
+}
+
+/// Smoke coverage for [BarLabelCalloutStyle]'s 5 executable verb(s).
+void _smokeBarLabelCalloutStyle(_Verb verb, BarLabelCalloutStyle subject) {
+  verb('BarLabelCalloutStyleFluent.withShow', () => subject.withShow(false));
+  verb(
+    'BarLabelCalloutStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarLabelCalloutStyleFluent.clearColor', () => subject.clearColor());
+  verb('BarLabelCalloutStyleFluent.withWidth', () => subject.withWidth(1.0));
+  verb(
+    'BarLabelCalloutStyleFluent.withMinimumLength',
+    () => subject.withMinimumLength(4.0),
+  );
+}
+
+/// Smoke coverage for [BarLabelStyle]'s 22 executable verb(s).
+void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
+  verb('BarLabelStyleFluent.withShow', () => subject.withShow(false));
+  verb(
+    'BarLabelStyleFluent.withPosition',
+    () => subject.withPosition(BarLabelPosition.auto),
+  );
+  verb(
+    'BarLabelStyleFluent.withValueMode',
+    () => subject.withValueMode(BarLabelValueMode.value),
+  );
+  verb(
+    'BarLabelStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarLabelStyleFluent.clearColor', () => subject.clearColor());
+  verb('BarLabelStyleFluent.withFontSize', () => subject.withFontSize(10.0));
+  verb(
+    'BarLabelStyleFluent.withFontWeight',
+    () => subject.withFontWeight(FontWeight.w600),
+  );
+  verb('BarLabelStyleFluent.withShowUnit', () => subject.withShowUnit(false));
+  verb('BarLabelStyleFluent.withPadding', () => subject.withPadding(4.0));
+  verb(
+    'BarLabelStyleFluent.withCollisionPolicy',
+    () => subject.withCollisionPolicy(BarLabelCollisionPolicy.none),
+  );
+  verb(
+    'BarLabelStyleFluent.withPlotEdgeAware',
+    () => subject.withPlotEdgeAware(true),
+  );
+  verb(
+    'BarLabelStyleFluent.withCollisionPadding',
+    () => subject.withCollisionPadding(2.0),
+  );
+  verb(
+    'BarLabelStyleFluent.withBackgroundColor',
+    () => subject.withBackgroundColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarLabelStyleFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
+    'BarLabelStyleFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'BarLabelStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'BarLabelStyleFluent.withBorderWidth',
+    () => subject.withBorderWidth(0.0),
+  );
+  verb(
+    'BarLabelStyleFluent.withBorderRadius',
+    () => subject.withBorderRadius(4.0),
+  );
+  verb(
+    'BarLabelStyleFluent.withBackgroundPadding',
+    () => subject.withBackgroundPadding(3.0),
+  );
+  verb(
+    'BarLabelStyleFluent.withCallout',
+    () => subject.withCallout(const BarLabelCalloutStyle()),
+  );
+  verb(
+    'BarLabelStyleFluent.updateCallout',
+    () => subject.updateCallout((current) => current),
+  );
+  verb(
+    'BarLabelStyleFluent.withShowStackTotal',
+    () => subject.withShowStackTotal(false),
+  );
+}
+
+/// Smoke coverage for [CandlestickChartSeries]'s 13 executable verb(s).
 void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
   verb('CandlestickChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
@@ -167,8 +616,16 @@ void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
     () => subject.withCandlestickStyle(const CandlestickChartStyle()),
   );
   verb(
+    'CandlestickChartSeriesFluent.updateCandlestickStyle',
+    () => subject.updateCandlestickStyle((current) => current),
+  );
+  verb(
     'CandlestickChartSeriesFluent.withAnimation',
     () => subject.withAnimation(const CandlestickAnimationStyle()),
+  );
+  verb(
+    'CandlestickChartSeriesFluent.updateAnimation',
+    () => subject.updateAnimation((current) => current),
   );
   verb(
     'CandlestickChartSeriesFluent.withDensityGrouping',
@@ -177,6 +634,140 @@ void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
   verb(
     'CandlestickChartSeriesFluent.updateDensityGrouping',
     () => subject.updateDensityGrouping((current) => current),
+  );
+}
+
+/// Smoke coverage for [CandlestickChartStyle]'s 27 executable verb(s).
+void _smokeCandlestickChartStyle(_Verb verb, CandlestickChartStyle subject) {
+  verb(
+    'CandlestickChartStyleFluent.withRisingBodyFillColor',
+    () => subject.withRisingBodyFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearRisingBodyFillColor',
+    () => subject.clearRisingBodyFillColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withFallingBodyFillColor',
+    () => subject.withFallingBodyFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearFallingBodyFillColor',
+    () => subject.clearFallingBodyFillColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withDojiBodyFillColor',
+    () => subject.withDojiBodyFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearDojiBodyFillColor',
+    () => subject.clearDojiBodyFillColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withRisingBorderColor',
+    () => subject.withRisingBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearRisingBorderColor',
+    () => subject.clearRisingBorderColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withFallingBorderColor',
+    () => subject.withFallingBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearFallingBorderColor',
+    () => subject.clearFallingBorderColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withDojiBorderColor',
+    () => subject.withDojiBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearDojiBorderColor',
+    () => subject.clearDojiBorderColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withRisingWickColor',
+    () => subject.withRisingWickColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearRisingWickColor',
+    () => subject.clearRisingWickColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withFallingWickColor',
+    () => subject.withFallingWickColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearFallingWickColor',
+    () => subject.clearFallingWickColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withDojiWickColor',
+    () => subject.withDojiWickColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'CandlestickChartStyleFluent.clearDojiWickColor',
+    () => subject.clearDojiWickColor(),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withBodyFillMode',
+    () => subject.withBodyFillMode(CandlestickBodyFillMode.hollowRising),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withBodyWidthFactor',
+    () => subject.withBodyWidthFactor(0.7),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withBodyBorderWidth',
+    () => subject.withBodyBorderWidth(1),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withWickWidth',
+    () => subject.withWickWidth(1),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withShowBodyBorder',
+    () => subject.withShowBodyBorder(true),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withShowWicks',
+    () => subject.withShowWicks(true),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withBodyCornerRadius',
+    () => subject.withBodyCornerRadius(0),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withMinimumBodyHeight',
+    () => subject.withMinimumBodyHeight(1),
+  );
+  verb(
+    'CandlestickChartStyleFluent.withBodyWidthLimits',
+    () =>
+        subject.withBodyWidthLimits(subject.minBodyWidth, subject.maxBodyWidth),
+  );
+}
+
+/// Smoke coverage for [CandlestickAnimationStyle]'s 3 executable verb(s).
+void _smokeCandlestickAnimationStyle(
+  _Verb verb,
+  CandlestickAnimationStyle subject,
+) {
+  verb(
+    'CandlestickAnimationStyleFluent.withMode',
+    () => subject.withMode(CandlestickAnimationMode.reveal),
+  );
+  verb(
+    'CandlestickAnimationStyleFluent.withStaggerFraction',
+    () => subject.withStaggerFraction(0),
+  );
+  verb(
+    'CandlestickAnimationStyleFluent.withDataUpdateMode',
+    () => subject.withDataUpdateMode(
+      CandlestickDataUpdateAnimationMode.interpolate,
+    ),
   );
 }
 
@@ -1217,7 +1808,7 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   );
 }
 
-/// Smoke coverage for [ScatterChartSeries]'s 27 executable verb(s).
+/// Smoke coverage for [ScatterChartSeries]'s 30 executable verb(s).
 void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
   verb('ScatterChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
@@ -1297,12 +1888,24 @@ void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
     () => subject.withClusterConfig(const ScatterClusterConfig()),
   );
   verb(
+    'ScatterChartSeriesFluent.updateClusterConfig',
+    () => subject.updateClusterConfig((current) => current),
+  );
+  verb(
     'ScatterChartSeriesFluent.withBinConfig',
     () => subject.withBinConfig(const ScatterBinConfig()),
   );
   verb(
+    'ScatterChartSeriesFluent.updateBinConfig',
+    () => subject.updateBinConfig((current) => current),
+  );
+  verb(
     'ScatterChartSeriesFluent.withDensityConfig',
     () => subject.withDensityConfig(const ScatterDensityConfig()),
+  );
+  verb(
+    'ScatterChartSeriesFluent.updateDensityConfig',
+    () => subject.updateDensityConfig((current) => current),
   );
   verb(
     'ScatterChartSeriesFluent.withDataPointLabels',
@@ -1443,7 +2046,7 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 35 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 44 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
   verb(
@@ -1495,6 +2098,10 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     () => subject.withDivergingStyle(const BarDivergingStyle()),
   );
   verb(
+    'BarChartSeriesFluent.updateDivergingStyle',
+    () => subject.updateDivergingStyle((current) => current),
+  );
+  verb(
     'BarChartSeriesFluent.withOverlayWidthFactor',
     () => subject.withOverlayWidthFactor(1.0),
   );
@@ -1519,6 +2126,10 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     () => subject.withWaterfallStyle(const BarWaterfallStyle()),
   );
   verb(
+    'BarChartSeriesFluent.updateWaterfallStyle',
+    () => subject.updateWaterfallStyle((current) => current),
+  );
+  verb(
     'BarChartSeriesFluent.withMinBarLength',
     () => subject.withMinBarLength(0.0),
   );
@@ -1526,10 +2137,28 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     'BarChartSeriesFluent.withBarStyle',
     () => subject.withBarStyle(const BarChartStyle()),
   );
+  verb(
+    'BarChartSeriesFluent.updateBarStyle',
+    () => subject.updateBarStyle((current) => current),
+  );
+  verb(
+    'BarChartSeriesFluent.withTrackStyle',
+    () => subject.withTrackStyle(BarTrackStyle(color: const Color(0xFF2196F3))),
+  );
   verb('BarChartSeriesFluent.clearTrackStyle', () => subject.clearTrackStyle());
+  verb(
+    'BarChartSeriesFluent.withLollipopStyle',
+    () => subject.withLollipopStyle(BarLollipopStyle()),
+  );
   verb(
     'BarChartSeriesFluent.clearLollipopStyle',
     () => subject.clearLollipopStyle(),
+  );
+  verb(
+    'BarChartSeriesFluent.withBulletStyle',
+    () => subject.withBulletStyle(
+      BarBulletStyle(ranges: const <BarBulletRange>[]),
+    ),
   );
   verb(
     'BarChartSeriesFluent.clearBulletStyle',
@@ -1544,6 +2173,10 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     () => subject.withTargetMarkerStyle(const BarTargetMarkerStyle()),
   );
   verb(
+    'BarChartSeriesFluent.updateTargetMarkerStyle',
+    () => subject.updateTargetMarkerStyle((current) => current),
+  );
+  verb(
     'BarChartSeriesFluent.withErrorLowerValues',
     () => subject.withErrorLowerValues(const []),
   );
@@ -1556,26 +2189,21 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
     () => subject.withErrorBarStyle(const BarErrorBarStyle()),
   );
   verb(
+    'BarChartSeriesFluent.updateErrorBarStyle',
+    () => subject.updateErrorBarStyle((current) => current),
+  );
+  verb(
     'BarChartSeriesFluent.withLabelStyle',
     () => subject.withLabelStyle(const BarLabelStyle()),
+  );
+  verb(
+    'BarChartSeriesFluent.updateLabelStyle',
+    () => subject.updateLabelStyle((current) => current),
   );
   verb(
     'BarChartSeriesFluent.withWidthBounds',
     () => subject.withWidthBounds(subject.maxWidth, subject.minWidth),
   );
-}
-
-/// Compile-only coverage for [BarChartSeries]'s 3 verb(s)
-/// whose argument type has no synthesizable value.
-void _compileBarChartSeries(
-  BarChartSeries subject,
-  BarTrackStyle a0,
-  BarLollipopStyle a1,
-  BarBulletStyle a2,
-) {
-  subject.withTrackStyle(a0);
-  subject.withLollipopStyle(a1);
-  subject.withBulletStyle(a2);
 }
 
 /// Smoke coverage for [ChartTheme]'s 30 executable verb(s).
@@ -3880,6 +4508,115 @@ void _smokeScatterInteractionStyle(
   );
 }
 
+/// Smoke coverage for [ScatterClusterConfig]'s 9 executable verb(s).
+void _smokeScatterClusterConfig(_Verb verb, ScatterClusterConfig subject) {
+  verb(
+    'ScatterClusterConfigFluent.withCellSize',
+    () => subject.withCellSize(40),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withMinimumPointCount',
+    () => subject.withMinimumPointCount(2),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withShowCountLabels',
+    () => subject.withShowCountLabels(true),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withLabelMinimumPointCount',
+    () => subject.withLabelMinimumPointCount(2),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withShowZones',
+    () => subject.withShowZones(false),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withZoneOpacity',
+    () => subject.withZoneOpacity(0.08),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withDrillOnTap',
+    () => subject.withDrillOnTap(true),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withDrillPadding',
+    () => subject.withDrillPadding(0.18),
+  );
+  verb(
+    'ScatterClusterConfigFluent.withRadiusBounds',
+    () =>
+        subject.withRadiusBounds(subject.minimumRadius, subject.maximumRadius),
+  );
+}
+
+/// Smoke coverage for [ScatterBinConfig]'s 8 executable verb(s).
+void _smokeScatterBinConfig(_Verb verb, ScatterBinConfig subject) {
+  verb('ScatterBinConfigFluent.withCellSize', () => subject.withCellSize(36));
+  verb('ScatterBinConfigFluent.withGap', () => subject.withGap(1));
+  verb(
+    'ScatterBinConfigFluent.withMinimumPointCount',
+    () => subject.withMinimumPointCount(1),
+  );
+  verb(
+    'ScatterBinConfigFluent.withAggregate',
+    () => subject.withAggregate(ScatterBinAggregate.count),
+  );
+  verb(
+    'ScatterBinConfigFluent.withValueSource',
+    () => subject.withValueSource(ScatterBinValueSource.y),
+  );
+  verb(
+    'ScatterBinConfigFluent.withShowLabels',
+    () => subject.withShowLabels(false),
+  );
+  verb(
+    'ScatterBinConfigFluent.withLabelMinimumPointCount',
+    () => subject.withLabelMinimumPointCount(10),
+  );
+  verb(
+    'ScatterBinConfigFluent.withOpacityBounds',
+    () => subject.withOpacityBounds(
+      subject.minimumOpacity,
+      subject.maximumOpacity,
+    ),
+  );
+}
+
+/// Smoke coverage for [ScatterDensityConfig]'s 7 executable verb(s).
+void _smokeScatterDensityConfig(_Verb verb, ScatterDensityConfig subject) {
+  verb(
+    'ScatterDensityConfigFluent.withGridCellSize',
+    () => subject.withGridCellSize(8),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withBandwidth',
+    () => subject.withBandwidth(32),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withContourCount',
+    () => subject.withContourCount(6),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withMinimumDensity',
+    () => subject.withMinimumDensity(0.08),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withLineWidth',
+    () => subject.withLineWidth(1.5),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withShowPoints',
+    () => subject.withShowPoints(false),
+  );
+  verb(
+    'ScatterDensityConfigFluent.withOpacityBounds',
+    () => subject.withOpacityBounds(
+      subject.minimumOpacity,
+      subject.maximumOpacity,
+    ),
+  );
+}
+
 /// Smoke coverage for [SegmentStyle]'s 6 executable verb(s).
 void _smokeSegmentStyle(_Verb verb, SegmentStyle subject) {
   verb(
@@ -5017,7 +5754,6 @@ const List<Function> _compileOnlyCases = <Function>[
   _compileCandlestickDataPoint,
   _compileScatterChartSeries,
   _compileAreaChartSeries,
-  _compileBarChartSeries,
   _compileRangeAreaChartSeries,
 ];
 
@@ -5029,9 +5765,6 @@ const List<String> _compileOnlyVerbs = <String>[
   'ScatterChartSeriesFluent.withOpacityEncoding — no synthesizable value for ScatterOpacityEncoding',
   'ScatterChartSeriesFluent.withCategoryEncoding — no synthesizable value for ScatterCategoryEncoding',
   'AreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
-  'BarChartSeriesFluent.withTrackStyle — no synthesizable value for BarTrackStyle',
-  'BarChartSeriesFluent.withLollipopStyle — no synthesizable value for BarLollipopStyle',
-  'BarChartSeriesFluent.withBulletStyle — no synthesizable value for BarBulletStyle',
   'RangeAreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
 ];
 
@@ -5055,6 +5788,169 @@ void main() {
         reason: 'generated AutoScrollConfigFluent verb(s) threw',
       );
     });
+    test('BarDivergingStyle', () {
+      final subject = _subject(() => BarDivergingStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarDivergingStyle, subject),
+        isEmpty,
+        reason: 'generated BarDivergingStyleFluent verb(s) threw',
+      );
+    });
+    test('BarMotionStyle', () {
+      final subject = _subject(() => BarMotionStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarMotionStyle, subject),
+        isEmpty,
+        reason: 'generated BarMotionStyleFluent verb(s) threw',
+      );
+    });
+    test('BarGradient', () {
+      final subject = _subject(() => BarGradient(colors: const <Color>[]));
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarGradient, subject),
+        isEmpty,
+        reason: 'generated BarGradientFluent verb(s) threw',
+      );
+    });
+    test('BarPatternStyle', () {
+      final subject = _subject(
+        () => BarPatternStyle(pattern: BarFillPattern.values.first),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarPatternStyle, subject),
+        isEmpty,
+        reason: 'generated BarPatternStyleFluent verb(s) threw',
+      );
+    });
+    test('BarBorderStyle', () {
+      final subject = _subject(
+        () => BarBorderStyle(color: const Color(0xFF2196F3)),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarBorderStyle, subject),
+        isEmpty,
+        reason: 'generated BarBorderStyleFluent verb(s) threw',
+      );
+    });
+    test('BarInteractionStyle', () {
+      final subject = _subject(() => BarInteractionStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarInteractionStyle, subject),
+        isEmpty,
+        reason: 'generated BarInteractionStyleFluent verb(s) threw',
+      );
+    });
+    test('BarChartStyle', () {
+      final subject = _subject(() => BarChartStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarChartStyle, subject),
+        isEmpty,
+        reason: 'generated BarChartStyleFluent verb(s) threw',
+      );
+    });
+    test('BarTrackStyle', () {
+      final subject = _subject(
+        () => BarTrackStyle(color: const Color(0xFF2196F3)),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarTrackStyle, subject),
+        isEmpty,
+        reason: 'generated BarTrackStyleFluent verb(s) threw',
+      );
+    });
+    test('BarLollipopStyle', () {
+      final subject = _subject(() => BarLollipopStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarLollipopStyle, subject),
+        isEmpty,
+        reason: 'generated BarLollipopStyleFluent verb(s) threw',
+      );
+    });
+    test('BarBulletRange', () {
+      final subject = _subject(
+        () => BarBulletRange(endValue: 0.5, color: const Color(0xFF2196F3)),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarBulletRange, subject),
+        isEmpty,
+        reason: 'generated BarBulletRangeFluent verb(s) threw',
+      );
+    });
+    test('BarBulletStyle', () {
+      final subject = _subject(
+        () => BarBulletStyle(ranges: const <BarBulletRange>[]),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarBulletStyle, subject),
+        isEmpty,
+        reason: 'generated BarBulletStyleFluent verb(s) threw',
+      );
+    });
+    test('BarTargetMarkerStyle', () {
+      final subject = _subject(() => BarTargetMarkerStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarTargetMarkerStyle, subject),
+        isEmpty,
+        reason: 'generated BarTargetMarkerStyleFluent verb(s) threw',
+      );
+    });
+    test('BarErrorBarStyle', () {
+      final subject = _subject(() => BarErrorBarStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarErrorBarStyle, subject),
+        isEmpty,
+        reason: 'generated BarErrorBarStyleFluent verb(s) threw',
+      );
+    });
+    test('BarWaterfallConnectorStyle', () {
+      final subject = _subject(() => BarWaterfallConnectorStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarWaterfallConnectorStyle, subject),
+        isEmpty,
+        reason: 'generated BarWaterfallConnectorStyleFluent verb(s) threw',
+      );
+    });
+    test('BarWaterfallStyle', () {
+      final subject = _subject(() => BarWaterfallStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarWaterfallStyle, subject),
+        isEmpty,
+        reason: 'generated BarWaterfallStyleFluent verb(s) threw',
+      );
+    });
+    test('BarLabelCalloutStyle', () {
+      final subject = _subject(() => BarLabelCalloutStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarLabelCalloutStyle, subject),
+        isEmpty,
+        reason: 'generated BarLabelCalloutStyleFluent verb(s) threw',
+      );
+    });
+    test('BarLabelStyle', () {
+      final subject = _subject(() => BarLabelStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarLabelStyle, subject),
+        isEmpty,
+        reason: 'generated BarLabelStyleFluent verb(s) threw',
+      );
+    });
     test('CandlestickChartSeries', () {
       final subject = _subject(
         () => CandlestickChartSeries(
@@ -5067,6 +5963,24 @@ void main() {
         _record(_smokeCandlestickChartSeries, subject),
         isEmpty,
         reason: 'generated CandlestickChartSeriesFluent verb(s) threw',
+      );
+    });
+    test('CandlestickChartStyle', () {
+      final subject = _subject(() => CandlestickChartStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeCandlestickChartStyle, subject),
+        isEmpty,
+        reason: 'generated CandlestickChartStyleFluent verb(s) threw',
+      );
+    });
+    test('CandlestickAnimationStyle', () {
+      final subject = _subject(() => CandlestickAnimationStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeCandlestickAnimationStyle, subject),
+        isEmpty,
+        reason: 'generated CandlestickAnimationStyleFluent verb(s) threw',
       );
     });
     test('CandlestickDataPoint', () {
@@ -5885,6 +6799,33 @@ void main() {
         reason: 'generated ScatterInteractionStyleFluent verb(s) threw',
       );
     });
+    test('ScatterClusterConfig', () {
+      final subject = _subject(() => ScatterClusterConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeScatterClusterConfig, subject),
+        isEmpty,
+        reason: 'generated ScatterClusterConfigFluent verb(s) threw',
+      );
+    });
+    test('ScatterBinConfig', () {
+      final subject = _subject(() => ScatterBinConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeScatterBinConfig, subject),
+        isEmpty,
+        reason: 'generated ScatterBinConfigFluent verb(s) threw',
+      );
+    });
+    test('ScatterDensityConfig', () {
+      final subject = _subject(() => ScatterDensityConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeScatterDensityConfig, subject),
+        isEmpty,
+        reason: 'generated ScatterDensityConfigFluent verb(s) threw',
+      );
+    });
     test('SegmentStyle', () {
       final subject = _subject(() => SegmentStyle());
       if (subject == null) return;
@@ -6385,9 +7326,9 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 98);
+    expect(_executedClasses, 120);
     expect(_skippedClasses, 0);
-    expect(_compileOnlyCases, hasLength(5));
-    expect(_compileOnlyVerbs, hasLength(10));
+    expect(_compileOnlyCases, hasLength(4));
+    expect(_compileOnlyVerbs, hasLength(7));
   });
 }

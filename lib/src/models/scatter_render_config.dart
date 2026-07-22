@@ -1,6 +1,8 @@
 // Copyright 2026 Braven Charts contributors
 // SPDX-License-Identifier: MIT
 
+import '../meta/chart_surface.dart';
+
 /// Rendering strategy for a Scatter series.
 ///
 /// Additional dense-data strategies are introduced as their geometry,
@@ -53,6 +55,11 @@ enum ScatterBinValueSource { x, y, magnitude, colorValue, opacityValue }
 ///
 /// Clustering is performed in logical pixels after the active data transform,
 /// so zooming naturally reveals detail without mutating the source series.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withRadiusBounds', ['minimumRadius', 'maximumRadius']),
+  ],
+)
 class ScatterClusterConfig {
   const ScatterClusterConfig({
     this.cellSize = 40,
@@ -107,6 +114,31 @@ class ScatterClusterConfig {
   /// Fractional data-space padding added around drill-to-cluster bounds.
   final double drillPadding;
 
+  ScatterClusterConfig copyWith({
+    double? cellSize,
+    int? minimumPointCount,
+    double? minimumRadius,
+    double? maximumRadius,
+    bool? showCountLabels,
+    int? labelMinimumPointCount,
+    bool? showZones,
+    double? zoneOpacity,
+    bool? drillOnTap,
+    double? drillPadding,
+  }) => ScatterClusterConfig(
+    cellSize: cellSize ?? this.cellSize,
+    minimumPointCount: minimumPointCount ?? this.minimumPointCount,
+    minimumRadius: minimumRadius ?? this.minimumRadius,
+    maximumRadius: maximumRadius ?? this.maximumRadius,
+    showCountLabels: showCountLabels ?? this.showCountLabels,
+    labelMinimumPointCount:
+        labelMinimumPointCount ?? this.labelMinimumPointCount,
+    showZones: showZones ?? this.showZones,
+    zoneOpacity: zoneOpacity ?? this.zoneOpacity,
+    drillOnTap: drillOnTap ?? this.drillOnTap,
+    drillPadding: drillPadding ?? this.drillPadding,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -151,6 +183,11 @@ class ScatterClusterConfig {
 /// Each occupied bin represents one or more raw observations. The source
 /// series remains unchanged, and every bin retains the represented source
 /// indices for tooltips, selection, table projection, and callbacks.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withOpacityBounds', ['minimumOpacity', 'maximumOpacity']),
+  ],
+)
 class ScatterBinConfig {
   const ScatterBinConfig({
     this.cellSize = 36,
@@ -200,6 +237,29 @@ class ScatterBinConfig {
   /// Smallest bin count that receives an on-bin label.
   final int labelMinimumPointCount;
 
+  ScatterBinConfig copyWith({
+    double? cellSize,
+    double? gap,
+    int? minimumPointCount,
+    double? minimumOpacity,
+    double? maximumOpacity,
+    ScatterBinAggregate? aggregate,
+    ScatterBinValueSource? valueSource,
+    bool? showLabels,
+    int? labelMinimumPointCount,
+  }) => ScatterBinConfig(
+    cellSize: cellSize ?? this.cellSize,
+    gap: gap ?? this.gap,
+    minimumPointCount: minimumPointCount ?? this.minimumPointCount,
+    minimumOpacity: minimumOpacity ?? this.minimumOpacity,
+    maximumOpacity: maximumOpacity ?? this.maximumOpacity,
+    aggregate: aggregate ?? this.aggregate,
+    valueSource: valueSource ?? this.valueSource,
+    showLabels: showLabels ?? this.showLabels,
+    labelMinimumPointCount:
+        labelMinimumPointCount ?? this.labelMinimumPointCount,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -242,6 +302,11 @@ class ScatterBinConfig {
 /// Density is derived after the active chart transform, so [bandwidth] and
 /// [gridCellSize] are expressed in logical pixels. The source observations
 /// remain unchanged and continue to back Data, Split, Source, and callbacks.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withOpacityBounds', ['minimumOpacity', 'maximumOpacity']),
+  ],
+)
 class ScatterDensityConfig {
   const ScatterDensityConfig({
     this.gridCellSize = 8,
@@ -283,6 +348,26 @@ class ScatterDensityConfig {
 
   /// Whether raw markers are painted above the contour family.
   final bool showPoints;
+
+  ScatterDensityConfig copyWith({
+    double? gridCellSize,
+    double? bandwidth,
+    int? contourCount,
+    double? minimumDensity,
+    double? minimumOpacity,
+    double? maximumOpacity,
+    double? lineWidth,
+    bool? showPoints,
+  }) => ScatterDensityConfig(
+    gridCellSize: gridCellSize ?? this.gridCellSize,
+    bandwidth: bandwidth ?? this.bandwidth,
+    contourCount: contourCount ?? this.contourCount,
+    minimumDensity: minimumDensity ?? this.minimumDensity,
+    minimumOpacity: minimumOpacity ?? this.minimumOpacity,
+    maximumOpacity: maximumOpacity ?? this.maximumOpacity,
+    lineWidth: lineWidth ?? this.lineWidth,
+    showPoints: showPoints ?? this.showPoints,
+  );
 
   @override
   bool operator ==(Object other) =>
