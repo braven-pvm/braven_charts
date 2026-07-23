@@ -60,6 +60,15 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
     TextStyle? headerTextStyle,
     TextStyle? cellTextStyle,
     TextStyle? rowNumberTextStyle,
+    bool clearHeaderBackgroundColor = false,
+    bool clearEvenRowColor = false,
+    bool clearOddRowColor = false,
+    bool clearDividerColor = false,
+    bool clearFocusedRowColor = false,
+    bool clearSelectedRowColor = false,
+    bool clearHeaderTextStyle = false,
+    bool clearCellTextStyle = false,
+    bool clearRowNumberTextStyle = false,
   }) => ChartDataTableTheme(
     rowHeight: rowHeight ?? this.rowHeight,
     headerHeight: headerHeight ?? this.headerHeight,
@@ -67,15 +76,31 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
     xColumnWidth: xColumnWidth ?? this.xColumnWidth,
     seriesColumnWidth: seriesColumnWidth ?? this.seriesColumnWidth,
     cellHorizontalPadding: cellHorizontalPadding ?? this.cellHorizontalPadding,
-    headerBackgroundColor: headerBackgroundColor ?? this.headerBackgroundColor,
-    evenRowColor: evenRowColor ?? this.evenRowColor,
-    oddRowColor: oddRowColor ?? this.oddRowColor,
-    dividerColor: dividerColor ?? this.dividerColor,
-    focusedRowColor: focusedRowColor ?? this.focusedRowColor,
-    selectedRowColor: selectedRowColor ?? this.selectedRowColor,
-    headerTextStyle: headerTextStyle ?? this.headerTextStyle,
-    cellTextStyle: cellTextStyle ?? this.cellTextStyle,
-    rowNumberTextStyle: rowNumberTextStyle ?? this.rowNumberTextStyle,
+    headerBackgroundColor: clearHeaderBackgroundColor
+        ? null
+        : (headerBackgroundColor ?? this.headerBackgroundColor),
+    evenRowColor: clearEvenRowColor
+        ? null
+        : (evenRowColor ?? this.evenRowColor),
+    oddRowColor: clearOddRowColor ? null : (oddRowColor ?? this.oddRowColor),
+    dividerColor: clearDividerColor
+        ? null
+        : (dividerColor ?? this.dividerColor),
+    focusedRowColor: clearFocusedRowColor
+        ? null
+        : (focusedRowColor ?? this.focusedRowColor),
+    selectedRowColor: clearSelectedRowColor
+        ? null
+        : (selectedRowColor ?? this.selectedRowColor),
+    headerTextStyle: clearHeaderTextStyle
+        ? null
+        : (headerTextStyle ?? this.headerTextStyle),
+    cellTextStyle: clearCellTextStyle
+        ? null
+        : (cellTextStyle ?? this.cellTextStyle),
+    rowNumberTextStyle: clearRowNumberTextStyle
+        ? null
+        : (rowNumberTextStyle ?? this.rowNumberTextStyle),
   );
 
   @override

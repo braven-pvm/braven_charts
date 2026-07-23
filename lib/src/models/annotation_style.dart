@@ -71,14 +71,22 @@ class AnnotationStyle {
     double? borderWidth,
     BorderRadius? borderRadius,
     EdgeInsets? padding,
+    bool clearBackgroundColor = false,
+    bool clearBorderColor = false,
+    bool clearBorderRadius = false,
+    bool clearPadding = false,
   }) {
     return AnnotationStyle(
       textStyle: textStyle ?? this.textStyle,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      borderColor: borderColor ?? this.borderColor,
+      backgroundColor: clearBackgroundColor
+          ? null
+          : (backgroundColor ?? this.backgroundColor),
+      borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
       borderWidth: borderWidth ?? this.borderWidth,
-      borderRadius: borderRadius ?? this.borderRadius,
-      padding: padding ?? this.padding,
+      borderRadius: clearBorderRadius
+          ? null
+          : (borderRadius ?? this.borderRadius),
+      padding: clearPadding ? null : (padding ?? this.padding),
     );
   }
 

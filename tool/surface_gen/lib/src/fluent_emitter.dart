@@ -95,10 +95,13 @@ const String _flutterImport = 'package:flutter/widgets.dart';
 /// Counts parameters that are nullable but have NO clear verb, because the
 /// owning class's `copyWith` cannot unset them.
 ///
-/// Surfaced in the builder's log so the size of the gap stays visible
-/// (~70% of nullable parameters across the fleet). The alternative fixes
-/// were both rejected: `withX(T? value)` is a silent no-op, and bolting a
-/// sentinel `copyWith` onto ~97 classes is a public-API rewrite.
+/// Surfaced in the builder's log so any regression stays visible. The
+/// fleet-wide gap (once ~70% of nullable parameters) was closed by extending
+/// the bool-flag `copyWith` convention across the surface — chosen over a
+/// sentinel `copyWith`, which would have un-typed the public API for a library
+/// whose config surface is the primary authoring path. Only structural
+/// exceptions remain: a field an `assert` couples to another (so `null` is not
+/// a legal standalone value, e.g. `TrendAnnotation.windowSize`).
 int countParamsWithoutClearVerb(SurfaceModel model) {
   var count = 0;
   for (final cls in model.classes) {

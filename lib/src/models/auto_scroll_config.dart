@@ -137,6 +137,7 @@ class AutoScrollConfig {
     Duration? incomingDataAnimationDuration,
     bool? animateScroll,
     Duration? scrollAnimationDuration,
+    bool clearResumeAfterInteractionDelay = false,
   }) {
     return AutoScrollConfig(
       enabled: enabled ?? this.enabled,
@@ -144,8 +145,9 @@ class AutoScrollConfig {
       resumeOnNewData: resumeOnNewData ?? this.resumeOnNewData,
       pauseOnUserInteraction:
           pauseOnUserInteraction ?? this.pauseOnUserInteraction,
-      resumeAfterInteractionDelay:
-          resumeAfterInteractionDelay ?? this.resumeAfterInteractionDelay,
+      resumeAfterInteractionDelay: clearResumeAfterInteractionDelay
+          ? null
+          : (resumeAfterInteractionDelay ?? this.resumeAfterInteractionDelay),
       animateIncomingData: animateIncomingData ?? this.animateIncomingData,
       incomingDataAnimationDuration:
           incomingDataAnimationDuration ?? this.incomingDataAnimationDuration,

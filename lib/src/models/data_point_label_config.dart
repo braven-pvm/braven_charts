@@ -122,6 +122,8 @@ class DataPointLabelConfig {
     String Function(ChartDataPoint)? formatter,
     Color? background,
     double? backgroundOpacity,
+    bool clearLabelColor = false,
+    bool clearBackground = false,
   }) {
     return DataPointLabelConfig(
       show: show ?? this.show,
@@ -133,12 +135,12 @@ class DataPointLabelConfig {
       collisionPolicy: collisionPolicy ?? this.collisionPolicy,
       collisionPadding: collisionPadding ?? this.collisionPadding,
       plotEdgeAware: plotEdgeAware ?? this.plotEdgeAware,
-      labelColor: labelColor ?? this.labelColor,
+      labelColor: clearLabelColor ? null : (labelColor ?? this.labelColor),
       fontSize: fontSize ?? this.fontSize,
       fontWeight: fontWeight ?? this.fontWeight,
       showUnit: showUnit ?? this.showUnit,
       formatter: formatter ?? this.formatter,
-      background: background ?? this.background,
+      background: clearBackground ? null : (background ?? this.background),
       backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
     );
   }

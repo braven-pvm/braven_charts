@@ -34,19 +34,21 @@ extension ChartDocumentExtractOptionsFluent on ChartDocumentExtractOptions {
       copyWith(themeMode: value);
 
   /// Replaces [ChartDocumentExtractOptions.themeReference] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDocumentExtractOptions.themeReference]; construct a new instance to reset it.
   ChartDocumentExtractOptions withThemeReference(String value) =>
       copyWith(themeReference: value);
 
+  /// Clears [ChartDocumentExtractOptions.themeReference] to `null`.
+  ChartDocumentExtractOptions clearThemeReference() =>
+      copyWith(clearThemeReference: true);
+
   /// Replaces [ChartDocumentExtractOptions.xAxisFormatterDescriptor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDocumentExtractOptions.xAxisFormatterDescriptor]; construct a new instance to reset it.
   ChartDocumentExtractOptions withXAxisFormatterDescriptor(
     JsonObjectValue value,
   ) => copyWith(xAxisFormatterDescriptor: value);
+
+  /// Clears [ChartDocumentExtractOptions.xAxisFormatterDescriptor] to `null`.
+  ChartDocumentExtractOptions clearXAxisFormatterDescriptor() =>
+      copyWith(clearXAxisFormatterDescriptor: true);
 
   /// Replaces [ChartDocumentExtractOptions.yAxisFormatterDescriptors] with [value].
   ChartDocumentExtractOptions withYAxisFormatterDescriptors(
@@ -64,12 +66,13 @@ extension ChartDocumentExtractOptionsFluent on ChartDocumentExtractOptions {
   ) => copyWith(radialFormatterDescriptors: value);
 
   /// Replaces [ChartDocumentExtractOptions.concentricCenterFormatterDescriptor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [ChartDocumentExtractOptions.concentricCenterFormatterDescriptor]; construct a new instance to reset it.
   ChartDocumentExtractOptions withConcentricCenterFormatterDescriptor(
     JsonObjectValue value,
   ) => copyWith(concentricCenterFormatterDescriptor: value);
+
+  /// Clears [ChartDocumentExtractOptions.concentricCenterFormatterDescriptor] to `null`.
+  ChartDocumentExtractOptions clearConcentricCenterFormatterDescriptor() =>
+      copyWith(clearConcentricCenterFormatterDescriptor: true);
 
   /// Replaces [ChartDocumentExtractOptions.maxSnapshotAttempts] with [value].
   ChartDocumentExtractOptions withMaxSnapshotAttempts(int value) =>

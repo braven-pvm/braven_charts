@@ -26,9 +26,6 @@ extension GridStyleFluent on GridStyle {
   /// Replaces [GridStyle.showMinor], [GridStyle.minorColor], and [GridStyle.minorWidth] together.
   ///
   /// The parameters are assert-coupled, so all three only move together.
-  ///
-  /// No clear verb: this class's copyWith cannot unset them;
-  /// construct a new instance to reset.
   GridStyle withMinorGrid({
     required bool showMinor,
     required Color minorColor,
@@ -38,4 +35,10 @@ extension GridStyleFluent on GridStyle {
     minorColor: minorColor,
     minorWidth: minorWidth,
   );
+
+  /// Clears [GridStyle.minorColor] to `null`.
+  GridStyle clearMinorColor() => copyWith(clearMinorColor: true);
+
+  /// Clears [GridStyle.minorWidth] to `null`.
+  GridStyle clearMinorWidth() => copyWith(clearMinorWidth: true);
 }

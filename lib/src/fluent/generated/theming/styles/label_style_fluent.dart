@@ -29,15 +29,15 @@ extension LabelStyleFluent on LabelStyle {
   LabelStyle withPadding(EdgeInsets value) => copyWith(padding: value);
 
   /// Replaces [LabelStyle.shadowColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LabelStyle.shadowColor]; construct a new instance to reset it.
   LabelStyle withShadowColor(Color value) => copyWith(shadowColor: value);
 
+  /// Clears [LabelStyle.shadowColor] to `null`.
+  LabelStyle clearShadowColor() => copyWith(clearShadowColor: true);
+
   /// Replaces [LabelStyle.shadowBlurRadius] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [LabelStyle.shadowBlurRadius]; construct a new instance to reset it.
   LabelStyle withShadowBlurRadius(double value) =>
       copyWith(shadowBlurRadius: value);
+
+  /// Clears [LabelStyle.shadowBlurRadius] to `null`.
+  LabelStyle clearShadowBlurRadius() => copyWith(clearShadowBlurRadius: true);
 }

@@ -47,24 +47,24 @@ extension CandlestickDataPointFluent on CandlestickDataPoint {
       copyWith(clearCategoryValue: true);
 
   /// Replaces [CandlestickDataPoint.timestamp] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickDataPoint.timestamp]; construct a new instance to reset it.
   CandlestickDataPoint withTimestamp(DateTime value) =>
       copyWith(timestamp: value);
 
+  /// Clears [CandlestickDataPoint.timestamp] to `null`.
+  CandlestickDataPoint clearTimestamp() => copyWith(clearTimestamp: true);
+
   /// Replaces [CandlestickDataPoint.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickDataPoint.label]; construct a new instance to reset it.
   CandlestickDataPoint withLabel(String value) => copyWith(label: value);
 
+  /// Clears [CandlestickDataPoint.label] to `null`.
+  CandlestickDataPoint clearLabel() => copyWith(clearLabel: true);
+
   /// Replaces [CandlestickDataPoint.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CandlestickDataPoint.metadata]; construct a new instance to reset it.
   CandlestickDataPoint withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
+
+  /// Clears [CandlestickDataPoint.metadata] to `null`.
+  CandlestickDataPoint clearMetadata() => copyWith(clearMetadata: true);
 
   /// Replaces [CandlestickDataPoint.segmentStyle] with [value].
   CandlestickDataPoint withSegmentStyle(SegmentStyle value) =>

@@ -193,6 +193,9 @@ class ChartDocumentExtractOptions {
     Map<String, RadialFormatterDocumentDescriptors>? radialFormatterDescriptors,
     JsonObjectValue? concentricCenterFormatterDescriptor,
     int? maxSnapshotAttempts,
+    bool clearThemeReference = false,
+    bool clearXAxisFormatterDescriptor = false,
+    bool clearConcentricCenterFormatterDescriptor = false,
   }) => ChartDocumentExtractOptions(
     documentId: documentId ?? this.documentId,
     dataScope: dataScope ?? this.dataScope,
@@ -200,9 +203,12 @@ class ChartDocumentExtractOptions {
     includeViewState: includeViewState ?? this.includeViewState,
     dataStorage: dataStorage ?? this.dataStorage,
     themeMode: themeMode ?? this.themeMode,
-    themeReference: themeReference ?? this.themeReference,
-    xAxisFormatterDescriptor:
-        xAxisFormatterDescriptor ?? this.xAxisFormatterDescriptor,
+    themeReference: clearThemeReference
+        ? null
+        : (themeReference ?? this.themeReference),
+    xAxisFormatterDescriptor: clearXAxisFormatterDescriptor
+        ? null
+        : (xAxisFormatterDescriptor ?? this.xAxisFormatterDescriptor),
     yAxisFormatterDescriptors:
         yAxisFormatterDescriptors ?? this.yAxisFormatterDescriptors,
     interactionBindingDescriptors:
@@ -210,8 +216,10 @@ class ChartDocumentExtractOptions {
     radialFormatterDescriptors:
         radialFormatterDescriptors ?? this.radialFormatterDescriptors,
     concentricCenterFormatterDescriptor:
-        concentricCenterFormatterDescriptor ??
-        this.concentricCenterFormatterDescriptor,
+        clearConcentricCenterFormatterDescriptor
+        ? null
+        : (concentricCenterFormatterDescriptor ??
+              this.concentricCenterFormatterDescriptor),
     maxSnapshotAttempts: maxSnapshotAttempts ?? this.maxSnapshotAttempts,
   );
 }

@@ -13,22 +13,23 @@ extension SeriesLabelBackgroundFluent on SeriesLabelBackground {
   SeriesLabelBackground withColor(Color value) => copyWith(color: value);
 
   /// Replaces [SeriesLabelBackground.cornerRadius] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [SeriesLabelBackground.cornerRadius]; construct a new instance to reset it.
   SeriesLabelBackground withCornerRadius(double value) =>
       copyWith(cornerRadius: value);
+
+  /// Clears [SeriesLabelBackground.cornerRadius] to `null`.
+  SeriesLabelBackground clearCornerRadius() =>
+      copyWith(clearCornerRadius: true);
 
   /// Replaces [SeriesLabelBackground.padding] with [value].
   SeriesLabelBackground withPadding(EdgeInsets value) =>
       copyWith(padding: value);
 
   /// Replaces [SeriesLabelBackground.borderColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [SeriesLabelBackground.borderColor]; construct a new instance to reset it.
   SeriesLabelBackground withBorderColor(Color value) =>
       copyWith(borderColor: value);
+
+  /// Clears [SeriesLabelBackground.borderColor] to `null`.
+  SeriesLabelBackground clearBorderColor() => copyWith(clearBorderColor: true);
 
   /// Replaces [SeriesLabelBackground.borderWidth] with [value].
   SeriesLabelBackground withBorderWidth(double value) =>
@@ -48,10 +49,10 @@ extension SeriesInlineLabelConfigFluent on SeriesInlineLabelConfig {
   SeriesInlineLabelConfig withOffsetY(double value) => copyWith(offsetY: value);
 
   /// Replaces [SeriesInlineLabelConfig.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [SeriesInlineLabelConfig.color]; construct a new instance to reset it.
   SeriesInlineLabelConfig withColor(Color value) => copyWith(color: value);
+
+  /// Clears [SeriesInlineLabelConfig.color] to `null`.
+  SeriesInlineLabelConfig clearColor() => copyWith(clearColor: true);
 
   /// Replaces [SeriesInlineLabelConfig.fontSize] with [value].
   SeriesInlineLabelConfig withFontSize(double value) =>
@@ -62,9 +63,9 @@ extension SeriesInlineLabelConfigFluent on SeriesInlineLabelConfig {
       copyWith(fontWeight: value);
 
   /// Replaces [SeriesInlineLabelConfig.background] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [SeriesInlineLabelConfig.background]; construct a new instance to reset it.
   SeriesInlineLabelConfig withBackground(SeriesLabelBackground value) =>
       copyWith(background: value);
+
+  /// Clears [SeriesInlineLabelConfig.background] to `null`.
+  SeriesInlineLabelConfig clearBackground() => copyWith(clearBackground: true);
 }

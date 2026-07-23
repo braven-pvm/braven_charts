@@ -155,8 +155,11 @@ final class RangeAreaDataPoint extends ChartDataPoint {
     String? categoryValue,
     bool clearCategoryValue = false,
     DateTime? timestamp,
+    bool clearTimestamp = false,
     String? label,
+    bool clearLabel = false,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     SegmentStyle? segmentStyle,
     bool clearSegmentStyle = false,
     PointStyle? pointStyle,
@@ -172,9 +175,9 @@ final class RangeAreaDataPoint extends ChartDataPoint {
       return RangeAreaDataPoint.gap(
         x: x ?? this.x,
         pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
-        timestamp: timestamp ?? this.timestamp,
-        label: label ?? this.label,
-        metadata: metadata ?? this.metadata,
+        timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
+        label: clearLabel ? null : (label ?? this.label),
+        metadata: clearMetadata ? null : (metadata ?? this.metadata),
       );
     }
 
@@ -192,9 +195,9 @@ final class RangeAreaDataPoint extends ChartDataPoint {
       return RangeAreaDataPoint.gap(
         x: x ?? this.x,
         pointKey: clearPointKey ? null : (pointKey ?? this.pointKey),
-        timestamp: timestamp ?? this.timestamp,
-        label: label ?? this.label,
-        metadata: metadata ?? this.metadata,
+        timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
+        label: clearLabel ? null : (label ?? this.label),
+        metadata: clearMetadata ? null : (metadata ?? this.metadata),
       );
     }
 
@@ -217,9 +220,9 @@ final class RangeAreaDataPoint extends ChartDataPoint {
       categoryValue: clearCategoryValue
           ? null
           : (categoryValue ?? this.categoryValue),
-      timestamp: timestamp ?? this.timestamp,
-      label: label ?? this.label,
-      metadata: metadata ?? this.metadata,
+      timestamp: clearTimestamp ? null : (timestamp ?? this.timestamp),
+      label: clearLabel ? null : (label ?? this.label),
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
       segmentStyle: clearSegmentStyle
           ? null
           : (segmentStyle ?? this.segmentStyle),

@@ -218,16 +218,24 @@ class LegendStyle {
     bool? allowDragging,
     double? opacity,
     Offset? offset,
+    bool clearBackgroundColor = false,
+    bool clearBorderColor = false,
+    bool clearBorderRadius = false,
+    bool clearPadding = false,
   }) {
     return LegendStyle(
       position: position ?? this.position,
       orientation: orientation ?? this.orientation,
       textStyle: textStyle ?? this.textStyle,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      borderColor: borderColor ?? this.borderColor,
+      backgroundColor: clearBackgroundColor
+          ? null
+          : (backgroundColor ?? this.backgroundColor),
+      borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
       borderWidth: borderWidth ?? this.borderWidth,
-      borderRadius: borderRadius ?? this.borderRadius,
-      padding: padding ?? this.padding,
+      borderRadius: clearBorderRadius
+          ? null
+          : (borderRadius ?? this.borderRadius),
+      padding: clearPadding ? null : (padding ?? this.padding),
       itemSpacing: itemSpacing ?? this.itemSpacing,
       markerSize: markerSize ?? this.markerSize,
       markerShape: markerShape ?? this.markerShape,

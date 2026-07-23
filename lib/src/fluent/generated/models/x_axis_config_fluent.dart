@@ -10,34 +10,34 @@ import 'package:flutter/widgets.dart' show Color;
 /// Generated fluent modifiers for [XAxisConfig].
 extension XAxisConfigFluent on XAxisConfig {
   /// Replaces [XAxisConfig.color] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.color]; construct a new instance to reset it.
   XAxisConfig withColor(Color value) => copyWith(color: value);
 
+  /// Clears [XAxisConfig.color] to `null`.
+  XAxisConfig clearColor() => copyWith(clearColor: true);
+
   /// Replaces [XAxisConfig.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.label]; construct a new instance to reset it.
   XAxisConfig withLabel(String value) => copyWith(label: value);
 
+  /// Clears [XAxisConfig.label] to `null`.
+  XAxisConfig clearLabel() => copyWith(clearLabel: true);
+
   /// Replaces [XAxisConfig.unit] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.unit]; construct a new instance to reset it.
   XAxisConfig withUnit(String value) => copyWith(unit: value);
 
+  /// Clears [XAxisConfig.unit] to `null`.
+  XAxisConfig clearUnit() => copyWith(clearUnit: true);
+
   /// Replaces [XAxisConfig.renderMin] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.renderMin]; construct a new instance to reset it.
   XAxisConfig withRenderMin(double value) => copyWith(renderMin: value);
 
+  /// Clears [XAxisConfig.renderMin] to `null`.
+  XAxisConfig clearRenderMin() => copyWith(clearRenderMin: true);
+
   /// Replaces [XAxisConfig.renderMax] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.renderMax]; construct a new instance to reset it.
   XAxisConfig withRenderMax(double value) => copyWith(renderMax: value);
+
+  /// Clears [XAxisConfig.renderMax] to `null`.
+  XAxisConfig clearRenderMax() => copyWith(clearRenderMax: true);
 
   /// Replaces [XAxisConfig.visible] with [value].
   XAxisConfig withVisible(bool value) => copyWith(visible: value);
@@ -75,10 +75,10 @@ extension XAxisConfigFluent on XAxisConfig {
   XAxisConfig withAxisMargin(double value) => copyWith(axisMargin: value);
 
   /// Replaces [XAxisConfig.tickCount] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [XAxisConfig.tickCount]; construct a new instance to reset it.
   XAxisConfig withTickCount(int value) => copyWith(tickCount: value);
+
+  /// Clears [XAxisConfig.tickCount] to `null`.
+  XAxisConfig clearTickCount() => copyWith(clearTickCount: true);
 
   /// Replaces [XAxisConfig.categoryAxis] with [value].
   XAxisConfig withCategoryAxis(CategoryAxisConfig value) =>
@@ -100,10 +100,13 @@ extension XAxisConfigFluent on XAxisConfig {
   /// Replaces [XAxisConfig.min] and [XAxisConfig.max] together.
   ///
   /// The parameters are assert-coupled, so they only move as a pair.
-  ///
-  /// No clear verb: this class's copyWith cannot unset them;
-  /// construct a new instance to reset.
   XAxisConfig withRange(double min, double max) => copyWith(min: min, max: max);
+
+  /// Clears [XAxisConfig.min] to `null`.
+  XAxisConfig clearMin() => copyWith(clearMin: true);
+
+  /// Clears [XAxisConfig.max] to `null`.
+  XAxisConfig clearMax() => copyWith(clearMax: true);
 
   /// Replaces [XAxisConfig.minHeight] and [XAxisConfig.maxHeight] together.
   ///

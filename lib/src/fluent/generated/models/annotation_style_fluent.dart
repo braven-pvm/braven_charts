@@ -14,31 +14,32 @@ extension AnnotationStyleFluent on AnnotationStyle {
   AnnotationStyle withTextStyle(TextStyle value) => copyWith(textStyle: value);
 
   /// Replaces [AnnotationStyle.backgroundColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [AnnotationStyle.backgroundColor]; construct a new instance to reset it.
   AnnotationStyle withBackgroundColor(Color value) =>
       copyWith(backgroundColor: value);
 
+  /// Clears [AnnotationStyle.backgroundColor] to `null`.
+  AnnotationStyle clearBackgroundColor() =>
+      copyWith(clearBackgroundColor: true);
+
   /// Replaces [AnnotationStyle.borderColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [AnnotationStyle.borderColor]; construct a new instance to reset it.
   AnnotationStyle withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Clears [AnnotationStyle.borderColor] to `null`.
+  AnnotationStyle clearBorderColor() => copyWith(clearBorderColor: true);
 
   /// Replaces [AnnotationStyle.borderWidth] with [value].
   AnnotationStyle withBorderWidth(double value) => copyWith(borderWidth: value);
 
   /// Replaces [AnnotationStyle.borderRadius] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [AnnotationStyle.borderRadius]; construct a new instance to reset it.
   AnnotationStyle withBorderRadius(BorderRadius value) =>
       copyWith(borderRadius: value);
 
+  /// Clears [AnnotationStyle.borderRadius] to `null`.
+  AnnotationStyle clearBorderRadius() => copyWith(clearBorderRadius: true);
+
   /// Replaces [AnnotationStyle.padding] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [AnnotationStyle.padding]; construct a new instance to reset it.
   AnnotationStyle withPadding(EdgeInsets value) => copyWith(padding: value);
+
+  /// Clears [AnnotationStyle.padding] to `null`.
+  AnnotationStyle clearPadding() => copyWith(clearPadding: true);
 }

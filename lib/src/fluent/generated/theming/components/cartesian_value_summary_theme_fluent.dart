@@ -50,11 +50,11 @@ extension CartesianValueSummaryThemeFluent on CartesianValueSummaryTheme {
       copyWith(accentSize: value);
 
   /// Replaces [CartesianValueSummaryTheme.shadow] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CartesianValueSummaryTheme.shadow]; construct a new instance to reset it.
   CartesianValueSummaryTheme withShadow(BoxShadow value) =>
       copyWith(shadow: value);
+
+  /// Clears [CartesianValueSummaryTheme.shadow] to `null`.
+  CartesianValueSummaryTheme clearShadow() => copyWith(clearShadow: true);
 
   /// Replaces [CartesianValueSummaryTheme.minWidth] with [value].
   CartesianValueSummaryTheme withMinWidth(double value) =>
@@ -69,9 +69,10 @@ extension CartesianValueSummaryThemeFluent on CartesianValueSummaryTheme {
       copyWith(rowGap: value);
 
   /// Replaces [CartesianValueSummaryTheme.labelValueGap] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [CartesianValueSummaryTheme.labelValueGap]; construct a new instance to reset it.
   CartesianValueSummaryTheme withLabelValueGap(double value) =>
       copyWith(labelValueGap: value);
+
+  /// Clears [CartesianValueSummaryTheme.labelValueGap] to `null`.
+  CartesianValueSummaryTheme clearLabelValueGap() =>
+      copyWith(clearLabelValueGap: true);
 }

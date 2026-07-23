@@ -16,17 +16,17 @@ extension GridConfigFluent on GridConfig {
   GridConfig withVertical(bool value) => copyWith(vertical: value);
 
   /// Replaces [GridConfig.horizontalColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [GridConfig.horizontalColor]; construct a new instance to reset it.
   GridConfig withHorizontalColor(Color value) =>
       copyWith(horizontalColor: value);
 
+  /// Clears [GridConfig.horizontalColor] to `null`.
+  GridConfig clearHorizontalColor() => copyWith(clearHorizontalColor: true);
+
   /// Replaces [GridConfig.verticalColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [GridConfig.verticalColor]; construct a new instance to reset it.
   GridConfig withVerticalColor(Color value) => copyWith(verticalColor: value);
+
+  /// Clears [GridConfig.verticalColor] to `null`.
+  GridConfig clearVerticalColor() => copyWith(clearVerticalColor: true);
 
   /// Replaces [GridConfig.horizontalStrokeWidth] with [value].
   GridConfig withHorizontalStrokeWidth(double value) =>

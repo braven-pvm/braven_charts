@@ -45,24 +45,24 @@ extension RangeAreaDataPointFluent on RangeAreaDataPoint {
   RangeAreaDataPoint clearCategoryValue() => copyWith(clearCategoryValue: true);
 
   /// Replaces [RangeAreaDataPoint.timestamp] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaDataPoint.timestamp]; construct a new instance to reset it.
   RangeAreaDataPoint withTimestamp(DateTime value) =>
       copyWith(timestamp: value);
 
+  /// Clears [RangeAreaDataPoint.timestamp] to `null`.
+  RangeAreaDataPoint clearTimestamp() => copyWith(clearTimestamp: true);
+
   /// Replaces [RangeAreaDataPoint.label] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaDataPoint.label]; construct a new instance to reset it.
   RangeAreaDataPoint withLabel(String value) => copyWith(label: value);
 
+  /// Clears [RangeAreaDataPoint.label] to `null`.
+  RangeAreaDataPoint clearLabel() => copyWith(clearLabel: true);
+
   /// Replaces [RangeAreaDataPoint.metadata] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [RangeAreaDataPoint.metadata]; construct a new instance to reset it.
   RangeAreaDataPoint withMetadata(Map<String, dynamic> value) =>
       copyWith(metadata: value);
+
+  /// Clears [RangeAreaDataPoint.metadata] to `null`.
+  RangeAreaDataPoint clearMetadata() => copyWith(clearMetadata: true);
 
   /// Replaces [RangeAreaDataPoint.segmentStyle] with [value].
   RangeAreaDataPoint withSegmentStyle(SegmentStyle value) =>

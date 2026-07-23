@@ -156,15 +156,19 @@ class PieChartSeries extends RadialCategorySeries {
   PieChartSeries copyWith({
     String? id,
     String? name,
+    bool clearName = false,
     List<ChartDataPoint>? points,
     Color? color,
+    bool clearColor = false,
     SeriesStyle? style,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    bool clearMetadata = false,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
     YAxisConfig? yAxisConfig,
     String? unit,
+    bool clearUnit = false,
     PieChartStyle? pieStyle,
     RadialSelectionStyle? selectionStyle,
     PieDataLabelConfig? dataLabels,
@@ -191,16 +195,16 @@ class PieChartSeries extends RadialCategorySeries {
     final copiedPoints = points ?? this.points;
     return PieChartSeries(
       id: id ?? this.id,
-      name: name ?? this.name,
+      name: clearName ? null : (name ?? this.name),
       points: clearSliceRadiusConfig
           ? [
               for (final point in copiedPoints)
                 RadialCategorySeries.withoutSliceRadius(point),
             ]
           : copiedPoints,
-      color: color ?? this.color,
-      metadata: metadata ?? this.metadata,
-      unit: unit ?? this.unit,
+      color: clearColor ? null : (color ?? this.color),
+      metadata: clearMetadata ? null : (metadata ?? this.metadata),
+      unit: clearUnit ? null : (unit ?? this.unit),
       pieStyle: pieStyle ?? this.pieStyle,
       selectionStyle: selectionStyle ?? this.selectionStyle,
       dataLabels: dataLabels ?? this.dataLabels,

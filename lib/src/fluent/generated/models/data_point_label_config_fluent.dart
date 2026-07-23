@@ -44,11 +44,11 @@ extension DataPointLabelConfigFluent on DataPointLabelConfig {
       copyWith(plotEdgeAware: value);
 
   /// Replaces [DataPointLabelConfig.labelColor] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DataPointLabelConfig.labelColor]; construct a new instance to reset it.
   DataPointLabelConfig withLabelColor(Color value) =>
       copyWith(labelColor: value);
+
+  /// Clears [DataPointLabelConfig.labelColor] to `null`.
+  DataPointLabelConfig clearLabelColor() => copyWith(clearLabelColor: true);
 
   /// Replaces [DataPointLabelConfig.fontSize] with [value].
   DataPointLabelConfig withFontSize(double value) => copyWith(fontSize: value);
@@ -61,11 +61,11 @@ extension DataPointLabelConfigFluent on DataPointLabelConfig {
   DataPointLabelConfig withShowUnit(bool value) => copyWith(showUnit: value);
 
   /// Replaces [DataPointLabelConfig.background] with [value].
-  ///
-  /// No clear verb: this class's copyWith cannot unset
-  /// [DataPointLabelConfig.background]; construct a new instance to reset it.
   DataPointLabelConfig withBackground(Color value) =>
       copyWith(background: value);
+
+  /// Clears [DataPointLabelConfig.background] to `null`.
+  DataPointLabelConfig clearBackground() => copyWith(clearBackground: true);
 
   /// Replaces [DataPointLabelConfig.backgroundOpacity] with [value].
   DataPointLabelConfig withBackgroundOpacity(double value) =>
