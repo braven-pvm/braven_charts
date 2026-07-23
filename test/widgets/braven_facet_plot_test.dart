@@ -125,6 +125,32 @@ void main() {
     );
   });
 
+  testWidgets('a non-positive columns count surfaces as a diagnostic, not a '
+      'hang', (tester) async {
+    // Finding 1: columns <= 0 would never advance the panel-layout loop and
+    // hang the UI thread. The guard must throw during build so this COMPLETES.
+    await tester.pumpWidget(
+      host(
+        const BravenFacetPlot<Row>(
+          PlotSpec<Row>(
+            data: rows,
+            marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+            facet: FacetSpec<Row>(by: rowZone, columns: 0),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.takeException(),
+      isA<GrammarSpecException>().having(
+        (e) => e.code,
+        'code',
+        GrammarDiagnosticCode.facetColumnsNotPositive,
+      ),
+    );
+  });
+
   group('synchronized interaction', () {
     List<BravenPlot<Row>> panelPlots(WidgetTester tester) =>
         tester.widgetList<BravenPlot<Row>>(find.byType(BravenPlot<Row>)).toList();

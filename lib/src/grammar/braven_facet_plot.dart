@@ -39,6 +39,19 @@ class BravenFacetPanel<T> {
   final PlotSpec<T> spec;
 }
 
+/// Placeholder shown for a null facet value, so a strip never reads `null`.
+const String facetNullValuePlaceholder = '—'; // em dash
+
+/// The strip label for a facet [value] under an optional [prefix].
+///
+/// A null [value] renders as [facetNullValuePlaceholder] (an em dash) rather
+/// than the literal string `'null'` — a null value is a valid panel per the
+/// spec, so it gets a defined label. Non-null values stringify as before.
+String facetStripLabel(Object? value, String? prefix) {
+  final valuePart = value == null ? facetNullValuePlaceholder : '$value';
+  return prefix == null ? valuePart : '$prefix: $valuePart';
+}
+
 /// Partitions [spec] into one [BravenFacetPanel] per distinct facet value.
 ///
 /// Validates the faceting up front: [GrammarDiagnosticCode.notFaceted] when the
@@ -50,6 +63,15 @@ class BravenFacetPanel<T> {
 List<BravenFacetPanel<T>> resolveFacetPanels<T>(PlotSpec<T> spec) {
   final facet = spec.facet;
   if (facet == null) throw GrammarSpecException.notFaceted();
+  if (facet.columns != null && facet.columns! <= 0) {
+    throw GrammarSpecException.facetColumnsNotPositive(facet.columns!);
+  }
+  if (spec.yAxes.length > 1 && facet.scales.sharesY) {
+    throw GrammarSpecException.facetMultiAxisSharedY(
+      spec.yAxes.length,
+      facet.scales.name,
+    );
+  }
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final values = distinctFacetValues(spec.data, facet.by);
@@ -73,7 +95,7 @@ List<BravenFacetPanel<T>> resolveFacetPanels<T>(PlotSpec<T> spec) {
     for (final value in values)
       BravenFacetPanel<T>(
         value: value,
-        label: facet.label == null ? '$value' : '${facet.label}: $value',
+        label: facetStripLabel(value, facet.label),
         spec: _injectPanel<T>(
           base,
           <T>[for (final row in spec.data) if (facet.by(row) == value) row],

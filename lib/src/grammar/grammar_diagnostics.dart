@@ -71,6 +71,14 @@ enum GrammarDiagnosticCode {
 
   /// Faceting produced more than the panel cap allows.
   facetPanelCapExceeded,
+
+  /// A facet declared a non-positive `columns` count, which cannot lay out a
+  /// grid (the panel-layout loop would never advance).
+  facetColumnsNotPositive,
+
+  /// A multi-y-axis spec was faceted under a shared-Y scale mode, which v1
+  /// cannot honor without distorting the declared axes.
+  facetMultiAxisSharedY,
 }
 
 /// Raised when a [PlotSpec] cannot be lowered onto the config surface.
@@ -245,6 +253,27 @@ final class GrammarSpecException implements Exception {
         'large is a chart-authoring error, not a render — facet by a coarser '
         'field or pre-aggregate the rows.',
       );
+
+  /// A facet declared a non-positive `columns` count.
+  factory GrammarSpecException.facetColumnsNotPositive(int columns) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.facetColumnsNotPositive,
+        'Faceting was asked for $columns columns, but a grid needs a positive '
+        'column count. Pass columns: 1 or more, or leave it null to auto-size '
+        'the grid.',
+      );
+
+  /// A multi-y-axis spec was faceted under a shared-Y scale mode.
+  factory GrammarSpecException.facetMultiAxisSharedY(
+    int axisCount,
+    String scales,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.facetMultiAxisSharedY,
+    'This spec declares $axisCount Y axes and facets with a shared-Y scale '
+    '($scales), which would collapse every axis onto one global Y range and '
+    'silently distort them. Multi-axis faceting needs FacetScales.freeY or '
+    'FacetScales.free in v1 (per-axis shared ranges are not computed yet).',
+  );
 
   /// The machine-readable diagnostic.
   final GrammarDiagnosticCode code;

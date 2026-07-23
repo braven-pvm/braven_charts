@@ -25,6 +25,11 @@ const rows = <Sample>[
   Sample(time: 2, power: 220, zone: 'easy'),
 ];
 
+const nullableRows = <Sample>[
+  Sample(time: 0, power: 180, zone: 'easy'),
+  Sample(time: 1, power: 260, zone: null),
+];
+
 Matcher throwsGrammarCode(GrammarDiagnosticCode code) =>
     throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
 
@@ -119,5 +124,81 @@ void main() {
       )),
       throwsGrammarCode(GrammarDiagnosticCode.facetPanelCapExceeded),
     );
+  });
+
+  test('a non-positive columns count is a diagnostic, not an infinite loop', () {
+    // Finding 1: columns <= 0 would never advance the panel-layout loop. The
+    // guard must throw BEFORE any loop is reached, so this completes.
+    expect(
+      () => resolveFacetPanels(const PlotSpec<Sample>(
+        data: rows,
+        marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+        facet: FacetSpec<Sample>(by: sampleZone, columns: 0),
+      )),
+      throwsGrammarCode(GrammarDiagnosticCode.facetColumnsNotPositive),
+    );
+    expect(
+      () => resolveFacetPanels(const PlotSpec<Sample>(
+        data: rows,
+        marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+        facet: FacetSpec<Sample>(by: sampleZone, columns: -1),
+      )),
+      throwsGrammarCode(GrammarDiagnosticCode.facetColumnsNotPositive),
+    );
+  });
+
+  test('multi-y-axis faceting under a shared-Y mode is a diagnostic', () {
+    // Finding 2: fixed shares Y, and a single global range applied to every
+    // declared axis silently distorts a 2-axis chart. Reject it in v1.
+    final spec = PlotSpec<Sample>(
+      data: rows,
+      marks: const <Mark<Sample>>[
+        LineMark<Sample>(x: sampleTime, y: samplePower),
+      ],
+      yAxes: <YAxisConfig>[
+        YAxisConfig(position: YAxisPosition.left),
+        YAxisConfig(position: YAxisPosition.right),
+      ],
+      facet: const FacetSpec<Sample>(by: sampleZone),
+    );
+    expect(
+      () => resolveFacetPanels(spec),
+      throwsGrammarCode(GrammarDiagnosticCode.facetMultiAxisSharedY),
+    );
+  });
+
+  test('multi-y-axis faceting under freeY resolves (Y is not shared)', () {
+    final spec = PlotSpec<Sample>(
+      data: rows,
+      marks: const <Mark<Sample>>[
+        LineMark<Sample>(x: sampleTime, y: samplePower),
+      ],
+      yAxes: <YAxisConfig>[
+        YAxisConfig(position: YAxisPosition.left),
+        YAxisConfig(position: YAxisPosition.right),
+      ],
+      facet: const FacetSpec<Sample>(by: sampleZone, scales: FacetScales.freeY),
+    );
+    expect(resolveFacetPanels(spec), hasLength(2));
+  });
+
+  test('a null facet value renders an em-dash placeholder, not "null"', () {
+    // Finding 3: the strip label for a null distinct value is a defined
+    // placeholder (—), never the literal string 'null'.
+    const bare = PlotSpec<Sample>(
+      data: nullableRows,
+      marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+      facet: FacetSpec<Sample>(by: sampleZone),
+    );
+    expect(resolveFacetPanels(bare).map((p) => p.label),
+        <String>['easy', '—']);
+
+    const prefixed = PlotSpec<Sample>(
+      data: nullableRows,
+      marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+      facet: FacetSpec<Sample>(by: sampleZone, label: 'Zone'),
+    );
+    expect(resolveFacetPanels(prefixed).map((p) => p.label),
+        <String>['Zone: easy', 'Zone: —']);
   });
 }
