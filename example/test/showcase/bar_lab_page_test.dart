@@ -10,6 +10,33 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Widget subject() => const MaterialApp(home: Scaffold(body: BarLabPage()));
 
+  testWidgets('point-popup option is available for every bar preset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    final layout = tester.widget<ChartPageLayout>(find.byType(ChartPageLayout));
+    final interaction = layout.optionsChildren
+        .whereType<OptionSection>()
+        .singleWhere((section) => section.title == 'Point popup');
+    final popup = interaction.children.whereType<BoolOption>().singleWhere(
+      (option) => option.key == const ValueKey('bar-lab-show-data-point-popup'),
+    );
+    popup.onChanged(false);
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(chart.interactionConfig?.tooltip.enabled, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows a live bar review surface and style controls', (
     tester,
   ) async {

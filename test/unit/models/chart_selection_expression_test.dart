@@ -133,6 +133,47 @@ void main() {
       );
     });
 
+    test('portable expression document round-trips every clause type', () {
+      final expression = ChartSelectionExpression(
+        clauses: [
+          const ChartSelectionWholeSeriesClause(seriesId: 'whole'),
+          const ChartSelectionPointIndexSpanClause(
+            seriesId: 'span',
+            startPointIndexInclusive: 2,
+            endPointIndexInclusive: 7,
+          ),
+          ChartSelectionPointKeysClause(
+            seriesId: 'keys',
+            pointKeys: const {'alpha', 'beta'},
+          ),
+          ChartSelectionXIntervalClause(
+            minimumXInclusive: 1.25,
+            maximumXInclusive: 8.75,
+            seriesIds: const {'x'},
+          ),
+          ChartSelectionYIntervalClause(
+            minimumYInclusive: -4,
+            maximumYInclusive: 12,
+          ),
+          ChartSelectionExplicitPointRefsClause(
+            pointRefs: {
+              const ChartPointRef(seriesId: 'explicit', pointIndex: 3),
+            },
+          ),
+        ],
+      );
+      final state = ChartViewState(
+        selectionExpression: expression.toDocument(),
+      );
+      final restoredState = ChartViewState.fromJson(state.toJson());
+      final restored = ChartSelectionExpression.fromDocument(
+        restoredState.selectionExpression!,
+      );
+
+      expect(restored, expression);
+      expect(restoredState.selectedPointRefs, isEmpty);
+    });
+
     test('ordered X interval snapshot stays lazy and uses binary search', () {
       final points = _CountingPointList(
         List.generate(
@@ -199,6 +240,153 @@ void main() {
       expect(snapshot.statistics.x?.mean, 2);
       expect(snapshot.statistics.y?.mean, 30);
       expect(snapshot.extents, snapshot.result.extents);
+    });
+
+    test(
+      'Range Area selection extents retain low and high bounds in both lazy paths',
+      () {
+        final series = <ChartSeries>[
+          RangeAreaChartSeries(
+            id: 'outer',
+            points: [
+              RangeAreaDataPoint(x: 0, low: 40, high: 60),
+              RangeAreaDataPoint(x: 1, low: 44, high: 66),
+              RangeAreaDataPoint(x: 2, low: 46, high: 70),
+            ],
+          ),
+          const LineChartSeries(
+            id: 'centre',
+            points: [
+              ChartDataPoint(x: 0, y: 50),
+              ChartDataPoint(x: 1, y: 55),
+              ChartDataPoint(x: 2, y: 58),
+            ],
+          ),
+        ];
+        final expression = ChartSelectionExpression.fromResolvedIdentities(
+          pointRefs: const [
+            ChartPointRef(seriesId: 'outer', pointIndex: 1),
+            ChartPointRef(seriesId: 'outer', pointIndex: 2),
+            ChartPointRef(seriesId: 'centre', pointIndex: 1),
+            ChartPointRef(seriesId: 'centre', pointIndex: 2),
+          ],
+          series: series,
+        );
+
+        final summaryFirst = ChartSelectionSnapshot(
+          expression: expression,
+          revision: ChartDocumentRevision.next(),
+          series: series,
+        );
+        expect(summaryFirst.extents?.minimumY, 44);
+        expect(summaryFirst.extents?.maximumY, 70);
+        expect(summaryFirst.statistics.y?.minimum, 55);
+        expect(summaryFirst.statistics.y?.maximum, 58);
+
+        final resultFirst = ChartSelectionSnapshot(
+          expression: expression,
+          revision: ChartDocumentRevision.next(),
+          series: series,
+        );
+        expect(resultFirst.result.extents?.minimumY, 44);
+        expect(resultFirst.result.extents?.maximumY, 70);
+        expect(resultFirst.extents, resultFirst.result.extents);
+      },
+    );
+
+    test('Y interval membership intersects the complete Range Area tuple', () {
+      final series = <ChartSeries>[
+        RangeAreaChartSeries(
+          id: 'range',
+          points: [
+            RangeAreaDataPoint(x: 0, low: 40, high: 60),
+            RangeAreaDataPoint(x: 1, low: 20, high: 30),
+          ],
+        ),
+        const LineChartSeries(
+          id: 'centre',
+          points: [ChartDataPoint(x: 0, y: 50), ChartDataPoint(x: 1, y: 25)],
+        ),
+      ];
+      final snapshot = ChartSelectionSnapshot(
+        expression: ChartSelectionExpression(
+          clauses: [
+            ChartSelectionYIntervalClause(
+              minimumYInclusive: 58,
+              maximumYInclusive: 62,
+            ),
+          ],
+        ),
+        revision: ChartDocumentRevision.next(),
+        series: series,
+      );
+
+      expect(snapshot.pointRefs, {
+        const ChartPointRef(seriesId: 'range', pointIndex: 0),
+      });
+      expect(snapshot.statistics.pointCount, 1);
+      expect(snapshot.extents?.minimumY, 40);
+      expect(snapshot.extents?.maximumY, 60);
+    });
+
+    test('Candlestick selection extents retain complete wick bounds', () {
+      final series = CandlestickChartSeries(
+        id: 'price',
+        points: [
+          CandlestickDataPoint(x: 0, open: 100, high: 112, low: 94, close: 106),
+        ],
+      );
+      final snapshot = ChartSelectionSnapshot(
+        expression: ChartSelectionExpression.fromResolvedIdentities(
+          pointRefs: const [ChartPointRef(seriesId: 'price', pointIndex: 0)],
+          series: [series],
+        ),
+        revision: ChartDocumentRevision.next(),
+        series: [series],
+      );
+
+      expect(snapshot.extents?.minimumY, 94);
+      expect(snapshot.extents?.maximumY, 112);
+      expect(snapshot.statistics.y?.minimum, 106);
+      expect(snapshot.statistics.y?.maximum, 106);
+    });
+
+    test('stale compact intent reports an empty resolved snapshot', () {
+      final snapshot = ChartSelectionSnapshot(
+        expression: ChartSelectionExpression(
+          clauses: [
+            const ChartSelectionWholeSeriesClause(seriesId: 'missing'),
+            const ChartSelectionPointIndexSpanClause(
+              seriesId: 'live',
+              startPointIndexInclusive: 10,
+              endPointIndexInclusive: 20,
+            ),
+            ChartSelectionPointKeysClause(
+              seriesId: 'live',
+              pointKeys: const {'missing-key'},
+            ),
+            ChartSelectionXIntervalClause(
+              minimumXInclusive: 100,
+              maximumXInclusive: 200,
+            ),
+            ChartSelectionExplicitPointRefsClause(
+              pointRefs: {
+                const ChartPointRef(seriesId: 'live', pointIndex: 99),
+              },
+            ),
+          ],
+        ),
+        revision: ChartDocumentRevision.next(),
+        series: [
+          _series('live', const [(0, 10), (1, 20)], isXOrdered: true),
+        ],
+      );
+
+      expect(snapshot.expression.isNotEmpty, isTrue);
+      expect(snapshot.isEmpty, isTrue);
+      expect(snapshot.isNotEmpty, isFalse);
+      expect(snapshot.debugPointRefsMaterialized, isFalse);
+      expect(snapshot.statistics.pointCount, 0);
     });
 
     test('million-point whole-series statistics stream source points once', () {

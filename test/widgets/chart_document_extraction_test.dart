@@ -554,7 +554,7 @@ void main() {
   );
 
   testWidgets(
-    'X-interval selection preserves exact Line boundaries using renderer interpolation',
+    'X-interval selection defaults to source points and can opt into exact Line boundaries',
     (tester) async {
       final controller = BravenChartController();
       addTearDown(controller.dispose);
@@ -597,20 +597,21 @@ void main() {
       );
       await tester.pump();
 
-      final interpolated = _success(
+      final sourceOnly = _success(
         controller.extractDocument(
           const ChartDocumentExtractOptions(
             dataScope: ChartDataScope.selection,
           ),
         ),
       ).value;
-      final sourceOnly = _success(
+      final interpolated = _success(
         controller.extractDocument(
           const ChartDocumentExtractOptions(
             dataScope: ChartDataScope.selection,
             selectionProjection: ChartSelectionProjectionOptions(
               intervalBoundaryProjection:
-                  ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
+                  ChartSelectionIntervalBoundaryProjection
+                      .interpolateContinuousSeries,
             ),
           ),
         ),
@@ -638,6 +639,29 @@ void main() {
         controller.selectionExpression.clauses.single,
         isA<ChartSelectionXIntervalClause>(),
       );
+
+      final captured = _success(controller.extractDocument()).value;
+      final portableExpression = captured.viewState!.selectionExpression!;
+      final capturedClause = portableExpression.clauses.single;
+      expect(capturedClause.kind, ChartSelectionClauseDocumentKind.xInterval);
+      expect(capturedClause.minimumInclusive, 0.5);
+      expect(capturedClause.maximumInclusive, 2.5);
+      expect(capturedClause.seriesIds, {'signal'});
+
+      controller.clearPointSelection();
+      await tester.pump();
+      expect(controller.selectionExpression.isEmpty, isTrue);
+
+      controller.restoreViewState(
+        ChartViewState.fromJson(captured.viewState!.toJson()),
+      );
+      await tester.pump();
+      final restoredClause =
+          controller.selectionExpression.clauses.single
+              as ChartSelectionXIntervalClause;
+      expect(restoredClause.minimumXInclusive, 0.5);
+      expect(restoredClause.maximumXInclusive, 2.5);
+      expect(restoredClause.seriesIds, {'signal'});
     },
   );
 
@@ -777,6 +801,11 @@ void main() {
         controller.extractDocument(
           const ChartDocumentExtractOptions(
             dataScope: ChartDataScope.selection,
+            selectionProjection: ChartSelectionProjectionOptions(
+              intervalBoundaryProjection:
+                  ChartSelectionIntervalBoundaryProjection
+                      .interpolateContinuousSeries,
+            ),
           ),
         ),
       ).value;
@@ -786,13 +815,7 @@ void main() {
       expect(points.map((point) => point.y.asDouble), [5, 15]);
 
       final sourceOnly = controller.extractDocument(
-        const ChartDocumentExtractOptions(
-          dataScope: ChartDataScope.selection,
-          selectionProjection: ChartSelectionProjectionOptions(
-            intervalBoundaryProjection:
-                ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
-          ),
-        ),
+        const ChartDocumentExtractOptions(dataScope: ChartDataScope.selection),
       );
       expect(sourceOnly, isA<ChartArtifactFailure<ChartDocumentSnapshot>>());
     },
@@ -842,13 +865,28 @@ void main() {
     );
     await tester.pump();
 
-    final extracted = _success(
+    final sourceOnly = _success(
       controller.extractDocument(
         const ChartDocumentExtractOptions(dataScope: ChartDataScope.selection),
       ),
     ).value;
+    final extracted = _success(
+      controller.extractDocument(
+        const ChartDocumentExtractOptions(
+          dataScope: ChartDataScope.selection,
+          selectionProjection: ChartSelectionProjectionOptions(
+            intervalBoundaryProjection: ChartSelectionIntervalBoundaryProjection
+                .interpolateContinuousSeries,
+          ),
+        ),
+      ),
+    ).value;
     final points =
         (extracted.document.series.single.data as InlinePointPayload).points;
+    final sourcePoints =
+        (sourceOnly.document.series.single.data as InlinePointPayload).points;
+    expect(sourcePoints.map((point) => point.x.asDouble), [1]);
+    expect(sourcePoints.map((point) => point.y.asDouble), [10]);
     expect(points.map((point) => point.x.asDouble), [0.5, 1, 1.5]);
     expect(points.map((point) => point.y.asDouble), [7.5, 10, 5]);
   });

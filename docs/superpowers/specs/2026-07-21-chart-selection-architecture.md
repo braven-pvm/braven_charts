@@ -1,10 +1,10 @@
 # Chart Selection Architecture
 
-**Status:** Approved; implementation in progress
+**Status:** Implemented; release hardening complete
 
 **Lane:** `feature/selection-architecture`
 
-**Base:** `origin/master` at `154b21eb`
+**Base:** `origin/master` at `6892ee42`
 
 ## Goal
 
@@ -235,10 +235,11 @@ Projection policies cover:
 - X preservation versus rebasing;
 - derived-series recalculation or structured omission warnings.
 
-Line and Area interval boundaries use the same interpolation implementation as
-rendering. Point-index annotations and chords are rebased. The resulting view
-starts fitted with selection cleared and carries source-document and selection
-provenance.
+Line and Area interval extraction keeps source observations by default, while
+an explicit interpolation projection uses the same implementation as
+rendering for exact interval boundaries. Point-index annotations and chords
+are rebased. The resulting view starts fitted with selection cleared and
+carries source-document and selection provenance.
 
 Annotation projection is explicit. The default clips compatible data-space
 ranges to the retained selection bounds, rebases point/chord/error-bar indices,

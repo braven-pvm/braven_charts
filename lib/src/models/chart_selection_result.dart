@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_view_state.dart';
 import 'chart_data_point.dart';
+import 'chart_selection_point_bounds.dart';
 
 /// One selected datum paired with its stable chart reference.
 @immutable
@@ -205,6 +206,20 @@ class ChartSelectionResult {
     final y = ChartSelectionMetricSummary.summarize(
       points.map((selection) => selection.point.y),
     );
+    final yBounds = <({double minimum, double maximum})>[
+      for (final selection in points)
+        ?chartSelectionPointYBounds(selection.point),
+    ];
+    final minimumY = yBounds.isEmpty
+        ? null
+        : yBounds
+              .map((bounds) => bounds.minimum)
+              .reduce((first, second) => first < second ? first : second);
+    final maximumY = yBounds.isEmpty
+        ? null
+        : yBounds
+              .map((bounds) => bounds.maximum)
+              .reduce((first, second) => first > second ? first : second);
     final categories = <String, int>{};
     for (final selection in points) {
       final category = selection.point.categoryValue;
@@ -217,13 +232,13 @@ class ChartSelectionResult {
       pointRefs: List<ChartPointRef>.unmodifiable(
         points.map((selection) => selection.reference),
       ),
-      extents: x == null || y == null
+      extents: x == null || minimumY == null || maximumY == null
           ? null
           : ChartSelectionDataExtents(
               minimumX: x.minimum,
               maximumX: x.maximum,
-              minimumY: y.minimum,
-              maximumY: y.maximum,
+              minimumY: minimumY,
+              maximumY: maximumY,
             ),
       statistics: ChartSelectionStatistics(
         pointCount: points.length,

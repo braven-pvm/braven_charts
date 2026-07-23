@@ -1,6 +1,10 @@
 # Chart Selection Implementation Plan
 
-**Status:** In progress
+**Status:** Implementation and release hardening complete; delivery pending commit
+
+The 2026-07-23 adversarial review reopened release readiness. All findings and
+acceptance evidence are tracked in
+[`2026-07-23-chart-selection-release-hardening.md`](2026-07-23-chart-selection-release-hardening.md).
 
 **Architecture:**
 [`2026-07-21-chart-selection-architecture.md`](../specs/2026-07-21-chart-selection-architecture.md)
@@ -197,14 +201,17 @@ Current checkpoint:
   of being collapsed to the source markers that happened to fall inside them;
 - `BravenChartController.selectExpression` provides a first-class,
   revision-safe programmatic entry point for compact selection intent;
-- selected Line and Area intervals synthesize exact boundary observations via
-  the same linear, stepped, Bezier, or monotone interpolation geometry used by
+- selected Line and Area intervals retain the selected source observations by
+  default so chart creation, table selection, Copy, and CSV expose the same
+  canonical marks;
+- callers can explicitly request synthetic exact boundary observations via the
+  same linear, stepped, Bezier, or monotone interpolation geometry used by
   rendering, including sparse intervals containing no source marker;
-- callers can explicitly request source-points-only interval projection when
-  synthetic continuous boundaries are undesirable;
 - Candlestick OHLC and Range Area low/high tuples remain atomic, while Pie,
   Donut, and concentric-ring projections retain raw values and therefore
   recompute contribution shares against each retained series total;
+- selection extents and viewport fitting use complete Range Area low/high and
+  Candlestick wick bounds rather than midpoint/close scalar values;
 - selection snapshots pass through the source-capture adapter, and the normal
   Workbench Chart/Data/Split/Source freshness and round-trip contracts remain
   green.
@@ -255,7 +262,7 @@ Focused verification surface:
 
 ### Slice 7 - release hardening
 
-**Status:** In progress; path accessibility and hostile showcase layouts verified
+**Status:** Complete; delivery pending commit
 
 - Complete keyboard and screen-reader semantics for every chart family.
 - Verify touch, compact layouts, RTL, reduced motion, themes, and long labels.
@@ -280,10 +287,43 @@ Current checkpoint:
 - semantic activation distinguishes point selection from complete-series
   selection and reports the series, observation, value, ordinal, and durable
   selection state without creating a parallel accessibility-only model;
+- Bar and Candlestick semantic nodes are live, tappable controls that activate
+  the focused mark through the same resolver and operation policy as keyboard
+  and pointer input;
+- replace, add, subtract, and toggle are visible in-chart controls rather than
+  inspector-only policy, preserving a complete touch path without modifier
+  keys;
 - the focused Selection Lab remains stable at compact width under RTL, 1.25x
   text scaling, dark application chrome, and reduced-motion preferences;
+- at 200% text scaling the Selection Lab switches to an internally scrollable
+  workspace, retains 44 px selection-mode targets, and preserves a non-zero
+  chart viewport instead of overflowing or collapsing the renderer;
 - the public chart-types guide and unreleased changelog now describe semantic
-  scopes, modifier operations, keyboard behavior, and selection extraction.
+  scopes, modifier operations, keyboard behavior, and selection extraction;
+- package and example analysis, 3,479 package tests, 397 example tests,
+  generator analysis/tests and regeneration, standalone dartdoc, release web
+  plus Wasm dry run, publish archive validation, a direct Selection Lab route
+  returning HTTP 200, and `git diff --check` pass.
+- the final publish dry-run has no package-content warnings; its sole warning
+  is the expected dirty-tree condition until the reviewed hardening changes
+  are committed.
+
+## Tracked debt
+
+### Range Area hover presentation refinement
+
+**Status:** Debt; non-blocking for Selection release
+
+- Range Area interval hover now resolves and paints the complete low/high datum,
+  including paired boundary emphasis and a connecting span, while complete-band
+  hover strengthens the series independently from durable selection.
+- The interaction meaning, cache invalidation, popup independence, and
+  regression coverage are complete.
+- The visual treatment still needs a dedicated polish pass for nested and
+  overlapping bands, including the relative weight of point hover, whole-band
+  hover, focus, and durable selection.
+- A later presentation pass should tune those states against light, dark, and
+  high-contrast themes without changing selection semantics or hit geometry.
 
 ## First checkpoint acceptance criteria
 

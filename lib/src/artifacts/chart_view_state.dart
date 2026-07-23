@@ -86,6 +86,192 @@ class ChartPositionDocument {
       );
 }
 
+enum ChartSelectionClauseDocumentKind {
+  wholeSeries,
+  pointIndexSpan,
+  pointKeys,
+  xInterval,
+  yInterval,
+  explicitPointRefs,
+}
+
+/// Portable form of one compact selection clause.
+///
+/// This document belongs to the artifact layer so view state can retain exact
+/// selection intent without depending on renderer or controller objects.
+@immutable
+class ChartSelectionClauseDocument {
+  const ChartSelectionClauseDocument._({
+    required this.kind,
+    this.seriesId,
+    this.startPointIndexInclusive,
+    this.endPointIndexInclusive,
+    this.pointKeys = const {},
+    this.minimumInclusive,
+    this.maximumInclusive,
+    this.seriesIds,
+    this.pointRefs = const [],
+  });
+
+  const ChartSelectionClauseDocument.wholeSeries({required String seriesId})
+    : this._(
+        kind: ChartSelectionClauseDocumentKind.wholeSeries,
+        seriesId: seriesId,
+      );
+
+  const ChartSelectionClauseDocument.pointIndexSpan({
+    required String seriesId,
+    required int startPointIndexInclusive,
+    required int endPointIndexInclusive,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.pointIndexSpan,
+         seriesId: seriesId,
+         startPointIndexInclusive: startPointIndexInclusive,
+         endPointIndexInclusive: endPointIndexInclusive,
+       );
+
+  ChartSelectionClauseDocument.pointKeys({
+    required String seriesId,
+    required Iterable<String> pointKeys,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.pointKeys,
+         seriesId: seriesId,
+         pointKeys: Set.unmodifiable(pointKeys),
+       );
+
+  ChartSelectionClauseDocument.xInterval({
+    required double minimumInclusive,
+    required double maximumInclusive,
+    Iterable<String>? seriesIds,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.xInterval,
+         minimumInclusive: minimumInclusive,
+         maximumInclusive: maximumInclusive,
+         seriesIds: seriesIds == null ? null : Set.unmodifiable(seriesIds),
+       );
+
+  ChartSelectionClauseDocument.yInterval({
+    required double minimumInclusive,
+    required double maximumInclusive,
+    Iterable<String>? seriesIds,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.yInterval,
+         minimumInclusive: minimumInclusive,
+         maximumInclusive: maximumInclusive,
+         seriesIds: seriesIds == null ? null : Set.unmodifiable(seriesIds),
+       );
+
+  ChartSelectionClauseDocument.explicitPointRefs({
+    required Iterable<ChartPointRef> pointRefs,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.explicitPointRefs,
+         pointRefs: List.unmodifiable(pointRefs),
+       );
+
+  final ChartSelectionClauseDocumentKind kind;
+  final String? seriesId;
+  final int? startPointIndexInclusive;
+  final int? endPointIndexInclusive;
+  final Set<String> pointKeys;
+  final double? minimumInclusive;
+  final double? maximumInclusive;
+  final Set<String>? seriesIds;
+  final List<ChartPointRef> pointRefs;
+
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    if (seriesId != null) 'seriesId': seriesId,
+    if (startPointIndexInclusive != null)
+      'startPointIndexInclusive': startPointIndexInclusive,
+    if (endPointIndexInclusive != null)
+      'endPointIndexInclusive': endPointIndexInclusive,
+    if (pointKeys.isNotEmpty) 'pointKeys': pointKeys.toList()..sort(),
+    if (minimumInclusive != null) 'minimumInclusive': minimumInclusive,
+    if (maximumInclusive != null) 'maximumInclusive': maximumInclusive,
+    if (seriesIds != null) 'seriesIds': seriesIds!.toList()..sort(),
+    if (pointRefs.isNotEmpty)
+      'pointRefs': pointRefs.map((ref) => ref.toJson()).toList(),
+  };
+
+  factory ChartSelectionClauseDocument.fromJson(Map<String, Object?> json) {
+    final kindName = readRequiredString(json, 'kind');
+    final kind = ChartSelectionClauseDocumentKind.values
+        .where((candidate) => candidate.name == kindName)
+        .firstOrNull;
+    if (kind == null) {
+      throw FormatException('Unsupported selection clause kind "$kindName".');
+    }
+    return switch (kind) {
+      ChartSelectionClauseDocumentKind.wholeSeries =>
+        ChartSelectionClauseDocument.wholeSeries(
+          seriesId: readRequiredString(json, 'seriesId'),
+        ),
+      ChartSelectionClauseDocumentKind.pointIndexSpan =>
+        ChartSelectionClauseDocument.pointIndexSpan(
+          seriesId: readRequiredString(json, 'seriesId'),
+          startPointIndexInclusive: readRequiredInt(
+            json,
+            'startPointIndexInclusive',
+          ),
+          endPointIndexInclusive: readRequiredInt(
+            json,
+            'endPointIndexInclusive',
+          ),
+        ),
+      ChartSelectionClauseDocumentKind.pointKeys =>
+        ChartSelectionClauseDocument.pointKeys(
+          seriesId: readRequiredString(json, 'seriesId'),
+          pointKeys: readOptionalStringSet(json, 'pointKeys'),
+        ),
+      ChartSelectionClauseDocumentKind.xInterval ||
+      ChartSelectionClauseDocumentKind.yInterval =>
+        (kind == ChartSelectionClauseDocumentKind.xInterval
+            ? ChartSelectionClauseDocument.xInterval
+            : ChartSelectionClauseDocument.yInterval)(
+          minimumInclusive: readRequiredDouble(json, 'minimumInclusive'),
+          maximumInclusive: readRequiredDouble(json, 'maximumInclusive'),
+          seriesIds: json.containsKey('seriesIds')
+              ? readOptionalStringSet(json, 'seriesIds')
+              : null,
+        ),
+      ChartSelectionClauseDocumentKind.explicitPointRefs =>
+        ChartSelectionClauseDocument.explicitPointRefs(
+          pointRefs: readOptionalList(json, 'pointRefs').map(
+            (item) =>
+                ChartPointRef.fromJson(readStringMap(item, 'point reference')),
+          ),
+        ),
+    };
+  }
+}
+
+/// Portable compact selection intent captured with chart view state.
+@immutable
+class ChartSelectionExpressionDocument {
+  ChartSelectionExpressionDocument({
+    required Iterable<ChartSelectionClauseDocument> clauses,
+  }) : clauses = List.unmodifiable(clauses);
+
+  final List<ChartSelectionClauseDocument> clauses;
+
+  bool get isEmpty => clauses.isEmpty;
+  bool get isNotEmpty => clauses.isNotEmpty;
+
+  Map<String, Object?> toJson() => {
+    'clauses': clauses.map((clause) => clause.toJson()).toList(),
+  };
+
+  factory ChartSelectionExpressionDocument.fromJson(
+    Map<String, Object?> json,
+  ) => ChartSelectionExpressionDocument(
+    clauses: readOptionalList(json, 'clauses').map(
+      (item) => ChartSelectionClauseDocument.fromJson(
+        readStringMap(item, 'selection clause'),
+      ),
+    ),
+  );
+}
+
 @immutable
 class ChartViewState {
   ChartViewState({
@@ -94,6 +280,7 @@ class ChartViewState {
     this.selectedSeriesId,
     Iterable<String>? selectedSeriesIds,
     Iterable<ChartPointRef> selectedPointRefs = const [],
+    this.selectionExpression,
     Iterable<String> visibleAxisIds = const [],
     Iterable<String> overflowAxisIds = const [],
     this.selectedAnnotationId,
@@ -124,6 +311,12 @@ class ChartViewState {
 
   /// Durable linked-point selection captured and restored with this view.
   final List<ChartPointRef> selectedPointRefs;
+
+  /// Exact compact selection intent.
+  ///
+  /// Older artifacts omit this field and continue restoring
+  /// [selectedSeriesIds] and [selectedPointRefs].
+  final ChartSelectionExpressionDocument? selectionExpression;
   final List<String> visibleAxisIds;
   final List<String> overflowAxisIds;
   final String? selectedAnnotationId;
@@ -136,6 +329,8 @@ class ChartViewState {
     if (selectedSeriesIds.isNotEmpty || selectedSeriesId != null)
       'selectedSeriesIds': selectedSeriesIds.toList()..sort(),
     'selectedPointRefs': selectedPointRefs.map((ref) => ref.toJson()).toList(),
+    if (selectionExpression?.isNotEmpty ?? false)
+      'selectionExpression': selectionExpression!.toJson(),
     'visibleAxisIds': visibleAxisIds,
     'overflowAxisIds': overflowAxisIds,
     if (selectedAnnotationId != null)
@@ -155,6 +350,11 @@ class ChartViewState {
     selectedPointRefs: readOptionalList(json, 'selectedPointRefs').map(
       (item) => ChartPointRef.fromJson(readStringMap(item, 'point reference')),
     ),
+    selectionExpression: json['selectionExpression'] == null
+        ? null
+        : ChartSelectionExpressionDocument.fromJson(
+            readRequiredMap(json, 'selectionExpression'),
+          ),
     visibleAxisIds: readOptionalStringList(json, 'visibleAxisIds'),
     overflowAxisIds: readOptionalStringList(json, 'overflowAxisIds'),
     selectedAnnotationId: readOptionalString(json, 'selectedAnnotationId'),

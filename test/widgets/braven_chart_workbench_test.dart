@@ -2408,6 +2408,111 @@ void main() {
       isNot(contains(const ChartPointRef(seriesId: 'signal', pointIndex: 1))),
     );
   });
+
+  testWidgets('stale selection intent disables all selection actions', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        width: 1100,
+        chartController: chartController,
+        workbenchController: workbenchController,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    chartController.selectExpression(
+      ChartSelectionExpression(
+        clauses: [
+          ChartSelectionExplicitPointRefsClause(
+            pointRefs: {
+              const ChartPointRef(seriesId: 'signal', pointIndex: 99),
+            },
+          ),
+        ],
+      ),
+      revision: chartController.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+
+    expect(chartController.selectionSnapshot, isNotNull);
+    expect(chartController.selectionSnapshot!.isEmpty, isTrue);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('chart-selection-create-chart')),
+          )
+          .onPressed,
+      isNull,
+    );
+    for (final key in const [
+      'chart-selection-zoom',
+      'chart-selection-copy',
+      'chart-selection-export-csv',
+      'chart-selection-invert',
+    ]) {
+      expect(
+        tester.widget<OutlinedButton>(find.byKey(ValueKey(key))).onPressed,
+        isNull,
+      );
+    }
+    expect(
+      tester
+          .widget<TextButton>(
+            find.byKey(const ValueKey('chart-selection-clear')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(find.text('Nothing selected'), findsOneWidget);
+  });
+
+  testWidgets('selection zoom action honors configured padding', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        width: 1100,
+        chartController: chartController,
+        workbenchController: workbenchController,
+        selectionZoomPaddingFraction: 0.25,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    chartController.selectPoints(const [
+      ChartPointRef(seriesId: 'signal', pointIndex: 0),
+      ChartPointRef(seriesId: 'signal', pointIndex: 2),
+    ], revision: chartController.effectiveDocumentRevision.value!);
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-zoom')),
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-selection-zoom')));
+    await tester.pump();
+
+    final extracted = chartController.extractDocument(
+      const ChartDocumentExtractOptions(includeViewState: true),
+    );
+    expect(extracted, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+    final bounds = (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>)
+        .value
+        .viewState!
+        .visibleBounds!;
+    expect(bounds.xMin, closeTo(-0.5, 0.02));
+    expect(bounds.xMax, closeTo(2.5, 0.02));
+  });
 }
 
 Widget _host({
@@ -2424,6 +2529,7 @@ Widget _host({
   ChartWorkbenchSelectionArtifactCallback? onSelectionArtifactCreated,
   ChartWorkbenchSelectionExportCallback? onSelectionCopied,
   ChartWorkbenchSelectionExportCallback? onSelectionCsvExported,
+  double selectionZoomPaddingFraction = 0.08,
   double splitBreakpoint = 900,
   Set<ChartDisplayMode> availableDisplayModes = const {
     ChartDisplayMode.chart,
@@ -2467,6 +2573,7 @@ Widget _host({
           contextActionsBuilder: contextActionsBuilder,
           chartActionButtonBuilder: chartActionButtonBuilder,
           showSelectionActions: showSelectionActions,
+          selectionZoomPaddingFraction: selectionZoomPaddingFraction,
           onSelectionArtifactCreated: onSelectionArtifactCreated,
           onSelectionCopied: onSelectionCopied,
           onSelectionCsvExported: onSelectionCsvExported,

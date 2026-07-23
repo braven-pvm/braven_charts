@@ -16,6 +16,7 @@ class ChartDataHit {
     this.sourcePointIndices = const <int>[],
     required this.plotPosition,
     required this.semanticBounds,
+    this.selectionBounds,
     required this.point,
     required this.formattedValue,
     this.formattedXValue,
@@ -77,6 +78,13 @@ class ChartDataHit {
 
   /// Assistive hit region in plot-local coordinates.
   final Rect semanticBounds;
+
+  /// Exact visual extent used by spatial selection feedback, when the datum
+  /// occupies more than one screen-space position.
+  ///
+  /// Range Area intervals use this to retain their complete low-to-high span
+  /// instead of presenting their canonical midpoint as a third data marker.
+  final Rect? selectionBounds;
 
   /// Original transported point passed to public callbacks.
   final ChartDataPoint point;

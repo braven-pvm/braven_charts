@@ -21,6 +21,7 @@ import '../../interaction/core/interaction_mode.dart';
 import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
+import '../../models/range_area_chart_series.dart';
 
 /// Delegate interface for EventHandlerManager to interact with ChartRenderBox.
 ///
@@ -239,6 +240,7 @@ class ChartSelectionGestureResult {
     this.maximumXInclusive,
     this.minimumYInclusive,
     this.maximumYInclusive,
+    this.plotBounds,
   });
 
   final ChartSelectionAcquisitionMode acquisitionMode;
@@ -247,6 +249,14 @@ class ChartSelectionGestureResult {
   final double? maximumXInclusive;
   final double? minimumYInclusive;
   final double? maximumYInclusive;
+
+  /// Exact plot-space drag bounds before any chart-wide data transform is
+  /// applied.
+  ///
+  /// Y interval intent must be resolved through each participating series
+  /// transform because independent axes map the same pixels to different data
+  /// values.
+  final Rect? plotBounds;
 }
 
 /// Manages all pointer event handling for the chart.
@@ -1351,9 +1361,11 @@ class EventHandlerManager {
     double? maximumX;
     double? minimumY;
     double? maximumY;
+    Rect? plotBounds;
     if (boxRect != null && transform != null) {
       final firstPlot = _delegate.widgetToPlot(boxRect.topLeft);
       final secondPlot = _delegate.widgetToPlot(boxRect.bottomRight);
+      plotBounds = Rect.fromPoints(firstPlot, secondPlot);
       final first = transform.plotToData(firstPlot.dx, firstPlot.dy);
       final second = transform.plotToData(secondPlot.dx, secondPlot.dy);
       minimumX = math.min(first.dx, second.dx);
@@ -1370,6 +1382,7 @@ class EventHandlerManager {
         maximumXInclusive: maximumX,
         minimumYInclusive: minimumY,
         maximumYInclusive: maximumY,
+        plotBounds: plotBounds,
       ),
     );
   }
@@ -2059,7 +2072,9 @@ class EventHandlerManager {
   bool _usesPathHoverFeedback(ChartElement? element) =>
       element is SeriesElement &&
       element.isHovered &&
-      (element.series is LineChartSeries || element.series is AreaChartSeries);
+      (element.series is LineChartSeries ||
+          element.series is AreaChartSeries ||
+          element.series is RangeAreaChartSeries);
 
   void _updateHoveredMarker(Offset widgetPosition) {
     if (!(_delegate.interactionConfig?.enabled ?? true)) {
@@ -2166,7 +2181,8 @@ class EventHandlerManager {
     if (marker == null) return false;
     for (final element in _delegate.elements.whereType<SeriesElement>()) {
       if (element.id == marker.seriesId) {
-        return element.series is! BarChartSeries;
+        return element.series is! BarChartSeries &&
+            element.series is! RangeAreaChartSeries;
       }
     }
     return false;

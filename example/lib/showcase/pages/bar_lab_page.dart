@@ -285,6 +285,7 @@ class _BarLabPageState extends State<BarLabPage> {
   BarLayoutMode _layoutMode = BarLayoutMode.grouped;
   BarOrientation _orientation = BarOrientation.vertical;
   ChartSelectionScope _selectionScope = ChartSelectionScope.mark;
+  bool _showDataPointPopup = true;
   double _barWidth = 0.72;
   double _barGap = 4;
   double _overlayWidthStep = 22;
@@ -447,6 +448,7 @@ class _BarLabPageState extends State<BarLabPage> {
           .values[random.nextInt(BarLabelPosition.values.length)];
       _labelEdgeOffset = 2 + random.nextDouble() * 14;
       _showTracks = random.nextBool();
+      _showDataPointPopup = random.nextBool();
       _dimmedOpacity = 0.2 + random.nextDouble() * 0.55;
       _categoryLabelDensity = CategoryLabelDensity
           .values[random.nextInt(CategoryLabelDensity.values.length)];
@@ -873,7 +875,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
       interactionConfig: InteractionConfig(
         selection: ChartSelectionConfig(scope: _selectionScope),
-        tooltip: const TooltipConfig(),
+        tooltip: TooltipConfig(enabled: _showDataPointPopup),
         crosshair: CrosshairConfig(
           mode: CrosshairMode.both,
           displayMode: _orientation == BarOrientation.horizontal
@@ -1657,6 +1659,20 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
+    OptionSection(
+      title: 'Point popup',
+      icon: Icons.chat_bubble_outline,
+      children: [
+        BoolOption(
+          key: const ValueKey('bar-lab-show-data-point-popup'),
+          label: 'Show Data Point Popup',
+          subtitle:
+              'Show the single-bar value popup for a directly hovered mark',
+          value: _showDataPointPopup,
+          onChanged: (value) => setState(() => _showDataPointPopup = value),
+        ),
+      ],
+    ),
   ];
 
   ChartBuildResult get _agentBuildResult {

@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -6,6 +7,7 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import 'chart_data_point.dart';
 import 'chart_point_identity.dart';
+import 'chart_selection_point_bounds.dart';
 import 'chart_selection_result.dart';
 import 'chart_series.dart';
 
@@ -187,6 +189,43 @@ class ChartSelectionExpression {
   ChartSelectionExpression({required Iterable<ChartSelectionClause> clauses})
     : clauses = List.unmodifiable(clauses);
 
+  factory ChartSelectionExpression.fromDocument(
+    ChartSelectionExpressionDocument document,
+  ) => ChartSelectionExpression(
+    clauses: [
+      for (final clause in document.clauses)
+        switch (clause.kind) {
+          ChartSelectionClauseDocumentKind.wholeSeries =>
+            ChartSelectionWholeSeriesClause(seriesId: clause.seriesId!),
+          ChartSelectionClauseDocumentKind.pointIndexSpan =>
+            ChartSelectionPointIndexSpanClause(
+              seriesId: clause.seriesId!,
+              startPointIndexInclusive: clause.startPointIndexInclusive!,
+              endPointIndexInclusive: clause.endPointIndexInclusive!,
+            ),
+          ChartSelectionClauseDocumentKind.pointKeys =>
+            ChartSelectionPointKeysClause(
+              seriesId: clause.seriesId!,
+              pointKeys: clause.pointKeys,
+            ),
+          ChartSelectionClauseDocumentKind.xInterval =>
+            ChartSelectionXIntervalClause(
+              minimumXInclusive: clause.minimumInclusive!,
+              maximumXInclusive: clause.maximumInclusive!,
+              seriesIds: clause.seriesIds,
+            ),
+          ChartSelectionClauseDocumentKind.yInterval =>
+            ChartSelectionYIntervalClause(
+              minimumYInclusive: clause.minimumInclusive!,
+              maximumYInclusive: clause.maximumInclusive!,
+              seriesIds: clause.seriesIds,
+            ),
+          ChartSelectionClauseDocumentKind.explicitPointRefs =>
+            ChartSelectionExplicitPointRefsClause(pointRefs: clause.pointRefs),
+        },
+    ],
+  );
+
   /// Compresses already-resolved identities into whole-series, point-span,
   /// and explicit-reference clauses.
   factory ChartSelectionExpression.fromResolvedIdentities({
@@ -273,8 +312,178 @@ class ChartSelectionExpression {
 
   final List<ChartSelectionClause> clauses;
 
+  ChartSelectionExpressionDocument toDocument() =>
+      ChartSelectionExpressionDocument(
+        clauses: [
+          for (final clause in clauses)
+            switch (clause) {
+              ChartSelectionWholeSeriesClause() =>
+                ChartSelectionClauseDocument.wholeSeries(
+                  seriesId: clause.seriesId,
+                ),
+              ChartSelectionPointIndexSpanClause() =>
+                ChartSelectionClauseDocument.pointIndexSpan(
+                  seriesId: clause.seriesId,
+                  startPointIndexInclusive: clause.startPointIndexInclusive,
+                  endPointIndexInclusive: clause.endPointIndexInclusive,
+                ),
+              ChartSelectionPointKeysClause() =>
+                ChartSelectionClauseDocument.pointKeys(
+                  seriesId: clause.seriesId,
+                  pointKeys: clause.pointKeys,
+                ),
+              ChartSelectionXIntervalClause() =>
+                ChartSelectionClauseDocument.xInterval(
+                  minimumInclusive: clause.minimumXInclusive,
+                  maximumInclusive: clause.maximumXInclusive,
+                  seriesIds: clause.seriesIds,
+                ),
+              ChartSelectionYIntervalClause() =>
+                ChartSelectionClauseDocument.yInterval(
+                  minimumInclusive: clause.minimumYInclusive,
+                  maximumInclusive: clause.maximumYInclusive,
+                  seriesIds: clause.seriesIds,
+                ),
+              ChartSelectionExplicitPointRefsClause() =>
+                ChartSelectionClauseDocument.explicitPointRefs(
+                  pointRefs: clause.pointRefs,
+                ),
+            },
+        ],
+      );
+
   bool get isEmpty => clauses.isEmpty;
   bool get isNotEmpty => clauses.isNotEmpty;
+
+  /// Whether this expression selects [pointIndex] in [series].
+  ///
+  /// Renderers use this predicate to paint compact whole-series, span, and
+  /// interval intent without first allocating every matching point identity.
+  /// The supplied index always refers to the effective source series.
+  bool selectsPoint(ChartSeries series, int pointIndex) {
+    if (pointIndex < 0 || pointIndex >= series.points.length) return false;
+    final point = series.points[pointIndex];
+    if (!point.isValid) return false;
+    final reference = ChartPointRef(
+      seriesId: series.id,
+      pointIndex: pointIndex,
+    );
+    for (final clause in clauses) {
+      switch (clause) {
+        case ChartSelectionWholeSeriesClause():
+          if (clause.seriesId == series.id) return true;
+        case ChartSelectionPointIndexSpanClause():
+          if (clause.seriesId == series.id &&
+              pointIndex >= clause.startPointIndexInclusive &&
+              pointIndex <= clause.endPointIndexInclusive) {
+            return true;
+          }
+        case ChartSelectionPointKeysClause():
+          final pointKey = point.pointKey;
+          if (clause.seriesId == series.id &&
+              pointKey != null &&
+              clause.pointKeys.contains(pointKey)) {
+            return true;
+          }
+        case ChartSelectionXIntervalClause():
+          if (_targetsSeries(clause.seriesIds, series.id) &&
+              point.x >= clause.minimumXInclusive &&
+              point.x <= clause.maximumXInclusive) {
+            return true;
+          }
+        case ChartSelectionYIntervalClause():
+          if (_targetsSeries(clause.seriesIds, series.id) &&
+              chartSelectionPointIntersectsYInterval(
+                point,
+                minimumYInclusive: clause.minimumYInclusive,
+                maximumYInclusive: clause.maximumYInclusive,
+              )) {
+            return true;
+          }
+        case ChartSelectionExplicitPointRefsClause():
+          if (clause.pointRefs.contains(reference)) return true;
+      }
+    }
+    return false;
+  }
+
+  /// Whether this expression resolves at least one valid point in [series].
+  ///
+  /// This short-circuits as soon as a live match is found and does not allocate
+  /// the concrete reference set. It is used for action availability so stale
+  /// identities cannot make an otherwise empty selection look active.
+  bool resolvesAny(Iterable<ChartSeries> series) {
+    if (clauses.isEmpty) return false;
+    final orderedSeries = series.toList(growable: false);
+    final seriesById = <String, ChartSeries>{
+      for (final candidate in orderedSeries) candidate.id: candidate,
+    };
+    for (final clause in clauses) {
+      switch (clause) {
+        case ChartSelectionWholeSeriesClause():
+          final candidate = seriesById[clause.seriesId];
+          if (candidate != null &&
+              candidate.points.any((point) => point.isValid)) {
+            return true;
+          }
+        case ChartSelectionPointIndexSpanClause():
+          final candidate = seriesById[clause.seriesId];
+          if (candidate == null || candidate.points.isEmpty) continue;
+          final start = clause.startPointIndexInclusive;
+          final end = math.min(
+            clause.endPointIndexInclusive,
+            candidate.points.length - 1,
+          );
+          for (var index = start; index <= end; index++) {
+            if (candidate.points[index].isValid) return true;
+          }
+        case ChartSelectionPointKeysClause():
+          final candidate = seriesById[clause.seriesId];
+          if (candidate == null) continue;
+          final keyIndex = ChartPointKeyIndex(candidate);
+          for (final pointKey in clause.pointKeys) {
+            final pointIndex = keyIndex.pointIndexFor(pointKey);
+            if (pointIndex != null && candidate.points[pointIndex].isValid) {
+              return true;
+            }
+          }
+        case ChartSelectionXIntervalClause():
+          for (final candidate in _targetSeries(
+            orderedSeries,
+            clause.seriesIds,
+          )) {
+            if (_seriesHasXIntervalPoint(candidate, clause)) return true;
+          }
+        case ChartSelectionYIntervalClause():
+          for (final candidate in _targetSeries(
+            orderedSeries,
+            clause.seriesIds,
+          )) {
+            for (final point in candidate.points) {
+              if (point.isValid &&
+                  chartSelectionPointIntersectsYInterval(
+                    point,
+                    minimumYInclusive: clause.minimumYInclusive,
+                    maximumYInclusive: clause.maximumYInclusive,
+                  )) {
+                return true;
+              }
+            }
+          }
+        case ChartSelectionExplicitPointRefsClause():
+          for (final ref in clause.pointRefs) {
+            final candidate = seriesById[ref.seriesId];
+            if (candidate != null &&
+                ref.pointIndex >= 0 &&
+                ref.pointIndex < candidate.points.length &&
+                candidate.points[ref.pointIndex].isValid) {
+              return true;
+            }
+          }
+      }
+    }
+    return false;
+  }
 
   /// Resolves this compact intent against [series].
   ///
@@ -342,8 +551,11 @@ class ChartSelectionExpression {
             for (var index = 0; index < candidate.points.length; index++) {
               final point = candidate.points[index];
               if (point.isValid &&
-                  point.y >= clause.minimumYInclusive &&
-                  point.y <= clause.maximumYInclusive) {
+                  chartSelectionPointIntersectsYInterval(
+                    point,
+                    minimumYInclusive: clause.minimumYInclusive,
+                    maximumYInclusive: clause.maximumYInclusive,
+                  )) {
                 refs.add(
                   ChartPointRef(seriesId: candidate.id, pointIndex: index),
                 );
@@ -389,9 +601,12 @@ class ChartSelectionSnapshot {
   final ChartDocumentRevision revision;
   final List<ChartSeries> _series;
 
-  late final Set<ChartPointRef> pointRefs = expression.resolvePointRefs(
-    _series,
-  );
+  Set<ChartPointRef>? _pointRefs;
+  Set<ChartPointRef> get pointRefs =>
+      _pointRefs ??= expression.resolvePointRefs(_series);
+
+  /// Whether a consumer has requested concrete point identities.
+  bool get debugPointRefsMaterialized => _pointRefs != null;
   late final Set<ChartPointKeyRef> pointKeyRefs = _buildPointKeyRefs();
   ChartSelectionResult? _result;
   _ChartSelectionSummary? _summary;
@@ -402,8 +617,9 @@ class ChartSelectionSnapshot {
       _result?.extents ?? (_summary ??= _buildSummary()).extents;
   ChartSelectionStatistics get statistics =>
       _result?.statistics ?? (_summary ??= _buildSummary()).statistics;
-  bool get isEmpty => expression.isEmpty;
-  bool get isNotEmpty => expression.isNotEmpty;
+  late final bool _resolvesAny = expression.resolvesAny(_series);
+  bool get isEmpty => !_resolvesAny;
+  bool get isNotEmpty => _resolvesAny;
 
   ChartSelectionResult _buildResult() {
     if (pointRefs.isEmpty) return const ChartSelectionResult.empty();
@@ -574,8 +790,11 @@ class _SeriesSelectionPredicate {
       }
     }
     for (final interval in _yIntervals) {
-      if (point.y >= interval.minimumYInclusive &&
-          point.y <= interval.maximumYInclusive) {
+      if (chartSelectionPointIntersectsYInterval(
+        point,
+        minimumYInclusive: interval.minimumYInclusive,
+        maximumYInclusive: interval.maximumYInclusive,
+      )) {
         return true;
       }
     }
@@ -587,6 +806,7 @@ class _ChartSelectionSummaryAccumulator {
   final Set<String> _seriesIds = {};
   final _MetricSummaryAccumulator _x = _MetricSummaryAccumulator();
   final _MetricSummaryAccumulator _y = _MetricSummaryAccumulator();
+  final _MetricSummaryAccumulator _yExtent = _MetricSummaryAccumulator();
   final _MetricSummaryAccumulator _magnitude = _MetricSummaryAccumulator();
   final _MetricSummaryAccumulator _colorValue = _MetricSummaryAccumulator();
   final _MetricSummaryAccumulator _opacityValue = _MetricSummaryAccumulator();
@@ -598,6 +818,11 @@ class _ChartSelectionSummaryAccumulator {
     _seriesIds.add(seriesId);
     _x.add(point.x);
     _y.add(point.y);
+    if (chartSelectionPointYBounds(point) case final bounds?) {
+      _yExtent
+        ..add(bounds.minimum)
+        ..add(bounds.maximum);
+    }
     _magnitude.add(point.magnitude);
     _colorValue.add(point.colorValue);
     _opacityValue.add(point.opacityValue);
@@ -610,6 +835,7 @@ class _ChartSelectionSummaryAccumulator {
   _ChartSelectionSummary finish() {
     final x = _x.finish();
     final y = _y.finish();
+    final yExtent = _yExtent.finish();
     final statistics = ChartSelectionStatistics(
       pointCount: _pointCount,
       seriesCount: _seriesIds.length,
@@ -622,13 +848,13 @@ class _ChartSelectionSummaryAccumulator {
     );
     return _ChartSelectionSummary(
       statistics: statistics,
-      extents: x == null || y == null
+      extents: x == null || yExtent == null
           ? null
           : ChartSelectionDataExtents(
               minimumX: x.minimum,
               maximumX: x.maximum,
-              minimumY: y.minimum,
-              maximumY: y.maximum,
+              minimumY: yExtent.minimum,
+              maximumY: yExtent.maximum,
             ),
     );
   }
@@ -712,6 +938,29 @@ void _addXIntervalRefs(
       refs.add(ChartPointRef(seriesId: series.id, pointIndex: index));
     }
   }
+}
+
+bool _seriesHasXIntervalPoint(
+  ChartSeries series,
+  ChartSelectionXIntervalClause clause,
+) {
+  final points = series.points;
+  if (points.isEmpty) return false;
+  if (!series.isXOrdered) {
+    return points.any(
+      (point) =>
+          point.isValid &&
+          point.x >= clause.minimumXInclusive &&
+          point.x <= clause.maximumXInclusive,
+    );
+  }
+
+  final start = _lowerBoundX(points, clause.minimumXInclusive);
+  final endExclusive = _upperBoundX(points, clause.maximumXInclusive);
+  for (var index = start; index < endExclusive; index++) {
+    if (points[index].isValid) return true;
+  }
+  return false;
 }
 
 int _lowerBoundX(List<ChartDataPoint> points, double value) {

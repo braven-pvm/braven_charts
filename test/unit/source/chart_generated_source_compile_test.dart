@@ -176,6 +176,15 @@ void main() {
           selectedPointRefs: const [
             ChartPointRef(seriesId: 'power', pointIndex: 1),
           ],
+          selectionExpression: ChartSelectionExpressionDocument(
+            clauses: [
+              ChartSelectionClauseDocument.xInterval(
+                minimumInclusive: 0.25,
+                maximumInclusive: 0.75,
+                seriesIds: const {'power'},
+              ),
+            ],
+          ),
         ),
       );
       final generated = _success(
@@ -593,7 +602,9 @@ void main() {
               ),
             ).value,
           ],
-          theme: _success(ChartThemeDocumentCodec.encode(ChartTheme.light)).value,
+          theme: _success(
+            ChartThemeDocumentCodec.encode(ChartTheme.light),
+          ).value,
           interaction: _success(
             ChartInteractionDocumentCodec.encode(const InteractionConfig()),
           ).value,
@@ -633,7 +644,11 @@ void main() {
           workingDirectory: Directory.current.path,
           runInShell: Platform.isWindows,
         );
-        expect(format.exitCode, 0, reason: '${format.stdout}\n${format.stderr}');
+        expect(
+          format.exitCode,
+          0,
+          reason: '${format.stdout}\n${format.stderr}',
+        );
 
         final analyze = await Process.run(
           'dart',
@@ -675,7 +690,11 @@ void main() {
             countryCode: 'ZA',
           ),
           shadows: const [
-            Shadow(color: Color(0x55000000), offset: Offset(1, 2), blurRadius: 3),
+            Shadow(
+              color: Color(0x55000000),
+              offset: Offset(1, 2),
+              blurRadius: 3,
+            ),
           ],
           fontFeatures: const [FontFeature('smcp')],
           fontVariations: const [FontVariation('wght', 650)],
@@ -730,7 +749,9 @@ void main() {
               ),
             ).value,
           ],
-          theme: _success(ChartThemeDocumentCodec.encode(ChartTheme.light)).value,
+          theme: _success(
+            ChartThemeDocumentCodec.encode(ChartTheme.light),
+          ).value,
           interaction: _success(
             ChartInteractionDocumentCodec.encode(const InteractionConfig()),
           ).value,
@@ -768,7 +789,11 @@ void main() {
           workingDirectory: Directory.current.path,
           runInShell: Platform.isWindows,
         );
-        expect(format.exitCode, 0, reason: '${format.stdout}\n${format.stderr}');
+        expect(
+          format.exitCode,
+          0,
+          reason: '${format.stdout}\n${format.stderr}',
+        );
 
         final analyze = await Process.run(
           'dart',

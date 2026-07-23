@@ -892,6 +892,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.chartActionButtonConfig = const ChartOverlayActionButtonConfig(),
     this.showSelectionActions = false,
     this.selectionProjection = const ChartSelectionProjectionOptions(),
+    this.selectionZoomPaddingFraction = 0.08,
     this.selectionCsvFileName = 'chart-selection.csv',
     this.onSelectionArtifactCreated,
     this.onSelectionCopied,
@@ -918,6 +919,10 @@ class BravenChartWorkbench extends StatefulWidget {
     this.onSplitRatioChanged,
     this.onStatusChanged,
   }) : assert(availableDisplayModes.length > 0),
+       assert(
+         selectionZoomPaddingFraction >= 0 &&
+             selectionZoomPaddingFraction < double.infinity,
+       ),
        assert(selectionCsvFileName != ''),
        assert(splitBreakpoint > 0),
        assert(splitRatio > 0 && splitRatio < 1),
@@ -1001,6 +1006,11 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Data-boundary rules used by selection-only artifacts and exports.
   final ChartSelectionProjectionOptions selectionProjection;
+
+  /// Fractional padding applied by the package-owned selection Zoom action.
+  ///
+  /// The value is applied independently to the selected X and Y spans.
+  final double selectionZoomPaddingFraction;
 
   /// Browser download name used by the package-owned CSV action.
   final String selectionCsvFileName;
@@ -1530,8 +1540,11 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     }
   }
 
-  void _zoomToSelection() =>
-      _handleSelectionCommand(_chartController.zoomToSelection());
+  void _zoomToSelection() => _handleSelectionCommand(
+    _chartController.zoomToSelection(
+      paddingFraction: widget.selectionZoomPaddingFraction,
+    ),
+  );
 
   void _invertSelection() =>
       _handleSelectionCommand(_chartController.invertSelection());

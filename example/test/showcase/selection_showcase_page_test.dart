@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/selection_showcase_page.dart';
+import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,9 +11,38 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const MaterialApp(home: SelectionShowcasePage()));
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SelectionShowcasePage())),
+    );
     await tester.pumpAndSettle();
   }
+
+  List<Widget> inspectorEntries(WidgetTester tester) {
+    final panel = tester.widget<OptionsPanel>(find.byType(OptionsPanel));
+    final entries = <Widget>[];
+
+    void visit(Widget widget) {
+      entries.add(widget);
+      if (widget is OptionSection) {
+        for (final child in widget.children) {
+          visit(child);
+        }
+      }
+    }
+
+    for (final child in panel.children) {
+      visit(child);
+    }
+    return entries;
+  }
+
+  T inspectorEntry<T extends Widget>(WidgetTester tester, Key key) =>
+      inspectorEntries(
+        tester,
+      ).whereType<T>().singleWhere((widget) => widget.key == key);
+
+  StandardChartOptions standardOptions(WidgetTester tester) =>
+      inspectorEntries(tester).whereType<StandardChartOptions>().single;
 
   testWidgets(
     'selection lab exposes every chart family in one wrapped picker',
@@ -103,7 +133,7 @@ void main() {
               family: 'rangeArea',
               acquisition: ChartSelectionAcquisitionMode.rectangle,
               scope: ChartSelectionScope.mark,
-              seriesCount: 1,
+              seriesCount: 3,
             ),
             (
               family: 'bar',
@@ -170,6 +200,11 @@ void main() {
           testCase.scope,
           reason: '${testCase.family} semantic scope',
         );
+        expect(
+          chart.interactionConfig?.tooltip.enabled,
+          isFalse,
+          reason: '${testCase.family} point popup default',
+        );
         expect(tester.takeException(), isNull, reason: testCase.family);
       }
     },
@@ -191,6 +226,14 @@ void main() {
     expect(
       tester
           .widget<ChoiceChip>(
+            find.byKey(const ValueKey('selection-lab-mode-replace')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(
             find.byKey(
               const ValueKey('selection-lab-target-markOrWholeSeries'),
             ),
@@ -205,6 +248,7 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('selection-lab-target-category')),
     );
+    await tester.tap(find.byKey(const ValueKey('selection-lab-mode-add')));
     await tester.pump();
 
     final chart = tester.widget<BravenChartPlus>(
@@ -217,6 +261,10 @@ void main() {
     expect(
       chart.interactionConfig?.selection.scope,
       ChartSelectionScope.category,
+    );
+    expect(
+      chart.interactionConfig?.selection.operation,
+      ChartSelectionOperation.add,
     );
 
     await tester.tap(find.byKey(const ValueKey('selection-family-bar')));
@@ -255,6 +303,9 @@ void main() {
       find.byKey(const ValueKey('selection-lab-target-markOrWholeSeries')),
       findsOneWidget,
     );
+    for (final mode in const ['replace', 'add', 'subtract', 'toggle']) {
+      expect(find.byKey(ValueKey('selection-lab-mode-$mode')), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -311,17 +362,72 @@ void main() {
     },
   );
 
+  testWidgets(
+    'touch selection modes remain reachable with 2x text at compact width',
+    (tester) async {
+      tester.view.physicalSize = const Size(820, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(2)),
+              child: const SelectionShowcasePage(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final mode in const ['replace', 'add', 'subtract', 'toggle']) {
+        final finder = find.byKey(ValueKey('selection-lab-mode-$mode'));
+        expect(finder, findsOneWidget);
+        expect(
+          tester.getSize(finder).height,
+          greaterThanOrEqualTo(44),
+          reason: '$mode must remain a usable touch target',
+        );
+      }
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('selection-lab-mode-subtract')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('selection-lab-mode-subtract')),
+      );
+      await tester.pump();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-line')),
+      );
+      expect(
+        chart.interactionConfig?.selection.operation,
+        ChartSelectionOperation.subtract,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('standard chart options reconfigure the active selection chart', (
     tester,
   ) async {
     await pumpSelectionLab(tester);
 
-    final standard = tester.widget<StandardChartOptions>(
-      find.byType(StandardChartOptions),
-    );
+    final standard = standardOptions(tester);
     expect(standard.showGridOption, isTrue);
     expect(standard.showMarkerOption, isTrue);
     expect(standard.showCrosshairOption, isTrue);
+    expect(standard.showDataPointPopupOption, isTrue);
+    expect(standard.controller.showDataPointPopup, isFalse);
+
+    final initialChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-chart-line')),
+    );
+    expect(initialChart.interactionConfig?.tooltip.enabled, isFalse);
 
     standard.controller
       ..showGrid = false
@@ -329,6 +435,7 @@ void main() {
       ..showDataMarkers = false
       ..showLegend = false
       ..showCrosshair = false
+      ..showDataPointPopup = false
       ..enableZoom = true
       ..enablePan = true;
     await tester.pump();
@@ -342,6 +449,7 @@ void main() {
     expect(chart.yAxis?.showAxisLine, isFalse);
     expect(chart.showLegend, isFalse);
     expect(chart.interactionConfig?.crosshair.enabled, isFalse);
+    expect(chart.interactionConfig?.tooltip.enabled, isFalse);
     expect(chart.interactionConfig?.enableZoom, isTrue);
     expect(chart.interactionConfig?.enablePan, isTrue);
     expect(
@@ -361,9 +469,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('selection-family-area')));
       await tester.pump();
 
-      final standard = tester.widget<StandardChartOptions>(
-        find.byType(StandardChartOptions),
-      );
+      final standard = standardOptions(tester);
       standard.controller
         ..showGrid = false
         ..showAxisLines = false
@@ -452,15 +558,26 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('selection-family-pie')));
     await tester.pump();
-    final radialOptions = tester.widget<StandardChartOptions>(
-      find.byType(StandardChartOptions),
-    );
+    final radialOptions = standardOptions(tester);
     expect(radialOptions.showGridOption, isFalse);
     expect(radialOptions.showAxisOption, isFalse);
     expect(radialOptions.showMarkerOption, isFalse);
     expect(radialOptions.showScrollbarOptions, isFalse);
     expect(radialOptions.showCrosshairOption, isFalse);
+    expect(radialOptions.showDataPointPopupOption, isTrue);
     expect(radialOptions.showInteractionOptions, isFalse);
+    expect(radialOptions.controller.showDataPointPopup, isFalse);
+    var radialChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-chart-pie')),
+    );
+    expect(radialChart.interactionConfig?.tooltip.enabled, isFalse);
+
+    radialOptions.controller.showDataPointPopup = true;
+    await tester.pump();
+    radialChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-chart-pie')),
+    );
+    expect(radialChart.interactionConfig?.tooltip.enabled, isTrue);
     expect(
       find.byKey(
         const ValueKey('selection-lab-radial-effect'),
@@ -468,6 +585,192 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selection action policies are wired into the Workbench', (
+    tester,
+  ) async {
+    await pumpSelectionLab(tester);
+
+    final seriesProjection =
+        inspectorEntry<EnumOption<ChartSelectionSeriesProjection>>(
+          tester,
+          const ValueKey('selection-lab-series-projection'),
+        );
+    final annotationProjection =
+        inspectorEntry<EnumOption<ChartSelectionAnnotationProjection>>(
+          tester,
+          const ValueKey('selection-lab-annotation-projection'),
+        );
+    final boundaryProjection =
+        inspectorEntry<EnumOption<ChartSelectionIntervalBoundaryProjection>>(
+          tester,
+          const ValueKey('selection-lab-boundary-projection'),
+        );
+    final zoomPadding = inspectorEntry<SliderOption>(
+      tester,
+      const ValueKey('selection-lab-zoom-padding'),
+    );
+
+    seriesProjection.onChanged(
+      ChartSelectionSeriesProjection.completeParticipatingSeries,
+    );
+    annotationProjection.onChanged(
+      ChartSelectionAnnotationProjection.retainContained,
+    );
+    expect(
+      boundaryProjection.value,
+      ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
+    );
+    boundaryProjection.onChanged(
+      ChartSelectionIntervalBoundaryProjection.interpolateContinuousSeries,
+    );
+    zoomPadding.onChanged(0.2);
+    await tester.pump();
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byKey(const ValueKey('selection-workbench')),
+    );
+    expect(
+      workbench.selectionProjection.seriesProjection,
+      ChartSelectionSeriesProjection.completeParticipatingSeries,
+    );
+    expect(
+      workbench.selectionProjection.annotationProjection,
+      ChartSelectionAnnotationProjection.retainContained,
+    );
+    expect(
+      workbench.selectionProjection.intervalBoundaryProjection,
+      ChartSelectionIntervalBoundaryProjection.interpolateContinuousSeries,
+    );
+    expect(workbench.selectionZoomPaddingFraction, 0.2);
+    expect(workbench.onSelectionArtifactCreated, isNotNull);
+    expect(workbench.selectionCsvFileName, 'line-selection.csv');
+  });
+
+  testWidgets('Create chart opens a hydrated selection-only chart', (
+    tester,
+  ) async {
+    await pumpSelectionLab(tester);
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byKey(const ValueKey('selection-workbench')),
+    );
+    final controller = workbench.chartController!;
+    controller.selectPoint(
+      const ChartPointRef(seriesId: 'observed', pointIndex: 1),
+      revision: controller.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('chart-selection-create-chart')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('chart-selection-create-chart')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('selection-created-chart-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text('Chart created from selection'), findsOneWidget);
+    expect(find.byType(HydratedBravenChart), findsOneWidget);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('selection-lab-open-created-chart')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Line X-range chart creation matches the four selected source marks by default',
+    (tester) async {
+      await pumpSelectionLab(tester);
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('selection-workbench')),
+      );
+      final controller = workbench.chartController!;
+      expect(
+        controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 0.75,
+                maximumXInclusive: 2.4,
+                seriesIds: const {'observed', 'capacity'},
+              ),
+            ],
+          ),
+          revision: controller.effectiveDocumentRevision.value!,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      expect(controller.selectionSnapshot?.statistics.pointCount, 4);
+      await tester.tap(
+        find.byKey(const ValueKey('chart-selection-create-chart')),
+      );
+      await tester.pumpAndSettle();
+
+      final created = tester.widget<HydratedBravenChart>(
+        find.byType(HydratedBravenChart),
+      );
+      expect(created.configuration.series, hasLength(2));
+      for (final series in created.configuration.series) {
+        expect(series.points.map((point) => point.x), [1, 2]);
+      }
+      expect(find.textContaining('2 series · 4 points'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('linked peer synchronizes stable-key selection', (tester) async {
+    await pumpSelectionLab(tester);
+
+    final linkedToggle = inspectorEntry<BoolOption>(
+      tester,
+      const ValueKey('selection-lab-linked-peer-toggle'),
+    );
+    linkedToggle.onChanged(true);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BravenChartPlus), findsNWidgets(2));
+    final main = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-chart-line')),
+    );
+    final peer = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-linked-chart-line')),
+    );
+    expect(main.interactionGroupController, isNotNull);
+    expect(
+      peer.interactionGroupController,
+      same(main.interactionGroupController),
+    );
+    expect(main.interactionGroupOptions.synchronizeSelection, isTrue);
+    expect(peer.interactionGroupOptions.synchronizeSelection, isTrue);
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byKey(const ValueKey('selection-workbench')),
+    );
+    workbench.chartController!.selectPoint(
+      const ChartPointRef(seriesId: 'observed', pointIndex: 2),
+      revision: workbench.chartController!.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(peer.bravenChartController!.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'observed', pointIndex: 2),
+    });
     expect(tester.takeException(), isNull);
   });
 }

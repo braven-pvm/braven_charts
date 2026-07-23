@@ -13,6 +13,7 @@ import '../models/bar_group_info.dart';
 import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
 import '../models/candlestick_chart_series.dart';
+import '../models/chart_selection_expression.dart';
 import '../models/chart_theme.dart';
 import '../models/range_area_chart_series.dart';
 import '../rendering/bar_composition.dart';
@@ -58,6 +59,8 @@ class DataConverter {
     Set<ChartPointRef> focusedPointRefs = const {},
     Set<ChartPointRef> selectedPointRefs = const {},
     Set<String> selectedSeriesIds = const {},
+    ChartSelectionExpression selectionExpression =
+        const ChartSelectionExpression.empty(),
     Map<String, double> pathRevealProgressBySeries = const {},
     Map<String, PathSeriesPointMap> pathPointMapsBySeries = const {},
     double dataPointHoverScale = 1.5,
@@ -76,7 +79,9 @@ class DataConverter {
         if (selectedSeriesIds.contains(candidate.id)) candidate.id,
     };
     final hasAnyRenderedPointSelection =
-        selectedPointRefs.isNotEmpty || selectedBarSeriesIds.isNotEmpty;
+        selectedPointRefs.isNotEmpty ||
+        selectedBarSeriesIds.isNotEmpty ||
+        selectionExpression.isNotEmpty;
 
     // Use theme.seriesTheme if available, otherwise backward compatibility mode
     return series.asMap().entries.map((entry) {
@@ -108,6 +113,7 @@ class DataConverter {
             for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++)
               if (s.points[pointIndex].isValid) pointIndex,
         },
+        selectionExpression: selectionExpression,
         pointFocusColor: theme?.interactionTheme.crosshairColor,
         pointSelectionColor: theme?.interactionTheme.selectionColor,
         fontFamily: theme?.typographyTheme.fontFamily,

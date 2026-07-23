@@ -49,6 +49,7 @@ class StandardChartOptions extends StatelessWidget
     this.showYScrollbarOption = true,
     this.showLegendOption = true,
     this.showCrosshairOption = true,
+    this.showDataPointPopupOption = false,
     this.showInteractionOptions = true,
     this.showLineStyleOption = true,
     this.sectionTitle = 'Chart Options',
@@ -67,6 +68,7 @@ class StandardChartOptions extends StatelessWidget
   final bool showYScrollbarOption;
   final bool showLegendOption;
   final bool showCrosshairOption;
+  final bool showDataPointPopupOption;
   final bool showInteractionOptions;
   final bool showLineStyleOption;
   final String sectionTitle;
@@ -91,6 +93,8 @@ class StandardChartOptions extends StatelessWidget
       if (showLegendOption) 'legend series key',
       if (showCrosshairOption)
         'crosshair tracking cursor guide axis values intersection',
+      if (showDataPointPopupOption)
+        'data point marker popup hover tooltip value card',
       if (showInteractionOptions) 'zoom pan interaction navigation',
       if (showLineStyleOption) 'line style stroke pattern',
     ],
@@ -177,6 +181,16 @@ class StandardChartOptions extends StatelessWidget
                     'Hide crosshair guides, axis values, intersections, and the tracking panel together',
                 value: controller.showCrosshair,
                 onChanged: (v) => controller.showCrosshair = v,
+              ),
+
+            if (showDataPointPopupOption)
+              BoolOption(
+                key: const ValueKey('standard-show-data-point-popup'),
+                label: 'Show Data Point Popup',
+                subtitle:
+                    'Show the single-point value popup for a directly hovered marker, bar, candle, or radial segment',
+                value: controller.showDataPointPopup,
+                onChanged: (v) => controller.showDataPointPopup = v,
               ),
 
             // Interactions

@@ -1008,11 +1008,21 @@ void main() {
     expect(find.text('Show Y Scrollbar'), findsNothing);
     expect(find.text('Show X Scrollbar'), findsOneWidget);
 
+    final optionsScrollable = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(Scrollable),
+    );
+    expect(optionsScrollable, findsOneWidget);
     for (final optionKey in const [
       ValueKey('synchronize-cursor'),
       ValueKey('synchronize-viewport'),
       ValueKey('synchronized-intersections'),
     ]) {
+      await tester.scrollUntilVisible(
+        find.byKey(optionKey),
+        240,
+        scrollable: optionsScrollable,
+      );
       final option = find.descendant(
         of: find.byKey(optionKey, skipOffstage: false),
         matching: find.byType(SwitchListTile, skipOffstage: false),
@@ -3516,6 +3526,42 @@ void main() {
             (chart) => chart.interactionConfig?.crosshair.enabled == false,
           ),
           isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'shared point-popup option gates Line, Area, and Scatter hover cards',
+    (tester) async {
+      for (final entry in const <({Widget page, String family})>[
+        (page: LineChartsPage(), family: 'line'),
+        (page: AreaChartsPage(), family: 'area'),
+        (page: ScatterChartsPage(), family: 'scatter'),
+      ]) {
+        await pumpPage(
+          tester,
+          KeyedSubtree(key: ValueKey(entry.family), child: entry.page),
+        );
+
+        final toggle = find.byKey(
+          const ValueKey('standard-show-data-point-popup'),
+        );
+        expect(toggle, findsOneWidget);
+        tester.widget<BoolOption>(toggle).onChanged(false);
+        await tester.pumpAndSettle();
+
+        final charts = tester.widgetList<BravenChartPlus>(
+          find.byType(BravenChartPlus),
+        );
+        expect(charts, isNotEmpty);
+        expect(
+          charts.every(
+            (chart) => chart.interactionConfig?.tooltip.enabled == false,
+          ),
+          isTrue,
+          reason: '${entry.family} should hide every point popup',
         );
         expect(tester.takeException(), isNull);
       }

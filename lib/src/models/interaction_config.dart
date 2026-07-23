@@ -851,10 +851,11 @@ class GestureConfig {
 ///
 /// Controls keyboard-based chart interaction. Arrow keys traverse selectable
 /// marks for Bar, Scatter, Candlestick, Range Area, Line, and Area charts;
-/// Line/Area use left/right for points and up/down for series. When a family
-/// does not own point navigation, arrows pan the Cartesian viewport. Plus and
-/// minus zoom, while Home or `R` restores the live viewport. Enter or Space
-/// applies the configured semantic scope, Shift+Space extends an ordered
+/// Line/Area and mixed Range Area compositions use left/right for observations
+/// and up/down for series. Bar navigation follows its orientation. When a
+/// family does not own point navigation, arrows pan the Cartesian viewport.
+/// Plus and minus zoom, while Home or `R` restores the live viewport. Enter or
+/// Space applies the configured semantic scope, Shift+Space extends an ordered
 /// selection from its keyboard anchor, Ctrl/Command+A selects all marks only
 /// when the result is bounded (or every complete series for whole-series
 /// scope), and Escape clears focus plus durable selection.
@@ -1125,20 +1126,20 @@ class ChartSelectionConfig {
   /// point acquisition.
   final double dataPointHitRadius;
 
-  /// Screen-space radius around a rendered Line or Area path used when
+  /// Screen-space radius around complete rendered series geometry used when
   /// [scope] includes complete-series selection.
   final double completeSeriesHitRadius;
 
-  /// Scale applied to a Line or Area data-point marker while it is hovered.
+  /// Scale applied to a data mark while it is hovered.
   final double dataPointHoverScale;
 
-  /// Scale applied to the durable selection halo around a Line or Area point.
+  /// Scale applied to the durable selection halo around a data mark.
   final double dataPointSelectionScale;
 
-  /// Stroke-width scale applied to a hovered complete Line or Area series.
+  /// Stroke-width scale applied to a hovered complete path or band series.
   final double completeSeriesHoverStrokeScale;
 
-  /// Stroke-width scale applied to a selected complete Line or Area series.
+  /// Stroke-width scale applied to a selected complete path or band series.
   final double completeSeriesSelectionStrokeScale;
 
   /// Whether this selection policy owns the current primary-button drag.

@@ -130,17 +130,45 @@ class BravenChartController extends ChangeNotifier {
       Set.unmodifiable(_focusedPointRefs);
 
   /// Durable point selection currently rendered by the attached chart.
-  Set<ChartPointRef> get selectedPointRefs =>
-      Set.unmodifiable(_selectedPointRefs);
+  ///
+  /// Compact interval/span intent is materialized only when this getter is
+  /// read. Whole-series clauses remain represented by [selectedSeriesIds].
+  Set<ChartPointRef> get selectedPointRefs {
+    final snapshot = _selectionSnapshot;
+    if (snapshot == null || !_hasCompactPointClauses(snapshot.expression)) {
+      return Set.unmodifiable(_selectedPointRefs);
+    }
+    final wholeSeriesIds = {
+      for (final clause in snapshot.expression.clauses)
+        if (clause is ChartSelectionWholeSeriesClause) clause.seriesId,
+    };
+    return Set.unmodifiable(
+      snapshot.pointRefs.where(
+        (reference) => !wholeSeriesIds.contains(reference.seriesId),
+      ),
+    );
+  }
 
   /// Latest stable identities, extents, and statistics for point selection.
-  ChartSelectionResult get selectionResult => _selectionResult;
+  ///
+  /// Compact intent is materialized only when this getter is read.
+  ChartSelectionResult get selectionResult {
+    final snapshot = _selectionSnapshot;
+    return snapshot != null && _hasCompactPointClauses(snapshot.expression)
+        ? snapshot.result
+        : _selectionResult;
+  }
 
   /// Compact renderer-neutral intent for the current durable selection.
   ChartSelectionExpression get selectionExpression => _selectionExpression;
 
   /// Current revision-bound selection, resolved lazily on demand.
   ChartSelectionSnapshot? get selectionSnapshot => _selectionSnapshot;
+
+  /// Whether the attached selection has allocated concrete point identities.
+  @visibleForTesting
+  bool get debugSelectionPointRefsMaterialized =>
+      _selectionSnapshot?.debugPointRefsMaterialized ?? false;
 
   /// Opaque revision of the effective document source attached to this chart.
   ///
@@ -504,7 +532,7 @@ class BravenChartController extends ChangeNotifier {
   void updatePointState({
     required Set<ChartPointRef> focusedPointRefs,
     required Set<ChartPointRef> selectedPointRefs,
-    required ChartSelectionResult selectionResult,
+    ChartSelectionResult selectionResult = const ChartSelectionResult.empty(),
   }) {
     if (_disposed) return;
     if (setEquals(_focusedPointRefs, focusedPointRefs) &&
@@ -548,3 +576,7 @@ class BravenChartController extends ChangeNotifier {
     super.dispose();
   }
 }
+
+bool _hasCompactPointClauses(ChartSelectionExpression expression) => expression
+    .clauses
+    .any((clause) => clause is! ChartSelectionWholeSeriesClause);

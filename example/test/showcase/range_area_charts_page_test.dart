@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/range_area_charts_page.dart';
+import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,6 +48,33 @@ void main() {
     expect(chart.interactionConfig!.crosshair.showIntersectionMarkers, isTrue);
     expect(chart.interactionConfig!.keyboard.enabled, isTrue);
     expect(chart.interactionConfig!.showFocusBorder, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shared point-popup option hides the range datum hover card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: RangeAreaChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final layout = tester.widget<ChartPageLayout>(find.byType(ChartPageLayout));
+    final standard = layout.optionsChildren
+        .whereType<StandardChartOptions>()
+        .single;
+    expect(standard.showDataPointPopupOption, isTrue);
+    standard.controller.showDataPointPopup = false;
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('range-area-chart-temperature')),
+    );
+    expect(chart.interactionConfig?.tooltip.enabled, isFalse);
     expect(tester.takeException(), isNull);
   });
 

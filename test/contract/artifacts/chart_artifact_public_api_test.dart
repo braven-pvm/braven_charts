@@ -28,6 +28,10 @@ void main() {
   test(
     'selection projection policies are available from the public barrel',
     () {
+      expect(
+        const ChartSelectionProjectionOptions().intervalBoundaryProjection,
+        ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
+      );
       const options = ChartDocumentExtractOptions(
         dataScope: ChartDataScope.selection,
         selectionProjection: ChartSelectionProjectionOptions(

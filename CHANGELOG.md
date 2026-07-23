@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Unified Range Area selection around the visible low-to-high interval for
+  pointer, lasso, expression, table, statistics, zoom, artifact, keyboard, and
+  screen-reader behavior, including nested bands with a centre line.
+- Preserved exact sparse X/Y interval intent and modifier operations without
+  eagerly expanding large selections; dense Cartesian acquisition now uses
+  family-appropriate indexes and mounted 100K/1M regressions.
+- Persisted typed compact selection expressions through artifact JSON,
+  hydration, and generated Dart while retaining legacy artifact fields.
+- Normalized stale expressions to an empty live selection, disabled invalid
+  Workbench actions, and removed a full-widget offscreen overlay layer from
+  dynamic selection/hover painting.
+- Selection-scoped chart creation now retains the canonical selected source
+  observations by default, so Line and Area X-range selections create the same
+  rows shown in the Workbench data table. Exact interpolated continuous
+  boundaries remain available as an explicit projection policy.
+- Selection zoom now fits atomic interval geometry instead of only inherited
+  scalar Y values: Range Area selections include every retained low/high bound,
+  and Candlestick selections include complete wick extents.
+- Completed selection accessibility hardening: Bar and Candlestick expose
+  tappable live semantics that activate the same durable selection path as
+  keyboard and pointer input. The Selection Lab now exposes replace, add,
+  subtract, and toggle as visible touch controls and preserves an operable
+  chart viewport at 200% text scaling through an adaptive scroll layout.
+
 ## 0.13.1 - 2026-07-23
 
 ### Added

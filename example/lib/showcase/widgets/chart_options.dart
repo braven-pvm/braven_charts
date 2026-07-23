@@ -19,6 +19,7 @@ class ChartOptions {
     this.showYScrollbar = false,
     this.showLegend = true,
     this.showCrosshair = true,
+    this.showDataPointPopup = true,
     this.enableZoom = true,
     this.enablePan = true,
     this.lineStyle = LineStyle.smooth,
@@ -49,6 +50,11 @@ class ChartOptions {
   /// Show the complete crosshair and shared tracking layer.
   final bool showCrosshair;
 
+  /// Show the single-point popup for a directly hovered chart datum.
+  ///
+  /// This is independent from the crosshair and its shared tracking panel.
+  final bool showDataPointPopup;
+
   /// Enable zoom interactions
   final bool enableZoom;
 
@@ -71,6 +77,7 @@ class ChartOptions {
     bool? showYScrollbar,
     bool? showLegend,
     bool? showCrosshair,
+    bool? showDataPointPopup,
     bool? enableZoom,
     bool? enablePan,
     LineStyle? lineStyle,
@@ -85,6 +92,7 @@ class ChartOptions {
       showYScrollbar: showYScrollbar ?? this.showYScrollbar,
       showLegend: showLegend ?? this.showLegend,
       showCrosshair: showCrosshair ?? this.showCrosshair,
+      showDataPointPopup: showDataPointPopup ?? this.showDataPointPopup,
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       lineStyle: lineStyle ?? this.lineStyle,
@@ -103,6 +111,7 @@ class ChartOptions {
     showXScrollbar: showXScrollbar,
     showYScrollbar: showYScrollbar,
     crosshair: CrosshairConfig(enabled: showCrosshair),
+    tooltip: TooltipConfig(enabled: showDataPointPopup),
   );
 }
 
@@ -134,6 +143,7 @@ class ChartOptionsController extends ChangeNotifier {
     bool? showYScrollbar,
     bool? showLegend,
     bool? showCrosshair,
+    bool? showDataPointPopup,
     bool? enableZoom,
     bool? enablePan,
     LineStyle? lineStyle,
@@ -149,6 +159,7 @@ class ChartOptionsController extends ChangeNotifier {
         showYScrollbar: showYScrollbar,
         showLegend: showLegend,
         showCrosshair: showCrosshair,
+        showDataPointPopup: showDataPointPopup,
         enableZoom: enableZoom,
         enablePan: enablePan,
         lineStyle: lineStyle,
@@ -166,6 +177,7 @@ class ChartOptionsController extends ChangeNotifier {
   set showYScrollbar(bool value) => updateWith(showYScrollbar: value);
   set showLegend(bool value) => updateWith(showLegend: value);
   set showCrosshair(bool value) => updateWith(showCrosshair: value);
+  set showDataPointPopup(bool value) => updateWith(showDataPointPopup: value);
   set enableZoom(bool value) => updateWith(enableZoom: value);
   set enablePan(bool value) => updateWith(enablePan: value);
   set lineStyle(LineStyle value) => updateWith(lineStyle: value);
@@ -180,6 +192,7 @@ class ChartOptionsController extends ChangeNotifier {
   bool get showYScrollbar => _options.showYScrollbar;
   bool get showLegend => _options.showLegend;
   bool get showCrosshair => _options.showCrosshair;
+  bool get showDataPointPopup => _options.showDataPointPopup;
   bool get enableZoom => _options.enableZoom;
   bool get enablePan => _options.enablePan;
   LineStyle get lineStyle => _options.lineStyle;

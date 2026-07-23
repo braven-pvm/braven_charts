@@ -365,6 +365,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       showXScrollbar: random.nextBool(),
       showYScrollbar: random.nextBool(),
       showLegend: random.nextBool(),
+      showDataPointPopup: random.nextBool(),
       enableZoom: random.nextBool(),
       enablePan: random.nextBool(),
     );
@@ -1498,7 +1499,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               !_isPathSelectionPreset || _pathShowTrackingTooltip,
         ),
         tooltip: TooltipConfig(
-          enabled: !_isPathSelectionPreset || _pathShowPointTooltip,
+          enabled:
+              options.showDataPointPopup &&
+              (!_isPathSelectionPreset || _pathShowPointTooltip),
         ),
         selection: _isScatterSelectionPreset
             ? ChartSelectionConfig(
@@ -3105,6 +3108,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           controller: _optionsController,
           showLegendOption: false,
           showYScrollbarOption: false,
+          showDataPointPopupOption: true,
           showLineStyleOption: false,
         ),
       if (widget.family == _CartesianFamily.line &&
@@ -3540,6 +3544,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           showLegendOption:
               _playgroundActive ||
               (!_isLineSpotlight && !_isLineForecast && !_isAreaPulse),
+          showDataPointPopupOption: true,
           showLineStyleOption: false,
         ),
     ];
@@ -6641,7 +6646,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                       trackingEnabled &&
                       showAxisValues,
                 ),
-                tooltip: const TooltipConfig(enabled: true),
+                tooltip: TooltipConfig(enabled: options.showDataPointPopup),
               ),
             ),
           ),
@@ -7289,7 +7294,7 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
             snapToDataPoint: true,
             displayMode: CrosshairDisplayMode.tracking,
           ),
-          tooltip: const TooltipConfig(enabled: true),
+          tooltip: TooltipConfig(enabled: widget.options.showDataPointPopup),
         ),
       ),
     );
@@ -7377,11 +7382,11 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
         min: 0,
         max: resolvedMaximum * 1.08,
       ),
-      interactionConfig: const InteractionConfig(
+      interactionConfig: InteractionConfig(
         enableZoom: false,
         enablePan: false,
-        crosshair: CrosshairConfig(enabled: false),
-        tooltip: TooltipConfig(enabled: true),
+        crosshair: const CrosshairConfig(enabled: false),
+        tooltip: TooltipConfig(enabled: widget.options.showDataPointPopup),
       ),
     );
   }
