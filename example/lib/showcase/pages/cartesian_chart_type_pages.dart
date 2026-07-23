@@ -52,17 +52,26 @@ class AreaChartsPage extends StatelessWidget {
 }
 
 class ScatterChartsPage extends StatelessWidget {
-  const ScatterChartsPage({super.key});
+  const ScatterChartsPage({super.key, this.mediaCapturePreset});
+
+  /// Renders one preset without showcase chrome for deterministic package media.
+  final String? mediaCapturePreset;
 
   @override
-  Widget build(BuildContext context) =>
-      const _CartesianChartTypePage(family: _CartesianFamily.scatter);
+  Widget build(BuildContext context) => _CartesianChartTypePage(
+    family: _CartesianFamily.scatter,
+    mediaCapturePreset: mediaCapturePreset,
+  );
 }
 
 class _CartesianChartTypePage extends StatefulWidget {
-  const _CartesianChartTypePage({required this.family});
+  const _CartesianChartTypePage({
+    required this.family,
+    this.mediaCapturePreset,
+  });
 
   final _CartesianFamily family;
+  final String? mediaCapturePreset;
 
   @override
   State<_CartesianChartTypePage> createState() =>
@@ -269,7 +278,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
     _resetMotionData();
     _chartController.addListener(_handleChartControllerChanged);
-    final requestedPreset = Uri.base.queryParameters['preset']?.toLowerCase();
+    final requestedPreset =
+        widget.mediaCapturePreset?.toLowerCase() ??
+        Uri.base.queryParameters['preset']?.toLowerCase();
     if (requestedPreset != null) {
       final index = _presets.indexWhere(
         (preset) => preset.label.toLowerCase() == requestedPreset,
@@ -544,6 +555,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mediaCapturePreset != null) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildChart(_optionsController.options, _chartController),
+        ),
+      );
+    }
     return ChartPageLayout(
       title: _pageTitle,
       subtitle: _pageSubtitle,

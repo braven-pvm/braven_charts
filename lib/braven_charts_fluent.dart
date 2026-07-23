@@ -19,6 +19,8 @@
 /// config instance; importing this barrel changes no behavior of the core
 /// API. Consumers who don't want the extensions keep importing
 /// `package:braven_charts/braven_charts.dart` and never see them.
+///
+/// {@category Authoring and data}
 library;
 
 export 'braven_charts.dart';

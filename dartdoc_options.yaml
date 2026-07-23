@@ -1,0 +1,29 @@
+dartdoc:
+  categories:
+    "Get started":
+      markdown: doc/topics/get_started.md
+      displayName: Get started
+    "Chart families":
+      markdown: doc/topics/chart_families.md
+      displayName: Chart families
+    "Interaction and display":
+      markdown: doc/topics/interaction_and_display.md
+      displayName: Interaction and display
+    "Authoring and data":
+      markdown: doc/topics/authoring_and_data.md
+      displayName: Authoring and data
+    "Workbench and artifacts":
+      markdown: doc/topics/workbench_and_artifacts.md
+      displayName: Workbench and artifacts
+  categoryOrder:
+    - "Get started"
+    - "Chart families"
+    - "Interaction and display"
+    - "Authoring and data"
+    - "Workbench and artifacts"
+  favicon: example/web/favicon.png
+  header:
+    - doc/dartdoc_header.html
+  footerText:
+    - doc/dartdoc_footer.txt
+  showUndocumentedCategories: true

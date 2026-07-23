@@ -20,6 +20,11 @@
 ///   yAxis: const YAxisConfig(label: 'USD'),
 /// );
 /// ```
+///
+/// {@category Get started}
+/// {@category Chart families}
+/// {@category Interaction and display}
+/// {@category Workbench and artifacts}
 
 library;
 

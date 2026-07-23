@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.1 - 2026-07-23
+
+### Added
+- A task-oriented Documentation home in the public showcase, with generated
+  catalog data for evergreen capabilities, chart families, guide groups, and
+  tested starter snippets.
+- A generated Dart API reference deployed under `/api/` in the same GitHub
+  Pages artifact as the runnable showcase.
+
+### Changed
+- Restructured the pub.dev README as a concise product entry point: visual
+  synopsis, six evergreen highlights, ten curated chart families, two tested
+  starter examples, grouped documentation routes, and a final visual gallery.
+- Added a package-neutral public documentation catalog, schema, generator, and
+  CI drift gate so README, showcase, routes, media, snippets, and versions stay
+  aligned.
+
 ## 0.13.0 - 2026-07-22
 
 ### Added

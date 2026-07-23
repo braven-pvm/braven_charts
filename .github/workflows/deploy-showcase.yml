@@ -7,6 +7,9 @@ on:
       - .github/workflows/deploy-showcase.yml
       - example/**
       - lib/**
+      - doc/**
+      - dartdoc_options.yaml
+      - tool/public_docs.dart
       - pubspec.yaml
   workflow_dispatch:
   workflow_call:
@@ -36,6 +39,9 @@ jobs:
       - name: Resolve package dependencies
         run: flutter pub get
 
+      - name: Verify public documentation catalog
+        run: dart run tool/public_docs.dart --check
+
       - name: Analyze package library
         run: flutter analyze lib
 
@@ -46,6 +52,26 @@ jobs:
       - name: Build showcase
         working-directory: example
         run: flutter build web --release --base-href /braven_charts/
+
+      - name: Generate hosted API reference
+        run: |
+          dart pub global activate dartdoc
+          set -o pipefail
+          dart pub global run dartdoc \
+            --validate-links \
+            --output example/build/web/api \
+            --link-to-source-root . \
+            --link-to-source-revision "$GITHUB_SHA" \
+            --link-to-source-uri-template "https://github.com/braven-pvm/braven_charts/blob/%r%/%f%#L%l%" \
+            2>&1 | tee /tmp/dartdoc.log
+          if grep -qE '(^|[[:space:]])warning:' /tmp/dartdoc.log; then
+            echo "::error::dartdoc emitted warnings; inspect the log above."
+            exit 1
+          fi
+
+      - name: Verify hosted documentation artifact
+        run: |
+          dart run tool/public_docs.dart --check --api-dir=example/build/web/api
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
