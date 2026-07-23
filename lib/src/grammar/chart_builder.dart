@@ -13,6 +13,8 @@ import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/donut_chart_config.dart'
+    show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
@@ -401,6 +403,36 @@ final class BravenChart<T> {
       name: name,
       color: color,
       style: style,
+      dataLabels: dataLabels,
+    ),
+  );
+
+  /// Appends a donut. With [ring] set, rows partition into concentric donuts
+  /// (one per distinct ring value, first-seen order); without it, a single
+  /// donut. [value] is the angle-share; [radius] is an optional variable
+  /// radius. Rich styling is deferred to [style]/[center]/[dataLabels].
+  BravenChart<T> geomDonut({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    FieldAccessor<T, num>? radius,
+    FieldAccessor<T, Object?>? ring,
+    String? id,
+    String? name,
+    Color? color,
+    DonutChartStyle? style,
+    DonutCenterContent? center,
+    PieDataLabelConfig? dataLabels,
+  }) => _append(
+    DonutMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      radius: radius,
+      ring: ring,
+      name: name,
+      color: color,
+      style: style,
+      center: center,
       dataLabels: dataLabels,
     ),
   );

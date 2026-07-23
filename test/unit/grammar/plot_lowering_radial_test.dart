@@ -285,4 +285,47 @@ void main() {
       );
     });
   });
+
+  group('donut channel to series mapping and parity', () {
+    test('a single donut lowers to one DonutChartSeries, no concentric config',
+        () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(category: fruitName, value: fruitCount, id: 'fruit'),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.id, 'fruit');
+      expect(series.points.map((p) => p.label), ['Apple', 'Pear', 'Plum']);
+      expect(series.points.map((p) => p.y), [30, 20, 10]);
+      expect(lowered.concentricDonutConfig, isNull);
+      expect(lowered.polarChartConfig, isNull);
+    });
+
+    test('a lowered donut equals the hand-built DonutChartSeries.fromMap', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            id: 'fruit',
+            center: DonutCenterContent(label: 'Total'),
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single,
+        DonutChartSeries.fromMap(
+          id: 'fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+          centerContent: const DonutCenterContent(label: 'Total'),
+        ),
+      );
+    });
+  });
 }

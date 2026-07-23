@@ -9,6 +9,8 @@ import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
@@ -803,9 +805,15 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
 
   if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
+  } else if (mark is DonutMark<T>) {
+    if (mark.ring == null) {
+      series.add(_lowerDonut<T>(mark, markId, spec.data));
+    } else {
+      throw StateError('Concentric donut is wired in Phase 3');
+    }
   } else {
-    // Donut and Polar branches are added in later phases; this guards the
-    // not-yet-wired path with a clear error rather than silent misbehavior.
+    // Polar branch is added in a later phase; this guards the not-yet-wired
+    // path with a clear error rather than silent misbehavior.
     throw StateError('Unhandled radial mark: $mark');
   }
 
@@ -862,6 +870,20 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
       pieStyle: mark.style ?? const PieChartStyle(),
+      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+    );
+
+DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
+    DonutChartSeries.fromMap(
+      id: id,
+      name: mark.name,
+      color: mark.color,
+      values: _radialValues(data, mark.category, mark.value),
+      radiusValues: mark.radius == null
+          ? const <String, num>{}
+          : _radiusValues(data, mark.category, mark.radius!),
+      donutStyle: mark.style ?? const DonutChartStyle(),
+      centerContent: mark.center ?? DonutCenterContent.hidden,
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 

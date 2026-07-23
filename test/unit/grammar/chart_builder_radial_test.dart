@@ -60,4 +60,35 @@ void main() {
       );
     });
   });
+
+  group('geomDonut equals the hand-written spec', () {
+    test('geomDonut appends a DonutMark with its channels and center', () {
+      final spec = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            name: 'Fruit',
+            center: const DonutCenterContent(label: 'Total'),
+            style: const DonutChartStyle(innerRadiusFactor: 0.5),
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              name: 'Fruit',
+              center: DonutCenterContent(label: 'Total'),
+              style: DonutChartStyle(innerRadiusFactor: 0.5),
+            ),
+          ],
+        ),
+      );
+    });
+  });
 }

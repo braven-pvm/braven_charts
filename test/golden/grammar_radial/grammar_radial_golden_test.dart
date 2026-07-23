@@ -96,6 +96,21 @@ void main() {
     await _pump(tester, chart, const Size(560, 380));
     await _expectGolden(tester, 'goldens/grammar_pie.png');
   });
+
+  testWidgets('grammar-authored donut', (tester) async {
+    final chart = BravenChart.of(_fruits)
+        .geomDonut(
+          category: fruitName,
+          value: fruitCount,
+          center: const DonutCenterContent(label: 'Total'),
+          style: const DonutChartStyle(animationMode: PieAnimationMode.none),
+        )
+        .title('Harvest share')
+        .theme(_goldenTheme())
+        .build();
+    await _pump(tester, chart, const Size(560, 380));
+    await _expectGolden(tester, 'goldens/grammar_donut.png');
+  });
 }
 
 class _TolerantGoldenFileComparator extends LocalFileComparator {
