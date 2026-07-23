@@ -5674,6 +5674,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handlePanStart(DragStartDetails details) {
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    if (!interaction.enabled || !interaction.enablePan) return;
     _captureStateRevision++;
     _pauseStreamingForViewportInteraction();
 
@@ -5685,16 +5687,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    if (!interaction.enabled || !interaction.enablePan) return;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     renderBox?.panChart(details.delta.dx, details.delta.dy);
   }
 
   void _handlePanEnd(DragEndDetails details) {
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    if (!interaction.enabled || !interaction.enablePan) return;
     _scheduleStreamingResumeIfNeeded();
   }
 
   void _handleTapDown(TapDownDetails details) {
+    final configuredInteraction =
+        widget.interactionConfig ?? const InteractionConfig();
+    if (!configuredInteraction.enabled) return;
     if (_layoutKind != ChartLayoutKind.cartesian) {
       final interaction = _effectiveRadialInteractionConfig();
       if (!interaction.enabled) return;
@@ -6348,6 +6357,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleTapUp(TapUpDetails details) {
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    if (!interaction.enabled) {
+      _backgroundTapCandidate = false;
+      return;
+    }
     // Double-click detection now handled in _handleTapDown
     // (since activeElement is cleared by the time we get here)
 
@@ -6364,9 +6378,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // that pointer movement stayed within tap slop. Empty-space drags must not
     // clear durable point selection or fire the background callback.
     if (_backgroundTapCandidate) {
-      final interaction = widget.interactionConfig ?? const InteractionConfig();
-      if (interaction.enabled &&
-          interaction.enableSelection &&
+      if (interaction.enableSelection &&
           interaction.selection.clearOnBackgroundTap) {
         _clearPointSelection();
         _clearSemanticSeriesSelection();
@@ -9550,6 +9562,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
+        final interactionEnabled = effectiveInteractionConfig?.enabled ?? true;
+        final keyboardEnabled =
+            effectiveInteractionConfig?.keyboard.enabled ?? true;
+        if (!interactionEnabled || !keyboardEnabled) {
+          return KeyEventResult.ignored;
+        }
         if (_handleContextMenuKeyEvent(event)) {
           return KeyEventResult.handled;
         }

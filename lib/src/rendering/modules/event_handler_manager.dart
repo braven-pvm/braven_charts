@@ -520,6 +520,14 @@ class EventHandlerManager {
   /// Main event handler - dispatches to specific handlers.
   void handleEvent(PointerEvent event) {
     final coordinator = _delegate.coordinator;
+    final interaction = _delegate.interactionConfig;
+
+    // The master switch is authoritative. Individual nested settings may
+    // remain populated so a host can restore them later, but a disabled chart
+    // must not hit-test, hover, focus, select, pan, zoom, or open tooltips.
+    if (interaction != null && !interaction.enabled) {
+      return;
+    }
 
     // Modal states block all events except themselves
     // EXCEPTION: rangeAnnotationCreation mode needs pointer events to work
