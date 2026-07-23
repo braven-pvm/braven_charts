@@ -59,7 +59,7 @@ void main() {
       expect(first.source, contains('theme: ChartTheme.light,'));
     });
 
-    test('emits non-default X-axis placement and tick-label rotation', () {
+    test('emits non-default X-axis placement and tick-label behavior', () {
       final generated = _success(
         ChartDartSourceGenerator.generate(
           _snapshot(
@@ -70,6 +70,8 @@ void main() {
             xAxis: const XAxisConfig(
               position: XAxisPosition.both,
               tickLabelRotationDegrees: -35,
+              tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.showAll,
+              tickLabelCollisionPadding: 9,
             ),
           ),
         ),
@@ -77,6 +79,14 @@ void main() {
 
       expect(generated.source, contains('position: XAxisPosition.both,'));
       expect(generated.source, contains('tickLabelRotationDegrees: -35.0,'));
+      expect(
+        generated.source,
+        contains(
+          'tickLabelCollisionPolicy: '
+          'XAxisTickLabelCollisionPolicy.showAll,',
+        ),
+      );
+      expect(generated.source, contains('tickLabelCollisionPadding: 9.0,'));
     });
 
     test('generates every built-in chart family constructor', () {

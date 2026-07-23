@@ -216,11 +216,18 @@ Controls X-axis layout, labeling, and tick generation.
 - `label`, `unit`, `color`
 - `position` — `XAxisPosition.bottom` (default), `XAxisPosition.top`, or
   `XAxisPosition.both` for mirrored axes
-- `min`, `max`, `tickCount`
+- `min`, `max`, `tickCount` — `tickCount` is a preferred maximum for the
+  visible X domain. The renderer selects one uniform readable interval without
+  exceeding that budget; automatic collision handling may retain fewer labels.
 - `labelDisplay`, `tickLabelPadding`, `axisLabelPadding`, `axisMargin`
 - `tickLabelRotationDegrees` — rotates numeric and categorical tick labels
   from -90° to 90°; when omitted, categorical axes retain their existing
   `CategoryAxisConfig.labelRotationDegrees` setting
+- `tickLabelCollisionPolicy` — optional `auto` or `showAll` override. Automatic
+  mode measures the real rotated label bounds, keeps the first and last visible
+  labels, and deterministically thins overlaps.
+- `tickLabelCollisionPadding` — minimum horizontal spacing between retained
+  labels in automatic mode
 - `showAxisLine`, `showTicks`, `showCrosshairLabel`
 - `categoryAxis` — optional `CategoryAxisConfig` for integer-indexed category
   names, automatic readable viewports, density control, wrapping/ellipsis, and
@@ -234,6 +241,8 @@ xAxisConfig: const XAxisConfig(
   label: 'Market segment',
   maxHeight: 88,
   tickLabelRotationDegrees: -35,
+  tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.auto,
+  tickLabelCollisionPadding: 6,
   categoryAxis: CategoryAxisConfig(
     categories: ['Enterprise', 'Mid-market', 'Small business'],
     minimumCategoryExtent: 72,
@@ -246,6 +255,12 @@ The axis title remains horizontal and centered. Tick marks, labels, and
 over-axis crosshair values render outward from the selected plot edge. With
 `XAxisPosition.both`, tick and crosshair values appear on both edges while the
 axis title appears once below the plot.
+
+Requested tick count and rendered label density are intentionally independent:
+`tickCount` controls uniform tick generation, while
+`XAxisTickLabelCollisionPolicy.auto` can thin overlapping labels at a regular
+stride after measuring their rotated bounds. Use `showAll` only when every
+generated label must remain visible.
 
 When all categories cannot fit, `autoViewport` opens the first readable window.
 Enable `showXScrollbar` or pan/zoom to navigate the full category domain.

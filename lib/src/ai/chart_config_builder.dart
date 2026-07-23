@@ -1556,6 +1556,16 @@ class ChartConfigBuilder {
       max: (json['max'] as num?)?.toDouble(),
       tickLabelRotationDegrees: (json['tick_label_rotation'] as num?)
           ?.toDouble(),
+      tickLabelCollisionPolicy: switch (json['tick_label_collision_policy']) {
+        null => null,
+        'auto' => XAxisTickLabelCollisionPolicy.auto,
+        'show_all' => XAxisTickLabelCollisionPolicy.showAll,
+        final value => throw FormatException(
+          'Unknown tick_label_collision_policy "$value".',
+        ),
+      },
+      tickLabelCollisionPadding:
+          (json['tick_label_collision_padding'] as num?)?.toDouble() ?? 4,
       categoryAxis: categoryAxis,
       maxHeight: categoryAxis == null ? 60 : 104,
     );

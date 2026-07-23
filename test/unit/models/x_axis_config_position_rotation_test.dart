@@ -9,6 +9,12 @@ void main() {
       expect(config.position, XAxisPosition.bottom);
       expect(config.tickLabelRotationDegrees, isNull);
       expect(config.effectiveTickLabelRotationDegrees, 0);
+      expect(config.tickLabelCollisionPolicy, isNull);
+      expect(
+        config.effectiveTickLabelCollisionPolicy,
+        XAxisTickLabelCollisionPolicy.auto,
+      );
+      expect(config.tickLabelCollisionPadding, 4);
     });
 
     test('applies rotation to numeric axes', () {
@@ -58,6 +64,47 @@ void main() {
       );
     });
 
+    test('retains the categorical density compatibility fallback', () {
+      const config = XAxisConfig(
+        categoryAxis: CategoryAxisConfig(
+          categories: ['Alpha', 'Beta'],
+          labelDensity: CategoryLabelDensity.showAll,
+        ),
+      );
+
+      expect(
+        config.effectiveTickLabelCollisionPolicy,
+        XAxisTickLabelCollisionPolicy.showAll,
+      );
+      expect(
+        config
+            .copyWith(
+              tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.auto,
+            )
+            .effectiveTickLabelCollisionPolicy,
+        XAxisTickLabelCollisionPolicy.auto,
+      );
+    });
+
+    test('copies and clears the collision-policy override', () {
+      const config = XAxisConfig(
+        tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.showAll,
+        tickLabelCollisionPadding: 10,
+      );
+
+      expect(
+        config.copyWith().tickLabelCollisionPolicy,
+        XAxisTickLabelCollisionPolicy.showAll,
+      );
+      expect(config.copyWith().tickLabelCollisionPadding, 10);
+      expect(
+        config
+            .copyWith(clearTickLabelCollisionPolicy: true)
+            .tickLabelCollisionPolicy,
+        isNull,
+      );
+    });
+
     test('rejects rotation outside the supported range', () {
       expect(
         () => XAxisConfig(tickLabelRotationDegrees: 91),
@@ -65,6 +112,13 @@ void main() {
       );
       expect(
         () => XAxisConfig(tickLabelRotationDegrees: -91),
+        throwsAssertionError,
+      );
+    });
+
+    test('rejects negative collision padding', () {
+      expect(
+        () => XAxisConfig(tickLabelCollisionPadding: -1),
         throwsAssertionError,
       );
     });

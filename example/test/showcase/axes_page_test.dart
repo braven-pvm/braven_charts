@@ -44,15 +44,29 @@ void main() {
     expect(chart.xAxisConfig!.labelFormatter, isNotNull);
     expect(chart.xAxisConfig!.position, XAxisPosition.bottom);
     expect(chart.xAxisConfig!.effectiveTickLabelRotationDegrees, 0);
+    expect(
+      chart.xAxisConfig!.effectiveTickLabelCollisionPolicy,
+      XAxisTickLabelCollisionPolicy.auto,
+    );
+    expect(chart.xAxisConfig!.tickLabelCollisionPadding, 4);
     expect(chart.yAxis!.position, YAxisPosition.left);
+    expect(chart.yAxis!.tickCount, 6);
 
     expect(find.text('Axis Pattern'), findsOneWidget);
-    expect(find.text('X-Axis Placement & Labels'), findsOneWidget);
+    expect(find.text('X-axis ticks & labels'), findsOneWidget);
     expect(find.text('Labels & Bounds'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Chart Options'),
+      240,
+      scrollable: find.descendant(
+        of: find.byType(OptionsPanel),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('Chart Options'), findsOneWidget);
   });
 
-  testWidgets('X-axis placement and angle controls update the live chart', (
+  testWidgets('X-axis placement and label controls update the live chart', (
     tester,
   ) async {
     final pixelRatio = tester.view.devicePixelRatio;
@@ -76,15 +90,71 @@ void main() {
     final angleOption = tester.widget<SliderOption>(
       find.byWidgetPredicate(
         (widget) =>
-            widget is SliderOption && widget.label == 'Tick Label Angle',
+            widget is SliderOption && widget.label == 'Tick label angle',
       ),
     );
     angleOption.onChanged(-45);
+
+    final tickCountOption = tester.widget<IntSliderOption>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is IntSliderOption &&
+            widget.label == 'Requested X-axis ticks',
+      ),
+    );
+    expect(tickCountOption.min, 2);
+    expect(tickCountOption.max, 32);
+    tickCountOption.onChanged(24);
+
+    final showXTickMarks = tester.widget<BoolOption>(
+      find.byWidgetPredicate(
+        (widget) => widget is BoolOption && widget.label == 'Show tick marks',
+      ),
+    );
+    showXTickMarks.onChanged(false);
+
+    final showXTickLabels = tester.widget<BoolOption>(
+      find.byWidgetPredicate(
+        (widget) => widget is BoolOption && widget.label == 'Show tick labels',
+      ),
+    );
+    showXTickLabels.onChanged(false);
+
+    final collisionOption = tester
+        .widget<EnumOption<XAxisTickLabelCollisionPolicy>>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is EnumOption<XAxisTickLabelCollisionPolicy> &&
+                widget.label == 'Label density',
+          ),
+        );
+    collisionOption.onChanged(XAxisTickLabelCollisionPolicy.showAll);
+
+    final gapOption = tester.widget<SliderOption>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SliderOption && widget.label == 'Minimum label spacing',
+      ),
+    );
+    gapOption.onChanged(12);
     await tester.pump();
 
     final chart = _mainChart(tester);
     expect(chart.xAxisConfig?.position, XAxisPosition.both);
     expect(chart.xAxisConfig?.tickLabelRotationDegrees, -45);
+    expect(chart.xAxisConfig?.tickCount, 24);
+    expect(chart.xAxisConfig?.showTicks, isFalse);
+    expect(chart.xAxisConfig?.showTickLabels, isFalse);
+    expect(
+      chart.xAxisConfig?.tickLabelCollisionPolicy,
+      XAxisTickLabelCollisionPolicy.showAll,
+    );
+    expect(chart.xAxisConfig?.tickLabelCollisionPadding, 12);
+    expect(chart.xAxisConfig?.labelFormatter?.call(42), '42:00');
+    expect(chart.xAxisConfig?.labelFormatter?.call(42.75), '42:45');
+    expect(chart.yAxis?.tickCount, 6);
+    expect(chart.yAxis?.showTicks, isTrue);
+    expect(chart.yAxis?.showTickLabels, isTrue);
   });
 
   testWidgets('axis patterns configure ticks, render windows, and slots', (
@@ -151,9 +221,19 @@ void main() {
     await tester.tap(find.text('Options'));
     await tester.pumpAndSettle();
     expect(find.text('Axis Pattern'), findsOneWidget);
+    expect(find.text('Requested X-axis ticks'), findsOneWidget);
+    expect(find.text('Label density'), findsOneWidget);
+    expect(find.text('Minimum label spacing'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Labels & Bounds'),
+      240,
+      scrollable: find.descendant(
+        of: find.byType(OptionsPanel),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('Labels & Bounds'), findsOneWidget);
-    expect(find.text('Major Tick Count'), findsOneWidget);
-    Navigator.of(tester.element(find.text('Axis Pattern'))).pop();
+    Navigator.of(tester.element(find.byType(OptionsPanel))).pop();
     await tester.pumpAndSettle();
   });
 }

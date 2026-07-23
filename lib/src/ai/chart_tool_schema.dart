@@ -422,6 +422,18 @@ same radial interaction contract.
               'description':
                   'Clockwise rotation for every X-axis tick label in screen-space degrees.',
             },
+            'tick_label_collision_policy': {
+              'type': 'string',
+              'enum': ['auto', 'show_all'],
+              'description':
+                  'Measure rotated X-axis labels and retain a readable subset, or paint every label.',
+            },
+            'tick_label_collision_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Minimum horizontal gap in logical pixels between automatically retained X-axis labels.',
+            },
             'categories': {
               'type': 'array',
               'minItems': 1,

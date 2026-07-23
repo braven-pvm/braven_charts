@@ -316,7 +316,8 @@ Widget Space (Flutter logical pixels)
 │   │   └── (0,0) top-left, (plotWidth, plotHeight) bottom-right
 │   │       Y is INVERTED: dataY=max at top, dataY=min at bottom
 │   └── Right Y-axis labels (rightMargin)
-├── X-axis labels (topMargin, bottomMargin, or both from XAxisPosition)
+├── X-axis labels (topMargin, bottomMargin, or both from XAxisPosition;
+│   exact rotation-aware collision thinning from XAxisTickLabelCollisionPolicy)
 └── Scrollbar area
 ```
 

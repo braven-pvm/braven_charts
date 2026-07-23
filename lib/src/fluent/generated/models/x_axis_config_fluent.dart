@@ -91,6 +91,19 @@ extension XAxisConfigFluent on XAxisConfig {
   XAxisConfig clearTickLabelRotationDegrees() =>
       copyWith(clearTickLabelRotationDegrees: true);
 
+  /// Replaces [XAxisConfig.tickLabelCollisionPolicy] with [value].
+  XAxisConfig withTickLabelCollisionPolicy(
+    XAxisTickLabelCollisionPolicy value,
+  ) => copyWith(tickLabelCollisionPolicy: value);
+
+  /// Clears [XAxisConfig.tickLabelCollisionPolicy] to `null`.
+  XAxisConfig clearTickLabelCollisionPolicy() =>
+      copyWith(clearTickLabelCollisionPolicy: true);
+
+  /// Replaces [XAxisConfig.tickLabelCollisionPadding] with [value].
+  XAxisConfig withTickLabelCollisionPadding(double value) =>
+      copyWith(tickLabelCollisionPadding: value);
+
   /// Replaces [XAxisConfig.categoryAxis] with [value].
   XAxisConfig withCategoryAxis(CategoryAxisConfig value) =>
       copyWith(categoryAxis: value);

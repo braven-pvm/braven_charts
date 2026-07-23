@@ -3451,6 +3451,18 @@ class ChartConfigDartEmitter {
       'tickLabelRotationDegrees',
       axis.tickLabelRotationDegrees,
     );
+    if (axis.tickLabelCollisionPolicy case final policy?) {
+      writer.namedArgument(
+        'tickLabelCollisionPolicy',
+        'XAxisTickLabelCollisionPolicy.${policy.name}',
+      );
+    }
+    _numberIf(
+      writer,
+      'tickLabelCollisionPadding',
+      axis.tickLabelCollisionPadding,
+      4,
+    );
     if (axis.tickCount != null) {
       writer.namedArgument('tickCount', axis.tickCount.toString());
     }

@@ -47,6 +47,10 @@ abstract final class ChartAxisDocumentCodec {
         tickLabelRotationDegrees: axis.tickLabelRotationDegrees == null
             ? null
             : ChartNumberDocument.fromDouble(axis.tickLabelRotationDegrees!),
+        tickLabelCollisionPolicy: axis.tickLabelCollisionPolicy?.name,
+        tickLabelCollisionPadding: ChartNumberDocument.fromDouble(
+          axis.tickLabelCollisionPadding,
+        ),
         tickCount: axis.tickCount,
         showMinorTicks: axis.showMinorTicks,
         minorTickCount: axis.minorTickCount,
@@ -108,6 +112,14 @@ abstract final class ChartAxisDocumentCodec {
           axisLabelPadding: document.axisLabelPadding?.asDouble ?? 5,
           axisMargin: document.axisMargin?.asDouble ?? 8,
           tickLabelRotationDegrees: document.tickLabelRotationDegrees?.asDouble,
+          tickLabelCollisionPolicy: document.tickLabelCollisionPolicy == null
+              ? null
+              : _enum(
+                  document.tickLabelCollisionPolicy!,
+                  XAxisTickLabelCollisionPolicy.values,
+                ),
+          tickLabelCollisionPadding:
+              document.tickLabelCollisionPadding?.asDouble ?? 4,
           tickCount: document.tickCount,
           showMinorTicks: document.showMinorTicks,
           minorTickCount: document.minorTickCount,

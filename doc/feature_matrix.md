@@ -27,7 +27,7 @@ is added to package marketing.
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
-| Configurable X axis | `XAxisConfig`, top/bottom/mirrored `XAxisPosition`, general numeric/categorical tick-label rotation, `CategoryAxisConfig`, `CategoryLabelDensity`, `CategoryLabelOverflow` | Axes, Bar Lab Categories, Minor Ticks, Render Range |
+| Configurable X axis | `XAxisConfig`, top/bottom/mirrored `XAxisPosition`, general numeric/categorical tick-label rotation, rotation-aware `XAxisTickLabelCollisionPolicy`, configurable label spacing, `CategoryAxisConfig`, `CategoryLabelDensity`, `CategoryLabelOverflow` | Axes, Bar Lab Categories, Minor Ticks, Render Range |
 | Streaming data | `StreamingConfig`, `StreamingController` | Streaming |
 | Direct live ingestion | `LiveStreamController`, `StreamingBuffer`, external viewport ownership through `manageViewport: false`, frame-coalesced host following through `dataRevision` | Gallery, Live Stream — Live Navigator |
 | Theming | `ChartTheme` and component theme types, including radial defaults | Theming, Pie Charts, Gallery |

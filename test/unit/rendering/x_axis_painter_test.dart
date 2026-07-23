@@ -182,6 +182,125 @@ void main() {
       });
     });
 
+    group('tick-label collision handling', () {
+      XAxisPainter numericPainter({
+        double rotation = 0,
+        XAxisTickLabelCollisionPolicy policy =
+            XAxisTickLabelCollisionPolicy.auto,
+        double padding = 4,
+      }) => XAxisPainter(
+        config: XAxisConfig(
+          tickLabelRotationDegrees: rotation,
+          tickLabelCollisionPolicy: policy,
+          tickLabelCollisionPadding: padding,
+          labelFormatter: (value) =>
+              '2026-07-${(value.toInt() + 10).toString().padLeft(2, '0')}',
+        ),
+        axisBounds: const DataRange(min: 0, max: 6),
+        tickValues: const [0, 1, 2, 3, 4, 5, 6],
+        labelStyle: const TextStyle(fontSize: 12),
+      );
+
+      test('automatically thins overlapping numeric labels', () {
+        final ticks = numericPainter().resolveTickValues(240);
+
+        expect(ticks.first, 0);
+        expect(ticks.last, 6);
+        expect(ticks.length, lessThan(7));
+      });
+
+      test('uses rotated bounds so vertical labels retain more ticks', () {
+        final horizontal = numericPainter().resolveTickValues(240);
+        final vertical = numericPainter(rotation: 90).resolveTickValues(240);
+
+        expect(vertical.length, greaterThan(horizontal.length));
+        expect(vertical, [0, 1, 2, 3, 4, 5, 6]);
+      });
+
+      test('showAll bypasses automatic collision thinning', () {
+        expect(
+          numericPainter(
+            policy: XAxisTickLabelCollisionPolicy.showAll,
+          ).resolveTickValues(120),
+          [0, 1, 2, 3, 4, 5, 6],
+        );
+      });
+
+      test('larger collision padding retains no more labels', () {
+        final compact = numericPainter(padding: 0).resolveTickValues(300);
+        final spacious = numericPainter(padding: 24).resolveTickValues(300);
+
+        expect(spacious.length, lessThanOrEqualTo(compact.length));
+        expect(spacious.first, compact.first);
+        expect(spacious.last, compact.last);
+      });
+
+      test('requested count overrides legacy precomputed tick budget', () {
+        final painter = XAxisPainter(
+          config: const XAxisConfig(
+            tickCount: 32,
+            tickLabelRotationDegrees: -90,
+          ),
+          axisBounds: const DataRange(min: 0, max: 100),
+          tickValues: const [0, 20, 40, 60, 80, 100],
+          labelStyle: const TextStyle(fontSize: 12),
+        );
+
+        final ticks = painter.resolveTickValues(1000);
+
+        expect(ticks.length, greaterThan(6));
+        expect(ticks.first, 0);
+        expect(ticks.last, 100);
+      });
+
+      test(
+        'requested count targets the visible viewport and render window',
+        () {
+          final painter = XAxisPainter(
+            config: XAxisConfig(
+              min: -10,
+              max: 110,
+              renderMin: 0,
+              renderMax: 100,
+              tickCount: 32,
+              tickLabelRotationDegrees: 90,
+              tickLabelCollisionPadding: 0,
+              labelFormatter: (value) => '${value.toInt()}:00',
+            ),
+            axisBounds: const DataRange(min: 15, max: 85),
+            tickValues: const [20, 40, 60, 80],
+            labelStyle: const TextStyle(fontSize: 12),
+          );
+
+          final ticks = painter.resolveTickValues(1200);
+
+          expect(ticks.length, inInclusiveRange(24, 32));
+          expect(ticks.first, greaterThanOrEqualTo(15));
+          expect(ticks.last, lessThanOrEqualTo(85));
+          final interval = ticks[1] - ticks.first;
+          for (var index = 2; index < ticks.length; index++) {
+            expect(ticks[index] - ticks[index - 1], closeTo(interval, 1e-9));
+          }
+        },
+      );
+
+      test('general showAll overrides categorical automatic density', () {
+        final painter = XAxisPainter(
+          config: const XAxisConfig(
+            tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.showAll,
+            categoryAxis: CategoryAxisConfig(
+              categories: ['Alpha', 'Beta', 'Gamma', 'Delta'],
+              minimumCategoryExtent: 80,
+            ),
+          ),
+          axisBounds: const DataRange(min: -0.5, max: 3.5),
+          labelStyle: const TextStyle(fontSize: 12),
+        );
+
+        expect(painter.resolveTickValues(100), [0, 1, 2, 3]);
+      });
+    });
+
     group('constructor', () {
       test('accepts required parameters', () {
         const config = XAxisConfig();

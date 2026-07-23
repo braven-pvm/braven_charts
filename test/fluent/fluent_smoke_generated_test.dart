@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1528 verbs total; 9 of them have an argument type with no
+// 1531 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -5164,7 +5164,7 @@ void _smokeStreamingConfig(_Verb verb, StreamingConfig subject) {
   );
 }
 
-/// Smoke coverage for [XAxisConfig]'s 34 executable verb(s).
+/// Smoke coverage for [XAxisConfig]'s 37 executable verb(s).
 void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   verb(
     'XAxisConfigFluent.withPosition',
@@ -5223,6 +5223,20 @@ void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   verb(
     'XAxisConfigFluent.clearTickLabelRotationDegrees',
     () => subject.clearTickLabelRotationDegrees(),
+  );
+  verb(
+    'XAxisConfigFluent.withTickLabelCollisionPolicy',
+    () => subject.withTickLabelCollisionPolicy(
+      XAxisTickLabelCollisionPolicy.values.first,
+    ),
+  );
+  verb(
+    'XAxisConfigFluent.clearTickLabelCollisionPolicy',
+    () => subject.clearTickLabelCollisionPolicy(),
+  );
+  verb(
+    'XAxisConfigFluent.withTickLabelCollisionPadding',
+    () => subject.withTickLabelCollisionPadding(4.0),
   );
   verb(
     'XAxisConfigFluent.withCategoryAxis',

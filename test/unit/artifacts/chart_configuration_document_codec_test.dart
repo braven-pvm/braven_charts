@@ -55,6 +55,8 @@ void main() {
         axisMargin: 9,
         tickCount: 8,
         tickLabelRotationDegrees: -42,
+        tickLabelCollisionPolicy: XAxisTickLabelCollisionPolicy.showAll,
+        tickLabelCollisionPadding: 11,
         showMinorTicks: true,
         minorTickCount: 3,
         minorTickLength: 2.5,
@@ -73,6 +75,8 @@ void main() {
       expect(document.id, 'elapsed');
       expect(document.position, 'both');
       expect(document.tickLabelRotationDegrees?.asDouble, -42);
+      expect(document.tickLabelCollisionPolicy, 'showAll');
+      expect(document.tickLabelCollisionPadding?.asDouble, 11);
       expect(decoded, source);
     });
 

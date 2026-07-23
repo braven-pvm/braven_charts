@@ -13,6 +13,19 @@ import 'y_axis_config.dart';
 /// Takes a numeric value and returns a formatted string representation.
 typedef XAxisLabelFormatter = String Function(double value);
 
+/// Controls whether X-axis tick labels are reduced when they would overlap.
+enum XAxisTickLabelCollisionPolicy {
+  /// Measure the actual rotated labels and retain a readable subset.
+  ///
+  /// The first and last visible tick labels are always retained. Categorical
+  /// axes also honor [CategoryAxisConfig.minimumCategoryExtent] before the
+  /// exact collision pass.
+  auto,
+
+  /// Paint every resolved tick label even when labels overlap.
+  showAll,
+}
+
 /// Configuration for the X-axis in a chart.
 ///
 /// Controls appearance, bounds, visibility, and label formatting for the
@@ -71,6 +84,8 @@ class XAxisConfig {
     this.tickCount,
     this.labelFormatter,
     this.tickLabelRotationDegrees,
+    this.tickLabelCollisionPolicy,
+    this.tickLabelCollisionPadding = 4.0,
     this.categoryAxis,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
@@ -87,6 +102,10 @@ class XAxisConfig {
              (tickLabelRotationDegrees >= -90 &&
                  tickLabelRotationDegrees <= 90),
          'tickLabelRotationDegrees must be between -90 and 90',
+       ),
+       assert(
+         tickLabelCollisionPadding >= 0,
+         'tickLabelCollisionPadding must be non-negative',
        );
 
   // ========== Appearance ==========
@@ -213,10 +232,12 @@ class XAxisConfig {
   /// Defaults to 8.0.
   final double axisMargin;
 
-  /// Explicit number of tick marks to display.
+  /// Preferred maximum number of major tick marks to display.
   ///
   /// If null, tick count is computed automatically based on available space.
-  /// If provided, must be >= 2.
+  /// When provided, the renderer chooses one uniform readable interval within
+  /// the visible X domain without exceeding this budget. Automatic collision
+  /// handling can retain fewer labels than ticks. Must be >= 2.
   final int? tickCount;
 
   /// Custom formatter for tick labels.
@@ -235,6 +256,25 @@ class XAxisConfig {
   /// fallback.
   double get effectiveTickLabelRotationDegrees =>
       tickLabelRotationDegrees ?? categoryAxis?.labelRotationDegrees ?? 0;
+
+  /// Optional override for automatic tick-label collision handling.
+  ///
+  /// When null, categorical axes preserve
+  /// [CategoryAxisConfig.labelDensity], while numeric axes default to
+  /// [XAxisTickLabelCollisionPolicy.auto].
+  final XAxisTickLabelCollisionPolicy? tickLabelCollisionPolicy;
+
+  /// Effective collision policy after applying categorical compatibility.
+  XAxisTickLabelCollisionPolicy get effectiveTickLabelCollisionPolicy {
+    final explicit = tickLabelCollisionPolicy;
+    if (explicit != null) return explicit;
+    return categoryAxis?.labelDensity == CategoryLabelDensity.showAll
+        ? XAxisTickLabelCollisionPolicy.showAll
+        : XAxisTickLabelCollisionPolicy.auto;
+  }
+
+  /// Minimum horizontal gap between retained tick-label bounds, in pixels.
+  final double tickLabelCollisionPadding;
 
   /// Optional first-class category metadata for integer X values.
   ///
@@ -338,6 +378,9 @@ class XAxisConfig {
     XAxisLabelFormatter? labelFormatter,
     double? tickLabelRotationDegrees,
     bool clearTickLabelRotationDegrees = false,
+    XAxisTickLabelCollisionPolicy? tickLabelCollisionPolicy,
+    bool clearTickLabelCollisionPolicy = false,
+    double? tickLabelCollisionPadding,
     CategoryAxisConfig? categoryAxis,
     bool clearCategoryAxis = false,
     bool? showMinorTicks,
@@ -371,6 +414,11 @@ class XAxisConfig {
       tickLabelRotationDegrees: clearTickLabelRotationDegrees
           ? null
           : (tickLabelRotationDegrees ?? this.tickLabelRotationDegrees),
+      tickLabelCollisionPolicy: clearTickLabelCollisionPolicy
+          ? null
+          : (tickLabelCollisionPolicy ?? this.tickLabelCollisionPolicy),
+      tickLabelCollisionPadding:
+          tickLabelCollisionPadding ?? this.tickLabelCollisionPadding,
       categoryAxis: clearCategoryAxis
           ? null
           : (categoryAxis ?? this.categoryAxis),
@@ -408,6 +456,8 @@ class XAxisConfig {
           tickCount == other.tickCount &&
           labelFormatter == other.labelFormatter &&
           tickLabelRotationDegrees == other.tickLabelRotationDegrees &&
+          tickLabelCollisionPolicy == other.tickLabelCollisionPolicy &&
+          tickLabelCollisionPadding == other.tickLabelCollisionPadding &&
           categoryAxis == other.categoryAxis &&
           showMinorTicks == other.showMinorTicks &&
           minorTickCount == other.minorTickCount &&
@@ -438,6 +488,8 @@ class XAxisConfig {
     tickCount,
     labelFormatter,
     tickLabelRotationDegrees,
+    tickLabelCollisionPolicy,
+    tickLabelCollisionPadding,
     categoryAxis,
     showMinorTicks,
     minorTickCount,
@@ -469,6 +521,8 @@ class XAxisConfig {
         'tickCount: $tickCount, '
         'labelFormatter: $labelFormatter, '
         'tickLabelRotationDegrees: $tickLabelRotationDegrees, '
+        'tickLabelCollisionPolicy: $tickLabelCollisionPolicy, '
+        'tickLabelCollisionPadding: $tickLabelCollisionPadding, '
         'categoryAxis: $categoryAxis, '
         'showMinorTicks: $showMinorTicks, '
         'minorTickCount: $minorTickCount, '
