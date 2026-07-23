@@ -8,6 +8,7 @@ import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
+import 'facet_spec.dart';
 import 'mark.dart';
 
 /// A complete, typed grammar-of-graphics specification over rows of type `T`.
@@ -47,6 +48,7 @@ class PlotSpec<T> {
     this.title,
     this.subtitle,
     this.showLegend,
+    this.facet,
   });
 
   /// Rows every mark's accessors read from.
@@ -102,6 +104,32 @@ class PlotSpec<T> {
   /// to `BravenChartPlus` unchanged.
   final bool? showLegend;
 
+  /// Optional faceting configuration.
+  ///
+  /// Null is a single-panel chart — the default, behaving exactly as before.
+  /// A non-null value makes this spec a small-multiples grid; it is rendered
+  /// with `BravenFacetPlot` (or `BravenChart.buildFaceted()`), and
+  /// `PlotSpec.lower()` / `BravenChart.build()` reject it.
+  final FacetSpec<T>? facet;
+
+  /// A copy of this spec with [facet] cleared and everything else identical.
+  ///
+  /// `BravenFacetPlot` lowers each panel from a facet-cleared copy, so the
+  /// per-panel lowering is exactly the single-panel lowering of the same marks.
+  PlotSpec<T> facetCleared() => PlotSpec<T>(
+    data: data,
+    marks: marks,
+    transposed: transposed,
+    theme: theme,
+    interaction: interaction,
+    xAxis: xAxis,
+    yAxes: yAxes,
+    grid: grid,
+    title: title,
+    subtitle: subtitle,
+    showLegend: showLegend,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -116,7 +144,8 @@ class PlotSpec<T> {
           other.grid == grid &&
           other.title == title &&
           other.subtitle == subtitle &&
-          other.showLegend == showLegend;
+          other.showLegend == showLegend &&
+          other.facet == facet;
 
   @override
   int get hashCode => Object.hash(
@@ -131,6 +160,7 @@ class PlotSpec<T> {
     title,
     subtitle,
     showLegend,
+    facet,
   );
 
   @override

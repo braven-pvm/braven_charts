@@ -1413,4 +1413,45 @@ void main() {
       );
     });
   });
+
+  group('faceting rejects the single-panel lowering', () {
+    test('lower() on a faceted spec throws facetedSpecNotLowerable', () {
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+          facet: FacetSpec<Sample>(by: sampleZone),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
+      );
+    });
+
+    test('the facet rejection beats every other diagnostic', () {
+      // A faceted spec that is ALSO otherwise broken (no marks) still reports
+      // the facet-path error first — the caller reached for the wrong terminal.
+      expect(
+        () => (const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[],
+          facet: FacetSpec<Sample>(by: sampleZone),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
+      );
+    });
+
+    test('the new diagnostics name their codes in toString', () {
+      expect(
+        GrammarSpecException.notFaceted().code,
+        GrammarDiagnosticCode.notFaceted,
+      );
+      expect(
+        GrammarSpecException.emptyFacetValues().code,
+        GrammarDiagnosticCode.emptyFacetValues,
+      );
+      final capped = GrammarSpecException.facetPanelCapExceeded(64, 50);
+      expect(capped.code, GrammarDiagnosticCode.facetPanelCapExceeded);
+      expect(capped.message, contains('64'));
+      expect(capped.message, contains('50'));
+    });
+  });
 }

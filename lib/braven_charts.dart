@@ -100,9 +100,11 @@ export 'src/comparison/chart_comparison_model.dart';
 // Formatting
 export 'src/formatting/multi_axis_value_formatter.dart';
 // Grammar
+export 'src/grammar/braven_facet_plot.dart';
 export 'src/grammar/braven_plot.dart';
 export 'src/grammar/channel.dart';
 export 'src/grammar/chart_builder.dart';
+export 'src/grammar/facet_spec.dart';
 export 'src/grammar/grammar_diagnostics.dart';
 export 'src/grammar/mark.dart';
 export 'src/grammar/plot_lowering.dart';

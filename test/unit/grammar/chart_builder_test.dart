@@ -954,4 +954,95 @@ void main() {
       expect(document.annotations, hasLength(1));
     });
   });
+
+  group('.facet sets PlotSpec.facet', () {
+    test('facet with defaults lands on the spec', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone)
+          .toSpec();
+
+      expect(spec.facet, const FacetSpec<Sample>(by: sampleZone));
+      expect(spec.facet!.scales, FacetScales.fixed);
+    });
+
+    test('facet carries columns, scales and label', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone, columns: 3, scales: FacetScales.freeY, label: 'Zone')
+          .toSpec();
+
+      expect(
+        spec.facet,
+        const FacetSpec<Sample>(
+          by: sampleZone,
+          columns: 3,
+          scales: FacetScales.freeY,
+          label: 'Zone',
+        ),
+      );
+    });
+
+    test('a chain without .facet leaves the spec unfaceted', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .toSpec();
+      expect(spec.facet, isNull);
+    });
+  });
+
+  group('faceted terminals', () {
+    Matcher throwsCode(GrammarDiagnosticCode code) =>
+        throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
+
+    test('.build() on a faceted chain throws, directing to buildFaceted', () {
+      expect(
+        () => BravenChart.of(rows)
+            .x(sampleTime)
+            .y(samplePower)
+            .geomLine()
+            .facet(sampleZone)
+            .build(),
+        throwsCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
+      );
+    });
+
+    test('.buildFaceted() on a non-faceted chain throws', () {
+      expect(
+        () => BravenChart.of(rows)
+            .x(sampleTime)
+            .y(samplePower)
+            .geomLine()
+            .buildFaceted(),
+        throwsCode(GrammarDiagnosticCode.notFaceted),
+      );
+    });
+
+    test('.buildFaceted() returns a BravenFacetPlot over the faceted spec', () {
+      final widget = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone, columns: 2, label: 'Zone')
+          .buildFaceted();
+      expect(widget, isA<BravenFacetPlot<Sample>>());
+      expect(widget.spec.facet, isNotNull);
+      expect(widget.spec.facet!.columns, 2);
+    });
+
+    test('.build() on a non-faceted chain still returns a BravenPlot', () {
+      final widget = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .build();
+      expect(widget, isA<BravenPlot<Sample>>());
+    });
+  });
 }

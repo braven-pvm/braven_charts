@@ -183,6 +183,7 @@ extension PlotSpecLowering<T> on PlotSpec<T> {
 }
 
 LoweredPlot _lower<T>(PlotSpec<T> spec) {
+  if (spec.facet != null) throw GrammarSpecException.facetedSpecNotLowerable();
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final markIds = _resolveMarkIds(spec.marks);

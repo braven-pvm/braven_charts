@@ -265,6 +265,10 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   bool _showDataPointMarkers = true;
   double _thresholdWatts = 285;
 
+  // Faceting knobs.
+  FacetScales _facetScales = FacetScales.fixed;
+  double _facetColumns = 2;
+
   @override
   void dispose() {
     _optionsController.dispose();
@@ -470,6 +474,31 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
       .theme(_theme)
       .interaction(_interaction);
 
+  /// One metric faceted across a categorical field — small multiples.
+  ///
+  /// `.facet(sampleZone)` partitions the ride into one panel per training
+  /// zone, in first-seen order. `fixed` scales share both axes so the panels
+  /// are directly comparable; `freeY` frees the vertical scale per panel;
+  /// `freeX`/`free` also free the horizontal scale, at which point the shared
+  /// crosshair is no longer meaningful and the panels interact independently.
+  BravenChart<GrammarSample> _facetedChart() => BravenChart.of(rideRows)
+      .x(sampleMinute, label: 'Elapsed (min)')
+      .y(samplePower, label: 'Power (W)')
+      .geomLine(
+        name: 'Power',
+        color: const Color(0xFF2563EB),
+        strokeWidth: 2.2,
+        interpolation: LineInterpolation.monotone,
+      )
+      .facet(
+        sampleZone,
+        scales: _facetScales,
+        columns: _facetColumns.round(),
+        label: 'Zone',
+      )
+      .theme(_theme)
+      .interaction(_interaction);
+
   BravenChart<GrammarSample> get _activeChart => switch (_preset) {
     _GrammarPreset.lineTrend => _lineTrendChart(),
     _GrammarPreset.multiAxis => _multiAxisChart(),
@@ -477,6 +506,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.candlestick => _candlestickChart(),
     _GrammarPreset.barTransposed => _barTransposedChart(),
     _GrammarPreset.referenceLines => _referenceLinesChart(),
+    _GrammarPreset.faceted => _facetedChart(),
   };
 
   // ==========================================================================
@@ -723,6 +753,10 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.candlestick => _handBuiltCandlestick(controller),
     _GrammarPreset.barTransposed => _handBuiltBar(controller),
     _GrammarPreset.referenceLines => _handBuiltReferenceLines(controller),
+    // Unreachable: the faceted preset renders its BravenFacetPlot grid directly
+    // (a facet grid is N configs, so there is no single hand-built equivalent
+    // and no workbench round-trip).
+    _GrammarPreset.faceted => const SizedBox.shrink(),
   };
 
   // ==========================================================================
@@ -818,15 +852,25 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
       builder: (context, _) {
         return ChartCard(
           title: _preset.stageTitle,
-          subtitle: _compareHandBuilt
-              ? 'Hand-built BravenChartPlus — the config the spec lowers to'
-              : _preset.stageSubtitle,
+          subtitle: _preset == _GrammarPreset.faceted
+              ? _preset.stageSubtitle
+              : _compareHandBuilt
+                  ? 'Hand-built BravenChartPlus — the config the spec lowers to'
+                  : _preset.stageSubtitle,
           padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
-          child: _buildWorkbench(),
+          child: _preset == _GrammarPreset.faceted
+              ? _buildFacetStage()
+              : _buildWorkbench(),
         );
       },
     );
   }
+
+  /// The faceted preset renders its grid directly: a facet grid is N configs,
+  /// so it does not round-trip the single-document workbench.
+  Widget _buildFacetStage() => _facetedChart().buildFaceted(
+    key: const ValueKey('chart-grammar-facet-plot'),
+  );
 
   /// The Chart / Data / Split / Source workbench every preset renders inside.
   ///
@@ -929,6 +973,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             _GrammarPreset.scatterChannels => _scatterControls(),
             _GrammarPreset.barTransposed => _barControls(),
             _GrammarPreset.referenceLines => _referenceLinesControls(),
+            _GrammarPreset.faceted => _facetControls(),
             _GrammarPreset.candlestick => const <Widget>[],
           },
         ),
@@ -1124,6 +1169,51 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'each one round-trips, so the Grammar Source tab emits a chain.',
     ),
   ];
+
+  List<Widget> _facetControls() => [
+    Text(
+      'Scales',
+      style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+    ),
+    const SizedBox(height: 4),
+    SegmentedOption<FacetScales>(
+      key: const ValueKey('chart-grammar-facet-scales'),
+      value: _facetScales,
+      options: const <FacetScales>[
+        FacetScales.fixed,
+        FacetScales.freeX,
+        FacetScales.freeY,
+        FacetScales.free,
+      ],
+      labelBuilder: (scales) => switch (scales) {
+        FacetScales.fixed => 'fixed',
+        FacetScales.freeX => 'freeX',
+        FacetScales.freeY => 'freeY',
+        FacetScales.free => 'free',
+      },
+      onChanged: (scales) => setState(() => _facetScales = scales),
+    ),
+    const SizedBox(height: 8),
+    SliderOption(
+      key: const ValueKey('chart-grammar-facet-columns'),
+      label: 'Columns',
+      value: _facetColumns,
+      min: 1,
+      max: 3,
+      divisions: 2,
+      decimalPlaces: 0,
+      onChanged: (value) => setState(() => _facetColumns = value),
+    ),
+    const InfoBox(
+      message:
+          'Faceting partitions the ride by training zone — one panel per zone, '
+          'in first-seen order. fixed shares both axes so the panels are '
+          'directly comparable; freeY frees the vertical scale; freeX / free '
+          'free the horizontal scale too, and a shared crosshair only makes '
+          'sense when x is shared, so under those the panels interact '
+          'independently.',
+    ),
+  ];
 }
 
 // ============================================================================
@@ -1136,6 +1226,7 @@ enum _GrammarPreset {
   scatterChannels,
   candlestick,
   referenceLines,
+  faceted,
   // barTransposed is kept LAST: BravenChartPlus retains exiting horizontal bars
   // through a cross-fade, and unioning those with a non-bar chart's entering
   // series trips its all-horizontal bounds check. Keeping the transposed preset
@@ -1152,6 +1243,7 @@ extension on _GrammarPreset {
     _GrammarPreset.candlestick => 'Candlestick',
     _GrammarPreset.barTransposed => 'Bar transposed',
     _GrammarPreset.referenceLines => 'Reference lines',
+    _GrammarPreset.faceted => 'Faceting',
   };
 
   IconData get icon => switch (this) {
@@ -1161,6 +1253,7 @@ extension on _GrammarPreset {
     _GrammarPreset.candlestick => Icons.candlestick_chart_outlined,
     _GrammarPreset.barTransposed => Icons.bar_chart,
     _GrammarPreset.referenceLines => Icons.stacked_line_chart,
+    _GrammarPreset.faceted => Icons.grid_view,
   };
 
   String get stageTitle => switch (this) {
@@ -1170,6 +1263,7 @@ extension on _GrammarPreset {
     _GrammarPreset.candlestick => 'Open, high, low, close as one mark',
     _GrammarPreset.barTransposed => 'Bars with the plane transposed',
     _GrammarPreset.referenceLines => 'Reference marks and chart-level options',
+    _GrammarPreset.faceted => 'One metric across small-multiple panels',
   };
 
   String get stageSubtitle => switch (this) {
@@ -1185,6 +1279,8 @@ extension on _GrammarPreset {
       'Transposition is a chain verb, not a per-mark property',
     _GrammarPreset.referenceLines =>
       'The V2.0 verbs: .threshold, .grid, .title and per-point markers',
+    _GrammarPreset.faceted =>
+      'Partition by a categorical field; fixed / free scales and synced x',
   };
 
   /// Whether this preset has any genuinely applicable per-preset control.
@@ -1225,5 +1321,11 @@ extension on _GrammarPreset {
           'rather than the "not emitted" diagnostic these shapes drew in V1. '
           'Drag the FTP slider and toggle the markers to watch the emitted '
           'chain track the chart.',
+    _GrammarPreset.faceted =>
+      'Switch the Scales control: fixed shares both axes so the panels are '
+          'directly comparable, freeY frees the vertical scale per panel, and '
+          'freeX / free free the horizontal scale — at which point the shared '
+          'crosshair is turned off because it is only meaningful when x is '
+          'shared. Drag Columns to relayout the grid.',
   };
 }
