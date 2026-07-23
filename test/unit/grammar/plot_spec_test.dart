@@ -57,6 +57,7 @@ String geomOf(Mark<Sample> mark) => switch (mark) {
   ThresholdMark<Sample>() => 'threshold',
   BandMark<Sample>() => 'band',
   PointMark<Sample>() => 'point',
+  RadialMark<Sample>() => 'radial',
 };
 
 const _line = LineMark<Sample>(x: sampleTime, y: samplePower);

@@ -259,6 +259,11 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         // structural invariant beyond what their annotation asserts on
         // construction during materialization.
         break;
+      case RadialMark<T>():
+        // Unreachable: a radial spec returns via _lowerRadial before this
+        // Cartesian switch runs. The arm exists only to keep the sealed
+        // switch exhaustive.
+        throw StateError('radial mark reached the Cartesian structural pass');
     }
   }
 
@@ -307,6 +312,8 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         annotations.add(_lowerBand(mark, markId));
       case PointMark<T>():
         annotations.add(_lowerPoint(mark, markId));
+      case RadialMark<T>():
+        throw StateError('radial mark reached the Cartesian materialization');
     }
   }
 

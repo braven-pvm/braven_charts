@@ -1592,6 +1592,10 @@ class _GrammarChainEmitter {
       PointMark<_SourceRow>() => throw StateError(
         'unreachable: a reference mark reached _emitGeometry',
       ),
+      RadialMark<_SourceRow>() => throw StateError(
+        'unreachable: a radial mark reached the grammar source generator; '
+        'radial series are rejected by the family gate before planning',
+      ),
     };
     writer.writeLine('.$verb(');
     writer.indented(() {
@@ -1667,6 +1671,8 @@ class _GrammarChainEmitter {
         case ThresholdMark<_SourceRow>() ||
             BandMark<_SourceRow>() ||
             PointMark<_SourceRow>():
+          break; // unreachable: the verb switch above already threw.
+        case RadialMark<_SourceRow>():
           break; // unreachable: the verb switch above already threw.
       }
       _optionalString(writer, 'yAxisId', mark.yAxisId);
