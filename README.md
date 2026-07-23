@@ -61,7 +61,7 @@ relevant Chart, Data, Split, and Source views.
 <!-- BEGIN GENERATED: INSTALL -->
 ```yaml
 dependencies:
-  braven_charts: ^0.13.3
+  braven_charts: ^0.13.4
 ```
 
 Then run `flutter pub get`.
