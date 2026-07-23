@@ -282,6 +282,8 @@ final class BarMark<T> extends Mark<T> {
     this.labelStyle,
     this.colorBy,
     this.colorEncoding,
+    this.sizeBy,
+    this.sizeEncoding,
   });
 
   /// Horizontal position accessor.
@@ -298,6 +300,16 @@ final class BarMark<T> extends Mark<T> {
   /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
   /// is set; inert otherwise (raises `orphanChannelEncoding`).
   final ScatterColorEncoding? colorEncoding;
+
+  /// Optional size channel driving each bar's WIDTH. The value is mapped
+  /// LINEARLY into [sizeEncoding]'s `[minimumRadius, maximumRadius]` range,
+  /// reinterpreted as a width MULTIPLIER (scatter's sqrt/area radius mapping is
+  /// wrong for width). Baked at lowering into `ChartDataPoint.pointStyle.size`.
+  final Channel<T>? sizeBy;
+
+  /// Width-multiplier range for [sizeBy] (min/max interpreted as multipliers).
+  /// Defaults to 0.3..1.0 when [sizeBy] is set and this is null.
+  final ScatterSizeEncoding? sizeEncoding;
 
   /// Bar width as a fraction of the slot, `0..1`.
   ///
@@ -344,7 +356,9 @@ final class BarMark<T> extends Mark<T> {
           other.baselineValue == baselineValue &&
           other.labelStyle == labelStyle &&
           other.colorBy == colorBy &&
-          other.colorEncoding == colorEncoding;
+          other.colorEncoding == colorEncoding &&
+          other.sizeBy == sizeBy &&
+          other.sizeEncoding == sizeEncoding;
 
   @override
   int get hashCode => Object.hash(
@@ -363,6 +377,8 @@ final class BarMark<T> extends Mark<T> {
     labelStyle,
     colorBy,
     colorEncoding,
+    sizeBy,
+    sizeEncoding,
   );
 
   @override

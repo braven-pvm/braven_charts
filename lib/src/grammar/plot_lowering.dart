@@ -299,6 +299,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
+        _validateBarSizeChannel(mark.sizeBy, mark.sizeEncoding, markId);
       case ThresholdMark<T>() || BandMark<T>() || PointMark<T>():
         // Reference marks bind no Y axis and carry no data-independent
         // structural invariant beyond what their annotation asserts on
@@ -614,7 +615,7 @@ BarChartSeries _lowerBar<T>(
   return BarChartSeries(
     id: id,
     name: mark.name,
-    points: mark.colorBy == null
+    points: (mark.colorBy == null && mark.sizeBy == null)
         ? _xyPoints(data, mark.x, mark.y)
         : _barStyledPoints(
             data,
@@ -622,6 +623,8 @@ BarChartSeries _lowerBar<T>(
             mark.y,
             mark.colorBy,
             mark.colorEncoding,
+            mark.sizeBy,
+            mark.sizeEncoding,
           ),
     color: mark.color,
     yAxisId: axis.id,
@@ -1165,25 +1168,82 @@ void _validateColorChannel<T>(
   }
 }
 
-/// Builds bar points, weaving a baked colour into `pointStyle`. A point whose
-/// channels produce nothing keeps a null pointStyle. Task 4 widens this to also
-/// carry a baked width multiplier.
+/// Bar width channel default range (multipliers). A bar at the domain minimum
+/// is 0.3x the base width; the maximum is full width.
+const ScatterSizeEncoding _barSizeMultiplierDefault = ScatterSizeEncoding(
+  minimumRadius: 0.3,
+  maximumRadius: 1.0,
+);
+
+/// Per-row baked width multiplier: [sizeBy]'s value mapped LINEARLY into
+/// `[encoding.minimumRadius, encoding.maximumRadius]`. Null where non-finite or
+/// the domain is empty (that bar keeps its base width).
+List<double?> _bakeChannelWidths<T>(
+  Channel<T> sizeBy,
+  ScatterSizeEncoding encoding,
+  List<T> data,
+) {
+  final domain = _finiteDomain(sizeBy.accessor, data);
+  final span = domain == null ? 0.0 : domain.max - domain.min;
+  return <double?>[
+    for (final row in data)
+      () {
+        final v = sizeBy.accessor(row).toDouble();
+        if (!v.isFinite || domain == null) return null;
+        final t = span <= 0 ? 0.5 : ((v - domain.min) / span).clamp(0.0, 1.0);
+        return encoding.minimumRadius +
+            t * (encoding.maximumRadius - encoding.minimumRadius);
+      }(),
+  ];
+}
+
+/// Structural validation of the bar size channel: native scale is linear, and
+/// a sizeEncoding with no sizeBy is an orphan. (sizeBy without sizeEncoding is
+/// allowed; it uses [_barSizeMultiplierDefault].)
+void _validateBarSizeChannel<T>(
+  Channel<T>? sizeBy,
+  ScatterSizeEncoding? sizeEncoding,
+  String markId,
+) {
+  _requireScale(markId, 'sizeBy', sizeBy?.scale, ChannelScale.linear);
+  if (sizeBy == null && sizeEncoding != null) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'sizeEncoding',
+      'sizeBy',
+    );
+  }
+}
+
+/// Builds bar points, weaving a baked colour (and, in Task 4, width) into
+/// `pointStyle`. A point whose channels produce nothing keeps a null pointStyle.
 List<ChartDataPoint> _barStyledPoints<T>(
   List<T> data,
   FieldAccessor<T, num> x,
   FieldAccessor<T, num> y,
   Channel<T>? colorBy,
   ScatterColorEncoding? colorEncoding,
+  Channel<T>? sizeBy,
+  ScatterSizeEncoding? sizeEncoding,
 ) {
   final colors = colorBy == null
       ? null
       : _bakeChannelColors(colorBy, colorEncoding!, data);
+  final widths = sizeBy == null
+      ? null
+      : _bakeChannelWidths(
+          sizeBy,
+          sizeEncoding ?? _barSizeMultiplierDefault,
+          data,
+        );
   return <ChartDataPoint>[
     for (var i = 0; i < data.length; i++)
       ChartDataPoint(
         x: x(data[i]).toDouble(),
         y: y(data[i]).toDouble(),
-        pointStyle: colors?[i] == null ? null : PointStyle(color: colors![i]),
+        pointStyle: (colors?[i] == null && widths?[i] == null)
+            ? null
+            : PointStyle(color: colors?[i], size: widths?[i]),
       ),
   ];
 }
