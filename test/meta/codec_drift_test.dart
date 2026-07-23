@@ -48,15 +48,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// The precise side is DECODE (per-construction named args), which is where the
 /// dangerous data-loss drops hide.
 ///
-/// ## This gate is grown in tiers
+/// ## Tiers
 ///
-/// Tier-1 (this file's first landing) gates the LEAF classes served by a
-/// dedicated both-sided method pair — `_encodeX(X x)` ⇄ a `X(...)` construction
-/// — which is the bulk of the surface. The polymorphic dispatch (series /
-/// annotations / points), the inline value classes, and the class-level
-/// scope pins arrive in the Tier-2 / Tier-3 steps; classes not yet reachable
-/// are named in [_deferredToLaterTiers] with a reason, so nothing is silently
-/// skipped.
+/// Tier-1 gates the LEAF classes served by a dedicated both-sided method pair —
+/// `_encodeX(X x)` ⇄ a `X(...)` construction — the bulk of the surface. Tier-2
+/// adds the classes with no per-class pair: the polymorphic dispatch (series /
+/// annotations / points), the inline value classes, and the pie/donut radial
+/// delegation. Tier-3 pins the classes the codec does not own ([_runtimeOnlyClasses],
+/// [_roundTrippedInExtractorLayer]) and asserts COMPLETENESS: every manifest
+/// class is gated, pinned, deferred, or a props-less abstract base — so a new
+/// modelled class cannot silently escape the gate.
 
 // ===========================================================================
 // Codec source files under audit (the artifact-codec mirror).
@@ -100,6 +101,43 @@ const Map<String, String> _codecPropertyGaps = <String, String>{
 /// instead of silently green. (Emptied once Tier-2 lands the polymorphic /
 /// inline / delegation attribution; retained as the seam for future deferrals.)
 const Map<String, String> _deferredToLaterTiers = <String, String>{};
+
+/// TIER-3 scope pins. Whole `@chartSurface` classes the artifact codec never
+/// touches because they are runtime-only parameters, not part of the persisted
+/// document graph. Reused verbatim (same reasoning) from the emitter gate's
+/// `_classesNotEmittedBySource`.
+const Map<String, String> _runtimeOnlyClasses = <String, String>{
+  'StreamingConfig':
+      'Runtime streaming config — a BravenChartPlus parameter that is not '
+          'captured in any ChartDocument, so the codec has no value to persist.',
+  'AutoScrollConfig':
+      'Runtime auto-scroll config — like StreamingConfig it is a live '
+          'BravenChartPlus parameter absent from the persisted document graph.',
+  'ChartDataTableTheme':
+      'Data-table view theme (lib/src/table). It themes the tabular data view, '
+          'not the chart, and is never part of the persisted config graph.',
+  'CartesianValueSummaryTheme':
+      'Theme-level value-summary defaults. The theme document codec does not '
+          'persist this component (only the per-chart CartesianValueSummaryConfig '
+          'is round-tripped, by the interaction codec), so there is nothing for '
+          'the codec to encode or decode.',
+  'ChartDocumentExtractOptions':
+      'Artifact extraction policy supplied to ChartDocumentExtractor at capture '
+          'time. It controls how a chart is projected into a document; it is not '
+          'itself a value the codec persists.',
+};
+
+/// TIER-3 scope pins. `@chartSurface` classes that DO round-trip, but through
+/// the extractor / hydrator mirror (`chart_document_extractor.dart` /
+/// `chart_document_hydrator.dart`) — a DIFFERENT mirror pair, out of scope for
+/// this codec gate. Gating that pair is a separate future slice.
+const Map<String, String> _roundTrippedInExtractorLayer = <String, String>{
+  'MultiAxisConfig':
+      'Top-level multi-axis binding container. It is assembled by the document '
+          'extractor/hydrator (its axes are persisted individually via the axis '
+          'codec), not by any *_document_codec method — a different mirror, out '
+          'of scope for the codec gate.',
+};
 
 // ===========================================================================
 // TIER-2: curated ENCODE sources for classes whose encode is NOT a dedicated
@@ -633,9 +671,15 @@ void main() {
   late _CodecModel model;
   // Gated scope: every props-bearing class the codec round-trips both-sided (a
   // member-read encode AND a construction-site decode) — Tier-1 leaf pairs plus
-  // the Tier-2 polymorphic / inline / delegated classes — minus anything still
-  // deferred to a later tier.
+  // the Tier-2 polymorphic / inline / delegated classes — minus anything pinned
+  // out of scope or deferred to a later tier.
   late Set<String> gated;
+
+  bool pinnedClass(String c) =>
+      _runtimeOnlyClasses.containsKey(c) ||
+      _roundTrippedInExtractorLayer.containsKey(c);
+  bool pinnedProp(String c, String p) =>
+      _codecPropertyGaps.containsKey('$c.$p');
 
   setUpAll(() {
     surface = _surfaceProperties();
@@ -645,13 +689,11 @@ void main() {
         if (surface[c]!.isNotEmpty &&
             model.encoded.containsKey(c) &&
             model.decoded.containsKey(c) &&
+            !pinnedClass(c) &&
             !_deferredToLaterTiers.containsKey(c))
           c,
     };
   });
-
-  bool pinnedProp(String c, String p) =>
-      _codecPropertyGaps.containsKey('$c.$p');
 
   test('the extraction produced plausible sets', () {
     expect(surface, hasLength(greaterThan(80)),
@@ -686,20 +728,42 @@ void main() {
   });
 
   test('every reviewed hole names a real class/property with a real reason', () {
+    for (final className in <String>[
+      ..._runtimeOnlyClasses.keys,
+      ..._roundTrippedInExtractorLayer.keys,
+      ..._deferredToLaterTiers.keys,
+    ]) {
+      expect(surface.containsKey(className), isTrue,
+          reason: '$className is pinned as a whole class but is not a '
+              '@chartSurface class in the manifest.');
+    }
     for (final key in _codecPropertyGaps.keys) {
       final parts = key.split('.');
       expect(surface.containsKey(parts[0]), isTrue,
           reason: '$key pins a property on ${parts[0]}, not a @chartSurface '
               'class.');
+      expect(pinnedClass(parts[0]), isFalse,
+          reason: '$key pins a property on ${parts[0]}, already pinned as a '
+              'whole class — the per-property pin is redundant.');
       expect(surface[parts[0]]!.contains(parts[1]), isTrue,
           reason: '$key pins property "${parts[1]}", which ${parts[0]} does not '
               'model — delete it.');
     }
-    for (final className in _deferredToLaterTiers.keys) {
-      expect(surface.containsKey(className), isTrue,
-          reason: '$className is deferred but is not a @chartSurface class.');
-    }
+    // A whole-class scope pin is stale if the codec actually round-trips it.
+    final staleClassPins = <String>[
+      for (final c in <String>[
+        ..._runtimeOnlyClasses.keys,
+        ..._roundTrippedInExtractorLayer.keys,
+      ])
+        if (model.encoded.containsKey(c) && model.decoded.containsKey(c)) c,
+    ]..sort();
+    expect(staleClassPins, isEmpty,
+        reason: 'these classes are pinned out of scope but the codec now '
+            'round-trips them both-sided — unpin them:\n'
+            '${staleClassPins.join('\n')}');
     for (final reason in <String>[
+      ..._runtimeOnlyClasses.values,
+      ..._roundTrippedInExtractorLayer.values,
       ..._codecPropertyGaps.values,
       ..._deferredToLaterTiers.values,
     ]) {
@@ -861,27 +925,67 @@ void main() {
             'would be vacuous for exactly the categoryValue-class bug');
   });
 
+  test('COMPLETENESS: every manifest class is bucketed', () {
+    // Every manifest class must be accounted for: gated both-sided, pinned out
+    // of scope, deferred (with a reason), or a props-less abstract base (its
+    // subtypes carry the fields). A props-bearing class that is none of these
+    // has silently escaped the drift gate.
+    final fell = <String>[];
+    for (final entry in surface.entries) {
+      final className = entry.key;
+      if (gated.contains(className)) continue;
+      if (pinnedClass(className)) continue;
+      if (_deferredToLaterTiers.containsKey(className)) continue;
+      if (entry.value.isEmpty) continue; // abstract sealed base, no fields.
+      final hasEncode = model.encoded.containsKey(className);
+      final hasDecode = model.decoded.containsKey(className);
+      fell.add('$className '
+          '(encode=${hasEncode ? 'yes' : 'NO'}, '
+          'decode=${hasDecode ? 'yes' : 'NO'})');
+    }
+    fell.sort();
+    expect(
+      fell,
+      isEmpty,
+      reason: 'these manifest classes fall through every bucket — the codec '
+          'neither round-trips them both-sided nor are they pinned/deferred. A '
+          'new modelled class must be wired into the codec (and this gate) or '
+          'pinned with a reason, so it cannot silently escape the gate:\n'
+          '${fell.join('\n')}',
+    );
+  });
+
   test('COVERAGE REPORT (not a gate): artifact-codec round-trip coverage', () {
     var modelled = 0;
     var encoded = 0;
     var decoded = 0;
-    for (final className in gated) {
-      for (final property in surface[className]!) {
+    var exempt = 0;
+    for (final entry in surface.entries) {
+      final className = entry.key;
+      final classPinned =
+          pinnedClass(className) || !gated.contains(className);
+      for (final property in entry.value) {
         modelled++;
+        if (classPinned) {
+          exempt++;
+          continue;
+        }
         if (model.encodedFor(className).contains(property)) encoded++;
         if (model.decodedFor(className).contains(property)) decoded++;
       }
     }
     // ignore: avoid_print
     print(
-      '\n[artifact codec drift — gated (Tier-1 + Tier-2)]\n'
-      '  @chartSurface classes:      ${surface.length}\n'
-      '  gated classes:              ${gated.length}\n'
-      '  deferred to later tiers:    ${_deferredToLaterTiers.length}\n'
-      '  gated modelled properties:  $modelled\n'
-      '  property gaps pinned:       ${_codecPropertyGaps.length}\n'
-      '  properties ENCODED:         $encoded of $modelled\n'
-      '  properties DECODED:         $decoded of $modelled',
+      '\n[artifact codec drift]\n'
+      '  @chartSurface classes:        ${surface.length}\n'
+      '  modelled properties:          $modelled\n'
+      '  gated classes:                ${gated.length}\n'
+      '  classes pinned (whole):       '
+      '${_runtimeOnlyClasses.length + _roundTrippedInExtractorLayer.length}\n'
+      '  property gaps pinned:         ${_codecPropertyGaps.length}\n'
+      '  properties outside gated set: $exempt\n'
+      '  properties ENCODED:           $encoded of ${modelled - exempt} gated\n'
+      '  properties DECODED:           $decoded of ${modelled - exempt} gated',
     );
     expect(encoded, greaterThan(0));
     expect(decoded, greaterThan(0));
