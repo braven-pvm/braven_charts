@@ -16,7 +16,7 @@ Add `.facet(by:)` to the `BravenChart` grammar so one chart specification render
 
 ## Approach (chosen: B — same builder + `buildFaceted()`)
 
-`.facet(...)` is a verb on the existing `BravenChart<T>` builder that records an immutable `FacetSpec<T>`. A distinct terminal `.buildFaceted()` returns a new `BravenFacetPlot<T>` widget. The footgun (calling `.facet()` then a plain `.build()`) is closed by guards: `.build()` throws a grammar diagnostic when a facet is present (directing to `.buildFaceted()`), and `.buildFaceted()` throws when no facet was set.
+`.facet(...)` is a verb on the existing `BravenChart<T>` builder that sets an immutable `FacetSpec<T>` **as an optional field on the `PlotSpec`** — so the `PlotSpec` remains the single, complete description of the chart (faceting included), honoring the grammar's "exactly one description" principle (stated in `braven_plot.dart`). This is the ggplot2 model — facet is part of the plot object, not a separate builder concern. A distinct terminal `.buildFaceted()` returns a new `BravenFacetPlot<T>` widget that reads `spec.facet`. The footgun (calling `.facet()` then a plain `.build()`) is closed by guards: `.build()` throws a grammar diagnostic when the spec is faceted (directing to `.buildFaceted()`), and `.buildFaceted()` throws when the spec is not faceted. `PlotSpec.lower()` on a faceted spec likewise throws (single-panel `lower()` returns exactly one config; a faceted spec is not a single panel) — `BravenFacetPlot` lowers each panel from a facet-cleared copy of the spec.
 
 Rationale: the whole feature is *composition* over primitives that already exist —
 - `PlotSpec.lower()` → `LoweredPlot` (a spec → `BravenChartPlus` config) already exists;
@@ -44,7 +44,7 @@ BravenChart<T> facet(
 // New terminal:
 BravenFacetPlot<T> buildFaceted({ /* same host-facing params build() exposes */ });
 ```
-`FieldAccessor<T, V> = V Function(T row)` (`channel.dart:19`). `FacetSpec<T>` is a grammar value (NOT `@chartSurface` — it holds an accessor function, exactly as `Mark` does).
+`FieldAccessor<T, V> = V Function(T row)` (`channel.dart:19`). `.facet()` sets `PlotSpec.facet` (an optional `FacetSpec<T>?` field); a non-faceted spec has `facet == null` and behaves exactly as today. `FacetSpec<T>` is a grammar value (NOT `@chartSurface` — it holds an accessor function, exactly as `Mark` does).
 
 ## Semantics
 
@@ -70,7 +70,9 @@ BravenFacetPlot<T> buildFaceted({ /* same host-facing params build() exposes */ 
 ## Architecture / file structure
 
 - **Create** `lib/src/grammar/facet_spec.dart` — `FacetScales` enum + immutable `FacetSpec<T>` (by, columns, scales, label). One clear job: hold facet configuration.
-- **Modify** `lib/src/grammar/chart_builder.dart` — add `.facet(...)` (records `FacetSpec`), the `.build()` guard, and `.buildFaceted()`.
+- **Modify** `lib/src/grammar/plot_spec.dart` — add an optional `FacetSpec<T>? facet` field to `PlotSpec` (so the spec is the single complete description) + a `facetCleared()` helper returning a copy with `facet == null`.
+- **Modify** `lib/src/grammar/plot_lowering.dart` — `lower()` throws a grammar diagnostic on a faceted spec (single-panel invariant); the per-panel path lowers `spec.facetCleared()`.
+- **Modify** `lib/src/grammar/chart_builder.dart` — add `.facet(...)` (sets `PlotSpec.facet`), the `.build()` guard, and `.buildFaceted()`.
 - **Create** `lib/src/grammar/braven_facet_plot.dart` — `BravenFacetPlot<T>` StatelessWidget: partition → per-facet `PlotSpec` (range injection) → grid of `BravenPlot`s + strips → one shared controller. One clear job: render a faceted spec.
 - **Create** `lib/src/grammar/facet_partition.dart` — pure functions: `distinctFacetValues(rows, by)`, `globalRange(spec, rows, axis)`, `autoColumns(n)`. Pure + unit-testable in isolation, kept out of the widget.
 - **Modify** `lib/src/grammar/grammar_diagnostics.dart` — facet diagnostics (no marks, zero facet values, panel-cap exceeded, `.build()` on a faceted chart).
@@ -89,11 +91,12 @@ BravenFacetPlot<T> buildFaceted({ /* same host-facing params build() exposes */ 
 - **Golden:** one representative faceted chart (e.g. 4 panels, fixed scales, strips).
 
 ## Invariants preserved
-- The grammar's opt-in/core-barrel placement is unchanged; faceting adds no config-surface classes and touches no drift gate.
-- Non-faceted authoring is completely unaffected (`.facet()` is additive; `.build()` unchanged except the guard when a facet is present).
-- Reuses `PlotSpec.lower()`, `BravenPlot`, and `ChartInteractionGroupController` — no new coordinate system, no render-pipeline change.
+- **`PlotSpec` remains the single, complete description** of a chart, faceting included — honoring the grammar's "exactly one description" principle. Faceting adds no config-surface classes and touches no drift gate.
+- Non-faceted authoring is completely unaffected (`facet == null`; `.build()` unchanged except the guard when the spec is faceted).
+- Reuses `PlotSpec.lower()` (per panel), `BravenPlot`, and `ChartInteractionGroupController` — no new coordinate system, no render-pipeline change.
 
 ## Out of scope (future)
+- **Artifact capture/restore of a faceted chart** — a facet grid is N `ChartConfiguration`s, not one, so it does not round-trip through the single-config artifact codec/hydrator. Per-panel capture works today; capturing the grid as one portable artifact is future work.
 - facet-grid (2-D, row-field × column-field).
 - Per-facet independent marks / free faceting layouts (ragged grids).
 - Faceting-aware legends (shared legend across panels) — v1 uses per-panel legends.
