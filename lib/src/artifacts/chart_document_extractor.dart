@@ -1261,6 +1261,7 @@ abstract final class ChartDocumentExtractor {
       selectedSeriesId: projectedSeriesIds.contains(source.selectedSeriesId)
           ? source.selectedSeriesId
           : null,
+      selectionBrush: source.selectionBrush,
       visibleAxisIds: source.visibleAxisIds.where(projectedAxisIds.contains),
       overflowAxisIds: source.overflowAxisIds.where(projectedAxisIds.contains),
       legendPosition: source.legendPosition,

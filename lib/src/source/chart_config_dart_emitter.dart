@@ -3561,6 +3561,49 @@ class ChartConfigDartEmitter {
           if (selectionExpression != null && selectionExpression.isNotEmpty) {
             _emitSelectionExpressionDocument(writer, selectionExpression);
           }
+          final selectionBrush = state.selectionBrush;
+          if (selectionBrush != null) {
+            if (selectionBrush.isCleared) {
+              writer.writeLine(
+                'selectionBrush: const ChartSelectionBrushViewState.cleared(),',
+              );
+            } else {
+              writer.writeLine('selectionBrush: ChartSelectionBrushViewState(');
+              writer.indented(() {
+                writer.namedArgument(
+                  'acquisitionMode',
+                  'ChartSelectionAcquisitionMode.'
+                      '${selectionBrush.acquisitionMode!.name}',
+                );
+                writer.writeLine('range: ChartSelectionBrushRange(');
+                writer.indented(() {
+                  writer.namedArgument(
+                    'minimum',
+                    DartSourceWriter.numberLiteral(
+                      selectionBrush.range!.minimum,
+                    ),
+                  );
+                  writer.namedArgument(
+                    'maximum',
+                    DartSourceWriter.numberLiteral(
+                      selectionBrush.range!.maximum,
+                    ),
+                  );
+                  _optionalString(
+                    writer,
+                    'referenceSeriesId',
+                    selectionBrush.range!.referenceSeriesId,
+                  );
+                });
+                writer.writeLine('),');
+                writer.namedArgument(
+                  'visible',
+                  selectionBrush.visible.toString(),
+                );
+              });
+              writer.writeLine('),');
+            }
+          }
           if (state.visibleAxisIds.isNotEmpty) {
             writer.namedArgument(
               'visibleAxisIds',
@@ -4402,6 +4445,7 @@ class ChartConfigDartEmitter {
           interaction.selection.useModifierKeys,
           defaultValue: true,
         );
+        _emitSelectionBrushConfig(writer, interaction.selection.brush);
       });
       writer.writeLine('),');
     }
@@ -4441,6 +4485,84 @@ class ChartConfigDartEmitter {
     _emitGestureConfig(writer, interaction.gesture);
     _emitTouchInteractionConfig(writer, interaction.touch);
     _emitKeyboardConfig(writer, interaction.keyboard);
+  }
+
+  void _emitSelectionBrushConfig(
+    DartSourceWriter writer,
+    ChartSelectionBrushConfig brush,
+  ) {
+    if (brush == const ChartSelectionBrushConfig()) return;
+    writer.writeLine('brush: ChartSelectionBrushConfig(');
+    writer.indented(() {
+      _valueIf(writer, 'enabled', brush.enabled, defaultValue: false);
+      _valueIf(
+        writer,
+        'initialVisible',
+        brush.initialVisible,
+        defaultValue: false,
+      );
+      final range = brush.initialRange;
+      if (range != null) {
+        writer.writeLine('initialRange: ChartSelectionBrushRange(');
+        writer.indented(() {
+          writer.namedArgument(
+            'minimum',
+            DartSourceWriter.numberLiteral(range.minimum),
+          );
+          writer.namedArgument(
+            'maximum',
+            DartSourceWriter.numberLiteral(range.maximum),
+          );
+          _optionalString(writer, 'referenceSeriesId', range.referenceSeriesId);
+        });
+        writer.writeLine('),');
+      }
+      _emitSelectionBrushStyle(writer, brush.style);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitSelectionBrushStyle(
+    DartSourceWriter writer,
+    ChartSelectionBrushStyle style,
+  ) {
+    if (style == const ChartSelectionBrushStyle()) return;
+    writer.writeLine('style: ChartSelectionBrushStyle(');
+    writer.indented(() {
+      if (style.fillColor != null) {
+        writer.namedArgument(
+          'fillColor',
+          DartSourceWriter.colorLiteral(style.fillColor!),
+        );
+      }
+      _numberIf(writer, 'fillOpacity', style.fillOpacity, 0.18);
+      if (style.borderColor != null) {
+        writer.namedArgument(
+          'borderColor',
+          DartSourceWriter.colorLiteral(style.borderColor!),
+        );
+      }
+      _numberIf(writer, 'borderWidth', style.borderWidth, 1.5);
+      _numberIf(writer, 'borderRadius', style.borderRadius, 0);
+      if (style.handleFillColor != null) {
+        writer.namedArgument(
+          'handleFillColor',
+          DartSourceWriter.colorLiteral(style.handleFillColor!),
+        );
+      }
+      if (style.handleBorderColor != null) {
+        writer.namedArgument(
+          'handleBorderColor',
+          DartSourceWriter.colorLiteral(style.handleBorderColor!),
+        );
+      }
+      _numberIf(writer, 'handleBorderWidth', style.handleBorderWidth, 1.5);
+      _numberIf(writer, 'handleSize', style.handleSize, 10);
+      _numberIf(writer, 'handleHitSize', style.handleHitSize, 44);
+      _numberIf(writer, 'hoverOpacity', style.hoverOpacity, 0.24);
+      _numberIf(writer, 'activeOpacity', style.activeOpacity, 0.30);
+    });
+    writer.writeLine('),');
   }
 
   /// Descriptor id of a runtime value-summary content builder captured in the

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/interaction_config.dart';
 import 'artifact_json_readers.dart';
 
 @immutable
@@ -272,6 +273,75 @@ class ChartSelectionExpressionDocument {
   );
 }
 
+/// Portable runtime state for an opt-in persistent interval-selection brush.
+///
+/// A cleared state is encoded explicitly so hydration can distinguish an
+/// intentional clear from an older view-state document that predates brushes.
+@immutable
+class ChartSelectionBrushViewState {
+  const ChartSelectionBrushViewState({
+    required this.acquisitionMode,
+    required this.range,
+    required this.visible,
+  }) : assert(acquisitionMode != null),
+       assert(range != null),
+       assert(
+         acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
+             acquisitionMode == ChartSelectionAcquisitionMode.yInterval,
+       );
+
+  const ChartSelectionBrushViewState.cleared()
+    : acquisitionMode = null,
+      range = null,
+      visible = false;
+
+  final ChartSelectionAcquisitionMode? acquisitionMode;
+  final ChartSelectionBrushRange? range;
+  final bool visible;
+
+  bool get isCleared => acquisitionMode == null || range == null;
+
+  Map<String, Object?> toJson() {
+    if (isCleared) return const {'cleared': true};
+    return {
+      'acquisitionMode': acquisitionMode!.name,
+      'minimum': range!.minimum,
+      'maximum': range!.maximum,
+      if (range!.referenceSeriesId != null)
+        'referenceSeriesId': range!.referenceSeriesId,
+      'visible': visible,
+    };
+  }
+
+  factory ChartSelectionBrushViewState.fromJson(Map<String, Object?> json) {
+    if (json['cleared'] == true) {
+      return const ChartSelectionBrushViewState.cleared();
+    }
+    final modeName = readRequiredString(json, 'acquisitionMode');
+    final mode = ChartSelectionAcquisitionMode.values.firstWhere(
+      (value) => value.name == modeName,
+      orElse: () => throw FormatException(
+        'Unsupported selection brush acquisition mode "$modeName".',
+      ),
+    );
+    if (mode != ChartSelectionAcquisitionMode.xInterval &&
+        mode != ChartSelectionAcquisitionMode.yInterval) {
+      throw const FormatException(
+        'Selection brush acquisition mode must be xInterval or yInterval.',
+      );
+    }
+    return ChartSelectionBrushViewState(
+      acquisitionMode: mode,
+      range: ChartSelectionBrushRange(
+        minimum: readRequiredDouble(json, 'minimum'),
+        maximum: readRequiredDouble(json, 'maximum'),
+        referenceSeriesId: readOptionalString(json, 'referenceSeriesId'),
+      ),
+      visible: readRequiredBool(json, 'visible'),
+    );
+  }
+}
+
 @immutable
 class ChartViewState {
   ChartViewState({
@@ -281,6 +351,7 @@ class ChartViewState {
     Iterable<String>? selectedSeriesIds,
     Iterable<ChartPointRef> selectedPointRefs = const [],
     this.selectionExpression,
+    this.selectionBrush,
     Iterable<String> visibleAxisIds = const [],
     Iterable<String> overflowAxisIds = const [],
     this.selectedAnnotationId,
@@ -317,6 +388,12 @@ class ChartViewState {
   /// Older artifacts omit this field and continue restoring
   /// [selectedSeriesIds] and [selectedPointRefs].
   final ChartSelectionExpressionDocument? selectionExpression;
+
+  /// Current persistent brush position and visibility.
+  ///
+  /// Null means the source view-state document predates brush persistence.
+  /// [ChartSelectionBrushViewState.cleared] records an intentional clear.
+  final ChartSelectionBrushViewState? selectionBrush;
   final List<String> visibleAxisIds;
   final List<String> overflowAxisIds;
   final String? selectedAnnotationId;
@@ -331,6 +408,7 @@ class ChartViewState {
     'selectedPointRefs': selectedPointRefs.map((ref) => ref.toJson()).toList(),
     if (selectionExpression?.isNotEmpty ?? false)
       'selectionExpression': selectionExpression!.toJson(),
+    if (selectionBrush != null) 'selectionBrush': selectionBrush!.toJson(),
     'visibleAxisIds': visibleAxisIds,
     'overflowAxisIds': overflowAxisIds,
     if (selectedAnnotationId != null)
@@ -354,6 +432,11 @@ class ChartViewState {
         ? null
         : ChartSelectionExpressionDocument.fromJson(
             readRequiredMap(json, 'selectionExpression'),
+          ),
+    selectionBrush: json['selectionBrush'] == null
+        ? null
+        : ChartSelectionBrushViewState.fromJson(
+            readRequiredMap(json, 'selectionBrush'),
           ),
     visibleAxisIds: readOptionalStringList(json, 'visibleAxisIds'),
     overflowAxisIds: readOptionalStringList(json, 'overflowAxisIds'),

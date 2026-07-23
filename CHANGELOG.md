@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the visible domain independently of Y-axis density.
   Placement and label behavior are covered by portable artifacts, generated
   source, AI configuration, crosshair alignment, and live Axes controls.
+- Opt-in persistent Cartesian X/Y interval brushes with configurable initial
+  bounds and visibility, native move/resize handles, styling, controller
+  commands, selection callbacks, view-state/artifact/source portability,
+  keyboard and semantics support, and touch coexistence with viewport
+  gestures. Selection Lab provides the complete review and configuration
+  surface.
 
 ## 0.13.3 - 2026-07-23
 

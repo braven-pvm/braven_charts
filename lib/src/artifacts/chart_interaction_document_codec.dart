@@ -456,6 +456,8 @@ Map<String, Object?> _encodeSelection(ChartSelectionConfig value) => {
   'completeSeriesSelectionStrokeScale': _n(
     value.completeSeriesSelectionStrokeScale,
   ),
+  if (value.brush != const ChartSelectionBrushConfig())
+    'brush': _encodeSelectionBrush(value.brush),
 };
 
 ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
@@ -486,7 +488,100 @@ ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
           map['completeSeriesSelectionStrokeScale'] == null
           ? 1.5
           : _double(map, 'completeSeriesSelectionStrokeScale'),
+      brush: map['brush'] == null
+          ? const ChartSelectionBrushConfig()
+          : _decodeSelectionBrush(_requiredMap(map, 'brush')),
     );
+
+Map<String, Object?> _encodeSelectionBrush(ChartSelectionBrushConfig value) => {
+  'enabled': value.enabled,
+  'initialVisible': value.initialVisible,
+  if (value.initialRange != null)
+    'initialRange': _encodeSelectionBrushRange(value.initialRange!),
+  'style': _encodeSelectionBrushStyle(value.style),
+};
+
+ChartSelectionBrushConfig _decodeSelectionBrush(Map<String, Object?> map) {
+  final range = map['initialRange'] == null
+      ? null
+      : _decodeSelectionBrushRange(_requiredMap(map, 'initialRange'));
+  return ChartSelectionBrushConfig(
+    enabled: map['enabled'] == null ? false : _bool(map, 'enabled'),
+    initialVisible: map['initialVisible'] == null
+        ? false
+        : _bool(map, 'initialVisible'),
+    initialRange: range,
+    style: map['style'] == null
+        ? const ChartSelectionBrushStyle()
+        : _decodeSelectionBrushStyle(_requiredMap(map, 'style')),
+  );
+}
+
+ChartSelectionBrushRange _decodeSelectionBrushRange(Map<String, Object?> map) =>
+    ChartSelectionBrushRange(
+      minimum: _double(map, 'minimum'),
+      maximum: _double(map, 'maximum'),
+      referenceSeriesId: map['referenceSeriesId'] == null
+          ? null
+          : _string(map, 'referenceSeriesId'),
+    );
+
+Map<String, Object?> _encodeSelectionBrushRange(
+  ChartSelectionBrushRange value,
+) => {
+  'minimum': _n(value.minimum),
+  'maximum': _n(value.maximum),
+  if (value.referenceSeriesId != null)
+    'referenceSeriesId': value.referenceSeriesId,
+};
+
+Map<String, Object?> _encodeSelectionBrushStyle(
+  ChartSelectionBrushStyle value,
+) => {
+  if (value.fillColor != null) 'fillColor': value.fillColor!.toARGB32(),
+  'fillOpacity': _n(value.fillOpacity),
+  if (value.borderColor != null) 'borderColor': value.borderColor!.toARGB32(),
+  'borderWidth': _n(value.borderWidth),
+  'borderRadius': _n(value.borderRadius),
+  if (value.handleFillColor != null)
+    'handleFillColor': value.handleFillColor!.toARGB32(),
+  if (value.handleBorderColor != null)
+    'handleBorderColor': value.handleBorderColor!.toARGB32(),
+  'handleBorderWidth': _n(value.handleBorderWidth),
+  'handleSize': _n(value.handleSize),
+  'handleHitSize': _n(value.handleHitSize),
+  'hoverOpacity': _n(value.hoverOpacity),
+  'activeOpacity': _n(value.activeOpacity),
+};
+
+ChartSelectionBrushStyle _decodeSelectionBrushStyle(
+  Map<String, Object?> map,
+) => ChartSelectionBrushStyle(
+  fillColor: map['fillColor'] == null ? null : _color(map, 'fillColor'),
+  fillOpacity: map['fillOpacity'] == null ? 0.18 : _double(map, 'fillOpacity'),
+  borderColor: map['borderColor'] == null ? null : _color(map, 'borderColor'),
+  borderWidth: map['borderWidth'] == null ? 1.5 : _double(map, 'borderWidth'),
+  borderRadius: map['borderRadius'] == null ? 0 : _double(map, 'borderRadius'),
+  handleFillColor: map['handleFillColor'] == null
+      ? null
+      : _color(map, 'handleFillColor'),
+  handleBorderColor: map['handleBorderColor'] == null
+      ? null
+      : _color(map, 'handleBorderColor'),
+  handleBorderWidth: map['handleBorderWidth'] == null
+      ? 1.5
+      : _double(map, 'handleBorderWidth'),
+  handleSize: map['handleSize'] == null ? 10 : _double(map, 'handleSize'),
+  handleHitSize: map['handleHitSize'] == null
+      ? 44
+      : _double(map, 'handleHitSize'),
+  hoverOpacity: map['hoverOpacity'] == null
+      ? 0.24
+      : _double(map, 'hoverOpacity'),
+  activeOpacity: map['activeOpacity'] == null
+      ? 0.30
+      : _double(map, 'activeOpacity'),
+);
 
 ChartSelectionAcquisitionMode _decodeSelectionAcquisitionMode(
   Map<String, Object?> map,

@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 122 of 122 classes have a synthesizable subject: every verb they
+// 125 of 125 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1531 verbs total; 9 of them have an argument type with no
+// 1556 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 122;
+const int _executedClasses = 125;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
@@ -3344,7 +3344,123 @@ void _smokeKeyboardConfig(_Verb verb, KeyboardConfig subject) {
   );
 }
 
-/// Smoke coverage for [ChartSelectionConfig]'s 12 executable verb(s).
+/// Smoke coverage for [ChartSelectionBrushRange]'s 3 executable verb(s).
+void _smokeChartSelectionBrushRange(
+  _Verb verb,
+  ChartSelectionBrushRange subject,
+) {
+  verb(
+    'ChartSelectionBrushRangeFluent.withReferenceSeriesId',
+    () => subject.withReferenceSeriesId('y'),
+  );
+  verb(
+    'ChartSelectionBrushRangeFluent.clearReferenceSeriesId',
+    () => subject.clearReferenceSeriesId(),
+  );
+  verb(
+    'ChartSelectionBrushRangeFluent.withBounds',
+    () => subject.withBounds(subject.minimum, subject.maximum),
+  );
+}
+
+/// Smoke coverage for [ChartSelectionBrushStyle]'s 15 executable verb(s).
+void _smokeChartSelectionBrushStyle(
+  _Verb verb,
+  ChartSelectionBrushStyle subject,
+) {
+  verb(
+    'ChartSelectionBrushStyleFluent.withFillColor',
+    () => subject.withFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.clearFillColor',
+    () => subject.clearFillColor(),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withFillOpacity',
+    () => subject.withFillOpacity(0.18),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withBorderWidth',
+    () => subject.withBorderWidth(1.5),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withBorderRadius',
+    () => subject.withBorderRadius(0),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withHandleFillColor',
+    () => subject.withHandleFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.clearHandleFillColor',
+    () => subject.clearHandleFillColor(),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withHandleBorderColor',
+    () => subject.withHandleBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.clearHandleBorderColor',
+    () => subject.clearHandleBorderColor(),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withHandleBorderWidth',
+    () => subject.withHandleBorderWidth(1.5),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withHoverOpacity',
+    () => subject.withHoverOpacity(0.24),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withActiveOpacity',
+    () => subject.withActiveOpacity(0.30),
+  );
+  verb(
+    'ChartSelectionBrushStyleFluent.withHandleGeometry',
+    () => subject.withHandleGeometry(subject.handleSize, subject.handleHitSize),
+  );
+}
+
+/// Smoke coverage for [ChartSelectionBrushConfig]'s 5 executable verb(s).
+void _smokeChartSelectionBrushConfig(
+  _Verb verb,
+  ChartSelectionBrushConfig subject,
+) {
+  verb(
+    'ChartSelectionBrushConfigFluent.withEnabled',
+    () => subject.withEnabled(false),
+  );
+  verb(
+    'ChartSelectionBrushConfigFluent.withStyle',
+    () => subject.withStyle(const ChartSelectionBrushStyle()),
+  );
+  verb(
+    'ChartSelectionBrushConfigFluent.updateStyle',
+    () => subject.updateStyle((current) => current),
+  );
+  verb(
+    'ChartSelectionBrushConfigFluent.withInitialState',
+    () => subject.withInitialState(
+      ChartSelectionBrushRange(minimum: 1.0, maximum: 1.0),
+      subject.initialVisible,
+    ),
+  );
+  verb(
+    'ChartSelectionBrushConfigFluent.clearInitialRange',
+    () => subject.clearInitialRange(),
+  );
+}
+
+/// Smoke coverage for [ChartSelectionConfig]'s 14 executable verb(s).
 void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
     'ChartSelectionConfigFluent.withAcquisitionMode',
@@ -3394,6 +3510,14 @@ void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
     'ChartSelectionConfigFluent.withCompleteSeriesSelectionStrokeScale',
     () => subject.withCompleteSeriesSelectionStrokeScale(1.5),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withBrush',
+    () => subject.withBrush(const ChartSelectionBrushConfig()),
+  );
+  verb(
+    'ChartSelectionConfigFluent.updateBrush',
+    () => subject.updateBrush((current) => current),
   );
 }
 
@@ -7021,6 +7145,35 @@ void main() {
         reason: 'generated KeyboardConfigFluent verb(s) threw',
       );
     });
+    test('ChartSelectionBrushRange', () {
+      final subject = _subject(
+        () => ChartSelectionBrushRange(minimum: 0.5, maximum: 0.5),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeChartSelectionBrushRange, subject),
+        isEmpty,
+        reason: 'generated ChartSelectionBrushRangeFluent verb(s) threw',
+      );
+    });
+    test('ChartSelectionBrushStyle', () {
+      final subject = _subject(() => ChartSelectionBrushStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeChartSelectionBrushStyle, subject),
+        isEmpty,
+        reason: 'generated ChartSelectionBrushStyleFluent verb(s) threw',
+      );
+    });
+    test('ChartSelectionBrushConfig', () {
+      final subject = _subject(() => ChartSelectionBrushConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeChartSelectionBrushConfig, subject),
+        isEmpty,
+        reason: 'generated ChartSelectionBrushConfigFluent verb(s) threw',
+      );
+    });
     test('ChartSelectionConfig', () {
       final subject = _subject(() => ChartSelectionConfig());
       if (subject == null) return;
@@ -7863,7 +8016,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 122);
+    expect(_executedClasses, 125);
     expect(_skippedClasses, 0);
     expect(_compileOnlyCases, hasLength(5));
     expect(_compileOnlyVerbs, hasLength(9));

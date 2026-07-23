@@ -21,7 +21,7 @@ const publicDocsFeatures = <PublicDocsFeatureEntry>[
   (
     id: "interaction-selection",
     title: "Interaction and selection",
-    summary: "Zoom, pan, track, annotate, select, and link chart data.",
+    summary: "Zoom, pan, track, annotate, select, and manipulate durable interval brushes.",
     page: "selection",
   ),
   (
@@ -228,7 +228,7 @@ const publicDocsGuides = <PublicDocsGuideEntry>[
     id: "selection",
     title: "Selection and linked brushing",
     group: "Interaction and display",
-    summary: "Select points, ranges, categories, series, and linked chart data.",
+    summary: "Select points, ranges, categories, series, linked data, and persistent X/Y brushes.",
     page: "selection",
     path: null,
     apiPath: null,

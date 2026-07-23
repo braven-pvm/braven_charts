@@ -190,6 +190,75 @@ portable chart from the selected data; `ChartSelectionProjectionOptions`
 controls series completion, annotation clipping, and continuous Line/Area
 boundary interpolation.
 
+#### Persistent X/Y interval brush
+
+`ChartSelectionBrushConfig` turns an X- or Y-interval selection into an
+opt-in, durable control. The brush remains on the native Cartesian surface
+after pointer-up, can be dragged or resized, and continues to publish
+`onSelectionChanged` and `onSelectionResultChanged` through the ordinary
+selection pipeline. Point, box, and lasso acquisition remain transient.
+
+```dart
+final controller = BravenChartController();
+
+BravenChartPlus(
+  bravenChartController: controller,
+  series: const [
+    LineChartSeries(
+      id: 'revenue',
+      name: 'Revenue',
+      points: [
+        ChartDataPoint(x: 1, y: 42),
+        ChartDataPoint(x: 2, y: 48),
+        ChartDataPoint(x: 3, y: 45),
+        ChartDataPoint(x: 4, y: 57),
+      ],
+    ),
+  ],
+  interactionConfig: InteractionConfig(
+    selection: const ChartSelectionConfig(
+      acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+      brush: ChartSelectionBrushConfig(
+        enabled: true,
+        initialVisible: true,
+        initialRange: ChartSelectionBrushRange(
+          minimum: 1.5,
+          maximum: 3.5,
+        ),
+        style: ChartSelectionBrushStyle(
+          fillColor: Color(0xFF2563EB),
+          borderColor: Color(0xFF1D4ED8),
+          borderRadius: 6,
+        ),
+      ),
+    ),
+    onSelectionResultChanged: (result) {
+      // Stable refs, extents, and statistics for the current interval.
+    },
+  ),
+);
+```
+
+The configured bounds are data-domain values, not pixels. For
+`ChartSelectionAcquisitionMode.yInterval` on an independently scaled chart,
+set `ChartSelectionBrushRange.referenceSeriesId` so the initial band uses the
+intended Y transform. The renderer reprojects the range after resize, zoom,
+pan, transpose, axis placement, and RTL changes.
+
+Use `BravenChartController.selectionBrushState` to read the live bounds and
+visibility. `setSelectionBrush(minimum:, maximum:, referenceSeriesId:,
+visible:)` creates or moves the brush programmatically.
+`hideSelectionBrush()` retains both its bounds and semantic selection;
+`showSelectionBrush()` reveals it again. `clearSelectionBrush()` removes the
+brush and clears the associated selection. Controller commands return a
+structured `ChartArtifactResult`, including failures for detached charts,
+unsupported acquisition modes, invalid bounds, or ambiguous Y-axis mappings.
+
+The feature defaults off, so existing interval-selection behavior is
+unchanged. The runnable [Selection Lab](https://braven-pvm.github.io/braven_charts/?page=selection)
+exposes initial bounds, visibility, movement, resizing, styling, X/Y modes,
+multi-axis mapping, callbacks, keyboard control, and touch coexistence.
+
 ### `ChartAnnotation`
 
 Annotation model for points, ranges, text, thresholds, trends, and chords.

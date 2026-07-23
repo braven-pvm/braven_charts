@@ -54,6 +54,8 @@ const _allowedExemptions = <String>[
   'ChartTransform',
   // Render-time bar-slot layout result produced per frame (Task 5).
   'BarGroupInfo',
+  // Controller-owned runtime brush snapshot; configured through brush config.
+  'ChartSelectionBrushState',
 ];
 
 /// Directories holding checked-in generator output.

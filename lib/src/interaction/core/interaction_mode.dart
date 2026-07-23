@@ -50,6 +50,9 @@ enum InteractionMode {
   /// Box selects ONLY datapoints, not annotations (per conflict resolution table).
   boxSelecting,
 
+  /// A persistent X/Y interval brush is being moved or resized.
+  selectionBrushManipulating,
+
   /// Datapoint is being dragged (left-click drag started on datapoint).
   /// Priority: 7 (per conflict resolution scenario 13)
   draggingDataPoint,
@@ -89,13 +92,15 @@ extension InteractionModeExtensions on InteractionMode {
   bool get isDragging {
     return this == InteractionMode.draggingDataPoint ||
         this == InteractionMode.draggingAnnotation ||
-        this == InteractionMode.resizingAnnotation;
+        this == InteractionMode.resizingAnnotation ||
+        this == InteractionMode.selectionBrushManipulating;
   }
 
   /// Returns true if this mode represents a selection operation.
   bool get isSelecting {
     return this == InteractionMode.selecting ||
-        this == InteractionMode.boxSelecting;
+        this == InteractionMode.boxSelecting ||
+        this == InteractionMode.selectionBrushManipulating;
   }
 
   /// Returns true for any continuous viewport navigation operation.
@@ -134,6 +139,7 @@ extension InteractionModeExtensions on InteractionMode {
         return 8;
       case InteractionMode.draggingDataPoint:
       case InteractionMode.scrollbarDragging:
+      case InteractionMode.selectionBrushManipulating:
         return 7;
       case InteractionMode.selecting:
       case InteractionMode.boxSelecting:
@@ -173,6 +179,8 @@ extension InteractionModeExtensions on InteractionMode {
         return 'Selecting element';
       case InteractionMode.boxSelecting:
         return 'Box selecting datapoints';
+      case InteractionMode.selectionBrushManipulating:
+        return 'Moving or resizing selection brush';
       case InteractionMode.draggingDataPoint:
         return 'Dragging datapoint';
       case InteractionMode.draggingAnnotation:

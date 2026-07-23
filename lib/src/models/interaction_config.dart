@@ -1178,6 +1178,271 @@ enum ChartSelectionOperation { replace, add, subtract, toggle }
 /// Point selection never owns drag, regardless of this value.
 enum ChartSelectionDragActivation { primaryButton, shiftPrimaryButton }
 
+/// Data-domain bounds used to initialize or programmatically position a
+/// persistent interval-selection brush.
+///
+/// The owning [ChartSelectionConfig.acquisitionMode] determines whether these
+/// values belong to the X or Y domain. For a Y interval on a multi-axis chart,
+/// [referenceSeriesId] identifies the series transform used to place the
+/// visual band.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withBounds', ['minimum', 'maximum']),
+  ],
+  clearFlags: {'referenceSeriesId': 'clearReferenceSeriesId'},
+)
+class ChartSelectionBrushRange {
+  const ChartSelectionBrushRange({
+    required this.minimum,
+    required this.maximum,
+    this.referenceSeriesId,
+  }) : assert(minimum == minimum),
+       assert(minimum > double.negativeInfinity),
+       assert(minimum < double.infinity),
+       assert(maximum == maximum),
+       assert(maximum > double.negativeInfinity),
+       assert(maximum < double.infinity),
+       assert(minimum <= maximum);
+
+  /// Inclusive lower data-domain bound.
+  final double minimum;
+
+  /// Inclusive upper data-domain bound.
+  final double maximum;
+
+  /// Optional reference series for mapping a Y interval to plot space.
+  final String? referenceSeriesId;
+
+  ChartSelectionBrushRange copyWith({
+    double? minimum,
+    double? maximum,
+    String? referenceSeriesId,
+    bool clearReferenceSeriesId = false,
+  }) => ChartSelectionBrushRange(
+    minimum: minimum ?? this.minimum,
+    maximum: maximum ?? this.maximum,
+    referenceSeriesId: clearReferenceSeriesId
+        ? null
+        : (referenceSeriesId ?? this.referenceSeriesId),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushRange &&
+          other.minimum == minimum &&
+          other.maximum == maximum &&
+          other.referenceSeriesId == referenceSeriesId;
+
+  @override
+  int get hashCode => Object.hash(minimum, maximum, referenceSeriesId);
+}
+
+/// Visual treatment for a persistent interval-selection brush.
+///
+/// Null colours inherit from the chart's interaction theme. The visible
+/// handles remain compact while [handleHitSize] supplies a forgiving pointer
+/// target.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withHandleGeometry', ['handleSize', 'handleHitSize']),
+  ],
+  clearFlags: {
+    'fillColor': 'clearFillColor',
+    'borderColor': 'clearBorderColor',
+    'handleFillColor': 'clearHandleFillColor',
+    'handleBorderColor': 'clearHandleBorderColor',
+  },
+)
+class ChartSelectionBrushStyle {
+  const ChartSelectionBrushStyle({
+    this.fillColor,
+    this.fillOpacity = 0.18,
+    this.borderColor,
+    this.borderWidth = 1.5,
+    this.borderRadius = 0,
+    this.handleFillColor,
+    this.handleBorderColor,
+    this.handleBorderWidth = 1.5,
+    this.handleSize = 10,
+    this.handleHitSize = 44,
+    this.hoverOpacity = 0.24,
+    this.activeOpacity = 0.30,
+  }) : assert(fillOpacity >= 0 && fillOpacity <= 1),
+       assert(borderWidth >= 0),
+       assert(borderRadius >= 0),
+       assert(handleBorderWidth >= 0),
+       assert(handleSize > 0),
+       assert(handleHitSize >= handleSize),
+       assert(hoverOpacity >= 0 && hoverOpacity <= 1),
+       assert(activeOpacity >= 0 && activeOpacity <= 1);
+
+  /// Optional fill colour. Defaults to the interaction selection colour.
+  final Color? fillColor;
+
+  /// Resting fill opacity.
+  final double fillOpacity;
+
+  /// Optional outline colour. Defaults to the interaction selection colour.
+  final Color? borderColor;
+
+  /// Outline width in logical pixels.
+  final double borderWidth;
+
+  /// Corner radius in logical pixels.
+  final double borderRadius;
+
+  /// Optional handle fill colour. Defaults to the selection colour.
+  final Color? handleFillColor;
+
+  /// Optional handle outline colour. Defaults to the chart background.
+  final Color? handleBorderColor;
+
+  /// Handle outline width in logical pixels.
+  final double handleBorderWidth;
+
+  /// Visible handle diameter in logical pixels.
+  final double handleSize;
+
+  /// Pointer hit-target extent around each handle.
+  final double handleHitSize;
+
+  /// Fill opacity while the pointer hovers the brush.
+  final double hoverOpacity;
+
+  /// Fill opacity while the brush is being moved or resized.
+  final double activeOpacity;
+
+  ChartSelectionBrushStyle copyWith({
+    Color? fillColor,
+    double? fillOpacity,
+    Color? borderColor,
+    double? borderWidth,
+    double? borderRadius,
+    Color? handleFillColor,
+    Color? handleBorderColor,
+    double? handleBorderWidth,
+    double? handleSize,
+    double? handleHitSize,
+    double? hoverOpacity,
+    double? activeOpacity,
+    bool clearFillColor = false,
+    bool clearBorderColor = false,
+    bool clearHandleFillColor = false,
+    bool clearHandleBorderColor = false,
+  }) => ChartSelectionBrushStyle(
+    fillColor: clearFillColor ? null : (fillColor ?? this.fillColor),
+    fillOpacity: fillOpacity ?? this.fillOpacity,
+    borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
+    borderWidth: borderWidth ?? this.borderWidth,
+    borderRadius: borderRadius ?? this.borderRadius,
+    handleFillColor: clearHandleFillColor
+        ? null
+        : (handleFillColor ?? this.handleFillColor),
+    handleBorderColor: clearHandleBorderColor
+        ? null
+        : (handleBorderColor ?? this.handleBorderColor),
+    handleBorderWidth: handleBorderWidth ?? this.handleBorderWidth,
+    handleSize: handleSize ?? this.handleSize,
+    handleHitSize: handleHitSize ?? this.handleHitSize,
+    hoverOpacity: hoverOpacity ?? this.hoverOpacity,
+    activeOpacity: activeOpacity ?? this.activeOpacity,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushStyle &&
+          other.fillColor == fillColor &&
+          other.fillOpacity == fillOpacity &&
+          other.borderColor == borderColor &&
+          other.borderWidth == borderWidth &&
+          other.borderRadius == borderRadius &&
+          other.handleFillColor == handleFillColor &&
+          other.handleBorderColor == handleBorderColor &&
+          other.handleBorderWidth == handleBorderWidth &&
+          other.handleSize == handleSize &&
+          other.handleHitSize == handleHitSize &&
+          other.hoverOpacity == hoverOpacity &&
+          other.activeOpacity == activeOpacity;
+
+  @override
+  int get hashCode => Object.hash(
+    fillColor,
+    fillOpacity,
+    borderColor,
+    borderWidth,
+    borderRadius,
+    handleFillColor,
+    handleBorderColor,
+    handleBorderWidth,
+    handleSize,
+    handleHitSize,
+    hoverOpacity,
+    activeOpacity,
+  );
+}
+
+/// Opt-in persistence and initial state for an interval-selection brush.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withInitialState', ['initialRange', 'initialVisible']),
+  ],
+  clearFlags: {'initialRange': 'clearInitialRange'},
+)
+class ChartSelectionBrushConfig {
+  const ChartSelectionBrushConfig({
+    this.enabled = false,
+    this.initialVisible = false,
+    this.initialRange,
+    this.style = const ChartSelectionBrushStyle(),
+  }) : assert(
+         !initialVisible || initialRange != null,
+         'initialVisible requires an initialRange.',
+       );
+
+  /// Whether completed X/Y interval selections remain interactive on screen.
+  final bool enabled;
+
+  /// Whether [initialRange] is visible on the first mounted frame.
+  final bool initialVisible;
+
+  /// Optional initial data-domain interval.
+  final ChartSelectionBrushRange? initialRange;
+
+  /// Brush appearance and handle sizing.
+  final ChartSelectionBrushStyle style;
+
+  ChartSelectionBrushConfig copyWith({
+    bool? enabled,
+    bool? initialVisible,
+    ChartSelectionBrushRange? initialRange,
+    ChartSelectionBrushStyle? style,
+    bool clearInitialRange = false,
+  }) => ChartSelectionBrushConfig(
+    enabled: enabled ?? this.enabled,
+    initialVisible: clearInitialRange
+        ? false
+        : (initialVisible ?? this.initialVisible),
+    initialRange: clearInitialRange
+        ? null
+        : (initialRange ?? this.initialRange),
+    style: style ?? this.style,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushConfig &&
+          other.enabled == enabled &&
+          other.initialVisible == initialVisible &&
+          other.initialRange == initialRange &&
+          other.style == style;
+
+  @override
+  int get hashCode => Object.hash(enabled, initialVisible, initialRange, style);
+}
+
 /// Portable policy for chart point selection.
 @chartSurface
 class ChartSelectionConfig {
@@ -1194,6 +1459,7 @@ class ChartSelectionConfig {
     this.dataPointSelectionScale = 2.67,
     this.completeSeriesHoverStrokeScale = 1.75,
     this.completeSeriesSelectionStrokeScale = 1.5,
+    this.brush = const ChartSelectionBrushConfig(),
   }) : assert(dataPointHitRadius >= 0),
        assert(completeSeriesHitRadius >= 0),
        assert(dataPointHoverScale >= 1),
@@ -1218,7 +1484,10 @@ class ChartSelectionConfig {
   /// [acquisitionMode] values.
   final ChartSelectionDragActivation dragActivation;
 
-  /// Whether tapping outside a data point clears durable selection.
+  /// Whether tapping outside a data point clears ordinary durable selection.
+  ///
+  /// An active persistent [brush] remains authoritative until it is explicitly
+  /// cleared, so background taps do not dismiss its bounds or selected data.
   final bool clearOnBackgroundTap;
 
   /// Whether platform modifiers temporarily override [operation].
@@ -1246,6 +1515,9 @@ class ChartSelectionConfig {
 
   /// Stroke-width scale applied to a selected complete path or band series.
   final double completeSeriesSelectionStrokeScale;
+
+  /// Optional persistent interval-selection brush.
+  final ChartSelectionBrushConfig brush;
 
   /// Whether this selection policy owns the current primary-button drag.
   ///
@@ -1286,6 +1558,7 @@ class ChartSelectionConfig {
     double? dataPointSelectionScale,
     double? completeSeriesHoverStrokeScale,
     double? completeSeriesSelectionStrokeScale,
+    ChartSelectionBrushConfig? brush,
   }) => ChartSelectionConfig(
     acquisitionMode: acquisitionMode ?? this.acquisitionMode,
     scope: scope ?? this.scope,
@@ -1304,6 +1577,7 @@ class ChartSelectionConfig {
     completeSeriesSelectionStrokeScale:
         completeSeriesSelectionStrokeScale ??
         this.completeSeriesSelectionStrokeScale,
+    brush: brush ?? this.brush,
   );
 
   @override
@@ -1323,7 +1597,8 @@ class ChartSelectionConfig {
           other.completeSeriesHoverStrokeScale ==
               completeSeriesHoverStrokeScale &&
           other.completeSeriesSelectionStrokeScale ==
-              completeSeriesSelectionStrokeScale;
+              completeSeriesSelectionStrokeScale &&
+          other.brush == brush;
 
   @override
   int get hashCode => Object.hash(
@@ -1339,6 +1614,7 @@ class ChartSelectionConfig {
     dataPointSelectionScale,
     completeSeriesHoverStrokeScale,
     completeSeriesSelectionStrokeScale,
+    brush,
   );
 }
 

@@ -62,6 +62,17 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   ChartSelectionAcquisitionMode _acquisitionMode =
       ChartSelectionAcquisitionMode.point;
   ChartSelectionScope _selectionScope = ChartSelectionScope.markOrWholeSeries;
+  bool _persistentBrushEnabled = false;
+  bool _persistentBrushVisible = true;
+  double _brushStartFraction = 0.22;
+  double _brushEndFraction = 0.68;
+  Color? _brushFillColor;
+  Color? _brushBorderColor;
+  Color? _brushHandleColor;
+  double _brushFillOpacity = 0.18;
+  double _brushBorderWidth = 1.5;
+  double _brushBorderRadius = 0;
+  double _brushHandleSize = 10;
   ChartSelectionSeriesProjection _seriesProjection =
       ChartSelectionSeriesProjection.selectedPointsOnly;
   ChartSelectionAnnotationProjection _annotationProjection =
@@ -118,6 +129,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     if (_acquisitionMode == mode) return;
     _clearSelection();
     setState(() => _acquisitionMode = mode);
+    _scheduleBrushApply();
   }
 
   void _selectScope(ChartSelectionScope scope) {
@@ -133,6 +145,82 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     _linkedChartController
       ..clearSelection()
       ..clearPointSelection();
+  }
+
+  bool get _supportsPersistentBrush =>
+      !_family.isRadial &&
+      (_acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
+          _acquisitionMode == ChartSelectionAcquisitionMode.yInterval);
+
+  ({double minimum, double maximum}) _brushDomain(ChartOptions options) {
+    final values = <double>[
+      for (final series in _seriesForFamily(options))
+        for (final point in series.points)
+          if (_acquisitionMode == ChartSelectionAcquisitionMode.xInterval)
+            point.x
+          else
+            point.y,
+    ].where((value) => value.isFinite).toList(growable: false);
+    if (values.isEmpty) return (minimum: 0, maximum: 1);
+    var minimum = values.first;
+    var maximum = values.first;
+    for (final value in values.skip(1)) {
+      if (value < minimum) minimum = value;
+      if (value > maximum) maximum = value;
+    }
+    if (minimum == maximum) maximum = minimum + 1;
+    return (minimum: minimum, maximum: maximum);
+  }
+
+  ChartSelectionBrushRange _currentBrushRange() {
+    final domain = _brushDomain(_chartOptionsController.options);
+    final span = domain.maximum - domain.minimum;
+    final series = _seriesForFamily(_chartOptionsController.options);
+    return ChartSelectionBrushRange(
+      minimum: domain.minimum + (span * _brushStartFraction),
+      maximum: domain.minimum + (span * _brushEndFraction),
+      referenceSeriesId:
+          _acquisitionMode == ChartSelectionAcquisitionMode.yInterval &&
+              series.isNotEmpty
+          ? series.first.id
+          : null,
+    );
+  }
+
+  void _scheduleBrushApply({bool? visible}) {
+    if (!_persistentBrushEnabled || !_supportsPersistentBrush) return;
+    final nextVisible = visible ?? _persistentBrushVisible;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_persistentBrushEnabled || !_supportsPersistentBrush) {
+        return;
+      }
+      final range = _currentBrushRange();
+      _showCommandResult(
+        _chartController.setSelectionBrush(
+          minimum: range.minimum,
+          maximum: range.maximum,
+          referenceSeriesId: range.referenceSeriesId,
+          visible: nextVisible,
+        ),
+      );
+    });
+  }
+
+  void _setPersistentBrushEnabled(bool enabled) {
+    setState(() => _persistentBrushEnabled = enabled);
+    if (enabled) {
+      _scheduleBrushApply();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _chartController.clearSelectionBrush();
+      });
+    }
+  }
+
+  void _setPersistentBrushVisible(bool visible) {
+    setState(() => _persistentBrushVisible = visible);
+    if (!_persistentBrushEnabled) return;
+    _scheduleBrushApply(visible: visible);
   }
 
   ChartSelectionProjectionOptions get _selectionProjection =>
@@ -399,6 +487,131 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         ),
       ],
     ),
+    if (_supportsPersistentBrush)
+      OptionSection(
+        title: 'Persistent selection brush',
+        icon: Icons.select_all_outlined,
+        description:
+            'Keep the completed interval visible, then move or resize it while ordinary selection callbacks continue to report changes.',
+        children: [
+          BoolOption(
+            key: const ValueKey('selection-lab-brush-enabled'),
+            label: 'Keep selection range on screen',
+            subtitle: 'Opt-in; existing interval selection stays transient',
+            value: _persistentBrushEnabled,
+            onChanged: _setPersistentBrushEnabled,
+          ),
+          if (_persistentBrushEnabled) ...[
+            BoolOption(
+              key: const ValueKey('selection-lab-brush-visible'),
+              label: 'Visible on render',
+              subtitle:
+                  'Hide retains the selected interval; clear removes both',
+              value: _persistentBrushVisible,
+              onChanged: _setPersistentBrushVisible,
+            ),
+            _buildBrushRangeOption(),
+            PaletteColorOption(
+              key: const ValueKey('selection-lab-brush-fill-color'),
+              keyPrefix: 'selection-lab-brush-fill-color',
+              label: 'Brush fill',
+              subtitle: 'Clear to inherit the interaction selection color',
+              value: _brushFillColor,
+              customColorFallback:
+                  (_chartOptionsController.options.theme ?? ChartTheme.light)
+                      .interactionTheme
+                      .selectionColor,
+              onChanged: (value) => setState(() => _brushFillColor = value),
+            ),
+            SliderOption(
+              key: const ValueKey('selection-lab-brush-fill-opacity'),
+              label: 'Fill opacity',
+              value: _brushFillOpacity,
+              min: 0,
+              max: 0.6,
+              divisions: 24,
+              decimalPlaces: 2,
+              onChanged: (value) => setState(() => _brushFillOpacity = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('selection-lab-brush-border-color'),
+              keyPrefix: 'selection-lab-brush-border-color',
+              label: 'Brush border',
+              subtitle: 'Clear to inherit the interaction selection color',
+              value: _brushBorderColor,
+              customColorFallback:
+                  (_chartOptionsController.options.theme ?? ChartTheme.light)
+                      .interactionTheme
+                      .selectionColor,
+              onChanged: (value) => setState(() => _brushBorderColor = value),
+            ),
+            SliderOption(
+              key: const ValueKey('selection-lab-brush-border-width'),
+              label: 'Border width',
+              value: _brushBorderWidth,
+              min: 0,
+              max: 5,
+              divisions: 20,
+              suffix: 'px',
+              decimalPlaces: 2,
+              onChanged: (value) => setState(() => _brushBorderWidth = value),
+            ),
+            SliderOption(
+              key: const ValueKey('selection-lab-brush-border-radius'),
+              label: 'Corner radius',
+              value: _brushBorderRadius,
+              min: 0,
+              max: 16,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _brushBorderRadius = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('selection-lab-brush-handle-color'),
+              keyPrefix: 'selection-lab-brush-handle-color',
+              label: 'Handle fill',
+              subtitle: 'Clear to inherit the interaction selection color',
+              value: _brushHandleColor,
+              customColorFallback:
+                  (_chartOptionsController.options.theme ?? ChartTheme.light)
+                      .interactionTheme
+                      .selectionColor,
+              onChanged: (value) => setState(() => _brushHandleColor = value),
+            ),
+            SliderOption(
+              key: const ValueKey('selection-lab-brush-handle-size'),
+              label: 'Visible handle size',
+              value: _brushHandleSize,
+              min: 6,
+              max: 22,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _brushHandleSize = value),
+            ),
+            ActionButton(
+              key: const ValueKey('selection-lab-brush-apply'),
+              label: 'Apply configured range',
+              icon: Icons.crop_free,
+              description:
+                  'Calls BravenChartController.setSelectionBrush with data-domain bounds.',
+              onPressed: _scheduleBrushApply,
+            ),
+            ActionButton(
+              key: const ValueKey('selection-lab-brush-clear'),
+              label: 'Clear brush and selection',
+              icon: Icons.deselect_outlined,
+              onPressed: () =>
+                  _showCommandResult(_chartController.clearSelectionBrush()),
+            ),
+            const InfoBox(
+              message:
+                  'Drag inside the band to move it. Drag either persistent handle to resize it. The 44 px hit targets stay larger than the visible handles.',
+            ),
+          ],
+        ],
+      ),
     if (_family.isPathFamily)
       OptionSection(
         title: 'Path selection feedback',
@@ -987,6 +1200,58 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     );
   }
 
+  Widget _buildBrushRangeOption() {
+    final theme = Theme.of(context);
+    final range = _currentBrushRange();
+    final axis = _acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+        ? 'X'
+        : 'Y';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Initial $axis range',
+                  style: TextStyle(fontSize: 12, color: theme.hintColor),
+                ),
+              ),
+              Text(
+                '${range.minimum.toStringAsFixed(2)} – '
+                '${range.maximum.toStringAsFixed(2)}',
+                key: const ValueKey('selection-lab-brush-range-value'),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          RangeSlider(
+            key: const ValueKey('selection-lab-brush-range'),
+            values: RangeValues(_brushStartFraction, _brushEndFraction),
+            min: 0,
+            max: 1,
+            divisions: 100,
+            labels: RangeLabels(
+              range.minimum.toStringAsFixed(2),
+              range.maximum.toStringAsFixed(2),
+            ),
+            onChanged: (values) {
+              setState(() {
+                _brushStartFraction = values.start;
+                _brushEndFraction = values.end;
+              });
+              _scheduleBrushApply();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   String _selectionScopeLabel(ChartSelectionScope scope) {
     if (_family != _SelectionFamily.rangeArea) return scope.shortLabel;
     return switch (scope) {
@@ -1116,6 +1381,26 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           dataPointSelectionScale: _dataPointSelectionScale,
           completeSeriesHoverStrokeScale: _seriesHoverStrokeScale,
           completeSeriesSelectionStrokeScale: _seriesSelectionStrokeScale,
+          brush: ChartSelectionBrushConfig(
+            enabled: _persistentBrushEnabled && _supportsPersistentBrush,
+            initialVisible:
+                _persistentBrushEnabled &&
+                _supportsPersistentBrush &&
+                _persistentBrushVisible,
+            initialRange: _persistentBrushEnabled && _supportsPersistentBrush
+                ? _currentBrushRange()
+                : null,
+            style: ChartSelectionBrushStyle(
+              fillColor: _brushFillColor,
+              fillOpacity: _brushFillOpacity,
+              borderColor: _brushBorderColor,
+              borderWidth: _brushBorderWidth,
+              borderRadius: _brushBorderRadius,
+              handleFillColor: _brushHandleColor,
+              handleSize: _brushHandleSize,
+              handleHitSize: 44,
+            ),
+          ),
         ),
       ),
     );
@@ -1389,6 +1674,7 @@ class _SelectionStatusState extends State<_SelectionStatus> {
         : selectedSeries;
     final expression = widget.controller.selectionExpression;
     final extents = snapshot?.extents;
+    final brush = widget.controller.selectionBrushState;
     return Semantics(
       liveRegion: true,
       label: '$pointCount selected points in $totalSeries series',
@@ -1418,6 +1704,17 @@ class _SelectionStatusState extends State<_SelectionStatus> {
                 '${expression.clauses.length == 1 ? 'clause' : 'clauses'} · '
                 '${snapshot.pointKeyRefs.length} stable keys'
                 '${extents == null ? '' : ' · X ${_statusNumber(extents.minimumX)}–${_statusNumber(extents.maximumX)}'}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            if (brush != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Persistent ${brush.acquisitionMode.shortLabel} brush · '
+                '${brush.range.minimum.toStringAsFixed(2)}–'
+                '${brush.range.maximum.toStringAsFixed(2)} · '
+                '${brush.visible ? 'visible' : 'hidden'}',
+                key: const ValueKey('selection-lab-brush-status'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
