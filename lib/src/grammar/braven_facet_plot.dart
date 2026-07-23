@@ -163,8 +163,9 @@ PlotSpec<T> _injectPanel<T>(
 /// [FacetSpec.label]) above a [BravenPlot] over the panel's facet-cleared,
 /// range-injected spec. Synchronized interaction is active only when x is
 /// shared ([FacetScales.fixed]/[FacetScales.freeY]): every panel is handed the
-/// SAME [ChartInteractionGroupController]; under [FacetScales.freeX]/[free] the
-/// panels get no shared controller and interact independently.
+/// SAME [ChartInteractionGroupController]; under [FacetScales.freeX]/
+/// [FacetScales.free] the panels get no shared controller and interact
+/// independently.
 class BravenFacetPlot<T> extends StatefulWidget {
   /// Renders [spec], which must be faceted (`spec.facet != null`).
   const BravenFacetPlot(
