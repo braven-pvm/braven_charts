@@ -954,4 +954,46 @@ void main() {
       expect(document.annotations, hasLength(1));
     });
   });
+
+  group('.facet sets PlotSpec.facet', () {
+    test('facet with defaults lands on the spec', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone)
+          .toSpec();
+
+      expect(spec.facet, const FacetSpec<Sample>(by: sampleZone));
+      expect(spec.facet!.scales, FacetScales.fixed);
+    });
+
+    test('facet carries columns, scales and label', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone, columns: 3, scales: FacetScales.freeY, label: 'Zone')
+          .toSpec();
+
+      expect(
+        spec.facet,
+        const FacetSpec<Sample>(
+          by: sampleZone,
+          columns: 3,
+          scales: FacetScales.freeY,
+          label: 'Zone',
+        ),
+      );
+    });
+
+    test('a chain without .facet leaves the spec unfaceted', () {
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .toSpec();
+      expect(spec.facet, isNull);
+    });
+  });
 }

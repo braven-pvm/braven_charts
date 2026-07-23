@@ -28,6 +28,7 @@ import '../models/y_axis_position.dart' show YAxisPosition;
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 import 'braven_plot.dart';
 import 'channel.dart';
+import 'facet_spec.dart';
 import 'grammar_diagnostics.dart';
 import 'mark.dart';
 import 'plot_spec.dart';
@@ -90,6 +91,7 @@ final class BravenChart<T> {
     String? title,
     String? subtitle,
     bool? showLegend,
+    FacetSpec<T>? facet,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -104,7 +106,8 @@ final class BravenChart<T> {
        _grid = grid,
        _title = title,
        _subtitle = subtitle,
-       _showLegend = showLegend;
+       _showLegend = showLegend,
+       _facet = facet;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -128,6 +131,7 @@ final class BravenChart<T> {
   final String? _title;
   final String? _subtitle;
   final bool? _showLegend;
+  final FacetSpec<T>? _facet;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -144,6 +148,7 @@ final class BravenChart<T> {
     String? title,
     String? subtitle,
     bool? showLegend,
+    FacetSpec<T>? facet,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -160,6 +165,7 @@ final class BravenChart<T> {
     title: title ?? _title,
     subtitle: subtitle ?? _subtitle,
     showLegend: showLegend ?? _showLegend,
+    facet: facet ?? _facet,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -506,6 +512,29 @@ final class BravenChart<T> {
   /// Shows or hides the chart legend.
   BravenChart<T> legend(bool show) => _copy(showLegend: show);
 
+  /// Renders this chain as N synchronized small-multiple panels — one per
+  /// distinct value of [by], in first-seen (data) order.
+  ///
+  /// [columns] fixes the grid width (null lays it out at `ceil(sqrt(N))`);
+  /// [scales] controls axis sharing across panels ([FacetScales.fixed] shares
+  /// both); [label] prefixes each panel's strip label. Faceting is set as an
+  /// optional field on the [PlotSpec], so the spec stays the single complete
+  /// description. Terminate the chain with [buildFaceted]; a faceted chain
+  /// rejects the single-panel [build].
+  BravenChart<T> facet(
+    FieldAccessor<T, Object?> by, {
+    int? columns,
+    FacetScales scales = FacetScales.fixed,
+    String? label,
+  }) => _copy(
+    facet: FacetSpec<T>(
+      by: by,
+      columns: columns,
+      scales: scales,
+      label: label,
+    ),
+  );
+
   /// The specification this chain describes.
   PlotSpec<T> toSpec() {
     final xLabel = _xLabel;
@@ -526,6 +555,7 @@ final class BravenChart<T> {
       title: _title,
       subtitle: _subtitle,
       showLegend: _showLegend,
+      facet: _facet,
     );
   }
 
