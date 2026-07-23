@@ -90,6 +90,26 @@ void main() {
   });
 
   test('clusters 100,000 visible observations with bounded linear work', () {
+    // Prime the lazy clustering path before timing it. The full package suite
+    // can otherwise charge first-use JIT work to this benchmark on shared CI
+    // runners, which measures VM warm-up rather than clustering throughput.
+    final warmup = SeriesElement(
+      series: series.copyWith(
+        points: points.take(1000).toList(growable: false),
+        renderMode: ScatterRenderMode.clusters,
+        clusterConfig: const ScatterClusterConfig(cellSize: 32),
+      ),
+      transform: const ChartTransform(
+        dataXMin: 0,
+        dataXMax: 1000,
+        dataYMin: 0,
+        dataYMax: 100,
+        plotWidth: 1000,
+        plotHeight: 600,
+      ),
+    );
+    warmup.visibleScatterRenderedMarkerCount;
+
     final clustered = SeriesElement(
       series: series.copyWith(
         renderMode: ScatterRenderMode.clusters,
