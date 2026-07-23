@@ -13,7 +13,10 @@ import '../widgets/standard_options.dart';
 
 /// Browse and configure direct exploration and multi-series tracking patterns.
 class InteractionPage extends StatefulWidget {
-  const InteractionPage({super.key});
+  const InteractionPage({super.key, this.mediaCapture = false});
+
+  /// Removes showcase chrome while retaining the real navigator composition.
+  final bool mediaCapture;
 
   @override
   State<InteractionPage> createState() => _InteractionPageState();
@@ -48,6 +51,10 @@ class _InteractionPageState extends State<InteractionPage> {
     _navigatorController.viewportListenable.addListener(
       _handleNavigatorViewportChanged,
     );
+    if (widget.mediaCapture) {
+      _mode = _InteractionMode.navigator;
+      return;
+    }
     final requestedMode = Uri.base.queryParameters['mode'];
     for (final mode in _InteractionMode.values) {
       if (mode.name == requestedMode) {
@@ -137,6 +144,15 @@ class _InteractionPageState extends State<InteractionPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mediaCapture) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildNavigatorExample(),
+        ),
+      );
+    }
     return ChartPageLayout(
       title: 'Interaction',
       subtitle: 'Choose an interaction pattern, then configure it live',

@@ -1,0 +1,597 @@
+{
+  "$schema": "./public_catalog.schema.json",
+  "schemaVersion": 1,
+  "showcaseBaseUrl": "https://braven-pvm.github.io/braven_charts/",
+  "repositoryBaseUrl": "https://github.com/braven-pvm/braven_charts/blob/master/",
+  "apiBaseUrl": "https://braven-pvm.github.io/braven_charts/api/",
+  "features": [
+    {
+      "id": "chart-families",
+      "title": "Ten chart families",
+      "summary": "Build Cartesian, financial, partition-radial, and polar charts with one native Flutter rendering system.",
+      "page": "chart-types"
+    },
+    {
+      "id": "interaction-selection",
+      "title": "Interaction and selection",
+      "summary": "Combine zoom, pan, tracking, tooltips, annotations, durable selection, and linked brushing.",
+      "page": "selection"
+    },
+    {
+      "id": "multi-axis-analysis",
+      "title": "Multi-axis analysis",
+      "summary": "Coordinate independent axes, normalization, synchronized charts, navigators, and persistent value summaries.",
+      "page": "multi-axis"
+    },
+    {
+      "id": "typed-authoring",
+      "title": "Typed authoring and source",
+      "summary": "Choose immutable configuration, checked Chart Grammar, fluent modifiers, or generated Dart source.",
+      "page": "chart-grammar"
+    },
+    {
+      "id": "live-rendering",
+      "title": "Live and efficient rendering",
+      "summary": "Use cached custom rendering, bounded streams, and frame-coalesced updates for changing data.",
+      "page": "live-stream"
+    },
+    {
+      "id": "product-surfaces",
+      "title": "Product-ready chart surfaces",
+      "summary": "Ship Chart, Data, Split, and Source views with artifacts, tables, CSV, themes, and accessible states.",
+      "page": "chart-workbench"
+    }
+  ],
+  "chartFamilies": [
+    {
+      "id": "line",
+      "label": "Line",
+      "group": "Cartesian",
+      "summary": "Continuous trends",
+      "bestFor": "Time series, change over time, and analytical overlays",
+      "page": "line-charts",
+      "guide": "doc/line_area_charts.md",
+      "apiSymbols": ["LineChartSeries", "PathAnimationStyle"],
+      "pairAsset": "doc/screenshots/family_line_pair.png",
+      "primaryExample": {
+        "title": "Line chart family",
+        "alt": "Two line series showing continuous trends",
+        "asset": "doc/screenshots/chart_type_line.png",
+        "page": "line-charts"
+      },
+      "secondaryExample": {
+        "title": "Synchronized route profile",
+        "asset": "doc/screenshots/synchronized_route_profile.png",
+        "page": "line-charts",
+        "preset": "synchronized"
+      }
+    },
+    {
+      "id": "area",
+      "label": "Area",
+      "group": "Cartesian",
+      "summary": "Magnitude and accumulation",
+      "bestFor": "Volume, accumulated values, forecasts, and baseline comparison",
+      "page": "area-charts",
+      "guide": "doc/line_area_charts.md",
+      "apiSymbols": ["AreaChartSeries", "AreaGradient"],
+      "pairAsset": "doc/screenshots/family_area_pair.png",
+      "primaryExample": {
+        "title": "Area chart family",
+        "alt": "Layered area chart showing magnitude and accumulation",
+        "asset": "doc/screenshots/chart_type_area.png",
+        "page": "area-charts"
+      },
+      "secondaryExample": {
+        "title": "Value summary composition",
+        "asset": "doc/screenshots/value_summary_panel.png",
+        "page": "value-summary"
+      }
+    },
+    {
+      "id": "range-area",
+      "label": "Range Area",
+      "group": "Cartesian",
+      "summary": "Intervals and uncertainty",
+      "bestFor": "Low-high envelopes, confidence bands, and bounded ranges",
+      "page": "range-area-charts",
+      "guide": "doc/range_area_charts.md",
+      "apiSymbols": ["RangeAreaChartSeries", "RangeAreaDataPoint"],
+      "pairAsset": "doc/screenshots/family_range_area_pair.png",
+      "primaryExample": {
+        "title": "Range Area chart family",
+        "alt": "Range Area chart showing a low-high interval band",
+        "asset": "doc/screenshots/chart_type_range_area.png",
+        "page": "range-area-charts"
+      },
+      "secondaryExample": {
+        "title": "Temperature envelope",
+        "asset": "doc/screenshots/range_area_temperature.png",
+        "page": "range-area-charts",
+        "preset": "temperature"
+      }
+    },
+    {
+      "id": "bar",
+      "label": "Bar",
+      "group": "Cartesian",
+      "summary": "Category comparison",
+      "bestFor": "Grouped, stacked, range, waterfall, and ranked data",
+      "page": "bar-charts",
+      "guide": "docs/guides/bar-charts.md",
+      "apiSymbols": ["BarChartSeries", "BarChartStyle"],
+      "pairAsset": "doc/screenshots/family_bar_pair.png",
+      "primaryExample": {
+        "title": "Bar chart family",
+        "alt": "Grouped bars comparing category values",
+        "asset": "doc/screenshots/chart_type_bar.png",
+        "page": "bar-charts"
+      },
+      "secondaryExample": {
+        "title": "Waterfall bridge",
+        "asset": "doc/screenshots/bar_waterfall.png",
+        "page": "bar-charts",
+        "preset": "waterfall"
+      }
+    },
+    {
+      "id": "scatter",
+      "label": "Scatter",
+      "group": "Cartesian",
+      "summary": "Relationships and outliers",
+      "bestFor": "Correlation, cohorts, distributions, and independent encodings",
+      "page": "scatter-charts",
+      "guide": "doc/api_reference.md",
+      "apiSymbols": ["ScatterChartSeries", "ScatterMarkerStyle"],
+      "pairAsset": "doc/screenshots/family_scatter_pair.png",
+      "primaryExample": {
+        "title": "Scatter chart family",
+        "alt": "Scatter plot showing three related observation groups",
+        "asset": "doc/screenshots/chart_type_scatter.png",
+        "page": "scatter-charts"
+      },
+      "secondaryExample": {
+        "title": "Market opportunity bubbles",
+        "asset": "doc/screenshots/scatter_market_opportunity.png",
+        "page": "scatter-charts",
+        "preset": "bubble"
+      }
+    },
+    {
+      "id": "candlestick",
+      "label": "Candlestick",
+      "group": "Financial",
+      "summary": "Open-high-low-close movement",
+      "bestFor": "Price action and interval-based financial observations",
+      "page": "candlestick-charts",
+      "guide": "doc/candlestick_charts.md",
+      "apiSymbols": ["CandlestickChartSeries", "CandlestickDataPoint"],
+      "pairAsset": "doc/screenshots/family_candlestick_pair.png",
+      "primaryExample": {
+        "title": "Candlestick chart family",
+        "alt": "Candlestick series with a moving-average overlay",
+        "asset": "doc/screenshots/chart_type_candlestick.png",
+        "page": "candlestick-charts"
+      },
+      "secondaryExample": {
+        "title": "Market structure",
+        "asset": "doc/screenshots/candlestick_market_structure.png",
+        "page": "candlestick-charts"
+      }
+    },
+    {
+      "id": "pie",
+      "label": "Pie",
+      "group": "Partition radial",
+      "summary": "Contribution to one whole",
+      "bestFor": "Small categorical share datasets with one total",
+      "page": "pie-charts",
+      "guide": "doc/pie_charts.md",
+      "apiSymbols": ["PieChartSeries", "PieChartStyle"],
+      "pairAsset": "doc/screenshots/family_pie_pair.png",
+      "primaryExample": {
+        "title": "Pie chart family",
+        "alt": "Pie chart showing category contribution to one whole",
+        "asset": "doc/screenshots/chart_type_pie.png",
+        "page": "pie-charts"
+      },
+      "secondaryExample": {
+        "title": "Revenue contribution",
+        "asset": "doc/screenshots/pie_revenue_contribution.png",
+        "page": "pie-charts"
+      }
+    },
+    {
+      "id": "donut",
+      "label": "Donut",
+      "group": "Partition radial",
+      "summary": "Contribution with center context",
+      "bestFor": "Part-to-whole data that benefits from a central value",
+      "page": "donut-charts",
+      "guide": "doc/donut_charts.md",
+      "apiSymbols": ["DonutChartSeries", "DonutCenterContent"],
+      "pairAsset": "doc/screenshots/family_donut_pair.png",
+      "primaryExample": {
+        "title": "Donut chart family",
+        "alt": "Donut chart with a central total",
+        "asset": "doc/screenshots/chart_type_donut.png",
+        "page": "donut-charts"
+      },
+      "secondaryExample": {
+        "title": "Campaign reach",
+        "asset": "doc/screenshots/donut_campaign_reach.png",
+        "page": "donut-charts"
+      }
+    },
+    {
+      "id": "concentric-donut",
+      "label": "Concentric Donut",
+      "group": "Partition radial",
+      "summary": "Independent totals, shared view",
+      "bestFor": "Comparing distributions across periods, cohorts, or groups",
+      "page": "concentric-donut",
+      "guide": "doc/concentric_donut_charts.md",
+      "apiSymbols": ["ConcentricDonutConfig", "DonutChartSeries"],
+      "pairAsset": "doc/screenshots/family_concentric_donut_pair.png",
+      "primaryExample": {
+        "title": "Concentric Donut chart family",
+        "alt": "Three concentric donut rings with independent totals",
+        "asset": "doc/screenshots/chart_type_concentric.png",
+        "page": "concentric-donut"
+      },
+      "secondaryExample": {
+        "title": "Service-level health",
+        "asset": "doc/screenshots/concentric_service_health.png",
+        "page": "concentric-donut"
+      }
+    },
+    {
+      "id": "polar-column",
+      "label": "Polar Column / Rose",
+      "group": "Polar",
+      "summary": "Magnitude on polar axes",
+      "bestFor": "Cyclical categories and compact magnitude profiles",
+      "page": "polar-column",
+      "guide": "doc/polar_column_charts.md",
+      "apiSymbols": ["PolarColumnChartSeries", "PolarChartConfig"],
+      "pairAsset": "doc/screenshots/family_polar_column_pair.png",
+      "primaryExample": {
+        "title": "Polar Column and Rose chart family",
+        "alt": "Area-correct rose columns arranged on a polar axis",
+        "asset": "doc/screenshots/chart_type_polar_column.png",
+        "page": "polar-column"
+      },
+      "secondaryExample": {
+        "title": "Lifecycle arc",
+        "asset": "doc/screenshots/polar_lifecycle_arc.png",
+        "page": "polar-column"
+      }
+    }
+  ],
+  "guides": [
+    {
+      "id": "first-chart",
+      "title": "Build your first chart",
+      "group": "Get started",
+      "summary": "Install the package and render a small, interactive line chart.",
+      "snippet": "basic-line"
+    },
+    {
+      "id": "first-grammar-chart",
+      "title": "Author with Chart Grammar",
+      "group": "Get started",
+      "summary": "Describe data accessors and marks through a checked typed chain.",
+      "snippet": "basic-grammar",
+      "page": "chart-grammar"
+    },
+    {
+      "id": "choose-chart",
+      "title": "Choose a chart family",
+      "group": "Get started",
+      "summary": "Start with the data question and compare all built-in families.",
+      "page": "chart-types"
+    },
+    {
+      "id": "tracking",
+      "title": "Tracking and value display",
+      "group": "Interaction and display",
+      "summary": "Compose crosshairs, tooltips, markers, and persistent value summaries.",
+      "page": "value-summary",
+      "path": "doc/value_summary.md"
+    },
+    {
+      "id": "selection",
+      "title": "Selection and linked brushing",
+      "group": "Interaction and display",
+      "summary": "Select points, ranges, categories, series, and linked chart data.",
+      "page": "selection"
+    },
+    {
+      "id": "zoom-navigation",
+      "title": "Zoom, pan, and navigators",
+      "group": "Interaction and display",
+      "summary": "Control viewports directly or through a reusable full-domain navigator.",
+      "page": "interaction",
+      "path": "doc/cartesian_navigator.md"
+    },
+    {
+      "id": "annotations",
+      "title": "Annotations",
+      "group": "Interaction and display",
+      "summary": "Add and edit point, range, threshold, text, trend, and pin overlays.",
+      "page": "annotations"
+    },
+    {
+      "id": "axes",
+      "title": "Axes and normalization",
+      "group": "Interaction and display",
+      "summary": "Configure independent axes, visible slots, formatting, and normalization.",
+      "page": "multi-axis"
+    },
+    {
+      "id": "themes",
+      "title": "Themes and accessibility",
+      "group": "Interaction and display",
+      "summary": "Apply coherent light, dark, accessible, and product-specific chart themes.",
+      "page": "theming"
+    },
+    {
+      "id": "grammar",
+      "title": "Typed Chart Grammar",
+      "group": "Data, authoring, and live updates",
+      "summary": "Lower typed accessors, encodings, marks, and options to the standard renderer.",
+      "page": "chart-grammar",
+      "path": "doc/chart_grammar.md"
+    },
+    {
+      "id": "generated-source",
+      "title": "Generated Dart source",
+      "group": "Data, authoring, and live updates",
+      "summary": "Capture a mounted chart and inspect checked Config or Grammar output.",
+      "page": "chart-workbench",
+      "path": "doc/chart_grammar.md"
+    },
+    {
+      "id": "live-data",
+      "title": "Live data and buffering",
+      "group": "Data, authoring, and live updates",
+      "summary": "Ingest changing data without rebuilding the widget tree for every sample.",
+      "page": "live-stream"
+    },
+    {
+      "id": "performance",
+      "title": "Performance",
+      "group": "Data, authoring, and live updates",
+      "summary": "Understand cached layers, spatial indexing, streaming, and large datasets.",
+      "page": "performance"
+    },
+    {
+      "id": "workbench",
+      "title": "Chart Workbench",
+      "group": "Workbench, artifacts, and export",
+      "summary": "Keep one chart mounted across Chart, Data, Split, and Source views.",
+      "page": "chart-workbench",
+      "path": "doc/chart_workbench.md"
+    },
+    {
+      "id": "artifacts",
+      "title": "Portable chart artifacts",
+      "group": "Workbench, artifacts, and export",
+      "summary": "Capture, validate, store, preview, hydrate, and restore effective chart state.",
+      "page": "artifact-showcase",
+      "path": "doc/chart_artifacts.md"
+    },
+    {
+      "id": "tables-export",
+      "title": "Data tables and CSV",
+      "group": "Workbench, artifacts, and export",
+      "summary": "Project chart data into exact tables with copy and raw-value CSV export.",
+      "page": "artifact-showcase",
+      "path": "doc/chart_artifacts.md"
+    },
+    {
+      "id": "comparison",
+      "title": "Chart document comparison",
+      "group": "Workbench, artifacts, and export",
+      "summary": "Align saved chart documents without losing identity, units, or provenance.",
+      "path": "doc/chart_comparison.md"
+    },
+    {
+      "id": "api-index",
+      "title": "Generated API reference",
+      "group": "API reference",
+      "summary": "Search public libraries, widgets, series, configuration, controllers, and members.",
+      "apiPath": ""
+    },
+    {
+      "id": "api-overview",
+      "title": "Public API overview",
+      "group": "API reference",
+      "summary": "Review the supported public surface by capability.",
+      "path": "doc/api_reference.md"
+    },
+    {
+      "id": "feature-matrix",
+      "title": "Feature coverage matrix",
+      "group": "API reference",
+      "summary": "Compare implemented behavior and public boundaries.",
+      "path": "doc/feature_matrix.md"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "basic-line",
+      "title": "Direct configuration",
+      "path": "example/lib/snippets/basic_line_chart.dart",
+      "startMarker": "// docs:start",
+      "endMarker": "// docs:end",
+      "language": "dart"
+    },
+    {
+      "id": "basic-grammar",
+      "title": "Typed Chart Grammar",
+      "path": "example/lib/snippets/basic_grammar_chart.dart",
+      "startMarker": "// docs:start",
+      "endMarker": "// docs:end",
+      "language": "dart"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "power-duration",
+      "title": "Power-duration model",
+      "group": "Analytical compositions",
+      "alt": "Dark multi-axis power-duration model with six curves",
+      "asset": "doc/screenshots/hero_power_duration.png",
+      "page": "multi-axis"
+    },
+    {
+      "id": "threshold-exposure",
+      "title": "Threshold exposure",
+      "group": "Analytical compositions",
+      "alt": "Threshold exposure composition with bars, curves, zones, and tracking",
+      "asset": "doc/screenshots/hero_threshold.png",
+      "page": "gallery"
+    },
+    {
+      "id": "technical-indicators",
+      "title": "Technical indicator stack",
+      "group": "Analytical compositions",
+      "alt": "Synchronized candlestick, MACD, momentum, and navigator composition",
+      "asset": "doc/screenshots/technical_indicator_stack.png",
+      "page": "technical-indicators",
+      "preset": "terminal"
+    },
+    {
+      "id": "donut-selection",
+      "title": "Donut selection",
+      "group": "Interaction and live behavior",
+      "alt": "Animated donut selection updating center content",
+      "asset": "doc/screenshots/donut_selection_demo.gif",
+      "page": "donut-charts",
+      "animated": true
+    },
+    {
+      "id": "tracking",
+      "title": "Crosshair tracking",
+      "group": "Interaction and live behavior",
+      "alt": "Animated crosshair tracking across an analytical chart",
+      "asset": "doc/screenshots/tracking_demo.gif",
+      "page": "interaction",
+      "animated": true
+    },
+    {
+      "id": "zoom-pan",
+      "title": "Zoom and pan",
+      "group": "Interaction and live behavior",
+      "alt": "Animated chart zoom and pan with a bounded viewport",
+      "asset": "doc/screenshots/zoom_pan_demo.gif",
+      "page": "interaction",
+      "animated": true
+    },
+    {
+      "id": "scatter-hexbin",
+      "title": "Hexbin density",
+      "group": "Density and navigation",
+      "alt": "Fifty thousand observations aggregated into interactive hexagonal bins",
+      "asset": "doc/screenshots/scatter_hexbin_density.png",
+      "page": "scatter-charts",
+      "preset": "hexbin"
+    },
+    {
+      "id": "scatter-density",
+      "title": "Density contours",
+      "group": "Density and navigation",
+      "alt": "Gaussian density contours preserving fifty thousand source observations",
+      "asset": "doc/screenshots/scatter_density_contours.png",
+      "page": "scatter-charts",
+      "preset": "density"
+    },
+    {
+      "id": "navigator-controller",
+      "title": "Navigator controller",
+      "group": "Density and navigation",
+      "alt": "Line chart with a shared full-domain navigator and selected viewport",
+      "asset": "doc/screenshots/interaction_navigator.png",
+      "page": "interaction",
+      "mode": "navigator"
+    },
+    {
+      "id": "waterfall",
+      "title": "Waterfall bridge",
+      "group": "Business and financial",
+      "alt": "Waterfall bridge with positive and negative deltas",
+      "asset": "doc/screenshots/bar_waterfall.png",
+      "page": "bar-charts",
+      "preset": "waterfall"
+    },
+    {
+      "id": "candlestick-structure",
+      "title": "Market structure",
+      "group": "Business and financial",
+      "alt": "Candlestick chart with market window and moving-average overlay",
+      "asset": "doc/screenshots/candlestick_market_structure.png",
+      "page": "candlestick-charts"
+    },
+    {
+      "id": "market-opportunity",
+      "title": "Market opportunity",
+      "group": "Business and financial",
+      "alt": "Scatter plot with independent bubble, colour, and shape encodings",
+      "asset": "doc/screenshots/scatter_market_opportunity.png",
+      "page": "scatter-charts",
+      "preset": "bubble"
+    },
+    {
+      "id": "forecast-fan",
+      "title": "Forecast fan",
+      "group": "Uncertainty and ranges",
+      "alt": "Nested Range Area confidence intervals around a median forecast",
+      "asset": "doc/screenshots/range_area_forecast_fan.png",
+      "page": "range-area-charts",
+      "preset": "forecast"
+    },
+    {
+      "id": "temperature-envelope",
+      "title": "Temperature envelope",
+      "group": "Uncertainty and ranges",
+      "alt": "Temperature range envelope with a tracked midpoint",
+      "asset": "doc/screenshots/range_area_temperature.png",
+      "page": "range-area-charts",
+      "preset": "temperature"
+    },
+    {
+      "id": "volatility-channel",
+      "title": "Volatility channel",
+      "group": "Uncertainty and ranges",
+      "alt": "Dark volatility channel with tracked price and bounds",
+      "asset": "doc/screenshots/range_area_volatility.png",
+      "page": "range-area-charts",
+      "preset": "volatility"
+    },
+    {
+      "id": "pie-contribution",
+      "title": "Revenue contribution",
+      "group": "Radial and polar",
+      "alt": "Pie chart with outside contribution labels",
+      "asset": "doc/screenshots/pie_revenue_contribution.png",
+      "page": "pie-charts"
+    },
+    {
+      "id": "donut-reach",
+      "title": "Campaign reach",
+      "group": "Radial and polar",
+      "alt": "Variable-radius donut encoding campaign reach",
+      "asset": "doc/screenshots/donut_campaign_reach.png",
+      "page": "donut-charts"
+    },
+    {
+      "id": "polar-seasonality",
+      "title": "Seasonal rose",
+      "group": "Radial and polar",
+      "alt": "Area-correct seasonal rose chart across twelve months",
+      "asset": "doc/screenshots/polar_seasonal_rose.png",
+      "page": "polar-column"
+    }
+  ]
+}

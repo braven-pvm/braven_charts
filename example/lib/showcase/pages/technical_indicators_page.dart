@@ -12,7 +12,10 @@ import '../widgets/standard_options.dart';
 
 /// Financial composition proving native mixed-series and synchronized panes.
 class TechnicalIndicatorsPage extends StatefulWidget {
-  const TechnicalIndicatorsPage({super.key});
+  const TechnicalIndicatorsPage({super.key, this.mediaCapture = false});
+
+  /// Removes showcase chrome while retaining the real synchronized study stack.
+  final bool mediaCapture;
 
   @override
   State<TechnicalIndicatorsPage> createState() =>
@@ -88,6 +91,9 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
         break;
       }
     }
+    if (widget.mediaCapture) {
+      _configurePreset(_FinancialStudyPreset.terminal);
+    }
     _applyRange(_range, rebuild: false);
   }
 
@@ -100,6 +106,9 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mediaCapture) {
+      return _buildMediaCapture();
+    }
     return ChartPageLayout(
       title: 'Technical Indicators',
       subtitle:
@@ -132,6 +141,74 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaCapture() {
+    final latest = _candles.last;
+    return ColoredBox(
+      color: _chartTheme.backgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildMarketSummary(latest),
+            const SizedBox(height: 8),
+            Expanded(
+              flex: 12,
+              child: _alignAxisPane(_buildPriceChart(compact: false)),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              flex: 5,
+              child: _alignAxisPane(_buildMacdChart(compact: false)),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              flex: 5,
+              child: _alignAxisPane(_buildMomentumChart(compact: false)),
+            ),
+            const Divider(height: 1),
+            SizedBox(
+              height: 80,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _oppositeGutter,
+                ),
+                child: CartesianNavigator(
+                  key: const ValueKey('financial-media-navigator'),
+                  height: 72,
+                  interactionGroupController: _interactionGroup,
+                  fullDomain: ChartXViewport(
+                    min: _candles.first.x,
+                    max: _candles.last.x,
+                  ),
+                  snapPolicy: CartesianNavigatorSnapPolicy.values(
+                    _candles.map((candle) => candle.x),
+                  ),
+                  behavior: const CartesianNavigatorBehavior(minimumSpan: 10),
+                  overviewSeries: AreaChartSeries(
+                    id: 'financial-media-close',
+                    name: 'Close',
+                    points: _closePoints,
+                    color: const Color(0xFF0EA5E9),
+                    interpolation: LineInterpolation.monotone,
+                    strokeWidth: 1.2,
+                    fillOpacity: .14,
+                  ),
+                  theme: _chartTheme,
+                  style: const CartesianNavigatorStyle(
+                    borderRadius: 6,
+                    handleVisualHeight: 24,
+                  ),
+                  semanticLabel: 'Technical indicator session range',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -902,11 +979,14 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
             color: _chartTheme.axisStyle.labelStyle.color ?? Colors.black87,
             fontSize: 12,
             fontWeight: FontWeight.w700,
+            fontFamily: widget.mediaCapture ? 'Roboto' : null,
           ),
           borderWidth: 0,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         ),
-        backgroundColor: _chartTheme.backgroundColor.withValues(alpha: .88),
+        backgroundColor: _chartTheme.backgroundColor.withValues(
+          alpha: widget.mediaCapture ? 1 : .88,
+        ),
         zIndex: 20,
       ),
     ];

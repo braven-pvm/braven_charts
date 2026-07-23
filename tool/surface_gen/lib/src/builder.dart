@@ -139,6 +139,8 @@ class FluentBarrelBuilder implements Builder {
       ..writeln('/// API. Consumers who don\'t want the extensions keep '
           'importing')
       ..writeln('/// `package:$package/$package.dart` and never see them.')
+      ..writeln('///')
+      ..writeln('/// {@category Authoring and data}')
       ..writeln('library;')
       ..writeln()
       ..writeln("export '$package.dart';");

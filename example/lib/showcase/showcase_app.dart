@@ -17,6 +17,7 @@ import 'pages/cartesian_chart_type_pages.dart';
 import 'pages/chart_grammar_page.dart';
 import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
+import 'pages/documentation_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/technical_indicators_page.dart';
 import 'pages/interaction_page.dart';
@@ -173,6 +174,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
       page: ChartTypesPage(onOpenChartType: _selectSlug),
+    ),
+    NavDestination(
+      label: 'Documentation',
+      icon: Icons.menu_book_outlined,
+      selectedIcon: Icons.menu_book,
+      page: DocumentationPage(onOpenPage: _selectSlug),
+      routeSlug: 'docs',
     ),
     ...showcaseChartTypes
         .where((chartType) => chartType.slug != 'candlestick-charts')
@@ -424,6 +432,11 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       return const PolarColumnGalleryMediaPanel();
     }
     final width = MediaQuery.of(context).size.width;
+    final selectedDestination = _destinations[_selectedIndex];
+
+    if (selectedDestination.slug == 'docs' && width < 600) {
+      return selectedDestination.page;
+    }
 
     // Adaptive layout breakpoints
     if (width < 600) {

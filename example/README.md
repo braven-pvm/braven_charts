@@ -13,6 +13,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open the chart-family overview →**](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
+[**Open Documentation →**](https://braven-pvm.github.io/braven_charts/?page=docs)
+
 [**Open Candlestick Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
 
 [**Open Range Area Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=range-area-charts)
@@ -47,6 +49,7 @@ flutter build web --release --base-href /braven_charts/
 | --- | --- |
 | Gallery | Start with a native-rendered ten-family sampler, then compare a readable multi-axis session profile, three native Range Area compositions, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
 | Chart Types | Choose between line, area, Range Area, bar, scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
+| Documentation | Start with tested direct and Grammar examples, browse six evergreen capability groups, choose a chart family, follow task-grouped guides, or open generated member-level API reference |
 | Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; use Synchronized's full-distance navigator across three independent plots; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; use Forecast's full-time-domain navigator; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Range Area Charts | Compare temperature, seasonal, confidence, nested forecast fan, volatility, and stepped-gap intervals; vary count and breadth; configure fill, boundaries, labels, tracking, summaries, and motion; inspect every preset in Chart/Data/Split/Source |

@@ -27,6 +27,12 @@ import '../example/lib/showcase/widgets/range_area_gallery_cards.dart';
 import '../example/lib/showcase/widgets/scatter_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/synchronized_cartesian_gallery_card.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/pages/cartesian_chart_type_pages.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/pages/interaction_page.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/pages/technical_indicators_page.dart';
 
 const _outputDirectory = String.fromEnvironment(
   'PUBDEV_MEDIA_OUTPUT_DIR',
@@ -364,21 +370,38 @@ void main() {
     },
   );
 
-  testWidgets(
-    'capture pub.dev interaction media through the public preview API',
-    (tester) async {
-      await tester.runAsync(_loadCaptureFont);
-      final outputDirectory = Directory(_outputDirectory)
-        ..createSync(recursive: true);
+  testWidgets('capture pub.dev advanced gallery media', (tester) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
 
-      await _captureInteraction(
-        tester,
-        outputDirectory: outputDirectory,
-        fileName: 'native_multi_axis_interaction.png',
-        source: const PhysiologySessionGalleryCard(),
-      );
-    },
-  );
+    await _captureInteraction(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'scatter_hexbin_density.png',
+      source: const ScatterChartsPage(mediaCapturePreset: 'Hexbin'),
+      interactionOffset: const Offset(0.24, 0.52),
+    );
+    await _captureInteraction(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'scatter_density_contours.png',
+      source: const ScatterChartsPage(mediaCapturePreset: 'Density'),
+      interactionOffset: const Offset(0.25, 0.5),
+    );
+    await _captureComposition(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'interaction_navigator.png',
+      source: const InteractionPage(mediaCapture: true),
+    );
+    await _captureComposition(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'technical_indicator_stack.png',
+      source: const TechnicalIndicatorsPage(mediaCapture: true),
+    );
+  });
 
   testWidgets('capture pub.dev chart type strip', (tester) async {
     await tester.runAsync(_loadCaptureFont);
@@ -401,6 +424,11 @@ void main() {
       outputDirectory: outputDirectory,
       captures: captures,
     );
+    await _captureFamilyPairs(
+      tester,
+      outputDirectory: outputDirectory,
+      captures: captures,
+    );
   });
 }
 
@@ -410,7 +438,7 @@ Future<Uint8List> _capturePie(
   required String fileName,
   required Widget source,
 }) async {
-  const logicalSize = Size(600, 440);
+  const logicalSize = Size(960, 540);
   await tester.binding.setSurfaceSize(logicalSize);
   await tester.pumpWidget(
     MaterialApp(
@@ -471,8 +499,8 @@ Future<Uint8List> _capturePie(
   expect(result, isA<ChartArtifactSuccess<ChartPreview>>());
   final preview = (result! as ChartArtifactSuccess<ChartPreview>).value;
   expect(preview.mimeType, 'image/png');
-  expect(preview.widthPixels, 1200);
-  expect(preview.heightPixels, 880);
+  expect(preview.widthPixels, 1920);
+  expect(preview.heightPixels, 1080);
   expect(preview.bytes, isNotEmpty);
 
   final bytes = preview.bytes!;
@@ -627,8 +655,9 @@ Future<void> _captureInteraction(
   required String fileName,
   required Widget source,
   bool includeTransientInteraction = true,
+  Offset interactionOffset = const Offset(0.54, 0.48),
 }) async {
-  const logicalSize = Size(1200, 720);
+  const logicalSize = Size(1280, 720);
   const pixelRatio = 1.5;
   await tester.binding.setSurfaceSize(logicalSize);
   await tester.pumpWidget(
@@ -681,7 +710,10 @@ Future<void> _captureInteraction(
   await pointer.addPointer(location: chartBox.localToGlobal(Offset.zero));
   await pointer.moveTo(
     chartBox.localToGlobal(
-      Offset(chartBox.size.width * 0.54, chartBox.size.height * 0.48),
+      Offset(
+        chartBox.size.width * interactionOffset.dx,
+        chartBox.size.height * interactionOffset.dy,
+      ),
     ),
   );
   await tester.pump(const Duration(milliseconds: 300));
@@ -719,7 +751,7 @@ Future<void> _captureInteraction(
   expect(result, isA<ChartArtifactSuccess<ChartPreview>>());
   final preview = (result! as ChartArtifactSuccess<ChartPreview>).value;
   expect(preview.mimeType, 'image/png');
-  expect(preview.widthPixels, 1800);
+  expect(preview.widthPixels, 1920);
   expect(preview.heightPixels, 1080);
   expect(preview.bytes, isNotEmpty);
 
@@ -743,7 +775,7 @@ Future<void> _captureComposition(
   required String fileName,
   required Widget source,
 }) async {
-  const logicalSize = Size(1200, 720);
+  const logicalSize = Size(1280, 720);
   const pixelRatio = 1.5;
   final boundaryKey = GlobalKey();
   final baseTheme = ThemeData.light();
@@ -783,7 +815,7 @@ Future<void> _captureComposition(
   );
   await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
   // ignore: avoid_print
-  print('Wrote ${output.path} (1800x1080)');
+  print('Wrote ${output.path} (1920x1080)');
 
   await tester.pumpWidget(const SizedBox.shrink());
 }
@@ -984,7 +1016,7 @@ Future<_ChartTypeCapture> _captureChartType(
   required Directory outputDirectory,
   required _ChartTypeAsset asset,
 }) async {
-  const logicalSize = Size(360, 260);
+  const logicalSize = Size(480, 270);
   const pixelRatio = 2.0;
   final controller = BravenChartController();
   final theme = _withCaptureFont(asset.theme);
@@ -1027,15 +1059,15 @@ Future<_ChartTypeCapture> _captureChartType(
   );
   expect(result, isA<ChartArtifactSuccess<ChartPreview>>());
   final preview = (result! as ChartArtifactSuccess<ChartPreview>).value;
-  expect(preview.widthPixels, 720);
-  expect(preview.heightPixels, 520);
+  expect(preview.widthPixels, 960);
+  expect(preview.heightPixels, 540);
   final bytes = preview.bytes!;
   final output = File(
     '${outputDirectory.path}${Platform.pathSeparator}${asset.fileName}',
   );
   await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
   // ignore: avoid_print
-  print('Wrote ${output.path} (720x520)');
+  print('Wrote ${output.path} (960x540)');
 
   await tester.pumpWidget(const SizedBox.shrink());
   controller.dispose();
@@ -1047,7 +1079,7 @@ Future<void> _captureChartTypeStrip(
   required Directory outputDirectory,
   required List<_ChartTypeCapture> captures,
 }) async {
-  const logicalSize = Size(2180, 400);
+  const logicalSize = Size(2400, 280);
   final boundaryKey = GlobalKey();
   await tester.binding.setSurfaceSize(logicalSize);
   await tester.pumpWidget(
@@ -1057,14 +1089,18 @@ Future<void> _captureChartTypeStrip(
       home: RepaintBoundary(
         key: boundaryKey,
         child: Material(
-          color: const Color(0xFFF7F5FA),
+          color: const Color(0xFFF4F2F7),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var index = 0; index < captures.length; index++) ...[
-                  if (index > 0) const SizedBox(width: 16),
+                  if (index > 0)
+                    const SizedBox(
+                      width: 1,
+                      child: ColoredBox(color: Color(0xFFD8D3E0)),
+                    ),
                   Expanded(child: _ChartTypeTile(capture: captures[index])),
                 ],
               ],
@@ -1100,7 +1136,165 @@ Future<void> _captureChartTypeStrip(
     () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
   );
   // ignore: avoid_print
-  print('Wrote ${output.path} (2180x400)');
+  print('Wrote ${output.path} (2400x280)');
+  await tester.pumpWidget(const SizedBox.shrink());
+}
+
+Future<void> _captureFamilyPairs(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+  required List<_ChartTypeCapture> captures,
+}) async {
+  final primaryByFile = {
+    for (final capture in captures) capture.asset.fileName: capture.bytes,
+  };
+  const pairs = [
+    (
+      output: 'family_line_pair.png',
+      primary: 'chart_type_line.png',
+      secondary: 'synchronized_route_profile.png',
+    ),
+    (
+      output: 'family_area_pair.png',
+      primary: 'chart_type_area.png',
+      secondary: 'value_summary_panel.png',
+    ),
+    (
+      output: 'family_range_area_pair.png',
+      primary: 'chart_type_range_area.png',
+      secondary: 'range_area_temperature.png',
+    ),
+    (
+      output: 'family_bar_pair.png',
+      primary: 'chart_type_bar.png',
+      secondary: 'bar_waterfall.png',
+    ),
+    (
+      output: 'family_scatter_pair.png',
+      primary: 'chart_type_scatter.png',
+      secondary: 'scatter_market_opportunity.png',
+    ),
+    (
+      output: 'family_candlestick_pair.png',
+      primary: 'chart_type_candlestick.png',
+      secondary: 'candlestick_market_structure.png',
+    ),
+    (
+      output: 'family_pie_pair.png',
+      primary: 'chart_type_pie.png',
+      secondary: 'pie_revenue_contribution.png',
+    ),
+    (
+      output: 'family_donut_pair.png',
+      primary: 'chart_type_donut.png',
+      secondary: 'donut_campaign_reach.png',
+    ),
+    (
+      output: 'family_concentric_donut_pair.png',
+      primary: 'chart_type_concentric.png',
+      secondary: 'concentric_service_health.png',
+    ),
+    (
+      output: 'family_polar_column_pair.png',
+      primary: 'chart_type_polar_column.png',
+      secondary: 'polar_lifecycle_arc.png',
+    ),
+  ];
+
+  for (final pair in pairs) {
+    final secondaryFile = File(
+      '${outputDirectory.path}${Platform.pathSeparator}${pair.secondary}',
+    );
+    expect(
+      secondaryFile.existsSync(),
+      isTrue,
+      reason: 'Capture ${pair.secondary} before composing family media.',
+    );
+    await _captureFamilyPair(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: pair.output,
+      primary: primaryByFile[pair.primary]!,
+      secondary:
+          await tester.runAsync(secondaryFile.readAsBytes) ?? Uint8List(0),
+    );
+  }
+}
+
+Future<void> _captureFamilyPair(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+  required String fileName,
+  required Uint8List primary,
+  required Uint8List secondary,
+}) async {
+  const logicalSize = Size(1944, 540);
+  final boundaryKey = GlobalKey();
+  await tester.binding.setSurfaceSize(logicalSize);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: RepaintBoundary(
+        key: boundaryKey,
+        child: Material(
+          color: const Color(0xFFF4F2F7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRect(
+                  child: Image.memory(
+                    primary,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: ClipRect(
+                  child: Image.memory(
+                    secondary,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  final context = boundaryKey.currentContext!;
+  if (!context.mounted) {
+    throw StateError('Family pair capture detached before rendering.');
+  }
+  final boundary = context.findRenderObject()! as RenderRepaintBoundary;
+  await tester.runAsync(() async {
+    await Future.wait([
+      precacheImage(MemoryImage(primary), context),
+      precacheImage(MemoryImage(secondary), context),
+    ]);
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+
+  final byteData = await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data;
+  });
+  expect(byteData, isNotNull);
+  final output = File(
+    '${outputDirectory.path}${Platform.pathSeparator}$fileName',
+  );
+  await tester.runAsync(
+    () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
+  );
+  // ignore: avoid_print
+  print('Wrote ${output.path} (1944x540)');
   await tester.pumpWidget(const SizedBox.shrink());
 }
 
@@ -1111,44 +1305,42 @@ class _ChartTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: capture.asset.theme.backgroundColor,
-        border: Border.all(color: const Color(0xFFD8D3E0)),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x120F172A),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ColoredBox(
+      color: capture.asset.theme.backgroundColor,
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            ColoredBox(
-              color: capture.asset.headerColor,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                child: Text(
-                  capture.asset.label,
-                  style: TextStyle(
-                    color: capture.asset.headerTextColor,
-                    fontFamily: _captureFontFamily,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+            Image.memory(
+              capture.bytes,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+            ),
+            Align(
+              alignment: Alignment.topLeft,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: capture.asset.headerColor.withValues(alpha: 0.92),
+                  borderRadius: const BorderRadius.only(
+                    bottomRight: Radius.circular(8),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Image.memory(
-                capture.bytes,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
+                  child: Text(
+                    capture.asset.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.fade,
+                    softWrap: false,
+                    style: TextStyle(
+                      color: capture.asset.headerTextColor,
+                      fontFamily: _captureFontFamily,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -1303,6 +1495,23 @@ List<_ChartTypeAsset> _chartTypeAssets() {
           interpolation: LineInterpolation.monotone,
           strokeWidth: 2,
         ),
+        LineChartSeries(
+          id: 'line-benchmark',
+          points: [
+            ChartDataPoint(x: 0, y: 31),
+            ChartDataPoint(x: 1, y: 33),
+            ChartDataPoint(x: 2, y: 35),
+            ChartDataPoint(x: 3, y: 38),
+            ChartDataPoint(x: 4, y: 41),
+            ChartDataPoint(x: 5, y: 45),
+            ChartDataPoint(x: 6, y: 50),
+            ChartDataPoint(x: 7, y: 54),
+          ],
+          color: Color(0xFFF59E0B),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 1.6,
+          dashPattern: [6, 4],
+        ),
       ],
     ),
     _ChartTypeAsset(
@@ -1317,6 +1526,24 @@ List<_ChartTypeAsset> _chartTypeAssets() {
         horizontalColor: Color(0x2238BDF8),
       ),
       series: const [
+        AreaChartSeries(
+          id: 'area-baseline',
+          points: [
+            ChartDataPoint(x: 0, y: 18),
+            ChartDataPoint(x: 1, y: 29),
+            ChartDataPoint(x: 2, y: 24),
+            ChartDataPoint(x: 3, y: 36),
+            ChartDataPoint(x: 4, y: 31),
+            ChartDataPoint(x: 5, y: 44),
+            ChartDataPoint(x: 6, y: 41),
+            ChartDataPoint(x: 7, y: 50),
+          ],
+          color: Color(0xFF8B5CF6),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 1.6,
+          fillOpacity: 0.14,
+          lineGlow: 2,
+        ),
         AreaChartSeries(
           id: 'area',
           points: [
@@ -1344,6 +1571,23 @@ List<_ChartTypeAsset> _chartTypeAssets() {
       headerColor: const Color(0xFFEDE9FE),
       headerTextColor: const Color(0xFF4C1D95),
       series: [
+        RangeAreaChartSeries(
+          id: 'range-area-outer',
+          name: 'Wide interval',
+          color: const Color(0xFFC4B5FD),
+          interpolation: LineInterpolation.monotone,
+          fillOpacity: 0.18,
+          points: [
+            RangeAreaDataPoint(x: 0, low: 16, high: 35),
+            RangeAreaDataPoint(x: 1, low: 19, high: 42),
+            RangeAreaDataPoint(x: 2, low: 21, high: 49),
+            RangeAreaDataPoint(x: 3, low: 22, high: 56),
+            RangeAreaDataPoint(x: 4, low: 26, high: 64),
+            RangeAreaDataPoint(x: 5, low: 29, high: 73),
+            RangeAreaDataPoint(x: 6, low: 32, high: 82),
+            RangeAreaDataPoint(x: 7, low: 36, high: 92),
+          ],
+        ),
         RangeAreaChartSeries(
           id: 'range-area',
           name: 'Forecast interval',
@@ -1423,6 +1667,19 @@ List<_ChartTypeAsset> _chartTypeAssets() {
           color: Color(0xFFF97316),
           markerRadius: 4.5,
         ),
+        ScatterChartSeries(
+          id: 'scatter-c',
+          points: [
+            ChartDataPoint(x: 1.4, y: 44),
+            ChartDataPoint(x: 2.5, y: 33),
+            ChartDataPoint(x: 3.6, y: 48),
+            ChartDataPoint(x: 4.7, y: 26),
+            ChartDataPoint(x: 5.8, y: 59),
+            ChartDataPoint(x: 6.7, y: 35),
+          ],
+          color: Color(0xFF0EA5E9),
+          markerRadius: 3.5,
+        ),
       ],
     ),
     _ChartTypeAsset(
@@ -1468,6 +1725,18 @@ List<_ChartTypeAsset> _chartTypeAssets() {
             width: 1,
             capLengthFactor: 0.55,
           ),
+        ),
+        BarChartSeries(
+          id: 'bar-forecast',
+          points: [
+            ChartDataPoint(x: 1, y: 28),
+            ChartDataPoint(x: 2, y: 43),
+            ChartDataPoint(x: 3, y: 44),
+            ChartDataPoint(x: 4, y: 50),
+            ChartDataPoint(x: 5, y: 59),
+          ],
+          color: Color(0xFFF59E0B),
+          barWidthPercent: 0.54,
         ),
       ],
     ),

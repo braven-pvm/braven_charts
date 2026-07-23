@@ -1,0 +1,1 @@
+void openPublicUrl(String url) {}

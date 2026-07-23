@@ -24,6 +24,9 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Verify public documentation catalog
+        run: dart run tool/public_docs.dart --check
+
       # The generator enforces the whole config surface, so it is verified
       # before it is trusted to regenerate anything.
       - name: Analyze surface generator
@@ -71,7 +74,13 @@ jobs:
       - name: Generate public API documentation
         run: |
           dart pub global activate dartdoc
-          dart pub global run dartdoc --no-validate-links
+          set -o pipefail
+          dart pub global run dartdoc --validate-links 2>&1 | tee /tmp/dartdoc.log
+          if grep -qE '(^|[[:space:]])warning:' /tmp/dartdoc.log; then
+            echo "::error::dartdoc emitted warnings; inspect the log above."
+            exit 1
+          fi
+          dart run tool/public_docs.dart --check --api-dir=doc/api
 
       - name: Validate publish archive
         run: dart pub publish --dry-run

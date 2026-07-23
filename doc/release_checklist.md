@@ -30,14 +30,19 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] `flutter analyze lib`
 - [ ] Analyze the release-facing example separately.
 - [ ] Run the package test suite and focused showcase widget tests.
-- [ ] `dart pub global run dartdoc --no-validate-links` completes with zero
+- [ ] `dart pub global run dartdoc --validate-links` completes with zero
   warnings and zero errors.
+- [ ] `dart run tool/public_docs.dart --check --api-dir=<dartdoc output>`
+  confirms every cataloged public symbol and API destination was generated.
 - [ ] `flutter pub outdated` is reviewed.
 - [ ] Run `pana` against a disposable copy of the package and review every lost
   pub point.
 
 ## Package page
 
+- [ ] `dart run tool/public_docs.dart --check` confirms the public catalog,
+  generated showcase catalog, README sections, routes, media, snippets, and
+  package version are aligned.
 - [ ] README installation and examples compile against the release version.
 - [ ] `example/lib/main.dart` is concise enough for pub.dev's Example tab.
 - [ ] The public API has useful `///` documentation.
@@ -45,8 +50,11 @@ GitHub publishing can be enabled on pub.dev after the package exists.
   thumbnail without relying on showcase application chrome.
 - [ ] Every README image is an individual chart or focused animation linked
       to the exact Gallery or detail page that demonstrates it.
-- [ ] The README visual index uses three examples per row and includes every
-      composition in the Gallery's curated tour without repeating an asset.
+- [ ] The README family chooser includes every built-in family exactly once,
+  with one primary visual and no more than one secondary deep link.
+- [ ] The final README visual gallery uses three examples per row by default,
+  contains 12–18 curated compositions, and does not repeat family-primary or
+  pubspec screenshot media.
 - [ ] The remaining screenshot slots prioritize the release's new public APIs,
       then add varied interaction/live examples. Keep Pie, Donut, Concentric,
       Polar, Cartesian, annotations, themes, and baseline fills represented in
@@ -106,6 +114,10 @@ motion has settled.
 - [ ] The deployed Candlestick route loads directly and after a browser refresh.
 - [ ] The deployed Chart Grammar route loads directly and after a browser refresh.
 - [ ] The deployed Tracking & Value Display route loads directly and after a browser refresh.
+- [ ] The deployed Documentation route loads directly on desktop and phone
+  widths and after a browser refresh.
+- [ ] `/braven_charts/api/index.html` and `/braven_charts/api/index.json` load
+  directly; generated API search works.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.
