@@ -128,6 +128,23 @@ void main() {
     await _pump(tester, chart, const Size(560, 460));
     await _expectGolden(tester, 'goldens/grammar_concentric.png');
   });
+
+  testWidgets('grammar-authored polar column', (tester) async {
+    final chart = BravenChart.of(_fruits)
+        .geomPolar(
+          category: fruitName,
+          value: fruitCount,
+          style: const PolarColumnStyle(
+            cornerRadius: 4,
+            animationMode: PolarColumnAnimationMode.none,
+          ),
+        )
+        .title('Harvest by fruit')
+        .theme(_goldenTheme())
+        .build();
+    await _pump(tester, chart, const Size(560, 460));
+    await _expectGolden(tester, 'goldens/grammar_polar.png');
+  });
 }
 
 class _TolerantGoldenFileComparator extends LocalFileComparator {

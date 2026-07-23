@@ -410,4 +410,48 @@ void main() {
       expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
     });
   });
+
+  group('polar column channel to series mapping and parity', () {
+    test('category maps to angular position and value to radius', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(category: fruitName, value: fruitCount, id: 'fruit'),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.id, 'fruit');
+      expect(series.categories, ['Apple', 'Pear', 'Plum']);
+      expect(series.points.map((p) => p.x), [0, 1, 2]);
+      expect(series.points.map((p) => p.y), [30, 20, 10]);
+      expect(lowered.polarChartConfig, const PolarChartConfig());
+      expect(lowered.concentricDonutConfig, isNull);
+    });
+
+    test('a lowered polar equals the hand-built PolarColumnChartSeries.fromMap',
+        () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            id: 'fruit',
+            name: 'Fruit',
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single,
+        PolarColumnChartSeries.fromMap(
+          id: 'fruit',
+          name: 'Fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+        ),
+      );
+    });
+  });
 }

@@ -18,6 +18,7 @@ import '../models/donut_chart_config.dart'
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
+import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -434,6 +435,27 @@ final class BravenChart<T> {
       style: style,
       center: center,
       dataLabels: dataLabels,
+    ),
+  );
+
+  /// Appends a polar column: [category] is the angular position and [value] is
+  /// the radius (magnitude) — values are NOT converted into pie shares. Rich
+  /// styling (labels, gradients, shadows) is deferred to [style].
+  BravenChart<T> geomPolar({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    String? id,
+    String? name,
+    Color? color,
+    PolarColumnStyle? style,
+  }) => _append(
+    PolarMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      name: name,
+      color: color,
+      style: style,
     ),
   );
 

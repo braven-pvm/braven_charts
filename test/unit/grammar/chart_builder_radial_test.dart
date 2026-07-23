@@ -91,4 +91,33 @@ void main() {
       );
     });
   });
+
+  group('geomPolar equals the hand-written spec', () {
+    test('geomPolar appends a PolarMark with its channels and style', () {
+      final spec = BravenChart.of(fruits)
+          .geomPolar(
+            category: fruitName,
+            value: fruitCount,
+            name: 'Fruit',
+            style: const PolarColumnStyle(cornerRadius: 6),
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              name: 'Fruit',
+              style: PolarColumnStyle(cornerRadius: 6),
+            ),
+          ],
+        ),
+      );
+    });
+  });
 }

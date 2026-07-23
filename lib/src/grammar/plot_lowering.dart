@@ -16,6 +16,7 @@ import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -815,9 +816,10 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
           ? const ConcentricDonutConfig()
           : ConcentricDonutConfig(centerContent: mark.center!);
     }
+  } else if (mark is PolarMark<T>) {
+    series.add(_lowerPolar<T>(mark, markId, spec.data));
+    polar = const PolarChartConfig();
   } else {
-    // Polar branch is added in a later phase; this guards the not-yet-wired
-    // path with a clear error rather than silent misbehavior.
     throw StateError('Unhandled radial mark: $mark');
   }
 
@@ -924,6 +926,18 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
       ),
   ];
 }
+
+PolarColumnChartSeries _lowerPolar<T>(
+  PolarMark<T> mark,
+  String id,
+  List<T> data,
+) => PolarColumnChartSeries.fromMap(
+  id: id,
+  name: mark.name,
+  color: mark.color,
+  values: _radialValues(data, mark.category, mark.value),
+  polarStyle: mark.style ?? const PolarColumnStyle(),
+);
 
 void _requireScale(
   String markId,
