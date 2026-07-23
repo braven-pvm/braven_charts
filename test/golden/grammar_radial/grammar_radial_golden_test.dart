@@ -111,6 +111,23 @@ void main() {
     await _pump(tester, chart, const Size(560, 380));
     await _expectGolden(tester, 'goldens/grammar_donut.png');
   });
+
+  testWidgets('grammar-authored concentric donut', (tester) async {
+    final chart = BravenChart.of(_fruits)
+        .geomDonut(
+          category: fruitName,
+          value: fruitCount,
+          ring: fruitBasket,
+          style: const DonutChartStyle(animationMode: PieAnimationMode.none),
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+        )
+        .title('Harvest by season')
+        .legend(true)
+        .theme(_goldenTheme())
+        .build();
+    await _pump(tester, chart, const Size(560, 460));
+    await _expectGolden(tester, 'goldens/grammar_concentric.png');
+  });
 }
 
 class _TolerantGoldenFileComparator extends LocalFileComparator {

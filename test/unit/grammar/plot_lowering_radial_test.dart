@@ -328,4 +328,86 @@ void main() {
       );
     });
   });
+
+  group('concentric donut (ring channel)', () {
+    test('rings partition rows in first-seen order with a ConcentricDonutConfig',
+        () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+          ),
+        ],
+      )).lower();
+
+      // baskets in first-seen order: A (Apple, Pear), B (Plum).
+      expect(lowered.series, hasLength(2));
+      expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
+      final ringA = lowered.series.first as DonutChartSeries;
+      final ringB = lowered.series.last as DonutChartSeries;
+      expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
+      expect(ringA.points.map((p) => p.y), [30, 20]);
+      expect(ringB.points.map((p) => p.label), ['Plum']);
+      expect(ringB.points.map((p) => p.y), [10]);
+      expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+      expect(lowered.polarChartConfig, isNull);
+    });
+
+    test('each ring donut parity + shared center goes to the config', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            center: DonutCenterContent(label: 'All'),
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.first,
+        DonutChartSeries.fromMap(
+          id: 'fruit-A',
+          name: 'A',
+          values: const {'Apple': 30, 'Pear': 20},
+          centerContent: DonutCenterContent.hidden,
+        ),
+      );
+      expect(
+        lowered.concentricDonutConfig,
+        const ConcentricDonutConfig(
+          centerContent: DonutCenterContent(label: 'All'),
+        ),
+      );
+    });
+
+    test('a single-value ring collapses to one ring donut (not an error)', () {
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(lowered.series.single.id, 'fruit-A');
+      expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+    });
+  });
 }

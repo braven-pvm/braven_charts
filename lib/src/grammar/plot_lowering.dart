@@ -809,7 +809,11 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     if (mark.ring == null) {
       series.add(_lowerDonut<T>(mark, markId, spec.data));
     } else {
-      throw StateError('Concentric donut is wired in Phase 3');
+      final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
+      series.addAll(rings);
+      concentric = mark.center == null
+          ? const ConcentricDonutConfig()
+          : ConcentricDonutConfig(centerContent: mark.center!);
     }
   } else {
     // Polar branch is added in a later phase; this guards the not-yet-wired
@@ -886,6 +890,40 @@ DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
       centerContent: mark.center ?? DonutCenterContent.hidden,
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
+
+/// Partitions [data] by the donut mark's ring accessor (first-seen order) and
+/// builds one `DonutChartSeries` per ring. The shared center is carried by the
+/// composition's `ConcentricDonutConfig`, so each ring donut's own center is
+/// hidden.
+List<DonutChartSeries> _lowerConcentricRings<T>(
+  DonutMark<T> mark,
+  String markId,
+  List<T> data,
+) {
+  final order = <String>[];
+  final buckets = <String, List<T>>{};
+  for (final row in data) {
+    final key = mark.ring!(row).toString();
+    buckets.putIfAbsent(key, () {
+      order.add(key);
+      return <T>[];
+    }).add(row);
+  }
+  return <DonutChartSeries>[
+    for (final key in order)
+      DonutChartSeries.fromMap(
+        id: '$markId-$key',
+        name: key,
+        values: _radialValues(buckets[key]!, mark.category, mark.value),
+        radiusValues: mark.radius == null
+            ? const <String, num>{}
+            : _radiusValues(buckets[key]!, mark.category, mark.radius!),
+        donutStyle: mark.style ?? const DonutChartStyle(),
+        centerContent: DonutCenterContent.hidden,
+        dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+      ),
+  ];
+}
 
 void _requireScale(
   String markId,
