@@ -264,7 +264,16 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateScatterChannels(mark, markId);
-      case LineMark<T>() || AreaMark<T>() || CandlestickMark<T>():
+      case LineMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
+        _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
+      case AreaMark<T>() || CandlestickMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
           markId,
@@ -315,6 +324,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     switch (mark) {
       case LineMark<T>():
         series.add(_lowerLine(mark, markId, axis!, spec.data));
+        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
       case AreaMark<T>():
         series.add(_lowerArea(mark, markId, axis!, spec.data));
       case BarMark<T>():
@@ -512,6 +522,28 @@ List<ChartDataPoint> _xyPoints<T>(
     ChartDataPoint(x: x(row).toDouble(), y: y(row).toDouble()),
 ];
 
+/// Builds points whose OUTGOING segment carries a baked colour: point i's
+/// `segmentStyle.color` is the ramp colour of point i's channel value (the
+/// segment from i to i+1). The last point has no outgoing segment, so its
+/// segmentStyle is unused; it is still set for parity with a hand-built series.
+List<ChartDataPoint> _xyColorPoints<T>(
+  List<T> data,
+  FieldAccessor<T, num> x,
+  FieldAccessor<T, num> y,
+  Channel<T> colorBy,
+  ScatterColorEncoding encoding,
+) {
+  final colors = _bakeChannelColors(colorBy, encoding, data);
+  return <ChartDataPoint>[
+    for (var i = 0; i < data.length; i++)
+      ChartDataPoint(
+        x: x(data[i]).toDouble(),
+        y: y(data[i]).toDouble(),
+        segmentStyle: colors[i] == null ? null : SegmentStyle.color(colors[i]!),
+      ),
+  ];
+}
+
 LineChartSeries _lowerLine<T>(
   LineMark<T> mark,
   String id,
@@ -520,7 +552,9 @@ LineChartSeries _lowerLine<T>(
 ) => LineChartSeries(
   id: id,
   name: mark.name,
-  points: _xyPoints(data, mark.x, mark.y),
+  points: mark.colorBy == null
+      ? _xyPoints(data, mark.x, mark.y)
+      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,

@@ -78,6 +78,8 @@ final class LineMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    this.colorBy,
+    this.colorEncoding,
     this.strokeWidth,
     this.dashPattern,
     this.interpolation,
@@ -90,6 +92,15 @@ final class LineMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel: each segment's stroke is the ramp colour of the
+  /// leading point's value over the data's finite domain, baked at lowering
+  /// into `ChartDataPoint.segmentStyle.color`. Requires [colorEncoding].
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
 
   /// Stroke width in logical pixels. Null keeps the series default.
   final double? strokeWidth;
@@ -118,6 +129,8 @@ final class LineMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
           listEquals(other.dashPattern, dashPattern) &&
           other.interpolation == interpolation &&
@@ -132,6 +145,8 @@ final class LineMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    colorBy,
+    colorEncoding,
     strokeWidth,
     dashPattern == null ? null : Object.hashAll(dashPattern!),
     interpolation,
