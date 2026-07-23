@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.4 - 2026-07-23
+
 ### Added
 
+- Checked Chart Grammar authoring for Pie, Donut, Concentric Donut, and Polar
+  Column charts, with radial diagnostics, configuration forwarding, generated
+  source parity, single-value ring handling, and a public radial Grammar
+  showcase.
 - Selectable top, bottom, or mirrored Cartesian X-axis placement and configurable
   numeric or categorical tick-label rotation, plus exact rotation-aware
   collision thinning with configurable spacing and a show-all override.
