@@ -132,8 +132,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _selectionOffset = 6;
   double _selectionBackdropBlur = 1.25;
   Color? _selectionColor;
-  String? _selectedCategory;
-  String? _selectedSeries;
 
   static const _labelWeights = <FontWeight>[
     FontWeight.w400,
@@ -324,6 +322,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     _values = Map<String, num>.of(_standardValues);
     _comparisonValues = const {};
     _tertiaryValues = const {};
+    _applyAuthoredPresentationStyle(_PolarPresentation.standard);
   }
 
   @override
@@ -337,20 +336,17 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Polar Column',
+      title: 'Polar Column Charts',
       subtitle:
           'Compare category magnitudes on angular categories and a numeric radial axis',
-      actions: _randomizedShowcaseSelected
-          ? [
-              OutlinedButton.icon(
-                key: const ValueKey('polar-column-regenerate'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-                onPressed: _regenerateValues,
-                icon: const Icon(Icons.casino_outlined, size: 18),
-                label: const Text('Regenerate values'),
-              ),
-            ]
-          : null,
+      actions: [
+        OutlinedButton.icon(
+          key: const ValueKey('polar-column-reset-example'),
+          onPressed: _resetExample,
+          icon: const Icon(Icons.restart_alt, size: 18),
+          label: const Text('Reset example'),
+        ),
+      ],
       playground: ChartPlaygroundConfig(
         active: _randomizedShowcaseSelected,
         optionsChildren: _buildPlaygroundOptions(),
@@ -365,94 +361,85 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   Widget _buildWorkspace() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          key: const ValueKey('polar-column-showcase-scroll'),
+        final compact = constraints.maxWidth < 600;
+        final contentHeight = math.max(
+          constraints.maxHeight,
+          compact ? 1040.0 : 860.0,
+        );
+        final content = SizedBox(
+          height: contentHeight,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildPresentationSelector(),
               const SizedBox(height: 16),
-              _buildInteractionNotice(),
-              const SizedBox(height: 16),
-              _buildChartCard(),
-              const SizedBox(height: 32),
-              _buildFeatureGuide(),
-              const SizedBox(height: 32),
-              _buildCodeRecipe(),
-              const SizedBox(height: 24),
+              Expanded(child: _buildChartCard()),
             ],
           ),
+        );
+        if (contentHeight <= constraints.maxHeight) return content;
+        return SingleChildScrollView(
+          key: const ValueKey('polar-column-showcase-scroll'),
+          primary: false,
+          child: content,
         );
       },
     );
   }
 
   Widget _buildPresentationSelector() {
+    final theme = Theme.of(context);
     return Semantics(
       container: true,
       label: 'Choose a Polar Column example',
-      child: ShowcaseExampleGrid(
-        key: const ValueKey('polar-presentation-selector'),
-        children: [
-          for (final presentation in _PolarPresentation.values)
-            _PresentationCard(
-              presentation: presentation,
-              selected:
-                  !_randomizedShowcaseSelected && presentation == _presentation,
-              onPressed: () => _applyPresentation(presentation),
-            ),
-          PlaygroundExampleCard(
-            key: const ValueKey('polar-playground'),
-            selected: _randomizedShowcaseSelected,
-            onTap: () => _setPlaygroundActive(true),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInteractionNotice() {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final selection = _selectedCategory == null
-        ? 'Select a column to inspect its exact category and value.'
-        : 'Selected: ${_selectedSeries == null ? '' : '$_selectedSeries · '}$_selectedCategory. '
-              'Select it again or press Escape to clear.';
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.ads_click_outlined, color: scheme.onPrimaryContainer),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Angle finds the category; radius compares the value',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: scheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w700,
-                  ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose a Polar Column example',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$selection Use arrow keys to move between columns and Enter to select.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onPrimaryContainer,
-                    height: 1.45,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const ValueKey('polar-presentation-selector'),
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final presentation in _PolarPresentation.values)
+                    ShowcaseExampleChoiceChip(
+                      key: ValueKey('polar-presentation-${presentation.name}'),
+                      label: presentation.label,
+                      icon: presentation.icon,
+                      selected:
+                          !_randomizedShowcaseSelected &&
+                          presentation == _presentation,
+                      onSelected: () => _applyPresentation(presentation),
+                    ),
+                  PlaygroundChoiceChip(
+                    key: const ValueKey('polar-playground'),
+                    selected: _randomizedShowcaseSelected,
+                    onSelected: () => _setPlaygroundActive(true),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _randomizedShowcaseSelected
+                    ? 'Generated data and every compatible Polar Column property. Seeded playback is available in Options.'
+                    : _presentation.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -564,62 +551,63 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               ),
             ],
             const SizedBox(height: 8),
-            SizedBox(
-              key: const ValueKey('polar-column-live-chart'),
-              height: 620,
-              child: BravenChartWorkbench(
-                chartController: _chartController,
-                workbenchController: _workbenchController,
-                initialDisplayMode: ChartDisplayMode.chart,
-                availableDisplayModes: const {
-                  ChartDisplayMode.chart,
-                  ChartDisplayMode.data,
-                  ChartDisplayMode.split,
-                  ChartDisplayMode.source,
-                },
-                sourceOptions: const ChartDartSourceOptions(
-                  variableName: 'polarColumnChart',
-                ),
-                splitBreakpoint: 1,
-                splitGap: 8,
-                minimumChartPaneExtent: 360,
-                minimumTablePaneExtent: 420,
-                maximumAutoTablePaneExtent: 560,
-                autoFitTablePane: true,
-                isSplitResizable: true,
-                documentOptions: const ChartDocumentExtractOptions(
-                  includeViewState: true,
-                ),
-                tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
-                onTableRowFocused: _focusTablePoints,
-                onTableRowFocusCleared: _chartController.clearPointFocus,
-                onTableRowHoverChanged: (points) => points == null
-                    ? _chartController.clearPointFocus()
-                    : _focusTablePoints(points),
-                onTableRowActivated: _selectTablePoints,
-                chartBuilder: (context, controller) => BravenChartPlus(
-                  key: const ValueKey('polar-column-chart'),
-                  series: chartSeries,
-                  polarChartConfig: config,
-                  bravenChartController: controller,
-                  theme: chartTheme,
-                  showLegend: false,
-                  interactionConfig: InteractionConfig(
-                    tooltip: TooltipConfig(
-                      enabled: _showTooltip,
-                      triggerMode: _tooltipTrigger,
-                      preferredPosition: _tooltipPosition,
-                      offsetFromPoint: _tooltipOffset,
-                      style: TooltipStyle(
-                        backgroundColor: _effectiveTooltipBackgroundColor,
-                        borderColor: _effectiveTooltipBorderColor,
-                        borderWidth: _tooltipBorderWidth,
-                        borderRadius: _tooltipCornerRadius,
-                        textColor: _effectiveTooltipTextColor,
+            Expanded(
+              child: SizedBox(
+                key: const ValueKey('polar-column-live-chart'),
+                child: BravenChartWorkbench(
+                  chartController: _chartController,
+                  workbenchController: _workbenchController,
+                  initialDisplayMode: ChartDisplayMode.chart,
+                  availableDisplayModes: const {
+                    ChartDisplayMode.chart,
+                    ChartDisplayMode.data,
+                    ChartDisplayMode.split,
+                    ChartDisplayMode.source,
+                  },
+                  sourceOptions: const ChartDartSourceOptions(
+                    variableName: 'polarColumnChart',
+                  ),
+                  splitBreakpoint: 1,
+                  splitGap: 8,
+                  minimumChartPaneExtent: 360,
+                  minimumTablePaneExtent: 420,
+                  maximumAutoTablePaneExtent: 560,
+                  autoFitTablePane: true,
+                  isSplitResizable: true,
+                  documentOptions: const ChartDocumentExtractOptions(
+                    includeViewState: true,
+                  ),
+                  tableRefreshPolicy:
+                      ChartTableRefreshPolicy.onDocumentRevision,
+                  onTableRowFocused: _focusTablePoints,
+                  onTableRowFocusCleared: _chartController.clearPointFocus,
+                  onTableRowHoverChanged: (points) => points == null
+                      ? _chartController.clearPointFocus()
+                      : _focusTablePoints(points),
+                  onTableRowActivated: _selectTablePoints,
+                  chartBuilder: (context, controller) => BravenChartPlus(
+                    key: const ValueKey('polar-column-chart'),
+                    series: chartSeries,
+                    polarChartConfig: config,
+                    bravenChartController: controller,
+                    theme: chartTheme,
+                    showLegend: false,
+                    interactionConfig: InteractionConfig(
+                      tooltip: TooltipConfig(
+                        enabled: _showTooltip,
+                        triggerMode: _tooltipTrigger,
+                        preferredPosition: _tooltipPosition,
+                        offsetFromPoint: _tooltipOffset,
+                        style: TooltipStyle(
+                          backgroundColor: _effectiveTooltipBackgroundColor,
+                          borderColor: _effectiveTooltipBorderColor,
+                          borderWidth: _tooltipBorderWidth,
+                          borderRadius: _tooltipCornerRadius,
+                          textColor: _effectiveTooltipTextColor,
+                        ),
                       ),
                     ),
                   ),
-                  onPointTap: _handlePointActivation,
                 ),
               ),
             ),
@@ -707,39 +695,10 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     final target = points.first;
     if (_chartController.selectedPointRefs.contains(target)) {
       _chartController.clearPointSelection();
-      setState(() {
-        _selectedCategory = null;
-        _selectedSeries = null;
-      });
       return;
     }
-    final result = _chartController.selectPoints(points, revision: revision);
-    if (result case ChartArtifactSuccess<void>()) {
-      final series = _seriesForId(target.seriesId);
-      final point = target.pointIndex < series.points.length
-          ? series.points[target.pointIndex]
-          : null;
-      setState(() {
-        _selectedCategory = point?.label;
-        _selectedSeries = series.name ?? series.id;
-      });
-    }
+    _chartController.selectPoints(points, revision: revision);
   }
-
-  void _handlePointActivation(ChartDataPoint point, String seriesId) {
-    final pointIndex = point.x.round();
-    final isSelected = _chartController.selectedPointRefs.contains(
-      ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
-    );
-    final series = _seriesForId(seriesId);
-    setState(() {
-      _selectedCategory = isSelected ? point.label : null;
-      _selectedSeries = isSelected ? (series.name ?? series.id) : null;
-    });
-  }
-
-  PolarColumnChartSeries _seriesForId(String seriesId) =>
-      _buildSeriesList().firstWhere((series) => series.id == seriesId);
 
   List<PolarColumnChartSeries> _buildSeriesList() {
     final palette = _categoryColors;
@@ -1186,8 +1145,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       _selectionOffset = generated.selectionOffset;
       _selectionBackdropBlur = generated.selectionBackdropBlur;
       _selectionColor = generated.selectionColor;
-      _selectedCategory = null;
-      _selectedSeries = null;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _chartController.replayRadialEntrance();
@@ -2156,146 +2113,232 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     ),
   ];
 
-  Widget _buildFeatureGuide() {
-    final items = const [
-      (
-        Icons.rotate_right_outlined,
-        'Category owns angle',
-        'Every category receives a stable angular band. Value never changes its width.',
-      ),
-      (
-        Icons.straighten_outlined,
-        'Value owns radius',
-        'A numeric radial scale makes magnitudes comparable instead of converting them into shares.',
-      ),
-      (
-        Icons.nightlight_round,
-        'Rose is area-correct',
-        'The Nightingale preset maps values to annular-sector area by default.',
-      ),
-      (
-        Icons.layers_outlined,
-        'Layers share one scale',
-        'Compatible series can compare observed and reference values in the same category bands.',
-      ),
-      (
-        Icons.view_week_outlined,
-        'Groups divide the band',
-        'Each series receives a stable angular sub-band while the category and radial scale stay shared.',
-      ),
-      (
-        Icons.stacked_bar_chart_outlined,
-        'Stacks diverge from zero',
-        'Positive and negative contributors accumulate independently without cancelling each other.',
-      ),
-      (
-        Icons.flag_outlined,
-        'Targets stay category-bound',
-        'Per-category target ticks keep their identity through selection, transport, tables, and source generation.',
-      ),
-      (
-        Icons.radar_outlined,
-        'Thresholds span the pane',
-        'A threshold ring communicates one absolute reference value across every angular category.',
-      ),
-      (
-        Icons.vertical_align_center_outlined,
-        'Intervals stay scale-bound',
-        'Absolute lower and upper values render as radial whiskers or compact annular range bands.',
-      ),
-    ];
-    return _Section(
-      eyebrow: 'FEATURE GUIDE',
-      title: 'An axis-based radial chart—not a Pie chart',
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth < 720
-              ? 1
-              : constraints.maxWidth < 900
-              ? 2
-              : 3;
-          const gap = 12.0;
-          final cardWidth =
-              (constraints.maxWidth - (columns - 1) * gap) / columns;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final (index, item) in items.indexed)
-                SizedBox(
-                  key: ValueKey('polar-feature-card-$index'),
-                  width: cardWidth,
-                  child: _FeatureCard(
-                    icon: item.$1,
-                    title: item.$2,
-                    body: item.$3,
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
+  void _resetExample() {
+    if (_randomizedShowcaseSelected) {
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _applyPresentation(_presentation);
   }
 
-  Widget _buildCodeRecipe() => const _Section(
-    eyebrow: 'HOW TO USE IT',
-    title: 'Attach targets, thresholds, and absolute uncertainty intervals',
-    child: _CodeBlock(
-      code: '''final volume = PolarColumnChartSeries.fromMap(
-  id: 'volume',
-  values: const {'Search': 74, 'Social': 56, 'Partners': 83},
-  targets: const {'Search': 78, 'Social': 62, 'Partners': 80},
-  intervals: const {
-    'Search': PolarColumnInterval(lower: 66, upper: 84),
-    'Social': PolarColumnInterval(lower: 48, upper: 67),
-  },
-  unit: 'orders',
-  targetMarkerStyle: const PolarColumnTargetMarkerStyle(
-    color: Color(0xFFF59E0B),
-    width: 3,
-    lengthFactor: 0.68,
-  ),
-  intervalStyle: const PolarColumnIntervalStyle(
-    display: PolarColumnIntervalDisplay.whisker,
-    width: 2,
-  ),
-  polarStyle: const PolarColumnStyle(
-    dataLabelRadialPosition: 0.65,
-    gradient: PolarColumnGradientStyle(),
-    shadow: PolarColumnShadowStyle(
-      blurRadius: 8,
-      offset: Offset(0, 4),
-    ),
-    animationMode: PolarColumnAnimationMode.sweep,
-  ),
-);
+  void _applyAuthoredPresentationStyle(_PolarPresentation presentation) {
+    _themePreset = _PolarThemePreset.light;
+    _palette = _PolarPalette.theme;
+    _canvasColor = null;
+    _axisLineColor = null;
+    _axisLabelColor = null;
+    _axisLineWidth = 1;
+    _axisLabelSize = 12;
+    _gridLineColor = null;
+    _gridLineWidth = 0.75;
+    _gridLinePattern = _PolarLinePattern.solid;
+    _columnBorderColor = null;
+    _columnBorderWidth = 0.75;
 
-BravenChartPlus(
-  series: [volume],
-  polarChartConfig: const PolarChartConfig(
-    pane: PolarPaneConfig(startAngleDegrees: -90),
-    angularAxis: PolarCategoryAxisConfig(
-      innerPadding: 0.12,
-      labelOffset: 8,
-      labelStyle: PolarLabelStyle(fontSize: 12),
-    ),
-    radialAxis: PolarNumericAxisConfig(
-      tickCount: 5,
-      labelPosition: PolarRadialLabelPosition.end,
-      labelOffset: 6,
-    ),
-    thresholds: [
-      PolarThreshold(
-        value: 80,
-        label: 'Capacity',
-        color: Color(0xFFDC2626),
-      ),
-    ],
-  ),
-);''',
-    ),
-  );
+    _showAngularLabels = true;
+    _showAngularGrid = true;
+    _maximumAngularLabels = 24;
+    _maximumAngularGridLines = 72;
+    _showRadialLabels = true;
+    _showRadialGrid = true;
+    _tickCount = 5;
+    _showValues = true;
+    _maximumDataLabels = 24;
+    _categoryLabelOffset = 4;
+    _categoryLabelColor = null;
+    _categoryLabelSize = 12;
+    _categoryLabelWeight = FontWeight.w500;
+    _valueLabelRadialPosition = 0.56;
+    _valueLabelColor = null;
+    _valueLabelSize = 11;
+    _valueLabelWeight = FontWeight.w700;
+    _radialLabelPosition = PolarRadialLabelPosition.start;
+    _radialLabelAngleOffset = 0;
+    _radialLabelOffset = 4;
+    _radialLabelColor = null;
+    _radialLabelSize = 10;
+    _radialLabelWeight = FontWeight.w500;
+
+    _opacity = 0.94;
+    _showGradient = false;
+    _gradientStartColor = null;
+    _gradientEndColor = null;
+    _gradientStartLightness = 0.16;
+    _gradientEndLightness = -0.12;
+    _showColumnShadow = false;
+    _columnShadowColor = null;
+    _columnShadowBlur = 8;
+    _columnShadowSpread = 0;
+    _columnShadowOffsetX = 0;
+    _columnShadowOffsetY = 4;
+    _columnShadowOpacity = 0.24;
+    _animationMode = PolarColumnAnimationMode.sweep;
+
+    _showTargets = presentation == _PolarPresentation.references;
+    _showThreshold = presentation == _PolarPresentation.references;
+    _showIntervals = presentation == _PolarPresentation.intervals;
+    _targetColor = null;
+    _targetOpacity = 1;
+    _thresholdColor = null;
+    _thresholdWidth = 2;
+    _thresholdPattern = _PolarLinePattern.dashed;
+    _intervalColor = null;
+    _intervalOpacity = 0.92;
+
+    _tooltipBackgroundColor = null;
+    _tooltipTextColor = null;
+    _tooltipBorderColor = null;
+
+    switch (presentation) {
+      case _PolarPresentation.standard:
+        _palette = _PolarPalette.ocean;
+        _canvasColor = const Color(0xFFF8FAFC);
+        _axisLineColor = const Color(0xFF334155);
+        _axisLabelColor = const Color(0xFF334155);
+        _gridLineColor = const Color(0xFFCBD5E1);
+        _categoryLabelColor = const Color(0xFF1E293B);
+        _radialLabelColor = const Color(0xFF475569);
+        _columnBorderColor = const Color(0xFF1E3A5F);
+        _animationMode = PolarColumnAnimationMode.grow;
+        _opacity = 0.97;
+      case _PolarPresentation.rose:
+        _themePreset = _PolarThemePreset.dark;
+        _palette = _PolarPalette.sunset;
+        _canvasColor = const Color(0xFF111827);
+        _axisLineColor = const Color(0xFFFBBF24);
+        _axisLabelColor = const Color(0xFFFDE68A);
+        _gridLineColor = const Color(0xFF64748B);
+        _gridLineWidth = 0.7;
+        _gridLinePattern = _PolarLinePattern.dotted;
+        _categoryLabelColor = const Color(0xFFF8FAFC);
+        _valueLabelColor = const Color(0xFFFFF7ED);
+        _radialLabelColor = const Color(0xFFFDE68A);
+        _columnBorderColor = const Color(0xFFF59E0B);
+        _showGradient = true;
+        _gradientStartLightness = 0.24;
+        _gradientEndLightness = -0.18;
+        _showColumnShadow = true;
+        _columnShadowColor = const Color(0xFF000000);
+        _columnShadowBlur = 12;
+        _columnShadowOffsetY = 5;
+        _columnShadowOpacity = 0.38;
+        _animationMode = PolarColumnAnimationMode.sweep;
+        _opacity = 0.98;
+      case _PolarPresentation.partial:
+        _themePreset = _PolarThemePreset.minimal;
+        _palette = _PolarPalette.earth;
+        _canvasColor = const Color(0xFFFFF7ED);
+        _axisLineColor = const Color(0xFF9A3412);
+        _axisLabelColor = const Color(0xFF7C2D12);
+        _gridLineColor = const Color(0xFFFDBA74);
+        _gridLineWidth = 0.9;
+        _gridLinePattern = _PolarLinePattern.dashed;
+        _categoryLabelColor = const Color(0xFF7C2D12);
+        _valueLabelColor = const Color(0xFF431407);
+        _radialLabelColor = const Color(0xFF9A3412);
+        _columnBorderColor = const Color(0xFF7C2D12);
+        _showGradient = true;
+        _gradientStartLightness = 0.28;
+        _gradientEndLightness = -0.08;
+        _showColumnShadow = true;
+        _columnShadowColor = const Color(0xFF9A3412);
+        _columnShadowBlur = 10;
+        _columnShadowOffsetY = 3;
+        _columnShadowOpacity = 0.18;
+        _animationMode = PolarColumnAnimationMode.fade;
+        _opacity = 0.86;
+      case _PolarPresentation.layered:
+        _themePreset = _PolarThemePreset.corporate;
+        _palette = _PolarPalette.ocean;
+        _canvasColor = const Color(0xFFEFF6FF);
+        _axisLineColor = const Color(0xFF1E3A8A);
+        _axisLabelColor = const Color(0xFF1E3A8A);
+        _gridLineColor = const Color(0xFF93C5FD);
+        _gridLinePattern = _PolarLinePattern.dotted;
+        _categoryLabelColor = const Color(0xFF1E3A8A);
+        _radialLabelColor = const Color(0xFF1D4ED8);
+        _columnBorderColor = const Color(0xFF1E40AF);
+        _animationMode = PolarColumnAnimationMode.grow;
+        _opacity = 0.92;
+      case _PolarPresentation.grouped:
+        _themePreset = _PolarThemePreset.vibrant;
+        _palette = _PolarPalette.sunset;
+        _canvasColor = const Color(0xFFFFFBEB);
+        _axisLineColor = const Color(0xFF92400E);
+        _axisLabelColor = const Color(0xFF92400E);
+        _gridLineColor = const Color(0xFFFDE68A);
+        _gridLineWidth = 1;
+        _categoryLabelColor = const Color(0xFF78350F);
+        _radialLabelColor = const Color(0xFF92400E);
+        _columnBorderColor = const Color(0xFF7C2D12);
+        _showGradient = true;
+        _gradientStartLightness = 0.18;
+        _gradientEndLightness = -0.16;
+        _showColumnShadow = true;
+        _columnShadowColor = const Color(0xFF92400E);
+        _columnShadowBlur = 7;
+        _columnShadowOffsetY = 2;
+        _columnShadowOpacity = 0.16;
+        _animationMode = PolarColumnAnimationMode.grow;
+        _opacity = 0.92;
+      case _PolarPresentation.stacked:
+        _themePreset = _PolarThemePreset.dark;
+        _palette = _PolarPalette.ocean;
+        _canvasColor = const Color(0xFF0F172A);
+        _axisLineColor = const Color(0xFF38BDF8);
+        _axisLabelColor = const Color(0xFFE0F2FE);
+        _gridLineColor = const Color(0xFF475569);
+        _gridLineWidth = 0.8;
+        _gridLinePattern = _PolarLinePattern.dashed;
+        _categoryLabelColor = const Color(0xFFE0F2FE);
+        _valueLabelColor = const Color(0xFFF8FAFC);
+        _radialLabelColor = const Color(0xFFBAE6FD);
+        _columnBorderColor = const Color(0xFF7DD3FC);
+        _showGradient = true;
+        _gradientStartLightness = 0.2;
+        _gradientEndLightness = -0.2;
+        _showColumnShadow = true;
+        _columnShadowColor = const Color(0xFF000000);
+        _columnShadowBlur = 10;
+        _columnShadowOffsetY = 4;
+        _columnShadowOpacity = 0.42;
+        _animationMode = PolarColumnAnimationMode.sweep;
+        _opacity = 0.97;
+      case _PolarPresentation.references:
+        _themePreset = _PolarThemePreset.colorblind;
+        _palette = _PolarPalette.theme;
+        _canvasColor = const Color(0xFFF8FAFC);
+        _axisLineColor = const Color(0xFF334155);
+        _axisLabelColor = const Color(0xFF334155);
+        _gridLineColor = const Color(0xFFCBD5E1);
+        _gridLinePattern = _PolarLinePattern.dotted;
+        _categoryLabelColor = const Color(0xFF1F2937);
+        _radialLabelColor = const Color(0xFF475569);
+        _columnBorderColor = const Color(0xFF334155);
+        _targetColor = const Color(0xFFF59E0B);
+        _thresholdColor = const Color(0xFFDC2626);
+        _animationMode = PolarColumnAnimationMode.grow;
+        _opacity = 0.9;
+      case _PolarPresentation.intervals:
+        _themePreset = _PolarThemePreset.minimal;
+        _palette = _PolarPalette.ocean;
+        _canvasColor = const Color(0xFFF1F5F9);
+        _axisLineColor = const Color(0xFF475569);
+        _axisLabelColor = const Color(0xFF334155);
+        _gridLineColor = const Color(0xFF94A3B8);
+        _gridLineWidth = 0.8;
+        _gridLinePattern = _PolarLinePattern.dashed;
+        _categoryLabelColor = const Color(0xFF334155);
+        _radialLabelColor = const Color(0xFF475569);
+        _columnBorderColor = const Color(0xFF1E3A8A);
+        _intervalColor = const Color(0xFF0F172A);
+        _showGradient = true;
+        _gradientStartLightness = 0.22;
+        _gradientEndLightness = -0.14;
+        _animationMode = PolarColumnAnimationMode.fade;
+        _opacity = 0.78;
+    }
+  }
 
   void _applyPresentation(
     _PolarPresentation presentation, {
@@ -2311,10 +2354,9 @@ BravenChartPlus(
         _authoredPresentation = presentation;
       }
       _presentation = presentation;
-      _selectedCategory = null;
-      _selectedSeries = null;
       _comparisonValues = const {};
       _tertiaryValues = const {};
+      _applyAuthoredPresentationStyle(presentation);
       _cornerRadiusMode = presentation == _PolarPresentation.stacked
           ? PolarColumnCornerRadiusMode.stackExterior
           : PolarColumnCornerRadiusMode.outerEnd;
@@ -2451,6 +2493,9 @@ BravenChartPlus(
           _intervalBandLength = 0.58;
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _chartController.replayRadialEntrance();
+    });
   }
 
   void _setPlaygroundActive(bool active) {
@@ -2471,8 +2516,6 @@ BravenChartPlus(
   void _setCategoryCount(int count) {
     setState(() {
       _categoryCount = count;
-      _selectedCategory = null;
-      _selectedSeries = null;
       if (_presentation == _PolarPresentation.layered) {
         final generated = _randomLayeredValues(count);
         _values = generated.$1;
@@ -2498,39 +2541,6 @@ BravenChartPlus(
         _tertiaryValues = generated.$3;
       } else {
         _values = _randomValues(count);
-      }
-    });
-  }
-
-  void _regenerateValues() {
-    setState(() {
-      _selectedCategory = null;
-      _selectedSeries = null;
-      if (_presentation == _PolarPresentation.layered) {
-        final generated = _randomLayeredValues(_categoryCount);
-        _values = generated.$1;
-        _comparisonValues = generated.$2;
-      } else if (_presentation == _PolarPresentation.grouped) {
-        final generated = _randomGroupedValues(_categoryCount);
-        _values = generated.$1;
-        _comparisonValues = generated.$2;
-        _tertiaryValues = generated.$3;
-      } else if (_presentation == _PolarPresentation.stacked) {
-        final generated = _randomStackedValues(_categoryCount);
-        _values = generated.$1;
-        _comparisonValues = generated.$2;
-        _tertiaryValues = generated.$3;
-      } else if (_presentation == _PolarPresentation.references) {
-        final generated = _randomReferenceValues(_categoryCount);
-        _values = generated.$1;
-        _comparisonValues = generated.$2;
-      } else if (_presentation == _PolarPresentation.intervals) {
-        final generated = _randomIntervalValues(_categoryCount);
-        _values = generated.$1;
-        _comparisonValues = generated.$2;
-        _tertiaryValues = generated.$3;
-      } else {
-        _values = _randomValues(_categoryCount);
       }
     });
   }
@@ -2711,31 +2721,6 @@ enum _PolarPresentation {
   final String chartSubtitle;
 }
 
-class _PresentationCard extends StatelessWidget {
-  const _PresentationCard({
-    required this.presentation,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final _PolarPresentation presentation;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return ShowcaseExampleCard(
-      key: ValueKey('polar-presentation-${presentation.name}'),
-      title: presentation.label,
-      description: presentation.description,
-      icon: presentation.icon,
-      selected: selected,
-      onTap: onPressed,
-      semanticsLabel: 'Apply ${presentation.label} Polar Column example',
-    );
-  }
-}
-
 class _MetricChip extends StatelessWidget {
   const _MetricChip({required this.label});
 
@@ -2776,45 +2761,6 @@ class _SeriesKey extends StatelessWidget {
   );
 }
 
-class _Section extends StatelessWidget {
-  const _Section({
-    required this.eyebrow,
-    required this.title,
-    required this.child,
-  });
-
-  final String eyebrow;
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          eyebrow,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 16),
-        child,
-      ],
-    );
-  }
-}
-
 class _PolarColorOption extends StatelessWidget {
   const _PolarColorOption({
     required this.label,
@@ -2850,91 +2796,6 @@ class _PolarColorOption extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
-    );
-  }
-}
-
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 19, color: theme.colorScheme.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 29),
-            child: Text(
-              body,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CodeBlock extends StatelessWidget {
-  const _CodeBlock({required this.code});
-
-  final String code;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF111827) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: SelectableText(
-        code,
-        style: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 12,
-          height: 1.5,
-          color: dark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-        ),
-      ),
     );
   }
 }

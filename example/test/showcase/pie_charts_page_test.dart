@@ -81,7 +81,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Pie Charts'), findsOneWidget);
-    expect(find.text('Choose a presentation'), findsOneWidget);
+    expect(find.text('Choose a Pie chart example'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-preset-simple')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-preset-editorial')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-preset-compact')), findsOneWidget);
@@ -99,6 +99,14 @@ void main() {
     expect(find.byKey(const ValueKey('pie-dataset-countries')), findsOneWidget);
     expect(find.text('Try slice interaction'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-legend-item-0')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('pie-example-picker'))).height,
+      lessThan(390),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('pie-showcase-card'))).dy,
+      lessThan(520),
+    );
     final initialChart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('pie-showcase-chart')),
     );

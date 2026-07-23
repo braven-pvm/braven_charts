@@ -687,6 +687,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
     return ChartPageLayout(
       title: 'Pie Charts',
       subtitle: 'Explain how categories contribute to one meaningful whole',
+      actions: [
+        OutlinedButton.icon(
+          key: const ValueKey('pie-reset-example'),
+          onPressed: _resetExample,
+          icon: const Icon(Icons.restart_alt, size: 18),
+          label: const Text('Reset example'),
+        ),
+      ],
       optionsChildren: _buildOptions(),
       playground: ChartPlaygroundConfig(
         active: _playgroundActive,
@@ -1549,6 +1557,16 @@ class _PieChartsPageState extends State<PieChartsPage> {
 
   List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
+  void _resetExample() {
+    if (_playgroundActive) {
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    final dataset = _dataset;
+    _applyShowcasePreset(_showcasePreset);
+    _selectDataset(dataset);
+  }
+
   Widget _buildWorkspace() {
     return ListenableBuilder(
       listenable: _optionsController,
@@ -1561,18 +1579,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPresentationHeader(),
-                  const SizedBox(height: 8),
-                  _buildPresentationSelector(compact: compact),
-                  const SizedBox(height: 20),
-                  _buildDatasetHeader(compact: compact),
-                  const SizedBox(height: 8),
-                  _buildDatasetSelector(compact: compact),
-                  const SizedBox(height: 16),
-                  _buildInteractionGuide(),
+                  _buildExamplePicker(),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: compact ? 680 : 640,
+                    height: compact ? 680 : 660,
                     child: ChartCard(
                       key: const ValueKey('pie-showcase-card'),
                       title: _dataset.title,
@@ -2026,58 +2036,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
     );
   }
 
-  Widget _buildInteractionGuide() {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.touch_app_outlined, color: colors.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedCategory == null
-                      ? 'Try slice interaction'
-                      : 'Selected: $_selectedCategory',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _interactionGuideText,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_selectedCategory != null)
-            IconButton(
-              tooltip: 'Clear slice selection',
-              onPressed: () {
-                _chartController.clearPointSelection();
-                setState(() => _selectedCategory = null);
-              },
-              icon: const Icon(Icons.close),
-            ),
-        ],
-      ),
-    );
-  }
-
   void _handlePointActivation(ChartDataPoint point, String seriesId) {
     final pointIndex = point.x.round();
     final isSelected = _chartController.selectedPointRefs.contains(
@@ -2101,173 +2059,190 @@ class _PieChartsPageState extends State<PieChartsPage> {
     return 'Hover for details. Select a slice, legend item, or table row to explode it. With chart focus, use arrow keys to move, Enter to select, and Escape to clear.';
   }
 
-  Widget _buildPresentationHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Choose a presentation',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'Apply a complete, production-shaped configuration, then refine every detail in Options.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPresentationSelector({required bool compact}) {
-    return ShowcaseExampleGrid(
-      key: const ValueKey('pie-presentation-selector'),
-      children: [
-        for (final preset in _PieShowcasePreset.values)
-          _presentationCard(preset),
-        PlaygroundExampleCard(
-          key: const ValueKey('pie-playground'),
-          selected: _playgroundActive,
-          onTap: () => _setPlaygroundActive(true),
-        ),
-      ],
-    );
-  }
-
-  Widget _presentationCard(_PieShowcasePreset preset) {
-    final selected = !_playgroundActive && preset == _showcasePreset;
-    return ShowcaseExampleCard(
-      key: ValueKey('pie-preset-${preset.name}'),
-      title: _presentationName(preset),
-      description: _presentationDescription(preset),
-      icon: _presentationIcon(preset),
-      selected: selected,
-      onTap: () => _applyShowcasePreset(preset),
-      semanticsLabel: 'Apply ${_presentationName(preset)} pie presentation',
-    );
-  }
-
-  Widget _buildDatasetHeader({required bool compact}) {
-    final title = Text(
-      'Choose a category story',
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-    );
-    final action = ElevatedButton.icon(
-      key: const ValueKey('regenerate-pie-values'),
-      style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
-      onPressed: _regenerateValues,
-      icon: const Icon(Icons.casino_outlined, size: 18),
-      label: const Text('Regenerate values'),
-    );
-
-    if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [title, const SizedBox(height: 8), action],
-      );
-    }
-    return Row(
-      children: [
-        Expanded(child: title),
-        const SizedBox(width: 16),
-        action,
-      ],
-    );
-  }
-
-  Widget _buildDatasetSelector({required bool compact}) {
-    const spacing = 12.0;
-    if (compact) {
-      return SizedBox(
-        height: 118,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: _PieDataset.values.length,
-          separatorBuilder: (_, _) => const SizedBox(width: spacing),
-          itemBuilder: (context, index) {
-            final dataset = _PieDataset.values[index];
-            return SizedBox(width: 210, child: _datasetCard(dataset));
-          },
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        for (final (index, dataset) in _PieDataset.values.indexed) ...[
-          if (index > 0) const SizedBox(width: spacing),
-          Expanded(child: _datasetCard(dataset)),
-        ],
-      ],
-    );
-  }
-
-  Widget _datasetCard(_PieDataset dataset) {
-    final colors = Theme.of(context).colorScheme;
-    final selected = !_playgroundActive && dataset == _dataset;
+  Widget _buildExamplePicker() {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Semantics(
-      button: true,
-      selected: selected,
-      label: 'Show ${dataset.title}',
-      child: Material(
-        color: selected
-            ? colors.primaryContainer.withValues(alpha: 0.42)
-            : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: ValueKey('pie-dataset-${dataset.name}'),
-          onTap: () => _selectDataset(dataset),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        dataset.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+      container: true,
+      label: 'Choose a Pie chart example',
+      child: Card(
+        key: const ValueKey('pie-example-picker'),
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 400;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Choose a Pie chart example',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      if (compact)
+                        Tooltip(
+                          message: 'Regenerate values',
+                          child: ElevatedButton(
+                            key: const ValueKey('regenerate-pie-values'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.square(40),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: _regenerateValues,
+                            child: const Icon(Icons.casino_outlined, size: 18),
+                          ),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          key: const ValueKey('regenerate-pie-values'),
+                          onPressed: _regenerateValues,
+                          icon: const Icon(Icons.casino_outlined, size: 17),
+                          label: const Text('Regenerate'),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const ValueKey('pie-presentation-selector'),
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final preset in _PieShowcasePreset.values)
+                    ShowcaseExampleChoiceChip(
+                      key: ValueKey('pie-preset-${preset.name}'),
+                      label: _presentationName(preset),
+                      icon: _presentationIcon(preset),
+                      selected: !_playgroundActive && preset == _showcasePreset,
+                      onSelected: () => _applyShowcasePreset(preset),
                     ),
-                    if (selected)
-                      Icon(Icons.check_circle, size: 18, color: colors.primary),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  dataset.selectorDescription,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.35,
+                  PlaygroundChoiceChip(
+                    key: const ValueKey('pie-playground'),
+                    selected: _playgroundActive,
+                    onSelected: () => _setPlaygroundActive(true),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _playgroundActive
+                    ? 'Generated data and every compatible Pie property. Seeded playback is available in Options.'
+                    : _presentationDescription(_showcasePreset),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Choose a category story',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                key: const ValueKey('pie-dataset-selector'),
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final dataset in _PieDataset.values)
+                    ShowcaseExampleChoiceChip(
+                      key: ValueKey('pie-dataset-${dataset.name}'),
+                      label: dataset.title,
+                      icon: _datasetIcon(dataset),
+                      selected: !_playgroundActive && dataset == _dataset,
+                      onSelected: () => _selectDataset(dataset),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _dataset.selectorDescription,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final heading = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.touch_app_outlined,
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _selectedCategory == null
+                              ? 'Try slice interaction'
+                              : 'Selected: $_selectedCategory',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (_selectedCategory != null)
+                        IconButton(
+                          tooltip: 'Clear slice selection',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            _chartController.clearPointSelection();
+                            setState(() => _selectedCategory = null);
+                          },
+                          icon: const Icon(Icons.close, size: 18),
+                        ),
+                    ],
+                  );
+                  final detail = Text(
+                    _interactionGuideText,
+                    maxLines: constraints.maxWidth < 520 ? 3 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  );
+                  if (constraints.maxWidth < 520) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [heading, const SizedBox(height: 4), detail],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      heading,
+                      const SizedBox(width: 8),
+                      Expanded(child: detail),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  IconData _datasetIcon(_PieDataset dataset) => switch (dataset) {
+    _PieDataset.revenue => Icons.pie_chart_outline,
+    _PieDataset.effort => Icons.workspaces_outline,
+    _PieDataset.support => Icons.support_agent_outlined,
+    _PieDataset.countries => Icons.public_outlined,
+  };
 
   Widget _buildFeatureGuide() {
     return Column(
