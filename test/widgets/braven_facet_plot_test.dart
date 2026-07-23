@@ -8,6 +8,8 @@
 library;
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -121,5 +123,95 @@ void main() {
         GrammarDiagnosticCode.facetPanelCapExceeded,
       ),
     );
+  });
+
+  group('synchronized interaction', () {
+    List<BravenPlot<Row>> panelPlots(WidgetTester tester) =>
+        tester.widgetList<BravenPlot<Row>>(find.byType(BravenPlot<Row>)).toList();
+
+    testWidgets('fixed scales wire every panel to ONE shared controller', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const BravenFacetPlot<Row>(
+            PlotSpec<Row>(
+              data: rows,
+              marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+              facet: FacetSpec<Row>(by: rowZone),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controllers =
+          panelPlots(tester).map((p) => p.interactionGroupController).toSet();
+      expect(controllers, hasLength(1));
+      expect(controllers.single, isNotNull);
+    });
+
+    testWidgets('freeX / free leave the panels independent (no controller)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const BravenFacetPlot<Row>(
+            PlotSpec<Row>(
+              data: rows,
+              marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+              facet: FacetSpec<Row>(by: rowZone, scales: FacetScales.free),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        panelPlots(tester).every((p) => p.interactionGroupController == null),
+        isTrue,
+      );
+    });
+
+    testWidgets('a crosshair-x driven on one panel reflects on the shared '
+        'controller', (tester) async {
+      await tester.pumpWidget(
+        host(
+          const BravenFacetPlot<Row>(
+            PlotSpec<Row>(
+              data: rows,
+              marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+              facet: FacetSpec<Row>(by: rowZone),
+              interaction: InteractionConfig(
+                crosshair: CrosshairConfig(
+                  displayMode: CrosshairDisplayMode.tracking,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller = panelPlots(tester).first.interactionGroupController!;
+      final renderFinder = find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      );
+      final renderBox = tester.firstRenderObject<ChartRenderBox>(renderFinder);
+      const dataX = 1.0;
+      final local = renderBox.plotToWidget(
+        renderBox.transform!.dataToPlot(
+          dataX,
+          (renderBox.transform!.dataYMin + renderBox.transform!.dataYMax) / 2,
+        ),
+      );
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(tester.getTopLeft(renderFinder.first) + local);
+      await tester.pump();
+
+      expect(controller.cursorX, closeTo(dataX, 0.0001));
+    });
   });
 }
