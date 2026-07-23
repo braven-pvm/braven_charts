@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.3 - 2026-07-23
+
+### Added
+
+- Browse and Explore touch profiles for phone and tablet charts, including
+  touch pan, focal-point pinch zoom, selection arbitration, controller
+  viewport actions, and long-press tracking scrub with optional haptics.
+- A responsive Mobile Interaction showcase covering the new touch profiles,
+  gesture controls, selection, tracking, and viewport behavior.
+
+### Changed
+
+- Exposed touch interaction configuration through artifacts, generated source,
+  fluent modifiers, and AI surfaces.
+- Hardened cross-family gesture ownership, tracking cleanup, callbacks,
+  semantics, context-menu precedence, and rebuild behavior.
+
 ## 0.13.2 - 2026-07-23
 
 ### Fixed
