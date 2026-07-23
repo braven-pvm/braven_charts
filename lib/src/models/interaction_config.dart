@@ -1309,6 +1309,37 @@ class InteractionConfig {
     keyboardZoomPercent: 25,
   );
 
+  /// Creates a focused tap interaction profile without navigation gestures.
+  ///
+  /// This profile is useful for compact dashboards and touch-first charts:
+  /// crosshair tracking, zoom, pan, scrollbars, keyboard navigation, and hover
+  /// focus are disabled. Callers independently choose whether tapping shows a
+  /// data-point tooltip, creates a durable selection, or does both.
+  ///
+  /// Use [InteractionConfig.none] when the chart must be completely static.
+  factory InteractionConfig.tap({
+    bool enableTooltip = true,
+    bool enableSelection = true,
+    ChartSelectionConfig selection = const ChartSelectionConfig(),
+  }) => InteractionConfig(
+    enabled: true,
+    crosshair: const CrosshairConfig(enabled: false),
+    tooltip: TooltipConfig(
+      enabled: enableTooltip,
+      triggerMode: TooltipTriggerMode.tap,
+    ),
+    keyboard: const KeyboardConfig(enabled: false),
+    enableZoom: false,
+    enablePan: false,
+    enableSelection: enableSelection,
+    selection: selection,
+    valueSummary: const CartesianValueSummaryConfig(enabled: false),
+    showFocusBorder: false,
+    enableFocusOnHover: false,
+    showXScrollbar: false,
+    showYScrollbar: false,
+  );
+
   /// Creates a configuration with all interaction features disabled.
   ///
   /// This factory disables all interactions, useful for static/non-interactive

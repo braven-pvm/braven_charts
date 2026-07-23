@@ -80,6 +80,62 @@ void main() {
       expect(hoveredSeriesId == null || hoveredSeriesId != null, isTrue);
     });
 
+    testWidgets('master interaction opt-out blocks Cartesian pointer input', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      ChartDataPoint? tappedPoint;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 520,
+              height: 360,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: false,
+                interactionConfig: InteractionConfig.none(),
+                series: const [
+                  LineChartSeries(
+                    id: 'signal',
+                    showDataPointMarkers: true,
+                    points: [
+                      ChartDataPoint(x: 0, y: 5),
+                      ChartDataPoint(x: 10, y: 7),
+                    ],
+                  ),
+                ],
+                onPointTap: (point, _) => tappedPoint = point,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderFinder = _chartRenderFinder();
+      final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      final line = renderBox.debugElements.whereType<SeriesElement>().single;
+      final target =
+          tester.getTopLeft(renderFinder) +
+          renderBox.plotToWidget(line.dataToCurrentPlot(0, 5));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(target);
+      await mouse.down(target);
+      await mouse.up();
+      await tester.pumpAndSettle();
+
+      expect(renderBox.coordinator.hoveredElement, isNull);
+      expect(renderBox.coordinator.hoveredMarker, isNull);
+      expect(renderBox.coordinator.pressedMarker, isNull);
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(tappedPoint, isNull);
+    });
+
     testWidgets(
       'whole-series Line selection uses a forgiving hover and tap corridor',
       (tester) async {
