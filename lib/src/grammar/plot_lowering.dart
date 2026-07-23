@@ -161,11 +161,14 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// * A mark without an `id` becomes `mark-<index>`, counting trend marks, so
 ///   ids are stable against restyling and unaffected by which marks are
 ///   geometries.
-/// * Nothing is dropped or defaulted silently: anything the config surface
-///   cannot express raises a [GrammarSpecException] with a
+/// * Nothing the config surface cannot express is dropped or defaulted
+///   silently: it raises a [GrammarSpecException] with a
 ///   [GrammarDiagnosticCode]. This is symmetric — a channel without its
 ///   encoding AND an encoding with no channel to drive it both raise, rather
-///   than one throwing and the other going quietly inert.
+///   than one throwing and the other going quietly inert. The one sanctioned
+///   collapse is a radial geom's duplicate categories: lowering routes through
+///   the families' `fromMap` (see [_radialValues]), so two rows with the same
+///   category collapse last-row-wins rather than raising.
 ///
 /// ## Non-finite values
 ///
@@ -811,10 +814,24 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
       series.add(_lowerDonut<T>(mark, markId, spec.data));
     } else {
       final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
-      series.addAll(rings);
-      concentric = mark.center == null
-          ? const ConcentricDonutConfig()
-          : ConcentricDonutConfig(centerContent: mark.center!);
+      if (rings.length == 1) {
+        // A single-value ring collapses to a plain donut. The render path only
+        // reads `ConcentricDonutConfig.centerContent` when more than one donut
+        // series is present, so the lone ring must carry the mark's center on
+        // itself — exactly like the ring-less donut path — or the center is
+        // silently hidden.
+        series.add(
+          rings.single.copyWith(
+            centerContent: mark.center ?? DonutCenterContent.hidden,
+          ),
+        );
+        concentric = const ConcentricDonutConfig();
+      } else {
+        series.addAll(rings);
+        concentric = mark.center == null
+            ? const ConcentricDonutConfig()
+            : ConcentricDonutConfig(centerContent: mark.center!);
+      }
     }
   } else if (mark is PolarMark<T>) {
     series.add(_lowerPolar<T>(mark, markId, spec.data));

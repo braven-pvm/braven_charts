@@ -245,6 +245,22 @@ void main() {
       );
     });
 
+    test('a yAxes entry on a radial spec raises axisOptionOnRadialSpec', () {
+      // yAxes cannot be const (YAxisConfig's public ctor is non-const), so the
+      // spec is built non-const while the marks list stays const.
+      final spec = PlotSpec<Fruit>(
+        data: fruits,
+        marks: const <Mark<Fruit>>[
+          PieMark<Fruit>(category: fruitName, value: fruitCount),
+        ],
+        yAxes: <YAxisConfig>[YAxisConfig(position: YAxisPosition.left)],
+      );
+      expect(
+        spec.lower,
+        throwsGrammarCode(GrammarDiagnosticCode.axisOptionOnRadialSpec),
+      );
+    });
+
     test('all-blank category labels raise emptyRadialCategories', () {
       expect(
         () => (const PlotSpec<Fruit>(
@@ -408,6 +424,63 @@ void main() {
       expect(lowered.series, hasLength(1));
       expect(lowered.series.single.id, 'fruit-A');
       expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+    });
+
+    test('a single-value ring keeps the mark center on the lone donut', () {
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            center: DonutCenterContent(label: 'Total'),
+          ),
+        ],
+      )).lower();
+
+      // The render path only reads ConcentricDonutConfig.centerContent when
+      // more than one donut series is present, so a collapsed single ring must
+      // carry the mark's center on itself — exactly like the ring-less donut
+      // path — or the center is silently hidden.
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.id, 'fruit-A');
+      expect(series.centerContent, const DonutCenterContent(label: 'Total'));
+    });
+
+    test('a genuine multi-value ring keeps center on the config (no regression)',
+        () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            center: DonutCenterContent(label: 'Total'),
+          ),
+        ],
+      )).lower();
+
+      // Two distinct rings → N series + a ConcentricDonutConfig; each ring's own
+      // center stays hidden and the shared center lives on the config.
+      expect(lowered.series, hasLength(2));
+      for (final ring in lowered.series.cast<DonutChartSeries>()) {
+        expect(ring.centerContent, DonutCenterContent.hidden);
+      }
+      expect(
+        lowered.concentricDonutConfig,
+        const ConcentricDonutConfig(
+          centerContent: DonutCenterContent(label: 'Total'),
+        ),
+      );
     });
   });
 
