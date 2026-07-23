@@ -273,7 +273,16 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
-      case AreaMark<T>() || CandlestickMark<T>():
+      case AreaMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
+        _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
+      case CandlestickMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
           markId,
@@ -327,6 +336,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
       case AreaMark<T>():
         series.add(_lowerArea(mark, markId, axis!, spec.data));
+        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
       case BarMark<T>():
         series.add(
           _lowerBar(
@@ -574,7 +584,9 @@ AreaChartSeries _lowerArea<T>(
 ) => AreaChartSeries(
   id: id,
   name: mark.name,
-  points: _xyPoints(data, mark.x, mark.y),
+  points: mark.colorBy == null
+      ? _xyPoints(data, mark.x, mark.y)
+      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,

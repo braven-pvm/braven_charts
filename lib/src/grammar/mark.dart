@@ -168,6 +168,8 @@ final class AreaMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    this.colorBy,
+    this.colorEncoding,
     this.baseline,
     this.fillOpacity,
     this.strokeWidth,
@@ -182,6 +184,15 @@ final class AreaMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel. Colours the area's TOP EDGE per segment (the
+  /// leading-point rule), NOT the fill — value-driven fill is not yet
+  /// supported. Baked at lowering into `ChartDataPoint.segmentStyle.color`.
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
 
   /// Value the fill is anchored to. Null fills to the axis floor.
   final double? baseline;
@@ -216,6 +227,8 @@ final class AreaMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
           other.fillOpacity == fillOpacity &&
           other.strokeWidth == strokeWidth &&
@@ -232,6 +245,8 @@ final class AreaMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    colorBy,
+    colorEncoding,
     baseline,
     fillOpacity,
     strokeWidth,
