@@ -3403,6 +3403,13 @@ class ChartConfigDartEmitter {
   }
 
   void _emitAxisFields(DartSourceWriter writer, XAxisConfig axis) {
+    _enumIf(
+      writer,
+      'position',
+      'XAxisPosition',
+      axis.position.name,
+      defaultName: 'bottom',
+    );
     _optionalColor(writer, 'color', axis.color);
     _optionalString(writer, 'label', axis.label);
     _optionalString(writer, 'unit', axis.unit);
@@ -3439,6 +3446,23 @@ class ChartConfigDartEmitter {
     _numberIf(writer, 'tickLabelPadding', axis.tickLabelPadding, 4);
     _numberIf(writer, 'axisLabelPadding', axis.axisLabelPadding, 5);
     _numberIf(writer, 'axisMargin', axis.axisMargin, 8);
+    _optionalNumber(
+      writer,
+      'tickLabelRotationDegrees',
+      axis.tickLabelRotationDegrees,
+    );
+    if (axis.tickLabelCollisionPolicy case final policy?) {
+      writer.namedArgument(
+        'tickLabelCollisionPolicy',
+        'XAxisTickLabelCollisionPolicy.${policy.name}',
+      );
+    }
+    _numberIf(
+      writer,
+      'tickLabelCollisionPadding',
+      axis.tickLabelCollisionPadding,
+      4,
+    );
     if (axis.tickCount != null) {
       writer.namedArgument('tickCount', axis.tickCount.toString());
     }

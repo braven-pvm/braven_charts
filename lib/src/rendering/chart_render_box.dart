@@ -50,6 +50,7 @@ import '../models/normalization_mode.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
+import '../models/x_axis_position.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/cartesian_value_summary_theme.dart';
@@ -2535,13 +2536,31 @@ class ChartRenderBox extends RenderBox {
           1.0,
           size.width - leftMargin - rightMargin,
         );
+        final xAxisPainter = _buildXAxisPainter(
+          bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+        );
         xAxisReservedHeight = math.max(
           50.0,
-          _buildXAxisPainter(
-            bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
-          ).measureRequiredHeight(estimatedPlotWidth),
+          xAxisPainter.measureRequiredHeight(estimatedPlotWidth),
         );
-        bottomMargin = xAxisReservedHeight + bottomReserved;
+        final xAxisPosition = _xAxisConfig?.position ?? XAxisPosition.bottom;
+        if (xAxisPosition == XAxisPosition.top ||
+            xAxisPosition == XAxisPosition.both) {
+          final topAxisReservedHeight = xAxisPosition == XAxisPosition.both
+              ? math.max(
+                  50.0,
+                  xAxisPainter.measureRequiredHeight(
+                    estimatedPlotWidth,
+                    includeAxisTitle: false,
+                  ),
+                )
+              : xAxisReservedHeight;
+          topMargin = math.max(topMargin, topAxisReservedHeight);
+        }
+        if (xAxisPosition == XAxisPosition.bottom ||
+            xAxisPosition == XAxisPosition.both) {
+          bottomMargin = xAxisReservedHeight + bottomReserved;
+        }
       }
     }
 
@@ -2558,11 +2577,20 @@ class ChartRenderBox extends RenderBox {
     Rect? yScrollbarRect;
 
     if (_scrollbarManager.showXScrollbar) {
-      // Position horizontal scrollbar BELOW the X-axis label
-      // Layout order: plot area → tick labels (~30px) → axis label (~20px) → scrollbar
-      // So scrollbar should start after ~50px total
+      // A top X-axis leaves the lower gutter entirely to the scrollbar.
+      // Transposed charts retain their existing bottom value-axis extent.
+      final xAxisExtentBelowPlot =
+          _isHorizontalBarChart ||
+              (_xAxis != null &&
+                  (_xAxisConfig?.visible ?? true) &&
+                  {
+                    XAxisPosition.bottom,
+                    XAxisPosition.both,
+                  }.contains(_xAxisConfig?.position ?? XAxisPosition.bottom))
+          ? xAxisReservedHeight
+          : 0.0;
       final scrollbarTop =
-          _plotArea.bottom + xAxisReservedHeight + scrollbarPadding;
+          _plotArea.bottom + xAxisExtentBelowPlot + scrollbarPadding;
       xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
         scrollbarTop,

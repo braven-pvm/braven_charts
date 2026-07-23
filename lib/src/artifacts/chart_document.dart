@@ -31,6 +31,9 @@ class ChartAxisDocument {
     this.tickLabelPadding,
     this.axisLabelPadding,
     this.axisMargin,
+    this.tickLabelRotationDegrees,
+    this.tickLabelCollisionPolicy,
+    this.tickLabelCollisionPadding,
     this.tickCount,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
@@ -70,6 +73,9 @@ class ChartAxisDocument {
   final ChartNumberDocument? tickLabelPadding;
   final ChartNumberDocument? axisLabelPadding;
   final ChartNumberDocument? axisMargin;
+  final ChartNumberDocument? tickLabelRotationDegrees;
+  final String? tickLabelCollisionPolicy;
+  final ChartNumberDocument? tickLabelCollisionPadding;
   final int? tickCount;
   final bool showMinorTicks;
   final int minorTickCount;
@@ -111,6 +117,12 @@ class ChartAxisDocument {
     if (axisLabelPadding != null)
       'axisLabelPadding': axisLabelPadding!.toJson(),
     if (axisMargin != null) 'axisMargin': axisMargin!.toJson(),
+    if (tickLabelRotationDegrees != null)
+      'tickLabelRotationDegrees': tickLabelRotationDegrees!.toJson(),
+    if (tickLabelCollisionPolicy != null)
+      'tickLabelCollisionPolicy': tickLabelCollisionPolicy,
+    if (tickLabelCollisionPadding != null)
+      'tickLabelCollisionPadding': tickLabelCollisionPadding!.toJson(),
     if (tickCount != null) 'tickCount': tickCount,
     if (showMinorTicks) 'showMinorTicks': true,
     if (minorTickCount != 4) 'minorTickCount': minorTickCount,
@@ -178,6 +190,16 @@ class ChartAxisDocument {
     axisMargin: json['axisMargin'] == null
         ? null
         : ChartNumberDocument.fromJson(json['axisMargin']),
+    tickLabelRotationDegrees: json['tickLabelRotationDegrees'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['tickLabelRotationDegrees']),
+    tickLabelCollisionPolicy: readOptionalString(
+      json,
+      'tickLabelCollisionPolicy',
+    ),
+    tickLabelCollisionPadding: json['tickLabelCollisionPadding'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['tickLabelCollisionPadding']),
     tickCount: readOptionalInt(json, 'tickCount'),
     showMinorTicks: readOptionalBool(json, 'showMinorTicks') ?? false,
     minorTickCount: readOptionalInt(json, 'minorTickCount') ?? 4,

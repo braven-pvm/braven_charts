@@ -27,10 +27,18 @@ class _AxesPageState extends State<AxesPage> {
   _AxisPattern _selectedPattern = _AxisPattern.labelsBounds;
 
   AxisLabelDisplay _labelDisplay = AxisLabelDisplay.labelWithUnit;
+  XAxisPosition _xAxisPosition = XAxisPosition.bottom;
+  double _xTickLabelRotation = 0;
+  XAxisTickLabelCollisionPolicy _xTickLabelCollisionPolicy =
+      XAxisTickLabelCollisionPolicy.auto;
+  double _xTickLabelCollisionPadding = 4;
   YAxisPosition _yAxisPosition = YAxisPosition.left;
-  int _majorTickCount = 6;
-  bool _showTicks = true;
-  bool _showTickLabels = true;
+  int _xMajorTickCount = 6;
+  int _yMajorTickCount = 6;
+  bool _showXTicks = true;
+  bool _showXTickLabels = true;
+  bool _showYTicks = true;
+  bool _showYTickLabels = true;
   bool _showCrosshairLabels = true;
   double _axisMargin = 8;
 
@@ -496,11 +504,18 @@ class _AxesPageState extends State<AxesPage> {
             axisSwapMode: _axisSwapMode,
             bravenChartController: _chartController,
             normalizationMode: NormalizationMode.perSeries,
-            xAxisConfig: const XAxisConfig(
+            xAxisConfig: XAxisConfig(
+              position: _xAxisPosition,
               label: 'Interval',
               min: 0,
               max: 19,
               showAxisLine: true,
+              showTicks: _showXTicks,
+              showTickLabels: _showXTickLabels,
+              tickCount: _xMajorTickCount,
+              tickLabelRotationDegrees: _xTickLabelRotation,
+              tickLabelCollisionPolicy: _xTickLabelCollisionPolicy,
+              tickLabelCollisionPadding: _xTickLabelCollisionPadding,
             ),
             grid: GridConfig(
               horizontal: _optionsController.showGrid,
@@ -555,6 +570,7 @@ class _AxesPageState extends State<AxesPage> {
 
   XAxisConfig get _mainXAxis {
     return XAxisConfig(
+      position: _xAxisPosition,
       label: 'Time',
       unit: 'h',
       min: _selectedPattern == _AxisPattern.labelsBounds ? -10 : 0,
@@ -570,13 +586,16 @@ class _AxesPageState extends State<AxesPage> {
         _ => null,
       },
       showAxisLine: _optionsController.showAxisLines,
-      showTicks: _showTicks,
-      showTickLabels: _showTickLabels,
+      showTicks: _showXTicks,
+      showTickLabels: _showXTickLabels,
       showCrosshairLabel: _showCrosshairLabels,
       labelDisplay: _labelDisplay,
-      tickCount: _majorTickCount,
+      tickCount: _xMajorTickCount,
+      tickLabelRotationDegrees: _xTickLabelRotation,
+      tickLabelCollisionPolicy: _xTickLabelCollisionPolicy,
+      tickLabelCollisionPadding: _xTickLabelCollisionPadding,
       labelFormatter: _selectedPattern == _AxisPattern.labelsBounds
-          ? (value) => '${value.toInt().toString().padLeft(2, '0')}:00'
+          ? _formatHourTick
           : null,
       showMinorTicks:
           _selectedPattern == _AxisPattern.minorTicks && _showMinorTicks,
@@ -584,6 +603,16 @@ class _AxesPageState extends State<AxesPage> {
       minorTickLength: _minorTickLength,
       axisMargin: _axisMargin,
     );
+  }
+
+  String _formatHourTick(double value) {
+    final totalMinutes = (value * 60).round();
+    final sign = totalMinutes < 0 ? '-' : '';
+    final absoluteMinutes = totalMinutes.abs();
+    final hours = absoluteMinutes ~/ 60;
+    final minutes = absoluteMinutes % 60;
+    return '$sign${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}';
   }
 
   YAxisConfig get _mainYAxis {
@@ -600,11 +629,11 @@ class _AxesPageState extends State<AxesPage> {
           ? _yRenderMax
           : null,
       showAxisLine: _optionsController.showAxisLines,
-      showTicks: _showTicks,
-      showTickLabels: _showTickLabels,
+      showTicks: _showYTicks,
+      showTickLabels: _showYTickLabels,
       showCrosshairLabel: _showCrosshairLabels,
       labelDisplay: _labelDisplay,
-      tickCount: _majorTickCount,
+      tickCount: _yMajorTickCount,
       showMinorTicks:
           _selectedPattern == _AxisPattern.minorTicks && _showMinorTicks,
       minorTickCount: _minorTickCount,
@@ -625,6 +654,84 @@ class _AxesPageState extends State<AxesPage> {
             values: _AxisPattern.values,
             labelBuilder: _patternLabel,
             onChanged: _selectPattern,
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'X-axis ticks & labels',
+        icon: Icons.text_rotate_up,
+        children: [
+          EnumOption<XAxisPosition>(
+            label: 'Position',
+            value: _xAxisPosition,
+            values: XAxisPosition.values,
+            labelBuilder: (value) => switch (value) {
+              XAxisPosition.bottom => 'Bottom',
+              XAxisPosition.top => 'Top',
+              XAxisPosition.both => 'Both',
+            },
+            onChanged: (value) => setState(() => _xAxisPosition = value),
+          ),
+          IntSliderOption(
+            label: 'Requested X-axis ticks',
+            value: _xMajorTickCount,
+            min: 2,
+            max: 32,
+            description:
+                'Set the maximum major ticks requested from the numeric '
+                'axis generator.',
+            aliases: const ['tick count', 'major ticks', 'density'],
+            onChanged: (value) => setState(() => _xMajorTickCount = value),
+          ),
+          BoolOption(
+            label: 'Show tick marks',
+            value: _showXTicks,
+            onChanged: (value) => setState(() => _showXTicks = value),
+          ),
+          BoolOption(
+            label: 'Show tick labels',
+            value: _showXTickLabels,
+            onChanged: (value) => setState(() => _showXTickLabels = value),
+          ),
+          SliderOption(
+            label: 'Tick label angle',
+            value: _xTickLabelRotation,
+            min: -90,
+            max: 90,
+            divisions: 12,
+            suffix: '°',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _xTickLabelRotation = value),
+          ),
+          EnumOption<XAxisTickLabelCollisionPolicy>(
+            label: 'Label density',
+            value: _xTickLabelCollisionPolicy,
+            values: XAxisTickLabelCollisionPolicy.values,
+            labelBuilder: (value) => switch (value) {
+              XAxisTickLabelCollisionPolicy.auto =>
+                'Automatic — prevent overlap',
+              XAxisTickLabelCollisionPolicy.showAll => 'Show every label',
+            },
+            subtitle:
+                'Automatic density thins labels after measuring their '
+                'rotated bounds.',
+            description:
+                'Choose whether the axis automatically removes overlapping '
+                'labels or paints every requested label.',
+            aliases: const ['collision', 'overlap', 'show all', 'thinning'],
+            onChanged: (value) =>
+                setState(() => _xTickLabelCollisionPolicy = value),
+          ),
+          SliderOption(
+            label: 'Minimum label spacing',
+            value: _xTickLabelCollisionPadding,
+            min: 0,
+            max: 24,
+            divisions: 12,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _xTickLabelCollisionPadding = value),
           ),
         ],
       ),
@@ -671,21 +778,25 @@ class _AxesPageState extends State<AxesPage> {
               onChanged: (value) => setState(() => _yAxisPosition = value),
             ),
             IntSliderOption(
-              label: 'Major Tick Count',
-              value: _majorTickCount,
-              min: 3,
-              max: 10,
-              onChanged: (value) => setState(() => _majorTickCount = value),
+              label: 'Requested Y-axis ticks',
+              value: _yMajorTickCount,
+              min: 2,
+              max: 32,
+              description:
+                  'Set the maximum major ticks requested from the Y-axis '
+                  'generator independently of the X-axis.',
+              aliases: const ['tick count', 'major ticks', 'density'],
+              onChanged: (value) => setState(() => _yMajorTickCount = value),
             ),
             BoolOption(
-              label: 'Show Tick Marks',
-              value: _showTicks,
-              onChanged: (value) => setState(() => _showTicks = value),
+              label: 'Show Y-axis tick marks',
+              value: _showYTicks,
+              onChanged: (value) => setState(() => _showYTicks = value),
             ),
             BoolOption(
-              label: 'Show Tick Labels',
-              value: _showTickLabels,
-              onChanged: (value) => setState(() => _showTickLabels = value),
+              label: 'Show Y-axis tick labels',
+              value: _showYTickLabels,
+              onChanged: (value) => setState(() => _showYTickLabels = value),
             ),
             BoolOption(
               label: 'Crosshair Labels',

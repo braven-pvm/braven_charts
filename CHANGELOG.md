@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Selectable top, bottom, or mirrored Cartesian X-axis placement and configurable
+  numeric or categorical tick-label rotation, plus exact rotation-aware
+  collision thinning with configurable spacing and a show-all override.
+  Preferred X-axis tick counts now generate uniform readable intervals across
+  the visible domain independently of Y-axis density.
+  Placement and label behavior are covered by portable artifacts, generated
+  source, AI configuration, crosshair alignment, and live Axes controls.
+
 ## 0.13.3 - 2026-07-23
 
 ### Added

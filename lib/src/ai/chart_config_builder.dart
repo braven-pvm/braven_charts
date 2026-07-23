@@ -25,6 +25,7 @@ import '../models/radial_selection_style.dart';
 import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
+import '../models/x_axis_position.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
 
@@ -1541,10 +1542,30 @@ class ChartConfigBuilder {
     }
 
     return XAxisConfig(
+      position: switch (json['position']) {
+        null || 'bottom' => XAxisPosition.bottom,
+        'top' => XAxisPosition.top,
+        'both' => XAxisPosition.both,
+        final value => throw FormatException(
+          'Unknown x_axis.position "$value".',
+        ),
+      },
       label: json['label'] as String?,
       unit: json['unit'] as String?,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
+      tickLabelRotationDegrees: (json['tick_label_rotation'] as num?)
+          ?.toDouble(),
+      tickLabelCollisionPolicy: switch (json['tick_label_collision_policy']) {
+        null => null,
+        'auto' => XAxisTickLabelCollisionPolicy.auto,
+        'show_all' => XAxisTickLabelCollisionPolicy.showAll,
+        final value => throw FormatException(
+          'Unknown tick_label_collision_policy "$value".',
+        ),
+      },
+      tickLabelCollisionPadding:
+          (json['tick_label_collision_padding'] as num?)?.toDouble() ?? 4,
       categoryAxis: categoryAxis,
       maxHeight: categoryAxis == null ? 60 : 104,
     );

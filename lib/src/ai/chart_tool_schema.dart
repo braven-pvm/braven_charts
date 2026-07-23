@@ -391,6 +391,12 @@ same radial interaction contract.
           'description':
               'Cartesian X-axis configuration. Omit when chart_type is pie or donut.',
           'properties': {
+            'position': {
+              'type': 'string',
+              'enum': ['bottom', 'top', 'both'],
+              'description':
+                  'Visual edge used by the Cartesian X-axis, or both edges.',
+            },
             'label': {
               'type': 'string',
               'description': 'Axis label (e.g., "Time", "Distance")',
@@ -408,6 +414,25 @@ same radial interaction contract.
               'type': 'number',
               'description':
                   'Explicit maximum value (auto-calculated if omitted)',
+            },
+            'tick_label_rotation': {
+              'type': 'number',
+              'minimum': -90,
+              'maximum': 90,
+              'description':
+                  'Clockwise rotation for every X-axis tick label in screen-space degrees.',
+            },
+            'tick_label_collision_policy': {
+              'type': 'string',
+              'enum': ['auto', 'show_all'],
+              'description':
+                  'Measure rotated X-axis labels and retain a readable subset, or paint every label.',
+            },
+            'tick_label_collision_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Minimum horizontal gap in logical pixels between automatically retained X-axis labels.',
             },
             'categories': {
               'type': 'array',
@@ -1651,8 +1676,7 @@ same radial interaction contract.
             'candlestick_animation_mode': {
               'type': 'string',
               'enum': ['none', 'reveal'],
-              'description':
-                  'Candlestick-only: entrance animation behavior.',
+              'description': 'Candlestick-only: entrance animation behavior.',
             },
             'candlestick_animation_stagger': {
               'type': 'number',

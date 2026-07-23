@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/category_axis_config.dart';
 import '../models/x_axis_config.dart';
+import '../models/x_axis_position.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
 import 'chart_artifact_diagnostics.dart';
@@ -23,7 +24,7 @@ abstract final class ChartAxisDocumentCodec {
       value: ChartAxisDocument(
         id: id,
         axisType: 'x',
-        position: 'bottom',
+        position: axis.position.name,
         label: axis.label,
         unit: axis.unit,
         color: axis.color?.toARGB32(),
@@ -43,6 +44,13 @@ abstract final class ChartAxisDocumentCodec {
         tickLabelPadding: ChartNumberDocument.fromDouble(axis.tickLabelPadding),
         axisLabelPadding: ChartNumberDocument.fromDouble(axis.axisLabelPadding),
         axisMargin: ChartNumberDocument.fromDouble(axis.axisMargin),
+        tickLabelRotationDegrees: axis.tickLabelRotationDegrees == null
+            ? null
+            : ChartNumberDocument.fromDouble(axis.tickLabelRotationDegrees!),
+        tickLabelCollisionPolicy: axis.tickLabelCollisionPolicy?.name,
+        tickLabelCollisionPadding: ChartNumberDocument.fromDouble(
+          axis.tickLabelCollisionPadding,
+        ),
         tickCount: axis.tickCount,
         showMinorTicks: axis.showMinorTicks,
         minorTickCount: axis.minorTickCount,
@@ -78,11 +86,9 @@ abstract final class ChartAxisDocumentCodec {
   }) {
     try {
       _requireAxisType(document, 'x');
-      if (document.position != 'bottom') {
-        throw const FormatException('X-axis position must be bottom.');
-      }
       return ChartArtifactSuccess(
         value: XAxisConfig(
+          position: _enum(document.position, XAxisPosition.values),
           color: _optionalColor(document.color),
           label: document.label,
           unit: document.unit,
@@ -105,6 +111,15 @@ abstract final class ChartAxisDocumentCodec {
           tickLabelPadding: document.tickLabelPadding?.asDouble ?? 4,
           axisLabelPadding: document.axisLabelPadding?.asDouble ?? 5,
           axisMargin: document.axisMargin?.asDouble ?? 8,
+          tickLabelRotationDegrees: document.tickLabelRotationDegrees?.asDouble,
+          tickLabelCollisionPolicy: document.tickLabelCollisionPolicy == null
+              ? null
+              : _enum(
+                  document.tickLabelCollisionPolicy!,
+                  XAxisTickLabelCollisionPolicy.values,
+                ),
+          tickLabelCollisionPadding:
+              document.tickLabelCollisionPadding?.asDouble ?? 4,
           tickCount: document.tickCount,
           showMinorTicks: document.showMinorTicks,
           minorTickCount: document.minorTickCount,
