@@ -31,6 +31,18 @@ enum InteractionMode {
   /// Chart is being zoomed (mouse wheel).
   zooming,
 
+  /// A direct-touch gesture is continuously transforming the viewport.
+  ///
+  /// The mode combines focal-point zoom and translation so the renderer can
+  /// defer geometry and hit-test rebuilding until the gesture ends.
+  transformingViewport,
+
+  /// A direct-touch long press is scrubbing the tracking cursor.
+  ///
+  /// This owns the active touch sequence without changing the viewport or
+  /// committing selection.
+  trackingScrub,
+
   /// Single element selection in progress (left-click).
   selecting,
 
@@ -86,6 +98,13 @@ extension InteractionModeExtensions on InteractionMode {
         this == InteractionMode.boxSelecting;
   }
 
+  /// Returns true for any continuous viewport navigation operation.
+  bool get isViewportTransform {
+    return this == InteractionMode.panning ||
+        this == InteractionMode.zooming ||
+        this == InteractionMode.transformingViewport;
+  }
+
   /// Returns true if this mode is passive (doesn't claim interactions).
   bool get isPassive {
     return this == InteractionMode.idle || this == InteractionMode.hovering;
@@ -119,6 +138,10 @@ extension InteractionModeExtensions on InteractionMode {
       case InteractionMode.selecting:
       case InteractionMode.boxSelecting:
         return 6;
+      case InteractionMode.transformingViewport:
+        return 5;
+      case InteractionMode.trackingScrub:
+        return 5;
       case InteractionMode.panning:
         return 3;
       case InteractionMode.zooming:
@@ -142,6 +165,10 @@ extension InteractionModeExtensions on InteractionMode {
         return 'Panning (middle-click drag)';
       case InteractionMode.zooming:
         return 'Zooming (mouse wheel)';
+      case InteractionMode.transformingViewport:
+        return 'Transforming viewport (touch)';
+      case InteractionMode.trackingScrub:
+        return 'Tracking data (touch)';
       case InteractionMode.selecting:
         return 'Selecting element';
       case InteractionMode.boxSelecting:

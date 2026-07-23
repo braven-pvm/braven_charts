@@ -42,6 +42,12 @@ typedef ChartSelectionCommandHandler = ChartArtifactResult<void> Function();
 typedef ChartSelectionZoomCommandHandler =
     ChartArtifactResult<void> Function(double paddingFraction);
 
+/// Internal chart-state bridge for viewport scaling.
+typedef ChartViewportZoomCommandHandler = bool Function(double factor);
+
+/// Internal chart-state bridge for restoring the complete data viewport.
+typedef ChartViewportFitCommandHandler = bool Function();
+
 /// Programmatic control over series, point linking, and Y-axis slot state.
 ///
 /// Attach to [BravenChartPlus.controller] to drive series selection
@@ -82,6 +88,8 @@ class BravenChartController extends ChangeNotifier {
   ChartSelectionExpressionCommandHandler? _selectExpressionHandler;
   ChartSelectionCommandHandler? _invertSelectionHandler;
   ChartSelectionZoomCommandHandler? _zoomToSelectionHandler;
+  ChartViewportZoomCommandHandler? _zoomViewportHandler;
+  ChartViewportFitCommandHandler? _fitDataHandler;
   void Function()? _clearPointFocusHandler;
   void Function()? _clearPointSelectionHandler;
   void Function()? _replayRadialEntranceHandler;
@@ -305,6 +313,26 @@ class BravenChartController extends ChangeNotifier {
     return handler(paddingFraction);
   }
 
+  /// Scales the mounted Cartesian viewport around its plot centre.
+  ///
+  /// Values greater than one zoom in and values between zero and one zoom out.
+  /// Returns false when detached or attached to a non-Cartesian chart.
+  bool zoomViewport(double factor) {
+    if (!factor.isFinite || factor <= 0) {
+      throw ArgumentError.value(
+        factor,
+        'factor',
+        'must be finite and positive',
+      );
+    }
+    return _zoomViewportHandler?.call(factor) ?? false;
+  }
+
+  /// Restores the mounted Cartesian chart's complete data viewport.
+  ///
+  /// Returns false when detached or attached to a non-Cartesian chart.
+  bool fitData() => _fitDataHandler?.call() ?? false;
+
   /// Clears transient point focus.
   void clearPointFocus() => _clearPointFocusHandler?.call();
 
@@ -432,6 +460,8 @@ class BravenChartController extends ChangeNotifier {
     ChartSelectionExpressionCommandHandler? onSelectExpression,
     ChartSelectionCommandHandler? onInvertSelection,
     ChartSelectionZoomCommandHandler? onZoomToSelection,
+    ChartViewportZoomCommandHandler? onZoomViewport,
+    ChartViewportFitCommandHandler? onFitData,
     void Function()? onClearPointFocus,
     void Function()? onClearPointSelection,
     void Function()? onReplayRadialEntrance,
@@ -453,6 +483,8 @@ class BravenChartController extends ChangeNotifier {
     _selectExpressionHandler = onSelectExpression;
     _invertSelectionHandler = onInvertSelection;
     _zoomToSelectionHandler = onZoomToSelection;
+    _zoomViewportHandler = onZoomViewport;
+    _fitDataHandler = onFitData;
     _clearPointFocusHandler = onClearPointFocus;
     _clearPointSelectionHandler = onClearPointSelection;
     _replayRadialEntranceHandler = onReplayRadialEntrance;
@@ -483,6 +515,8 @@ class BravenChartController extends ChangeNotifier {
     _selectExpressionHandler = null;
     _invertSelectionHandler = null;
     _zoomToSelectionHandler = null;
+    _zoomViewportHandler = null;
+    _fitDataHandler = null;
     _clearPointFocusHandler = null;
     _clearPointSelectionHandler = null;
     _replayRadialEntranceHandler = null;

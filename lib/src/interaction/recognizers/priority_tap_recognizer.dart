@@ -71,6 +71,10 @@ class PriorityTapGestureRecognizer
 
   @override
   void addPointer(PointerDownEvent event) {
+    if (!isPointerAllowed(event)) {
+      return;
+    }
+
     // Only accept left button for selection (per conflict resolution)
     if (event.buttons != kPrimaryMouseButton) {
       return;
@@ -86,11 +90,13 @@ class PriorityTapGestureRecognizer
     _downPosition = event.position;
 
     // Notify tap down
-    onTapDown?.call(TapDownDetails(
-      globalPosition: event.position,
-      localPosition: event.localPosition,
-      kind: event.kind,
-    ));
+    onTapDown?.call(
+      TapDownDetails(
+        globalPosition: event.position,
+        localPosition: event.localPosition,
+        kind: event.kind,
+      ),
+    );
 
     resolve(GestureDisposition.accepted);
   }
@@ -143,11 +149,13 @@ class PriorityTapGestureRecognizer
       if (canAcceptGesture()) {
         handleGestureAccepted();
 
-        onTapUp?.call(TapUpDetails(
-          kind: event.kind,
-          globalPosition: event.position,
-          localPosition: event.localPosition,
-        ));
+        onTapUp?.call(
+          TapUpDetails(
+            kind: event.kind,
+            globalPosition: event.position,
+            localPosition: event.localPosition,
+          ),
+        );
       }
     }
 

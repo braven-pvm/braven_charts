@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 121 of 121 classes have a synthesizable subject: every verb they
+// 122 of 122 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1517 verbs total; 9 of them have an argument type with no
+// 1525 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 121;
+const int _executedClasses = 122;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 0;
@@ -3297,6 +3297,34 @@ void _smokeGestureConfig(_Verb verb, GestureConfig subject) {
   );
 }
 
+/// Smoke coverage for [TouchInteractionConfig]'s 6 executable verb(s).
+void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
+  verb(
+    'TouchInteractionConfigFluent.withEnabled',
+    () => subject.withEnabled(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withProfile',
+    () => subject.withProfile(TouchInteractionProfile.browse),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnablePinchZoom',
+    () => subject.withEnablePinchZoom(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnablePan',
+    () => subject.withEnablePan(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnableLongPressTracking',
+    () => subject.withEnableLongPressTracking(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnableHapticFeedback',
+    () => subject.withEnableHapticFeedback(true),
+  );
+}
+
 /// Smoke coverage for [KeyboardConfig]'s 6 executable verb(s).
 void _smokeKeyboardConfig(_Verb verb, KeyboardConfig subject) {
   verb('KeyboardConfigFluent.withEnabled', () => subject.withEnabled(true));
@@ -3369,7 +3397,7 @@ void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   );
 }
 
-/// Smoke coverage for [InteractionConfig]'s 21 executable verb(s).
+/// Smoke coverage for [InteractionConfig]'s 23 executable verb(s).
 void _smokeInteractionConfig(_Verb verb, InteractionConfig subject) {
   verb('InteractionConfigFluent.withEnabled', () => subject.withEnabled(true));
   verb(
@@ -3395,6 +3423,14 @@ void _smokeInteractionConfig(_Verb verb, InteractionConfig subject) {
   verb(
     'InteractionConfigFluent.updateGesture',
     () => subject.updateGesture((current) => current),
+  );
+  verb(
+    'InteractionConfigFluent.withTouch',
+    () => subject.withTouch(const TouchInteractionConfig()),
+  );
+  verb(
+    'InteractionConfigFluent.updateTouch',
+    () => subject.updateTouch((current) => current),
   );
   verb(
     'InteractionConfigFluent.withKeyboard',
@@ -6941,6 +6977,15 @@ void main() {
         reason: 'generated GestureConfigFluent verb(s) threw',
       );
     });
+    test('TouchInteractionConfig', () {
+      final subject = _subject(() => TouchInteractionConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeTouchInteractionConfig, subject),
+        isEmpty,
+        reason: 'generated TouchInteractionConfigFluent verb(s) threw',
+      );
+    });
     test('KeyboardConfig', () {
       final subject = _subject(() => KeyboardConfig());
       if (subject == null) return;
@@ -7792,7 +7837,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 121);
+    expect(_executedClasses, 122);
     expect(_skippedClasses, 0);
     expect(_compileOnlyCases, hasLength(5));
     expect(_compileOnlyVerbs, hasLength(9));

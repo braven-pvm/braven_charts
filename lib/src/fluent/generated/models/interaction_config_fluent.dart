@@ -188,6 +188,32 @@ extension GestureConfigFluent on GestureConfig {
       copyWith(pinchThreshold: value);
 }
 
+/// Generated fluent modifiers for [TouchInteractionConfig].
+extension TouchInteractionConfigFluent on TouchInteractionConfig {
+  /// Replaces [TouchInteractionConfig.enabled] with [value].
+  TouchInteractionConfig withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [TouchInteractionConfig.profile] with [value].
+  TouchInteractionConfig withProfile(TouchInteractionProfile value) =>
+      copyWith(profile: value);
+
+  /// Replaces [TouchInteractionConfig.enablePinchZoom] with [value].
+  TouchInteractionConfig withEnablePinchZoom(bool value) =>
+      copyWith(enablePinchZoom: value);
+
+  /// Replaces [TouchInteractionConfig.enablePan] with [value].
+  TouchInteractionConfig withEnablePan(bool value) =>
+      copyWith(enablePan: value);
+
+  /// Replaces [TouchInteractionConfig.enableLongPressTracking] with [value].
+  TouchInteractionConfig withEnableLongPressTracking(bool value) =>
+      copyWith(enableLongPressTracking: value);
+
+  /// Replaces [TouchInteractionConfig.enableHapticFeedback] with [value].
+  TouchInteractionConfig withEnableHapticFeedback(bool value) =>
+      copyWith(enableHapticFeedback: value);
+}
+
 /// Generated fluent modifiers for [KeyboardConfig].
 extension KeyboardConfigFluent on KeyboardConfig {
   /// Replaces [KeyboardConfig.enabled] with [value].
@@ -304,6 +330,18 @@ extension InteractionConfigFluent on InteractionConfig {
   InteractionConfig updateGesture(
     GestureConfig Function(GestureConfig current) update,
   ) => copyWith(gesture: update(gesture));
+
+  /// Replaces [InteractionConfig.touch] with [value].
+  InteractionConfig withTouch(TouchInteractionConfig value) =>
+      copyWith(touch: value);
+
+  /// Rebuilds [InteractionConfig.touch] from its current value.
+  ///
+  /// `update` receives the current [TouchInteractionConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  InteractionConfig updateTouch(
+    TouchInteractionConfig Function(TouchInteractionConfig current) update,
+  ) => copyWith(touch: update(touch));
 
   /// Replaces [InteractionConfig.keyboard] with [value].
   InteractionConfig withKeyboard(KeyboardConfig value) =>

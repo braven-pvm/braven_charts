@@ -79,6 +79,8 @@ abstract final class ChartInteractionDocumentCodec {
             'crosshair': _encodeCrosshair(config.crosshair),
             'tooltip': _encodeTooltip(config.tooltip),
             'gesture': _encodeGesture(config.gesture),
+            if (config.touch != const TouchInteractionConfig())
+              'touch': _encodeTouch(config.touch),
             'keyboard': _encodeKeyboard(config.keyboard),
             'enableZoom': config.enableZoom,
             'enablePan': config.enablePan,
@@ -254,6 +256,9 @@ abstract final class ChartInteractionDocumentCodec {
             customBuilder: tooltipBuilder,
           ),
           gesture: _decodeGesture(_requiredMap(map, 'gesture')),
+          touch: map['touch'] == null
+              ? const TouchInteractionConfig()
+              : _decodeTouch(_requiredMap(map, 'touch')),
           keyboard: _decodeKeyboard(_requiredMap(map, 'keyboard')),
           enableZoom: _bool(map, 'enableZoom'),
           enablePan: _bool(map, 'enablePan'),
@@ -412,6 +417,29 @@ GestureConfig _decodeGesture(Map<String, Object?> map) => GestureConfig(
   panThreshold: _double(map, 'panThreshold'),
   pinchThreshold: _double(map, 'pinchThreshold'),
 );
+
+Map<String, Object?> _encodeTouch(TouchInteractionConfig value) => {
+  'enabled': value.enabled,
+  'profile': value.profile.name,
+  'enablePinchZoom': value.enablePinchZoom,
+  'enablePan': value.enablePan,
+  'enableLongPressTracking': value.enableLongPressTracking,
+  'enableHapticFeedback': value.enableHapticFeedback,
+};
+
+TouchInteractionConfig _decodeTouch(Map<String, Object?> map) =>
+    TouchInteractionConfig(
+      enabled: _bool(map, 'enabled'),
+      profile: _enum(map, 'profile', TouchInteractionProfile.values),
+      enablePinchZoom: _bool(map, 'enablePinchZoom'),
+      enablePan: _bool(map, 'enablePan'),
+      enableLongPressTracking: map['enableLongPressTracking'] == null
+          ? true
+          : _bool(map, 'enableLongPressTracking'),
+      enableHapticFeedback: map['enableHapticFeedback'] == null
+          ? true
+          : _bool(map, 'enableHapticFeedback'),
+    );
 
 Map<String, Object?> _encodeSelection(ChartSelectionConfig value) => {
   'acquisitionMode': value.acquisitionMode.name,
