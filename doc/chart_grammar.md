@@ -1,5 +1,9 @@
 # Chart grammar and the fluent surface
 
+> ⚠️ **Beta / Work in progress.** The grammar-of-graphics and fluent authoring
+> APIs are experimental and may change before a stable release. Pin a version if
+> you depend on them.
+
 Braven Charts has one configuration API — `BravenChartPlus` with
 `ChartSeries`, `ChartAnnotation` and the config classes — and **two optional
 authoring layers above it**. Both are additive: they change nothing about the

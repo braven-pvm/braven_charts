@@ -126,6 +126,11 @@ final basicGrammarChart = BravenChart.of(revenueSamples)
 The Grammar example uses a typed `revenueSamples` list and named accessors. It
 lowers to the same `BravenChartPlus` renderer as direct configuration.
 
+> **Grammar / Fluent API (Beta):** The Grammar of Graphics and fluent modifier
+> authoring layers are experimental and may change before a stable release. Pin
+> a version if you depend on them. See [Chart grammar and the fluent
+> surface](doc/chart_grammar.md).
+
 Continue with a runnable example:
 
 - [Multi-axis charts and normalization](https://braven-pvm.github.io/braven_charts/?page=multi-axis)

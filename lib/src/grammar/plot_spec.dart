@@ -11,6 +11,8 @@ import '../models/y_axis_config.dart' show YAxisConfig;
 import 'facet_spec.dart';
 import 'mark.dart';
 
+/// **Beta — work in progress; this API may change before a stable release.**
+///
 /// A complete, typed grammar-of-graphics specification over rows of type `T`.
 ///
 /// A spec is DECLARATIVE and inert: it names data, geometries and coordinate

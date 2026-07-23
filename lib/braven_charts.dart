@@ -100,6 +100,9 @@ export 'src/comparison/chart_comparison_model.dart';
 // Formatting
 export 'src/formatting/multi_axis_value_formatter.dart';
 // Grammar
+// Beta — work in progress; the grammar-of-graphics authoring API (BravenChart,
+// PlotSpec, marks and channels) is experimental and may change before a stable
+// release. Pin a version if you depend on it.
 export 'src/grammar/braven_facet_plot.dart';
 export 'src/grammar/braven_plot.dart';
 export 'src/grammar/channel.dart';

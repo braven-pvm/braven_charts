@@ -242,7 +242,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       routeSlug: 'value-summary',
     ),
     const NavDestination(
-      label: 'Chart Grammar',
+      label: 'Chart Grammar (Beta)',
       icon: Icons.auto_awesome_motion_outlined,
       selectedIcon: Icons.auto_awesome_motion,
       page: ChartGrammarPage(),

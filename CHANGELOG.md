@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Scale-driven colour channels on bar, line, and area geometries and a width
+  channel on bars in the Chart Grammar, reusing the scatter colour/size
+  encodings, baked at lowering into per-element styles with a colour-ramp
+  legend, plus a Scale-driven channels showcase with hand-built parity.
+
+### Notes
+
+- The Grammar of Graphics and fluent authoring APIs (`BravenChart`, `PlotSpec`,
+  marks/channels, and `braven_charts_fluent.dart`) are Beta / experimental and
+  may change before a stable release. Pin a version if you depend on them.
+
 ## 0.13.4 - 2026-07-23
 
 ### Added

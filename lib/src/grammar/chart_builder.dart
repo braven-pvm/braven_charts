@@ -38,6 +38,8 @@ import 'grammar_diagnostics.dart';
 import 'mark.dart';
 import 'plot_spec.dart';
 
+/// **Beta — work in progress; this API may change before a stable release.**
+///
 /// The chained, grammar-of-graphics way to author a chart.
 ///
 /// ```dart

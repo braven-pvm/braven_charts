@@ -1177,6 +1177,9 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'Author charts as data, geometries and encodings with the chained '
           'BravenChart facade — then read the ordinary config Dart it lowers '
           'to in the Source tab',
+      // The grammar-of-graphics + fluent authoring layers are still Beta, so
+      // the page header carries a small "work in progress" pill.
+      actions: const [_BetaBadge()],
       optionsChildren: _buildOptionsChildren(),
       chart: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1827,4 +1830,43 @@ extension on _GrammarPreset {
           'hand-built" to see the same baked pointStyle / segmentStyle and '
           'legend written by hand — the work the channel automates.',
   };
+}
+
+/// A small "work in progress" pill for the Chart Grammar page header.
+///
+/// The grammar-of-graphics and fluent authoring APIs are still Beta, so the
+/// page flags that plainly. Styled after the existing showcase badge/InfoBox
+/// widgets — a rounded warning-tone pill using `labelSmall` — so it reads as
+/// part of the same design system.
+class _BetaBadge extends StatelessWidget {
+  const _BetaBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final foreground = Colors.orange.shade900;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.science_outlined, size: 14, color: foreground),
+          const SizedBox(width: 5),
+          Text(
+            'Beta · Work in progress',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
