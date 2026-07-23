@@ -26,6 +26,7 @@ import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
 import '../models/y_axis_position.dart' show YAxisPosition;
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import 'braven_facet_plot.dart';
 import 'braven_plot.dart';
 import 'channel.dart';
 import 'facet_spec.dart';
@@ -559,20 +560,47 @@ final class BravenChart<T> {
     );
   }
 
-  /// Renders this chain.
+  /// Renders this chain as a single panel.
   ///
   /// The host-facing parameters are the ones [BravenPlot] exposes; everything
-  /// about the chart itself comes from the chain.
+  /// about the chart itself comes from the chain. A faceted chain is rejected
+  /// here with [GrammarDiagnosticCode.facetedSpecNotLowerable] — render it with
+  /// [buildFaceted] instead.
   BravenPlot<T> build({
     Key? key,
     BravenChartController? bravenChartController,
     ChartInteractionGroupController? interactionGroupController,
     ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
-  }) => BravenPlot<T>(
-    toSpec(),
-    key: key,
-    bravenChartController: bravenChartController,
-    interactionGroupController: interactionGroupController,
-    emptyStateConfig: emptyStateConfig,
-  );
+  }) {
+    final spec = toSpec();
+    if (spec.facet != null) {
+      throw GrammarSpecException.facetedSpecNotLowerable();
+    }
+    return BravenPlot<T>(
+      spec,
+      key: key,
+      bravenChartController: bravenChartController,
+      interactionGroupController: interactionGroupController,
+      emptyStateConfig: emptyStateConfig,
+    );
+  }
+
+  /// Renders this chain as a grid of synchronized small-multiple panels.
+  ///
+  /// Requires a faceted chain (`.facet(...)`); a non-faceted chain is rejected
+  /// with [GrammarDiagnosticCode.notFaceted]. The grid owns its own shared
+  /// interaction controller, so — unlike [build] — no per-chart controller is
+  /// exposed here (a facet grid is N charts).
+  BravenFacetPlot<T> buildFaceted({
+    Key? key,
+    ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
+  }) {
+    final spec = toSpec();
+    if (spec.facet == null) throw GrammarSpecException.notFaceted();
+    return BravenFacetPlot<T>(
+      spec,
+      key: key,
+      emptyStateConfig: emptyStateConfig,
+    );
+  }
 }

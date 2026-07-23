@@ -996,4 +996,53 @@ void main() {
       expect(spec.facet, isNull);
     });
   });
+
+  group('faceted terminals', () {
+    Matcher throwsCode(GrammarDiagnosticCode code) =>
+        throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
+
+    test('.build() on a faceted chain throws, directing to buildFaceted', () {
+      expect(
+        () => BravenChart.of(rows)
+            .x(sampleTime)
+            .y(samplePower)
+            .geomLine()
+            .facet(sampleZone)
+            .build(),
+        throwsCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
+      );
+    });
+
+    test('.buildFaceted() on a non-faceted chain throws', () {
+      expect(
+        () => BravenChart.of(rows)
+            .x(sampleTime)
+            .y(samplePower)
+            .geomLine()
+            .buildFaceted(),
+        throwsCode(GrammarDiagnosticCode.notFaceted),
+      );
+    });
+
+    test('.buildFaceted() returns a BravenFacetPlot over the faceted spec', () {
+      final widget = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .facet(sampleZone, columns: 2, label: 'Zone')
+          .buildFaceted();
+      expect(widget, isA<BravenFacetPlot<Sample>>());
+      expect(widget.spec.facet, isNotNull);
+      expect(widget.spec.facet!.columns, 2);
+    });
+
+    test('.build() on a non-faceted chain still returns a BravenPlot', () {
+      final widget = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine()
+          .build();
+      expect(widget, isA<BravenPlot<Sample>>());
+    });
+  });
 }
