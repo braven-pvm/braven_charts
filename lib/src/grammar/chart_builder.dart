@@ -288,6 +288,8 @@ final class BravenChart<T> {
     String? groupId,
     double? baselineValue,
     BarLabelStyle? labelStyle,
+    Channel<T>? colorBy,
+    ScatterColorEncoding? colorEncoding,
     String? yAxisId,
   }) => _append(
     BarMark<T>(
@@ -303,6 +305,8 @@ final class BravenChart<T> {
       groupId: groupId,
       baselineValue: baselineValue,
       labelStyle: labelStyle,
+      colorBy: colorBy,
+      colorEncoding: colorEncoding,
       yAxisId: yAxisId,
     ),
   );

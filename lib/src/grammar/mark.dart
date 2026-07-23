@@ -250,6 +250,8 @@ final class BarMark<T> extends Mark<T> {
     this.groupId,
     this.baselineValue,
     this.labelStyle,
+    this.colorBy,
+    this.colorEncoding,
   });
 
   /// Horizontal position accessor.
@@ -257,6 +259,15 @@ final class BarMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel: each bar's fill is the ramp colour of this
+  /// field's value over the data's finite domain, baked at lowering into
+  /// `ChartDataPoint.pointStyle.color`. Requires [colorEncoding].
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
 
   /// Bar width as a fraction of the slot, `0..1`.
   ///
@@ -301,7 +312,9 @@ final class BarMark<T> extends Mark<T> {
           other.layoutMode == layoutMode &&
           other.groupId == groupId &&
           other.baselineValue == baselineValue &&
-          other.labelStyle == labelStyle;
+          other.labelStyle == labelStyle &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding;
 
   @override
   int get hashCode => Object.hash(
@@ -318,6 +331,8 @@ final class BarMark<T> extends Mark<T> {
     groupId,
     baselineValue,
     labelStyle,
+    colorBy,
+    colorEncoding,
   );
 
   @override

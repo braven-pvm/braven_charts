@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'package:flutter/painting.dart' show Color;
+
 import '../models/bar_chart_style.dart' show BarOrientation;
 import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_data_point.dart';
@@ -18,6 +20,7 @@ import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/scatter_marker_style.dart';
+import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
@@ -261,10 +264,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateScatterChannels(mark, markId);
-      case LineMark<T>() ||
-          AreaMark<T>() ||
-          BarMark<T>() ||
-          CandlestickMark<T>():
+      case LineMark<T>() || AreaMark<T>() || CandlestickMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
           markId,
@@ -272,6 +272,15 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           axesById,
           boundAxisIds,
         );
+      case BarMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
+        _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
       case ThresholdMark<T>() || BandMark<T>() || PointMark<T>():
         // Reference marks bind no Y axis and carry no data-independent
         // structural invariant beyond what their annotation asserts on
@@ -318,6 +327,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
             transposed: spec.transposed,
           ),
         );
+        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
       case ScatterMark<T>():
         series.add(_lowerScatter(mark, markId, axis!, spec.data));
       case CandlestickMark<T>():
@@ -558,7 +568,15 @@ BarChartSeries _lowerBar<T>(
   return BarChartSeries(
     id: id,
     name: mark.name,
-    points: _xyPoints(data, mark.x, mark.y),
+    points: mark.colorBy == null
+        ? _xyPoints(data, mark.x, mark.y)
+        : _barStyledPoints(
+            data,
+            mark.x,
+            mark.y,
+            mark.colorBy,
+            mark.colorEncoding,
+          ),
     color: mark.color,
     yAxisId: axis.id,
     yAxisConfig: axis,
@@ -984,6 +1002,144 @@ void _requireScale(
       native.name,
     );
   }
+}
+
+/// The finite [min, max] of [accessor] over [data], or null when nothing is
+/// finite (in which case the channel bakes no colours and emits no legend).
+({double min, double max})? _finiteDomain<T>(
+  FieldAccessor<T, num> accessor,
+  List<T> data,
+) {
+  double? lo;
+  double? hi;
+  for (final row in data) {
+    final v = accessor(row).toDouble();
+    if (!v.isFinite) continue;
+    if (lo == null || v < lo) lo = v;
+    if (hi == null || v > hi) hi = v;
+  }
+  return lo == null || hi == null ? null : (min: lo, max: hi);
+}
+
+/// Per-row baked colour for [colorBy] under [encoding]. Null where the value
+/// is non-finite or the domain is empty, so that element keeps its base colour.
+List<Color?> _bakeChannelColors<T>(
+  Channel<T> colorBy,
+  ScatterColorEncoding encoding,
+  List<T> data,
+) {
+  final domain = _finiteDomain(colorBy.accessor, data);
+  return <Color?>[
+    for (final row in data)
+      domain == null
+          ? null
+          : encoding.colorFor(
+              colorBy.accessor(row).toDouble(),
+              resolvedMinimumValue: domain.min,
+              resolvedMaximumValue: domain.max,
+            ),
+  ];
+}
+
+/// A colour-ramp legend for a baked colour channel, mirroring
+/// `BravenChartPlus._buildAutomaticColorLegends` (which is scatter-only, so a
+/// baked non-scatter colour would otherwise carry no legend). Null when the
+/// encoding hides its legend, is an invalid piecewise config, or has no finite
+/// domain.
+LegendAnnotation? _channelColorLegend<T>(
+  Channel<T> colorBy,
+  ScatterColorEncoding encoding,
+  List<T> data,
+) {
+  if (!encoding.showLegend) return null;
+  if (!encoding.hasValidPiecewiseConfiguration) return null;
+  var minimum = encoding.minimumValue ?? double.infinity;
+  var maximum = encoding.maximumValue ?? double.negativeInfinity;
+  for (final row in data) {
+    final value = colorBy.accessor(row).toDouble();
+    if (!value.isFinite) continue;
+    if (encoding.minimumValue == null && value < minimum) minimum = value;
+    if (encoding.maximumValue == null && value > maximum) maximum = value;
+  }
+  if (!minimum.isFinite && maximum.isFinite) minimum = maximum;
+  if (!maximum.isFinite && minimum.isFinite) maximum = minimum;
+  if (!minimum.isFinite || !maximum.isFinite) return null;
+  final midpoint = (minimum + maximum) / 2;
+  return LegendAnnotation(
+    colorScale: LegendColorScale(
+      label: colorBy.label ?? encoding.label,
+      colors: encoding.colors,
+      type: encoding.scaleType == ScatterColorScaleType.piecewise
+          ? LegendColorScaleType.piecewise
+          : LegendColorScaleType.continuous,
+      segmentLabels: encoding.scaleType == ScatterColorScaleType.piecewise
+          ? encoding.effectiveBandLabels
+          : const <String>[],
+      minimumLabel: encoding.format(minimum),
+      midpointLabel: minimum == maximum ? null : encoding.format(midpoint),
+      maximumLabel: encoding.format(maximum),
+    ),
+  );
+}
+
+/// Appends a colour-ramp legend for [colorBy]/[colorEncoding] if present.
+void _addColorLegend<T>(
+  List<ChartAnnotation> annotations,
+  Channel<T>? colorBy,
+  ScatterColorEncoding? colorEncoding,
+  List<T> data,
+) {
+  if (colorBy == null || colorEncoding == null) return;
+  final legend = _channelColorLegend(colorBy, colorEncoding, data);
+  if (legend != null) annotations.add(legend);
+}
+
+/// Structural validation of a non-scatter colour channel: symmetric
+/// missing/orphan-encoding checks and the native-scale check (colour is linear).
+void _validateColorChannel<T>(
+  Channel<T>? colorBy,
+  ScatterColorEncoding? colorEncoding,
+  String markId,
+) {
+  _requireScale(markId, 'colorBy', colorBy?.scale, ChannelScale.linear);
+  if (colorBy != null && colorEncoding == null) {
+    throw GrammarSpecException.missingChannelEncoding(
+      markId,
+      'colorBy',
+      'Supply colorEncoding: ScatterColorEncoding(colors: [...]). The package '
+          'ships no default color ramp.',
+    );
+  }
+  if (colorBy == null && colorEncoding != null) {
+    throw GrammarSpecException.orphanChannelEncoding(
+      markId,
+      'colorEncoding',
+      'colorBy',
+    );
+  }
+}
+
+/// Builds bar points, weaving a baked colour into `pointStyle`. A point whose
+/// channels produce nothing keeps a null pointStyle. Task 4 widens this to also
+/// carry a baked width multiplier.
+List<ChartDataPoint> _barStyledPoints<T>(
+  List<T> data,
+  FieldAccessor<T, num> x,
+  FieldAccessor<T, num> y,
+  Channel<T>? colorBy,
+  ScatterColorEncoding? colorEncoding,
+) {
+  final colors = colorBy == null
+      ? null
+      : _bakeChannelColors(colorBy, colorEncoding!, data);
+  return <ChartDataPoint>[
+    for (var i = 0; i < data.length; i++)
+      ChartDataPoint(
+        x: x(data[i]).toDouble(),
+        y: y(data[i]).toDouble(),
+        pointStyle: colors?[i] == null ? null : PointStyle(color: colors![i]),
+      ),
+  ];
 }
 
 // A Channel's label, when it has one, is authoritative: it is where a reader
