@@ -58,6 +58,19 @@ enum GrammarDiagnosticCode {
   /// Raised by the chained `BravenChart` facade, never by `spec.lower()` — a
   /// [PlotSpec] cannot express a mark with a missing accessor.
   missingEncoding,
+
+  /// A faceted spec was handed to a single-panel path (`PlotSpec.lower()` /
+  /// `BravenChart.build()`). Render it with `BravenChart.buildFaceted()`.
+  facetedSpecNotLowerable,
+
+  /// `buildFaceted()` was called on a spec that declared no `.facet(...)`.
+  notFaceted,
+
+  /// Faceting found no rows to partition, so there is no panel to draw.
+  emptyFacetValues,
+
+  /// Faceting produced more than the panel cap allows.
+  facetPanelCapExceeded,
 }
 
 /// Raised when a [PlotSpec] cannot be lowered onto the config surface.
@@ -199,6 +212,38 @@ final class GrammarSpecException implements Exception {
         GrammarDiagnosticCode.missingEncoding,
         '$verb() has no $channel encoding. Pass $channel: (row) => ..., or '
         'set a chart-wide default with .$channel(...) before this geom.',
+      );
+
+  /// A faceted spec reached a single-panel path.
+  factory GrammarSpecException.facetedSpecNotLowerable() =>
+      const GrammarSpecException(
+        GrammarDiagnosticCode.facetedSpecNotLowerable,
+        'This PlotSpec is faceted. A single-panel lowering (PlotSpec.lower / '
+        'BravenChart.build) renders exactly one panel, but a faceted spec is N '
+        'panels. Render it with BravenChart.buildFaceted() or BravenFacetPlot.',
+      );
+
+  /// `buildFaceted()` was called on a non-faceted spec.
+  factory GrammarSpecException.notFaceted() => const GrammarSpecException(
+    GrammarDiagnosticCode.notFaceted,
+    'buildFaceted() needs a faceted spec, but this chain called no '
+    '.facet(...). Add .facet(by: ...), or render it with .build().',
+  );
+
+  /// Faceting partitioned zero rows into zero panels.
+  factory GrammarSpecException.emptyFacetValues() => const GrammarSpecException(
+    GrammarDiagnosticCode.emptyFacetValues,
+    'Faceting found no rows to partition, so there is no panel to draw. Pass '
+    'the rows the facet accessor reads to PlotSpec.data.',
+  );
+
+  /// Faceting produced more panels than the cap allows.
+  factory GrammarSpecException.facetPanelCapExceeded(int count, int cap) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.facetPanelCapExceeded,
+        'Faceting produced $count panels, over the cap of $cap. A grid this '
+        'large is a chart-authoring error, not a render — facet by a coarser '
+        'field or pre-aggregate the rows.',
       );
 
   /// The machine-readable diagnostic.
