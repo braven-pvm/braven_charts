@@ -103,6 +103,7 @@ export 'src/formatting/multi_axis_value_formatter.dart';
 export 'src/grammar/braven_plot.dart';
 export 'src/grammar/channel.dart';
 export 'src/grammar/chart_builder.dart';
+export 'src/grammar/facet_spec.dart';
 export 'src/grammar/grammar_diagnostics.dart';
 export 'src/grammar/mark.dart';
 export 'src/grammar/plot_lowering.dart';
