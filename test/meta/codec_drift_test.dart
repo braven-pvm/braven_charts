@@ -58,6 +58,26 @@ import 'package:flutter_test/flutter_test.dart';
 /// [_roundTrippedInExtractorLayer]) and asserts COMPLETENESS: every manifest
 /// class is gated, pinned, deferred, or a props-less abstract base — so a new
 /// modelled class cannot silently escape the gate.
+///
+/// ## Known blind spots (latent — adversarially verified as non-defects
+/// 2026-07-23; recorded, not silently accepted)
+///
+/// The generous DECODE union has three residual over-credit mechanisms. None
+/// masks a CURRENT drop (both hunt directions verified), but each could hide a
+/// FUTURE per-path drop:
+///   1. Alternate-constructor union. Classes decoded through two constructors
+///      (`RangeAreaDataPoint` full/`.gap`, `TextAnnotation` plain/`.rich`) get
+///      the UNION of args across both arms. Safe today because the reduced
+///      constructor structurally cannot carry the omitted fields; a future
+///      change letting `.gap`/`.rich` accept one would mask a per-path drop
+///      (the `categoryValue` shape, one granularity finer than subclass).
+///   2. Coincidental encode member-read. The generous encode scan credits any
+///      `x.<name>` read, so a future read-but-not-emitted prop sharing a common
+///      name (`name`/`values`/`color`/…) would be over-credited on ENCODE.
+///   3. copyWith→return-type attribution. A `.copyWith(<arg>:)` inside a decode
+///      method credits `<arg>` to that method's return type; a nested/delegated
+///      build could misattribute a field to the enclosing class. Currently only
+///      hits `onPlacementChanged`, an unmodelled callback.
 
 // ===========================================================================
 // Codec source files under audit (the artifact-codec mirror).
