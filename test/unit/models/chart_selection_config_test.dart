@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,6 +20,9 @@ void main() {
       expect(config.dataPointSelectionScale, 2.67);
       expect(config.completeSeriesHoverStrokeScale, 1.75);
       expect(config.completeSeriesSelectionStrokeScale, 1.5);
+      expect(config.brush.enabled, isFalse);
+      expect(config.brush.initialVisible, isFalse);
+      expect(config.brush.initialRange, isNull);
       expect(config.ownsPrimaryDrag(), isFalse);
       expect(
         config.resolveOperation(controlOrMeta: true),
@@ -124,5 +129,73 @@ void main() {
         }
       },
     );
+
+    test('persistent brush state and styling are immutable and portable', () {
+      const range = ChartSelectionBrushRange(
+        minimum: 2,
+        maximum: 6,
+        referenceSeriesId: 'temperature',
+      );
+      const style = ChartSelectionBrushStyle(
+        fillColor: Color(0xFF2563EB),
+        fillOpacity: 0.22,
+        borderColor: Color(0xFF1D4ED8),
+        borderWidth: 2,
+        borderRadius: 6,
+        handleFillColor: Color(0xFFFFFFFF),
+        handleBorderColor: Color(0xFF1D4ED8),
+        handleBorderWidth: 2,
+        handleSize: 12,
+        handleHitSize: 48,
+        hoverOpacity: 0.28,
+        activeOpacity: 0.34,
+      );
+      const brush = ChartSelectionBrushConfig(
+        enabled: true,
+        initialVisible: true,
+        initialRange: range,
+        style: style,
+      );
+      const config = ChartSelectionConfig(
+        acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+        brush: brush,
+      );
+
+      expect(config.brush, brush);
+      expect(
+        range.copyWith(minimum: 3, maximum: 7),
+        const ChartSelectionBrushRange(
+          minimum: 3,
+          maximum: 7,
+          referenceSeriesId: 'temperature',
+        ),
+      );
+      expect(
+        range.copyWith(clearReferenceSeriesId: true).referenceSeriesId,
+        isNull,
+      );
+      expect(style.copyWith(clearFillColor: true).fillColor, isNull);
+      expect(style.copyWith(clearBorderColor: true).borderColor, isNull);
+      expect(
+        style.copyWith(clearHandleFillColor: true).handleFillColor,
+        isNull,
+      );
+      expect(
+        style.copyWith(clearHandleBorderColor: true).handleBorderColor,
+        isNull,
+      );
+      expect(
+        brush.copyWith(clearInitialRange: true),
+        const ChartSelectionBrushConfig(enabled: true, style: style),
+      );
+      expect(config.copyWith(), config);
+    });
+
+    test('visible initial brush requires an initial range', () {
+      expect(
+        () => ChartSelectionBrushConfig(enabled: true, initialVisible: true),
+        throwsAssertionError,
+      );
+    });
   });
 }

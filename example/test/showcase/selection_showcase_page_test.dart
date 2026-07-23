@@ -588,6 +588,62 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'interval tools expose a configurable persistent brush and controller state',
+    (tester) async {
+      await pumpSelectionLab(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey('selection-lab-tool-xInterval')),
+      );
+      await tester.pumpAndSettle();
+
+      final enabled = inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-enabled'),
+      );
+      expect(enabled.value, isFalse);
+      enabled.onChanged(true);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-line')),
+      );
+      expect(chart.interactionConfig?.selection.brush.enabled, isTrue);
+      expect(chart.interactionConfig?.selection.brush.initialVisible, isTrue);
+      expect(chart.interactionConfig?.selection.brush.initialRange, isNotNull);
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-range'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-fill-color'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('selection-workbench')),
+      );
+      expect(workbench.chartController!.selectionBrushState?.visible, isTrue);
+
+      final visible = inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-visible'),
+      );
+      visible.onChanged(false);
+      await tester.pumpAndSettle();
+      expect(workbench.chartController!.selectionBrushState?.visible, isFalse);
+      expect(workbench.chartController!.selectedPointRefs, isNotEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('selection action policies are wired into the Workbench', (
     tester,
   ) async {

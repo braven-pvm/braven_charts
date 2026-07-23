@@ -89,6 +89,53 @@ void main() {
       expect(generated.source, contains('tickLabelCollisionPadding: 9.0,'));
     });
 
+    test('emits persistent brush configuration and optional view state', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const LineChartSeries(
+              id: 'signal',
+              points: [ChartDataPoint(x: 0, y: 1)],
+            ),
+            interaction: const InteractionConfig(
+              selection: ChartSelectionConfig(
+                acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                brush: ChartSelectionBrushConfig(
+                  enabled: true,
+                  initialVisible: true,
+                  initialRange: ChartSelectionBrushRange(
+                    minimum: 2,
+                    maximum: 6,
+                  ),
+                  style: ChartSelectionBrushStyle(
+                    fillColor: Color(0xFF123456),
+                    borderRadius: 6,
+                  ),
+                ),
+              ),
+            ),
+            viewState: ChartViewState(
+              selectionBrush: const ChartSelectionBrushViewState(
+                acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                range: ChartSelectionBrushRange(minimum: 4, maximum: 8),
+                visible: false,
+              ),
+            ),
+          ),
+          options: const ChartDartSourceOptions(includeViewState: true),
+        ),
+      );
+
+      expect(generated.source, contains('brush: ChartSelectionBrushConfig('));
+      expect(generated.source, contains('fillColor: Color(0xFF123456),'));
+      expect(
+        generated.source,
+        contains('selectionBrush: ChartSelectionBrushViewState('),
+      );
+      expect(generated.source, contains('minimum: 4.0,'));
+      expect(generated.source, contains('visible: false,'));
+    });
+
     test('generates every built-in chart family constructor', () {
       final series = <ChartSeries>[
         CandlestickChartSeries(

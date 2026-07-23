@@ -93,6 +93,29 @@ void main() {
           dataPointSelectionScale: 3.2,
           completeSeriesHoverStrokeScale: 2.1,
           completeSeriesSelectionStrokeScale: 1.9,
+          brush: ChartSelectionBrushConfig(
+            enabled: true,
+            initialVisible: true,
+            initialRange: ChartSelectionBrushRange(
+              minimum: 2.5,
+              maximum: 7.5,
+              referenceSeriesId: 'signal',
+            ),
+            style: ChartSelectionBrushStyle(
+              fillColor: Color(0xFF123456),
+              fillOpacity: 0.22,
+              borderColor: Color(0xFF654321),
+              borderWidth: 2.5,
+              borderRadius: 6,
+              handleFillColor: Color(0xFFABCDEF),
+              handleBorderColor: Color(0xFF102030),
+              handleBorderWidth: 2,
+              handleSize: 12,
+              handleHitSize: 48,
+              hoverOpacity: 0.28,
+              activeOpacity: 0.34,
+            ),
+          ),
         ),
         showFocusBorder: true,
         enableFocusOnHover: false,
@@ -110,6 +133,35 @@ void main() {
 
       expect(decoded, source);
       expect(document.requiredBindings, isEmpty);
+    });
+
+    test('defaults older selection documents to a disabled brush', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            selection: ChartSelectionConfig(
+              acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final selection = Map<String, Object?>.from(
+        configuration['selection']! as Map,
+      )..remove('brush');
+      configuration['selection'] = selection;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.selection.brush, const ChartSelectionBrushConfig());
     });
 
     test('defaults older selection documents to mark scope', () {

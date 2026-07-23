@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../../coordinates/chart_transform.dart';
@@ -20,6 +21,8 @@ import '../../interaction/core/hit_test_strategy.dart';
 import '../../interaction/core/interaction_mode.dart';
 import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
+import '../../models/braven_chart_controller.dart'
+    show ChartSelectionBrushState;
 import '../../models/interaction_config.dart';
 import '../../models/range_area_chart_series.dart';
 
@@ -46,6 +49,12 @@ abstract class EventHandlerDelegate {
 
   /// The plot area rectangle.
   Rect get plotArea;
+
+  /// Current durable brush state supplied by the chart widget.
+  ChartSelectionBrushState? get selectionBrushState;
+
+  /// Current durable brush geometry in widget coordinates.
+  Rect? get selectionBrushWidgetRect;
 
   // ==================== Callbacks ====================
 
@@ -105,6 +114,13 @@ abstract class EventHandlerDelegate {
 
   /// Resolves Cartesian data hits enclosed by a widget-space polygon.
   List<ChartDataHit> hitTestDataPolygon(List<Offset> widgetPolygon);
+
+  /// Resolves one widget-space brush rectangle through normal selection.
+  ChartSelectionGestureResult? selectionGestureForWidgetRect(
+    Rect widgetRect, {
+    bool isPersistentBrushUpdate,
+    bool isFinal,
+  });
 
   /// Rebuilds the spatial index after element changes.
   void rebuildSpatialIndex();
@@ -241,6 +257,8 @@ class ChartSelectionGestureResult {
     this.minimumYInclusive,
     this.maximumYInclusive,
     this.plotBounds,
+    this.isPersistentBrushUpdate = false,
+    this.isFinal = true,
   });
 
   final ChartSelectionAcquisitionMode acquisitionMode;
@@ -257,7 +275,15 @@ class ChartSelectionGestureResult {
   /// transform because independent axes map the same pixels to different data
   /// values.
   final Rect? plotBounds;
+
+  /// Whether this gesture came from moving or resizing an existing brush.
+  final bool isPersistentBrushUpdate;
+
+  /// Whether this is the final pointer-up publication for the interaction.
+  final bool isFinal;
 }
+
+enum _SelectionBrushDragKind { move, leadingHandle, trailingHandle }
 
 /// Manages all pointer event handling for the chart.
 ///
@@ -450,8 +476,22 @@ class EventHandlerManager {
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
+  _SelectionBrushDragKind? _selectionBrushDragKind;
+  Rect? _selectionBrushStartRect;
+  Rect? _activeSelectionBrushRect;
+  Offset? _selectionBrushStartPointer;
+  bool _selectionBrushHovered = false;
+  Rect? _pendingSelectionBrushRect;
+  bool _selectionBrushFrameScheduled = false;
+
   /// Gets the current cursor position for crosshair rendering.
   Offset? get cursorPosition => _cursorPosition;
+
+  /// Transient widget-space brush geometry during a move or resize.
+  Rect? get activeSelectionBrushRect => _activeSelectionBrushRect;
+
+  /// Whether the pointer is currently over the persistent brush.
+  bool get selectionBrushHovered => _selectionBrushHovered;
 
   /// Clears the cursor position and repaints. Call when the pointer leaves the chart.
   void clearCursorPosition() {
@@ -463,6 +503,7 @@ class EventHandlerManager {
     _cursorPosition = null;
     _delegate.coordinator.setHoveredMarker(null);
     _delegate.coordinator.setPressedMarker(null);
+    _selectionBrushHovered = false;
     _setHoveredElement(null);
     _delegate.markNeedsPaint();
   }
@@ -472,6 +513,7 @@ class EventHandlerManager {
     _cursorPosition = null;
     _tappedMarker = null;
     _pendingHitTestPosition = null;
+    _selectionBrushHovered = false;
     _delegate.coordinator.setHoveredMarker(null);
     _delegate.coordinator.setPressedMarker(null);
     _delegate.markNeedsPaint();
@@ -523,6 +565,7 @@ class EventHandlerManager {
   void dispose() {
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
+    _clearSelectionBrushInteractionState();
   }
 
   /// Cancels pointer-only candidate state after the gesture arena awards a
@@ -584,9 +627,31 @@ class EventHandlerManager {
   /// Main event handler - dispatches to specific handlers.
   void handleEvent(PointerEvent event) {
     final isDirectTouch = event.kind == PointerDeviceKind.touch;
+    final interaction =
+        _delegate.interactionConfig ?? const InteractionConfig();
     if (isDirectTouch && event is PointerDownEvent) {
       _activeTouchPointers.add(event.pointer);
       _touchDownPositions[event.pointer] = event.localPosition;
+      final touchCanTransformViewport =
+          interaction.enabled &&
+          interaction.touch.enabled &&
+          ((interaction.enableZoom && interaction.touch.enablePinchZoom) ||
+              (interaction.enablePan && interaction.touch.enablePan));
+      if (_activeTouchPointers.length >= 2 &&
+          touchCanTransformViewport &&
+          _delegate.coordinator.currentMode ==
+              InteractionMode.selectionBrushManipulating) {
+        // A visible brush owns one-finger manipulation, but an explicit second
+        // touch is the mobile viewport-navigation chord. Release the brush
+        // before the scale recognizer resolves so pinch/pan has no dead zone
+        // when its first pointer happened to land inside the brush.
+        _cancelSelectionBrushInteraction(restoreStartRect: true);
+        _delegate.coordinator.setPressedMarker(null);
+        _delegate.coordinator.endInteraction();
+        _delegate.coordinator.releaseMode(force: true);
+        _delegate.markNeedsPaint();
+        return;
+      }
     }
     if (isDirectTouch && _suppressTouchSequence) {
       if (event is PointerUpEvent || event is PointerCancelEvent) {
@@ -600,8 +665,6 @@ class EventHandlerManager {
       return;
     }
 
-    final interaction =
-        _delegate.interactionConfig ?? const InteractionConfig();
     final selectionOwnsPrimaryTouchDrag =
         interaction.enableSelection && interaction.selection.ownsPrimaryDrag();
     final isBrowseTouch =
@@ -739,6 +802,11 @@ class EventHandlerManager {
     final annotationInteractionTarget = event.buttons == kPrimaryMouseButton
         ? _delegate.hitTestAnnotationInteractionTarget(position)
         : null;
+    if (event.buttons == kPrimaryMouseButton &&
+        annotationInteractionTarget == null &&
+        _beginSelectionBrushInteraction(position)) {
+      return;
+    }
     final hitElement =
         annotationInteractionTarget ?? _delegate.hitTestElements(position);
 
@@ -869,12 +937,87 @@ class EventHandlerManager {
     }
   }
 
+  bool _beginSelectionBrushInteraction(Offset position) {
+    final selection =
+        _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+    final state = _delegate.selectionBrushState;
+    final rect = _delegate.selectionBrushWidgetRect;
+    if (!selection.brush.enabled ||
+        state == null ||
+        !state.visible ||
+        rect == null) {
+      return false;
+    }
+    final kind = _selectionBrushHitKind(position, rect, selection);
+    if (kind == null) return false;
+
+    _cancelDeferredEmptyAreaClick();
+    _selectionBrushDragKind = kind;
+    _selectionBrushStartRect = rect;
+    _activeSelectionBrushRect = rect;
+    _selectionBrushStartPointer = position;
+    _delegate.coordinator.startInteraction(position);
+    _delegate.coordinator.claimMode(InteractionMode.selectionBrushManipulating);
+    _delegate.onCursorChange?.call(
+      kind == _SelectionBrushDragKind.move
+          ? SystemMouseCursors.grabbing
+          : _selectionBrushResizeCursor(state.acquisitionMode),
+    );
+    _delegate.markNeedsPaint();
+    return true;
+  }
+
+  _SelectionBrushDragKind? _selectionBrushHitKind(
+    Offset position,
+    Rect rect,
+    ChartSelectionConfig selection,
+  ) {
+    final state = _delegate.selectionBrushState;
+    if (state == null) return null;
+    final transposed = _delegate.transform?.transposed ?? false;
+    final usesScreenX =
+        state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+        ? !transposed
+        : transposed;
+    final extent = selection.brush.style.handleHitSize;
+    final leadingCenter = usesScreenX ? rect.centerLeft : rect.topCenter;
+    final trailingCenter = usesScreenX ? rect.centerRight : rect.bottomCenter;
+    if ((position - leadingCenter).distance <= extent / 2) {
+      return _SelectionBrushDragKind.leadingHandle;
+    }
+    if ((position - trailingCenter).distance <= extent / 2) {
+      return _SelectionBrushDragKind.trailingHandle;
+    }
+    return rect.contains(position) ? _SelectionBrushDragKind.move : null;
+  }
+
+  MouseCursor _selectionBrushResizeCursor(ChartSelectionAcquisitionMode mode) {
+    final transposed = _delegate.transform?.transposed ?? false;
+    final usesScreenX = mode == ChartSelectionAcquisitionMode.xInterval
+        ? !transposed
+        : transposed;
+    return usesScreenX
+        ? SystemMouseCursors.resizeLeftRight
+        : SystemMouseCursors.resizeUpDown;
+  }
+
   // ==========================================================================
   // Pointer Move Handler
   // ==========================================================================
 
   void _handlePointerMove(PointerMoveEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
+
+    if (coordinator.currentMode == InteractionMode.selectionBrushManipulating &&
+        event.buttons == kPrimaryMouseButton) {
+      // Crosshair painting is suppressed while the brush owns the drag, but
+      // its retained pointer must continue following the gesture. Otherwise
+      // releasing the brush briefly reveals the pointer-down crosshair before
+      // the next hover event supplies the release position.
+      _cursorPosition = position;
+      _updateSelectionBrushInteraction(position);
+      return;
+    }
 
     // Check potential drags first (before isInteracting check)
     if (_checkPotentialDrags(event, position)) {
@@ -885,6 +1028,16 @@ class EventHandlerManager {
     if (_delegate.isScrollbarDragging) {
       _delegate.handleScrollbarDrag(position);
       _delegate.onViewportChanged?.call();
+      return;
+    }
+
+    if (coordinator.currentMode == InteractionMode.selectionBrushManipulating) {
+      _cursorPosition = position;
+      _completeSelectionBrushInteraction();
+      coordinator.setPressedMarker(null);
+      coordinator.endInteraction();
+      coordinator.releaseMode();
+      _delegate.markNeedsPaint();
       return;
     }
 
@@ -913,6 +1066,113 @@ class EventHandlerManager {
 
     // Handle pan and box selection
     _handlePanAndBoxSelection(event, position, startPos);
+  }
+
+  void _updateSelectionBrushInteraction(Offset position) {
+    final state = _delegate.selectionBrushState;
+    final kind = _selectionBrushDragKind;
+    final startRect = _selectionBrushStartRect;
+    final startPointer = _selectionBrushStartPointer;
+    if (state == null ||
+        kind == null ||
+        startRect == null ||
+        startPointer == null) {
+      return;
+    }
+    final transposed = _delegate.transform?.transposed ?? false;
+    final usesScreenX =
+        state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+        ? !transposed
+        : transposed;
+    final plot = _delegate.plotArea;
+    final style =
+        (_delegate.interactionConfig?.selection ?? const ChartSelectionConfig())
+            .brush
+            .style;
+    final minimumSpan = math.max(style.handleSize, 2);
+    final delta = usesScreenX
+        ? position.dx - startPointer.dx
+        : position.dy - startPointer.dy;
+    Rect next;
+    if (kind == _SelectionBrushDragKind.move) {
+      if (usesScreenX) {
+        final clampedDelta = delta.clamp(
+          plot.left - startRect.left,
+          plot.right - startRect.right,
+        );
+        next = startRect.shift(Offset(clampedDelta, 0));
+      } else {
+        final clampedDelta = delta.clamp(
+          plot.top - startRect.top,
+          plot.bottom - startRect.bottom,
+        );
+        next = startRect.shift(Offset(0, clampedDelta));
+      }
+    } else if (usesScreenX) {
+      final edge = kind == _SelectionBrushDragKind.leadingHandle
+          ? (startRect.left + delta).clamp(
+              plot.left,
+              startRect.right - minimumSpan,
+            )
+          : (startRect.right + delta).clamp(
+              startRect.left + minimumSpan,
+              plot.right,
+            );
+      next = kind == _SelectionBrushDragKind.leadingHandle
+          ? Rect.fromLTRB(
+              edge,
+              startRect.top,
+              startRect.right,
+              startRect.bottom,
+            )
+          : Rect.fromLTRB(
+              startRect.left,
+              startRect.top,
+              edge,
+              startRect.bottom,
+            );
+    } else {
+      final edge = kind == _SelectionBrushDragKind.leadingHandle
+          ? (startRect.top + delta).clamp(
+              plot.top,
+              startRect.bottom - minimumSpan,
+            )
+          : (startRect.bottom + delta).clamp(
+              startRect.top + minimumSpan,
+              plot.bottom,
+            );
+      next = kind == _SelectionBrushDragKind.leadingHandle
+          ? Rect.fromLTRB(
+              startRect.left,
+              edge,
+              startRect.right,
+              startRect.bottom,
+            )
+          : Rect.fromLTRB(startRect.left, startRect.top, startRect.right, edge);
+    }
+    _activeSelectionBrushRect = next;
+    _pendingSelectionBrushRect = next;
+    _scheduleSelectionBrushUpdate();
+    _delegate.markNeedsPaint();
+  }
+
+  void _scheduleSelectionBrushUpdate() {
+    if (_selectionBrushFrameScheduled) return;
+    _selectionBrushFrameScheduled = true;
+    SchedulerBinding.instance.scheduleFrameCallback((_) {
+      _selectionBrushFrameScheduled = false;
+      final rect = _pendingSelectionBrushRect;
+      _pendingSelectionBrushRect = null;
+      if (rect == null) return;
+      final result = _delegate.selectionGestureForWidgetRect(
+        rect,
+        isPersistentBrushUpdate: true,
+        isFinal: false,
+      );
+      if (result != null) {
+        _delegate.onSelectionGestureComplete?.call(result);
+      }
+    });
   }
 
   /// Checks and handles potential drag thresholds.
@@ -1392,6 +1652,15 @@ class EventHandlerManager {
       return;
     }
 
+    if (coordinator.currentMode == InteractionMode.selectionBrushManipulating) {
+      _cursorPosition = position;
+      _completeSelectionBrushInteraction();
+      coordinator.endInteraction();
+      coordinator.releaseMode();
+      _delegate.markNeedsPaint();
+      return;
+    }
+
     // Complete box selection if active
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       _completeBoxSelection();
@@ -1474,10 +1743,62 @@ class EventHandlerManager {
     }
     _potentialDragValueSummary = null;
     _potentialDragValueSummaryStart = null;
+    _cancelSelectionBrushInteraction();
     _delegate.coordinator.setPressedMarker(null);
     _delegate.coordinator.endInteraction();
     _delegate.coordinator.releaseMode(force: true);
     _delegate.markNeedsPaint();
+  }
+
+  void _completeSelectionBrushInteraction() {
+    final rect = _activeSelectionBrushRect ?? _selectionBrushStartRect;
+    _pendingSelectionBrushRect = null;
+    if (rect != null) {
+      final result = _delegate.selectionGestureForWidgetRect(
+        rect,
+        isPersistentBrushUpdate: true,
+        isFinal: true,
+      );
+      if (result != null) {
+        _delegate.onSelectionGestureComplete?.call(result);
+      }
+    }
+    _clearSelectionBrushInteractionState(preserveActiveRect: rect != null);
+    if (rect != null) {
+      // Keep the live rectangle through the frame that transfers the final
+      // data-domain range back into the RenderBox. Clearing it synchronously
+      // would paint the previously committed range for one frame.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (_selectionBrushDragKind == null &&
+            identical(_activeSelectionBrushRect, rect)) {
+          _activeSelectionBrushRect = null;
+          _delegate.markNeedsPaint();
+        }
+      });
+    }
+  }
+
+  void _cancelSelectionBrushInteraction({bool restoreStartRect = false}) {
+    final startRect = _selectionBrushStartRect;
+    _pendingSelectionBrushRect = null;
+    if (restoreStartRect && startRect != null) {
+      final result = _delegate.selectionGestureForWidgetRect(
+        startRect,
+        isPersistentBrushUpdate: true,
+        isFinal: true,
+      );
+      if (result != null) {
+        _delegate.onSelectionGestureComplete?.call(result);
+      }
+    }
+    _clearSelectionBrushInteractionState();
+  }
+
+  void _clearSelectionBrushInteractionState({bool preserveActiveRect = false}) {
+    _selectionBrushDragKind = null;
+    _selectionBrushStartRect = null;
+    if (!preserveActiveRect) _activeSelectionBrushRect = null;
+    _selectionBrushStartPointer = null;
   }
 
   void _completeBoxSelection() {
@@ -2103,6 +2424,7 @@ class EventHandlerManager {
 
     // Check scrollbar hover first
     if (_delegate.checkScrollbarHover(position)) {
+      _setSelectionBrushHovered(false);
       return;
     }
 
@@ -2116,6 +2438,23 @@ class EventHandlerManager {
 
     final selection =
         _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+    final brushRect = _delegate.selectionBrushWidgetRect;
+    final brushKind = selection.brush.enabled && brushRect != null
+        ? _selectionBrushHitKind(position, brushRect, selection)
+        : null;
+    if (brushKind != null) {
+      _setSelectionBrushHovered(true);
+      _setHoveredElement(null);
+      coordinator.setHoveredMarker(null);
+      final mode = _delegate.selectionBrushState?.acquisitionMode;
+      _delegate.onCursorChange?.call(
+        brushKind == _SelectionBrushDragKind.move || mode == null
+            ? SystemMouseCursors.move
+            : _selectionBrushResizeCursor(mode),
+      );
+      return;
+    }
+    _setSelectionBrushHovered(false);
 
     // Resolve marker feedback first. In the dual-target scope a marker inside
     // its configured radius wins exclusively; only the remaining path corridor
@@ -2151,6 +2490,12 @@ class EventHandlerManager {
     _hitTestDebounceTimer = Timer(_hitTestThrottleDuration, () {
       _performDeferredHitTest();
     });
+  }
+
+  void _setSelectionBrushHovered(bool value) {
+    if (_selectionBrushHovered == value) return;
+    _selectionBrushHovered = value;
+    _delegate.markNeedsPaint();
   }
 
   void _performDeferredHitTest() {

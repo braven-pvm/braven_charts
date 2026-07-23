@@ -16,7 +16,7 @@ Render ten chart families through one custom `RenderBox` and `Canvas` pipeline. 
 
 <!-- BEGIN GENERATED: FEATURES -->
 - **[Ten chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
-- **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Zoom, pan, track, annotate, select, and link chart data.
+- **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Zoom, pan, track, annotate, select, and manipulate durable interval brushes.
 - **[Multi-axis analysis](https://braven-pvm.github.io/braven_charts/?page=multi-axis):** Coordinate independent axes, normalized series, navigators, and summaries.
 - **[Typed authoring and source](https://braven-pvm.github.io/braven_charts/?page=chart-grammar):** Choose direct config, checked Grammar, fluent modifiers, or generated Dart.
 - **[Live and efficient rendering](https://braven-pvm.github.io/braven_charts/?page=live-stream):** Stream changing data through cached, frame-coalesced rendering.
@@ -129,7 +129,7 @@ lowers to the same `BravenChartPlus` renderer as direct configuration.
 Continue with a runnable example:
 
 - [Multi-axis charts and normalization](https://braven-pvm.github.io/braven_charts/?page=multi-axis)
-- [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection)
+- [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Try the opt-in persistent X/Y brush, including initial bounds, styling, drag/resize, controller commands, and touch coexistence.
 - [Live data and buffering](https://braven-pvm.github.io/braven_charts/?page=live-stream)
 - [Chart, Data, Split, and Source Workbench](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
 - [Portable artifacts, tables, and restoration](https://braven-pvm.github.io/braven_charts/?page=artifact-showcase)
@@ -150,7 +150,7 @@ developer task.
 ### Interaction and display
 
 - [Tracking and value display](https://braven-pvm.github.io/braven_charts/?page=value-summary) — Compose crosshairs, tooltips, markers, and persistent value summaries.
-- [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, and linked chart data.
+- [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, linked data, and persistent X/Y brushes.
 - [Zoom, pan, and navigators](https://braven-pvm.github.io/braven_charts/?page=interaction) — Control viewports directly or through a reusable full-domain navigator.
 - [Annotations](https://braven-pvm.github.io/braven_charts/?page=annotations) — Add and edit point, range, threshold, text, trend, and pin overlays.
 - [Axes and normalization](https://braven-pvm.github.io/braven_charts/?page=multi-axis) — Configure independent axes, visible slots, formatting, and normalization.

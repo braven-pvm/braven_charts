@@ -238,6 +238,119 @@ extension KeyboardConfigFluent on KeyboardConfig {
       copyWith(enableHomeEndKeys: value);
 }
 
+/// Generated fluent modifiers for [ChartSelectionBrushRange].
+extension ChartSelectionBrushRangeFluent on ChartSelectionBrushRange {
+  /// Replaces [ChartSelectionBrushRange.referenceSeriesId] with [value].
+  ChartSelectionBrushRange withReferenceSeriesId(String value) =>
+      copyWith(referenceSeriesId: value);
+
+  /// Clears [ChartSelectionBrushRange.referenceSeriesId] to `null`.
+  ChartSelectionBrushRange clearReferenceSeriesId() =>
+      copyWith(clearReferenceSeriesId: true);
+
+  /// Replaces [ChartSelectionBrushRange.minimum] and [ChartSelectionBrushRange.maximum] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  ChartSelectionBrushRange withBounds(double minimum, double maximum) =>
+      copyWith(minimum: minimum, maximum: maximum);
+}
+
+/// Generated fluent modifiers for [ChartSelectionBrushStyle].
+extension ChartSelectionBrushStyleFluent on ChartSelectionBrushStyle {
+  /// Replaces [ChartSelectionBrushStyle.fillColor] with [value].
+  ChartSelectionBrushStyle withFillColor(Color value) =>
+      copyWith(fillColor: value);
+
+  /// Clears [ChartSelectionBrushStyle.fillColor] to `null`.
+  ChartSelectionBrushStyle clearFillColor() => copyWith(clearFillColor: true);
+
+  /// Replaces [ChartSelectionBrushStyle.fillOpacity] with [value].
+  ChartSelectionBrushStyle withFillOpacity(double value) =>
+      copyWith(fillOpacity: value);
+
+  /// Replaces [ChartSelectionBrushStyle.borderColor] with [value].
+  ChartSelectionBrushStyle withBorderColor(Color value) =>
+      copyWith(borderColor: value);
+
+  /// Clears [ChartSelectionBrushStyle.borderColor] to `null`.
+  ChartSelectionBrushStyle clearBorderColor() =>
+      copyWith(clearBorderColor: true);
+
+  /// Replaces [ChartSelectionBrushStyle.borderWidth] with [value].
+  ChartSelectionBrushStyle withBorderWidth(double value) =>
+      copyWith(borderWidth: value);
+
+  /// Replaces [ChartSelectionBrushStyle.borderRadius] with [value].
+  ChartSelectionBrushStyle withBorderRadius(double value) =>
+      copyWith(borderRadius: value);
+
+  /// Replaces [ChartSelectionBrushStyle.handleFillColor] with [value].
+  ChartSelectionBrushStyle withHandleFillColor(Color value) =>
+      copyWith(handleFillColor: value);
+
+  /// Clears [ChartSelectionBrushStyle.handleFillColor] to `null`.
+  ChartSelectionBrushStyle clearHandleFillColor() =>
+      copyWith(clearHandleFillColor: true);
+
+  /// Replaces [ChartSelectionBrushStyle.handleBorderColor] with [value].
+  ChartSelectionBrushStyle withHandleBorderColor(Color value) =>
+      copyWith(handleBorderColor: value);
+
+  /// Clears [ChartSelectionBrushStyle.handleBorderColor] to `null`.
+  ChartSelectionBrushStyle clearHandleBorderColor() =>
+      copyWith(clearHandleBorderColor: true);
+
+  /// Replaces [ChartSelectionBrushStyle.handleBorderWidth] with [value].
+  ChartSelectionBrushStyle withHandleBorderWidth(double value) =>
+      copyWith(handleBorderWidth: value);
+
+  /// Replaces [ChartSelectionBrushStyle.hoverOpacity] with [value].
+  ChartSelectionBrushStyle withHoverOpacity(double value) =>
+      copyWith(hoverOpacity: value);
+
+  /// Replaces [ChartSelectionBrushStyle.activeOpacity] with [value].
+  ChartSelectionBrushStyle withActiveOpacity(double value) =>
+      copyWith(activeOpacity: value);
+
+  /// Replaces [ChartSelectionBrushStyle.handleSize] and [ChartSelectionBrushStyle.handleHitSize] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  ChartSelectionBrushStyle withHandleGeometry(
+    double handleSize,
+    double handleHitSize,
+  ) => copyWith(handleSize: handleSize, handleHitSize: handleHitSize);
+}
+
+/// Generated fluent modifiers for [ChartSelectionBrushConfig].
+extension ChartSelectionBrushConfigFluent on ChartSelectionBrushConfig {
+  /// Replaces [ChartSelectionBrushConfig.enabled] with [value].
+  ChartSelectionBrushConfig withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [ChartSelectionBrushConfig.style] with [value].
+  ChartSelectionBrushConfig withStyle(ChartSelectionBrushStyle value) =>
+      copyWith(style: value);
+
+  /// Rebuilds [ChartSelectionBrushConfig.style] from its current value.
+  ///
+  /// `update` receives the current [ChartSelectionBrushStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ChartSelectionBrushConfig updateStyle(
+    ChartSelectionBrushStyle Function(ChartSelectionBrushStyle current) update,
+  ) => copyWith(style: update(style));
+
+  /// Replaces [ChartSelectionBrushConfig.initialRange] and [ChartSelectionBrushConfig.initialVisible] together.
+  ///
+  /// The parameters are assert-coupled, so they only move as a pair.
+  ChartSelectionBrushConfig withInitialState(
+    ChartSelectionBrushRange initialRange,
+    bool initialVisible,
+  ) => copyWith(initialRange: initialRange, initialVisible: initialVisible);
+
+  /// Clears [ChartSelectionBrushConfig.initialRange] to `null`.
+  ChartSelectionBrushConfig clearInitialRange() =>
+      copyWith(clearInitialRange: true);
+}
+
 /// Generated fluent modifiers for [ChartSelectionConfig].
 extension ChartSelectionConfigFluent on ChartSelectionConfig {
   /// Replaces [ChartSelectionConfig.acquisitionMode] with [value].
@@ -288,6 +401,19 @@ extension ChartSelectionConfigFluent on ChartSelectionConfig {
   /// Replaces [ChartSelectionConfig.completeSeriesSelectionStrokeScale] with [value].
   ChartSelectionConfig withCompleteSeriesSelectionStrokeScale(double value) =>
       copyWith(completeSeriesSelectionStrokeScale: value);
+
+  /// Replaces [ChartSelectionConfig.brush] with [value].
+  ChartSelectionConfig withBrush(ChartSelectionBrushConfig value) =>
+      copyWith(brush: value);
+
+  /// Rebuilds [ChartSelectionConfig.brush] from its current value.
+  ///
+  /// `update` receives the current [ChartSelectionBrushConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ChartSelectionConfig updateBrush(
+    ChartSelectionBrushConfig Function(ChartSelectionBrushConfig current)
+    update,
+  ) => copyWith(brush: update(brush));
 }
 
 /// Generated fluent modifiers for [InteractionConfig].

@@ -116,6 +116,45 @@ void main() {
       },
     );
 
+    test('round-trips active, hidden, and explicitly cleared brush state', () {
+      const range = ChartSelectionBrushRange(
+        minimum: 2,
+        maximum: 6,
+        referenceSeriesId: 'signal',
+      );
+      final active = ChartViewState(
+        selectionBrush: const ChartSelectionBrushViewState(
+          acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+          range: range,
+          visible: true,
+        ),
+      );
+      final hidden = ChartViewState(
+        selectionBrush: const ChartSelectionBrushViewState(
+          acquisitionMode: ChartSelectionAcquisitionMode.yInterval,
+          range: range,
+          visible: false,
+        ),
+      );
+      final cleared = ChartViewState(
+        selectionBrush: const ChartSelectionBrushViewState.cleared(),
+      );
+
+      expect(
+        ChartViewState.fromJson(active.toJson()).selectionBrush?.visible,
+        isTrue,
+      );
+      expect(
+        ChartViewState.fromJson(hidden.toJson()).selectionBrush?.visible,
+        isFalse,
+      );
+      expect(
+        ChartViewState.fromJson(cleared.toJson()).selectionBrush?.isCleared,
+        isTrue,
+      );
+      expect(ChartViewState.fromJson(const {}).selectionBrush, isNull);
+    });
+
     test('returns structured failures for invalid and future schemas', () {
       final invalid = ChartArtifactJsonCodec.decode('{not-json');
       expect(invalid, isA<ChartArtifactFailure<ChartArtifactDecodeResult>>());

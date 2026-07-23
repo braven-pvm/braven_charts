@@ -1277,6 +1277,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   final Set<ChartPointRef> _selectedPointRefs = <ChartPointRef>{};
   ChartPointRef? _keyboardSelectionAnchorRef;
   ChartSelectionExpression? _selectionIntentExpression;
+  ChartSelectionBrushState? _selectionBrushState;
   ChartSelectionResult _lastPublishedSelectionResult =
       const ChartSelectionResult.empty();
   ChartSelectionResult? _pendingDataSelectionResult;
@@ -1520,6 +1521,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _focusNode.addListener(_onFocusChanged);
     _coordinator = ChartInteractionCoordinator();
     _coordinator.addListener(_onCoordinatorChanged);
+    _initializeSelectionBrushFromConfig();
 
     _spatialIndex = QuadTree(
       bounds: const Rect.fromLTWH(0, 0, 800, 600),
@@ -1640,6 +1642,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onZoomToSelection: _zoomToSelection,
       onZoomViewport: _zoomViewportFromController,
       onFitData: _fitDataFromController,
+      onSetSelectionBrush: _setSelectionBrush,
+      onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
+      onClearSelectionBrush: _clearSelectionBrush,
       onClearPointFocus: _clearPointFocus,
       onClearPointSelection: _clearPointSelection,
       onReplayRadialEntrance: _startRadialRevealAnimation,
@@ -1652,6 +1657,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // listeners are never dirtied during the build phase.
     _scheduleControllerPointStateSync();
     _scheduleEffectiveDocumentRevisionPublish();
+    _scheduleInitialSelectionBrushCommit();
     _attachInteractionGroup();
   }
 
@@ -1794,6 +1800,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onZoomToSelection: _zoomToSelection,
         onZoomViewport: _zoomViewportFromController,
         onFitData: _fitDataFromController,
+        onSetSelectionBrush: _setSelectionBrush,
+        onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
+        onClearSelectionBrush: _clearSelectionBrush,
         onClearPointFocus: _clearPointFocus,
         onClearPointSelection: _clearPointSelection,
         onReplayRadialEntrance: _startRadialRevealAnimation,
@@ -1802,6 +1811,29 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onClear: _clearAllSeriesSelection,
       );
       _scheduleControllerPointStateSync();
+    }
+
+    if (widget.interactionConfig != oldWidget.interactionConfig) {
+      final selection =
+          (widget.interactionConfig ?? const InteractionConfig()).selection;
+      final supportsBrush =
+          selection.acquisitionMode ==
+              ChartSelectionAcquisitionMode.xInterval ||
+          selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval;
+      if (!selection.brush.enabled || !supportsBrush) {
+        _selectionBrushState = null;
+      } else if (_selectionBrushState != null &&
+          _selectionBrushState!.acquisitionMode != selection.acquisitionMode) {
+        _selectionBrushState = null;
+      } else if (_selectionBrushState == null &&
+          !(oldWidget.interactionConfig?.selection.brush.enabled ?? false) &&
+          selection.brush.initialRange != null) {
+        _initializeSelectionBrushFromConfig();
+        _scheduleInitialSelectionBrushCommit();
+      }
+      widget.bravenChartController?.updateSelectionBrushState(
+        _selectionBrushState,
+      );
     }
 
     if (widget.interactionGroupController !=
@@ -1898,6 +1930,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // Without this guard, every focus change triggers setState on ALL charts,
     // causing cascading rebuilds with 21+ charts on the gallery page.
     if ((widget.interactionConfig?.showFocusBorder ?? false) ||
+        _selectionBrushState?.visible == true ||
         hideRadialFocus) {
       setState(() {
         if (hideRadialFocus) {
@@ -2673,6 +2706,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final baseInteraction =
         widget.interactionConfig ?? const InteractionConfig();
     final legendPosition = _legendCustomPosition;
+    final brushEnabled = baseInteraction.selection.brush.enabled;
+    final brushState = _selectionBrushState;
     final viewState = ChartViewState(
       visibleBounds: transform == null
           ? null
@@ -2687,6 +2722,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       selectedSeriesIds: _selectedSeriesIds,
       selectedPointRefs: _selectedPointRefs,
       selectionExpression: _selectionExpressionForSnapshot().toDocument(),
+      selectionBrush: brushEnabled
+          ? brushState == null
+                ? const ChartSelectionBrushViewState.cleared()
+                : ChartSelectionBrushViewState(
+                    acquisitionMode: brushState.acquisitionMode,
+                    range: brushState.range,
+                    visible: brushState.visible,
+                  )
+          : null,
       visibleAxisIds: renderBox?.visibleAxisIds ?? const [],
       overflowAxisIds: renderBox?.overflowAxisIds ?? const [],
       selectedAnnotationId:
@@ -5931,7 +5975,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             maxDistance: selection.completeSeriesHitRadius,
           )
         : null;
+    final tappedSelectionBrush =
+        renderBox?.selectionBrushWidgetRect?.contains(details.localPosition) ??
+        false;
     _backgroundTapCandidate =
+        !tappedSelectionBrush &&
         tappedElement == null &&
         directDataHit == null &&
         directSeriesId == null;
@@ -6246,7 +6294,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             ChartSelectionAcquisitionMode.point) {
       return;
     }
-    final operation = _resolveSelectionOperation(interaction.selection);
+    final operation = gesture.isPersistentBrushUpdate
+        ? ChartSelectionOperation.replace
+        : _resolveSelectionOperation(interaction.selection);
     final targets = ChartSelectionResolver.resolve(
       scope: interaction.selection.scope,
       hits: gesture.hits,
@@ -6260,6 +6310,189 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       operation,
       previousExpression,
     );
+    if (interaction.selection.brush.enabled &&
+        (gesture.acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
+            gesture.acquisitionMode ==
+                ChartSelectionAcquisitionMode.yInterval)) {
+      _updateSelectionBrushFromGesture(gesture);
+    }
+  }
+
+  void _initializeSelectionBrushFromConfig() {
+    final selection =
+        (widget.interactionConfig ?? const InteractionConfig()).selection;
+    final initialRange = selection.brush.initialRange;
+    final supportsBrush =
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval;
+    if (!selection.brush.enabled || !supportsBrush || initialRange == null) {
+      _selectionBrushState = null;
+      return;
+    }
+    _selectionBrushState = ChartSelectionBrushState(
+      acquisitionMode: selection.acquisitionMode,
+      range: initialRange,
+      visible: selection.brush.initialVisible,
+    );
+  }
+
+  void _scheduleInitialSelectionBrushCommit() {
+    final state = _selectionBrushState;
+    if (state == null || !state.visible) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectionBrushState != state) return;
+      _commitSelectionBrushState(state);
+    });
+  }
+
+  void _updateSelectionBrushFromGesture(ChartSelectionGestureResult gesture) {
+    final current = _selectionBrushState;
+    ChartSelectionBrushRange? range;
+    if (gesture.acquisitionMode == ChartSelectionAcquisitionMode.xInterval &&
+        gesture.minimumXInclusive != null &&
+        gesture.maximumXInclusive != null) {
+      range = ChartSelectionBrushRange(
+        minimum: gesture.minimumXInclusive!,
+        maximum: gesture.maximumXInclusive!,
+      );
+    } else if (gesture.acquisitionMode ==
+            ChartSelectionAcquisitionMode.yInterval &&
+        gesture.plotBounds != null) {
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      final plotBounds = gesture.plotBounds!;
+      final widgetRect = renderBox == null
+          ? null
+          : Rect.fromPoints(
+              renderBox.plotToWidget(plotBounds.topLeft),
+              renderBox.plotToWidget(plotBounds.bottomRight),
+            );
+      if (widgetRect != null) {
+        range = renderBox!.selectionBrushRangeForWidgetRect(
+          widgetRect,
+          acquisitionMode: gesture.acquisitionMode,
+          referenceSeriesId: current?.range.referenceSeriesId,
+        );
+      }
+    }
+    if (range == null) return;
+    final next = ChartSelectionBrushState(
+      acquisitionMode: gesture.acquisitionMode,
+      range: range,
+      visible: true,
+    );
+    if (_selectionBrushState == next) {
+      // Live brush updates deliberately avoid rebuilding the widget because
+      // EventHandlerManager paints its active rectangle directly. Pointer-up
+      // must still reconcile that already-current range into the RenderBox;
+      // otherwise clearing the live rectangle exposes the previous rendered
+      // range for a frame (or until another unrelated rebuild).
+      if (gesture.isFinal && mounted) setState(() {});
+      return;
+    }
+    _selectionBrushState = next;
+    _captureStateRevision++;
+    widget.bravenChartController?.updateSelectionBrushState(next);
+    if (gesture.isFinal && mounted) setState(() {});
+  }
+
+  ChartArtifactResult<void> _setSelectionBrush(
+    ChartSelectionBrushRange range, {
+    required bool visible,
+  }) {
+    final selection =
+        (widget.interactionConfig ?? const InteractionConfig()).selection;
+    if (!selection.brush.enabled) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+          message: 'Persistent selection brushes are disabled for this chart.',
+        ),
+      );
+    }
+    if (selection.acquisitionMode != ChartSelectionAcquisitionMode.xInterval &&
+        selection.acquisitionMode != ChartSelectionAcquisitionMode.yInterval) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Persistent brushes require xInterval or yInterval selection.',
+        ),
+      );
+    }
+    if (selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval &&
+        range.referenceSeriesId != null &&
+        !_resolvedChartData.allSeries.any(
+          (series) => series.id == range.referenceSeriesId,
+        )) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidPointReference,
+          message:
+              'Selection brush reference series "${range.referenceSeriesId}" '
+              'is not present in the mounted chart.',
+        ),
+      );
+    }
+    final next = ChartSelectionBrushState(
+      acquisitionMode: selection.acquisitionMode,
+      range: range,
+      visible: visible,
+    );
+    if (_selectionBrushState == next) {
+      return ChartArtifactSuccess(value: null);
+    }
+    _captureStateRevision++;
+    setState(() => _selectionBrushState = next);
+    widget.bravenChartController?.updateSelectionBrushState(next);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectionBrushState != next) return;
+      _commitSelectionBrushState(next);
+    });
+    return ChartArtifactSuccess(value: null);
+  }
+
+  ChartArtifactResult<void> _setSelectionBrushVisibility(bool visible) {
+    final current = _selectionBrushState;
+    if (current == null) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.selectionEmpty,
+          message: 'No persistent selection brush exists.',
+        ),
+      );
+    }
+    if (current.visible == visible) return ChartArtifactSuccess(value: null);
+    final next = current.copyWith(visible: visible);
+    _captureStateRevision++;
+    setState(() => _selectionBrushState = next);
+    widget.bravenChartController?.updateSelectionBrushState(next);
+    return ChartArtifactSuccess(value: null);
+  }
+
+  ChartArtifactResult<void> _clearSelectionBrush() {
+    final hadBrush = _selectionBrushState != null;
+    if (hadBrush) {
+      _captureStateRevision++;
+      setState(() => _selectionBrushState = null);
+      widget.bravenChartController?.updateSelectionBrushState(null);
+    }
+    _clearPointSelection();
+    return ChartArtifactSuccess(value: null);
+  }
+
+  void _commitSelectionBrushState(ChartSelectionBrushState state) {
+    if (!state.visible) return;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final rect = renderBox?.selectionBrushWidgetRect;
+    if (renderBox == null || rect == null) return;
+    final gesture = renderBox.selectionGestureForWidgetRect(
+      rect,
+      isPersistentBrushUpdate: true,
+      isFinal: true,
+    );
+    if (gesture != null) _selectCartesianPointsFromGesture(gesture);
   }
 
   void _preserveSelectionGestureIntent(
@@ -6579,7 +6812,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // clear durable point selection or fire the background callback.
     if (_backgroundTapCandidate) {
       if (interaction.enableSelection &&
-          interaction.selection.clearOnBackgroundTap) {
+          interaction.selection.clearOnBackgroundTap &&
+          _selectionBrushState == null) {
         _clearPointSelection();
         _clearSemanticSeriesSelection();
       }
@@ -7443,6 +7677,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         for (final clause in restoredExpression.clauses)
           if (clause is ChartSelectionWholeSeriesClause) clause.seriesId,
     };
+    final brushConfig =
+        (widget.interactionConfig ?? const InteractionConfig()).selection.brush;
+    final restoredBrush = viewState.selectionBrush;
     _captureStateRevision++;
     setState(() {
       _hiddenSeriesIds
@@ -7468,6 +7705,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         ..clear()
         ..addAll(restoredPointRefs);
       _focusedPointRefs.clear();
+      if (brushConfig.enabled && restoredBrush != null) {
+        if (restoredBrush.isCleared) {
+          _selectionBrushState = null;
+        } else {
+          _selectionBrushState = ChartSelectionBrushState(
+            acquisitionMode: restoredBrush.acquisitionMode!,
+            range: restoredBrush.range!,
+            visible: restoredBrush.visible,
+          );
+        }
+      }
       if (viewState.selectedAnnotationId != null &&
           _effectiveAnnotationController?.containsId(
                 viewState.selectedAnnotationId!,
@@ -7502,6 +7750,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
       _syncControllerState(renderBox);
       _syncControllerPointState();
+      widget.bravenChartController?.updateSelectionBrushState(
+        _selectionBrushState,
+      );
     });
   }
 
@@ -7914,9 +8165,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           (clause) => clause is! ChartSelectionWholeSeriesClause,
         ) ??
         false;
-    if (_selectedPointRefs.isEmpty && !hasCompactPointSelection) return;
+    if (_selectedPointRefs.isEmpty &&
+        !hasCompactPointSelection &&
+        _selectionBrushState == null) {
+      return;
+    }
     _selectionIntentExpression = null;
     _selectedPointRefs.clear();
+    _selectionBrushState = null;
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
       _coordinator.setHoveredMarker(null);
     }
@@ -7935,6 +8191,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _syncControllerPointState({ChartSelectionResult? selectionResult}) {
     final controller = widget.bravenChartController;
     _syncControllerSelectionSnapshot(controller);
+    controller?.updateSelectionBrushState(_selectionBrushState);
     controller?.updatePointState(
       focusedPointRefs: _focusedPointRefs,
       selectedPointRefs: _selectedPointRefs,
@@ -8094,6 +8351,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  void _handleChartPointerDown(PointerDownEvent event) {
+    _handleContextLongPressPointerDown(event);
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   void _handleContextLongPressPointerMove(PointerMoveEvent event) {
     if (event.pointer != _contextLongPressPointer) return;
     final start = _contextLongPressStart;
@@ -8146,6 +8408,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     if (summaryRenderBox != null &&
         summaryRenderBox.handleValueSummaryKeyEvent(event)) {
+      return;
+    }
+    if (summaryRenderBox != null &&
+        summaryRenderBox.handleSelectionBrushKeyEvent(event)) {
       return;
     }
 
@@ -9890,7 +10156,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               .precise // Precise crosshair cursor for range selection
                         : _currentCursor,
                     child: Listener(
-                      onPointerDown: _handleContextLongPressPointerDown,
+                      onPointerDown: _handleChartPointerDown,
                       onPointerMove: _handleContextLongPressPointerMove,
                       onPointerUp: _handleContextLongPressPointerEnd,
                       onPointerCancel: _handleContextLongPressPointerEnd,
@@ -9974,6 +10240,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               !isNonCartesian && widget.showYScrollbar,
                           scrollbarTheme: widget.scrollbarTheme,
                           interactionConfig: effectiveInteractionConfig,
+                          selectionBrushState: _selectionBrushState,
+                          selectionBrushKeyboardFocused:
+                              _focusNode.hasFocus &&
+                              (_selectionBrushState?.visible ?? false),
                           textScaleFactor: _textScaleFactor,
                           textDirection: _textDirection,
                           onCursorChange: _handleCursorChange,
@@ -10740,6 +11010,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.showYScrollbar,
     this.scrollbarTheme,
     this.interactionConfig,
+    this.selectionBrushState,
+    this.selectionBrushKeyboardFocused = false,
     this.textScaleFactor = 1,
     this.textDirection = TextDirection.ltr,
     this.onCursorChange,
@@ -10789,6 +11061,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final bool showYScrollbar;
   final ScrollbarConfig? scrollbarTheme;
   final InteractionConfig? interactionConfig;
+  final ChartSelectionBrushState? selectionBrushState;
+  final bool selectionBrushKeyboardFocused;
   final double textScaleFactor;
   final TextDirection textDirection;
   final void Function(MouseCursor cursor)? onCursorChange;
@@ -10824,6 +11098,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         showYScrollbar: showYScrollbar,
         scrollbarTheme: scrollbarTheme,
         interactionConfig: interactionConfig,
+        selectionBrushState: selectionBrushState,
+        selectionBrushKeyboardFocused: selectionBrushKeyboardFocused,
         axislessInsets: axislessPlotInsets,
         textScaleFactor: textScaleFactor,
         textDirection: textDirection,
@@ -10876,6 +11152,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setShowYScrollbar(showYScrollbar)
       ..setScrollbarTheme(scrollbarTheme)
       ..setInteractionConfig(interactionConfig)
+      ..setSelectionBrushState(selectionBrushState)
+      ..setSelectionBrushKeyboardFocused(selectionBrushKeyboardFocused)
       ..setTextScaleFactor(textScaleFactor)
       ..setTextDirection(textDirection)
       ..setGridConfig(gridConfig)

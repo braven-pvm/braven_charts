@@ -61,6 +61,7 @@ flutter build web --release --base-href /braven_charts/
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
 | Polar Column | Compare standard linear-radius columns, an area-correct Nightingale rose, and a partial annular sweep; tune both Polar axes; then inspect the value-only native table, generated Source, and portable document |
+| Selection Lab | Compare selection acquisition, scope, and set operations across every built-in family; enable a persistent Cartesian X/Y brush, set its initial data-domain bounds and visibility, drag or resize it, style its fill/border/handles, issue controller show/hide/reset/clear commands, and inspect live callback state |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips; use the Navigator pattern to change point density and drive one shared viewport through either direct manipulation or `ChartInteractionGroupController` commands |
 | Tracking & Value Display | Compose every tracking feedback layer independently — crosshair lines, the classic tracking panel, point tooltips, axis value labels, intersection markers, and data point markers — around the flagship value summary: a persistent policy-resolved panel with latest-value fallback, multi-axis units, candlestick OHLC rows, a synchronized pair resolving locally at a shared X, programmatic pinning, and tri-state styling with truly transparent clears |
 | Chart Grammar | Author line-plus-trend, multi-axis, channel-encoded scatter, candlestick, and transposed bar charts entirely with the chained `BravenChart` facade — no `ChartSeries` anywhere; read the generated chain in the workbench Source tab's Grammar form, prove the lowering across Chart/Data/Split/Source, and swap in the hand-written `BravenChartPlus` equivalent to see the two are indistinguishable |
@@ -95,6 +96,9 @@ the mode or show/hide the selector for the entire application.
 - Drag a Cartesian navigator window or resize either edge and confirm every
   attached chart follows the same data-X viewport while the overview stays
   full-domain.
+- In Selection Lab, enable Persistent brush for X range or Y range, then drag
+  the body or either handle. Hide preserves the semantic selection; Clear
+  removes both. A second touch hands ownership to viewport zoom/pan.
 - On Chart Workbench, right-click a chart or press Shift+F10 to run native host
   actions, or use its compact top-left chart action. Long press is enabled on
   its focused examples for touch review.

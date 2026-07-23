@@ -7,9 +7,14 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_preview.dart';
 import '../artifacts/chart_preview_capture.dart';
 import '../artifacts/chart_view_state.dart';
+import '../meta/chart_surface.dart';
 import 'chart_selection_result.dart';
 import 'chart_selection_expression.dart';
-import 'interaction_config.dart' show ChartSelectionOperation;
+import 'interaction_config.dart'
+    show
+        ChartSelectionAcquisitionMode,
+        ChartSelectionBrushRange,
+        ChartSelectionOperation;
 
 /// Internal chart-state bridge for semantic multi-series selection commands.
 typedef ChartSeriesCommandHandler =
@@ -47,6 +52,67 @@ typedef ChartViewportZoomCommandHandler = bool Function(double factor);
 
 /// Internal chart-state bridge for restoring the complete data viewport.
 typedef ChartViewportFitCommandHandler = bool Function();
+
+/// Internal chart-state bridge for setting a persistent selection brush.
+typedef ChartSelectionBrushSetCommandHandler =
+    ChartArtifactResult<void> Function(
+      ChartSelectionBrushRange range, {
+      required bool visible,
+    });
+
+/// Internal chart-state bridge for changing persistent brush visibility.
+typedef ChartSelectionBrushVisibilityCommandHandler =
+    ChartArtifactResult<void> Function(bool visible);
+
+/// Current renderer-neutral state of a persistent interval-selection brush.
+@immutable
+@ChartSurfaceExempt(
+  'Controller-mirrored runtime state, not an authoring configuration: the '
+  'chart creates and updates this value after pointer, keyboard, semantic, '
+  'view-state, or controller commands. Consumers configure persistence and '
+  'initial bounds through ChartSelectionBrushConfig, then read this immutable '
+  'snapshot from BravenChartController.',
+)
+class ChartSelectionBrushState {
+  const ChartSelectionBrushState({
+    required this.acquisitionMode,
+    required this.range,
+    required this.visible,
+  }) : assert(
+         acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
+             acquisitionMode == ChartSelectionAcquisitionMode.yInterval,
+       );
+
+  /// Whether the brush controls the X or Y data interval.
+  final ChartSelectionAcquisitionMode acquisitionMode;
+
+  /// Current ordered data-domain bounds.
+  final ChartSelectionBrushRange range;
+
+  /// Whether the brush geometry is currently painted and interactive.
+  final bool visible;
+
+  ChartSelectionBrushState copyWith({
+    ChartSelectionAcquisitionMode? acquisitionMode,
+    ChartSelectionBrushRange? range,
+    bool? visible,
+  }) => ChartSelectionBrushState(
+    acquisitionMode: acquisitionMode ?? this.acquisitionMode,
+    range: range ?? this.range,
+    visible: visible ?? this.visible,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushState &&
+          other.acquisitionMode == acquisitionMode &&
+          other.range == range &&
+          other.visible == visible;
+
+  @override
+  int get hashCode => Object.hash(acquisitionMode, range, visible);
+}
 
 /// Programmatic control over series, point linking, and Y-axis slot state.
 ///
@@ -90,6 +156,10 @@ class BravenChartController extends ChangeNotifier {
   ChartSelectionZoomCommandHandler? _zoomToSelectionHandler;
   ChartViewportZoomCommandHandler? _zoomViewportHandler;
   ChartViewportFitCommandHandler? _fitDataHandler;
+  ChartSelectionBrushSetCommandHandler? _setSelectionBrushHandler;
+  ChartSelectionBrushVisibilityCommandHandler?
+  _setSelectionBrushVisibilityHandler;
+  ChartSelectionCommandHandler? _clearSelectionBrushHandler;
   void Function()? _clearPointFocusHandler;
   void Function()? _clearPointSelectionHandler;
   void Function()? _replayRadialEntranceHandler;
@@ -111,6 +181,7 @@ class BravenChartController extends ChangeNotifier {
   ChartSelectionExpression _selectionExpression =
       const ChartSelectionExpression.empty();
   ChartSelectionSnapshot? _selectionSnapshot;
+  ChartSelectionBrushState? _selectionBrushState;
 
   // ---- Public read API ----
 
@@ -172,6 +243,9 @@ class BravenChartController extends ChangeNotifier {
 
   /// Current revision-bound selection, resolved lazily on demand.
   ChartSelectionSnapshot? get selectionSnapshot => _selectionSnapshot;
+
+  /// Current persistent interval brush, or null when no brush exists.
+  ChartSelectionBrushState? get selectionBrushState => _selectionBrushState;
 
   /// Whether the attached selection has allocated concrete point identities.
   @visibleForTesting
@@ -333,6 +407,59 @@ class BravenChartController extends ChangeNotifier {
   /// Returns false when detached or attached to a non-Cartesian chart.
   bool fitData() => _fitDataHandler?.call() ?? false;
 
+  /// Sets the persistent interval brush to [minimum] and [maximum].
+  ///
+  /// The attached chart's selection acquisition mode determines whether the
+  /// bounds belong to X or Y. Y brushes can name [referenceSeriesId] when
+  /// independent axes are present.
+  ChartArtifactResult<void> setSelectionBrush({
+    required double minimum,
+    required double maximum,
+    String? referenceSeriesId,
+    bool visible = true,
+  }) {
+    if (!minimum.isFinite || !maximum.isFinite || minimum > maximum) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Selection brush bounds must be finite and ordered from minimum to maximum.',
+        ),
+      );
+    }
+    final handler = _setSelectionBrushHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(
+      ChartSelectionBrushRange(
+        minimum: minimum,
+        maximum: maximum,
+        referenceSeriesId: referenceSeriesId,
+      ),
+      visible: visible,
+    );
+  }
+
+  /// Shows an existing persistent brush without changing its selection.
+  ChartArtifactResult<void> showSelectionBrush() =>
+      _setSelectionBrushVisibility(true);
+
+  /// Hides an existing persistent brush while retaining its selection.
+  ChartArtifactResult<void> hideSelectionBrush() =>
+      _setSelectionBrushVisibility(false);
+
+  ChartArtifactResult<void> _setSelectionBrushVisibility(bool visible) {
+    final handler = _setSelectionBrushVisibilityHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(visible);
+  }
+
+  /// Clears the persistent brush and its semantic selection.
+  ChartArtifactResult<void> clearSelectionBrush() {
+    final handler = _clearSelectionBrushHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler();
+  }
+
   /// Clears transient point focus.
   void clearPointFocus() => _clearPointFocusHandler?.call();
 
@@ -462,6 +589,9 @@ class BravenChartController extends ChangeNotifier {
     ChartSelectionZoomCommandHandler? onZoomToSelection,
     ChartViewportZoomCommandHandler? onZoomViewport,
     ChartViewportFitCommandHandler? onFitData,
+    ChartSelectionBrushSetCommandHandler? onSetSelectionBrush,
+    ChartSelectionBrushVisibilityCommandHandler? onSetSelectionBrushVisibility,
+    ChartSelectionCommandHandler? onClearSelectionBrush,
     void Function()? onClearPointFocus,
     void Function()? onClearPointSelection,
     void Function()? onReplayRadialEntrance,
@@ -485,6 +615,9 @@ class BravenChartController extends ChangeNotifier {
     _zoomToSelectionHandler = onZoomToSelection;
     _zoomViewportHandler = onZoomViewport;
     _fitDataHandler = onFitData;
+    _setSelectionBrushHandler = onSetSelectionBrush;
+    _setSelectionBrushVisibilityHandler = onSetSelectionBrushVisibility;
+    _clearSelectionBrushHandler = onClearSelectionBrush;
     _clearPointFocusHandler = onClearPointFocus;
     _clearPointSelectionHandler = onClearPointSelection;
     _replayRadialEntranceHandler = onReplayRadialEntrance;
@@ -517,11 +650,15 @@ class BravenChartController extends ChangeNotifier {
     _zoomToSelectionHandler = null;
     _zoomViewportHandler = null;
     _fitDataHandler = null;
+    _setSelectionBrushHandler = null;
+    _setSelectionBrushVisibilityHandler = null;
+    _clearSelectionBrushHandler = null;
     _clearPointFocusHandler = null;
     _clearPointSelectionHandler = null;
     _replayRadialEntranceHandler = null;
     _replaySeriesEntranceHandler = null;
     _selectionSnapshot = null;
+    _selectionBrushState = null;
     if (!_disposed) _effectiveDocumentRevision.value = null;
   }
 
@@ -590,6 +727,14 @@ class BravenChartController extends ChangeNotifier {
     }
     _selectionExpression = snapshot.expression;
     _selectionSnapshot = snapshot;
+    notifyListeners();
+  }
+
+  /// Mirrors persistent brush state from the mounted chart.
+  @internal
+  void updateSelectionBrushState(ChartSelectionBrushState? state) {
+    if (_disposed || _selectionBrushState == state) return;
+    _selectionBrushState = state;
     notifyListeners();
   }
 
