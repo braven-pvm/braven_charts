@@ -13,8 +13,12 @@ import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/donut_chart_config.dart'
+    show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
+import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
+import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -373,6 +377,85 @@ final class BravenChart<T> {
       name: name,
       color: color,
       yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends a pie: each row is a slice, [value] is the angle-share.
+  ///
+  /// A pie makes the spec RADIAL — it may contain no other mark, and honors no
+  /// Cartesian axis/grid option. [radius] encodes an optional second metric as
+  /// a variable slice radius. Rich styling is deferred to [style]/[dataLabels],
+  /// the real config objects, exactly as the Cartesian geoms defer to config.
+  BravenChart<T> geomPie({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    FieldAccessor<T, num>? radius,
+    String? id,
+    String? name,
+    Color? color,
+    PieChartStyle? style,
+    PieDataLabelConfig? dataLabels,
+  }) => _append(
+    PieMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      radius: radius,
+      name: name,
+      color: color,
+      style: style,
+      dataLabels: dataLabels,
+    ),
+  );
+
+  /// Appends a donut. With [ring] set, rows partition into concentric donuts
+  /// (one per distinct ring value, first-seen order); without it, a single
+  /// donut. [value] is the angle-share; [radius] is an optional variable
+  /// radius. Rich styling is deferred to [style]/[center]/[dataLabels].
+  BravenChart<T> geomDonut({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    FieldAccessor<T, num>? radius,
+    FieldAccessor<T, Object?>? ring,
+    String? id,
+    String? name,
+    Color? color,
+    DonutChartStyle? style,
+    DonutCenterContent? center,
+    PieDataLabelConfig? dataLabels,
+  }) => _append(
+    DonutMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      radius: radius,
+      ring: ring,
+      name: name,
+      color: color,
+      style: style,
+      center: center,
+      dataLabels: dataLabels,
+    ),
+  );
+
+  /// Appends a polar column: [category] is the angular position and [value] is
+  /// the radius (magnitude) — values are NOT converted into pie shares. Rich
+  /// styling (labels, gradients, shadows) is deferred to [style].
+  BravenChart<T> geomPolar({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    String? id,
+    String? name,
+    Color? color,
+    PolarColumnStyle? style,
+  }) => _append(
+    PolarMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      name: name,
+      color: color,
+      style: style,
     ),
   );
 

@@ -17,6 +17,11 @@ import '../models/scatter_marker_style.dart'
         ScatterOpacityEncoding,
         ScatterSizeEncoding;
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import '../models/donut_chart_config.dart'
+    show DonutCenterContent, DonutChartStyle;
+import '../models/pie_chart_config.dart'
+    show PieChartStyle, PieDataLabelConfig;
+import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
 import 'channel.dart';
 
 /// One geometry (or one derived statistic) in a [PlotSpec].
@@ -763,4 +768,184 @@ final class PointMark<T> extends Mark<T> {
 
   @override
   String toString() => 'PointMark(id: $id, series: $seriesId)';
+}
+
+/// A radial geometry: a whole-dataset arc mark, not a per-point Cartesian one.
+///
+/// Every radial variant shares two channels — [category] (the slice/column
+/// identity) and [value] (its magnitude) — so they live on this sealed base.
+/// A spec containing any [RadialMark] is a RADIAL spec: it lowers through the
+/// radial branch of `spec.lower()`, may contain no other mark, and honors no
+/// Cartesian axis/grid option. Like the Cartesian marks these hold functions,
+/// so they carry no `copyWith` and no `@chartSurface`.
+sealed class RadialMark<T> extends Mark<T> {
+  /// Shared radial channels plus the inherited identity fields.
+  const RadialMark({
+    required this.category,
+    required this.value,
+    super.id,
+    super.name,
+    super.color,
+  });
+
+  /// Slice/column identity accessor. Stringified into the category label.
+  final FieldAccessor<T, Object?> category;
+
+  /// Magnitude accessor: angle-share for pie/donut, radius for polar.
+  final FieldAccessor<T, num> value;
+}
+
+/// A pie: each row is a slice, [RadialMark.value] is the angle-share.
+final class PieMark<T> extends RadialMark<T> {
+  /// Creates a pie geometry.
+  const PieMark({
+    required super.category,
+    required super.value,
+    super.id,
+    super.name,
+    super.color,
+    this.radius,
+    this.style,
+    this.dataLabels,
+  });
+
+  /// Optional second metric → variable slice radius (Nightingale). Null keeps
+  /// every slice at the series radius.
+  final FieldAccessor<T, num>? radius;
+
+  /// Slice geometry/appearance. Null lowers to `const PieChartStyle()`.
+  final PieChartStyle? style;
+
+  /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
+  final PieDataLabelConfig? dataLabels;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieMark<T> &&
+          other.category == category &&
+          other.value == value &&
+          other.radius == radius &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.style == style &&
+          other.dataLabels == dataLabels;
+
+  @override
+  int get hashCode => Object.hash(
+    category,
+    value,
+    radius,
+    id,
+    name,
+    color,
+    style,
+    dataLabels,
+  );
+
+  @override
+  String toString() => 'PieMark(id: $id, name: $name)';
+}
+
+/// A donut. With [ring] set, rows partition into concentric `DonutChartSeries`
+/// (one per distinct ring value, in first-seen order); without it, a single
+/// donut.
+final class DonutMark<T> extends RadialMark<T> {
+  /// Creates a donut geometry.
+  const DonutMark({
+    required super.category,
+    required super.value,
+    super.id,
+    super.name,
+    super.color,
+    this.radius,
+    this.ring,
+    this.style,
+    this.center,
+    this.dataLabels,
+  });
+
+  /// Optional second metric → variable slice radius. Null keeps a fixed radius.
+  final FieldAccessor<T, num>? radius;
+
+  /// Concentric-ring grouping channel. Absent = a single donut.
+  final FieldAccessor<T, Object?>? ring;
+
+  /// Donut geometry/appearance. Null lowers to `const DonutChartStyle()`.
+  final DonutChartStyle? style;
+
+  /// Center summary. For a single donut this is the series' center; for a
+  /// concentric composition it is the shared `ConcentricDonutConfig.centerContent`.
+  final DonutCenterContent? center;
+
+  /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
+  final PieDataLabelConfig? dataLabels;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DonutMark<T> &&
+          other.category == category &&
+          other.value == value &&
+          other.radius == radius &&
+          other.ring == ring &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.style == style &&
+          other.center == center &&
+          other.dataLabels == dataLabels;
+
+  @override
+  int get hashCode => Object.hash(
+    category,
+    value,
+    radius,
+    ring,
+    id,
+    name,
+    color,
+    style,
+    center,
+    dataLabels,
+  );
+
+  @override
+  String toString() => 'DonutMark(id: $id, name: $name)';
+}
+
+/// A polar column: [RadialMark.category] is the angular position and
+/// [RadialMark.value] is the radius (magnitude).
+final class PolarMark<T> extends RadialMark<T> {
+  /// Creates a polar-column geometry.
+  const PolarMark({
+    required super.category,
+    required super.value,
+    super.id,
+    super.name,
+    super.color,
+    this.style,
+  });
+
+  /// Column geometry/appearance. Null lowers to `const PolarColumnStyle()`.
+  final PolarColumnStyle? style;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarMark<T> &&
+          other.category == category &&
+          other.value == value &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.style == style;
+
+  @override
+  int get hashCode =>
+      Object.hash(category, value, id, name, color, style);
+
+  @override
+  String toString() => 'PolarMark(id: $id, name: $name)';
 }

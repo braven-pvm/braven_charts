@@ -130,6 +130,12 @@ class PlotSpec<T> {
     showLegend: showLegend,
   );
 
+  /// Whether any mark is a radial geometry.
+  ///
+  /// A radial spec lowers through the dedicated radial branch of
+  /// `spec.lower()`; a Cartesian spec never enters it.
+  bool get isRadial => marks.any((mark) => mark is RadialMark<T>);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

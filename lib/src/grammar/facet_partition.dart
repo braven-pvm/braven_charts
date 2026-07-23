@@ -48,7 +48,8 @@ class FacetRange {
 /// extent of every geometry's `x`; the [FacetAxis.y] range is the extent of
 /// every geometry's `y` (a candlestick contributes `open`/`high`/`low`/`close`,
 /// so the shared price axis spans the wicks). Reference/derived marks
-/// (threshold, band, point, trend) contribute nothing. Non-finite accessor
+/// (threshold, band, point, trend) and radial marks contribute nothing.
+/// Non-finite accessor
 /// output is skipped, exactly as the point families carry it through. Returns
 /// null when nothing finite was found.
 FacetRange? globalRange<T>(PlotSpec<T> spec, List<T> rows, FacetAxis axis) {
@@ -96,7 +97,12 @@ List<FieldAccessor<T, num>> _axisAccessors<T>(Mark<T> mark, FacetAxis axis) =>
       TrendMark<T>() ||
       ThresholdMark<T>() ||
       BandMark<T>() ||
-      PointMark<T>() => const <Never>[],
+      PointMark<T>() ||
+      // Radial geoms have no Cartesian position, so they contribute nothing to
+      // a shared Cartesian facet range. In practice a faceted radial spec is
+      // rejected up front (facetedRadialUnsupported); this keeps the switch
+      // exhaustive and defensive regardless.
+      RadialMark<T>() => const <Never>[],
     };
 
 /// The auto grid width for [panelCount] panels: `ceil(sqrt(n))`, min 1.

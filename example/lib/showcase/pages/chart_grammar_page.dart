@@ -29,6 +29,7 @@ class GrammarSample {
     this.high = 0,
     this.low = 0,
     this.close = 0,
+    this.group = '',
   });
 
   /// Elapsed minutes — also the bar preset's zone ordinal and the
@@ -45,6 +46,9 @@ class GrammarSample {
   final double high;
   final double low;
   final double close;
+
+  /// The concentric-ring group for the radial preset (e.g. a season).
+  final String group;
 }
 
 // Accessors are TOP-LEVEL TEAR-OFFS, never inline closures: `Mark` and
@@ -61,6 +65,7 @@ double sampleOpen(GrammarSample row) => row.open;
 double sampleHigh(GrammarSample row) => row.high;
 double sampleLow(GrammarSample row) => row.low;
 double sampleClose(GrammarSample row) => row.close;
+Object sampleGroup(GrammarSample row) => row.group;
 
 /// The ride the line, multi-axis and scatter presets read.
 const List<GrammarSample> rideRows = <GrammarSample>[
@@ -184,6 +189,15 @@ const List<GrammarSample> candleRows = <GrammarSample>[
   GrammarSample(minute: 10, open: 138, high: 141, low: 133, close: 135),
 ];
 
+/// Harvest counts by fruit and season — the radial preset's rows. `zone`
+/// carries the category label and `group` the concentric-ring season.
+const List<GrammarSample> harvestRows = <GrammarSample>[
+  GrammarSample(minute: 0, minutes: 42, zone: 'Apple', group: 'Winter'),
+  GrammarSample(minute: 1, minutes: 31, zone: 'Pear', group: 'Winter'),
+  GrammarSample(minute: 2, minutes: 17, zone: 'Plum', group: 'Summer'),
+  GrammarSample(minute: 3, minutes: 10, zone: 'Fig', group: 'Summer'),
+];
+
 /// The categorical palette the scatter preset's `categoryBy` channel needs.
 ///
 /// The package ships NO categorical palette, so a `categoryBy` channel
@@ -268,6 +282,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   // Faceting knobs.
   FacetScales _facetScales = FacetScales.fixed;
   double _facetColumns = 2;
+  // Radial preset knob.
+  _RadialFamily _radialFamily = _RadialFamily.pie;
 
   @override
   void dispose() {
@@ -498,6 +514,36 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
       )
       .theme(_theme)
       .interaction(_interaction);
+  /// The radial preset, authored through the chained facade only. A radial
+  /// geom makes the spec radial: it lowers to the rich radial config family
+  /// and honors no Cartesian axis/grid option.
+  BravenChart<GrammarSample> _radialChart() {
+    final base = BravenChart.of(harvestRows).theme(_theme);
+    return switch (_radialFamily) {
+      _RadialFamily.pie => base.geomPie(
+        category: sampleZone,
+        value: sampleMinutes,
+        name: 'Harvest',
+      ).title('Harvest share'),
+      _RadialFamily.donut => base.geomDonut(
+        category: sampleZone,
+        value: sampleMinutes,
+        name: 'Harvest',
+        center: const DonutCenterContent(label: 'Total'),
+      ).title('Harvest share'),
+      _RadialFamily.concentric => base.geomDonut(
+        category: sampleZone,
+        value: sampleMinutes,
+        ring: sampleGroup,
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+      ).title('Harvest by season').legend(true),
+      _RadialFamily.polar => base.geomPolar(
+        category: sampleZone,
+        value: sampleMinutes,
+        name: 'Harvest',
+      ).title('Harvest by fruit'),
+    };
+  }
 
   BravenChart<GrammarSample> get _activeChart => switch (_preset) {
     _GrammarPreset.lineTrend => _lineTrendChart(),
@@ -507,6 +553,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.barTransposed => _barTransposedChart(),
     _GrammarPreset.referenceLines => _referenceLinesChart(),
     _GrammarPreset.faceted => _facetedChart(),
+    _GrammarPreset.radial => _radialChart(),
   };
 
   // ==========================================================================
@@ -746,6 +793,83 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         ],
       );
 
+  Map<String, num> _harvestValues() => <String, num>{
+    for (final row in harvestRows) row.zone: row.minutes,
+  };
+
+  Widget _handBuiltRadial(BravenChartController controller) {
+    switch (_radialFamily) {
+      case _RadialFamily.pie:
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          title: 'Harvest share',
+          series: <ChartSeries>[
+            PieChartSeries.fromMap(
+              id: 'mark-0',
+              name: 'Harvest',
+              values: _harvestValues(),
+            ),
+          ],
+        );
+      case _RadialFamily.donut:
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          title: 'Harvest share',
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'mark-0',
+              name: 'Harvest',
+              values: _harvestValues(),
+              centerContent: const DonutCenterContent(label: 'Total'),
+            ),
+          ],
+        );
+      case _RadialFamily.concentric:
+        final order = <String>[];
+        final buckets = <String, Map<String, num>>{};
+        for (final row in harvestRows) {
+          buckets.putIfAbsent(row.group, () {
+            order.add(row.group);
+            return <String, num>{};
+          })[row.zone] = row.minutes;
+        }
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          title: 'Harvest by season',
+          showLegend: true,
+          series: <ChartSeries>[
+            for (final group in order)
+              DonutChartSeries.fromMap(
+                id: 'mark-0-$group',
+                name: group,
+                values: buckets[group]!,
+                dataLabels: const PieDataLabelConfig(isVisible: false),
+              ),
+          ],
+        );
+      case _RadialFamily.polar:
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          title: 'Harvest by fruit',
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'mark-0',
+              name: 'Harvest',
+              values: _harvestValues(),
+            ),
+          ],
+        );
+    }
+  }
+
   Widget _buildHandBuilt(BravenChartController controller) => switch (_preset) {
     _GrammarPreset.lineTrend => _handBuiltLineTrend(controller),
     _GrammarPreset.multiAxis => _handBuiltMultiAxis(controller),
@@ -757,6 +881,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     // (a facet grid is N configs, so there is no single hand-built equivalent
     // and no workbench round-trip).
     _GrammarPreset.faceted => const SizedBox.shrink(),
+    _GrammarPreset.radial => _handBuiltRadial(controller),
   };
 
   // ==========================================================================
@@ -974,6 +1099,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             _GrammarPreset.barTransposed => _barControls(),
             _GrammarPreset.referenceLines => _referenceLinesControls(),
             _GrammarPreset.faceted => _facetControls(),
+            _GrammarPreset.radial => _radialControls(),
             _GrammarPreset.candlestick => const <Widget>[],
           },
         ),
@@ -1214,6 +1340,34 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'independently.',
     ),
   ];
+
+  List<Widget> _radialControls() => [
+    Text(
+      'Radial family',
+      style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+    ),
+    const SizedBox(height: 4),
+    SegmentedOption<_RadialFamily>(
+      key: const ValueKey('chart-grammar-radial-family'),
+      value: _radialFamily,
+      options: _RadialFamily.values,
+      labelBuilder: (family) => switch (family) {
+        _RadialFamily.pie => 'Pie',
+        _RadialFamily.donut => 'Donut',
+        _RadialFamily.concentric => 'Concentric',
+        _RadialFamily.polar => 'Polar',
+      },
+      onChanged: (family) => setState(() => _radialFamily = family),
+    ),
+    const SizedBox(height: 4),
+    const InfoBox(
+      message:
+          'geomPie/geomDonut/geomPolar carry their own channels. The donut '
+          'ring channel partitions rows into concentric DonutChartSeries. A '
+          'radial spec honors title, legend and theme, but a grid or axis '
+          'option raises axisOptionOnRadialSpec.',
+    ),
+  ];
 }
 
 // ============================================================================
@@ -1227,6 +1381,7 @@ enum _GrammarPreset {
   candlestick,
   referenceLines,
   faceted,
+  radial,
   // barTransposed is kept LAST: BravenChartPlus retains exiting horizontal bars
   // through a cross-fade, and unioning those with a non-bar chart's entering
   // series trips its all-horizontal bounds check. Keeping the transposed preset
@@ -1234,6 +1389,8 @@ enum _GrammarPreset {
   // just-shown horizontal-bar chart INTO a Cartesian one.
   barTransposed,
 }
+
+enum _RadialFamily { pie, donut, concentric, polar }
 
 extension on _GrammarPreset {
   String get label => switch (this) {
@@ -1244,6 +1401,7 @@ extension on _GrammarPreset {
     _GrammarPreset.barTransposed => 'Bar transposed',
     _GrammarPreset.referenceLines => 'Reference lines',
     _GrammarPreset.faceted => 'Faceting',
+    _GrammarPreset.radial => 'Radial',
   };
 
   IconData get icon => switch (this) {
@@ -1254,6 +1412,7 @@ extension on _GrammarPreset {
     _GrammarPreset.barTransposed => Icons.bar_chart,
     _GrammarPreset.referenceLines => Icons.stacked_line_chart,
     _GrammarPreset.faceted => Icons.grid_view,
+    _GrammarPreset.radial => Icons.pie_chart_outline,
   };
 
   String get stageTitle => switch (this) {
@@ -1264,6 +1423,7 @@ extension on _GrammarPreset {
     _GrammarPreset.barTransposed => 'Bars with the plane transposed',
     _GrammarPreset.referenceLines => 'Reference marks and chart-level options',
     _GrammarPreset.faceted => 'One metric across small-multiple panels',
+    _GrammarPreset.radial => 'Radial geoms: pie, donut, concentric, polar',
   };
 
   String get stageSubtitle => switch (this) {
@@ -1281,6 +1441,8 @@ extension on _GrammarPreset {
       'The V2.0 verbs: .threshold, .grid, .title and per-point markers',
     _GrammarPreset.faceted =>
       'Partition by a categorical field; fixed / free scales and synced x',
+    _GrammarPreset.radial =>
+      'A radial geom makes the spec radial — one geom, no Cartesian axes',
   };
 
   /// Whether this preset has any genuinely applicable per-preset control.
@@ -1327,5 +1489,11 @@ extension on _GrammarPreset {
           'freeX / free free the horizontal scale — at which point the shared '
           'crosshair is turned off because it is only meaningful when x is '
           'shared. Drag Columns to relayout the grid.',
+    _GrammarPreset.radial =>
+      'Switch families with the segmented control. Each is '
+          'BravenChart.of(rows).geomPie/geomDonut/geomPolar — the ring channel '
+          'splits a donut into concentric rings. Turn on "Compare hand-built" '
+          'to see the PieChartSeries.fromMap / ConcentricDonutConfig the chain '
+          'lowers to.',
   };
 }

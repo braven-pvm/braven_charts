@@ -8,8 +8,15 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/concentric_donut_config.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_config.dart';
+import '../models/pie_chart_series.dart';
+import '../models/polar_chart_config.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -46,6 +53,8 @@ class LoweredPlot {
     this.title,
     this.subtitle,
     this.showLegend,
+    this.concentricDonutConfig,
+    this.polarChartConfig,
   });
 
   /// One series per geometry mark, in spec order.
@@ -77,6 +86,14 @@ class LoweredPlot {
 
   /// The spec's legend visibility, unchanged. Null lets the chart default it.
   final bool? showLegend;
+
+  /// The concentric-donut composition config, when the lowered chart is a
+  /// concentric donut. Null for every other family.
+  final ConcentricDonutConfig? concentricDonutConfig;
+
+  /// The polar pane/axis config, when the lowered chart is a polar column.
+  /// Null for every other family.
+  final PolarChartConfig? polarChartConfig;
 }
 
 // Const prototypes. Reading defaults off a real instance instead of
@@ -187,6 +204,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final markIds = _resolveMarkIds(spec.marks);
+  if (spec.isRadial) return _lowerRadial<T>(spec, markIds);
   final axes = _resolveAxes(spec.yAxes);
   final axesById = <String, YAxisConfig>{
     for (final axis in axes) axis.id: axis,
@@ -259,6 +277,11 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         // structural invariant beyond what their annotation asserts on
         // construction during materialization.
         break;
+      case RadialMark<T>():
+        // Unreachable: a radial spec returns via _lowerRadial before this
+        // Cartesian switch runs. The arm exists only to keep the sealed
+        // switch exhaustive.
+        throw StateError('radial mark reached the Cartesian structural pass');
     }
   }
 
@@ -307,6 +330,8 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         annotations.add(_lowerBand(mark, markId));
       case PointMark<T>():
         annotations.add(_lowerPoint(mark, markId));
+      case RadialMark<T>():
+        throw StateError('radial mark reached the Cartesian materialization');
     }
   }
 
@@ -720,6 +745,230 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
     markerShape: mark.markerShape ?? _pointDefaults.markerShape,
   );
 }
+
+/// Lowers a RADIAL spec: exactly one radial geom, no Cartesian marks, no
+/// Cartesian axis/grid option. The whole dataset maps to one radial series
+/// (or, for a ring channel, one per ring). Validation order is deterministic
+/// and matches the Cartesian contract: every data-INDEPENDENT structural check
+/// runs before the emptyData guard, so BravenPlot swallows ONLY an otherwise
+/// well-formed empty spec.
+LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
+  final radialIndices = <int>[
+    for (var index = 0; index < spec.marks.length; index++)
+      if (spec.marks[index] is RadialMark<T>) index,
+  ];
+  if (radialIndices.length > 1) {
+    throw GrammarSpecException.multipleRadialGeoms(<String>[
+      for (final index in radialIndices) markIds[index],
+    ]);
+  }
+  final markIndex = radialIndices.single;
+  if (spec.marks.length > 1) {
+    throw GrammarSpecException.mixedCoordinateSystems(
+      markIds[markIndex],
+      <String>[
+        for (var index = 0; index < spec.marks.length; index++)
+          if (index != markIndex) markIds[index],
+      ],
+    );
+  }
+
+  final mark = spec.marks[markIndex] as RadialMark<T>;
+  final markId = markIds[markIndex];
+
+  // Cartesian-only options carry no meaning on a radial spec.
+  if (spec.transposed) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('transposed');
+  }
+  if (spec.xAxis != null) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('xAxis');
+  }
+  if (spec.yAxes.isNotEmpty) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('yAxes');
+  }
+  if (spec.grid != null) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('grid');
+  }
+
+  // Data-dependent checks live below the emptyData guard.
+  if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
+
+  final hasVisibleCategory = spec.data.any(
+    (row) => mark.category(row).toString().trim().isNotEmpty,
+  );
+  if (!hasVisibleCategory) {
+    throw GrammarSpecException.emptyRadialCategories(markId);
+  }
+
+  final series = <ChartSeries>[];
+  ConcentricDonutConfig? concentric;
+  PolarChartConfig? polar;
+
+  if (mark is PieMark<T>) {
+    series.add(_lowerPie<T>(mark, markId, spec.data));
+  } else if (mark is DonutMark<T>) {
+    if (mark.ring == null) {
+      series.add(_lowerDonut<T>(mark, markId, spec.data));
+    } else {
+      final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
+      if (rings.length == 1) {
+        // A single-value ring collapses to a plain donut. The render path only
+        // reads `ConcentricDonutConfig.centerContent` when more than one donut
+        // series is present, so the lone ring must carry the mark's center on
+        // itself — exactly like the ring-less donut path — or the center is
+        // silently hidden.
+        series.add(
+          rings.single.copyWith(
+            centerContent: mark.center ?? DonutCenterContent.hidden,
+          ),
+        );
+        concentric = const ConcentricDonutConfig();
+      } else {
+        series.addAll(rings);
+        concentric = mark.center == null
+            ? const ConcentricDonutConfig()
+            : ConcentricDonutConfig(centerContent: mark.center!);
+      }
+    }
+  } else if (mark is PolarMark<T>) {
+    series.add(_lowerPolar<T>(mark, markId, spec.data));
+    polar = const PolarChartConfig();
+  } else {
+    throw StateError('Unhandled radial mark: $mark');
+  }
+
+  return LoweredPlot(
+    series: series,
+    annotations: const <ChartAnnotation>[],
+    xAxis: null,
+    yAxes: const <YAxisConfig>[],
+    interaction: spec.interaction ?? const InteractionConfig(),
+    theme: spec.theme,
+    grid: null,
+    title: spec.title,
+    subtitle: spec.subtitle,
+    showLegend: spec.showLegend,
+    concentricDonutConfig: concentric,
+    polarChartConfig: polar,
+  );
+}
+
+/// Builds an insertion-ordered category→value map, failing loud on a repeated
+/// category rather than collapsing it.
+///
+/// A duplicate category would otherwise silently collapse (last row wins) via
+/// the families' `fromMap`; the module's contract is that nothing is dropped or
+/// defaulted silently, so a repeat raises [GrammarDiagnosticCode
+/// .duplicateRadialCategory] instead. The identity key is `category.toString()`
+/// — exactly the key the map uses — so the check matches the collapse it
+/// replaces.
+///
+/// Scoping is a property of the CALL, not this function: [_lowerConcentricRings]
+/// calls it once per ring bucket, so a category repeated across different rings
+/// (the legitimate concentric shape) never lands in the same map and is
+/// accepted, while pie/donut/polar call it once over the whole dataset, so their
+/// categories must be unique globally.
+Map<String, num> _radialValues<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, num> value,
+) {
+  final result = <String, num>{};
+  for (final row in data) {
+    final key = category(row).toString();
+    if (result.containsKey(key)) {
+      throw GrammarSpecException.duplicateRadialCategory(key);
+    }
+    result[key] = value(row);
+  }
+  return result;
+}
+
+/// Builds the per-category second-metric radius map for a variable-radius geom.
+Map<String, num> _radiusValues<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, num> radius,
+) {
+  final result = <String, num>{};
+  for (final row in data) {
+    result[category(row).toString()] = radius(row);
+  }
+  return result;
+}
+
+PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
+    PieChartSeries.fromMap(
+      id: id,
+      name: mark.name,
+      color: mark.color,
+      values: _radialValues(data, mark.category, mark.value),
+      radiusValues: mark.radius == null
+          ? const <String, num>{}
+          : _radiusValues(data, mark.category, mark.radius!),
+      pieStyle: mark.style ?? const PieChartStyle(),
+      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+    );
+
+DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
+    DonutChartSeries.fromMap(
+      id: id,
+      name: mark.name,
+      color: mark.color,
+      values: _radialValues(data, mark.category, mark.value),
+      radiusValues: mark.radius == null
+          ? const <String, num>{}
+          : _radiusValues(data, mark.category, mark.radius!),
+      donutStyle: mark.style ?? const DonutChartStyle(),
+      centerContent: mark.center ?? DonutCenterContent.hidden,
+      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+    );
+
+/// Partitions [data] by the donut mark's ring accessor (first-seen order) and
+/// builds one `DonutChartSeries` per ring. The shared center is carried by the
+/// composition's `ConcentricDonutConfig`, so each ring donut's own center is
+/// hidden.
+List<DonutChartSeries> _lowerConcentricRings<T>(
+  DonutMark<T> mark,
+  String markId,
+  List<T> data,
+) {
+  final order = <String>[];
+  final buckets = <String, List<T>>{};
+  for (final row in data) {
+    final key = mark.ring!(row).toString();
+    buckets.putIfAbsent(key, () {
+      order.add(key);
+      return <T>[];
+    }).add(row);
+  }
+  return <DonutChartSeries>[
+    for (final key in order)
+      DonutChartSeries.fromMap(
+        id: '$markId-$key',
+        name: key,
+        values: _radialValues(buckets[key]!, mark.category, mark.value),
+        radiusValues: mark.radius == null
+            ? const <String, num>{}
+            : _radiusValues(buckets[key]!, mark.category, mark.radius!),
+        donutStyle: mark.style ?? const DonutChartStyle(),
+        centerContent: DonutCenterContent.hidden,
+        dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+      ),
+  ];
+}
+
+PolarColumnChartSeries _lowerPolar<T>(
+  PolarMark<T> mark,
+  String id,
+  List<T> data,
+) => PolarColumnChartSeries.fromMap(
+  id: id,
+  name: mark.name,
+  color: mark.color,
+  values: _radialValues(data, mark.category, mark.value),
+  polarStyle: mark.style ?? const PolarColumnStyle(),
+);
 
 void _requireScale(
   String markId,

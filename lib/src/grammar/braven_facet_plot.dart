@@ -13,6 +13,7 @@ import 'braven_plot.dart';
 import 'facet_partition.dart';
 import 'facet_spec.dart';
 import 'grammar_diagnostics.dart';
+import 'mark.dart';
 import 'plot_spec.dart';
 
 /// Default maximum number of facet panels. Exceeding it is a grammar
@@ -73,6 +74,13 @@ List<BravenFacetPanel<T>> resolveFacetPanels<T>(PlotSpec<T> spec) {
     );
   }
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
+  for (final mark in spec.marks) {
+    if (mark is RadialMark<T>) {
+      // Radial faceting is out of scope for this slice: a radial geom on a
+      // faceted spec fails loud rather than rendering N radial panels.
+      throw GrammarSpecException.facetedRadialUnsupported(mark.id ?? 'radial');
+    }
+  }
 
   final values = distinctFacetValues(spec.data, facet.by);
   if (values.isEmpty) throw GrammarSpecException.emptyFacetValues();

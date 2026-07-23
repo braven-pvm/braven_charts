@@ -201,4 +201,19 @@ void main() {
     expect(resolveFacetPanels(prefixed).map((p) => p.label),
         <String>['Zone: easy', 'Zone: —']);
   });
+
+  test('faceting a radial geom raises facetedRadialUnsupported', () {
+    // Radial faceting is out of scope for this slice: a radial geom on a
+    // faceted spec fails loud rather than silently rendering N radial panels.
+    expect(
+      () => resolveFacetPanels(const PlotSpec<Sample>(
+        data: rows,
+        marks: <Mark<Sample>>[
+          PieMark<Sample>(category: sampleZone, value: samplePower),
+        ],
+        facet: FacetSpec<Sample>(by: sampleZone),
+      )),
+      throwsGrammarCode(GrammarDiagnosticCode.facetedRadialUnsupported),
+    );
+  });
 }
