@@ -89,4 +89,200 @@ void main() {
       expect(facet.message, contains('pie'));
     });
   });
+
+  group('pie channel to series mapping', () {
+    test('values lower to angle-share slices in row order', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(category: fruitName, value: fruitCount),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PieChartSeries;
+      expect(series.id, 'mark-0');
+      expect(series.points.map((p) => p.label), ['Apple', 'Pear', 'Plum']);
+      expect(series.points.map((p) => p.y), [30, 20, 10]);
+      expect(series.points.map((p) => p.x), [0, 1, 2]);
+      expect(series.total, 60);
+      // Angle-share = y / total.
+      expect(series.points.first.y / series.total, 0.5);
+      expect(lowered.concentricDonutConfig, isNull);
+      expect(lowered.polarChartConfig, isNull);
+      expect(lowered.yAxes, isEmpty);
+      expect(lowered.annotations, isEmpty);
+    });
+
+    test('the radius channel lowers to variable slice radii', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            radius: fruitMass,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PieChartSeries;
+      expect(series.sliceRadiusConfig, isNotNull);
+      expect(series.points.map((p) => p.pointStyle?.size), [5, 3, 2]);
+    });
+  });
+
+  group('pie config parity', () {
+    test('a lowered pie equals the hand-built PieChartSeries.fromMap', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            id: 'fruit',
+            name: 'Fruit',
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single,
+        PieChartSeries.fromMap(
+          id: 'fruit',
+          name: 'Fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+        ),
+      );
+    });
+
+    test('the radius channel parity uses radiusValues', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            radius: fruitMass,
+            id: 'fruit',
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single,
+        PieChartSeries.fromMap(
+          id: 'fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+          radiusValues: const {'Apple': 5, 'Pear': 3, 'Plum': 2},
+        ),
+      );
+    });
+  });
+
+  group('radial coordinate-system diagnostics', () {
+    test('a pie plus a line raises mixedCoordinateSystems', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+            LineMark<Fruit>(x: sampleX, y: sampleY),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.mixedCoordinateSystems),
+      );
+    });
+
+    test('two pies raise multipleRadialGeoms', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount, id: 'a'),
+            PieMark<Fruit>(category: fruitName, value: fruitCount, id: 'b'),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.multipleRadialGeoms),
+      );
+    });
+
+    test('a grid on a radial spec raises axisOptionOnRadialSpec', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+          grid: GridConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.axisOptionOnRadialSpec),
+      );
+    });
+
+    test('a transposed radial spec raises axisOptionOnRadialSpec', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+          transposed: true,
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.axisOptionOnRadialSpec),
+      );
+    });
+
+    test('an xAxis on a radial spec raises axisOptionOnRadialSpec', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+          xAxis: XAxisConfig(label: 'x'),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.axisOptionOnRadialSpec),
+      );
+    });
+
+    test('all-blank category labels raise emptyRadialCategories', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitBlank, value: fruitCount),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyRadialCategories),
+      );
+    });
+
+    test('empty radial data raises emptyData (so BravenPlot can swallow it)',
+        () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
+    });
+
+    test('a structural radial error beats the empty-data guard', () {
+      // axisOptionOnRadialSpec must fire even against empty data, so BravenPlot
+      // only ever swallows an otherwise well-formed empty spec.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+          grid: GridConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.axisOptionOnRadialSpec),
+      );
+    });
+  });
 }

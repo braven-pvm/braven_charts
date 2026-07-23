@@ -15,6 +15,7 @@ import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
+import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -373,6 +374,34 @@ final class BravenChart<T> {
       name: name,
       color: color,
       yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends a pie: each row is a slice, [value] is the angle-share.
+  ///
+  /// A pie makes the spec RADIAL — it may contain no other mark, and honors no
+  /// Cartesian axis/grid option. [radius] encodes an optional second metric as
+  /// a variable slice radius. Rich styling is deferred to [style]/[dataLabels],
+  /// the real config objects, exactly as the Cartesian geoms defer to config.
+  BravenChart<T> geomPie({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    FieldAccessor<T, num>? radius,
+    String? id,
+    String? name,
+    Color? color,
+    PieChartStyle? style,
+    PieDataLabelConfig? dataLabels,
+  }) => _append(
+    PieMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      radius: radius,
+      name: name,
+      color: color,
+      style: style,
+      dataLabels: dataLabels,
     ),
   );
 

@@ -11,6 +11,8 @@ import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_config.dart';
+import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
@@ -199,6 +201,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final markIds = _resolveMarkIds(spec.marks);
+  if (spec.isRadial) return _lowerRadial<T>(spec, markIds);
   final axes = _resolveAxes(spec.yAxes);
   final axesById = <String, YAxisConfig>{
     for (final axis in axes) axis.id: axis,
@@ -739,6 +742,128 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
     markerShape: mark.markerShape ?? _pointDefaults.markerShape,
   );
 }
+
+/// Lowers a RADIAL spec: exactly one radial geom, no Cartesian marks, no
+/// Cartesian axis/grid option. The whole dataset maps to one radial series
+/// (or, for a ring channel, one per ring). Validation order is deterministic
+/// and matches the Cartesian contract: every data-INDEPENDENT structural check
+/// runs before the emptyData guard, so BravenPlot swallows ONLY an otherwise
+/// well-formed empty spec.
+LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
+  final radialIndices = <int>[
+    for (var index = 0; index < spec.marks.length; index++)
+      if (spec.marks[index] is RadialMark<T>) index,
+  ];
+  if (radialIndices.length > 1) {
+    throw GrammarSpecException.multipleRadialGeoms(<String>[
+      for (final index in radialIndices) markIds[index],
+    ]);
+  }
+  final markIndex = radialIndices.single;
+  if (spec.marks.length > 1) {
+    throw GrammarSpecException.mixedCoordinateSystems(
+      markIds[markIndex],
+      <String>[
+        for (var index = 0; index < spec.marks.length; index++)
+          if (index != markIndex) markIds[index],
+      ],
+    );
+  }
+
+  final mark = spec.marks[markIndex] as RadialMark<T>;
+  final markId = markIds[markIndex];
+
+  // Cartesian-only options carry no meaning on a radial spec.
+  if (spec.transposed) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('transposed');
+  }
+  if (spec.xAxis != null) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('xAxis');
+  }
+  if (spec.yAxes.isNotEmpty) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('yAxes');
+  }
+  if (spec.grid != null) {
+    throw GrammarSpecException.axisOptionOnRadialSpec('grid');
+  }
+
+  // Data-dependent checks live below the emptyData guard.
+  if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
+
+  final hasVisibleCategory = spec.data.any(
+    (row) => mark.category(row).toString().trim().isNotEmpty,
+  );
+  if (!hasVisibleCategory) {
+    throw GrammarSpecException.emptyRadialCategories(markId);
+  }
+
+  final series = <ChartSeries>[];
+  ConcentricDonutConfig? concentric;
+  PolarChartConfig? polar;
+
+  if (mark is PieMark<T>) {
+    series.add(_lowerPie<T>(mark, markId, spec.data));
+  } else {
+    // Donut and Polar branches are added in later phases; this guards the
+    // not-yet-wired path with a clear error rather than silent misbehavior.
+    throw StateError('Unhandled radial mark: $mark');
+  }
+
+  return LoweredPlot(
+    series: series,
+    annotations: const <ChartAnnotation>[],
+    xAxis: null,
+    yAxes: const <YAxisConfig>[],
+    interaction: spec.interaction ?? const InteractionConfig(),
+    theme: spec.theme,
+    grid: null,
+    title: spec.title,
+    subtitle: spec.subtitle,
+    showLegend: spec.showLegend,
+    concentricDonutConfig: concentric,
+    polarChartConfig: polar,
+  );
+}
+
+/// Builds an insertion-ordered category→value map. Duplicate categories
+/// collapse (last row wins), matching `PieChartSeries.fromMap` semantics.
+Map<String, num> _radialValues<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, num> value,
+) {
+  final result = <String, num>{};
+  for (final row in data) {
+    result[category(row).toString()] = value(row);
+  }
+  return result;
+}
+
+/// Builds the per-category second-metric radius map for a variable-radius geom.
+Map<String, num> _radiusValues<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, num> radius,
+) {
+  final result = <String, num>{};
+  for (final row in data) {
+    result[category(row).toString()] = radius(row);
+  }
+  return result;
+}
+
+PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
+    PieChartSeries.fromMap(
+      id: id,
+      name: mark.name,
+      color: mark.color,
+      values: _radialValues(data, mark.category, mark.value),
+      radiusValues: mark.radius == null
+          ? const <String, num>{}
+          : _radiusValues(data, mark.category, mark.radius!),
+      pieStyle: mark.style ?? const PieChartStyle(),
+      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+    );
 
 void _requireScale(
   String markId,
