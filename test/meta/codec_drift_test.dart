@@ -95,15 +95,153 @@ const Map<String, String> _codecPropertyGaps = <String, String>{
           'through a runtime binding descriptor rather than being persisted.',
 };
 
-/// Classes that DO round-trip but through a mechanism this Tier-1 landing does
-/// not yet attribute (polymorphic dispatch, inline construction, or the radial
-/// decode delegation). Each is picked up by a later tier; naming it here keeps
-/// the Tier-1 scope honest instead of silently green.
-const Map<String, String> _deferredToLaterTiers = <String, String>{
-  'DonutChartStyle':
-      'Its decoder delegates the 19 shared radial fields to _decodePieStyle via '
-          'DonutChartStyle.fromRadialStyle — modelled by the Tier-2 decode '
-          'delegation, not the leaf construction scan.',
+/// Classes that DO round-trip but through a mechanism no tier here attributes.
+/// Each is picked up by a later tier or pinned; naming it keeps the gate honest
+/// instead of silently green. (Emptied once Tier-2 lands the polymorphic /
+/// inline / delegation attribution; retained as the seam for future deferrals.)
+const Map<String, String> _deferredToLaterTiers = <String, String>{};
+
+// ===========================================================================
+// TIER-2: curated ENCODE sources for classes whose encode is NOT a dedicated
+// `_encodeC(C c)` method (so the Tier-1 first-param attributor cannot see it):
+// classes serialized INLINE inside a parent encoder, the pie/donut style
+// delegation, and the polymorphic series / annotation / point dispatch.
+//
+// Each entry maps a class to the [file, method] encode bodies that name its
+// fields. The generous member-read + object-pattern scan runs over those bodies
+// and is filtered to the class's own modelled props — so a helper that happens
+// to name a sibling's field does not credit it. A method named here that no
+// longer exists makes the gate fail loudly (the "methods exist" test), never
+// silently vacuous.
+// ===========================================================================
+const String _seriesFile = 'chart_series_document_codec.dart';
+const String _axisFile = 'chart_axis_document_codec.dart';
+const String _configFile = 'chart_configuration_document_codec.dart';
+const String _interactionFile = 'chart_interaction_document_codec.dart';
+const String _annotationFile = 'chart_annotation_document_codec.dart';
+
+const Map<String, List<List<String>>> _inlineEncodeSources =
+    <String, List<List<String>>>{
+  // Inline value classes serialized inside a parent encoder.
+  'SegmentStyle': [
+    [_seriesFile, '_encodePoint'],
+  ],
+  'PointStyle': [
+    [_seriesFile, '_encodePoint'],
+  ],
+  'CategoryAxisConfig': [
+    [_axisFile, 'encodeXAxis'],
+  ],
+  'BarPatternStyle': [
+    [_seriesFile, '_encodeBarStyle'],
+  ],
+  'BarMotionStyle': [
+    [_seriesFile, '_encodeBarStyle'],
+  ],
+  'BarGradient': [
+    [_seriesFile, '_encodeBarStyle'],
+  ],
+  'BarLabelCalloutStyle': [
+    [_seriesFile, '_encodeBarLabels'],
+  ],
+  'BarBulletRange': [
+    [_seriesFile, '_encodeBarBullet'],
+  ],
+  'BarWaterfallConnectorStyle': [
+    [_seriesFile, '_encodeBarWaterfallStyle'],
+  ],
+  'SeriesLabelBackground': [
+    [_seriesFile, '_encodeInlineLabel'],
+  ],
+  'PolarThreshold': [
+    [_configFile, 'encodePolarChart'],
+  ],
+  'PolarPaneConfig': [
+    [_configFile, 'encodePolarChart'],
+  ],
+  'PolarCategoryAxisConfig': [
+    [_configFile, 'encodePolarChart'],
+  ],
+  'PolarNumericAxisConfig': [
+    [_configFile, 'encodePolarChart'],
+  ],
+  'PolarColumnCompositionConfig': [
+    [_configFile, 'encodePolarChart'],
+  ],
+  'CartesianValueSummaryOverlay': [
+    [_interactionFile, '_encodeValueSummaryPresentation'],
+  ],
+  'CartesianValueSummaryAnnotation': [
+    [_interactionFile, '_encodeValueSummaryPresentation'],
+  ],
+  'CartesianValueSummaryAutomaticContent': [
+    [_interactionFile, '_encodeValueSummaryContent'],
+  ],
+  // Pie/Donut radial-style delegation: the pie encoder takes the RadialChartStyle
+  // base (not a manifest type), and the donut encoder spreads it.
+  'PieChartStyle': [
+    [_seriesFile, '_encodePieStyle'],
+  ],
+  'DonutChartStyle': [
+    [_seriesFile, '_encodeDonutStyle'],
+    [_seriesFile, '_encodePieStyle'],
+  ],
+};
+
+/// Polymorphic dispatch groups: series, annotations, and data points have no
+/// per-class encode method — they are encoded through a shared method with a
+/// `switch`/`is` dispatch. Each subclass's encoded set is the generous scan of
+/// these shared bodies, filtered to that subclass's own modelled props. (The
+/// DECODE side stays precise per subclass: each is constructed in its own switch
+/// arm / decode method, so the construction-site scan attributes it exactly —
+/// this is what catches a per-subclass drop like the categoryValue seam.)
+const List<List<String>> _seriesEncodeSources = <List<String>>[
+  [_seriesFile, 'encodeWithContext'],
+  [_seriesFile, '_encodeSeriesStyle'],
+];
+const List<String> _seriesClasses = <String>[
+  'LineChartSeries',
+  'AreaChartSeries',
+  'RangeAreaChartSeries',
+  'ScatterChartSeries',
+  'BarChartSeries',
+  'CandlestickChartSeries',
+  'PieChartSeries',
+  'DonutChartSeries',
+  'PolarColumnChartSeries',
+];
+
+const List<List<String>> _annotationEncodeSources = <List<String>>[
+  [_annotationFile, 'encodeWithContext'],
+  [_annotationFile, '_encodePayload'],
+];
+const List<String> _annotationClasses = <String>[
+  'PointAnnotation',
+  'RangeAnnotation',
+  'TextAnnotation',
+  'ThresholdAnnotation',
+  'PinAnnotation',
+  'TrendAnnotation',
+  'ErrorBarAnnotation',
+  'ChordAnnotation',
+  'LegendAnnotation',
+];
+
+const List<List<String>> _pointEncodeSources = <List<String>>[
+  [_seriesFile, '_encodePoint'],
+];
+const List<String> _pointClasses = <String>[
+  'ChartDataPoint',
+  'CandlestickDataPoint',
+  'RangeAreaDataPoint',
+];
+
+/// DECODE delegation: a class whose decoded set includes another's because its
+/// decoder threads the delegate's construction. `_decodeDonutStyle` builds a
+/// `DonutChartStyle.fromRadialStyle(_decodePieStyle(value), …)`, so the shared
+/// pie fields are decoded through the pie decoder.
+const Map<String, List<String>> _decodeDelegates = <String, List<String>>{
+  'DonutChartStyle': ['PieChartStyle'],
 };
 
 // ===========================================================================
@@ -206,6 +344,24 @@ int _skipStringBody(
 }
 
 const String _identifier = r'[A-Za-z_][A-Za-z0-9_]*';
+
+/// Finds the declaration of [method] and returns the source span from its
+/// signature's opening paren through the end of its body (block `{…}` or arrow
+/// `=> …;`). Returns '' if not found. Body boundaries are computed by
+/// paren/brace matching on the (string-stripped) source, so a nested `_decodeX(`
+/// CALL inside an arrow body is never mistaken for a new method start — the
+/// method-splitter caveat.
+String _methodBody(String stripped, String method) {
+  final declRe = RegExp(
+    r'(?:^|\n)[ ]{0,2}(?:static +)?[A-Za-z_][\w<>,?. ]*?\s' +
+        RegExp.escape(method) +
+        r'\s*\(',
+  );
+  final m = declRe.firstMatch(stripped);
+  if (m == null) return '';
+  final open = stripped.indexOf('(', m.start);
+  return _spanFrom(stripped, open);
+}
 
 /// Given the index of a signature's opening `(`, returns the method text from
 /// there to the end of its body.
@@ -386,8 +542,8 @@ _CodecModel _buildModel(Set<String> manifestClasses) {
   void addEncoded(String cls, Iterable<String> names) =>
       encoded.putIfAbsent(cls, () => <String>{}).addAll(names);
 
-  // Auto: dedicated `_?encode…` methods whose first positional parameter is a
-  // manifest class (the leaf both-sided pairs).
+  // Tier-1 auto: dedicated `_?encode…` methods whose first positional parameter
+  // is a manifest class (the leaf both-sided pairs).
   final declRe = RegExp(
     r'(?:^|\n)([ ]{0,2})(?:static +)?[A-Za-z_][\w<>,?. ]*?\s(_?encode'
     r'[A-Za-z0-9_]*)\s*\(',
@@ -399,6 +555,37 @@ _CodecModel _buildModel(Set<String> manifestClasses) {
       if (cls == null || !manifestClasses.contains(cls)) continue;
       addEncoded(cls, _encodeNames(_spanFrom(src, open)));
     }
+  }
+
+  // Tier-2 curated inline / delegated encode sources.
+  for (final entry in _inlineEncodeSources.entries) {
+    for (final where in entry.value) {
+      addEncoded(entry.key, _encodeNames(_methodBody(stripped[where[0]]!, where[1])));
+    }
+  }
+
+  // Tier-2 polymorphic dispatch: series / annotations / points share encode
+  // bodies; each subclass is filtered to its own modelled props downstream.
+  final seriesBody = <String>[
+    for (final where in _seriesEncodeSources)
+      _methodBody(stripped[where[0]]!, where[1]),
+  ].join('\n');
+  for (final cls in _seriesClasses) {
+    addEncoded(cls, _encodeNames(seriesBody));
+  }
+  final annotationBody = <String>[
+    for (final where in _annotationEncodeSources)
+      _methodBody(stripped[where[0]]!, where[1]),
+  ].join('\n');
+  for (final cls in _annotationClasses) {
+    addEncoded(cls, _encodeNames(annotationBody));
+  }
+  final pointBody = <String>[
+    for (final where in _pointEncodeSources)
+      _methodBody(stripped[where[0]]!, where[1]),
+  ].join('\n');
+  for (final cls in _pointClasses) {
+    addEncoded(cls, _encodeNames(pointBody));
   }
 
   // DECODE: construction-site scan for every manifest class.
@@ -429,6 +616,14 @@ _CodecModel _buildModel(Set<String> manifestClasses) {
     }
   }
 
+  // Tier-2 decode delegation (donut → pie radial fields).
+  for (final entry in _decodeDelegates.entries) {
+    final target = decoded.putIfAbsent(entry.key, () => <String>{});
+    for (final delegate in entry.value) {
+      target.addAll(decoded[delegate] ?? const <String>{});
+    }
+  }
+
   return _CodecModel(encoded, decoded);
 }
 
@@ -436,15 +631,16 @@ _CodecModel _buildModel(Set<String> manifestClasses) {
 void main() {
   late Map<String, Set<String>> surface;
   late _CodecModel model;
-  // Tier-1 scope: classes served by a dedicated both-sided pair (a member-read
-  // encode AND a construction-site decode), minus the classes deferred to a
-  // later tier.
-  late Set<String> tier1;
+  // Gated scope: every props-bearing class the codec round-trips both-sided (a
+  // member-read encode AND a construction-site decode) — Tier-1 leaf pairs plus
+  // the Tier-2 polymorphic / inline / delegated classes — minus anything still
+  // deferred to a later tier.
+  late Set<String> gated;
 
   setUpAll(() {
     surface = _surfaceProperties();
     model = _buildModel(surface.keys.toSet());
-    tier1 = <String>{
+    gated = <String>{
       for (final c in surface.keys)
         if (surface[c]!.isNotEmpty &&
             model.encoded.containsKey(c) &&
@@ -465,14 +661,28 @@ void main() {
       greaterThan(700),
       reason: 'the surface manifest resolved almost no properties',
     );
-    expect(tier1, hasLength(greaterThan(50)),
-        reason: 'almost no leaf pairs resolved — the encode/decode scan was '
-            'probably broken');
+    expect(gated, hasLength(greaterThan(100)),
+        reason: 'almost no classes resolved both-sided — the encode/decode scan '
+            'was probably broken');
     expect(model.encodedFor('LegendStyle'), contains('markerShape'));
     expect(model.decodedFor('LegendStyle'), contains('markerShape'));
-    expect(tier1, contains('LegendStyle'));
-    expect(tier1, contains('XAxisConfig'));
-    expect(tier1, contains('YAxisConfig'));
+    // Tier-2 spot-checks: the polymorphic + inline + delegated classes resolve.
+    expect(model.decodedFor('CandlestickDataPoint'), contains('categoryValue'));
+    expect(model.encodedFor('CandlestickDataPoint'), contains('categoryValue'));
+    expect(model.decodedFor('DonutChartStyle'), contains('radiusFactor'),
+        reason: 'the donut→pie decode delegation did not thread the pie fields');
+    for (final c in <String>[
+      'LegendStyle',
+      'XAxisConfig',
+      'YAxisConfig',
+      'LineChartSeries',
+      'PieChartStyle',
+      'DonutChartStyle',
+      'PointAnnotation',
+      'SegmentStyle',
+    ]) {
+      expect(gated, contains(c), reason: '$c is not gated both-sided');
+    }
   });
 
   test('every reviewed hole names a real class/property with a real reason', () {
@@ -498,9 +708,9 @@ void main() {
     }
   });
 
-  test('every Tier-1 modelled property is ENCODED (or pinned)', () {
+  test('every gated modelled property is ENCODED (or pinned)', () {
     final gaps = <String>[];
-    for (final className in tier1) {
+    for (final className in gated) {
       final encoded = model.encodedFor(className);
       for (final property in surface[className]!) {
         if (encoded.contains(property)) continue;
@@ -518,9 +728,9 @@ void main() {
     );
   });
 
-  test('every Tier-1 modelled property is DECODED (or pinned)', () {
+  test('every gated modelled property is DECODED (or pinned)', () {
     final gaps = <String>[];
-    for (final className in tier1) {
+    for (final className in gated) {
       final decoded = model.decodedFor(className);
       for (final property in surface[className]!) {
         if (decoded.contains(property)) continue;
@@ -539,11 +749,11 @@ void main() {
     );
   });
 
-  test('no encode/decode ASYMMETRY across Tier-1 (the categoryValue-class bug)',
-      () {
+  test('no encode/decode ASYMMETRY across gated classes '
+      '(the categoryValue-class bug)', () {
     final encodedNotDecoded = <String>[];
     final decodedNotEncoded = <String>[];
-    for (final className in tier1) {
+    for (final className in gated) {
       final encoded = model.encodedFor(className);
       final decoded = model.decodedFor(className);
       for (final property in surface[className]!) {
@@ -590,11 +800,72 @@ void main() {
     );
   });
 
-  test('COVERAGE REPORT (not a gate): Tier-1 leaf-pair coverage', () {
+  test('the curated Tier-2 encode sources all name real methods', () {
+    final stripped = _strippedSources();
+    final missing = <String>[];
+    void check(String file, String method) {
+      if (_methodBody(stripped[file]!, method).isEmpty) {
+        missing.add('$file:$method');
+      }
+    }
+
+    for (final sources in _inlineEncodeSources.values) {
+      for (final where in sources) {
+        check(where[0], where[1]);
+      }
+    }
+    for (final where in <List<String>>[
+      ..._seriesEncodeSources,
+      ..._annotationEncodeSources,
+      ..._pointEncodeSources,
+    ]) {
+      check(where[0], where[1]);
+    }
+    expect(
+      (missing.toSet().toList()..sort()),
+      isEmpty,
+      reason: 'these curated encode-source methods no longer exist (renamed?) — '
+          'the gate would be silently vacuous for the classes they feed. Update '
+          'the Tier-2 source maps:\n${missing.join('\n')}',
+    );
+  });
+
+  test('every polymorphic subclass is wired into a Tier-2 group', () {
+    // A new series/annotation subclass must be added to its group or it escapes
+    // the per-subclass gate (the emitter gate's maintenance guard, mirrored).
+    final manifestSeries =
+        surface.keys.where((c) => c.endsWith('ChartSeries')).toSet();
+    expect(manifestSeries.difference(_seriesClasses.toSet()), isEmpty,
+        reason: 'unmapped manifest series — add to _seriesClasses');
+    expect(_seriesClasses.toSet().difference(manifestSeries), isEmpty,
+        reason: 'stale _seriesClasses entry — not a manifest series');
+    final manifestAnnotations =
+        surface.keys.where((c) => c.endsWith('Annotation')).toSet()
+          ..removeWhere((c) => c.startsWith('CartesianValueSummary'));
+    expect(manifestAnnotations.difference(_annotationClasses.toSet()), isEmpty,
+        reason: 'unmapped manifest annotation — add to _annotationClasses');
+  });
+
+  test('the gate is NON-VACUOUS: a synthetic decode drop is detected', () {
+    // Prove the construction-site decode scan actually names each argument and
+    // would flag a missing one — the same mechanism the live gate relies on, in
+    // miniature, so a future refactor that silently emptied it fails here.
+    const present = 'CandlestickDataPoint(x: base.x, categoryValue: '
+        'base.categoryValue, close: close)';
+    const dropped = 'CandlestickDataPoint(x: base.x, close: close)';
+    expect(_decodeNames([_strip(present)], 'CandlestickDataPoint'),
+        contains('categoryValue'));
+    expect(_decodeNames([_strip(dropped)], 'CandlestickDataPoint'),
+        isNot(contains('categoryValue')),
+        reason: 'the decode scan failed to notice a dropped ctor arg — the gate '
+            'would be vacuous for exactly the categoryValue-class bug');
+  });
+
+  test('COVERAGE REPORT (not a gate): artifact-codec round-trip coverage', () {
     var modelled = 0;
     var encoded = 0;
     var decoded = 0;
-    for (final className in tier1) {
+    for (final className in gated) {
       for (final property in surface[className]!) {
         modelled++;
         if (model.encodedFor(className).contains(property)) encoded++;
@@ -603,11 +874,11 @@ void main() {
     }
     // ignore: avoid_print
     print(
-      '\n[artifact codec drift — Tier-1 leaf pairs]\n'
+      '\n[artifact codec drift — gated (Tier-1 + Tier-2)]\n'
       '  @chartSurface classes:      ${surface.length}\n'
-      '  Tier-1 gated classes:       ${tier1.length}\n'
+      '  gated classes:              ${gated.length}\n'
       '  deferred to later tiers:    ${_deferredToLaterTiers.length}\n'
-      '  Tier-1 modelled properties: $modelled\n'
+      '  gated modelled properties:  $modelled\n'
       '  property gaps pinned:       ${_codecPropertyGaps.length}\n'
       '  properties ENCODED:         $encoded of $modelled\n'
       '  properties DECODED:         $decoded of $modelled',
