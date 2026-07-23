@@ -8,6 +8,8 @@ import '../controllers/chart_interaction_group_controller.dart';
 import '../models/braven_chart_controller.dart';
 import '../models/chart_series.dart';
 import '../models/chart_state_config.dart';
+import '../models/concentric_donut_config.dart';
+import '../models/polar_chart_config.dart';
 import 'grammar_diagnostics.dart';
 import 'plot_lowering.dart';
 import 'plot_spec.dart';
@@ -96,6 +98,10 @@ class BravenPlot<T> extends StatelessWidget {
       title: spec.title,
       subtitle: spec.subtitle,
       showLegend: spec.showLegend ?? true,
+      concentricDonutConfig:
+          lowered?.concentricDonutConfig ?? const ConcentricDonutConfig(),
+      polarChartConfig:
+          lowered?.polarChartConfig ?? const PolarChartConfig(),
       emptyStateConfig: emptyStateConfig,
       bravenChartController: bravenChartController,
       interactionGroupController: interactionGroupController,

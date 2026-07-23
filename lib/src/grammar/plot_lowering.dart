@@ -8,8 +8,10 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/polar_chart_config.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -46,6 +48,8 @@ class LoweredPlot {
     this.title,
     this.subtitle,
     this.showLegend,
+    this.concentricDonutConfig,
+    this.polarChartConfig,
   });
 
   /// One series per geometry mark, in spec order.
@@ -77,6 +81,14 @@ class LoweredPlot {
 
   /// The spec's legend visibility, unchanged. Null lets the chart default it.
   final bool? showLegend;
+
+  /// The concentric-donut composition config, when the lowered chart is a
+  /// concentric donut. Null for every other family.
+  final ConcentricDonutConfig? concentricDonutConfig;
+
+  /// The polar pane/axis config, when the lowered chart is a polar column.
+  /// Null for every other family.
+  final PolarChartConfig? polarChartConfig;
 }
 
 // Const prototypes. Reading defaults off a real instance instead of
