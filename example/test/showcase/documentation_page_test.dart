@@ -1,6 +1,8 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/documentation_page.dart';
 import 'package:braven_charts_example/showcase/showcase_app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -27,10 +29,81 @@ void main() {
     expect(find.byKey(const ValueKey('docs-browse-api')), findsOneWidget);
     expect(find.text('Explore by what you need to build'), findsOneWidget);
     expect(find.text('Two ways to build the same chart'), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('docs-feature-chart-families')))
+          .height,
+      128,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('docs-feature-chart-families')));
+    await tester.pump();
+    expect(opened, ['chart-types']);
+    opened.clear();
 
     await tester.tap(find.byKey(const ValueKey('docs-choose-family')));
     await tester.pump();
     expect(opened, ['chart-types']);
+  });
+
+  testWidgets('quick start uses the shared code view and copies either form', (
+    tester,
+  ) async {
+    MethodCall? clipboardCall;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') clipboardCall = call;
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(home: DocumentationPage(onOpenPage: (_) {})),
+    );
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('docs-snippet-viewer')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartCodeBlock), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('docs-snippet-code-window')),
+      findsOneWidget,
+    );
+    var code = tester.widget<Text>(
+      find.byKey(const ValueKey('docs-snippet-code')),
+    );
+    expect(code.textSpan?.toPlainText(), contains('class BasicLineChart'));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('docs-snippet-form-toggle')),
+        matching: find.text('Grammar'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    code = tester.widget<Text>(find.byKey(const ValueKey('docs-snippet-code')));
+    expect(code.textSpan?.toPlainText(), contains('BravenChart.of'));
+
+    await tester.tap(find.byKey(const ValueKey('docs-copy-snippet')));
+    await tester.pump();
+    expect(clipboardCall?.method, 'Clipboard.setData');
+    final clipboardArguments =
+        clipboardCall?.arguments as Map<Object?, Object?>;
+    expect(clipboardArguments['text'], contains('BravenChart.of'));
   });
 
   testWidgets('docs route remains documentation on a phone viewport', (

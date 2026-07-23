@@ -1,7 +1,9 @@
 // Copyright 2026 Braven Charts contributors
 // SPDX-License-Identifier: MIT
 
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../generated/public_docs_catalog.g.dart';
 import '../platform/open_public_url.dart';
@@ -50,7 +52,7 @@ class _DocumentationPageState extends State<DocumentationPage> {
               eyebrow: 'PACKAGE CAPABILITIES',
               title: 'Explore by what you need to build',
               subtitle:
-                  'Six stable capability groups replace a release-by-release feature list.',
+                  'Start with the job; each destination opens a runnable guide.',
             ),
           ),
           _FeatureGrid(onOpenPage: widget.onOpenPage),
@@ -164,7 +166,7 @@ class _DocumentationIntroduction extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Build a chart, understand the system, find the exact API.',
+                  'Build a chart. Understand the system. Find the exact API.',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.7,
@@ -174,7 +176,7 @@ class _DocumentationIntroduction extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 760),
                   child: Text(
-                    'The showcase is the runnable documentation layer. Start with a small chart, choose a family by its data question, or jump to generated member reference.',
+                    'Start with a runnable chart, choose a family by its data question, or jump to generated member reference.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: scheme.onSurfaceVariant,
                       height: 1.5,
@@ -375,13 +377,14 @@ class _FeatureGrid extends StatelessWidget {
         return SliverGrid(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            mainAxisExtent: 170,
+            mainAxisExtent: 128,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
           delegate: SliverChildBuilderDelegate((context, index) {
             final feature = publicDocsFeatures[index];
-            return _DestinationCard(
+            return _CapabilityCard(
+              key: ValueKey('docs-feature-${feature.id}'),
               icon: _featureIcon(feature.id),
               title: feature.title,
               summary: feature.summary,
@@ -391,6 +394,96 @@ class _FeatureGrid extends StatelessWidget {
           }, childCount: publicDocsFeatures.length),
         );
       },
+    );
+  }
+}
+
+class _CapabilityCard extends StatelessWidget {
+  const _CapabilityCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.summary,
+    required this.actionLabel,
+    required this.onOpen,
+  });
+
+  final IconData icon;
+  final String title;
+  final String summary;
+  final String actionLabel;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      button: true,
+      label: '$title. $summary. $actionLabel.',
+      child: ExcludeSemantics(
+        child: Card(
+          margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onOpen,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: scheme.primaryContainer.withValues(
+                            alpha: 0.55,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, size: 18, color: scheme.primary),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: actionLabel,
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: scheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -430,103 +523,118 @@ class _FamilyGrid extends StatelessWidget {
   }
 }
 
-class _QuickStartExamples extends StatelessWidget {
+class _QuickStartExamples extends StatefulWidget {
   const _QuickStartExamples();
+
+  @override
+  State<_QuickStartExamples> createState() => _QuickStartExamplesState();
+}
+
+class _QuickStartExamplesState extends State<_QuickStartExamples> {
+  var _selectedSnippetId = publicDocsSnippets.first.id;
+  var _wrapLines = false;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final panels = publicDocsSnippets
-            .map(
-              (snippet) => _CodePanel(
-                key: ValueKey('docs-snippet-${snippet.id}'),
-                title: snippet.title,
-                source: snippet.source,
-              ),
-            )
-            .toList(growable: false);
-        if (constraints.maxWidth < 920) {
-          return Column(
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final selected = publicDocsSnippets.firstWhere(
+          (snippet) => snippet.id == _selectedSnippetId,
+        );
+        return Container(
+          key: const ValueKey('docs-snippet-viewer'),
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var index = 0; index < panels.length; index++) ...[
-                if (index > 0) const SizedBox(height: 16),
-                panels[index],
-              ],
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SegmentedButton<String>(
+                      key: const ValueKey('docs-snippet-form-toggle'),
+                      showSelectedIcon: false,
+                      segments: [
+                        for (final snippet in publicDocsSnippets)
+                          ButtonSegment<String>(
+                            value: snippet.id,
+                            label: Text(_snippetFormLabel(snippet.id)),
+                            tooltip: snippet.title,
+                          ),
+                      ],
+                      selected: {_selectedSnippetId},
+                      onSelectionChanged: (selection) =>
+                          setState(() => _selectedSnippetId = selection.single),
+                    ),
+                    Text(
+                      'Dart · ${selected.title}',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    IconButton(
+                      tooltip: _wrapLines
+                          ? 'Disable line wrapping'
+                          : 'Wrap lines',
+                      onPressed: () => setState(() => _wrapLines = !_wrapLines),
+                      icon: Icon(
+                        _wrapLines ? Icons.wrap_text : Icons.horizontal_rule,
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      key: const ValueKey('docs-copy-snippet'),
+                      onPressed: () => _copySnippet(context, selected),
+                      icon: const Icon(Icons.copy_all_outlined),
+                      label: const Text('Copy code'),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: scheme.outlineVariant),
+              SizedBox(
+                height: constraints.maxWidth < 600 ? 360 : 420,
+                child: KeyedSubtree(
+                  key: ValueKey('docs-snippet-${selected.id}'),
+                  child: ChartCodeBlock(
+                    code: selected.source,
+                    wrapLines: _wrapLines,
+                    semanticLabel: '${selected.title} Dart example',
+                    surfaceKey: const ValueKey('docs-snippet-code-window'),
+                    codeKey: const ValueKey('docs-snippet-code'),
+                  ),
+                ),
+              ),
             ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var index = 0; index < panels.length; index++) ...[
-              if (index > 0) const SizedBox(width: 16),
-              Expanded(child: panels[index]),
-            ],
-          ],
+          ),
         );
       },
     );
   }
-}
 
-class _CodePanel extends StatelessWidget {
-  const _CodePanel({super.key, required this.title, required this.source});
-
-  final String title;
-  final String source;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final dark = theme.brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF111827) : const Color(0xFFF6F7FB),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-            child: Row(
-              children: [
-                Icon(Icons.code, size: 19, color: scheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: scheme.outlineVariant),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: SelectionArea(
-              child: Text(
-                source,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                  height: 1.55,
-                  color: dark
-                      ? const Color(0xFFE5E7EB)
-                      : const Color(0xFF1F2937),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _copySnippet(
+    BuildContext context,
+    PublicDocsSnippetEntry snippet,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: snippet.source));
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null && Scaffold.maybeOf(context) != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('${snippet.title} copied')),
+      );
+    }
   }
 }
 
@@ -739,6 +847,12 @@ String _featureAction(String id) => switch (id) {
   'live-rendering' => 'Open live data',
   'product-surfaces' => 'Open Workbench',
   _ => 'Open guide',
+};
+
+String _snippetFormLabel(String id) => switch (id) {
+  'basic-line' => 'Direct',
+  'basic-grammar' => 'Grammar',
+  _ => 'Example',
 };
 
 IconData _guideIcon(PublicDocsGuideEntry guide) {

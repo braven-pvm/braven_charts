@@ -565,6 +565,28 @@ List<String> _validateApiDocumentation(
     }
   }
 
+  final indexFile = apiDirectory.file('index.html');
+  if (indexFile.existsSync()) {
+    final index = indexFile.readAsStringSync();
+    final headEnd = index.indexOf('</head>');
+    final head = headEnd < 0 ? index : index.substring(0, headEnd);
+    if (!head.contains('#dartdoc-main-content .markdown img') ||
+        !head.contains('#dartdoc-main-content .markdown table')) {
+      errors.add(
+        'index.html is missing responsive Markdown image and table styles.',
+      );
+    }
+    if (RegExp(r'<nav\b', caseSensitive: false).hasMatch(head)) {
+      errors.add(
+        'index.html injects navigation markup inside <head>; '
+        'create it after DOMContentLoaded instead.',
+      );
+    }
+    if (!head.contains("document.createElement('nav')")) {
+      errors.add('index.html is missing the Braven documentation navigation.');
+    }
+  }
+
   for (final family in _list(catalog, 'chartFamilies')) {
     final familyId = family['id'];
     for (final symbol in family['apiSymbols'] as List) {

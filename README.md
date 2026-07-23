@@ -15,12 +15,12 @@ Render ten chart families through one custom `RenderBox` and `Canvas` pipeline. 
 ## Why Braven Charts
 
 <!-- BEGIN GENERATED: FEATURES -->
-- **[Ten chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, partition-radial, and polar charts with one native Flutter rendering system.
-- **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Combine zoom, pan, tracking, tooltips, annotations, durable selection, and linked brushing.
-- **[Multi-axis analysis](https://braven-pvm.github.io/braven_charts/?page=multi-axis):** Coordinate independent axes, normalization, synchronized charts, navigators, and persistent value summaries.
-- **[Typed authoring and source](https://braven-pvm.github.io/braven_charts/?page=chart-grammar):** Choose immutable configuration, checked Chart Grammar, fluent modifiers, or generated Dart source.
-- **[Live and efficient rendering](https://braven-pvm.github.io/braven_charts/?page=live-stream):** Use cached custom rendering, bounded streams, and frame-coalesced updates for changing data.
-- **[Product-ready chart surfaces](https://braven-pvm.github.io/braven_charts/?page=chart-workbench):** Ship Chart, Data, Split, and Source views with artifacts, tables, CSV, themes, and accessible states.
+- **[Ten chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
+- **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Zoom, pan, track, annotate, select, and link chart data.
+- **[Multi-axis analysis](https://braven-pvm.github.io/braven_charts/?page=multi-axis):** Coordinate independent axes, normalized series, navigators, and summaries.
+- **[Typed authoring and source](https://braven-pvm.github.io/braven_charts/?page=chart-grammar):** Choose direct config, checked Grammar, fluent modifiers, or generated Dart.
+- **[Live and efficient rendering](https://braven-pvm.github.io/braven_charts/?page=live-stream):** Stream changing data through cached, frame-coalesced rendering.
+- **[Product-ready chart surfaces](https://braven-pvm.github.io/braven_charts/?page=chart-workbench):** Add Chart, Data, Split, Source, tables, CSV, themes, and artifacts.
 <!-- END GENERATED: FEATURES -->
 
 ## Choose a chart family

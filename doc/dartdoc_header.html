@@ -8,6 +8,19 @@
     border-bottom: 1px solid #d7d4df;
   }
 
+  #dartdoc-main-content .markdown img {
+    max-width: 100%;
+    height: auto;
+    box-sizing: content-box;
+  }
+
+  #dartdoc-main-content .markdown table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   .braven-docs-links {
     display: flex;
     flex-wrap: wrap;
@@ -21,12 +34,32 @@
     }
   }
 </style>
-<nav class="braven-docs-nav">
-  <strong>Braven Charts</strong>
-  <span class="braven-docs-links">
-    <a href="https://braven-pvm.github.io/braven_charts/">Showcase</a>
-    <a href="https://braven-pvm.github.io/braven_charts/?page=docs">Documentation</a>
-    <a href="https://pub.dev/packages/braven_charts">pub.dev</a>
-    <a href="https://github.com/braven-pvm/braven_charts">GitHub</a>
-  </span>
-</nav>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (document.querySelector('.braven-docs-nav')) return;
+
+    var nav = document.createElement('nav');
+    nav.className = 'braven-docs-nav';
+    nav.setAttribute('aria-label', 'Braven Charts documentation');
+
+    var brand = document.createElement('strong');
+    brand.textContent = 'Braven Charts';
+    nav.appendChild(brand);
+
+    var links = document.createElement('span');
+    links.className = 'braven-docs-links';
+    [
+      ['Showcase', 'https://braven-pvm.github.io/braven_charts/'],
+      ['Documentation', 'https://braven-pvm.github.io/braven_charts/?page=docs'],
+      ['pub.dev', 'https://pub.dev/packages/braven_charts'],
+      ['GitHub', 'https://github.com/braven-pvm/braven_charts']
+    ].forEach(function (entry) {
+      var link = document.createElement('a');
+      link.textContent = entry[0];
+      link.href = entry[1];
+      links.appendChild(link);
+    });
+    nav.appendChild(links);
+    document.body.prepend(nav);
+  });
+</script>
