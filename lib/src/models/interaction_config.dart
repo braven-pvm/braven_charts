@@ -844,6 +844,111 @@ class GestureConfig {
 }
 
 // ==============================================================================
+// Touch Configuration
+// ==============================================================================
+
+/// Determines how direct touch gestures share the surface with a parent
+/// scrollable.
+enum TouchInteractionProfile {
+  /// Preserve one-finger dragging for the surrounding page.
+  ///
+  /// The chart only claims viewport gestures after a second touch pointer is
+  /// present.
+  browse,
+
+  /// Give a chart-focused surface one-finger panning after drag slop.
+  ///
+  /// Taps remain available for inspection and selection.
+  explore,
+}
+
+/// Touch-specific viewport gesture policy.
+///
+/// This policy does not replace [InteractionConfig.enableZoom] or
+/// [InteractionConfig.enablePan]. Those top-level flags remain the final
+/// feature gates. It only defines which touch gestures may request them.
+@chartSurface
+class TouchInteractionConfig {
+  const TouchInteractionConfig({
+    this.enabled = true,
+    this.profile = TouchInteractionProfile.browse,
+    this.enablePinchZoom = true,
+    this.enablePan = true,
+    this.enableLongPressTracking = true,
+    this.enableHapticFeedback = true,
+  });
+
+  /// Whether direct touch viewport gestures are enabled.
+  final bool enabled;
+
+  /// How the chart arbitrates one-finger drags with surrounding content.
+  final TouchInteractionProfile profile;
+
+  /// Whether two-finger scale changes may zoom the chart.
+  final bool enablePinchZoom;
+
+  /// Whether touch translation may pan the chart.
+  ///
+  /// Browse mode requires two pointers. Explore mode permits one pointer after
+  /// the configured pan threshold is crossed.
+  final bool enablePan;
+
+  /// Whether holding one finger may activate transient tracking inspection.
+  ///
+  /// Once active, dragging scrubs the existing crosshair and tracking tooltip.
+  /// The transient inspection clears when the pointer lifts.
+  final bool enableLongPressTracking;
+
+  /// Whether touch tracking may request platform haptic feedback.
+  ///
+  /// Haptics are requested when tracking activates and when it crosses to a
+  /// different snapped X observation. Platforms without haptic support safely
+  /// ignore the request.
+  final bool enableHapticFeedback;
+
+  TouchInteractionConfig copyWith({
+    bool? enabled,
+    TouchInteractionProfile? profile,
+    bool? enablePinchZoom,
+    bool? enablePan,
+    bool? enableLongPressTracking,
+    bool? enableHapticFeedback,
+  }) {
+    return TouchInteractionConfig(
+      enabled: enabled ?? this.enabled,
+      profile: profile ?? this.profile,
+      enablePinchZoom: enablePinchZoom ?? this.enablePinchZoom,
+      enablePan: enablePan ?? this.enablePan,
+      enableLongPressTracking:
+          enableLongPressTracking ?? this.enableLongPressTracking,
+      enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TouchInteractionConfig &&
+        other.enabled == enabled &&
+        other.profile == profile &&
+        other.enablePinchZoom == enablePinchZoom &&
+        other.enablePan == enablePan &&
+        other.enableLongPressTracking == enableLongPressTracking &&
+        other.enableHapticFeedback == enableHapticFeedback;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    enabled,
+    profile,
+    enablePinchZoom,
+    enablePan,
+    enableLongPressTracking,
+    enableHapticFeedback,
+  );
+}
+
+// ==============================================================================
 // Keyboard Configuration
 // ==============================================================================
 
@@ -1249,6 +1354,7 @@ class InteractionConfig {
     this.crosshair = const CrosshairConfig(),
     this.tooltip = const TooltipConfig(),
     this.gesture = const GestureConfig(),
+    this.touch = const TouchInteractionConfig(),
     this.keyboard = const KeyboardConfig(),
     this.enableZoom = true,
     this.enablePan = true,
@@ -1298,6 +1404,7 @@ class InteractionConfig {
     crosshair: CrosshairConfig(enabled: true),
     tooltip: TooltipConfig(enabled: true),
     gesture: GestureConfig(),
+    touch: TouchInteractionConfig(),
     keyboard: KeyboardConfig(enabled: true),
     enableZoom: true,
     enablePan: true,
@@ -1357,6 +1464,7 @@ class InteractionConfig {
     crosshair: CrosshairConfig(enabled: false),
     tooltip: TooltipConfig(enabled: false),
     gesture: GestureConfig(),
+    touch: TouchInteractionConfig(enabled: false),
     keyboard: KeyboardConfig(enabled: false),
     enableZoom: false,
     enablePan: false,
@@ -1387,6 +1495,9 @@ class InteractionConfig {
 
   /// Gesture recognition configuration (tap, pan, pinch timeouts and thresholds).
   final GestureConfig gesture;
+
+  /// Direct-touch viewport gesture policy.
+  final TouchInteractionConfig touch;
 
   /// Keyboard navigation configuration (arrow keys, zoom keys, shortcuts).
   final KeyboardConfig keyboard;
@@ -1602,6 +1713,7 @@ class InteractionConfig {
     CrosshairConfig? crosshair,
     TooltipConfig? tooltip,
     GestureConfig? gesture,
+    TouchInteractionConfig? touch,
     KeyboardConfig? keyboard,
     bool? enableZoom,
     bool? enablePan,
@@ -1630,6 +1742,7 @@ class InteractionConfig {
       crosshair: crosshair ?? this.crosshair,
       tooltip: tooltip ?? this.tooltip,
       gesture: gesture ?? this.gesture,
+      touch: touch ?? this.touch,
       keyboard: keyboard ?? this.keyboard,
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
@@ -1664,6 +1777,7 @@ class InteractionConfig {
         other.crosshair == crosshair &&
         other.tooltip == tooltip &&
         other.gesture == gesture &&
+        other.touch == touch &&
         other.keyboard == keyboard &&
         other.enableZoom == enableZoom &&
         other.enablePan == enablePan &&
@@ -1683,6 +1797,7 @@ class InteractionConfig {
     crosshair,
     tooltip,
     gesture,
+    touch,
     keyboard,
     enableZoom,
     enablePan,

@@ -37,6 +37,7 @@ import 'interaction/core/coordinator.dart';
 import 'interaction/core/data_hit.dart';
 import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
+import 'interaction/recognizers/priority_scale_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'interaction/selection/chart_selection_resolver.dart';
 import 'layout/chart_layout_kind.dart';
@@ -1248,10 +1249,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
   late PriorityPanGestureRecognizer _panRecognizer;
+  late PriorityScaleGestureRecognizer _touchViewportRecognizer;
   late PriorityTapGestureRecognizer _tapRecognizer;
+  late TapGestureRecognizer _touchTapRecognizer;
   late FocusNode _focusNode;
 
   MouseCursor _currentCursor = SystemMouseCursors.basic;
+  double _lastTouchScale = 1;
+  Offset? _lastTouchFocalPoint;
+  bool _touchScaleActive = false;
+  bool _touchViewportChanged = false;
+  bool _touchTrackingActive = false;
+  double? _lastTouchTrackingX;
   final GlobalKey _renderBoxKey = GlobalKey();
   ChartInteractionGroupParticipant? _interactionGroupParticipant;
 
@@ -1528,7 +1537,24 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       coordinator: _coordinator,
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,
+      supportedDevices: const <PointerDeviceKind>{
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+      },
     );
+
+    _touchViewportRecognizer = PriorityScaleGestureRecognizer(
+      coordinator: _coordinator,
+      onStart: _handleTouchViewportStart,
+      onUpdate: _handleTouchViewportUpdate,
+      onEnd: _handleTouchViewportEnd,
+      supportedDevices: const <PointerDeviceKind>{PointerDeviceKind.touch},
+    );
+
+    _touchTapRecognizer = TapGestureRecognizer(
+      supportedDevices: const <PointerDeviceKind>{PointerDeviceKind.touch},
+    )..onTapUp = _handleTouchTapUp;
 
     _incomingDataAnimationController =
         AnimationController(
@@ -1612,6 +1638,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onSelectExpression: _selectExpression,
       onInvertSelection: _invertSelection,
       onZoomToSelection: _zoomToSelection,
+      onZoomViewport: _zoomViewportFromController,
+      onFitData: _fitDataFromController,
       onClearPointFocus: _clearPointFocus,
       onClearPointSelection: _clearPointSelection,
       onReplayRadialEntrance: _startRadialRevealAnimation,
@@ -1764,6 +1792,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onSelectExpression: _selectExpression,
         onInvertSelection: _invertSelection,
         onZoomToSelection: _zoomToSelection,
+        onZoomViewport: _zoomViewportFromController,
+        onFitData: _fitDataFromController,
         onClearPointFocus: _clearPointFocus,
         onClearPointSelection: _clearPointSelection,
         onReplayRadialEntrance: _startRadialRevealAnimation,
@@ -1930,7 +1960,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
+    _touchViewportRecognizer.dispose();
     _tapRecognizer.dispose();
+    _touchTapRecognizer.dispose();
     super.dispose();
   }
 
@@ -5700,6 +5732,162 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _scheduleStreamingResumeIfNeeded();
   }
 
+  void _handleTouchViewportStart(ScaleStartDetails details) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return;
+
+    _captureStateRevision++;
+    _pauseStreamingForViewportInteraction();
+    renderBox.beginViewportTransform();
+    _lastTouchScale = 1;
+    _lastTouchFocalPoint = details.localFocalPoint;
+    _touchScaleActive = false;
+    _touchViewportChanged = false;
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
+  void _handleTouchViewportUpdate(ScaleUpdateDetails details) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return;
+
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    final touch = interaction.touch;
+    final canPinch =
+        details.pointerCount >= 2 &&
+        interaction.enableZoom &&
+        touch.enablePinchZoom;
+    if (canPinch &&
+        !_touchScaleActive &&
+        (details.scale - 1).abs() >= interaction.gesture.pinchThreshold) {
+      _touchScaleActive = true;
+    }
+    if (canPinch && _touchScaleActive) {
+      final factor = details.scale / _lastTouchScale;
+      if (factor.isFinite && factor > 0 && factor != 1) {
+        final zoomFocalPoint =
+            _lastTouchFocalPoint ??
+            (details.localFocalPoint - details.focalPointDelta);
+        renderBox.zoomChart(
+          factor,
+          plotCenter: renderBox.widgetToPlot(zoomFocalPoint),
+          animate: false,
+          finalize: false,
+        );
+        _touchViewportChanged = true;
+      }
+      _lastTouchScale = details.scale;
+    }
+
+    final canPan =
+        interaction.enablePan &&
+        touch.enablePan &&
+        (touch.profile == TouchInteractionProfile.explore ||
+            details.pointerCount >= 2);
+    if (canPan && details.focalPointDelta != Offset.zero) {
+      // [ChartTransform.pan] shifts the data viewport in the same direction
+      // as its delta, which moves the rendered content in the opposite
+      // direction. A touch centroid is content-following, so invert it.
+      renderBox.panChart(
+        -details.focalPointDelta.dx,
+        -details.focalPointDelta.dy,
+      );
+      _touchViewportChanged = true;
+    }
+    _lastTouchFocalPoint = details.localFocalPoint;
+  }
+
+  void _handleTouchViewportEnd(ScaleEndDetails details) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (_touchViewportChanged) {
+      renderBox?.finalizeViewportInteraction();
+    }
+    _lastTouchScale = 1;
+    _lastTouchFocalPoint = null;
+    _touchScaleActive = false;
+    _touchViewportChanged = false;
+    _scheduleStreamingResumeIfNeeded();
+  }
+
+  void _handleTouchTapUp(TapUpDetails details) {
+    _handleTapDown(
+      TapDownDetails(
+        globalPosition: details.globalPosition,
+        localPosition: details.localPosition,
+        kind: details.kind,
+      ),
+    );
+  }
+
+  void _handleTouchTrackingStart(LongPressStartDetails details) {
+    if (!_coordinator.canStartInteraction(InteractionMode.trackingScrub) ||
+        !_coordinator.claimMode(InteractionMode.trackingScrub)) {
+      return;
+    }
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null || !renderBox.attached) {
+      _coordinator.releaseMode();
+      return;
+    }
+
+    _touchTrackingActive = true;
+    _lastTouchTrackingX = renderBox.beginTouchTracking(details.localPosition);
+    if (_lastTouchTrackingX == null) {
+      _touchTrackingActive = false;
+      _coordinator.releaseMode();
+      return;
+    }
+    if (widget.interactionConfig?.touch.enableHapticFeedback ?? true) {
+      unawaited(HapticFeedback.selectionClick());
+    }
+    final dataHit = renderBox.dataHitAtWidgetPosition(
+      details.localPosition,
+      maxDistance:
+          widget.interactionConfig?.selection.dataPointHitRadius ??
+          const ChartSelectionConfig().dataPointHitRadius,
+    );
+    if (dataHit != null) {
+      widget.interactionConfig?.onDataPointLongPress?.call(
+        dataHit.point,
+        details.localPosition,
+      );
+    }
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
+  void _handleTouchTrackingUpdate(LongPressMoveUpdateDetails details) {
+    if (!_touchTrackingActive ||
+        _coordinator.currentMode != InteractionMode.trackingScrub) {
+      return;
+    }
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final snappedX = renderBox?.updateTouchTrackingPosition(
+      details.localPosition,
+    );
+    if (snappedX != null &&
+        snappedX != _lastTouchTrackingX &&
+        (widget.interactionConfig?.touch.enableHapticFeedback ?? true)) {
+      unawaited(HapticFeedback.selectionClick());
+    }
+    _lastTouchTrackingX = snappedX;
+  }
+
+  void _handleTouchTrackingEnd([LongPressEndDetails? details]) {
+    if (!_touchTrackingActive) return;
+    _touchTrackingActive = false;
+    _lastTouchTrackingX = null;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    renderBox?.endTouchTracking();
+    if (_coordinator.currentMode == InteractionMode.trackingScrub) {
+      _coordinator.releaseMode();
+    }
+  }
+
   void _handleTapDown(TapDownDetails details) {
     final configuredInteraction =
         widget.interactionConfig ?? const InteractionConfig();
@@ -5816,12 +6004,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           _selectSemanticSeriesFromInteraction(tappedElement.series.id);
           if (dataHit != null) {
             widget.onPointTap?.call(dataHit.point, tappedElement.series.id);
+            interaction.onDataPointTap?.call(
+              dataHit.point,
+              details.localPosition,
+            );
           }
         } else if (dataHit != null) {
           if (!_drillIntoScatterCluster(dataHit)) {
             _selectCartesianPointFromInteraction(dataHit);
           }
           widget.onPointTap?.call(dataHit.point, dataHit.seriesId);
+          interaction.onDataPointTap?.call(
+            dataHit.point,
+            details.localPosition,
+          );
         } else if (scope.includesWholeSeries) {
           _selectSemanticSeriesFromInteraction(tappedElement.series.id);
         } else {
@@ -5838,6 +6034,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         }
       }
       widget.onPointTap?.call(directDataHit.point, directDataHit.seriesId);
+      interaction.onDataPointTap?.call(
+        directDataHit.point,
+        details.localPosition,
+      );
     } else if (directSeriesId != null) {
       _selectSemanticSeriesFromInteraction(directSeriesId);
     }
@@ -7573,6 +7773,29 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _handleViewportInteractionPulse();
     }
     return ChartArtifactSuccess(value: null);
+  }
+
+  bool _zoomViewportFromController(double factor) {
+    if (_layoutKind != ChartLayoutKind.cartesian) return false;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox?.transform == null) return false;
+    _captureStateRevision++;
+    _pauseStreamingForViewportInteraction();
+    renderBox!.zoomChart(factor);
+    _scheduleStreamingResumeIfNeeded();
+    return true;
+  }
+
+  bool _fitDataFromController() {
+    if (_layoutKind != ChartLayoutKind.cartesian) return false;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox?.transform == null) return false;
+    _captureStateRevision++;
+    renderBox!.resetView();
+    _scheduleStreamingResumeIfNeeded();
+    return true;
   }
 
   (double, double) _selectionZoomBounds({
@@ -9537,6 +9760,41 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final effectiveInteractionConfig = isNonCartesian
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
+    final touchInteraction =
+        effectiveInteractionConfig?.touch ?? const TouchInteractionConfig();
+    final touchPanEnabled =
+        (effectiveInteractionConfig?.enablePan ?? true) &&
+        touchInteraction.enablePan;
+    final touchZoomEnabled =
+        (effectiveInteractionConfig?.enableZoom ?? true) &&
+        touchInteraction.enablePinchZoom;
+    final selectionOwnsPrimaryTouchDrag =
+        !isNonCartesian &&
+        (effectiveInteractionConfig?.enabled ?? true) &&
+        (effectiveInteractionConfig?.enableSelection ?? true) &&
+        (effectiveInteractionConfig?.selection ?? const ChartSelectionConfig())
+            .ownsPrimaryDrag();
+    final touchTrackingEnabled =
+        !isNonCartesian &&
+        (effectiveInteractionConfig?.enabled ?? true) &&
+        touchInteraction.enabled &&
+        touchInteraction.enableLongPressTracking &&
+        !widget.contextMenuConfig.enableLongPress;
+    _touchViewportRecognizer
+      ..enabled =
+          !isNonCartesian &&
+          (effectiveInteractionConfig?.enabled ?? true) &&
+          touchInteraction.enabled &&
+          (touchPanEnabled || touchZoomEnabled)
+      ..minimumPointerCount =
+          touchInteraction.profile == TouchInteractionProfile.explore &&
+              touchPanEnabled &&
+              !selectionOwnsPrimaryTouchDrag
+          ? 1
+          : 2
+      ..panThreshold =
+          effectiveInteractionConfig?.gesture.panThreshold ??
+          const GestureConfig().panThreshold;
     ChartPointRef? selectedTooltipPoint;
     final donutCenterSeries = isPartitionRadial
         ? _effectiveRenderSeries.whereType<DonutChartSeries>().toList(
@@ -9642,10 +9900,47 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               GestureRecognizerFactoryWithHandlers<
                                 PriorityPanGestureRecognizer
                               >(() => _panRecognizer, (recognizer) {}),
+                          PriorityScaleGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                PriorityScaleGestureRecognizer
+                              >(
+                                () => _touchViewportRecognizer,
+                                (recognizer) {},
+                              ),
                           PriorityTapGestureRecognizer:
                               GestureRecognizerFactoryWithHandlers<
                                 PriorityTapGestureRecognizer
                               >(() => _tapRecognizer, (recognizer) {}),
+                          TapGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                TapGestureRecognizer
+                              >(() => _touchTapRecognizer, (recognizer) {}),
+                          if (touchTrackingEnabled)
+                            LongPressGestureRecognizer:
+                                GestureRecognizerFactoryWithHandlers<
+                                  LongPressGestureRecognizer
+                                >(
+                                  () => LongPressGestureRecognizer(
+                                    duration:
+                                        effectiveInteractionConfig
+                                            ?.gesture
+                                            .longPressTimeout ??
+                                        const GestureConfig().longPressTimeout,
+                                    supportedDevices: const {
+                                      PointerDeviceKind.touch,
+                                    },
+                                  ),
+                                  (recognizer) {
+                                    recognizer
+                                      ..onLongPressStart =
+                                          _handleTouchTrackingStart
+                                      ..onLongPressMoveUpdate =
+                                          _handleTouchTrackingUpdate
+                                      ..onLongPressEnd = _handleTouchTrackingEnd
+                                      ..onLongPressCancel =
+                                          _handleTouchTrackingEnd;
+                                  },
+                                ),
                         },
                         child: _ChartRenderWidget(
                           key: _renderBoxKey,

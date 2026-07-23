@@ -503,6 +503,18 @@ class EventHandlerManager {
   /// Throttle duration for hit testing (milliseconds).
   static const Duration _hitTestThrottleDuration = Duration(milliseconds: 50);
 
+  /// Direct-touch pointers currently down on the rendering surface.
+  final Set<int> _activeTouchPointers = <int>{};
+  final Map<int, Offset> _touchDownPositions = <int, Offset>{};
+  final Set<int> _browseScrollPointers = <int>{};
+
+  /// Prevents the remainder of a claimed viewport transform from being
+  /// interpreted as taps, selection, or annotation input.
+  bool _suppressTouchSequence = false;
+
+  /// Whether direct-touch raw events are currently owned by viewport input.
+  bool get isSuppressingTouchSequence => _suppressTouchSequence;
+
   // ==========================================================================
   // Lifecycle
   // ==========================================================================
@@ -513,19 +525,125 @@ class EventHandlerManager {
     _hitTestDebounceTimer = null;
   }
 
+  /// Cancels pointer-only candidate state after the gesture arena awards a
+  /// direct-touch sequence to viewport navigation.
+  ///
+  /// The coordinator mode is deliberately left untouched: the touch
+  /// recognizer has already claimed `transformingViewport`.
+  void beginViewportTransform() {
+    _beginClaimedTouchSequence(clearCursor: true);
+  }
+
+  /// Cancels pending raw-touch candidates after long-press tracking wins.
+  void beginTouchTracking(Offset position) {
+    _beginClaimedTouchSequence(clearCursor: false);
+    updateTouchTrackingPosition(position);
+  }
+
+  void _beginClaimedTouchSequence({required bool clearCursor}) {
+    _suppressTouchSequence = true;
+    _hitTestDebounceTimer?.cancel();
+    _hitTestDebounceTimer = null;
+    _pendingHitTestPosition = null;
+    _cancelDeferredEmptyAreaClick();
+    _potentialDragPointAnnotation = null;
+    _potentialDragStartPosition = null;
+    _potentialDragRangeAnnotation = null;
+    _potentialDragRangeStartPosition = null;
+    _potentialDragRangeStartBounds = null;
+    _potentialDragTextAnnotation = null;
+    _potentialDragTextStartPosition = null;
+    _potentialDragThresholdAnnotation = null;
+    _potentialDragThresholdStartPosition = null;
+    _potentialDragPinAnnotation = null;
+    _potentialDragPinStartPosition = null;
+    _potentialDragValueSummary = null;
+    _potentialDragValueSummaryStart = null;
+    _potentialDragLegendAnnotation = null;
+    _potentialDragLegendStartPosition = null;
+    _lastPanPosition = null;
+    if (clearCursor) _cursorPosition = null;
+    _tappedMarker = null;
+    _delegate.coordinator.setHoveredMarker(null);
+    _delegate.coordinator.setPressedMarker(null);
+    _setHoveredElement(null);
+    _delegate.markNeedsPaint();
+  }
+
+  /// Updates the renderer-owned cursor and marker feedback during touch scrub.
+  void updateTouchTrackingPosition(Offset position) {
+    _cursorPosition = position;
+    _updateHoveredMarker(position);
+    _delegate.markNeedsPaint();
+  }
+
   // ==========================================================================
   // Main Event Dispatcher
   // ==========================================================================
 
   /// Main event handler - dispatches to specific handlers.
   void handleEvent(PointerEvent event) {
+    final isDirectTouch = event.kind == PointerDeviceKind.touch;
+    if (isDirectTouch && event is PointerDownEvent) {
+      _activeTouchPointers.add(event.pointer);
+      _touchDownPositions[event.pointer] = event.localPosition;
+    }
+    if (isDirectTouch && _suppressTouchSequence) {
+      if (event is PointerUpEvent || event is PointerCancelEvent) {
+        _activeTouchPointers.remove(event.pointer);
+        _touchDownPositions.remove(event.pointer);
+        _browseScrollPointers.remove(event.pointer);
+        if (_activeTouchPointers.isEmpty) {
+          _suppressTouchSequence = false;
+        }
+      }
+      return;
+    }
+
+    final interaction =
+        _delegate.interactionConfig ?? const InteractionConfig();
+    final selectionOwnsPrimaryTouchDrag =
+        interaction.enableSelection && interaction.selection.ownsPrimaryDrag();
+    final isBrowseTouch =
+        isDirectTouch &&
+        interaction.touch.enabled &&
+        interaction.touch.profile == TouchInteractionProfile.browse &&
+        !selectionOwnsPrimaryTouchDrag;
+    if (isBrowseTouch && event is PointerMoveEvent) {
+      final downPosition = _touchDownPositions[event.pointer];
+      if (downPosition != null &&
+          (event.localPosition - downPosition).distance >=
+              interaction.gesture.panThreshold) {
+        _browseScrollPointers.add(event.pointer);
+        _cancelDeferredEmptyAreaClick();
+        _potentialDragPointAnnotation = null;
+        _potentialDragRangeAnnotation = null;
+        _potentialDragTextAnnotation = null;
+        _potentialDragThresholdAnnotation = null;
+        _potentialDragPinAnnotation = null;
+        _potentialDragValueSummary = null;
+        _potentialDragLegendAnnotation = null;
+        _delegate.coordinator.setPressedMarker(null);
+        _delegate.coordinator.endInteraction();
+        _delegate.coordinator.releaseMode();
+      }
+      if (_browseScrollPointers.contains(event.pointer)) return;
+    }
+    if (isDirectTouch &&
+        _browseScrollPointers.contains(event.pointer) &&
+        (event is PointerUpEvent || event is PointerCancelEvent)) {
+      _activeTouchPointers.remove(event.pointer);
+      _touchDownPositions.remove(event.pointer);
+      _browseScrollPointers.remove(event.pointer);
+      return;
+    }
+
     final coordinator = _delegate.coordinator;
-    final interaction = _delegate.interactionConfig;
 
     // The master switch is authoritative. Individual nested settings may
     // remain populated so a host can restore them later, but a disabled chart
     // must not hit-test, hover, focus, select, pan, zoom, or open tooltips.
-    if (interaction != null && !interaction.enabled) {
+    if (!interaction.enabled) {
       return;
     }
 
@@ -551,6 +669,12 @@ class EventHandlerManager {
       _handlePointerHover(event, localPosition);
     } else if (event is PointerScrollEvent) {
       _handlePointerScroll(event, localPosition);
+    }
+    if (isDirectTouch &&
+        (event is PointerUpEvent || event is PointerCancelEvent)) {
+      _activeTouchPointers.remove(event.pointer);
+      _touchDownPositions.remove(event.pointer);
+      _browseScrollPointers.remove(event.pointer);
     }
   }
 
@@ -778,8 +902,6 @@ class EventHandlerManager {
       }
       return;
     }
-
-    if (!coordinator.isInteracting) return;
 
     final startPos = coordinator.interactionStartPosition;
     if (startPos == null) return;

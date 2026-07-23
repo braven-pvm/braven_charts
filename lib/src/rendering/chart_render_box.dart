@@ -41,6 +41,7 @@ import '../models/axis_swap_mode.dart';
 import '../models/bar_chart_style.dart';
 import '../models/cartesian_value_summary_config.dart';
 import '../models/chart_annotation.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/grid_config.dart';
@@ -234,6 +235,18 @@ class ChartRenderBox extends RenderBox {
   /// until the next hitTestElements() call or paint(), avoiding 2s freezes
   /// when multiple charts are on screen (e.g., gallery with 21 charts).
   bool _spatialIndexDirty = false;
+
+  /// Diagnostic count of completed element regenerations.
+  ///
+  /// This lets interaction regression tests prove that continuous viewport
+  /// gestures remain paint-only and pay the geometry/index rebuild cost once
+  /// when the gesture settles.
+  int get debugElementRebuildCount => _debugElementRebuildCount;
+  int _debugElementRebuildCount = 0;
+
+  /// Whether raw touch input is still suppressed by an owned viewport gesture.
+  bool get debugIsSuppressingTouchSequence =>
+      _eventHandlerManager.isSuppressingTouchSequence;
 
   /// All chart elements to render and test.
   ///
@@ -650,7 +663,13 @@ class ChartRenderBox extends RenderBox {
 
   /// Finalizes geometry and hit-test state after synchronized viewport input
   /// settles. Continuous updates use [restoreVisibleXBounds]'s paint-only path.
-  void finalizeSynchronizedViewport() {
+  void finalizeSynchronizedViewport() => finalizeViewportInteraction();
+
+  /// Finalizes geometry and hit-test state after continuous viewport input.
+  ///
+  /// Touch transforms and synchronized charts use paint-only updates while an
+  /// interaction is active, then pay this rebuild cost once when it settles.
+  void finalizeViewportInteraction() {
     if (_transform == null) return;
     _rebuildElementsWithTransform();
     _seriesCacheManager.invalidate();
@@ -1926,7 +1945,12 @@ class ChartRenderBox extends RenderBox {
   /// - `animate`: Whether to animate the zoom (default: true)
   ///
   /// Only works when using elementGenerator (for element regeneration).
-  void zoomChart(double factor, {Offset? plotCenter, bool animate = true}) {
+  void zoomChart(
+    double factor, {
+    Offset? plotCenter,
+    bool animate = true,
+    bool finalize = true,
+  }) {
     // [DEBUG OUTPUT REMOVED] Zoom chart calls - fire on user interaction
 
     if (_transform == null ||
@@ -1952,7 +1976,7 @@ class ChartRenderBox extends RenderBox {
     } else {
       // Apply immediately without animation
       _applyZoomTransform(targetTransform);
-      _onZoomAnimationComplete();
+      if (finalize) _onZoomAnimationComplete();
     }
   }
 
@@ -2269,6 +2293,44 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  /// Transfers the active direct-touch sequence from raw chart interaction to
+  /// viewport navigation.
+  void beginViewportTransform() {
+    _eventHandlerManager.beginViewportTransform();
+    _publishCrosshairChange(null);
+    onDataXCursorChanged?.call(null);
+  }
+
+  /// Claims the active touch sequence for transient tracking inspection.
+  double? beginTouchTracking(Offset widgetPosition) {
+    if (!_plotArea.contains(widgetPosition)) return null;
+    _eventHandlerManager.beginTouchTracking(widgetPosition);
+    return _publishTouchTrackingPosition(widgetPosition);
+  }
+
+  /// Moves transient touch tracking and returns the snapped X observation.
+  double? updateTouchTrackingPosition(Offset widgetPosition) {
+    _eventHandlerManager.updateTouchTrackingPosition(widgetPosition);
+    return _publishTouchTrackingPosition(widgetPosition);
+  }
+
+  double? _publishTouchTrackingPosition(Offset widgetPosition) {
+    final snapPoints = _publishCrosshairChange(widgetPosition);
+    final transform = _transform;
+    if (transform != null && _plotArea.contains(widgetPosition)) {
+      final plotPosition = widgetToPlot(widgetPosition);
+      onDataXCursorChanged?.call(
+        transform.plotToData(plotPosition.dx, plotPosition.dy).dx,
+      );
+    }
+    return snapPoints.isEmpty ? null : snapPoints.first.x;
+  }
+
+  /// Ends transient touch tracking without committing selection.
+  void endTouchTracking() {
+    clearCursorPosition();
+  }
+
   /// Rebuilds the QuadTree spatial index from current elements.
   ///
   /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
@@ -2340,6 +2402,7 @@ class ChartRenderBox extends RenderBox {
     if (generator == null || transform == null) {
       return;
     }
+    _debugElementRebuildCount++;
 
     // Preserve selection state: get IDs of currently selected elements
     final selectedIds = coordinator.selectedElements.map((e) => e.id).toSet();
@@ -3056,6 +3119,12 @@ class ChartRenderBox extends RenderBox {
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     _eventHandlerManager.handleEvent(event);
+    if (coordinator.isPanningOrZooming ||
+        _eventHandlerManager.isSuppressingTouchSequence) {
+      _publishCrosshairChange(null);
+      onDataXCursorChanged?.call(null);
+      return;
+    }
     final publishesPosition =
         event is PointerHoverEvent ||
         event is PointerDownEvent ||
@@ -3080,9 +3149,8 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
-  void _publishCrosshairChange(Offset? position) {
+  List<ChartDataPoint> _publishCrosshairChange(Offset? position) {
     final callback = _interactionConfig?.onCrosshairChanged;
-    if (callback == null) return;
     final transform = _transform;
     if (position == null ||
         transform == null ||
@@ -3090,8 +3158,8 @@ class ChartRenderBox extends RenderBox {
         !(_interactionConfig?.enabled ?? true) ||
         coordinator.isPanningOrZooming ||
         coordinator.isDragging) {
-      callback(null, const []);
-      return;
+      callback?.call(null, const []);
+      return const [];
     }
 
     final categoryScreenPosition = transform.transposed
@@ -3115,8 +3183,8 @@ class ChartRenderBox extends RenderBox {
       useCandlestickDensityGrouping: false,
     );
     if (trackingState == null) {
-      callback(position, const []);
-      return;
+      callback?.call(position, const []);
+      return const [];
     }
 
     final elementsById = {
@@ -3129,7 +3197,9 @@ class ChartRenderBox extends RenderBox {
                 value.dataPointIndex < element.series.points.length)
           element.series.points[value.dataPointIndex],
     ];
-    callback(position, List.unmodifiable(snapPoints));
+    final immutablePoints = List<ChartDataPoint>.unmodifiable(snapPoints);
+    callback?.call(position, immutablePoints);
+    return immutablePoints;
   }
 
   /// Clears crosshair state when the pointer leaves the chart widget.
@@ -4374,9 +4444,14 @@ class ChartRenderBox extends RenderBox {
     for (final hit in hits) {
       groupCount ??= hit.groupCount;
     }
-    config.label = groupCount == null
+    final isRadial = hits.any(
+      (hit) => hit.share != null || hit.groupCount != null,
+    );
+    config.label = groupCount != null
+        ? 'Concentric Donut chart with $groupCount rings and $hitCount slices'
+        : isRadial
         ? 'Radial chart with $hitCount slices'
-        : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
+        : 'Cartesian chart with $hitCount data points';
   }
 
   @override
@@ -4465,6 +4540,10 @@ class ChartRenderBox extends RenderBox {
       }
     }
     for (final summary in summaries) {
+      final summaryRect = summary.bounds
+          .shift(_plotArea.topLeft)
+          .intersect(Offset.zero & size);
+      if (summaryRect.isEmpty) continue;
       final identity = 'summary:${summary.id}';
       final semanticConfig = SemanticsConfiguration()
         ..sortKey = const OrdinalSortKey(0)
@@ -4475,14 +4554,16 @@ class ChartRenderBox extends RenderBox {
           _dataSemanticsNodes[identity] ??
           SemanticsNode(key: ValueKey(identity));
       semanticNode
-        ..rect = summary.bounds
-            .shift(_plotArea.topLeft)
-            .intersect(Offset.zero & size)
+        ..rect = summaryRect
         ..updateWith(config: semanticConfig);
       nextNodes[identity] = semanticNode;
       orderedNodes.add(semanticNode);
     }
     for (final hit in hits) {
+      final hitRect = hit.semanticBounds
+          .shift(_plotArea.topLeft)
+          .intersect(Offset.zero & size);
+      if (hitRect.isEmpty) continue;
       final identity = '${hit.seriesId}:${hit.pointIndex}';
       final semanticConfig = SemanticsConfiguration()
         ..sortKey = OrdinalSortKey(hit.semanticSortOrdinal + 1)
@@ -4501,9 +4582,7 @@ class ChartRenderBox extends RenderBox {
           _dataSemanticsNodes[identity] ??
           SemanticsNode(key: ValueKey(identity));
       semanticNode
-        ..rect = hit.semanticBounds
-            .shift(_plotArea.topLeft)
-            .intersect(Offset.zero & size)
+        ..rect = hitRect
         ..updateWith(config: semanticConfig);
       nextNodes[identity] = semanticNode;
       orderedNodes.add(semanticNode);

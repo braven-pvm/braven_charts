@@ -61,6 +61,14 @@ void main() {
           panThreshold: 13.5,
           pinchThreshold: 0.25,
         ),
+        touch: TouchInteractionConfig(
+          enabled: false,
+          profile: TouchInteractionProfile.explore,
+          enablePinchZoom: false,
+          enablePan: false,
+          enableLongPressTracking: false,
+          enableHapticFeedback: false,
+        ),
         keyboard: KeyboardConfig(
           enabled: false,
           panStep: 15,

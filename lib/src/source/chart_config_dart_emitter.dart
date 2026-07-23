@@ -4415,6 +4415,7 @@ class ChartConfigDartEmitter {
     _emitCrosshairConfig(writer, interaction.crosshair);
     _emitTooltipConfig(writer, interaction.tooltip);
     _emitGestureConfig(writer, interaction.gesture);
+    _emitTouchInteractionConfig(writer, interaction.touch);
     _emitKeyboardConfig(writer, interaction.keyboard);
   }
 
@@ -4952,6 +4953,47 @@ class ChartConfigDartEmitter {
       );
       _numberIf(writer, 'panThreshold', config.panThreshold, 10);
       _numberIf(writer, 'pinchThreshold', config.pinchThreshold, 0.1);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitTouchInteractionConfig(
+    DartSourceWriter writer,
+    TouchInteractionConfig config,
+  ) {
+    if (!options.includeDefaultValues &&
+        config == const TouchInteractionConfig()) {
+      return;
+    }
+    writer.writeLine('touch: TouchInteractionConfig(');
+    writer.indented(() {
+      _valueIf(writer, 'enabled', config.enabled, defaultValue: true);
+      _enumIf(
+        writer,
+        'profile',
+        'TouchInteractionProfile',
+        config.profile.name,
+        defaultName: TouchInteractionProfile.browse.name,
+      );
+      _valueIf(
+        writer,
+        'enablePinchZoom',
+        config.enablePinchZoom,
+        defaultValue: true,
+      );
+      _valueIf(writer, 'enablePan', config.enablePan, defaultValue: true);
+      _valueIf(
+        writer,
+        'enableLongPressTracking',
+        config.enableLongPressTracking,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'enableHapticFeedback',
+        config.enableHapticFeedback,
+        defaultValue: true,
+      );
     });
     writer.writeLine('),');
   }

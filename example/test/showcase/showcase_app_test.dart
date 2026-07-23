@@ -1,5 +1,6 @@
 import 'package:braven_charts_example/showcase/showcase_app.dart';
 import 'package:braven_charts_example/showcase/pages/mobile_showcase_page.dart';
+import 'package:braven_charts_example/showcase/pages/mobile_interaction_page.dart';
 import 'package:braven_charts_example/showcase/widgets/braven_brand.dart';
 import 'package:braven_charts_example/showcase/widgets/chart_type_catalog.dart';
 import 'package:braven_charts/braven_charts.dart';
@@ -101,6 +102,44 @@ void main() {
     expect(find.text('Selection lab'), findsOneWidget);
     expect(find.byKey(const ValueKey('selection-family-grid')), findsOneWidget);
     expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('direct Mobile Interaction route stays available on a phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'mobile-interaction'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MobileInteractionPage), findsOneWidget);
+    expect(find.text('Mobile interaction'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-interaction-chart')),
+      findsOneWidget,
+    );
+    expect(find.text('Browse'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Long-press tracking'), findsOneWidget);
+    expect(find.text('Haptic steps'), findsOneWidget);
+    expect(
+      tester
+          .getSize(
+            find.ancestor(
+              of: find.text('Fit data'),
+              matching: find.byType(FilledButton),
+            ),
+          )
+          .height,
+      greaterThanOrEqualTo(48),
+    );
     expect(tester.takeException(), isNull);
   });
 

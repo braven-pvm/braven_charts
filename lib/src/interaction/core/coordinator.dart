@@ -191,7 +191,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Whether chart is actively panning or zooming.
   ///
   /// Tooltips and crosshair labels should be hidden during these operations.
-  bool get isPanningOrZooming => isPanning || isZooming;
+  bool get isPanningOrZooming => _currentMode.isViewportTransform;
 
   /// Whether chart is currently in a selecting state.
   bool get isSelecting => _currentMode.isSelecting;
@@ -227,8 +227,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
     // Clear hovered marker when entering zoom/pan modes
     // This prevents stale marker positions from being used after zoom/pan completes
-    if (requestedMode == InteractionMode.zooming ||
-        requestedMode == InteractionMode.panning) {
+    if (requestedMode.isViewportTransform) {
       _hoveredMarker = null;
       _pressedMarker = null;
     }
@@ -353,7 +352,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     _hoveredElement = element;
 
     // Enter new hover (if not panning - per scenario 12)
-    if (element != null && !isPanning) {
+    if (element != null && !isPanningOrZooming) {
       element.onHoverEnter();
       if (_currentMode == InteractionMode.idle) {
         _setMode(InteractionMode.hovering, element: element);

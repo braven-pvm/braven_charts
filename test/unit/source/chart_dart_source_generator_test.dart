@@ -1562,6 +1562,36 @@ void main() {
       );
     });
 
+    test('emits non-default touch interaction policy', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const LineChartSeries(
+              id: 'touch',
+              points: [ChartDataPoint(x: 1, y: 2)],
+            ),
+            interaction: const InteractionConfig(
+              touch: TouchInteractionConfig(
+                profile: TouchInteractionProfile.explore,
+                enablePinchZoom: false,
+                enableLongPressTracking: false,
+                enableHapticFeedback: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('touch: TouchInteractionConfig('));
+      expect(
+        generated.source,
+        contains('profile: TouchInteractionProfile.explore'),
+      );
+      expect(generated.source, contains('enablePinchZoom: false'));
+      expect(generated.source, contains('enableLongPressTracking: false'));
+      expect(generated.source, contains('enableHapticFeedback: false'));
+    });
+
     test('emits grouped Polar Column composition settings', () {
       final generated = _success(
         ChartDartSourceGenerator.generate(
