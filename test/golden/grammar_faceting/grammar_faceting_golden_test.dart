@@ -4,9 +4,16 @@
 /// One representative faceted chart: 4 panels, fixed scales, strip labels.
 library;
 
+import 'dart:typed_data';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Cross-platform antialiasing tolerance — the repo's golden convention (the
+/// same `_TolerantGoldenFileComparator` every other golden suite uses). Windows
+/// and the ubuntu CI runner render sub-pixel edges slightly differently.
+const _pixelTolerance = 0.035;
 
 class Row {
   const Row({required this.t, required this.power, required this.zone});
@@ -31,6 +38,19 @@ const rows = <Row>[
 ];
 
 void main() {
+  late GoldenFileComparator previousComparator;
+
+  setUp(() {
+    previousComparator = goldenFileComparator;
+    final local = previousComparator as LocalFileComparator;
+    goldenFileComparator = _TolerantGoldenFileComparator(
+      local.basedir.resolve('grammar_faceting_golden_test.dart'),
+      precisionTolerance: _pixelTolerance,
+    );
+  });
+
+  tearDown(() => goldenFileComparator = previousComparator);
+
   testWidgets('faceted line, 4 panels, fixed scales', (tester) async {
     tester.view.physicalSize = const Size(720, 540);
     tester.view.devicePixelRatio = 1;
@@ -73,4 +93,29 @@ void main() {
       matchesGoldenFile('goldens/grammar_faceting_fixed.png'),
     );
   });
+}
+
+class _TolerantGoldenFileComparator extends LocalFileComparator {
+  _TolerantGoldenFileComparator(
+    super.testFile, {
+    required double precisionTolerance,
+  }) : _precisionTolerance = precisionTolerance;
+
+  final double _precisionTolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    final passed = result.passed || result.diffPercent <= _precisionTolerance;
+    if (passed) {
+      result.dispose();
+      return true;
+    }
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
+  }
 }
