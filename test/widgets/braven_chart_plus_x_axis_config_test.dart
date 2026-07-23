@@ -19,6 +19,7 @@ import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/category_axis_config.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
+import 'package:braven_charts/src/models/x_axis_position.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
@@ -27,6 +28,52 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChartPlus.xAxisConfig parameter', () {
+    testWidgets('top and bottom positions reserve opposite chart edges', (
+      tester,
+    ) async {
+      Future<Rect> layoutFor(XAxisPosition position) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 500,
+                height: 320,
+                child: BravenChartPlus(
+                  series: const [
+                    LineChartSeries(
+                      id: 'series',
+                      points: [
+                        ChartDataPoint(x: 0, y: 10),
+                        ChartDataPoint(x: 1, y: 20),
+                      ],
+                    ),
+                  ],
+                  xAxisConfig: XAxisConfig(position: position, label: 'Sample'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return tester.allRenderObjects
+            .whereType<ChartRenderBox>()
+            .single
+            .debugPlotArea;
+      }
+
+      final bottomPlot = await layoutFor(XAxisPosition.bottom);
+      final topPlot = await layoutFor(XAxisPosition.top);
+      final bothPlot = await layoutFor(XAxisPosition.both);
+
+      expect(topPlot.top, greaterThan(bottomPlot.top));
+      expect(topPlot.bottom, greaterThan(bottomPlot.bottom));
+      expect(topPlot.height, closeTo(bottomPlot.height, 0.01));
+      expect(bothPlot.top, closeTo(topPlot.top, 0.01));
+      expect(bothPlot.bottom, closeTo(bottomPlot.bottom, 0.01));
+      expect(bothPlot.height, lessThan(bottomPlot.height));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('categorical bounds open a readable scrollable viewport', (
       tester,
     ) async {

@@ -9,6 +9,9 @@ import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [XAxisConfig].
 extension XAxisConfigFluent on XAxisConfig {
+  /// Replaces [XAxisConfig.position] with [value].
+  XAxisConfig withPosition(XAxisPosition value) => copyWith(position: value);
+
   /// Replaces [XAxisConfig.color] with [value].
   XAxisConfig withColor(Color value) => copyWith(color: value);
 
@@ -79,6 +82,14 @@ extension XAxisConfigFluent on XAxisConfig {
 
   /// Clears [XAxisConfig.tickCount] to `null`.
   XAxisConfig clearTickCount() => copyWith(clearTickCount: true);
+
+  /// Replaces [XAxisConfig.tickLabelRotationDegrees] with [value].
+  XAxisConfig withTickLabelRotationDegrees(double value) =>
+      copyWith(tickLabelRotationDegrees: value);
+
+  /// Clears [XAxisConfig.tickLabelRotationDegrees] to `null`.
+  XAxisConfig clearTickLabelRotationDegrees() =>
+      copyWith(clearTickLabelRotationDegrees: true);
 
   /// Replaces [XAxisConfig.categoryAxis] with [value].
   XAxisConfig withCategoryAxis(CategoryAxisConfig value) =>

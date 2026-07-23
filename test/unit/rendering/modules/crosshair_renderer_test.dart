@@ -10,6 +10,8 @@ import 'package:braven_charts/src/models/chart_theme.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
 import 'package:braven_charts/src/models/normalization_mode.dart';
 import 'package:braven_charts/src/models/series_axis_binding.dart';
+import 'package:braven_charts/src/models/x_axis_config.dart';
+import 'package:braven_charts/src/models/x_axis_position.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
 import 'package:braven_charts/src/rendering/modules/crosshair_renderer.dart';
@@ -50,6 +52,72 @@ void main() {
       test('creates instance with const constructor', () {
         const renderer = CrosshairRenderer();
         expect(renderer, isNotNull);
+      });
+    });
+
+    group('X-axis crosshair label placement', () {
+      test('over-axis labels follow the configured edge', () {
+        final bottom = renderer.calculateXAxisCrosshairLabelY(
+          plotArea: plotArea,
+          textHeight: 12,
+          labelPadding: 4,
+          axis: const XAxisConfig(position: XAxisPosition.bottom),
+        );
+        final top = renderer.calculateXAxisCrosshairLabelY(
+          plotArea: plotArea,
+          textHeight: 12,
+          labelPadding: 4,
+          axis: const XAxisConfig(position: XAxisPosition.top),
+        );
+
+        expect(bottom, greaterThan(plotArea.bottom));
+        expect(top + 12, lessThan(plotArea.top));
+      });
+
+      test('inside labels remain inside the matching plot edge', () {
+        final bottom = renderer.calculateXAxisCrosshairLabelY(
+          plotArea: plotArea,
+          textHeight: 12,
+          labelPadding: 4,
+          axis: const XAxisConfig(
+            position: XAxisPosition.bottom,
+            crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+          ),
+        );
+        final top = renderer.calculateXAxisCrosshairLabelY(
+          plotArea: plotArea,
+          textHeight: 12,
+          labelPadding: 4,
+          axis: const XAxisConfig(
+            position: XAxisPosition.top,
+            crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+          ),
+        );
+
+        expect(bottom + 12, lessThanOrEqualTo(plotArea.bottom));
+        expect(top, greaterThanOrEqualTo(plotArea.top));
+      });
+
+      test('mirrored axes return labels for both plot edges', () {
+        final positions = renderer.calculateXAxisCrosshairLabelYs(
+          plotArea: plotArea,
+          textHeight: 12,
+          labelPadding: 4,
+          axis: const XAxisConfig(position: XAxisPosition.both),
+        );
+
+        expect(positions, hasLength(2));
+        expect(positions.first + 12, lessThan(plotArea.top));
+        expect(positions.last, greaterThan(plotArea.bottom));
+        expect(
+          renderer.calculateXAxisCrosshairLabelY(
+            plotArea: plotArea,
+            textHeight: 12,
+            labelPadding: 4,
+            axis: const XAxisConfig(position: XAxisPosition.both),
+          ),
+          positions.last,
+        );
       });
     });
 

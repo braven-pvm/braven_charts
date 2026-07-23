@@ -322,9 +322,10 @@ only when the corresponding data exists. See
 
 ## Axes, normalization, and layout
 
-- `XAxisConfig`, `CategoryAxisConfig` — numeric bounds plus native categorical
-  labels, density, wrapping/ellipsis, rotation, and automatic scrollable
-  viewports.
+- `XAxisConfig`, `XAxisPosition`, `CategoryAxisConfig` — top, bottom, or
+  mirrored placement, numeric bounds, general tick-label rotation, native
+  categorical labels, density, wrapping/ellipsis, compatibility rotation, and
+  automatic scrollable viewports.
 - `YAxisConfig`, `YAxisPosition` — independent Y-axis identity, units,
   position, bounds, and labels.
 - `MultiAxisConfig`, `NormalizationMode` — multi-axis policy.

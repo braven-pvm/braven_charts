@@ -5,6 +5,7 @@ import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/category_axis_config.dart';
 import 'package:braven_charts/src/models/data_range.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
+import 'package:braven_charts/src/models/x_axis_position.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/rendering/x_axis_painter.dart';
 import 'package:flutter/painting.dart' show TextStyle;
@@ -12,6 +13,99 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('XAxisPainter', () {
+    group('placement and rotation', () {
+      test('rotated numeric labels reserve their transformed height', () {
+        double measure(double rotation) => XAxisPainter(
+          config: XAxisConfig(
+            maxHeight: 200,
+            tickLabelRotationDegrees: rotation,
+            tickCount: 3,
+          ),
+          axisBounds: const DataRange(min: 10000, max: 30000),
+          labelStyle: const TextStyle(fontSize: 12),
+        ).measureRequiredHeight(400);
+
+        expect(measure(90), greaterThan(measure(0)));
+      });
+
+      test('top placement paints without changing required extent', () {
+        final bottom = XAxisPainter(
+          config: const XAxisConfig(
+            position: XAxisPosition.bottom,
+            tickLabelRotationDegrees: -45,
+          ),
+          axisBounds: const DataRange(min: 0, max: 100),
+          labelStyle: const TextStyle(fontSize: 12),
+        );
+        final top = XAxisPainter(
+          config: const XAxisConfig(
+            position: XAxisPosition.top,
+            tickLabelRotationDegrees: -45,
+          ),
+          axisBounds: const DataRange(min: 0, max: 100),
+          labelStyle: const TextStyle(fontSize: 12),
+        );
+
+        expect(
+          top.measureRequiredHeight(400),
+          bottom.measureRequiredHeight(400),
+        );
+
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+        expect(
+          () => top.paint(
+            canvas,
+            const Rect.fromLTWH(0, 0, 400, 300),
+            const Rect.fromLTWH(50, 60, 300, 220),
+          ),
+          returnsNormally,
+        );
+      });
+
+      test(
+        'mirrored placement paints both edges without extra per-edge extent',
+        () {
+          final both = XAxisPainter(
+            config: const XAxisConfig(
+              position: XAxisPosition.both,
+              label: 'Sample',
+              tickLabelRotationDegrees: 30,
+            ),
+            axisBounds: const DataRange(min: 0, max: 100),
+            labelStyle: const TextStyle(fontSize: 12),
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          expect(
+            () => both.paint(
+              canvas,
+              const Rect.fromLTWH(0, 0, 400, 300),
+              const Rect.fromLTWH(50, 60, 300, 180),
+            ),
+            returnsNormally,
+          );
+          expect(
+            both.measureRequiredHeight(400),
+            XAxisPainter(
+              config: const XAxisConfig(
+                position: XAxisPosition.bottom,
+                label: 'Sample',
+                tickLabelRotationDegrees: 30,
+              ),
+              axisBounds: const DataRange(min: 0, max: 100),
+              labelStyle: const TextStyle(fontSize: 12),
+            ).measureRequiredHeight(400),
+          );
+          expect(
+            both.measureRequiredHeight(400, includeAxisTitle: false),
+            lessThan(both.measureRequiredHeight(400)),
+          );
+        },
+      );
+    });
+
     group('categorical ticks', () {
       XAxisPainter painter({
         CategoryLabelDensity density = CategoryLabelDensity.auto,

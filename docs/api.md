@@ -214,8 +214,13 @@ Draws a straight line (chord/secant) between two data points on a series, with a
 Controls X-axis layout, labeling, and tick generation.
 
 - `label`, `unit`, `color`
+- `position` — `XAxisPosition.bottom` (default), `XAxisPosition.top`, or
+  `XAxisPosition.both` for mirrored axes
 - `min`, `max`, `tickCount`
 - `labelDisplay`, `tickLabelPadding`, `axisLabelPadding`, `axisMargin`
+- `tickLabelRotationDegrees` — rotates numeric and categorical tick labels
+  from -90° to 90°; when omitted, categorical axes retain their existing
+  `CategoryAxisConfig.labelRotationDegrees` setting
 - `showAxisLine`, `showTicks`, `showCrosshairLabel`
 - `categoryAxis` — optional `CategoryAxisConfig` for integer-indexed category
   names, automatic readable viewports, density control, wrapping/ellipsis, and
@@ -225,8 +230,10 @@ Controls X-axis layout, labeling, and tick generation.
 
 ```dart
 xAxisConfig: const XAxisConfig(
+  position: XAxisPosition.top,
   label: 'Market segment',
   maxHeight: 88,
+  tickLabelRotationDegrees: -35,
   categoryAxis: CategoryAxisConfig(
     categories: ['Enterprise', 'Mid-market', 'Small business'],
     minimumCategoryExtent: 72,
@@ -234,6 +241,11 @@ xAxisConfig: const XAxisConfig(
   ),
 ),
 ```
+
+The axis title remains horizontal and centered. Tick marks, labels, and
+over-axis crosshair values render outward from the selected plot edge. With
+`XAxisPosition.both`, tick and crosshair values appear on both edges while the
+axis title appears once below the plot.
 
 When all categories cannot fit, `autoViewport` opens the first readable window.
 Enable `showXScrollbar` or pan/zoom to navigate the full category domain.

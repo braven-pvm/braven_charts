@@ -20,6 +20,7 @@ import '../../models/normalization_mode.dart';
 import '../../models/range_area_chart_series.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/x_axis_config.dart';
+import '../../models/x_axis_position.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
 import '../../utils/text_direction_resolver.dart';
@@ -171,6 +172,49 @@ class CrosshairRenderer {
     return isLeftAxis
         ? axisRect.right - textWidth - labelPadding * 2
         : axisRect.left + labelPadding * 2;
+  }
+
+  /// Calculates the vertical text origin for an X-axis crosshair label.
+  double calculateXAxisCrosshairLabelY({
+    required Rect plotArea,
+    required double textHeight,
+    required double labelPadding,
+    XAxisConfig? axis,
+  }) => calculateXAxisCrosshairLabelYs(
+    plotArea: plotArea,
+    textHeight: textHeight,
+    labelPadding: labelPadding,
+    axis: axis,
+  ).last;
+
+  /// Calculates every vertical text origin needed by an X-axis crosshair.
+  ///
+  /// A mirrored axis returns top and bottom origins in that order. The
+  /// singular helper retains the conventional bottom origin for `both`.
+  List<double> calculateXAxisCrosshairLabelYs({
+    required Rect plotArea,
+    required double textHeight,
+    required double labelPadding,
+    XAxisConfig? axis,
+  }) {
+    final inside =
+        axis?.crosshairLabelPosition == CrosshairLabelPosition.insidePlot;
+    double positionFor(bool isTop) {
+      if (!isTop) {
+        return inside
+            ? plotArea.bottom - textHeight - labelPadding
+            : plotArea.bottom + labelPadding * 2;
+      }
+      return inside
+          ? plotArea.top + labelPadding
+          : plotArea.top - textHeight - labelPadding * 2;
+    }
+
+    return switch (axis?.position ?? XAxisPosition.bottom) {
+      XAxisPosition.bottom => [positionFor(false)],
+      XAxisPosition.top => [positionFor(true)],
+      XAxisPosition.both => [positionFor(true), positionFor(false)],
+    };
   }
 
   /// Paints the crosshair overlay.
@@ -874,16 +918,12 @@ class CrosshairRenderer {
 
       var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
 
-      // Position label based on crosshairLabelPosition setting
-      final double xLabelY;
-      if (xAxisConfig?.crosshairLabelPosition ==
-          CrosshairLabelPosition.insidePlot) {
-        // Inside plot: near bottom edge
-        xLabelY = plotArea.bottom - xTextPainter.height - labelPadding;
-      } else {
-        // Over axis (default): position just below plot area with compact padding
-        xLabelY = plotArea.bottom + labelPadding * 2;
-      }
+      final xLabelYs = calculateXAxisCrosshairLabelYs(
+        plotArea: plotArea,
+        textHeight: xTextPainter.height,
+        labelPadding: labelPadding,
+        axis: xAxisConfig,
+      );
 
       xLabelX = xLabelX.clamp(
         plotArea.left + labelPadding,
@@ -902,18 +942,20 @@ class CrosshairRenderer {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
 
-      final xBgRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          xLabelX - labelPadding,
-          xLabelY - labelPadding,
-          xTextPainter.width + labelPadding * 2,
-          xTextPainter.height + labelPadding * 2,
-        ),
-        Radius.circular(borderRadius),
-      );
-      canvas.drawRRect(xBgRect, bgPaint);
-      canvas.drawRRect(xBgRect, borderPaint);
-      xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+      for (final xLabelY in xLabelYs) {
+        final xBgRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            xLabelX - labelPadding,
+            xLabelY - labelPadding,
+            xTextPainter.width + labelPadding * 2,
+            xTextPainter.height + labelPadding * 2,
+          ),
+          Radius.circular(borderRadius),
+        );
+        canvas.drawRRect(xBgRect, bgPaint);
+        canvas.drawRRect(xBgRect, borderPaint);
+        xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+      }
     }
 
     // Y coordinate label: use per-axis styling if any axis has showCrosshairLabel
@@ -1610,13 +1652,12 @@ class CrosshairRenderer {
 
     var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
 
-    final double xLabelY;
-    if (xAxisConfig?.crosshairLabelPosition ==
-        CrosshairLabelPosition.insidePlot) {
-      xLabelY = plotArea.bottom - xTextPainter.height - labelPadding;
-    } else {
-      xLabelY = plotArea.bottom + labelPadding * 2;
-    }
+    final xLabelYs = calculateXAxisCrosshairLabelYs(
+      plotArea: plotArea,
+      textHeight: xTextPainter.height,
+      labelPadding: labelPadding,
+      axis: xAxisConfig,
+    );
 
     xLabelX = xLabelX.clamp(
       plotArea.left + labelPadding,
@@ -1635,18 +1676,20 @@ class CrosshairRenderer {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    final xBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        xLabelX - labelPadding,
-        xLabelY - labelPadding,
-        xTextPainter.width + labelPadding * 2,
-        xTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
-    );
-    canvas.drawRRect(xBgRect, bgPaint);
-    canvas.drawRRect(xBgRect, borderPaint);
-    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+    for (final xLabelY in xLabelYs) {
+      final xBgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          xLabelX - labelPadding,
+          xLabelY - labelPadding,
+          xTextPainter.width + labelPadding * 2,
+          xTextPainter.height + labelPadding * 2,
+        ),
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(xBgRect, bgPaint);
+      canvas.drawRRect(xBgRect, borderPaint);
+      xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+    }
   }
 
   /// Paints the Y-axis label for tracking mode (single-axis mode).

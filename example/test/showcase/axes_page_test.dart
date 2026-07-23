@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/axes_page.dart';
+import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,11 +42,49 @@ void main() {
     expect(chart.xAxisConfig!.renderMax, 100);
     expect(chart.xAxisConfig!.tickCount, 6);
     expect(chart.xAxisConfig!.labelFormatter, isNotNull);
+    expect(chart.xAxisConfig!.position, XAxisPosition.bottom);
+    expect(chart.xAxisConfig!.effectiveTickLabelRotationDegrees, 0);
     expect(chart.yAxis!.position, YAxisPosition.left);
 
     expect(find.text('Axis Pattern'), findsOneWidget);
+    expect(find.text('X-Axis Placement & Labels'), findsOneWidget);
     expect(find.text('Labels & Bounds'), findsOneWidget);
     expect(find.text('Chart Options'), findsOneWidget);
+  });
+
+  testWidgets('X-axis placement and angle controls update the live chart', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: AxesPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final positionOption = tester.widget<EnumOption<XAxisPosition>>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is EnumOption<XAxisPosition> && widget.label == 'Position',
+      ),
+    );
+    expect(positionOption.values, contains(XAxisPosition.both));
+    positionOption.onChanged(XAxisPosition.both);
+
+    final angleOption = tester.widget<SliderOption>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SliderOption && widget.label == 'Tick Label Angle',
+      ),
+    );
+    angleOption.onChanged(-45);
+    await tester.pump();
+
+    final chart = _mainChart(tester);
+    expect(chart.xAxisConfig?.position, XAxisPosition.both);
+    expect(chart.xAxisConfig?.tickLabelRotationDegrees, -45);
   });
 
   testWidgets('axis patterns configure ticks, render windows, and slots', (

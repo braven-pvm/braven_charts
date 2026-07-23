@@ -33,6 +33,7 @@ void main() {
 
     test('round-trips every X-axis field', () {
       const source = XAxisConfig(
+        position: XAxisPosition.both,
         color: Color(0xFF123456),
         label: 'Elapsed time',
         unit: 'min',
@@ -53,6 +54,7 @@ void main() {
         axisLabelPadding: 7,
         axisMargin: 9,
         tickCount: 8,
+        tickLabelRotationDegrees: -42,
         showMinorTicks: true,
         minorTickCount: 3,
         minorTickLength: 2.5,
@@ -69,7 +71,8 @@ void main() {
 
       expect(document.axisType, 'x');
       expect(document.id, 'elapsed');
-      expect(document.position, 'bottom');
+      expect(document.position, 'both');
+      expect(document.tickLabelRotationDegrees?.asDouble, -42);
       expect(decoded, source);
     });
 

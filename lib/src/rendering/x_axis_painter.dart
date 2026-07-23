@@ -12,6 +12,7 @@ import '../models/chart_series.dart';
 import '../models/category_axis_config.dart';
 import '../models/data_range.dart';
 import '../models/x_axis_config.dart';
+import '../models/x_axis_position.dart';
 
 /// Paints the X-axis with tick marks and labels.
 ///
@@ -143,8 +144,14 @@ class XAxisPainter {
     return painter;
   }
 
-  /// Required bottom-axis height for the current plot width.
-  double measureRequiredHeight(double plotWidth) {
+  /// Required outward extent for the current plot width.
+  ///
+  /// [includeAxisTitle] is false for the top half of a mirrored axis because
+  /// the shared title is painted only below the plot.
+  double measureRequiredHeight(
+    double plotWidth, {
+    bool includeAxisTitle = true,
+  }) {
     if (!config.visible) return 0;
     const tickLength = 6.0;
     final ticks = resolveTickValues(plotWidth);
@@ -164,7 +171,9 @@ class XAxisPainter {
         ? config.tickLabelPadding + tickLabelExtent
         : 0.0;
     final titleExtent =
-        config.shouldShowAxisLabel && (config.label?.isNotEmpty ?? false)
+        includeAxisTitle &&
+            config.shouldShowAxisLabel &&
+            (config.label?.isNotEmpty ?? false)
         ? config.axisLabelPadding + (labelStyle.fontSize ?? 12) * 1.25
         : 0.0;
     return (tickExtent + labelExtent + titleExtent + config.axisMargin).clamp(
@@ -190,27 +199,64 @@ class XAxisPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    // Draw axis line at bottom of plot area
+    final ticks = resolveTickValues(plotArea.width);
+    final categoryLabelWidth = _categoryLabelWidth(ticks, plotArea.width);
+    final positions = switch (config.position) {
+      XAxisPosition.bottom => const [XAxisPosition.bottom],
+      XAxisPosition.top => const [XAxisPosition.top],
+      XAxisPosition.both => const [XAxisPosition.top, XAxisPosition.bottom],
+    };
+
+    for (final position in positions) {
+      _paintAxisAt(
+        canvas: canvas,
+        chartArea: chartArea,
+        plotArea: plotArea,
+        position: position,
+        paintAxisTitle:
+            config.position != XAxisPosition.both ||
+            position == XAxisPosition.bottom,
+        axisColor: axisColor,
+        paint: paint,
+        ticks: ticks,
+        categoryLabelWidth: categoryLabelWidth,
+      );
+    }
+  }
+
+  void _paintAxisAt({
+    required Canvas canvas,
+    required Rect chartArea,
+    required Rect plotArea,
+    required XAxisPosition position,
+    required bool paintAxisTitle,
+    required Color axisColor,
+    required Paint paint,
+    required List<double> ticks,
+    required double categoryLabelWidth,
+  }) {
+    final isTop = position == XAxisPosition.top;
+    final axisY = isTop ? plotArea.top : plotArea.bottom;
+    final outwardDirection = isTop ? -1.0 : 1.0;
+    final tickExtent = config.showTicks ? 6.0 : 0.0;
+
+    // Draw the axis line on the configured plot edge.
     if (config.showAxisLine) {
       canvas.drawLine(
-        Offset(plotArea.left, plotArea.bottom),
-        Offset(plotArea.right, plotArea.bottom),
+        Offset(plotArea.left, axisY),
+        Offset(plotArea.right, axisY),
         paint,
       );
     }
 
-    // Generate ticks and draw them
-    final ticks = resolveTickValues(plotArea.width);
-    final categoryLabelWidth = _categoryLabelWidth(ticks, plotArea.width);
     var maximumTickLabelHeight = 0.0;
 
-    // Save canvas state and clip to prevent ticks from extending beyond plot area bounds
+    // Save canvas state and clip to the full axis margin on either edge.
     canvas.save();
-    // Clip horizontally to plot area, allow vertical overflow for labels below axis
     canvas.clipRect(
       Rect.fromLTRB(
         plotArea.left,
-        plotArea.top,
+        chartArea.top,
         plotArea.right,
         chartArea.bottom,
       ),
@@ -233,8 +279,8 @@ class XAxisPainter {
       if (config.showTicks) {
         const tickLength = 6.0;
         canvas.drawLine(
-          Offset(x, plotArea.bottom),
-          Offset(x, plotArea.bottom + tickLength),
+          Offset(x, axisY),
+          Offset(x, axisY + outwardDirection * tickLength),
           paint,
         );
       }
@@ -250,12 +296,13 @@ class XAxisPainter {
           _rotatedLabelHeight(textPainter),
         );
 
-        const tickLength = 6.0;
         _paintTickLabel(
           canvas: canvas,
           painter: textPainter,
           centerX: x,
-          top: plotArea.bottom + tickLength + config.tickLabelPadding,
+          nearEdgeY:
+              axisY + outwardDirection * (tickExtent + config.tickLabelPadding),
+          isTop: isTop,
         );
       }
     }
@@ -278,8 +325,8 @@ class XAxisPainter {
               v >= effectiveRenderMin &&
               v <= effectiveRenderMax) {
             canvas.drawLine(
-              Offset(x, plotArea.bottom),
-              Offset(x, plotArea.bottom + config.minorTickLength),
+              Offset(x, axisY),
+              Offset(x, axisY + outwardDirection * config.minorTickLength),
               paint,
             );
           }
@@ -291,7 +338,7 @@ class XAxisPainter {
     canvas.restore();
 
     // Draw axis label if configured
-    if (config.shouldShowAxisLabel && config.label != null) {
+    if (paintAxisTitle && config.shouldShowAxisLabel && config.label != null) {
       final axisLabelText =
           config.shouldAppendUnitToLabel && config.unit != null
           ? '${config.label} (${config.unit})'
@@ -308,14 +355,14 @@ class XAxisPainter {
         textDirection: textDirection,
       )..layout();
 
-      // Position the axis label centered below the tick labels
-      const tickLength = 6.0;
-      final axisLabelY =
-          plotArea.bottom +
-          tickLength +
-          config.tickLabelPadding +
-          maximumTickLabelHeight +
-          config.axisLabelPadding;
+      final tickLabelExtent = config.shouldShowTickLabels
+          ? config.tickLabelPadding + maximumTickLabelHeight
+          : 0.0;
+      final outwardExtent =
+          tickExtent + tickLabelExtent + config.axisLabelPadding;
+      final axisLabelY = isTop
+          ? axisY - outwardExtent - axisLabelPainter.height
+          : axisY + outwardExtent;
 
       // Use canvas save/restore to ensure axis label doesn't affect other rendering
       canvas.save();
@@ -454,7 +501,7 @@ class XAxisPainter {
   }
 
   double _rotatedLabelHeight(TextPainter painter) {
-    final degrees = config.categoryAxis?.labelRotationDegrees ?? 0;
+    final degrees = config.effectiveTickLabelRotationDegrees;
     if (degrees == 0) return painter.height;
     final radians = degrees.abs() * math.pi / 180;
     return painter.width * math.sin(radians) +
@@ -465,17 +512,17 @@ class XAxisPainter {
     required Canvas canvas,
     required TextPainter painter,
     required double centerX,
-    required double top,
+    required double nearEdgeY,
+    required bool isTop,
   }) {
-    final degrees = config.categoryAxis?.labelRotationDegrees ?? 0;
-    if (degrees == 0) {
-      painter.paint(canvas, Offset(centerX - painter.width / 2, top));
-      return;
-    }
+    final degrees = config.effectiveTickLabelRotationDegrees;
+    final centerY = isTop
+        ? nearEdgeY - _rotatedLabelHeight(painter) / 2
+        : nearEdgeY + _rotatedLabelHeight(painter) / 2;
     canvas.save();
-    canvas.translate(centerX, top);
+    canvas.translate(centerX, centerY);
     canvas.rotate(degrees * math.pi / 180);
-    painter.paint(canvas, Offset(-painter.width / 2, 0));
+    painter.paint(canvas, Offset(-painter.width / 2, -painter.height / 2));
     canvas.restore();
   }
 

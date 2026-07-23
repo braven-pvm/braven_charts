@@ -27,6 +27,8 @@ class _AxesPageState extends State<AxesPage> {
   _AxisPattern _selectedPattern = _AxisPattern.labelsBounds;
 
   AxisLabelDisplay _labelDisplay = AxisLabelDisplay.labelWithUnit;
+  XAxisPosition _xAxisPosition = XAxisPosition.bottom;
+  double _xTickLabelRotation = 0;
   YAxisPosition _yAxisPosition = YAxisPosition.left;
   int _majorTickCount = 6;
   bool _showTicks = true;
@@ -496,11 +498,13 @@ class _AxesPageState extends State<AxesPage> {
             axisSwapMode: _axisSwapMode,
             bravenChartController: _chartController,
             normalizationMode: NormalizationMode.perSeries,
-            xAxisConfig: const XAxisConfig(
+            xAxisConfig: XAxisConfig(
+              position: _xAxisPosition,
               label: 'Interval',
               min: 0,
               max: 19,
               showAxisLine: true,
+              tickLabelRotationDegrees: _xTickLabelRotation,
             ),
             grid: GridConfig(
               horizontal: _optionsController.showGrid,
@@ -555,6 +559,7 @@ class _AxesPageState extends State<AxesPage> {
 
   XAxisConfig get _mainXAxis {
     return XAxisConfig(
+      position: _xAxisPosition,
       label: 'Time',
       unit: 'h',
       min: _selectedPattern == _AxisPattern.labelsBounds ? -10 : 0,
@@ -575,6 +580,7 @@ class _AxesPageState extends State<AxesPage> {
       showCrosshairLabel: _showCrosshairLabels,
       labelDisplay: _labelDisplay,
       tickCount: _majorTickCount,
+      tickLabelRotationDegrees: _xTickLabelRotation,
       labelFormatter: _selectedPattern == _AxisPattern.labelsBounds
           ? (value) => '${value.toInt().toString().padLeft(2, '0')}:00'
           : null,
@@ -625,6 +631,33 @@ class _AxesPageState extends State<AxesPage> {
             values: _AxisPattern.values,
             labelBuilder: _patternLabel,
             onChanged: _selectPattern,
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'X-Axis Placement & Labels',
+        icon: Icons.text_rotate_up,
+        children: [
+          EnumOption<XAxisPosition>(
+            label: 'Position',
+            value: _xAxisPosition,
+            values: XAxisPosition.values,
+            labelBuilder: (value) => switch (value) {
+              XAxisPosition.bottom => 'Bottom',
+              XAxisPosition.top => 'Top',
+              XAxisPosition.both => 'Both',
+            },
+            onChanged: (value) => setState(() => _xAxisPosition = value),
+          ),
+          SliderOption(
+            label: 'Tick Label Angle',
+            value: _xTickLabelRotation,
+            min: -90,
+            max: 90,
+            divisions: 12,
+            suffix: '°',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _xTickLabelRotation = value),
           ),
         ],
       ),

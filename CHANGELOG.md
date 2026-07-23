@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Selectable top, bottom, or mirrored Cartesian X-axis placement and configurable
+  numeric or categorical tick-label rotation, including portable artifacts,
+  generated source, AI configuration, crosshair alignment, and live Axes
+  showcase controls.
+
 ## 0.13.3 - 2026-07-23
 
 ### Added

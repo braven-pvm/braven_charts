@@ -316,7 +316,7 @@ Widget Space (Flutter logical pixels)
 │   │   └── (0,0) top-left, (plotWidth, plotHeight) bottom-right
 │   │       Y is INVERTED: dataY=max at top, dataY=min at bottom
 │   └── Right Y-axis labels (rightMargin)
-├── X-axis labels (bottomMargin)
+├── X-axis labels (topMargin, bottomMargin, or both from XAxisPosition)
 └── Scrollbar area
 ```
 
@@ -344,7 +344,7 @@ The transform is **immutable**. Every zoom/pan creates a new instance via `copyW
 
 3. AXES (in margin areas, outside plot clip)
    ├── MultiAxisPainter → all Y-axes (left + right side)
-   └── XAxisPainter → X-axis (bottom)
+   └── XAxisPainter → X-axis (configured top, bottom, or mirrored edges)
 
 4. [canvas.save() + translate to plot origin + clip to plot area]
 

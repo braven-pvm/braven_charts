@@ -5,6 +5,7 @@ import 'dart:ui' show Color;
 
 import '../meta/chart_surface.dart';
 import 'category_axis_config.dart';
+import 'x_axis_position.dart';
 import 'y_axis_config.dart';
 
 /// Typedef for custom X-axis label formatters.
@@ -47,6 +48,7 @@ class XAxisConfig {
   /// - If both [min] and [max] are provided, [min] < [max]
   /// - If [tickCount] is provided, it must be >= 2
   const XAxisConfig({
+    this.position = XAxisPosition.bottom,
     this.color,
     this.label,
     this.unit,
@@ -68,6 +70,7 @@ class XAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
+    this.tickLabelRotationDegrees,
     this.categoryAxis,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
@@ -78,9 +81,20 @@ class XAxisConfig {
          min == null || max == null || min < max,
          'min must be less than max',
        ),
-       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
+       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2'),
+       assert(
+         tickLabelRotationDegrees == null ||
+             (tickLabelRotationDegrees >= -90 &&
+                 tickLabelRotationDegrees <= 90),
+         'tickLabelRotationDegrees must be between -90 and 90',
+       );
 
   // ========== Appearance ==========
+
+  /// Visual edge or mirrored edges used by this axis.
+  ///
+  /// Defaults to [XAxisPosition.bottom].
+  final XAxisPosition position;
 
   /// Color of the axis line, ticks, and labels.
   ///
@@ -210,6 +224,18 @@ class XAxisConfig {
   /// If provided, overrides default number formatting.
   final XAxisLabelFormatter? labelFormatter;
 
+  /// Clockwise rotation applied to every X-axis tick label, in degrees.
+  ///
+  /// Values must be between -90 and 90. When null, categorical axes retain
+  /// the legacy [CategoryAxisConfig.labelRotationDegrees] behavior and numeric
+  /// axes use 0 degrees.
+  final double? tickLabelRotationDegrees;
+
+  /// Effective tick-label rotation after applying the categorical compatibility
+  /// fallback.
+  double get effectiveTickLabelRotationDegrees =>
+      tickLabelRotationDegrees ?? categoryAxis?.labelRotationDegrees ?? 0;
+
   /// Optional first-class category metadata for integer X values.
   ///
   /// When supplied, category labels take precedence over [labelFormatter] at
@@ -280,6 +306,7 @@ class XAxisConfig {
   /// All parameters are optional. Properties not specified retain their
   /// current values.
   XAxisConfig copyWith({
+    XAxisPosition? position,
     Color? color,
     bool clearColor = false,
     String? label,
@@ -309,6 +336,8 @@ class XAxisConfig {
     int? tickCount,
     bool clearTickCount = false,
     XAxisLabelFormatter? labelFormatter,
+    double? tickLabelRotationDegrees,
+    bool clearTickLabelRotationDegrees = false,
     CategoryAxisConfig? categoryAxis,
     bool clearCategoryAxis = false,
     bool? showMinorTicks,
@@ -316,6 +345,7 @@ class XAxisConfig {
     double? minorTickLength,
   }) {
     return XAxisConfig(
+      position: position ?? this.position,
       color: clearColor ? null : (color ?? this.color),
       label: clearLabel ? null : (label ?? this.label),
       unit: clearUnit ? null : (unit ?? this.unit),
@@ -338,6 +368,9 @@ class XAxisConfig {
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: clearTickCount ? null : (tickCount ?? this.tickCount),
       labelFormatter: labelFormatter ?? this.labelFormatter,
+      tickLabelRotationDegrees: clearTickLabelRotationDegrees
+          ? null
+          : (tickLabelRotationDegrees ?? this.tickLabelRotationDegrees),
       categoryAxis: clearCategoryAxis
           ? null
           : (categoryAxis ?? this.categoryAxis),
@@ -352,6 +385,7 @@ class XAxisConfig {
       identical(this, other) ||
       other is XAxisConfig &&
           runtimeType == other.runtimeType &&
+          position == other.position &&
           color == other.color &&
           label == other.label &&
           unit == other.unit &&
@@ -373,6 +407,7 @@ class XAxisConfig {
           axisMargin == other.axisMargin &&
           tickCount == other.tickCount &&
           labelFormatter == other.labelFormatter &&
+          tickLabelRotationDegrees == other.tickLabelRotationDegrees &&
           categoryAxis == other.categoryAxis &&
           showMinorTicks == other.showMinorTicks &&
           minorTickCount == other.minorTickCount &&
@@ -380,6 +415,7 @@ class XAxisConfig {
 
   @override
   int get hashCode => Object.hashAll([
+    position,
     color,
     label,
     unit,
@@ -401,6 +437,7 @@ class XAxisConfig {
     axisMargin,
     tickCount,
     labelFormatter,
+    tickLabelRotationDegrees,
     categoryAxis,
     showMinorTicks,
     minorTickCount,
@@ -410,6 +447,7 @@ class XAxisConfig {
   @override
   String toString() {
     return 'XAxisConfig('
+        'position: $position, '
         'color: $color, '
         'label: $label, '
         'unit: $unit, '
@@ -430,6 +468,7 @@ class XAxisConfig {
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount, '
         'labelFormatter: $labelFormatter, '
+        'tickLabelRotationDegrees: $tickLabelRotationDegrees, '
         'categoryAxis: $categoryAxis, '
         'showMinorTicks: $showMinorTicks, '
         'minorTickCount: $minorTickCount, '
