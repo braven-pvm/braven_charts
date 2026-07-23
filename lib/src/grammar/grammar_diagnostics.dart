@@ -93,6 +93,10 @@ enum GrammarDiagnosticCode {
   /// A radial geom produced no category with a visible label.
   emptyRadialCategories,
 
+  /// A radial geom repeated the same category within a single series (or, for
+  /// a concentric donut, within a single ring).
+  duplicateRadialCategory,
+
   /// A radial spec also requested faceting, which radial does not yet support.
   facetedRadialUnsupported,
 }
@@ -328,6 +332,14 @@ final class GrammarSpecException implements Exception {
         'The radial mark "$markId" produced no category with a visible label. '
         'Its category accessor must return a non-empty value for at least one '
         'row.',
+      );
+
+  /// A radial geom repeated a category within a single series or ring.
+  factory GrammarSpecException.duplicateRadialCategory(String category) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.duplicateRadialCategory,
+        'Radial geom has duplicate category "$category"; each slice/column '
+        'category must be unique (per ring for a concentric donut).',
       );
 
   /// A radial spec also requested faceting.

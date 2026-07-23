@@ -161,14 +161,11 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// * A mark without an `id` becomes `mark-<index>`, counting trend marks, so
 ///   ids are stable against restyling and unaffected by which marks are
 ///   geometries.
-/// * Nothing the config surface cannot express is dropped or defaulted
-///   silently: it raises a [GrammarSpecException] with a
+/// * Nothing is dropped or defaulted silently: anything the config surface
+///   cannot express raises a [GrammarSpecException] with a
 ///   [GrammarDiagnosticCode]. This is symmetric — a channel without its
 ///   encoding AND an encoding with no channel to drive it both raise, rather
-///   than one throwing and the other going quietly inert. The one sanctioned
-///   collapse is a radial geom's duplicate categories: lowering routes through
-///   the families' `fromMap` (see [_radialValues]), so two rows with the same
-///   category collapse last-row-wins rather than raising.
+///   than one throwing and the other going quietly inert.
 ///
 /// ## Non-finite values
 ///
@@ -856,8 +853,21 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   );
 }
 
-/// Builds an insertion-ordered category→value map. Duplicate categories
-/// collapse (last row wins), matching `PieChartSeries.fromMap` semantics.
+/// Builds an insertion-ordered category→value map, failing loud on a repeated
+/// category rather than collapsing it.
+///
+/// A duplicate category would otherwise silently collapse (last row wins) via
+/// the families' `fromMap`; the module's contract is that nothing is dropped or
+/// defaulted silently, so a repeat raises [GrammarDiagnosticCode
+/// .duplicateRadialCategory] instead. The identity key is `category.toString()`
+/// — exactly the key the map uses — so the check matches the collapse it
+/// replaces.
+///
+/// Scoping is a property of the CALL, not this function: [_lowerConcentricRings]
+/// calls it once per ring bucket, so a category repeated across different rings
+/// (the legitimate concentric shape) never lands in the same map and is
+/// accepted, while pie/donut/polar call it once over the whole dataset, so their
+/// categories must be unique globally.
 Map<String, num> _radialValues<T>(
   List<T> data,
   FieldAccessor<T, Object?> category,
@@ -865,7 +875,11 @@ Map<String, num> _radialValues<T>(
 ) {
   final result = <String, num>{};
   for (final row in data) {
-    result[category(row).toString()] = value(row);
+    final key = category(row).toString();
+    if (result.containsKey(key)) {
+      throw GrammarSpecException.duplicateRadialCategory(key);
+    }
+    result[key] = value(row);
   }
   return result;
 }

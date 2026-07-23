@@ -69,7 +69,7 @@ The existing `PlotSpec` options honor what applies:
 - `PolarMark` → `PolarColumnChartSeries` (category→angular position, value→radius).
 Wrap in a radial `BravenChartPlus`.
 
-New `GrammarDiagnosticCode`s (+ factories, following the existing idiom): `mixedCoordinateSystems`, `multipleRadialGeoms`, `axisOptionOnRadialSpec`, `emptyRadialCategories`, `facetedRadialUnsupported` (a radial spec that also sets `.facet(...)`). A single-value `ring` collapsing to a plain donut is allowed (not an error).
+New `GrammarDiagnosticCode`s (+ factories, following the existing idiom): `mixedCoordinateSystems`, `multipleRadialGeoms`, `axisOptionOnRadialSpec`, `emptyRadialCategories`, `duplicateRadialCategory`, `facetedRadialUnsupported` (a radial spec that also sets `.facet(...)`). Duplicate categories now **raise** `duplicateRadialCategory` rather than silently collapsing last-row-wins — uniqueness is checked **per ring** for a concentric donut (the same category legitimately repeating across different rings is the expected concentric shape and does not raise) and across the whole dataset for pie/donut(no ring)/polar. A single-value `ring` collapsing to a plain donut is allowed (not an error).
 
 ## Architecture / file structure
 

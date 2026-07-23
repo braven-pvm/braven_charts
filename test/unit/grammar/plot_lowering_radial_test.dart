@@ -87,6 +87,11 @@ void main() {
       final facet = GrammarSpecException.facetedRadialUnsupported('pie');
       expect(facet.code, GrammarDiagnosticCode.facetedRadialUnsupported);
       expect(facet.message, contains('pie'));
+
+      final dup = GrammarSpecException.duplicateRadialCategory('Apple');
+      expect(dup.code, GrammarDiagnosticCode.duplicateRadialCategory);
+      expect(dup.toString(), contains('duplicateRadialCategory'));
+      expect(dup.message, contains('Apple'));
     });
   });
 
@@ -524,6 +529,129 @@ void main() {
           name: 'Fruit',
           values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
         ),
+      );
+    });
+  });
+
+  group('radial duplicate-category diagnostics', () {
+    // Two rows share the category 'Apple'. The old behavior collapsed them
+    // last-row-wins through the families' fromMap; that silent collapse is now
+    // a loud diagnostic.
+    const dupCategories = <Fruit>[
+      Fruit(name: 'Apple', count: 30),
+      Fruit(name: 'Apple', count: 20),
+      Fruit(name: 'Pear', count: 10),
+    ];
+
+    test('a pie with two rows sharing a category raises '
+        'duplicateRadialCategory', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupCategories,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+      );
+    });
+
+    test('a polar with duplicate categories raises duplicateRadialCategory',
+        () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupCategories,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+      );
+    });
+
+    test('a donut WITHOUT a ring and duplicate categories raises '
+        'duplicateRadialCategory', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupCategories,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+      );
+    });
+
+    test('the diagnostic names the offending duplicate category', () {
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: dupCategories,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(category: fruitName, value: fruitCount),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (e) {
+        thrown = e;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.duplicateRadialCategory);
+      expect(thrown.message, contains('Apple'));
+    });
+
+    // REGRESSION (the trap): the SAME categories legitimately repeat across
+    // DIFFERENT rings. Uniqueness is per-ring, so this is the expected
+    // concentric shape and must NOT throw.
+    test('the same categories across DIFFERENT rings lower without throwing',
+        () {
+      const crossRing = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+        Fruit(name: 'Apple', count: 10, basket: 'B'),
+        Fruit(name: 'Pear', count: 5, basket: 'B'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: crossRing,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+          ),
+        ],
+      )).lower();
+
+      // Two rings, each with the same two categories → N series + config.
+      expect(lowered.series, hasLength(2));
+      expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
+      expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+      final ringA = lowered.series.first as DonutChartSeries;
+      final ringB = lowered.series.last as DonutChartSeries;
+      expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
+      expect(ringB.points.map((p) => p.label), ['Apple', 'Pear']);
+    });
+
+    test('a category duplicated WITHIN one ring raises '
+        'duplicateRadialCategory', () {
+      const dupWithinRing = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Apple', count: 20, basket: 'A'),
+        Fruit(name: 'Pear', count: 10, basket: 'B'),
+      ];
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupWithinRing,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
       );
     });
   });
