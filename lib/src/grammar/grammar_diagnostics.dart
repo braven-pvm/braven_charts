@@ -79,6 +79,22 @@ enum GrammarDiagnosticCode {
   /// A multi-y-axis spec was faceted under a shared-Y scale mode, which v1
   /// cannot honor without distorting the declared axes.
   facetMultiAxisSharedY,
+
+  /// A radial geom was combined with a Cartesian (or reference) mark.
+  mixedCoordinateSystems,
+
+  /// A spec declared more than one radial geom.
+  multipleRadialGeoms,
+
+  /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
+  /// a radial spec.
+  axisOptionOnRadialSpec,
+
+  /// A radial geom produced no category with a visible label.
+  emptyRadialCategories,
+
+  /// A radial spec also requested faceting, which radial does not yet support.
+  facetedRadialUnsupported,
 }
 
 /// Raised when a [PlotSpec] cannot be lowered onto the config surface.
@@ -274,6 +290,53 @@ final class GrammarSpecException implements Exception {
     'silently distort them. Multi-axis faceting needs FacetScales.freeY or '
     'FacetScales.free in v1 (per-axis shared ranges are not computed yet).',
   );
+
+  /// A radial geom was combined with a non-radial mark.
+  factory GrammarSpecException.mixedCoordinateSystems(
+    String radialMarkId,
+    Iterable<String> otherMarkIds,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.mixedCoordinateSystems,
+    'The radial mark "$radialMarkId" cannot share a plot with the '
+    'non-radial mark(s) ${_list(otherMarkIds)}. Radial and Cartesian '
+    'geometries use different coordinate systems; author them as separate '
+    'charts.',
+  );
+
+  /// A spec declared more than one radial geom.
+  factory GrammarSpecException.multipleRadialGeoms(
+    Iterable<String> radialMarkIds,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.multipleRadialGeoms,
+    'A plot may contain at most one radial geom, but ${_list(radialMarkIds)} '
+    'are all radial. Split them into separate charts.',
+  );
+
+  /// A Cartesian axis/grid option was set on a radial spec.
+  factory GrammarSpecException.axisOptionOnRadialSpec(String option) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.axisOptionOnRadialSpec,
+        'A radial spec set "$option", but radial charts have no Cartesian '
+        'axes or grid. Remove $option; use title, subtitle, legend and theme '
+        'instead.',
+      );
+
+  /// A radial geom produced no category with a visible label.
+  factory GrammarSpecException.emptyRadialCategories(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.emptyRadialCategories,
+        'The radial mark "$markId" produced no category with a visible label. '
+        'Its category accessor must return a non-empty value for at least one '
+        'row.',
+      );
+
+  /// A radial spec also requested faceting.
+  factory GrammarSpecException.facetedRadialUnsupported(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.facetedRadialUnsupported,
+        'The radial mark "$markId" is on a faceted spec. Faceting a radial '
+        'geom is not supported; author the radial chart without .facet(...).',
+      );
 
   /// The machine-readable diagnostic.
   final GrammarDiagnosticCode code;

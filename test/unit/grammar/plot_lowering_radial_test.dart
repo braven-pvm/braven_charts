@@ -62,4 +62,31 @@ void main() {
       expect(spec.isRadial, isTrue);
     });
   });
+
+  group('radial diagnostic factories', () {
+    test('every radial diagnostic names its code and remedy', () {
+      final mixed = GrammarSpecException.mixedCoordinateSystems('pie', ['ln']);
+      expect(mixed.code, GrammarDiagnosticCode.mixedCoordinateSystems);
+      expect(mixed.toString(), contains('mixedCoordinateSystems'));
+      expect(mixed.message, contains('pie'));
+      expect(mixed.message, contains('ln'));
+
+      final many = GrammarSpecException.multipleRadialGeoms(['a', 'b']);
+      expect(many.code, GrammarDiagnosticCode.multipleRadialGeoms);
+      expect(many.message, contains('a'));
+      expect(many.message, contains('b'));
+
+      final axis = GrammarSpecException.axisOptionOnRadialSpec('grid');
+      expect(axis.code, GrammarDiagnosticCode.axisOptionOnRadialSpec);
+      expect(axis.message, contains('grid'));
+
+      final empty = GrammarSpecException.emptyRadialCategories('pie');
+      expect(empty.code, GrammarDiagnosticCode.emptyRadialCategories);
+      expect(empty.message, contains('pie'));
+
+      final facet = GrammarSpecException.facetedRadialUnsupported('pie');
+      expect(facet.code, GrammarDiagnosticCode.facetedRadialUnsupported);
+      expect(facet.message, contains('pie'));
+    });
+  });
 }
