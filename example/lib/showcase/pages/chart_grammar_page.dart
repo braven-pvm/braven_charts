@@ -209,6 +209,37 @@ const List<ScatterCategoryStyle> zoneStyles = <ScatterCategoryStyle>[
   ScatterCategoryStyle(key: 'Threshold', color: Color(0xFFDC2626)),
 ];
 
+/// Rising-effort intervals — the scale-driven-channels preset's rows.
+///
+/// `minute` is the interval index (x), `minutes` the load a bar or line draws
+/// (y), and `effort` the field a colour ramp or a width multiplier reads. The
+/// effort domain is `[1, 10]`, which the colour and width maps resolve against.
+const List<GrammarSample> channelRows = <GrammarSample>[
+  GrammarSample(minute: 0, minutes: 22, effort: 1),
+  GrammarSample(minute: 1, minutes: 34, effort: 3),
+  GrammarSample(minute: 2, minutes: 29, effort: 5),
+  GrammarSample(minute: 3, minutes: 46, effort: 7),
+  GrammarSample(minute: 4, minutes: 38, effort: 9),
+  GrammarSample(minute: 5, minutes: 53, effort: 10),
+];
+
+/// The blue→red ramp the channels preset's colour families resolve against.
+///
+/// A colour ramp has no default — the package ships none — so this encoding is
+/// always supplied alongside the `colorBy` channel.
+const ScatterColorEncoding channelRamp = ScatterColorEncoding(
+  colors: <Color>[Color(0xFF2563EB), Color(0xFFDC2626)],
+  label: 'Effort',
+);
+
+/// The bar-width channel's multiplier range: `minimumRadius`/`maximumRadius`
+/// are reinterpreted as width multipliers, so a domain-min bar is 0.4x the base
+/// width and a domain-max bar is full width.
+const ScatterSizeEncoding channelWidthEncoding = ScatterSizeEncoding(
+  minimumRadius: 0.4,
+  maximumRadius: 1,
+);
+
 // ============================================================================
 // Page
 // ============================================================================
@@ -284,6 +315,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   double _facetColumns = 2;
   // Radial preset knob.
   _RadialFamily _radialFamily = _RadialFamily.pie;
+  // Scale-driven-channels preset knob.
+  _ChannelFamily _channelFamily = _ChannelFamily.colourBar;
 
   @override
   void dispose() {
@@ -514,34 +547,92 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
       )
       .theme(_theme)
       .interaction(_interaction);
+
   /// The radial preset, authored through the chained facade only. A radial
   /// geom makes the spec radial: it lowers to the rich radial config family
   /// and honors no Cartesian axis/grid option.
   BravenChart<GrammarSample> _radialChart() {
     final base = BravenChart.of(harvestRows).theme(_theme);
     return switch (_radialFamily) {
-      _RadialFamily.pie => base.geomPie(
-        category: sampleZone,
-        value: sampleMinutes,
-        name: 'Harvest',
-      ).title('Harvest share'),
-      _RadialFamily.donut => base.geomDonut(
-        category: sampleZone,
-        value: sampleMinutes,
-        name: 'Harvest',
-        center: const DonutCenterContent(label: 'Total'),
-      ).title('Harvest share'),
-      _RadialFamily.concentric => base.geomDonut(
-        category: sampleZone,
-        value: sampleMinutes,
-        ring: sampleGroup,
-        dataLabels: const PieDataLabelConfig(isVisible: false),
-      ).title('Harvest by season').legend(true),
-      _RadialFamily.polar => base.geomPolar(
-        category: sampleZone,
-        value: sampleMinutes,
-        name: 'Harvest',
-      ).title('Harvest by fruit'),
+      _RadialFamily.pie =>
+        base
+            .geomPie(
+              category: sampleZone,
+              value: sampleMinutes,
+              name: 'Harvest',
+            )
+            .title('Harvest share'),
+      _RadialFamily.donut =>
+        base
+            .geomDonut(
+              category: sampleZone,
+              value: sampleMinutes,
+              name: 'Harvest',
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .title('Harvest share'),
+      _RadialFamily.concentric =>
+        base
+            .geomDonut(
+              category: sampleZone,
+              value: sampleMinutes,
+              ring: sampleGroup,
+              dataLabels: const PieDataLabelConfig(isVisible: false),
+            )
+            .title('Harvest by season')
+            .legend(true),
+      _RadialFamily.polar =>
+        base
+            .geomPolar(
+              category: sampleZone,
+              value: sampleMinutes,
+              name: 'Harvest',
+            )
+            .title('Harvest by fruit'),
+    };
+  }
+
+  /// Scale-driven channels on the non-scatter families, authored through the
+  /// chained facade only.
+  ///
+  /// A `colorBy` channel binds a data field to colour on bar (per-bar fill),
+  /// line (per-segment stroke) and area (the top EDGE per segment, not the
+  /// fill), baked at lowering into the point's `pointStyle.color` /
+  /// `segmentStyle.color`; a bar `sizeBy` channel maps a field LINEARLY into a
+  /// width multiplier. A colour channel also appends a colour-ramp
+  /// `LegendAnnotation`. All four reuse scatter's `Scatter*Encoding`.
+  BravenChart<GrammarSample> _channelsChart() {
+    final base = BravenChart.of(channelRows)
+        .x(sampleMinute, label: 'Interval')
+        .y(sampleMinutes, label: 'Load (min)')
+        .theme(_theme)
+        .interaction(_interaction);
+    const effort = Channel<GrammarSample>(sampleEffort, label: 'Effort');
+    return switch (_channelFamily) {
+      _ChannelFamily.colourBar => base.geomBar(
+        name: 'Load',
+        colorBy: effort,
+        colorEncoding: channelRamp,
+      ),
+      _ChannelFamily.colourLine => base.geomLine(
+        name: 'Load',
+        strokeWidth: 3,
+        colorBy: effort,
+        colorEncoding: channelRamp,
+      ),
+      _ChannelFamily.edgeArea => base.geomArea(
+        name: 'Load',
+        color: const Color(0xFF2563EB),
+        fillOpacity: 0.16,
+        colorBy: effort,
+        colorEncoding: channelRamp,
+      ),
+      _ChannelFamily.widthBar => base.geomBar(
+        name: 'Load',
+        color: const Color(0xFF7C3AED),
+        sizeBy: effort,
+        sizeEncoding: channelWidthEncoding,
+      ),
     };
   }
 
@@ -554,6 +645,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.referenceLines => _referenceLinesChart(),
     _GrammarPreset.faceted => _facetedChart(),
     _GrammarPreset.radial => _radialChart(),
+    _GrammarPreset.channels => _channelsChart(),
   };
 
   // ==========================================================================
@@ -870,6 +962,194 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     }
   }
 
+  // The scale-driven-channels preset's hand-built side spells out the baking
+  // the grammar automates: the finite effort domain, then each point's colour
+  // (ScatterColorEncoding.colorFor over that domain) or width (a LINEAR map
+  // into the multiplier range), plus the colour-ramp LegendAnnotation the
+  // lowering appends. These mirror plot_lowering's helpers exactly, so the
+  // two renders are indistinguishable.
+
+  /// The finite `[min, max]` of the effort channel over [channelRows].
+  ({double min, double max}) _channelDomain() {
+    var lo = double.infinity;
+    var hi = double.negativeInfinity;
+    for (final row in channelRows) {
+      final value = row.effort;
+      if (!value.isFinite) continue;
+      if (value < lo) lo = value;
+      if (value > hi) hi = value;
+    }
+    return (min: lo, max: hi);
+  }
+
+  /// Per-row baked colour: `colorFor(effort)` over the finite domain.
+  List<Color?> _channelColours() {
+    final domain = _channelDomain();
+    return <Color?>[
+      for (final row in channelRows)
+        channelRamp.colorFor(
+          row.effort,
+          resolvedMinimumValue: domain.min,
+          resolvedMaximumValue: domain.max,
+        ),
+    ];
+  }
+
+  /// Per-row baked width multiplier: effort mapped LINEARLY into the encoding's
+  /// `[minimumRadius, maximumRadius]` range.
+  List<double?> _channelWidths() {
+    final domain = _channelDomain();
+    final span = domain.max - domain.min;
+    final low = channelWidthEncoding.minimumRadius;
+    final high = channelWidthEncoding.maximumRadius;
+    return <double?>[
+      for (final row in channelRows)
+        span <= 0
+            ? low + 0.5 * (high - low)
+            : low +
+                  ((row.effort - domain.min) / span).clamp(0.0, 1.0) *
+                      (high - low),
+    ];
+  }
+
+  /// The colour-ramp legend the lowering appends for a baked colour channel.
+  LegendAnnotation _channelColourLegend() {
+    final domain = _channelDomain();
+    final midpoint = (domain.min + domain.max) / 2;
+    return LegendAnnotation(
+      colorScale: LegendColorScale(
+        label: 'Effort',
+        colors: channelRamp.colors,
+        minimumLabel: channelRamp.format(domain.min),
+        midpointLabel: domain.min == domain.max
+            ? null
+            : channelRamp.format(midpoint),
+        maximumLabel: channelRamp.format(domain.max),
+      ),
+    );
+  }
+
+  Widget _channelsScaffold(
+    BravenChartController controller, {
+    required List<ChartSeries> series,
+    List<ChartAnnotation> annotations = const <ChartAnnotation>[],
+  }) => BravenChartPlus(
+    key: const ValueKey('chart-grammar-stage-chart'),
+    bravenChartController: controller,
+    theme: _theme,
+    interactionConfig: _interaction,
+    xAxisConfig: const XAxisConfig(label: 'Interval'),
+    series: series,
+    annotations: annotations,
+  );
+
+  Widget _handBuiltChannels(BravenChartController controller) {
+    final axis = _defaultAxis('Load (min)');
+    switch (_channelFamily) {
+      case _ChannelFamily.colourBar:
+        final colours = _channelColours();
+        return _channelsScaffold(
+          controller,
+          series: <ChartSeries>[
+            BarChartSeries(
+              id: 'mark-0',
+              name: 'Load',
+              points: <ChartDataPoint>[
+                for (var i = 0; i < channelRows.length; i++)
+                  ChartDataPoint(
+                    x: channelRows[i].minute,
+                    y: channelRows[i].minutes,
+                    pointStyle: colours[i] == null
+                        ? null
+                        : PointStyle(color: colours[i]),
+                  ),
+              ],
+              barWidthPercent: 0.8,
+              yAxisId: 'axis-0',
+              yAxisConfig: axis,
+            ),
+          ],
+          annotations: <ChartAnnotation>[_channelColourLegend()],
+        );
+      case _ChannelFamily.colourLine:
+        final colours = _channelColours();
+        return _channelsScaffold(
+          controller,
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'mark-0',
+              name: 'Load',
+              points: <ChartDataPoint>[
+                for (var i = 0; i < channelRows.length; i++)
+                  ChartDataPoint(
+                    x: channelRows[i].minute,
+                    y: channelRows[i].minutes,
+                    segmentStyle: colours[i] == null
+                        ? null
+                        : SegmentStyle.color(colours[i]!),
+                  ),
+              ],
+              strokeWidth: 3,
+              yAxisId: 'axis-0',
+              yAxisConfig: axis,
+            ),
+          ],
+          annotations: <ChartAnnotation>[_channelColourLegend()],
+        );
+      case _ChannelFamily.edgeArea:
+        final colours = _channelColours();
+        return _channelsScaffold(
+          controller,
+          series: <ChartSeries>[
+            AreaChartSeries(
+              id: 'mark-0',
+              name: 'Load',
+              points: <ChartDataPoint>[
+                for (var i = 0; i < channelRows.length; i++)
+                  ChartDataPoint(
+                    x: channelRows[i].minute,
+                    y: channelRows[i].minutes,
+                    segmentStyle: colours[i] == null
+                        ? null
+                        : SegmentStyle.color(colours[i]!),
+                  ),
+              ],
+              color: const Color(0xFF2563EB),
+              fillOpacity: 0.16,
+              yAxisId: 'axis-0',
+              yAxisConfig: axis,
+            ),
+          ],
+          annotations: <ChartAnnotation>[_channelColourLegend()],
+        );
+      case _ChannelFamily.widthBar:
+        final widths = _channelWidths();
+        return _channelsScaffold(
+          controller,
+          series: <ChartSeries>[
+            BarChartSeries(
+              id: 'mark-0',
+              name: 'Load',
+              points: <ChartDataPoint>[
+                for (var i = 0; i < channelRows.length; i++)
+                  ChartDataPoint(
+                    x: channelRows[i].minute,
+                    y: channelRows[i].minutes,
+                    pointStyle: widths[i] == null
+                        ? null
+                        : PointStyle(size: widths[i]),
+                  ),
+              ],
+              color: const Color(0xFF7C3AED),
+              barWidthPercent: 0.8,
+              yAxisId: 'axis-0',
+              yAxisConfig: axis,
+            ),
+          ],
+        );
+    }
+  }
+
   Widget _buildHandBuilt(BravenChartController controller) => switch (_preset) {
     _GrammarPreset.lineTrend => _handBuiltLineTrend(controller),
     _GrammarPreset.multiAxis => _handBuiltMultiAxis(controller),
@@ -882,6 +1162,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     // and no workbench round-trip).
     _GrammarPreset.faceted => const SizedBox.shrink(),
     _GrammarPreset.radial => _handBuiltRadial(controller),
+    _GrammarPreset.channels => _handBuiltChannels(controller),
   };
 
   // ==========================================================================
@@ -980,8 +1261,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           subtitle: _preset == _GrammarPreset.faceted
               ? _preset.stageSubtitle
               : _compareHandBuilt
-                  ? 'Hand-built BravenChartPlus — the config the spec lowers to'
-                  : _preset.stageSubtitle,
+              ? 'Hand-built BravenChartPlus — the config the spec lowers to'
+              : _preset.stageSubtitle,
           padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
           child: _preset == _GrammarPreset.faceted
               ? _buildFacetStage()
@@ -1100,6 +1381,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             _GrammarPreset.referenceLines => _referenceLinesControls(),
             _GrammarPreset.faceted => _facetControls(),
             _GrammarPreset.radial => _radialControls(),
+            _GrammarPreset.channels => _channelControls(),
             _GrammarPreset.candlestick => const <Widget>[],
           },
         ),
@@ -1368,6 +1650,36 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'option raises axisOptionOnRadialSpec.',
     ),
   ];
+
+  List<Widget> _channelControls() => [
+    Text(
+      'Channel family',
+      style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+    ),
+    const SizedBox(height: 4),
+    SegmentedOption<_ChannelFamily>(
+      key: const ValueKey('chart-grammar-channel-family'),
+      value: _channelFamily,
+      options: _ChannelFamily.values,
+      labelBuilder: (family) => switch (family) {
+        _ChannelFamily.colourBar => 'Bar',
+        _ChannelFamily.colourLine => 'Line',
+        _ChannelFamily.edgeArea => 'Area',
+        _ChannelFamily.widthBar => 'Width',
+      },
+      onChanged: (family) => setState(() => _channelFamily = family),
+    ),
+    const SizedBox(height: 4),
+    const InfoBox(
+      message:
+          'A scale-driven channel binds a data field to colour or width, baked '
+          'at lowering into the per-point style the renderer already paints. '
+          'Bar/Line/Area take colorBy — the bar fill, the line stroke, the '
+          'area top EDGE (not the fill) — and a colour channel also appends a '
+          'colour-ramp legend. Width takes the bar sizeBy channel: the value '
+          'maps LINEARLY into a width multiplier (not scatter\'s area radius).',
+    ),
+  ];
 }
 
 // ============================================================================
@@ -1382,15 +1694,21 @@ enum _GrammarPreset {
   referenceLines,
   faceted,
   radial,
+  channels,
   // barTransposed is kept LAST: BravenChartPlus retains exiting horizontal bars
   // through a cross-fade, and unioning those with a non-bar chart's entering
   // series trips its all-horizontal bounds check. Keeping the transposed preset
   // terminal means the page (and the preset-sweep tests) never animate FROM a
-  // just-shown horizontal-bar chart INTO a Cartesian one.
+  // just-shown horizontal-bar chart INTO a Cartesian one. (The channels preset
+  // above uses only VERTICAL bars, so it does not trip that check.)
   barTransposed,
 }
 
 enum _RadialFamily { pie, donut, concentric, polar }
+
+/// The scale-driven-channels preset's family toggle: a colour channel on each
+/// non-scatter family, plus the bar width channel.
+enum _ChannelFamily { colourBar, colourLine, edgeArea, widthBar }
 
 extension on _GrammarPreset {
   String get label => switch (this) {
@@ -1402,6 +1720,7 @@ extension on _GrammarPreset {
     _GrammarPreset.referenceLines => 'Reference lines',
     _GrammarPreset.faceted => 'Faceting',
     _GrammarPreset.radial => 'Radial',
+    _GrammarPreset.channels => 'Scale-driven channels',
   };
 
   IconData get icon => switch (this) {
@@ -1413,6 +1732,7 @@ extension on _GrammarPreset {
     _GrammarPreset.referenceLines => Icons.stacked_line_chart,
     _GrammarPreset.faceted => Icons.grid_view,
     _GrammarPreset.radial => Icons.pie_chart_outline,
+    _GrammarPreset.channels => Icons.gradient,
   };
 
   String get stageTitle => switch (this) {
@@ -1424,6 +1744,7 @@ extension on _GrammarPreset {
     _GrammarPreset.referenceLines => 'Reference marks and chart-level options',
     _GrammarPreset.faceted => 'One metric across small-multiple panels',
     _GrammarPreset.radial => 'Radial geoms: pie, donut, concentric, polar',
+    _GrammarPreset.channels => 'Colour and width driven by a data field',
   };
 
   String get stageSubtitle => switch (this) {
@@ -1443,6 +1764,8 @@ extension on _GrammarPreset {
       'Partition by a categorical field; fixed / free scales and synced x',
     _GrammarPreset.radial =>
       'A radial geom makes the spec radial — one geom, no Cartesian axes',
+    _GrammarPreset.channels =>
+      'colorBy on bar/line/area and sizeBy width on bar, baked at lowering',
   };
 
   /// Whether this preset has any genuinely applicable per-preset control.
@@ -1495,5 +1818,13 @@ extension on _GrammarPreset {
           'splits a donut into concentric rings. Turn on "Compare hand-built" '
           'to see the PieChartSeries.fromMap / ConcentricDonutConfig the chain '
           'lowers to.',
+    _GrammarPreset.channels =>
+      'Switch the Channel family. Bar / Line / Area bind effort to colour with '
+          'colorBy + a ScatterColorEncoding ramp — the bar fill, the line '
+          'stroke, the area top EDGE (value-driven fill is deferred) — and each '
+          'appends a colour-ramp legend. Width binds effort to the bar sizeBy '
+          'channel, a LINEAR map into a width multiplier. Turn on "Compare '
+          'hand-built" to see the same baked pointStyle / segmentStyle and '
+          'legend written by hand — the work the channel automates.',
   };
 }
