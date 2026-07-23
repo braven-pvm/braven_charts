@@ -63,20 +63,21 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   double _outsideLabelOffset = 4;
   double _connectorLength = 12;
   double _connectorWidth = 1;
-  bool _useCustomConnectorColor = false;
-  Color _connectorColor = const Color(0xFF475569);
+  bool _useCustomConnectorColor = true;
+  Color _connectorColor = const Color(0xFF0D9488);
   _DonutCalloutPreset _calloutPreset = _DonutCalloutPreset.plain;
-  _DonutInsideShareStyle _insideShareStyle = _DonutInsideShareStyle.darkBadge;
+  _DonutInsideShareStyle _insideShareStyle =
+      _DonutInsideShareStyle.autoContrast;
   _DonutThemePreset _themePreset = _DonutThemePreset.light;
-  _DonutPalette _palette = _DonutPalette.theme;
-  _DonutGradientPreset _gradientPreset = _DonutGradientPreset.radial;
+  _DonutPalette _palette = _DonutPalette.ocean;
+  _DonutGradientPreset _gradientPreset = _DonutGradientPreset.linear;
   bool _useFixedGradientColors = false;
   Color _gradientStartColor = const Color(0xFF67E8F9);
   Color _gradientEndColor = const Color(0xFF1D4ED8);
   double _gradientStartLightnessShift = 0.14;
   double _gradientEndLightnessShift = -0.08;
-  double _gradientAngleDegrees = -45;
-  double _sliceOpacity = 1;
+  double _gradientAngleDegrees = -30;
+  double _sliceOpacity = 0.98;
   double _borderWidth = 1;
   _DonutBorderPreset _borderPreset = _DonutBorderPreset.darkerSlice;
   Color _fixedBorderColor = const Color(0xFF334155);
@@ -155,6 +156,14 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       title: 'Donut Charts',
       subtitle:
           'Compare category contributions around a configurable center opening',
+      actions: [
+        OutlinedButton.icon(
+          key: const ValueKey('donut-reset-example'),
+          onPressed: _resetExample,
+          icon: const Icon(Icons.restart_alt, size: 18),
+          label: const Text('Reset example'),
+        ),
+      ],
       optionsChildren: _buildOptions(),
       playground: ChartPlaygroundConfig(
         active: _playgroundActive,
@@ -175,12 +184,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildStorySelector(compact: compact),
-              const SizedBox(height: 16),
-              _buildSliceNotice(),
+              _buildStorySelector(),
               const SizedBox(height: 16),
               SizedBox(
-                height: compact ? 760 : 680,
+                height: compact ? 760 : 700,
                 child: _buildChartCard(compact: compact),
               ),
               const SizedBox(height: 32),
@@ -197,49 +204,57 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     );
   }
 
-  Widget _buildStorySelector({required bool compact}) {
+  Widget _buildStorySelector() {
+    final theme = Theme.of(context);
     return Semantics(
       container: true,
       label: 'Choose a Donut geometry story',
-      child: ShowcaseExampleGrid(
-        key: const ValueKey('donut-story-selector'),
-        children: [
-          for (final story in _DonutStory.values)
-            ShowcaseExampleCard(
-              key: ValueKey('donut-story-${story.name}'),
-              title: story.label,
-              description: story.description,
-              icon: story.icon,
-              selected: !_playgroundActive && story == _story,
-              onTap: () => _selectStory(story),
-              semanticsLabel: 'Show ${story.label} donut example',
-            ),
-          PlaygroundExampleCard(
-            key: const ValueKey('donut-playground'),
-            selected: _playgroundActive,
-            onTap: () => _setPlaygroundActive(true),
+      child: Card(
+        key: const ValueKey('donut-example-picker'),
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose a Donut chart example',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const ValueKey('donut-story-selector'),
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final story in _DonutStory.values)
+                    ShowcaseExampleChoiceChip(
+                      key: ValueKey('donut-story-${story.name}'),
+                      label: story.label,
+                      icon: story.icon,
+                      selected: !_playgroundActive && story == _story,
+                      onSelected: () => _selectStory(story),
+                    ),
+                  PlaygroundChoiceChip(
+                    key: const ValueKey('donut-playground'),
+                    selected: _playgroundActive,
+                    onSelected: () => _setPlaygroundActive(true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _playgroundActive
+                    ? 'Generated data and every compatible Donut property. Seeded playback is available in Options.'
+                    : '${_story.description}. $_sliceNoticeText',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSliceNotice() {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(Icons.donut_large_outlined, color: theme.colorScheme.primary),
-            const SizedBox(width: 10),
-            Expanded(child: Text(_sliceNoticeText)),
-          ],
         ),
       ),
     );
@@ -2400,6 +2415,16 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       _clearPortableState();
       switch (story) {
         case _DonutStory.contribution:
+          _themePreset = _DonutThemePreset.light;
+          _palette = _DonutPalette.ocean;
+          _gradientPreset = _DonutGradientPreset.linear;
+          _gradientAngleDegrees = -30;
+          _sliceOpacity = 0.98;
+          _showShadow = false;
+          _calloutPreset = _DonutCalloutPreset.plain;
+          _insideShareStyle = _DonutInsideShareStyle.autoContrast;
+          _useCustomConnectorColor = true;
+          _connectorColor = const Color(0xFF0D9488);
           _innerRadiusFactor = 0.58;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -90;
@@ -2417,6 +2442,17 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _legendContent = _DonutLegendContent.standard;
           _groupSmallSlices = false;
         case _DonutStory.progress:
+          _themePreset = _DonutThemePreset.dark;
+          _palette = _DonutPalette.sunset;
+          _gradientPreset = _DonutGradientPreset.radial;
+          _sliceOpacity = 0.92;
+          _showShadow = true;
+          _calloutPreset = _DonutCalloutPreset.highContrast;
+          _insideShareStyle = _DonutInsideShareStyle.lightBadge;
+          _labelLayout = _DonutLabelLayout.single;
+          _labelPosition = PieDataLabelPosition.inside;
+          _labelContent = PieDataLabelContent.percentage;
+          _legendPreset = _DonutLegendPreset.surface;
           _innerRadiusFactor = 0.68;
           _sweepAngleDegrees = 280;
           _startAngleDegrees = 130;
@@ -2434,6 +2470,16 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _legendContent = _DonutLegendContent.valueCards;
           _groupSmallSlices = false;
         case _DonutStory.reach:
+          _themePreset = _DonutThemePreset.colorblind;
+          _palette = _DonutPalette.earth;
+          _gradientPreset = _DonutGradientPreset.radial;
+          _sliceOpacity = 0.82;
+          _showShadow = true;
+          _calloutPreset = _DonutCalloutPreset.surface;
+          _insideShareStyle = _DonutInsideShareStyle.autoContrast;
+          _useCustomConnectorColor = true;
+          _connectorColor = const Color(0xFF15803D);
+          _legendPreset = _DonutLegendPreset.compact;
           _innerRadiusFactor = 0.3;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -90;
@@ -2451,6 +2497,15 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _legendContent = _DonutLegendContent.standard;
           _groupSmallSlices = false;
         case _DonutStory.grouping:
+          _themePreset = _DonutThemePreset.highContrast;
+          _palette = _DonutPalette.monochrome;
+          _gradientPreset = _DonutGradientPreset.solid;
+          _sliceOpacity = 1;
+          _showShadow = false;
+          _calloutPreset = _DonutCalloutPreset.highContrast;
+          _insideShareStyle = _DonutInsideShareStyle.darkBadge;
+          _useCustomConnectorColor = true;
+          _connectorColor = Colors.black;
           _innerRadiusFactor = 0.58;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -90;
@@ -2557,6 +2612,14 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     _showcaseRandomizer.pause();
     _showcaseRandomizer.clear();
     _selectStory(_authoredStory);
+  }
+
+  void _resetExample() {
+    if (_playgroundActive) {
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _selectStory(_story);
   }
 
   List<Widget> _buildPlaygroundOptions() => _buildOptions();

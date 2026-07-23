@@ -91,6 +91,18 @@ void main() {
     expect(find.text('Partial rings'), findsOneWidget);
     expect(find.text('Elevated gradients'), findsOneWidget);
     expect(find.text('High contrast'), findsWidgets);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('concentric-example-picker')))
+          .height,
+      lessThan(270),
+    );
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('concentric-showcase-card')))
+          .dy,
+      lessThan(430),
+    );
     expect(find.text('Independent totals'), findsOneWidget);
     expect(find.text('Stable ring identity'), findsOneWidget);
     expect(

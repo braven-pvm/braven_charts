@@ -19,7 +19,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Polar Column'), findsOneWidget);
+    expect(find.text('Polar Column Charts'), findsOneWidget);
     expect(find.text('Standard columns'), findsOneWidget);
     expect(find.text('Nightingale rose'), findsOneWidget);
     expect(find.text('Partial sweep'), findsOneWidget);
@@ -362,18 +362,15 @@ void main() {
         matching: find.byType(BravenChartPlus),
       ),
     );
-    expect(chart.theme?.backgroundColor, ChartTheme.light.backgroundColor);
-    expect(
-      chart.theme?.gridStyle.majorColor,
-      ChartTheme.light.gridStyle.majorColor,
-    );
+    expect(chart.theme?.backgroundColor, const Color(0xFFF8FAFC));
+    expect(chart.theme?.gridStyle.majorColor, const Color(0xFFCBD5E1));
     expect(
       (chart.series.single as PolarColumnChartSeries)
           .points
           .first
           .pointStyle
           ?.color,
-      const Color(0xFF2196F3),
+      const Color(0xFF2563EB),
     );
 
     await tester.tap(find.byKey(const ValueKey('options-panel-search-toggle')));
@@ -383,13 +380,13 @@ void main() {
       'Category colors',
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Theme colors'));
+    await tester.tap(find.text('Ocean'));
     await tester.pumpAndSettle();
-    expect(find.text('Ocean'), findsOneWidget);
+    expect(find.text('Ocean'), findsNWidgets(2));
     expect(find.text('Sunset'), findsOneWidget);
     expect(find.text('Earth'), findsOneWidget);
     expect(find.text('Monochrome'), findsOneWidget);
-    await tester.tap(find.text('Ocean').last);
+    await tester.tap(find.text('Sunset').last);
     await tester.pumpAndSettle();
 
     chart = tester.widget<BravenChartPlus>(
@@ -404,7 +401,7 @@ void main() {
           .first
           .pointStyle
           ?.color,
-      const Color(0xFF2563EB),
+      const Color(0xFFE63946),
     );
     expect(tester.takeException(), isNull);
   });
@@ -539,7 +536,7 @@ void main() {
     },
   );
 
-  testWidgets('feature guide cards use compact content-driven height', (
+  testWidgets('uses the compact chart-family selector and chart-first layout', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1600, 1000);
@@ -549,21 +546,24 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: PolarColumnPage())),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    final pageScroll = find.descendant(
-      of: find.byKey(const ValueKey('polar-column-showcase-scroll')),
-      matching: find.byType(Scrollable),
+    final selector = find.byKey(const ValueKey('polar-presentation-selector'));
+    expect(
+      find.descendant(of: selector, matching: find.byType(ChoiceChip)),
+      findsNWidgets(9),
     );
-    final firstCard = find.byKey(const ValueKey('polar-feature-card-0'));
-    await tester.scrollUntilVisible(
-      firstCard,
-      500,
-      scrollable: pageScroll.first,
+    expect(tester.getSize(selector).height, lessThan(130));
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('polar-column-live-chart')))
+          .height,
+      greaterThan(500),
     );
-    await tester.pumpAndSettle();
-
-    expect(tester.getSize(firstCard).height, lessThan(150));
+    expect(
+      find.byKey(const ValueKey('polar-column-reset-example')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -705,6 +705,80 @@ void main() {
       intervalSeries.intervalStyle.display,
       PolarColumnIntervalDisplay.whisker,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('authored examples exercise distinct visual systems', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final backgrounds = <Color>{};
+    final gridColors = <Color>{};
+    final categoryLabelColors = <Color?>{};
+    final animations = <PolarColumnAnimationMode>{};
+    final opacities = <double>{};
+    final dashPatterns = <List<double>>[];
+    var gradientCount = 0;
+    var shadowCount = 0;
+
+    for (final preset in const [
+      'standard',
+      'rose',
+      'partial',
+      'layered',
+      'grouped',
+      'stacked',
+      'references',
+      'intervals',
+    ]) {
+      if (preset != 'standard') {
+        await tester.tap(find.byKey(ValueKey('polar-presentation-$preset')));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      final style = chart.series
+          .whereType<PolarColumnChartSeries>()
+          .last
+          .polarStyle;
+      backgrounds.add(chart.theme!.backgroundColor);
+      gridColors.add(chart.theme!.gridStyle.majorColor);
+      categoryLabelColors.add(
+        chart.polarChartConfig.angularAxis.labelStyle.color,
+      );
+      animations.add(style.animationMode);
+      opacities.add(style.opacity);
+      dashPatterns.add(chart.theme!.gridStyle.majorDashPattern);
+      if (style.gradient != null) gradientCount++;
+      if (style.shadow.isVisible) shadowCount++;
+    }
+
+    expect(backgrounds.length, greaterThanOrEqualTo(6));
+    expect(gridColors.length, greaterThanOrEqualTo(7));
+    expect(categoryLabelColors.length, greaterThanOrEqualTo(6));
+    expect(animations, {
+      PolarColumnAnimationMode.grow,
+      PolarColumnAnimationMode.fade,
+      PolarColumnAnimationMode.sweep,
+    });
+    expect(opacities.length, greaterThanOrEqualTo(6));
+    expect(gradientCount, greaterThanOrEqualTo(5));
+    expect(shadowCount, greaterThanOrEqualTo(4));
+    expect(dashPatterns, contains(const <double>[]));
+    expect(dashPatterns, contains(const <double>[2, 3]));
+    expect(dashPatterns, contains(const <double>[7, 4]));
     expect(tester.takeException(), isNull);
   });
 

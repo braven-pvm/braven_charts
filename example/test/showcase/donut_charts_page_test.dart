@@ -75,6 +75,14 @@ void main() {
     expect(find.text('Partial sweep'), findsOneWidget);
     expect(find.text('Variable radius'), findsOneWidget);
     expect(find.text('Grouped sources'), findsWidgets);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('donut-example-picker'))).height,
+      lessThan(200),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('donut-showcase-card'))).dy,
+      lessThan(320),
+    );
     final optionSections = tester
         .widget<ChartPageLayout>(find.byType(ChartPageLayout))
         .optionsChildren
@@ -233,6 +241,58 @@ void main() {
     expect(find.text('Campaign contribution and reach'), findsWidgets);
     expect(find.text('30% center'), findsOneWidget);
     expect(find.text('Fade in'), findsOneWidget);
+  });
+
+  testWidgets('authored Donut stories use visibly distinct treatments', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: DonutChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    BravenChartPlus chart() => tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('donut-showcase-chart')),
+    );
+    DonutChartSeries series() => chart().series.single as DonutChartSeries;
+
+    expect(chart().theme?.backgroundColor, ChartTheme.light.backgroundColor);
+    expect(series().donutStyle.gradient?.type, PieGradientType.linear);
+    expect(series().donutStyle.opacity, 0.98);
+    expect(series().donutStyle.shadow?.isVisible ?? false, isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('donut-story-progress')));
+    await tester.pumpAndSettle();
+    expect(chart().theme?.backgroundColor, ChartTheme.dark.backgroundColor);
+    expect(series().donutStyle.gradient?.type, PieGradientType.radial);
+    expect(series().donutStyle.opacity, 0.92);
+    expect(series().donutStyle.shadow?.isVisible ?? false, isTrue);
+    expect(series().dataLabels.position, PieDataLabelPosition.inside);
+
+    await tester.tap(find.byKey(const ValueKey('donut-story-reach')));
+    await tester.pumpAndSettle();
+    expect(
+      chart().theme?.backgroundColor,
+      ChartTheme.colorblindFriendly.backgroundColor,
+    );
+    expect(series().donutStyle.gradient?.type, PieGradientType.radial);
+    expect(series().donutStyle.opacity, 0.82);
+    expect(series().donutStyle.shadow?.isVisible ?? false, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('donut-story-grouping')));
+    await tester.pumpAndSettle();
+    expect(
+      chart().theme?.backgroundColor,
+      ChartTheme.highContrast.backgroundColor,
+    );
+    expect(series().donutStyle.gradient, isNull);
+    expect(series().donutStyle.opacity, 1);
+    expect(series().donutStyle.shadow?.isVisible ?? false, isFalse);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('wires the complete Donut appearance and interaction editors', (

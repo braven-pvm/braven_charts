@@ -353,6 +353,14 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       title: 'Concentric Donut',
       subtitle:
           'Compare several independent part-to-whole distributions in one shared radial pane',
+      actions: [
+        OutlinedButton.icon(
+          key: const ValueKey('concentric-reset-example'),
+          onPressed: _resetExample,
+          icon: const Icon(Icons.restart_alt, size: 18),
+          label: const Text('Reset example'),
+        ),
+      ],
       optionsChildren: _buildOptions(),
       playground: ChartPlaygroundConfig(
         active: _playgroundActive,
@@ -373,15 +381,10 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPresentationHeader(),
-              const SizedBox(height: 8),
               _buildPresentationSelector(),
-              const SizedBox(height: 12),
-              _buildRingCountSelector(),
-              const SizedBox(height: 16),
-              _buildMeaningCard(compact: compact),
               const SizedBox(height: 16),
               Card(
+                key: const ValueKey('concentric-showcase-card'),
                 margin: EdgeInsets.zero,
                 clipBehavior: Clip.antiAlias,
                 child: Padding(
@@ -402,6 +405,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                 ),
               ),
               const SizedBox(height: 24),
+              _buildMeaningCard(compact: compact),
+              const SizedBox(height: 24),
               _buildPortabilityCard(compact: compact),
               const SizedBox(height: 24),
               _buildApiCard(),
@@ -413,54 +418,61 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     );
   }
 
-  Widget _buildPresentationHeader() {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Choose a presentation',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'Apply a complete multi-ring configuration, then refine every detail in Options.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPresentationSelector() {
-    return ShowcaseExampleGrid(
-      key: const ValueKey('concentric-presentation-selector'),
-      children: [
-        for (final preset in _ConcentricShowcasePreset.values)
-          _presentationCard(preset),
-        PlaygroundExampleCard(
-          key: const ValueKey('concentric-playground'),
-          selected: _playgroundActive,
-          onTap: () => _setPlaygroundActive(true),
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      label: 'Choose a Concentric Donut example',
+      child: Card(
+        key: const ValueKey('concentric-example-picker'),
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose a presentation',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const ValueKey('concentric-presentation-selector'),
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final preset in _ConcentricShowcasePreset.values)
+                    ShowcaseExampleChoiceChip(
+                      key: ValueKey('concentric-preset-${preset.name}'),
+                      label: _presentationName(preset),
+                      icon: _presentationIcon(preset),
+                      selected: !_playgroundActive && preset == _showcasePreset,
+                      onSelected: () => _applyShowcasePreset(preset),
+                    ),
+                  PlaygroundChoiceChip(
+                    key: const ValueKey('concentric-playground'),
+                    selected: _playgroundActive,
+                    onSelected: () => _setPlaygroundActive(true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _playgroundActive
+                    ? 'Generated data and every compatible Concentric Donut property. Seeded playback is available in Options.'
+                    : _presentationDescription(_showcasePreset),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildRingCountSelector(),
+            ],
+          ),
         ),
-      ],
-    );
-  }
-
-  Widget _presentationCard(_ConcentricShowcasePreset preset) {
-    final selected = !_playgroundActive && preset == _showcasePreset;
-    return ShowcaseExampleCard(
-      key: ValueKey('concentric-preset-${preset.name}'),
-      title: _presentationName(preset),
-      description: _presentationDescription(preset),
-      icon: _presentationIcon(preset),
-      selected: selected,
-      onTap: () => _applyShowcasePreset(preset),
-      semanticsLabel:
-          'Apply ${_presentationName(preset)} Concentric Donut presentation',
+      ),
     );
   }
 
@@ -2023,6 +2035,14 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     _showcaseRandomizer.pause();
     _showcaseRandomizer.clear();
     _applyShowcasePreset(_authoredPreset);
+  }
+
+  void _resetExample() {
+    if (_playgroundActive) {
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _applyShowcasePreset(_showcasePreset);
   }
 
   List<Widget> _buildPlaygroundOptions() => _buildOptions();
