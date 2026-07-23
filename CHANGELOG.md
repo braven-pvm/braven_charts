@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.2 - 2026-07-23
+
 ### Fixed
 
 - Unified Range Area selection around the visible low-to-high interval for
