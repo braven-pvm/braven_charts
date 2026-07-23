@@ -2153,8 +2153,13 @@ class ChartConfigDartEmitter {
     }
     _emitBarWaterfallStyle(writer, series.waterfallStyle);
     _emitBarChartStyle(writer, series.barStyle);
-    _enumIf(writer, 'divergingRole', 'BarDivergingRole',
-        series.divergingRole.name, defaultName: 'positive');
+    _enumIf(
+      writer,
+      'divergingRole',
+      'BarDivergingRole',
+      series.divergingRole.name,
+      defaultName: 'positive',
+    );
     _emitBarDivergingStyle(writer, series.divergingStyle);
     if (series.trackStyle != null) {
       _emitBarTrackStyle(writer, series.trackStyle!);
@@ -2298,19 +2303,29 @@ class ChartConfigDartEmitter {
   }
 
   void _emitBarMotionStyle(DartSourceWriter writer, BarMotionStyle style) {
-    if (!options.includeDefaultValues && style == const BarMotionStyle()) return;
+    if (!options.includeDefaultValues && style == const BarMotionStyle()) {
+      return;
+    }
     writer.writeLine('motion: BarMotionStyle(');
     writer.indented(() {
-      _enumIf(writer, 'order', 'BarAnimationOrder', style.order.name,
-          defaultName: 'together');
+      _enumIf(
+        writer,
+        'order',
+        'BarAnimationOrder',
+        style.order.name,
+        defaultName: 'together',
+      );
       _numberIf(writer, 'staggerFraction', style.staggerFraction, 0);
     });
     writer.writeLine('),');
   }
 
   void _emitBarLabelCalloutStyle(
-      DartSourceWriter writer, BarLabelCalloutStyle style) {
-    if (!options.includeDefaultValues && style == const BarLabelCalloutStyle()) {
+    DartSourceWriter writer,
+    BarLabelCalloutStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const BarLabelCalloutStyle()) {
       return;
     }
     writer.writeLine('callout: BarLabelCalloutStyle(');
@@ -2323,15 +2338,27 @@ class ChartConfigDartEmitter {
     writer.writeLine('),');
   }
 
-  void _emitBarDivergingStyle(DartSourceWriter writer, BarDivergingStyle style) {
+  void _emitBarDivergingStyle(
+    DartSourceWriter writer,
+    BarDivergingStyle style,
+  ) {
     if (!options.includeDefaultValues && style == const BarDivergingStyle()) {
       return;
     }
     writer.writeLine('divergingStyle: BarDivergingStyle(');
     writer.indented(() {
-      _valueIf(writer, 'showCenterLine', style.showCenterLine, defaultValue: true);
-      _colorIf(writer, 'centerLineColor', style.centerLineColor,
-          const Color(0xFF64748B));
+      _valueIf(
+        writer,
+        'showCenterLine',
+        style.showCenterLine,
+        defaultValue: true,
+      );
+      _colorIf(
+        writer,
+        'centerLineColor',
+        style.centerLineColor,
+        const Color(0xFF64748B),
+      );
       _numberIf(writer, 'centerLineWidth', style.centerLineWidth, 1.25);
       _numberIf(writer, 'centerLineOpacity', style.centerLineOpacity, 0.7);
     });
@@ -2361,16 +2388,25 @@ class ChartConfigDartEmitter {
           writer.writeLine('BarBulletRange(');
           writer.indented(() {
             writer.namedArgument(
-                'endValue', DartSourceWriter.numberLiteral(range.endValue));
+              'endValue',
+              DartSourceWriter.numberLiteral(range.endValue),
+            );
             writer.namedArgument(
-                'color', DartSourceWriter.colorLiteral(range.color));
+              'color',
+              DartSourceWriter.colorLiteral(range.color),
+            );
             _optionalString(writer, 'label', range.label);
           });
           writer.writeLine('),');
         }
       });
       writer.writeLine('],');
-      _numberIf(writer, 'measureThicknessFactor', style.measureThicknessFactor, 0.45);
+      _numberIf(
+        writer,
+        'measureThicknessFactor',
+        style.measureThicknessFactor,
+        0.45,
+      );
       _numberIf(writer, 'cornerRadius', style.cornerRadius, 3);
     });
     writer.writeLine('),');
@@ -2461,9 +2497,19 @@ class ChartConfigDartEmitter {
       _fontWeightIf(writer, 'fontWeight', style.fontWeight, FontWeight.w600);
       _valueIf(writer, 'showUnit', style.showUnit, defaultValue: false);
       _numberIf(writer, 'padding', style.padding, 4);
-      _enumIf(writer, 'collisionPolicy', 'BarLabelCollisionPolicy',
-          style.collisionPolicy.name, defaultName: 'none');
-      _valueIf(writer, 'plotEdgeAware', style.plotEdgeAware, defaultValue: true);
+      _enumIf(
+        writer,
+        'collisionPolicy',
+        'BarLabelCollisionPolicy',
+        style.collisionPolicy.name,
+        defaultName: 'none',
+      );
+      _valueIf(
+        writer,
+        'plotEdgeAware',
+        style.plotEdgeAware,
+        defaultValue: true,
+      );
       _numberIf(writer, 'collisionPadding', style.collisionPadding, 2);
       _optionalColor(writer, 'backgroundColor', style.backgroundColor);
       _optionalColor(writer, 'borderColor', style.borderColor);
@@ -2471,7 +2517,12 @@ class ChartConfigDartEmitter {
       _numberIf(writer, 'borderRadius', style.borderRadius, 4);
       _numberIf(writer, 'backgroundPadding', style.backgroundPadding, 3);
       _emitBarLabelCalloutStyle(writer, style.callout);
-      _valueIf(writer, 'showStackTotal', style.showStackTotal, defaultValue: false);
+      _valueIf(
+        writer,
+        'showStackTotal',
+        style.showStackTotal,
+        defaultValue: false,
+      );
       if (style.formatter != null) {
         writer.writeLine(
           '// formatter: (point) => ..., // Supply application formatting.',
@@ -3280,18 +3331,8 @@ class ChartConfigDartEmitter {
       );
       _numberIf(writer, 'maximumLabelExtent', config.maximumLabelExtent, 104);
       _numberIf(writer, 'maxLabelLines', config.maxLabelLines, 2);
-      _numberIf(
-        writer,
-        'labelRotationDegrees',
-        config.labelRotationDegrees,
-        0,
-      );
-      _valueIf(
-        writer,
-        'autoViewport',
-        config.autoViewport,
-        defaultValue: true,
-      );
+      _numberIf(writer, 'labelRotationDegrees', config.labelRotationDegrees, 0);
+      _valueIf(writer, 'autoViewport', config.autoViewport, defaultValue: true);
     });
     writer.writeLine('),');
   }
@@ -3492,6 +3533,10 @@ class ChartConfigDartEmitter {
             });
             writer.writeLine('],');
           }
+          final selectionExpression = state.selectionExpression;
+          if (selectionExpression != null && selectionExpression.isNotEmpty) {
+            _emitSelectionExpressionDocument(writer, selectionExpression);
+          }
           if (state.visibleAxisIds.isNotEmpty) {
             writer.namedArgument(
               'visibleAxisIds',
@@ -3530,6 +3575,97 @@ class ChartConfigDartEmitter {
       writer.writeLine(');');
     });
     writer.writeLine('}');
+  }
+
+  void _emitSelectionExpressionDocument(
+    DartSourceWriter writer,
+    ChartSelectionExpressionDocument expression,
+  ) {
+    writer.writeLine(
+      'selectionExpression: ChartSelectionExpressionDocument(clauses: [',
+    );
+    writer.indented(() {
+      for (final clause in expression.clauses) {
+        final constructor = switch (clause.kind) {
+          ChartSelectionClauseDocumentKind.wholeSeries => 'wholeSeries',
+          ChartSelectionClauseDocumentKind.pointIndexSpan => 'pointIndexSpan',
+          ChartSelectionClauseDocumentKind.pointKeys => 'pointKeys',
+          ChartSelectionClauseDocumentKind.xInterval => 'xInterval',
+          ChartSelectionClauseDocumentKind.yInterval => 'yInterval',
+          ChartSelectionClauseDocumentKind.explicitPointRefs =>
+            'explicitPointRefs',
+        };
+        writer.writeLine('ChartSelectionClauseDocument.$constructor(');
+        writer.indented(() {
+          if (clause.seriesId != null) {
+            writer.namedArgument(
+              'seriesId',
+              DartSourceWriter.stringLiteral(clause.seriesId!),
+            );
+          }
+          if (clause.startPointIndexInclusive != null) {
+            writer.namedArgument(
+              'startPointIndexInclusive',
+              clause.startPointIndexInclusive.toString(),
+            );
+          }
+          if (clause.endPointIndexInclusive != null) {
+            writer.namedArgument(
+              'endPointIndexInclusive',
+              clause.endPointIndexInclusive.toString(),
+            );
+          }
+          if (clause.pointKeys.isNotEmpty) {
+            final keys = clause.pointKeys.toList()..sort();
+            writer.namedArgument(
+              'pointKeys',
+              '{${keys.map(DartSourceWriter.stringLiteral).join(', ')}}',
+            );
+          }
+          if (clause.minimumInclusive != null) {
+            writer.namedArgument(
+              'minimumInclusive',
+              DartSourceWriter.numberLiteral(clause.minimumInclusive!),
+            );
+          }
+          if (clause.maximumInclusive != null) {
+            writer.namedArgument(
+              'maximumInclusive',
+              DartSourceWriter.numberLiteral(clause.maximumInclusive!),
+            );
+          }
+          if (clause.seriesIds != null) {
+            final seriesIds = clause.seriesIds!.toList()..sort();
+            writer.namedArgument(
+              'seriesIds',
+              '{${seriesIds.map(DartSourceWriter.stringLiteral).join(', ')}}',
+            );
+          }
+          if (clause.pointRefs.isNotEmpty) {
+            writer.writeLine('pointRefs: [');
+            writer.indented(() {
+              for (final point in clause.pointRefs) {
+                writer.writeLine('ChartPointRef(');
+                writer.indented(() {
+                  writer.namedArgument(
+                    'seriesId',
+                    DartSourceWriter.stringLiteral(point.seriesId),
+                  );
+                  writer.namedArgument(
+                    'pointIndex',
+                    point.pointIndex.toString(),
+                  );
+                });
+                writer.writeLine('),');
+              }
+            });
+            writer.writeLine('],');
+          }
+        });
+        writer.writeLine('),');
+      }
+    });
+    writer.writeLine(']),');
   }
 
   /// The `ChartTheme.<name>` expression the captured theme reference names, or

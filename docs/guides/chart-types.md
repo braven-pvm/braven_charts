@@ -108,10 +108,13 @@ final selectedChart = controller.extractDocument(
 );
 ```
 
-Line and Area interval extraction interpolates exact continuous boundaries by
-default. Candlestick OHLC tuples and Range Area low/high intervals remain
-atomic. The Selection Lab (`?page=selection`) provides one comparable test
-surface for every built-in family.
+Line and Area interval extraction retains the selected source observations by
+default, so a created chart matches the Workbench data selection exactly.
+Set `intervalBoundaryProjection` to `interpolateContinuousSeries` when the
+detached chart must reproduce the drag interval's exact rendered boundaries.
+Candlestick OHLC tuples and Range Area low/high intervals remain atomic. The
+Selection Lab (`?page=selection`) provides one comparable test surface for
+every built-in family.
 
 ## Line charts
 

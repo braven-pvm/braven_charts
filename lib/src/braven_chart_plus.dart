@@ -159,6 +159,8 @@ Color _contrastSafeChartTextColor({
   return background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 }
 
+enum _SelectionIntervalAxis { x, y }
+
 /// BravenChartPlus renders interactive, multi-series charts with annotations.
 ///
 /// Key capabilities:
@@ -2652,6 +2654,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       selectedSeriesId: _promotedAxisSeriesId,
       selectedSeriesIds: _selectedSeriesIds,
       selectedPointRefs: _selectedPointRefs,
+      selectionExpression: _selectionExpressionForSnapshot().toDocument(),
       visibleAxisIds: renderBox?.visibleAxisIds ?? const [],
       overflowAxisIds: renderBox?.overflowAxisIds ?? const [],
       selectedAnnotationId:
@@ -3036,6 +3039,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           focusedPointRefs: _focusedPointRefs,
           selectedPointRefs: _selectedPointRefs,
           selectedSeriesIds: _selectedSeriesIds,
+          selectionExpression:
+              _selectionIntentExpression ??
+              const ChartSelectionExpression.empty(),
           pathRevealProgressBySeries: {
             for (final id in _pathRevealWindows.keys)
               id: _pathRevealProgressFor(id),
@@ -6037,48 +6043,252 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       hits: gesture.hits,
       series: _effectiveDataSeries,
     );
+    final previousExpression = _selectionExpressionForSnapshot();
     _applyResolvedSelectionTargets(targets, operation);
-    _preserveSelectionGestureIntent(gesture, targets, operation);
+    _preserveSelectionGestureIntent(
+      gesture,
+      targets,
+      operation,
+      previousExpression,
+    );
   }
 
   void _preserveSelectionGestureIntent(
     ChartSelectionGestureResult gesture,
     ChartSelectionTargets targets,
     ChartSelectionOperation operation,
+    ChartSelectionExpression previousExpression,
   ) {
-    if (operation != ChartSelectionOperation.replace ||
-        targets.pointRefs.isEmpty ||
-        targets.seriesIds.isNotEmpty) {
+    if (targets.seriesIds.isNotEmpty) {
       return;
     }
-    final participatingSeriesIds = <String>{
-      for (final reference in targets.pointRefs) reference.seriesId,
-    };
-    final clause = switch (gesture.acquisitionMode) {
+    final clauses = switch (gesture.acquisitionMode) {
       ChartSelectionAcquisitionMode.xInterval
           when gesture.minimumXInclusive != null &&
               gesture.maximumXInclusive != null =>
-        ChartSelectionXIntervalClause(
-          minimumXInclusive: gesture.minimumXInclusive!,
-          maximumXInclusive: gesture.maximumXInclusive!,
-          seriesIds: participatingSeriesIds,
-        ),
-      ChartSelectionAcquisitionMode.yInterval
-          when gesture.minimumYInclusive != null &&
-              gesture.maximumYInclusive != null =>
-        ChartSelectionYIntervalClause(
-          minimumYInclusive: gesture.minimumYInclusive!,
-          maximumYInclusive: gesture.maximumYInclusive!,
-          seriesIds: participatingSeriesIds,
-        ),
-      _ => null,
+        <ChartSelectionClause>[
+          ChartSelectionXIntervalClause(
+            minimumXInclusive: gesture.minimumXInclusive!,
+            maximumXInclusive: gesture.maximumXInclusive!,
+          ),
+        ],
+      ChartSelectionAcquisitionMode.yInterval when gesture.plotBounds != null =>
+        _seriesYIntervalClauses(gesture.plotBounds!),
+      _ => const <ChartSelectionClause>[],
     };
-    if (clause == null) return;
-    final expression = ChartSelectionExpression(clauses: [clause]);
+    if (clauses.isEmpty) return;
+    final expression = _composeIntervalSelectionExpression(
+      previousExpression: previousExpression,
+      gestureClauses: clauses,
+      operation: operation,
+    );
     if (_selectionIntentExpression == expression) return;
     _selectionIntentExpression = expression;
     _captureStateRevision++;
     _syncControllerSelectionSnapshot(widget.bravenChartController);
+  }
+
+  List<ChartSelectionClause> _seriesYIntervalClauses(Rect plotBounds) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return const [];
+    final intervals = renderBox.seriesYIntervalsForPlotRect(plotBounds);
+    return [
+      for (final entry in intervals.entries)
+        ChartSelectionYIntervalClause(
+          minimumYInclusive: entry.value.minimum,
+          maximumYInclusive: entry.value.maximum,
+          seriesIds: {entry.key},
+        ),
+    ];
+  }
+
+  ChartSelectionExpression _composeIntervalSelectionExpression({
+    required ChartSelectionExpression previousExpression,
+    required List<ChartSelectionClause> gestureClauses,
+    required ChartSelectionOperation operation,
+  }) {
+    final gestureAxis = gestureClauses.first is ChartSelectionXIntervalClause
+        ? _SelectionIntervalAxis.x
+        : _SelectionIntervalAxis.y;
+    final previousHasOtherAxis = previousExpression.clauses.any(
+      (clause) =>
+          (gestureAxis == _SelectionIntervalAxis.x &&
+              clause is ChartSelectionYIntervalClause) ||
+          (gestureAxis == _SelectionIntervalAxis.y &&
+              clause is ChartSelectionXIntervalClause),
+    );
+    final concrete = ChartSelectionExpression.fromResolvedIdentities(
+      wholeSeriesIds: _selectedSeriesIds,
+      pointRefs: _selectedPointRefs,
+      series: _resolvedChartData.allSeries,
+    );
+
+    // Cross-axis subtraction and symmetric difference cannot be represented
+    // as a union of one-dimensional interval clauses. Normalize that case to
+    // the concrete identities already resolved by the renderer.
+    if (previousHasOtherAxis &&
+        (operation == ChartSelectionOperation.subtract ||
+            operation == ChartSelectionOperation.toggle)) {
+      return concrete;
+    }
+
+    final previousIntervals = _selectionIntervals(
+      previousExpression.clauses,
+      gestureAxis,
+    );
+    final gestureIntervals = _selectionIntervals(gestureClauses, gestureAxis);
+    final seriesIds = <String>{
+      ...previousIntervals.keys,
+      ...gestureIntervals.keys,
+    };
+    final composedIntervals =
+        <String, List<({double minimum, double maximum})>>{};
+    for (final seriesId in seriesIds) {
+      final previous = previousIntervals[seriesId] ?? const [];
+      final gesture = gestureIntervals[seriesId] ?? const [];
+      final intervals = switch (operation) {
+        ChartSelectionOperation.replace => _mergeSelectionIntervals(gesture),
+        ChartSelectionOperation.add => _mergeSelectionIntervals([
+          ...previous,
+          ...gesture,
+        ]),
+        ChartSelectionOperation.subtract => _subtractSelectionIntervals(
+          previous,
+          gesture,
+        ),
+        ChartSelectionOperation.toggle => _mergeSelectionIntervals([
+          ..._subtractSelectionIntervals(previous, gesture),
+          ..._subtractSelectionIntervals(gesture, previous),
+        ]),
+      };
+      if (intervals.isNotEmpty) composedIntervals[seriesId] = intervals;
+    }
+
+    final clauses = <ChartSelectionClause>[
+      ...concrete.clauses,
+      if (operation == ChartSelectionOperation.add)
+        for (final clause in previousExpression.clauses)
+          if ((gestureAxis == _SelectionIntervalAxis.x &&
+                  clause is ChartSelectionYIntervalClause) ||
+              (gestureAxis == _SelectionIntervalAxis.y &&
+                  clause is ChartSelectionXIntervalClause))
+            clause,
+      for (final entry in composedIntervals.entries)
+        for (final interval in entry.value)
+          if (gestureAxis == _SelectionIntervalAxis.x)
+            ChartSelectionXIntervalClause(
+              minimumXInclusive: interval.minimum,
+              maximumXInclusive: interval.maximum,
+              seriesIds: {entry.key},
+            )
+          else
+            ChartSelectionYIntervalClause(
+              minimumYInclusive: interval.minimum,
+              maximumYInclusive: interval.maximum,
+              seriesIds: {entry.key},
+            ),
+    ];
+    return clauses.isEmpty
+        ? const ChartSelectionExpression.empty()
+        : ChartSelectionExpression(clauses: clauses);
+  }
+
+  Map<String, List<({double minimum, double maximum})>> _selectionIntervals(
+    Iterable<ChartSelectionClause> clauses,
+    _SelectionIntervalAxis axis,
+  ) {
+    final validSeriesIds = {
+      for (final series in _effectiveDataSeries) series.id,
+    };
+    final intervals = <String, List<({double minimum, double maximum})>>{};
+    for (final clause in clauses) {
+      final (Set<String>? targetedSeriesIds, double minimum, double maximum)?
+      interval = switch ((axis, clause)) {
+        (
+          _SelectionIntervalAxis.x,
+          ChartSelectionXIntervalClause(
+            :final seriesIds,
+            :final minimumXInclusive,
+            :final maximumXInclusive,
+          ),
+        ) =>
+          (seriesIds, minimumXInclusive, maximumXInclusive),
+        (
+          _SelectionIntervalAxis.y,
+          ChartSelectionYIntervalClause(
+            :final seriesIds,
+            :final minimumYInclusive,
+            :final maximumYInclusive,
+          ),
+        ) =>
+          (seriesIds, minimumYInclusive, maximumYInclusive),
+        _ => null,
+      };
+      if (interval == null) continue;
+      final targets = interval.$1 ?? validSeriesIds;
+      for (final seriesId in targets.where(validSeriesIds.contains)) {
+        intervals.putIfAbsent(seriesId, () => []).add((
+          minimum: interval.$2,
+          maximum: interval.$3,
+        ));
+      }
+    }
+    return intervals;
+  }
+
+  List<({double minimum, double maximum})> _mergeSelectionIntervals(
+    Iterable<({double minimum, double maximum})> intervals,
+  ) {
+    final ordered = intervals.toList()
+      ..sort((first, second) => first.minimum.compareTo(second.minimum));
+    if (ordered.isEmpty) return const [];
+    final merged = <({double minimum, double maximum})>[];
+    var current = ordered.first;
+    for (final next in ordered.skip(1)) {
+      if (next.minimum <= current.maximum) {
+        current = (
+          minimum: current.minimum,
+          maximum: math.max(current.maximum, next.maximum),
+        );
+      } else {
+        merged.add(current);
+        current = next;
+      }
+    }
+    merged.add(current);
+    return merged;
+  }
+
+  List<({double minimum, double maximum})> _subtractSelectionIntervals(
+    Iterable<({double minimum, double maximum})> source,
+    Iterable<({double minimum, double maximum})> exclusions,
+  ) {
+    var remaining = _mergeSelectionIntervals(source);
+    for (final exclusion in _mergeSelectionIntervals(exclusions)) {
+      final next = <({double minimum, double maximum})>[];
+      for (final interval in remaining) {
+        if (exclusion.maximum <= interval.minimum ||
+            exclusion.minimum >= interval.maximum) {
+          next.add(interval);
+          continue;
+        }
+        if (exclusion.minimum > interval.minimum) {
+          next.add((
+            minimum: interval.minimum,
+            maximum: math.min(exclusion.minimum, interval.maximum),
+          ));
+        }
+        if (exclusion.maximum < interval.maximum) {
+          next.add((
+            minimum: math.max(exclusion.maximum, interval.minimum),
+            maximum: interval.maximum,
+          ));
+        }
+      }
+      remaining = next;
+    }
+    return remaining;
   }
 
   void _applyResolvedSelectionTargets(
@@ -6088,7 +6298,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (targets.seriesIds.isNotEmpty) {
       _applySeriesSelectionOperationForIds(targets.seriesIds, operation);
     }
-    if (targets.pointRefs.isNotEmpty) {
+    if (targets.pointRefs.isNotEmpty ||
+        (operation == ChartSelectionOperation.replace &&
+            targets.seriesIds.isEmpty)) {
       _applyPointSelectionOperationForRefs(targets.pointRefs, operation);
     }
   }
@@ -6447,6 +6659,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _notifyPointSelectionChanged() {
+    final interaction = widget.interactionConfig;
+    if (interaction?.onSelectionChanged == null &&
+        interaction?.onSelectionResultChanged == null) {
+      return;
+    }
     final result = _buildPointSelectionResult();
     _pendingDataSelectionResult = null;
     _publishPointSelectionResult(result);
@@ -6463,6 +6680,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _refreshPointSelectionAfterDataChange() {
+    final interaction = widget.interactionConfig;
+    if (interaction?.onSelectionChanged == null &&
+        interaction?.onSelectionResultChanged == null) {
+      _scheduleControllerPointStateSync();
+      return;
+    }
     final result = _buildPointSelectionResult();
     // Element rebuilding can run while Flutter is mounting or rebuilding the
     // chart. Controller listeners commonly include Workbench builders, so a
@@ -6492,6 +6715,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   ChartSelectionResult _buildPointSelectionResult() {
+    final compactExpression = _selectionIntentExpression;
+    if (compactExpression != null) {
+      final pointClauses = compactExpression.clauses
+          .where((clause) => clause is! ChartSelectionWholeSeriesClause)
+          .toList(growable: false);
+      if (pointClauses.isNotEmpty) {
+        return ChartSelectionSnapshot(
+          expression: ChartSelectionExpression(clauses: pointClauses),
+          revision: _effectiveDocumentRevision,
+          series: _resolvedChartData.allSeries,
+        ).result;
+      }
+    }
     if (_selectedPointRefs.isEmpty) {
       return const ChartSelectionResult.empty();
     }
@@ -6983,9 +7219,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _restoreViewState(ChartViewState viewState) {
+    final restoredExpressionDocument = viewState.selectionExpression;
+    final restoredExpression = restoredExpressionDocument == null
+        ? null
+        : ChartSelectionExpression.fromDocument(restoredExpressionDocument);
     final restoredPointRefs = _expandRadialPointRefs(
       _validPointRefs(viewState.selectedPointRefs).toList(growable: false),
     );
+    final restoredWholeSeriesIds = <String>{
+      if (restoredExpression != null)
+        for (final clause in restoredExpression.clauses)
+          if (clause is ChartSelectionWholeSeriesClause) clause.seriesId,
+    };
     _captureStateRevision++;
     setState(() {
       _hiddenSeriesIds
@@ -6995,14 +7240,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _selectedSeriesIds
         ..clear()
         ..addAll(
-          _validSeriesIds(
-            viewState.selectedSeriesIds.isEmpty &&
+          _validSeriesIds(<String>{
+            ...(viewState.selectedSeriesIds.isEmpty &&
                     viewState.selectedSeriesId != null
                 ? <String>[viewState.selectedSeriesId!]
-                : viewState.selectedSeriesIds,
-          ),
+                : viewState.selectedSeriesIds),
+            ...restoredWholeSeriesIds,
+          }),
         );
-      _selectionIntentExpression = null;
+      _selectionIntentExpression =
+          restoredExpression == null || restoredExpression.isEmpty
+          ? null
+          : restoredExpression;
       _selectedPointRefs
         ..clear()
         ..addAll(restoredPointRefs);
@@ -7148,16 +7397,29 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             validSeriesIds.contains(clause.seriesId))
           clause.seriesId,
     };
-    final resolvedRefs = expression
-        .resolvePointRefs(allSeries)
-        .where((reference) => !wholeSeriesIds.contains(reference.seriesId))
-        .toSet();
+    final pointClauses = expression.clauses
+        .where((clause) => clause is! ChartSelectionWholeSeriesClause)
+        .toList(growable: false);
+    final resolvedRefs =
+        _layoutKind == ChartLayoutKind.partitionRadial &&
+            pointClauses.isNotEmpty
+        ? ChartSelectionExpression(
+            clauses: pointClauses,
+          ).resolvePointRefs(allSeries)
+        : const <ChartPointRef>{};
     final changed =
         !setEquals(_selectedSeriesIds, wholeSeriesIds) ||
         !setEquals(_selectedPointRefs, resolvedRefs) ||
         _selectionIntentExpression != expression;
     if (!changed) {
-      if (reveal) _revealPoints(resolvedRefs.toList(growable: false));
+      if (reveal && pointClauses.isNotEmpty) {
+        final snapshot = ChartSelectionSnapshot(
+          expression: ChartSelectionExpression(clauses: pointClauses),
+          revision: _effectiveDocumentRevision,
+          series: allSeries,
+        );
+        _revealPoints(snapshot.pointRefs.toList(growable: false));
+      }
       return ChartArtifactSuccess(value: null);
     }
     _selectionIntentExpression = expression;
@@ -7175,7 +7437,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _syncControllerState(renderBox);
     _syncControllerPointState();
     _notifyPointSelectionChanged();
-    if (reveal) _revealPoints(resolvedRefs.toList(growable: false));
+    if (reveal && pointClauses.isNotEmpty) {
+      final snapshot = ChartSelectionSnapshot(
+        expression: ChartSelectionExpression(clauses: pointClauses),
+        revision: _effectiveDocumentRevision,
+        series: allSeries,
+      );
+      _revealPoints(snapshot.pointRefs.toList(growable: false));
+    }
     return ChartArtifactSuccess(value: null);
   }
 
@@ -7405,7 +7674,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _clearPointSelection() {
     _keyboardSelectionAnchorRef = null;
-    if (_selectedPointRefs.isEmpty) return;
+    final hasCompactPointSelection =
+        _selectionIntentExpression?.clauses.any(
+          (clause) => clause is! ChartSelectionWholeSeriesClause,
+        ) ??
+        false;
+    if (_selectedPointRefs.isEmpty && !hasCompactPointSelection) return;
     _selectionIntentExpression = null;
     _selectedPointRefs.clear();
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
@@ -7425,12 +7699,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _syncControllerPointState({ChartSelectionResult? selectionResult}) {
     final controller = widget.bravenChartController;
+    _syncControllerSelectionSnapshot(controller);
     controller?.updatePointState(
       focusedPointRefs: _focusedPointRefs,
       selectedPointRefs: _selectedPointRefs,
-      selectionResult: selectionResult ?? _buildPointSelectionResult(),
+      selectionResult: selectionResult ?? const ChartSelectionResult.empty(),
     );
-    _syncControllerSelectionSnapshot(controller);
     _publishLinkedSelection();
   }
 
@@ -8225,20 +8499,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final keyboard =
         widget.interactionConfig?.keyboard ?? const KeyboardConfig();
     if (!keyboard.enabled) return false;
-    final ranges = _effectiveDataSeries
-        .whereType<RangeAreaChartSeries>()
-        .toList(growable: false);
-    if (ranges.length != 1) return false;
-    final series = ranges.single;
-    final validIndices = [
-      for (final (index, point) in series.intervals.indexed)
-        if (!point.isGap) index,
+    final series = _rangeCompositionSeries();
+    if (series.isEmpty) return false;
+    final validIndicesBySeries = <List<int>>[
+      for (final candidate in series)
+        candidate is RangeAreaChartSeries
+            ? <int>[
+                for (final (index, point) in candidate.intervals.indexed)
+                  if (!point.isGap) index,
+              ]
+            : _validPathPointIndices(candidate),
     ];
-    if (validIndices.isEmpty) return false;
+    if (validIndicesBySeries.any((indices) => indices.isEmpty)) return false;
 
     if (key == LogicalKeyboardKey.escape) {
-      final current = _focusedPointRefs.firstOrNull;
-      if (current?.seriesId != series.id &&
+      if (_focusedPointRefs.isEmpty &&
           _selectedPointRefs.isEmpty &&
           _selectedSeriesIds.isEmpty) {
         return false;
@@ -8250,36 +8525,88 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       final current = _focusedPointRefs.firstOrNull;
-      if (current == null || current.seriesId != series.id) return false;
-      final point = series.intervalAt(current.pointIndex);
+      if (current == null) return false;
+      final currentSeries = series
+          .where((candidate) => candidate.id == current.seriesId)
+          .firstOrNull;
+      if (currentSeries == null) return false;
+      final point = currentSeries is RangeAreaChartSeries
+          ? currentSeries.intervalAt(current.pointIndex)
+          : currentSeries.points[current.pointIndex];
       return _activateCartesianPointSelection(
         current,
         callbackPoint: point,
         extendOrderedRange: true,
       );
     }
-    if (!keyboard.enableArrowKeys ||
-        HardwareKeyboard.instance.isAltPressed ||
-        (key != LogicalKeyboardKey.arrowLeft &&
-            key != LogicalKeyboardKey.arrowRight)) {
+
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+    if (!isArrow ||
+        !keyboard.enableArrowKeys ||
+        HardwareKeyboard.instance.isAltPressed) {
       return false;
     }
 
+    final movesPoint =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight;
+    final delta =
+        key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowUp
+        ? -1
+        : 1;
     final current = _focusedPointRefs.firstOrNull;
-    final currentPosition = current?.seriesId == series.id
-        ? validIndices.indexOf(current!.pointIndex)
-        : -1;
-    final nextPosition = currentPosition < 0
-        ? key == LogicalKeyboardKey.arrowLeft
-              ? validIndices.length - 1
-              : 0
-        : (currentPosition + (key == LogicalKeyboardKey.arrowLeft ? -1 : 1))
-              .clamp(0, validIndices.length - 1);
-    _setKeyboardRangeAreaFocus(series, validIndices[nextPosition]);
+    if (current == null) {
+      final seriesIndex = delta < 0 ? series.length - 1 : 0;
+      final validIndices = validIndicesBySeries[seriesIndex];
+      _setKeyboardRangeCompositionFocus(
+        series[seriesIndex],
+        delta < 0 ? validIndices.last : validIndices.first,
+      );
+      return true;
+    }
+
+    var seriesIndex = series.indexWhere(
+      (candidate) => candidate.id == current.seriesId,
+    );
+    if (seriesIndex < 0) seriesIndex = 0;
+    var validIndices = validIndicesBySeries[seriesIndex];
+    var pointPosition = validIndices.indexOf(current.pointIndex);
+    if (pointPosition < 0) pointPosition = 0;
+
+    if (movesPoint) {
+      pointPosition = (pointPosition + delta).clamp(0, validIndices.length - 1);
+    } else {
+      seriesIndex = (seriesIndex + delta).clamp(0, series.length - 1);
+      validIndices = validIndicesBySeries[seriesIndex];
+      pointPosition = pointPosition.clamp(0, validIndices.length - 1);
+    }
+    _setKeyboardRangeCompositionFocus(
+      series[seriesIndex],
+      validIndices[pointPosition],
+    );
     return true;
   }
 
-  void _setKeyboardRangeAreaFocus(RangeAreaChartSeries series, int pointIndex) {
+  List<ChartSeries> _rangeCompositionSeries() {
+    final series = _effectiveDataSeries
+        .where(
+          (candidate) =>
+              candidate is RangeAreaChartSeries ||
+              candidate is LineChartSeries ||
+              candidate is AreaChartSeries,
+        )
+        .toList(growable: false);
+    return series.any((candidate) => candidate is RangeAreaChartSeries) &&
+            series.length == _effectiveDataSeries.length
+        ? series
+        : const <ChartSeries>[];
+  }
+
+  void _setKeyboardRangeCompositionFocus(ChartSeries series, int pointIndex) {
     final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
     if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
       return;
@@ -8287,6 +8614,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _focusedPointRefs
       ..clear()
       ..add(ref);
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final hit = renderBox?.dataHitForPointIndex(series.id, pointIndex);
+    _coordinator.setHoveredMarker(
+      hit == null
+          ? null
+          : HoveredMarkerInfo(
+              seriesId: hit.seriesId,
+              markerIndex: hit.pointIndex,
+              plotPosition: hit.plotPosition,
+              dataHit: hit,
+            ),
+    );
     _refreshLinkedPointRendering();
     _syncControllerPointState();
   }
@@ -9006,6 +9346,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
+  void _activateSemanticBarFocus() {
+    _handleBarPointKey(LogicalKeyboardKey.enter);
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   ({String value, bool isSelected})? _focusedCandlestickSemantics() {
     final ref = _focusedPointRefs.firstOrNull;
     if (ref == null) return null;
@@ -9063,10 +9408,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
-  ({String value, bool isSelected})? _focusedRangeAreaSemantics() {
+  void _activateSemanticCandlestickFocus() {
+    _handleCandlestickPointKey(LogicalKeyboardKey.enter);
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
+  ({String value, bool isSelected})? _focusedRangeCompositionSemantics() {
     final ref = _focusedPointRefs.firstOrNull;
     if (ref == null) return null;
-    return _rangeAreaSemanticsForRef(ref);
+    return _rangeCompositionSemanticsForRef(ref);
+  }
+
+  ({String value, bool isSelected})? _rangeCompositionSemanticsForRef(
+    ChartPointRef ref,
+  ) {
+    return _rangeAreaSemanticsForRef(ref) ?? _pathSemanticsForRef(ref);
   }
 
   ({String value, bool isSelected})? _rangeAreaSemanticsForRef(
@@ -9106,25 +9462,26 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
-  String? _adjacentRangeAreaSemanticsValue(int delta) {
+  String? _adjacentRangeCompositionSemanticsValue(int delta) {
     final current = _focusedPointRefs.firstOrNull;
     if (current == null) return null;
-    final series = _effectiveDataSeries
-        .whereType<RangeAreaChartSeries>()
+    final series = _rangeCompositionSeries()
         .where((candidate) => candidate.id == current.seriesId)
         .firstOrNull;
     if (series == null) return null;
-    final validIndices = [
-      for (final (index, point) in series.intervals.indexed)
-        if (!point.isGap) index,
-    ];
+    final validIndices = series is RangeAreaChartSeries
+        ? <int>[
+            for (final (index, point) in series.intervals.indexed)
+              if (!point.isGap) index,
+          ]
+        : _validPathPointIndices(series);
     if (validIndices.isEmpty) return null;
     final currentPosition = validIndices.indexOf(current.pointIndex);
     final nextPosition = (math.max(0, currentPosition) + delta).clamp(
       0,
       validIndices.length - 1,
     );
-    return _rangeAreaSemanticsForRef(
+    return _rangeCompositionSemanticsForRef(
       ChartPointRef(
         seriesId: series.id,
         pointIndex: validIndices[nextPosition],
@@ -9132,14 +9489,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     )?.value;
   }
 
-  void _moveSemanticRangeAreaFocus(int delta) {
+  void _moveSemanticRangeCompositionFocus(int delta) {
     _handleRangeAreaPointKey(
       delta < 0 ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight,
     );
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
-  void _activateSemanticRangeAreaFocus() {
+  void _activateSemanticRangeCompositionFocus() {
     _handleRangeAreaPointKey(LogicalKeyboardKey.enter);
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
@@ -9499,11 +9856,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final focusedCandlestick = hasCandlesticks
         ? _focusedCandlestickSemantics()
         : null;
-    final hasRangeArea =
-        !isNonCartesian &&
-        !hasCandlesticks &&
-        _effectiveDataSeries.whereType<RangeAreaChartSeries>().length == 1;
-    final focusedRangeArea = hasRangeArea ? _focusedRangeAreaSemantics() : null;
+    final rangeComposition = !isNonCartesian && !hasCandlesticks
+        ? _rangeCompositionSeries()
+        : const <ChartSeries>[];
+    final hasRangeComposition = rangeComposition.isNotEmpty;
+    final focusedRangeComposition = hasRangeComposition
+        ? _focusedRangeCompositionSemantics()
+        : null;
+    final rangeCompositionLabel = !hasRangeComposition
+        ? null
+        : rangeComposition.every((series) => series is RangeAreaChartSeries)
+        ? 'Interactive range area chart'
+        : 'Interactive range area composition';
     final hasOnlyScatter =
         !isNonCartesian &&
         _effectiveDataSeries.isNotEmpty &&
@@ -9533,6 +9897,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         ? Semantics(
             container: true,
             focusable: true,
+            liveRegion: focusedCandlestick != null,
             label: widget.title ?? 'Interactive candlestick chart',
             value: focusedCandlestick?.value,
             increasedValue: focusedCandlestick == null
@@ -9549,37 +9914,42 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             selected: focusedCandlestick?.isSelected,
             onIncrease: () => _moveSemanticCandlestickFocus(1),
             onDecrease: () => _moveSemanticCandlestickFocus(-1),
+            onTap: focusedCandlestick == null
+                ? () => _moveSemanticCandlestickFocus(1)
+                : _activateSemanticCandlestickFocus,
             child: focusChart,
           )
-        : hasRangeArea
+        : hasRangeComposition
         ? Semantics(
             container: true,
             focusable: true,
-            liveRegion: focusedRangeArea != null,
-            label: widget.title ?? 'Interactive range area chart',
-            value: focusedRangeArea?.value,
-            increasedValue: focusedRangeArea == null
+            liveRegion: focusedRangeComposition != null,
+            label: widget.title ?? rangeCompositionLabel,
+            value: focusedRangeComposition?.value,
+            increasedValue: focusedRangeComposition == null
                 ? null
-                : _adjacentRangeAreaSemanticsValue(1) ?? focusedRangeArea.value,
-            decreasedValue: focusedRangeArea == null
+                : _adjacentRangeCompositionSemanticsValue(1) ??
+                      focusedRangeComposition.value,
+            decreasedValue: focusedRangeComposition == null
                 ? null
-                : _adjacentRangeAreaSemanticsValue(-1) ??
-                      focusedRangeArea.value,
-            hint: focusedRangeArea == null
-                ? 'Use left and right arrow keys to inspect intervals. Press Enter to select, Shift plus Space to extend, or Control plus A to select all.'
+                : _adjacentRangeCompositionSemanticsValue(-1) ??
+                      focusedRangeComposition.value,
+            hint: focusedRangeComposition == null
+                ? 'Use left and right arrow keys to inspect observations and up and down arrow keys to move between series. Press Enter to select, Shift plus Space to extend, or Control plus A to select all.'
                 : null,
-            selected: focusedRangeArea?.isSelected,
-            onIncrease: () => _moveSemanticRangeAreaFocus(1),
-            onDecrease: () => _moveSemanticRangeAreaFocus(-1),
-            onTap: focusedRangeArea == null
-                ? () => _moveSemanticRangeAreaFocus(1)
-                : _activateSemanticRangeAreaFocus,
+            selected: focusedRangeComposition?.isSelected,
+            onIncrease: () => _moveSemanticRangeCompositionFocus(1),
+            onDecrease: () => _moveSemanticRangeCompositionFocus(-1),
+            onTap: focusedRangeComposition == null
+                ? () => _moveSemanticRangeCompositionFocus(1)
+                : _activateSemanticRangeCompositionFocus,
             child: focusChart,
           )
         : hasOnlyBars
         ? Semantics(
             container: true,
             focusable: true,
+            liveRegion: focusedBar != null,
             label: widget.title ?? 'Interactive bar chart',
             value: focusedBar?.value,
             increasedValue: focusedBar == null
@@ -9594,6 +9964,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             selected: focusedBar?.isSelected,
             onIncrease: () => _moveSemanticBarFocus(1),
             onDecrease: () => _moveSemanticBarFocus(-1),
+            onTap: focusedBar == null
+                ? () => _moveSemanticBarFocus(1)
+                : _activateSemanticBarFocus,
             child: focusChart,
           )
         : hasOnlyPathSeries

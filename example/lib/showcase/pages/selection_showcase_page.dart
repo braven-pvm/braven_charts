@@ -18,11 +18,15 @@ class SelectionShowcasePage extends StatefulWidget {
 
 class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   final BravenChartController _chartController = BravenChartController();
+  final BravenChartController _linkedChartController = BravenChartController();
+  final ChartInteractionGroupController _interactionGroupController =
+      ChartInteractionGroupController();
   final ChartWorkbenchController _workbenchController =
       ChartWorkbenchController();
   final ChartOptionsController _chartOptionsController = ChartOptionsController(
     const ChartOptions(
       showDataMarkers: true,
+      showDataPointPopup: false,
       enableZoom: false,
       enablePan: false,
     ),
@@ -38,14 +42,17 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   double _dataPointSelectionScale = 2.67;
   double _seriesHoverStrokeScale = 1.75;
   double _seriesSelectionStrokeScale = 1.5;
-  bool _showDataPointHoverPopup = true;
   bool _showTrackingInformationPanel = true;
   double _barDimmedOpacity = 0.42;
   double _barSelectionOpacity = 0.14;
   double _barSelectionBorderWidth = 2.5;
+  Color? _barSelectionColor;
   double _scatterHoverScale = 1.35;
   double _scatterSelectionScale = 1.25;
+  double _scatterSelectionOpacity = 0.14;
+  double _scatterSelectionStrokeWidth = 2.5;
   double _scatterDimmedOpacity = 0.32;
+  Color? _scatterSelectionColor;
   RadialSelectionEffect _radialSelectionEffect = RadialSelectionEffect.lift;
   double _radialSelectionScale = 1.08;
   double _radialSelectionOffset = 6;
@@ -55,6 +62,17 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   ChartSelectionAcquisitionMode _acquisitionMode =
       ChartSelectionAcquisitionMode.point;
   ChartSelectionScope _selectionScope = ChartSelectionScope.markOrWholeSeries;
+  ChartSelectionSeriesProjection _seriesProjection =
+      ChartSelectionSeriesProjection.selectedPointsOnly;
+  ChartSelectionAnnotationProjection _annotationProjection =
+      ChartSelectionAnnotationProjection.clipToSelectionBounds;
+  ChartSelectionIntervalBoundaryProjection _intervalBoundaryProjection =
+      ChartSelectionIntervalBoundaryProjection.sourcePointsOnly;
+  double _selectionZoomPadding = 0.08;
+  bool _showProjectionAnnotations = true;
+  bool _showLinkedPeer = false;
+  ChartArtifact? _createdSelectionArtifact;
+  HydratedChartConfiguration? _createdSelectionChart;
 
   @override
   void initState() {
@@ -76,6 +94,8 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   @override
   void dispose() {
     _chartController.dispose();
+    _linkedChartController.dispose();
+    _interactionGroupController.dispose();
     _workbenchController.dispose();
     _chartOptionsController
       ..removeListener(_handleChartOptionsChanged)
@@ -85,9 +105,8 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
 
   void _selectFamily(_SelectionFamily family) {
     if (_family == family) return;
-    _chartController
-      ..clearSelection()
-      ..clearPointSelection();
+    _clearSelection();
+    _interactionGroupController.reset();
     setState(() {
       _family = family;
       _acquisitionMode = family.defaultAcquisitionMode;
@@ -111,6 +130,174 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     _chartController
       ..clearSelection()
       ..clearPointSelection();
+    _linkedChartController
+      ..clearSelection()
+      ..clearPointSelection();
+  }
+
+  ChartSelectionProjectionOptions get _selectionProjection =>
+      ChartSelectionProjectionOptions(
+        seriesProjection: _seriesProjection,
+        annotationProjection: _annotationProjection,
+        intervalBoundaryProjection: _intervalBoundaryProjection,
+      );
+
+  void _selectFirstMark() {
+    final revision = _chartController.effectiveDocumentRevision.value;
+    final series = _seriesForFamily(_chartOptionsController.options);
+    if (revision == null || series.isEmpty || series.first.points.isEmpty) {
+      _showMessage('The chart is not ready for programmatic selection.');
+      return;
+    }
+    _showCommandResult(
+      _chartController.selectPoint(
+        ChartPointRef(seriesId: series.first.id, pointIndex: 0),
+        revision: revision,
+        reveal: true,
+      ),
+    );
+  }
+
+  void _selectFirstSeries() {
+    final series = _seriesForFamily(_chartOptionsController.options);
+    if (series.isEmpty) {
+      _showMessage('The chart has no series to select.');
+      return;
+    }
+    _chartController.selectSeriesIds([
+      series.first.id,
+    ], operation: ChartSelectionOperation.replace);
+  }
+
+  void _selectProgrammaticInterval() {
+    final revision = _chartController.effectiveDocumentRevision.value;
+    if (revision == null || _family.isRadial) {
+      _showMessage('Programmatic intervals require a Cartesian chart.');
+      return;
+    }
+    _showCommandResult(
+      _chartController.selectExpression(
+        ChartSelectionExpression(
+          clauses: [
+            ChartSelectionXIntervalClause(
+              minimumXInclusive: 1.25,
+              maximumXInclusive: 4.25,
+              seriesIds: {
+                for (final series in _seriesForFamily(
+                  _chartOptionsController.options,
+                ))
+                  series.id,
+              },
+            ),
+          ],
+        ),
+        revision: revision,
+        reveal: true,
+      ),
+    );
+  }
+
+  void _showCommandResult(ChartArtifactResult<void> result) {
+    if (result case ChartArtifactSuccess<void>()) return;
+    _showMessage((result as ChartArtifactFailure<void>).error.message);
+  }
+
+  void _handleSelectionArtifactCreated(ChartArtifact artifact) {
+    final hydrated = ChartDocumentHydrator.hydrateArtifact(artifact);
+    switch (hydrated) {
+      case ChartArtifactFailure<HydratedChartConfiguration>():
+        _showMessage(hydrated.error.message);
+      case ChartArtifactSuccess<HydratedChartConfiguration>():
+        setState(() {
+          _createdSelectionArtifact = artifact;
+          _createdSelectionChart = hydrated.value;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openCreatedSelectionChart();
+        });
+    }
+  }
+
+  Future<void> _openCreatedSelectionChart() async {
+    final artifact = _createdSelectionArtifact;
+    final chart = _createdSelectionChart;
+    if (artifact == null || chart == null) {
+      _showMessage('Create a chart from the current selection first.');
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        key: const ValueKey('selection-created-chart-dialog'),
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1080, maxHeight: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.add_chart_outlined),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Chart created from selection',
+                            style: Theme.of(dialogContext).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${artifact.document.series.length} series · '
+                            '${artifact.document.pointCount} points · '
+                            '${_seriesProjectionLabel(_seriesProjection)}',
+                            style: Theme.of(dialogContext).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close selected chart',
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: chart.build(
+                    key: ValueKey(
+                      'selection-created-chart-${artifact.document.revision}',
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Text(
+                  'This is a freshly hydrated, independent chart. The source '
+                  'selection has been cleared from the artifact and its '
+                  'viewport is fitted to the retained data.',
+                  style: Theme.of(dialogContext).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -120,6 +307,14 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       subtitle:
           'Compare durable point, series, group, range, and radial selection across every chart family',
       actions: [
+        OutlinedButton.icon(
+          key: const ValueKey('selection-lab-open-created-chart'),
+          onPressed: _createdSelectionChart == null
+              ? null
+              : _openCreatedSelectionChart,
+          icon: const Icon(Icons.open_in_new, size: 18),
+          label: const Text('Open created chart'),
+        ),
         OutlinedButton.icon(
           key: const ValueKey('selection-lab-clear-header'),
           onPressed: _clearSelection,
@@ -165,7 +360,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           label: 'Selection scope',
           value: _selectionScope,
           values: _family.availableSelectionScopes,
-          labelBuilder: (scope) => scope.shortLabel,
+          labelBuilder: _selectionScopeLabel,
           onChanged: _selectScope,
         ),
         EnumOption<ChartSelectionOperation>(
@@ -319,6 +514,18 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
             onChanged: (value) =>
                 setState(() => _barSelectionBorderWidth = value),
           ),
+          PaletteColorOption(
+            key: const ValueKey('selection-lab-bar-selection-color'),
+            keyPrefix: 'selection-lab-bar-selection-color',
+            label: 'Selection overlay color',
+            subtitle: 'Clear to use the chart interaction theme',
+            value: _barSelectionColor,
+            customColorFallback:
+                (_chartOptionsController.options.theme ?? ChartTheme.light)
+                    .interactionTheme
+                    .selectionColor,
+            onChanged: (value) => setState(() => _barSelectionColor = value),
+          ),
         ],
       ),
     if (_family == _SelectionFamily.scatter)
@@ -349,6 +556,42 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
             decimalPlaces: 2,
             onChanged: (value) =>
                 setState(() => _scatterSelectionScale = value),
+          ),
+          SliderOption(
+            key: const ValueKey('selection-lab-scatter-selection-opacity'),
+            label: 'Selection backing opacity',
+            value: _scatterSelectionOpacity,
+            min: 0,
+            max: 0.5,
+            divisions: 20,
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _scatterSelectionOpacity = value),
+          ),
+          SliderOption(
+            key: const ValueKey('selection-lab-scatter-selection-stroke'),
+            label: 'Selection ring width',
+            value: _scatterSelectionStrokeWidth,
+            min: 0,
+            max: 6,
+            divisions: 24,
+            suffix: 'px',
+            decimalPlaces: 2,
+            onChanged: (value) =>
+                setState(() => _scatterSelectionStrokeWidth = value),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('selection-lab-scatter-selection-color'),
+            keyPrefix: 'selection-lab-scatter-selection-color',
+            label: 'Selection ring color',
+            subtitle: 'Clear to inherit the point color',
+            value: _scatterSelectionColor,
+            customColorFallback:
+                (_chartOptionsController.options.theme ?? ChartTheme.light)
+                    .interactionTheme
+                    .selectionColor,
+            onChanged: (value) =>
+                setState(() => _scatterSelectionColor = value),
           ),
           SliderOption(
             key: const ValueKey('selection-lab-scatter-dimmed-opacity'),
@@ -423,14 +666,6 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         initiallyExpanded: false,
         children: [
           BoolOption(
-            key: const ValueKey('selection-lab-point-popup'),
-            label: 'Show data point hover popup',
-            subtitle: 'Show the standard single-point value popup',
-            value: _showDataPointHoverPopup,
-            onChanged: (value) =>
-                setState(() => _showDataPointHoverPopup = value),
-          ),
-          BoolOption(
             key: const ValueKey('selection-lab-tracking-panel'),
             label: 'Show tracking information panel',
             subtitle: 'Show the shared multi-series tracking panel',
@@ -440,6 +675,118 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           ),
         ],
       ),
+    OptionSection(
+      title: 'Selection actions',
+      icon: Icons.playlist_add_check_outlined,
+      description:
+          'Controls selection-only chart creation, export boundaries, and viewport fitting.',
+      children: [
+        EnumOption<ChartSelectionSeriesProjection>(
+          key: const ValueKey('selection-lab-series-projection'),
+          label: 'Created chart data',
+          description:
+              'Choose whether Create chart, Copy, and CSV retain only selected marks or every point from participating series.',
+          value: _seriesProjection,
+          values: ChartSelectionSeriesProjection.values,
+          labelBuilder: _seriesProjectionLabel,
+          onChanged: (value) => setState(() => _seriesProjection = value),
+        ),
+        EnumOption<ChartSelectionAnnotationProjection>(
+          key: const ValueKey('selection-lab-annotation-projection'),
+          label: 'Created chart annotations',
+          description:
+              'Choose whether selection-only charts omit, retain, or clip compatible annotations.',
+          value: _annotationProjection,
+          values: ChartSelectionAnnotationProjection.values,
+          labelBuilder: _annotationProjectionLabel,
+          onChanged: (value) => setState(() => _annotationProjection = value),
+        ),
+        EnumOption<ChartSelectionIntervalBoundaryProjection>(
+          key: const ValueKey('selection-lab-boundary-projection'),
+          label: 'Continuous interval edges',
+          description:
+              'Line and Area intervals can keep source markers only or synthesize exact rendered boundaries.',
+          value: _intervalBoundaryProjection,
+          values: ChartSelectionIntervalBoundaryProjection.values,
+          labelBuilder: _intervalBoundaryProjectionLabel,
+          onChanged: (value) =>
+              setState(() => _intervalBoundaryProjection = value),
+        ),
+        SliderOption(
+          key: const ValueKey('selection-lab-zoom-padding'),
+          label: 'Zoom padding',
+          description:
+              'Adds proportional space around the selected X and Y extents when Zoom is used.',
+          value: _selectionZoomPadding,
+          min: 0,
+          max: 0.3,
+          divisions: 30,
+          suffix: '×',
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _selectionZoomPadding = value),
+        ),
+        BoolOption(
+          key: const ValueKey('selection-lab-projection-annotations'),
+          label: 'Show projection annotations',
+          subtitle:
+              'Adds a point and range annotation so projection policies are visible in created charts',
+          value: _showProjectionAnnotations,
+          onChanged: (value) =>
+              setState(() => _showProjectionAnnotations = value),
+        ),
+        InfoBox(
+          message: _family.isRadial
+              ? 'Create chart, Copy, CSV, Invert, and Clear are available after selecting a mark. Zoom intentionally reports that it is Cartesian-only.'
+              : 'Select data, then use Create chart, Zoom, Copy, CSV, Invert, or Clear in the action strip below the chart.',
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Programmatic and linked selection',
+      icon: Icons.hub_outlined,
+      initiallyExpanded: false,
+      description:
+          'Exercises the controller API and stable-key selection synchronization without pointer gestures.',
+      children: [
+        BoolOption(
+          key: const ValueKey('selection-lab-linked-peer-toggle'),
+          label: 'Show linked peer chart',
+          subtitle:
+              'Selections synchronize by stable series and point keys; viewports remain independent',
+          value: _showLinkedPeer,
+          onChanged: (value) {
+            _clearSelection();
+            _interactionGroupController.reset();
+            setState(() => _showLinkedPeer = value);
+          },
+        ),
+        ActionButton(
+          key: const ValueKey('selection-lab-select-first-mark'),
+          label: 'Select first mark',
+          icon: Icons.adjust,
+          description:
+              'Uses BravenChartController.selectPoint with the mounted document revision.',
+          onPressed: _selectFirstMark,
+        ),
+        ActionButton(
+          key: const ValueKey('selection-lab-select-first-series'),
+          label: 'Select first series',
+          icon: Icons.timeline,
+          description:
+              'Uses one atomic controller command to replace durable series selection.',
+          onPressed: _selectFirstSeries,
+        ),
+        if (!_family.isRadial)
+          ActionButton(
+            key: const ValueKey('selection-lab-select-interval'),
+            label: 'Select X interval',
+            icon: Icons.swap_horiz,
+            description:
+                'Applies an exact ChartSelectionXIntervalClause through selectExpression.',
+            onPressed: _selectProgrammaticInterval,
+          ),
+      ],
+    ),
     StandardChartOptions(
       key: ValueKey('selection-lab-standard-${_family.name}'),
       controller: _chartOptionsController,
@@ -450,6 +797,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       showXScrollbarOption: !_family.isRadial,
       showYScrollbarOption: !_family.isRadial,
       showCrosshairOption: !_family.isRadial,
+      showDataPointPopupOption: true,
       showInteractionOptions: !_family.isRadial,
       showLineStyleOption: false,
     ),
@@ -482,83 +830,110 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
 
   Widget _buildWorkspace() {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Material(
-          key: const ValueKey('selection-family-grid'),
-          color: theme.colorScheme.surfaceContainerLowest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: _SelectionChoiceRow<_SelectionFamily>(
-              label: 'Chart family',
-              value: _family,
-              values: _SelectionFamily.values,
-              keyPrefix: 'selection-family',
-              labelBuilder: (family) => family.label,
-              iconBuilder: (family) => family.icon,
-              tooltipBuilder: (family) =>
-                  '${family.label}: ${family.shortDescription}',
-              onChanged: _selectFamily,
+    final familyGrid = Material(
+      key: const ValueKey('selection-family-grid'),
+      color: theme.colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: _SelectionChoiceRow<_SelectionFamily>(
+          label: 'Chart family',
+          value: _family,
+          values: _SelectionFamily.values,
+          keyPrefix: 'selection-family',
+          labelBuilder: (family) => family.label,
+          iconBuilder: (family) => family.icon,
+          tooltipBuilder: (family) =>
+              '${family.label}: ${family.shortDescription}',
+          onChanged: _selectFamily,
+        ),
+      ),
+    );
+    final chartCard = ChartCard(
+      key: const ValueKey('selection-card'),
+      title: _family.exampleTitle,
+      subtitle:
+          '${_family.exampleSubtitle} · ${_acquisitionMode.shortLabel} · ${_selectionScopeLabel(_selectionScope)}',
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSelectionToolbar(),
+          const SizedBox(height: 8),
+          Expanded(
+            child: BravenChartWorkbench(
+              key: const ValueKey('selection-workbench'),
+              chartController: _chartController,
+              workbenchController: _workbenchController,
+              showSelectionActions: true,
+              selectionProjection: _selectionProjection,
+              selectionZoomPaddingFraction: _selectionZoomPadding,
+              selectionCsvFileName: '${_family.name}-selection.csv',
+              onSelectionArtifactCreated: _handleSelectionArtifactCreated,
+              availableDisplayModes: const {
+                ChartDisplayMode.chart,
+                ChartDisplayMode.data,
+                ChartDisplayMode.split,
+                ChartDisplayMode.source,
+              },
+              sourceOptions: ChartDartSourceOptions(
+                variableName: '${_family.name}SelectionChart',
+              ),
+              documentOptions: const ChartDocumentExtractOptions(
+                includeViewState: true,
+              ),
+              tableOptions: _family == _SelectionFamily.scatter
+                  ? const ChartTableOptions(rowLayout: ChartTableRowLayout.long)
+                  : const ChartTableOptions(),
+              tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+              splitBreakpoint: 760,
+              autoFitTablePane: true,
+              minimumChartPaneExtent: 320,
+              minimumTablePaneExtent: 320,
+              maximumAutoTablePaneExtent: 520,
+              chartBuilder: (context, controller) =>
+                  _buildChartComposition(controller),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ChartCard(
-            key: const ValueKey('selection-card'),
-            title: _family.exampleTitle,
-            subtitle:
-                '${_family.exampleSubtitle} · ${_acquisitionMode.shortLabel} · ${_selectionScope.shortLabel}',
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSelectionToolbar(),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: BravenChartWorkbench(
-                    key: const ValueKey('selection-workbench'),
-                    chartController: _chartController,
-                    workbenchController: _workbenchController,
-                    showSelectionActions: true,
-                    availableDisplayModes: const {
-                      ChartDisplayMode.chart,
-                      ChartDisplayMode.data,
-                      ChartDisplayMode.split,
-                      ChartDisplayMode.source,
-                    },
-                    sourceOptions: ChartDartSourceOptions(
-                      variableName: '${_family.name}SelectionChart',
-                    ),
-                    documentOptions: const ChartDocumentExtractOptions(
-                      includeViewState: true,
-                    ),
-                    tableOptions: _family == _SelectionFamily.scatter
-                        ? const ChartTableOptions(
-                            rowLayout: ChartTableRowLayout.long,
-                          )
-                        : const ChartTableOptions(),
-                    tableRefreshPolicy:
-                        ChartTableRefreshPolicy.onDocumentRevision,
-                    splitBreakpoint: 760,
-                    autoFitTablePane: true,
-                    minimumChartPaneExtent: 320,
-                    minimumTablePaneExtent: 320,
-                    maximumAutoTablePaneExtent: 520,
-                    chartBuilder: (context, controller) =>
-                        _buildChart(controller),
-                  ),
-                ),
-              ],
-            ),
+        ],
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        if (textScale <= 1.5) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              familyGrid,
+              const SizedBox(height: 8),
+              Expanded(child: chartCard),
+            ],
+          );
+        }
+
+        // At accessibility text sizes the wrapped family and selection
+        // controls legitimately need more vertical room. Let this workspace
+        // scroll instead of squeezing the plot to a zero-height render box.
+        return SingleChildScrollView(
+          key: const ValueKey('selection-large-text-scroll'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              familyGrid,
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 1000 + (350 * textScale.clamp(1.5, 3)),
+                child: chartCard,
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -590,9 +965,21 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
               value: _selectionScope,
               values: _family.availableSelectionScopes,
               keyPrefix: 'selection-lab-target',
-              labelBuilder: (scope) => scope.shortLabel,
+              labelBuilder: _selectionScopeLabel,
               iconBuilder: (scope) => scope.icon,
               onChanged: _selectScope,
+            ),
+            const Divider(height: 12),
+            _SelectionChoiceRow<ChartSelectionOperation>(
+              label: 'Selection mode',
+              value: _operation,
+              values: ChartSelectionOperation.values,
+              keyPrefix: 'selection-lab-mode',
+              labelBuilder: _operationLabel,
+              iconBuilder: _operationIcon,
+              tooltipBuilder: (operation) =>
+                  '${_operationLabel(operation)} with touch or pointer input',
+              onChanged: (value) => setState(() => _operation = value),
             ),
           ],
         ),
@@ -600,16 +987,82 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     );
   }
 
-  Widget _buildChart(BravenChartController controller) {
+  String _selectionScopeLabel(ChartSelectionScope scope) {
+    if (_family != _SelectionFamily.rangeArea) return scope.shortLabel;
+    return switch (scope) {
+      ChartSelectionScope.mark => 'Interval / point',
+      ChartSelectionScope.category => 'All series at X',
+      ChartSelectionScope.wholeSeries => 'Complete series',
+      _ => scope.shortLabel,
+    };
+  }
+
+  Widget _buildChartComposition(BravenChartController controller) {
+    if (!_showLinkedPeer) return _buildChart(controller);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(flex: 3, child: _buildChart(controller)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.hub_outlined,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Linked peer · select either chart',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: _buildChart(
+            _linkedChartController,
+            key: ValueKey('selection-linked-chart-${_family.name}'),
+            showTitles: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChart(
+    BravenChartController controller, {
+    Key? key,
+    bool showTitles = true,
+  }) {
     final radial = _family.isRadial;
     final options = _chartOptionsController.options;
     return BravenChartPlus(
-      key: ValueKey('selection-chart-${_family.name}'),
+      key: key ?? ValueKey('selection-chart-${_family.name}'),
       transitionKey: _family,
       bravenChartController: controller,
+      interactionGroupController: _showLinkedPeer
+          ? _interactionGroupController
+          : null,
+      interactionGroupOptions: const ChartInteractionGroupOptions(
+        synchronizeCursor: false,
+        synchronizeViewport: false,
+        synchronizeSelection: true,
+      ),
       series: _seriesForFamily(options),
-      title: _family.chartTitle,
-      subtitle: _family.chartSubtitle,
+      annotations: _showProjectionAnnotations && !radial
+          ? _selectionAnnotations(options)
+          : const [],
+      interactiveAnnotations: false,
+      title: showTitles ? _family.chartTitle : null,
+      subtitle: showTitles ? _family.chartSubtitle : null,
       theme: options.theme ?? ChartTheme.light,
       showLegend: options.showLegend,
       showXScrollbar: !radial && options.showXScrollbar,
@@ -641,7 +1094,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           showTrackingTooltip: _showTrackingInformationPanel,
         ),
         tooltip: TooltipConfig(
-          enabled: radial || _showDataPointHoverPopup,
+          enabled: options.showDataPointPopup,
           triggerMode: TooltipTriggerMode.both,
         ),
         keyboard: const KeyboardConfig(enabled: true),
@@ -666,6 +1119,34 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         ),
       ),
     );
+  }
+
+  List<ChartAnnotation> _selectionAnnotations(ChartOptions options) {
+    final series = _seriesForFamily(options);
+    if (series.isEmpty || series.first.points.isEmpty) return const [];
+    final pointIndex = series.first.points.length > 3 ? 3 : 0;
+    return [
+      RangeAnnotation(
+        id: 'selection-projection-window',
+        label: 'Projection window',
+        startX: 1.5,
+        endX: 4.5,
+        fillColor: const Color(0x142563EB),
+        borderColor: const Color(0x992563EB),
+        allowDragging: false,
+        allowEditing: false,
+        labelPosition: AnnotationLabelPosition.topCenter,
+      ),
+      PointAnnotation(
+        id: 'selection-projection-anchor',
+        label: 'Projection anchor',
+        seriesId: series.first.id,
+        dataPointIndex: pointIndex,
+        markerColor: const Color(0xFFEA580C),
+        allowDragging: false,
+        allowEditing: false,
+      ),
+    ];
   }
 
   List<ChartSeries> _seriesForFamily(ChartOptions options) => switch (_family) {
@@ -696,6 +1177,9 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           RangeAreaChartSeries range => range.copyWith(
             showBoundaryMarkers: options.showDataMarkers,
           ),
+          LineChartSeries line => line.copyWith(
+            showDataPointMarkers: options.showDataMarkers,
+          ),
           _ => series,
         },
     ],
@@ -706,6 +1190,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
             barStyle: _barStyleWithInteraction(
               bar.barStyle,
               BarInteractionStyle(
+                selectionColor: _barSelectionColor,
                 selectionOpacity: _barSelectionOpacity,
                 selectionBorderWidth: _barSelectionBorderWidth,
                 dimmedOpacity: _barDimmedOpacity,
@@ -721,8 +1206,12 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           ScatterChartSeries scatter => scatter.copyWith(
             interactionStyle: scatter.interactionStyle.copyWith(
               hoverScale: _scatterHoverScale,
+              selectionColor: _scatterSelectionColor,
               selectionScale: _scatterSelectionScale,
+              selectionOpacity: _scatterSelectionOpacity,
+              selectionStrokeWidth: _scatterSelectionStrokeWidth,
               dimmedOpacity: _scatterDimmedOpacity,
+              clearSelectionColor: _scatterSelectionColor == null,
             ),
           ),
           _ => series,
@@ -898,6 +1387,8 @@ class _SelectionStatusState extends State<_SelectionStatus> {
     final totalSeries = seriesCount > selectedSeries
         ? seriesCount
         : selectedSeries;
+    final expression = widget.controller.selectionExpression;
+    final extents = snapshot?.extents;
     return Semantics(
       liveRegion: true,
       label: '$pointCount selected points in $totalSeries series',
@@ -909,17 +1400,36 @@ class _SelectionStatusState extends State<_SelectionStatus> {
           color: Theme.of(context).colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
-          pointCount == 0 && totalSeries == 0
-              ? 'Nothing selected'
-              : '$pointCount ${pointCount == 1 ? 'point' : 'points'} · $totalSeries series',
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              pointCount == 0 && totalSeries == 0
+                  ? 'Nothing selected'
+                  : '$pointCount ${pointCount == 1 ? 'point' : 'points'} · $totalSeries series',
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (snapshot != null && snapshot.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${expression.clauses.length} compact '
+                '${expression.clauses.length == 1 ? 'clause' : 'clauses'} · '
+                '${snapshot.pointKeyRefs.length} stable keys'
+                '${extents == null ? '' : ' · X ${_statusNumber(extents.minimumX)}–${_statusNumber(extents.maximumX)}'}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
+
+  String _statusNumber(double value) => value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toStringAsFixed(2);
 }
 
 enum _SelectionFamily {
@@ -979,7 +1489,7 @@ enum _SelectionFamily {
     area =>
       'Select a marker or the nearby boundary as a complete series. Switch to X range to extract an exact continuous interval.',
     rangeArea =>
-      'Drag a box through low/high intervals. Each retained interval remains an atomic tuple.',
+      'Each band contributes atomic low/high intervals. The centre line is a separate series; box feedback highlights complete interval spans.',
     bar =>
       'A direct bar selects the same semantic series across all categories. Modifier keys compose selections.',
     scatter =>
@@ -1001,7 +1511,7 @@ enum _SelectionFamily {
   String get exampleSubtitle => switch (this) {
     line => 'Markers and forgiving stroke hit corridors',
     area => 'Marker, boundary, and continuous X-range selection',
-    rangeArea => 'Atomic low/high interval selection',
+    rangeArea => 'Nested intervals plus a separate midpoint line',
     bar => 'Same series across every category',
     scatter => 'Free-form spatial acquisition',
     candlestick => 'Complete OHLC range selection',
@@ -1014,7 +1524,7 @@ enum _SelectionFamily {
   String get chartTitle => switch (this) {
     line => 'Weekly performance paths',
     area => 'Active workload envelope',
-    rangeArea => 'Expected recovery range',
+    rangeArea => 'Nested recovery forecast',
     bar => 'Channel performance',
     scatter => 'Account opportunity map',
     candlestick => 'Daily market sessions',
@@ -1027,7 +1537,7 @@ enum _SelectionFamily {
   String get chartSubtitle => switch (this) {
     line => 'Select a marker or the complete nearby series',
     area => 'Select a marker, the complete boundary, or an X interval',
-    rangeArea => 'Drag a box through one or more bands',
+    rangeArea => 'Select an interval span, a complete band, or the centre line',
     bar => 'Select the same colored series in one action',
     scatter => 'Draw around the accounts to retain',
     candlestick => 'Drag across the sessions to extract',
@@ -1145,6 +1655,40 @@ String _operationLabel(ChartSelectionOperation operation) =>
       ChartSelectionOperation.toggle => 'Toggle selection',
     };
 
+IconData _operationIcon(ChartSelectionOperation operation) =>
+    switch (operation) {
+      ChartSelectionOperation.replace => Icons.filter_center_focus,
+      ChartSelectionOperation.add => Icons.add_circle_outline,
+      ChartSelectionOperation.subtract => Icons.remove_circle_outline,
+      ChartSelectionOperation.toggle => Icons.change_circle_outlined,
+    };
+
+String _seriesProjectionLabel(ChartSelectionSeriesProjection projection) =>
+    switch (projection) {
+      ChartSelectionSeriesProjection.selectedPointsOnly =>
+        'Selected points only',
+      ChartSelectionSeriesProjection.completeParticipatingSeries =>
+        'Complete participating series',
+    };
+
+String _annotationProjectionLabel(
+  ChartSelectionAnnotationProjection projection,
+) => switch (projection) {
+  ChartSelectionAnnotationProjection.omitAll => 'Omit annotations',
+  ChartSelectionAnnotationProjection.retainContained => 'Retain contained',
+  ChartSelectionAnnotationProjection.clipToSelectionBounds =>
+    'Clip to selection',
+};
+
+String _intervalBoundaryProjectionLabel(
+  ChartSelectionIntervalBoundaryProjection projection,
+) => switch (projection) {
+  ChartSelectionIntervalBoundaryProjection.sourcePointsOnly =>
+    'Source points only',
+  ChartSelectionIntervalBoundaryProjection.interpolateContinuousSeries =>
+    'Interpolate exact boundaries',
+};
+
 const _pathPointsA = <ChartDataPoint>[
   ChartDataPoint(x: 0, y: 34, pointKey: 'mon'),
   ChartDataPoint(x: 1, y: 42, pointKey: 'tue'),
@@ -1207,21 +1751,74 @@ final _areaSeries = <ChartSeries>[
   ),
 ];
 
+const _recoveryMidpoints = <double>[52, 55, 58, 57, 60, 64, 67, 66, 69, 72];
+const _outerRecoveryHalfSpan = <double>[10, 11, 12, 11, 13, 14, 13, 12, 14, 15];
+const _innerRecoveryHalfSpan = <double>[4, 5, 5, 4, 6, 6, 5, 5, 6, 6];
+
 final _rangeAreaSeries = <ChartSeries>[
   RangeAreaChartSeries(
-    id: 'recovery-range',
-    name: 'Expected range',
-    color: const Color(0xFF0891B2),
+    id: 'recovery-95',
+    name: '95% recovery interval',
+    color: const Color(0xFF2563EB),
     interpolation: LineInterpolation.monotone,
-    fillOpacity: 0.32,
+    fillOpacity: 0.16,
     showBoundaryMarkers: true,
+    upperBoundaryStyle: const RangeAreaBoundaryStyle(
+      color: Color(0xFF2563EB),
+      strokeWidth: 1.75,
+    ),
+    lowerBoundaryStyle: const RangeAreaBoundaryStyle(
+      color: Color(0xFF2563EB),
+      strokeWidth: 1.75,
+    ),
     points: [
-      for (var index = 0; index < 8; index++)
+      for (final (index, midpoint) in _recoveryMidpoints.indexed)
         RangeAreaDataPoint(
           x: index.toDouble(),
-          pointKey: 'day-$index',
-          low: 42 + index * 1.8 + (index.isEven ? 0 : -3),
-          high: 58 + index * 2.1 + (index.isEven ? 3 : 0),
+          pointKey: 'recovery-95-$index',
+          low: midpoint - _outerRecoveryHalfSpan[index],
+          high: midpoint + _outerRecoveryHalfSpan[index],
+        ),
+    ],
+  ),
+  RangeAreaChartSeries(
+    id: 'recovery-50',
+    name: '50% recovery interval',
+    color: const Color(0xFF7C3AED),
+    interpolation: LineInterpolation.monotone,
+    fillOpacity: 0.22,
+    showBoundaryMarkers: true,
+    upperBoundaryStyle: const RangeAreaBoundaryStyle(
+      color: Color(0xFF7C3AED),
+      strokeWidth: 1.75,
+    ),
+    lowerBoundaryStyle: const RangeAreaBoundaryStyle(
+      color: Color(0xFF7C3AED),
+      strokeWidth: 1.75,
+    ),
+    points: [
+      for (final (index, midpoint) in _recoveryMidpoints.indexed)
+        RangeAreaDataPoint(
+          x: index.toDouble(),
+          pointKey: 'recovery-50-$index',
+          low: midpoint - _innerRecoveryHalfSpan[index],
+          high: midpoint + _innerRecoveryHalfSpan[index],
+        ),
+    ],
+  ),
+  LineChartSeries(
+    id: 'recovery-centre',
+    name: 'Recovery centre',
+    color: const Color(0xFFDB2777),
+    interpolation: LineInterpolation.monotone,
+    strokeWidth: 2.5,
+    showDataPointMarkers: true,
+    points: [
+      for (final (index, midpoint) in _recoveryMidpoints.indexed)
+        ChartDataPoint(
+          x: index.toDouble(),
+          y: midpoint,
+          pointKey: 'recovery-centre-$index',
         ),
     ],
   ),

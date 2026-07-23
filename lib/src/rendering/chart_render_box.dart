@@ -46,6 +46,7 @@ import '../models/chart_theme.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
+import '../models/range_area_chart_series.dart';
 import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -3014,6 +3015,39 @@ class ChartRenderBox extends RenderBox {
     ];
   }
 
+  /// Resolves one plot-space Y interval through every Cartesian series
+  /// transform.
+  ///
+  /// Independent Y axes assign different data values to the same pixels.
+  /// Durable Y-selection intent therefore records one targeted clause per
+  /// series instead of applying the primary-axis values to every series.
+  Map<String, ({double minimum, double maximum})> seriesYIntervalsForPlotRect(
+    Rect plotRect,
+  ) {
+    if (plotRect.isEmpty) return const {};
+    final elements = _elements.whereType<SeriesElement>().toList(
+      growable: false,
+    );
+    _ensureSeriesTransformsUpdated(elements);
+    return {
+      for (final element in elements)
+        element.series.id: (
+          minimum: math.min(
+            element.currentTransform.plotToData(plotRect.left, plotRect.top).dy,
+            element.currentTransform
+                .plotToData(plotRect.right, plotRect.bottom)
+                .dy,
+          ),
+          maximum: math.max(
+            element.currentTransform.plotToData(plotRect.left, plotRect.top).dy,
+            element.currentTransform
+                .plotToData(plotRect.right, plotRect.bottom)
+                .dy,
+          ),
+        ),
+    };
+  }
+
   // ============================================================================
   // Event Handling (delegated to EventHandlerManager)
   // ============================================================================
@@ -3316,19 +3350,20 @@ class ChartRenderBox extends RenderBox {
   /// - canvas: Canvas to paint overlays (in widget space)
   /// - size: Total widget size (including axis areas)
 
-  /// Returns true if there is active overlay content that requires saveLayer.
+  /// Returns true if there is active overlay content to paint.
   ///
-  /// This avoids allocating a full-size GPU texture on every paint frame
-  /// for idle charts. On CanvasKit web, saveLayer is extremely expensive
-  /// (~1-3ms per call), and with 21 charts on the gallery page, skipping
-  /// it for idle charts saves ~20-60ms per frame.
+  /// Overlays paint directly into the render object's canvas. None of the
+  /// overlay primitives require offscreen compositing, so a full-widget
+  /// `saveLayer` would only allocate an avoidable CanvasKit texture.
   bool _hasActiveOverlayContent() {
     final hoveredMarker = coordinator.hoveredMarker;
     final pressedMarker = coordinator.pressedMarker;
     if (_isBarMarker(hoveredMarker) ||
         _isBarMarker(pressedMarker) ||
         _isScatterMarker(hoveredMarker) ||
-        _isScatterMarker(pressedMarker)) {
+        _isScatterMarker(pressedMarker) ||
+        _isRangeAreaMarker(hoveredMarker) ||
+        _isRangeAreaMarker(pressedMarker)) {
       return true;
     }
 
@@ -3350,28 +3385,35 @@ class ChartRenderBox extends RenderBox {
       return true;
     }
 
-    // Tooltip is visible or animating
-    if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
-      if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) {
-        return true;
-      }
-      if (_resolveSelectedTooltipMarker() != null) return true;
-      // Check if there's a marker that would trigger a tooltip
-      final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-      final hasHoveredMarker = coordinator.hoveredMarker != null;
-      final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
-      if (hasHoveredMarker &&
-          (config.triggerMode == TooltipTriggerMode.hover ||
-              config.triggerMode == TooltipTriggerMode.both)) {
-        return true;
-      }
-      if (hasTappedMarker &&
-          (config.triggerMode == TooltipTriggerMode.tap ||
-              config.triggerMode == TooltipTriggerMode.both)) {
-        return true;
-      }
-    }
+    if (_hasActiveTooltipOverlay()) return true;
 
+    return false;
+  }
+
+  /// Whether the overlay pass contains tooltip primitives.
+  ///
+  /// Tooltip shadows and translucent surfaces retain an isolated compositing
+  /// layer so their blending stays stable across renderers. Lightweight
+  /// crosshair, selection, and mark-feedback overlays paint directly and avoid
+  /// allocating a full-widget offscreen texture.
+  bool _hasActiveTooltipOverlay() {
+    if (!_tooltipsEnabled || coordinator.isPanningOrZooming) return false;
+    if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) return true;
+    if (_resolveSelectedTooltipMarker() != null) return true;
+
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+    final hasHoveredMarker = coordinator.hoveredMarker != null;
+    final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
+    if (hasHoveredMarker &&
+        (config.triggerMode == TooltipTriggerMode.hover ||
+            config.triggerMode == TooltipTriggerMode.both)) {
+      return true;
+    }
+    if (hasTappedMarker &&
+        (config.triggerMode == TooltipTriggerMode.tap ||
+            config.triggerMode == TooltipTriggerMode.both)) {
+      return true;
+    }
     return false;
   }
 
@@ -3379,23 +3421,47 @@ class ChartRenderBox extends RenderBox {
     // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
     _paintBarInteractionOverlays(canvas);
     _paintScatterInteractionOverlays(canvas);
+    _paintRangeAreaInteractionOverlays(canvas);
 
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       for (final hit in coordinator.previewDataHits) {
-        final widgetCenter = plotToWidget(hit.plotPosition);
-        final radius =
-            (math.max(hit.semanticBounds.width, hit.semanticBounds.height) / 2)
-                .clamp(4.0, 10.0);
         final interactionTheme = _theme?.interactionTheme;
+        final selectionColor =
+            interactionTheme?.selectionColor ?? const Color(0xFF00AAFF);
         final previewPaint = Paint()
-          ..color =
-              (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF))
-                  .withValues(alpha: 0.65)
+          ..color = selectionColor.withValues(alpha: 0.65)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2;
-        canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
+        final selectionBounds = hit.selectionBounds;
+        if (hit.rangeArea != null && selectionBounds != null) {
+          final bounds = selectionBounds;
+          final upper = plotToWidget(
+            Offset(bounds.center.dx, math.min(bounds.top, bounds.bottom)),
+          );
+          final lower = plotToWidget(
+            Offset(bounds.center.dx, math.max(bounds.top, bounds.bottom)),
+          );
+          canvas
+            ..drawLine(
+              upper,
+              lower,
+              Paint()
+                ..color = selectionColor.withValues(alpha: 0.42)
+                ..strokeWidth = 3
+                ..strokeCap = StrokeCap.round,
+            )
+            ..drawCircle(upper, 7, previewPaint)
+            ..drawCircle(lower, 7, previewPaint);
+        } else {
+          final widgetCenter = plotToWidget(hit.plotPosition);
+          final radius =
+              (math.max(hit.semanticBounds.width, hit.semanticBounds.height) /
+                      2)
+                  .clamp(4.0, 10.0);
+          canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
+        }
       }
     }
 
@@ -3729,6 +3795,16 @@ class ChartRenderBox extends RenderBox {
     return false;
   }
 
+  bool _isRangeAreaMarker(HoveredMarkerInfo? marker) {
+    if (marker == null) return false;
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.id == marker.seriesId) {
+        return element.series is RangeAreaChartSeries;
+      }
+    }
+    return false;
+  }
+
   void _paintBarInteractionOverlays(Canvas canvas) {
     final hoveredMarker = coordinator.hoveredMarker;
     final pressedMarker = coordinator.pressedMarker;
@@ -3774,6 +3850,35 @@ class ChartRenderBox extends RenderBox {
           : null;
       if (hoveredPointIndex == null && pressedPointIndex == null) continue;
       element.paintScatterInteractionOverlay(
+        canvas,
+        hoveredPointIndex: hoveredPointIndex,
+        pressedPointIndex: pressedPointIndex,
+      );
+    }
+    canvas.restore();
+  }
+
+  void _paintRangeAreaInteractionOverlays(Canvas canvas) {
+    final hoveredMarker = coordinator.hoveredMarker;
+    final pressedMarker = coordinator.pressedMarker;
+    if (!_isRangeAreaMarker(hoveredMarker) &&
+        !_isRangeAreaMarker(pressedMarker)) {
+      return;
+    }
+
+    canvas.save();
+    canvas.translate(_plotArea.left, _plotArea.top);
+    canvas.clipRect(Offset.zero & _plotArea.size);
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.series is! RangeAreaChartSeries) continue;
+      final hoveredPointIndex = hoveredMarker?.seriesId == element.id
+          ? hoveredMarker!.markerIndex
+          : null;
+      final pressedPointIndex = pressedMarker?.seriesId == element.id
+          ? pressedMarker!.markerIndex
+          : null;
+      if (hoveredPointIndex == null && pressedPointIndex == null) continue;
+      element.paintRangeAreaInteractionOverlay(
         canvas,
         hoveredPointIndex: hoveredPointIndex,
         pressedPointIndex: pressedPointIndex,
@@ -4071,19 +4176,18 @@ class ChartRenderBox extends RenderBox {
     canvas
         .restore(); // Restore canvas state (removes clipping and translation from plot area)
 
-    // LAYER 3: Overlays (dynamic, always rendered fresh)
-    // Crosshair, selection box, preview indicators - change every frame during hover/drag
-    // Use saveLayer to create independent compositing layer for crosshair
-    // This allows Flutter to repaint ONLY the crosshair without touching series layer
-    //
-    // PERFORMANCE: Only use saveLayer when there is actual overlay content to paint.
-    // saveLayer allocates a full-size GPU texture on CanvasKit web — extremely expensive.
-    // On the gallery page with 21 charts, 19+ idle charts shouldn't pay this GPU cost.
+    // LAYER 3: Overlays (dynamic, always rendered fresh).
+    // Crosshair, selection box, and interaction feedback paint directly.
+    // Tooltip surfaces retain an isolated layer for stable shadow/translucency
+    // blending, while lightweight overlays avoid the full-widget allocation.
     if (_hasActiveOverlayContent()) {
-      final overlayBounds = Offset.zero & size;
-      canvas.saveLayer(overlayBounds, Paint());
-      _paintOverlayLayer(canvas, size);
-      canvas.restore(); // Restore from saveLayer
+      if (_hasActiveTooltipOverlay()) {
+        canvas.saveLayer(Offset.zero & size, Paint());
+        _paintOverlayLayer(canvas, size);
+        canvas.restore();
+      } else {
+        _paintOverlayLayer(canvas, size);
+      }
     } else if (!_valueSummaryTrackingActive) {
       // No overlay content means no tracking source either (cursor gone or
       // crosshair gated off): publish the null snapshot so future consumers

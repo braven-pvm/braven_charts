@@ -25,6 +25,7 @@ import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_interaction_details.dart';
 import '../models/chart_data_point.dart';
+import '../models/chart_selection_expression.dart';
 import '../models/chart_series.dart';
 import '../models/scatter_marker_style.dart'
     show ScatterCategoryStyle, ScatterJitterConfig;
@@ -259,6 +260,7 @@ class SeriesElement implements DataHitElement {
     this.barGroupInfo,
     this.focusedPointIndices = const {},
     this.selectedPointIndices = const {},
+    this.selectionExpression = const ChartSelectionExpression.empty(),
     this.pointFocusColor,
     this.pointSelectionColor,
     this.fontFamily,
@@ -312,6 +314,9 @@ class SeriesElement implements DataHitElement {
 
   /// Point indices receiving durable linked selection from another surface.
   final Set<int> selectedPointIndices;
+
+  /// Compact durable selection evaluated only for visible paint geometry.
+  final ChartSelectionExpression selectionExpression;
 
   /// Visual scale for hovered Line and Area data-point markers.
   final double dataPointHoverScale;
@@ -370,6 +375,62 @@ class SeriesElement implements DataHitElement {
     return pointMap == null
         ? targetIndex
         : pointMap.renderIndexForTargetIndex(targetIndex);
+  }
+
+  bool _isPointSelected(int pointIndex) =>
+      selectedPointIndices.contains(pointIndex) ||
+      selectionExpression.selectsPoint(series, pointIndex);
+
+  Iterable<int> _selectedPointIndicesForPaint() sync* {
+    final seen = <int>{};
+    for (final pointIndex in selectedPointIndices) {
+      if (seen.add(pointIndex)) yield pointIndex;
+    }
+    if (selectionExpression.isEmpty) return;
+    final candidates = switch (series) {
+      BarChartSeries() => visibleBarPointIndices,
+      ScatterChartSeries() => visibleScatterPointIndices,
+      CandlestickChartSeries() => visibleCandlestickPointIndices,
+      RangeAreaChartSeries() => visibleRangeAreaPointIndices,
+      _ => _visibleOrderedPointIndices(),
+    };
+    for (final pointIndex in candidates) {
+      if (seen.add(pointIndex) && _isPointSelected(pointIndex)) {
+        yield pointIndex;
+      }
+    }
+  }
+
+  Iterable<int> _visibleOrderedPointIndices() sync* {
+    final points = series.points;
+    if (points.isEmpty) return;
+    final minimumX = _currentTransform.dataXMin;
+    final maximumX = _currentTransform.dataXMax;
+    var low = 0;
+    var high = points.length;
+    while (low < high) {
+      final middle = (low + high) >> 1;
+      if (points[middle].x < minimumX) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    final start = low > 0 ? low - 1 : 0;
+    low = start;
+    high = points.length;
+    while (low < high) {
+      final middle = (low + high) >> 1;
+      if (points[middle].x <= maximumX) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    final end = low < points.length ? low + 1 : points.length;
+    for (var index = start; index < end; index++) {
+      yield index;
+    }
   }
 
   /// Bar group positioning metadata (only used for BarChartSeries).
@@ -550,6 +611,7 @@ class SeriesElement implements DataHitElement {
 
     series = newSeries;
     _barViewportIndex = null;
+    _pointSelectionViewportIndex = null;
     _scatterViewportIndex = null;
     _candlestickViewportIndex = null;
     _rangeAreaViewportIndex = null;
@@ -582,6 +644,7 @@ class SeriesElement implements DataHitElement {
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
     _barViewportIndex = null;
+    _pointSelectionViewportIndex = null;
     _clearResolvedBarGeometry();
     _scatterViewportIndex = null;
     _clearResolvedScatterGeometry();
@@ -624,6 +687,7 @@ class SeriesElement implements DataHitElement {
   // TextPainter cache for data-point labels — keyed by formatted text string
   final Map<String, TextPainter> _labelPainterCache = {};
   BarViewportIndex? _barViewportIndex;
+  ScatterViewportIndex? _pointSelectionViewportIndex;
   List<BarGeometry>? _barGeometries;
   Map<int, BarGeometry> _barGeometryByPointIndex = const {};
   Map<(int, int), List<BarGeometry>> _barHitGeometryByCell = const {};
@@ -662,6 +726,7 @@ class SeriesElement implements DataHitElement {
   List<RangeAreaGeometryRun>? _rangeAreaGeometryRuns;
   Map<int, RangeAreaScreenPoint> _rangeAreaPointBySourceIndex = const {};
   int _rangeAreaHitComparisonCount = 0;
+  int _selectionCandidateCount = 0;
   DataPointLabelLayoutCoordinator? _dataPointLabelLayoutCoordinator;
   List<Rect> _visibleScatterLabelBounds = const [];
 
@@ -739,6 +804,9 @@ class SeriesElement implements DataHitElement {
 
   /// Exact run/point comparisons made by the latest Range Area hit query.
   int get rangeAreaHitComparisonCount => _rangeAreaHitComparisonCount;
+
+  /// Source candidates examined by the latest rectangle or lasso query.
+  int get selectionCandidateCount => _selectionCandidateCount;
 
   /// Label rectangles accepted by the latest Scatter paint pass.
   List<Rect> get visibleScatterLabelBounds => _visibleScatterLabelBounds;
@@ -1547,6 +1615,7 @@ class SeriesElement implements DataHitElement {
         geometry.upper,
         geometry.lower,
       ).inflate(12),
+      selectionBounds: Rect.fromPoints(geometry.upper, geometry.lower),
       point: point,
       formattedValue:
           '${point.low!.toStringAsFixed(2)}–${point.high!.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
@@ -1557,7 +1626,7 @@ class SeriesElement implements DataHitElement {
       markerColor: themeColor,
       ordinal: geometry.sourceIndex + 1,
       count: pointCount,
-      isSelected: selectedPointIndices.contains(geometry.sourceIndex),
+      isSelected: _isPointSelected(geometry.sourceIndex),
       isFocused: focusedPointIndices.contains(geometry.sourceIndex),
     );
   }
@@ -1776,9 +1845,7 @@ class SeriesElement implements DataHitElement {
       markerColor: currentSeries.color ?? themeColor,
       ordinal: clusterIndex + 1,
       count: layout.renderedMarkerCount,
-      isSelected: cluster.sourcePointIndices.every(
-        selectedPointIndices.contains,
-      ),
+      isSelected: cluster.sourcePointIndices.every(_isPointSelected),
       isFocused: cluster.sourcePointIndices.any(focusedPointIndices.contains),
     );
   }
@@ -1888,7 +1955,7 @@ class SeriesElement implements DataHitElement {
       aggregateSampleCount: bin.aggregateSampleCount,
       ordinal: binIndex + 1,
       count: layout.renderedMarkerCount,
-      isSelected: bin.sourcePointIndices.every(selectedPointIndices.contains),
+      isSelected: bin.sourcePointIndices.every(_isPointSelected),
       isFocused: bin.sourcePointIndices.any(focusedPointIndices.contains),
     );
   }
@@ -1949,7 +2016,7 @@ class SeriesElement implements DataHitElement {
       aggregateSampleCount: nearby.length,
       ordinal: math.min(ordinal, math.max(1, layout.contours.length)),
       count: math.max(1, layout.contours.length),
-      isSelected: sourceIndices.every(selectedPointIndices.contains),
+      isSelected: sourceIndices.every(_isPointSelected),
       isFocused: sourceIndices.any(focusedPointIndices.contains),
     );
   }
@@ -2275,8 +2342,34 @@ class SeriesElement implements DataHitElement {
     if (series is ScatterChartSeries) {
       return scatterDataHitsInPlotRect(plotRect);
     }
-    return _dataHitsWhere(plotRect.contains);
+    if (series is RangeAreaChartSeries) {
+      _resolveRangeAreaGeometry();
+      final candidates = _rangeAreaSelectionCandidates(plotRect);
+      _selectionCandidateCount = candidates.length;
+      return [
+        for (final geometry in candidates)
+          if (_verticalRangeIntersectsRect(
+            x: geometry.upper.dx,
+            top: math.min(geometry.upper.dy, geometry.lower.dy),
+            bottom: math.max(geometry.upper.dy, geometry.lower.dy),
+            rect: plotRect,
+          ))
+            _rangeAreaDataHit(geometry),
+      ];
+    }
+    return _dataHitsWhere(plotBounds: plotRect, contains: plotRect.contains);
   }
+
+  bool _verticalRangeIntersectsRect({
+    required double x,
+    required double top,
+    required double bottom,
+    required Rect rect,
+  }) =>
+      x >= rect.left &&
+      x <= rect.right &&
+      bottom >= rect.top &&
+      top <= rect.bottom;
 
   /// Resolves visible Scatter data whose rendered marker centers fall inside
   /// the closed [plotPolygon].
@@ -2301,19 +2394,186 @@ class SeriesElement implements DataHitElement {
       return scatterDataHitsInPlotPolygon(plotPolygon);
     }
     final path = Path()..addPolygon(plotPolygon, true);
-    return _dataHitsWhere(path.contains);
+    if (series is RangeAreaChartSeries) {
+      _resolveRangeAreaGeometry();
+      final candidates = _rangeAreaSelectionCandidates(path.getBounds());
+      _selectionCandidateCount = candidates.length;
+      return [
+        for (final geometry in candidates)
+          if (_rangeAreaIntersectsPolygon(geometry, plotPolygon, path))
+            _rangeAreaDataHit(geometry),
+      ];
+    }
+    return _dataHitsWhere(
+      plotBounds: path.getBounds(),
+      contains: path.contains,
+    );
   }
 
-  List<ChartDataHit> _dataHitsWhere(bool Function(Offset center) contains) {
+  bool _rangeAreaIntersectsPolygon(
+    RangeAreaScreenPoint geometry,
+    List<Offset> polygon,
+    Path path,
+  ) {
+    final upper = geometry.upper;
+    final lower = geometry.lower;
+    final midpoint = Offset(upper.dx, (upper.dy + lower.dy) / 2);
+    if (path.contains(upper) ||
+        path.contains(lower) ||
+        path.contains(midpoint)) {
+      return true;
+    }
+    for (var index = 0; index < polygon.length; index++) {
+      final edgeStart = polygon[index];
+      final edgeEnd = polygon[(index + 1) % polygon.length];
+      if (_lineSegmentsIntersect(upper, lower, edgeStart, edgeEnd)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<RangeAreaScreenPoint> _rangeAreaSelectionCandidates(Rect plotBounds) {
+    final currentSeries = series as RangeAreaChartSeries;
+    var index = _rangeAreaViewportIndex;
+    index ??= RangeAreaViewportIndex(currentSeries.intervals);
+    _rangeAreaViewportIndex = index;
+    final first = _currentTransform.plotToData(plotBounds.left, 0);
+    final second = _currentTransform.plotToData(plotBounds.right, 0);
+    final range = index.visibleRange(
+      xMin: math.min(first.dx, second.dx),
+      xMax: math.max(first.dx, second.dx),
+      overscanPoints: 0,
+    );
+    return [
+      for (
+        var pointIndex = range.start;
+        pointIndex < range.endExclusive;
+        pointIndex++
+      )
+        ?_rangeAreaPointBySourceIndex[pointIndex],
+    ];
+  }
+
+  bool _lineSegmentsIntersect(
+    Offset firstStart,
+    Offset firstEnd,
+    Offset secondStart,
+    Offset secondEnd,
+  ) {
+    const epsilon = 1e-9;
+    final firstSideStart = _crossProduct(firstStart, firstEnd, secondStart);
+    final firstSideEnd = _crossProduct(firstStart, firstEnd, secondEnd);
+    final secondSideStart = _crossProduct(secondStart, secondEnd, firstStart);
+    final secondSideEnd = _crossProduct(secondStart, secondEnd, firstEnd);
+    if (((firstSideStart > epsilon && firstSideEnd < -epsilon) ||
+            (firstSideStart < -epsilon && firstSideEnd > epsilon)) &&
+        ((secondSideStart > epsilon && secondSideEnd < -epsilon) ||
+            (secondSideStart < -epsilon && secondSideEnd > epsilon))) {
+      return true;
+    }
+    return (firstSideStart.abs() <= epsilon &&
+            _pointOnSegment(secondStart, firstStart, firstEnd)) ||
+        (firstSideEnd.abs() <= epsilon &&
+            _pointOnSegment(secondEnd, firstStart, firstEnd)) ||
+        (secondSideStart.abs() <= epsilon &&
+            _pointOnSegment(firstStart, secondStart, secondEnd)) ||
+        (secondSideEnd.abs() <= epsilon &&
+            _pointOnSegment(firstEnd, secondStart, secondEnd));
+  }
+
+  double _crossProduct(Offset start, Offset end, Offset point) =>
+      (end.dx - start.dx) * (point.dy - start.dy) -
+      (end.dy - start.dy) * (point.dx - start.dx);
+
+  bool _pointOnSegment(Offset point, Offset start, Offset end) {
+    const epsilon = 1e-9;
+    return point.dx >= math.min(start.dx, end.dx) - epsilon &&
+        point.dx <= math.max(start.dx, end.dx) + epsilon &&
+        point.dy >= math.min(start.dy, end.dy) - epsilon &&
+        point.dy <= math.max(start.dy, end.dy) + epsilon;
+  }
+
+  List<ChartDataHit> _dataHitsWhere({
+    required Rect plotBounds,
+    required bool Function(Offset center) contains,
+  }) {
     final hits = <ChartDataHit>[];
     final seen = <(String seriesId, int pointIndex)>{};
-    for (var pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+    final candidates = _selectionCandidatePointIndices(plotBounds);
+    _selectionCandidateCount = candidates.length;
+    for (final pointIndex in candidates) {
       final hit = dataHitForPointIndex(pointIndex);
       if (hit == null || !contains(hit.plotPosition)) continue;
       final identity = (hit.seriesId, hit.pointIndex);
       if (seen.add(identity)) hits.add(hit);
     }
     return hits;
+  }
+
+  Iterable<int> _selectionCandidatePointIndices(Rect plotBounds) {
+    if (series is BarChartSeries) {
+      _resolveBarGeometries();
+      final minimumCellX = (plotBounds.left / _barHitCellSize).floor();
+      final maximumCellX = (plotBounds.right / _barHitCellSize).floor();
+      final minimumCellY = (plotBounds.top / _barHitCellSize).floor();
+      final maximumCellY = (plotBounds.bottom / _barHitCellSize).floor();
+      final indices = <int>{};
+      for (var cellX = minimumCellX; cellX <= maximumCellX; cellX++) {
+        for (var cellY = minimumCellY; cellY <= maximumCellY; cellY++) {
+          for (final geometry
+              in _barHitGeometryByCell[(cellX, cellY)] ??
+                  const <BarGeometry>[]) {
+            indices.add(geometry.pointIndex);
+          }
+        }
+      }
+      return indices;
+    }
+    if (series is CandlestickChartSeries) {
+      final currentSeries = series as CandlestickChartSeries;
+      var index = _candlestickViewportIndex;
+      index ??= CandlestickViewportIndex(currentSeries.candles);
+      _candlestickViewportIndex = index;
+      final first = _currentTransform.plotToData(
+        plotBounds.left,
+        plotBounds.top,
+      );
+      final second = _currentTransform.plotToData(
+        plotBounds.right,
+        plotBounds.bottom,
+      );
+      final range = index.visibleRange(
+        xMin: math.min(first.dx, second.dx),
+        xMax: math.max(first.dx, second.dx),
+      );
+      return [
+        for (
+          var pointIndex = range.start;
+          pointIndex < range.endExclusive;
+          pointIndex++
+        )
+          pointIndex,
+      ];
+    }
+
+    var index = _pointSelectionViewportIndex;
+    index ??= ScatterViewportIndex(
+      series.points,
+      isXOrdered: series.isXOrdered,
+    );
+    _pointSelectionViewportIndex = index;
+    final first = _currentTransform.plotToData(plotBounds.left, plotBounds.top);
+    final second = _currentTransform.plotToData(
+      plotBounds.right,
+      plotBounds.bottom,
+    );
+    return index.pointIndicesForViewport(
+      minX: math.min(first.dx, second.dx),
+      maxX: math.max(first.dx, second.dx),
+      minY: math.min(first.dy, second.dy),
+      maxY: math.max(first.dy, second.dy),
+    );
   }
 
   List<ChartDataHit> _scatterDataHitsInPlotBounds(
@@ -2338,6 +2598,7 @@ class SeriesElement implements DataHitElement {
     }
 
     final pointIndices = candidates.keys.toList()..sort();
+    _selectionCandidateCount = pointIndices.length;
     return [
       for (final pointIndex in pointIndices)
         if (contains(candidates[pointIndex]!.center))
@@ -2357,7 +2618,7 @@ class SeriesElement implements DataHitElement {
           '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
       ordinal: geometry.pointIndex + 1,
       count: pointCount,
-      isSelected: selectedPointIndices.contains(geometry.pointIndex),
+      isSelected: _isPointSelected(geometry.pointIndex),
       isFocused: focusedPointIndices.contains(geometry.pointIndex),
     );
   }
@@ -2386,9 +2647,7 @@ class SeriesElement implements DataHitElement {
       markerColor: visual.borderColor,
       ordinal: geometry.projectionIndex + 1,
       count: _resolveCandlestickGeometries().length,
-      isSelected: geometry.sourcePointIndices.any(
-        selectedPointIndices.contains,
-      ),
+      isSelected: geometry.sourcePointIndices.any(_isPointSelected),
       isFocused: geometry.sourcePointIndices.any(focusedPointIndices.contains),
     );
   }
@@ -2467,7 +2726,7 @@ class SeriesElement implements DataHitElement {
           : _scatterMarkerStyleAt(scatter, renderIndex).fillColor,
       ordinal: targetIndex + 1,
       count: pointCount,
-      isSelected: selectedPointIndices.contains(targetIndex),
+      isSelected: _isPointSelected(targetIndex),
       isFocused: focusedPointIndices.contains(targetIndex),
     );
   }
@@ -2558,7 +2817,11 @@ class SeriesElement implements DataHitElement {
   }
 
   void _paintLinkedPoints(Canvas canvas, Color baseColor) {
-    if (focusedPointIndices.isEmpty && selectedPointIndices.isEmpty) return;
+    if (focusedPointIndices.isEmpty &&
+        selectedPointIndices.isEmpty &&
+        selectionExpression.isEmpty) {
+      return;
+    }
     if (series is BarChartSeries) {
       _paintLinkedBars(canvas, baseColor);
       return;
@@ -2590,7 +2853,7 @@ class SeriesElement implements DataHitElement {
       ..color = baseColor
       ..style = PaintingStyle.fill;
 
-    for (final index in selectedPointIndices) {
+    for (final index in _selectedPointIndicesForPaint()) {
       final renderIndex = _renderIndexForTargetIndex(index);
       if (renderIndex == null) continue;
       if (renderIndex < 0 || renderIndex >= series.points.length) continue;
@@ -2633,7 +2896,17 @@ class SeriesElement implements DataHitElement {
     canvas.save();
     canvas.clipRect(plotBounds);
 
-    final fillPaint = _rangeAreaFillPaint(rangeSeries, baseColor, plotBounds);
+    final interactionFillBoost = isHovered
+        ? 0.12
+        : isSelected
+        ? 0.08
+        : 0.0;
+    final fillPaint = _rangeAreaFillPaint(
+      rangeSeries,
+      baseColor,
+      plotBounds,
+      opacity: math.min(1, rangeSeries.fillOpacity + interactionFillBoost),
+    );
     for (final run in runs) {
       canvas.drawPath(run.fillPath, fillPaint);
     }
@@ -2881,20 +3154,21 @@ class SeriesElement implements DataHitElement {
   Paint _rangeAreaFillPaint(
     RangeAreaChartSeries rangeSeries,
     Color baseColor,
-    Rect plotBounds,
-  ) {
-    final opacity = rangeSeries.fillOpacity;
+    Rect plotBounds, {
+    double? opacity,
+  }) {
+    final effectiveOpacity = opacity ?? rangeSeries.fillOpacity;
     final gradient = rangeSeries.fillGradient;
     if (gradient == null) {
       return Paint()
-        ..color = baseColor.withValues(alpha: opacity)
+        ..color = baseColor.withValues(alpha: effectiveOpacity)
         ..style = PaintingStyle.fill;
     }
     return Paint()
       ..shader = LinearGradient(
         colors: [
           for (final color in gradient.colors)
-            color.withValues(alpha: color.a * opacity),
+            color.withValues(alpha: color.a * effectiveOpacity),
         ],
         stops: gradient.stops,
         begin: gradient.begin,
@@ -2910,6 +3184,8 @@ class SeriesElement implements DataHitElement {
     required Color fallbackColor,
   }) {
     if (!style.visible || style.strokeWidth <= 0) return;
+    final interactionStrokeWidth =
+        style.strokeWidth * _pathInteractionStrokeScale;
     final color = (style.color ?? fallbackColor).withValues(
       alpha: (style.color ?? fallbackColor).a * rangeAreaTheme.boundaryOpacity,
     );
@@ -2920,7 +3196,7 @@ class SeriesElement implements DataHitElement {
         Paint()
           ..color = color.withValues(alpha: color.a * 0.42)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = style.strokeWidth + style.glowRadius * 2
+          ..strokeWidth = interactionStrokeWidth + style.glowRadius * 2
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.glowRadius),
@@ -2931,7 +3207,7 @@ class SeriesElement implements DataHitElement {
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = style.strokeWidth
+        ..strokeWidth = interactionStrokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
@@ -2940,21 +3216,17 @@ class SeriesElement implements DataHitElement {
   void _paintLinkedRangeArea(Canvas canvas) {
     _resolveRangeAreaGeometry();
     void paintPoints(Set<int> indices, Color color, double radius) {
-      final fill = Paint()
-        ..color = rangeAreaTheme.markerFillColor
-        ..style = PaintingStyle.fill;
-      final stroke = Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
       for (final index in indices) {
         final point = _rangeAreaPointBySourceIndex[index];
         if (point == null) continue;
-        canvas
-          ..drawCircle(point.upper, radius, fill)
-          ..drawCircle(point.upper, radius, stroke)
-          ..drawCircle(point.lower, radius, fill)
-          ..drawCircle(point.lower, radius, stroke);
+        _paintRangeAreaPointFeedback(
+          canvas,
+          point: point,
+          color: color,
+          radius: radius,
+          connectorOpacity: 0.58,
+          strokeWidth: 2.5,
+        );
       }
     }
 
@@ -2970,6 +3242,34 @@ class SeriesElement implements DataHitElement {
     );
   }
 
+  void _paintRangeAreaPointFeedback(
+    Canvas canvas, {
+    required RangeAreaScreenPoint point,
+    required Color color,
+    required double radius,
+    required double connectorOpacity,
+    required double strokeWidth,
+  }) {
+    final fill = Paint()
+      ..color = rangeAreaTheme.markerFillColor
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    final connector = Paint()
+      ..color = color.withValues(alpha: connectorOpacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(2.5, radius * 0.52)
+      ..strokeCap = StrokeCap.round;
+    canvas
+      ..drawLine(point.upper, point.lower, connector)
+      ..drawCircle(point.upper, radius, fill)
+      ..drawCircle(point.upper, radius, stroke)
+      ..drawCircle(point.lower, radius, fill)
+      ..drawCircle(point.lower, radius, stroke);
+  }
+
   void _paintLinkedScatter(Canvas canvas) {
     final currentSeries = series as ScatterChartSeries;
     final interaction = currentSeries.interactionStyle;
@@ -2980,7 +3280,7 @@ class SeriesElement implements DataHitElement {
     final focusColor =
         interaction.focusColor ?? pointFocusColor ?? const Color(0xFF334155);
 
-    for (final pointIndex in selectedPointIndices) {
+    for (final pointIndex in _selectedPointIndicesForPaint()) {
       final geometry = scatterGeometryForPoint(pointIndex);
       if (geometry == null) continue;
       final path = _scatterStatePath(
@@ -3037,7 +3337,7 @@ class SeriesElement implements DataHitElement {
       ..strokeWidth = 2;
 
     final paintedSelectionGroups = <String>{};
-    for (final pointIndex in selectedPointIndices) {
+    for (final pointIndex in _selectedPointIndicesForPaint()) {
       final geometry = candlestickGeometryForPoint(pointIndex);
       if (geometry == null || !paintedSelectionGroups.add(geometry.groupKey)) {
         continue;
@@ -3277,7 +3577,7 @@ class SeriesElement implements DataHitElement {
       final lollipop = currentSeries.lollipopStyle;
       final headCenter = geometry.lollipopHeadCenter;
       if (lollipop != null && headCenter != null) {
-        if (selectedPointIndices.contains(geometry.pointIndex)) {
+        if (_isPointSelected(geometry.pointIndex)) {
           canvas.drawCircle(headCenter, lollipop.headRadius + 3, selectionFill);
           canvas.drawCircle(
             headCenter,
@@ -3294,7 +3594,7 @@ class SeriesElement implements DataHitElement {
         }
         continue;
       }
-      if (selectedPointIndices.contains(geometry.pointIndex)) {
+      if (_isPointSelected(geometry.pointIndex)) {
         canvas.drawRRect(geometry.rrect, selectionFill);
         canvas.drawRRect(geometry.rrect.inflate(2), selectionBorder);
       }
@@ -3496,6 +3796,44 @@ class SeriesElement implements DataHitElement {
         ..color = interaction.hoverColor ?? pointColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = interaction.hoverStrokeWidth,
+    );
+  }
+
+  /// Paints transient hover and press feedback for a Range Area interval.
+  ///
+  /// Both boundaries are emphasized together because they form one semantic
+  /// datum. This runs in the uncached overlay layer so moving between
+  /// intervals does not rebuild the complete band picture.
+  void paintRangeAreaInteractionOverlay(
+    Canvas canvas, {
+    int? hoveredPointIndex,
+    int? pressedPointIndex,
+  }) {
+    final currentSeries = series;
+    if (currentSeries is! RangeAreaChartSeries) return;
+    final activeIndex = pressedPointIndex ?? hoveredPointIndex;
+    if (activeIndex == null) return;
+
+    _resolveRangeAreaGeometry();
+    final point = _rangeAreaPointBySourceIndex[activeIndex];
+    if (point == null) return;
+
+    final pressed = pressedPointIndex != null;
+    final baseRadius = math.max(3.0, currentSeries.markerRadius);
+    final radius = (baseRadius * (pressed ? 1.8 : dataPointHoverScale)).clamp(
+      5.0,
+      10.0,
+    );
+    final color = pressed
+        ? rangeAreaTheme.selectionColor
+        : currentSeries.upperBoundaryStyle.color ?? themeColor;
+    _paintRangeAreaPointFeedback(
+      canvas,
+      point: point,
+      color: color,
+      radius: radius,
+      connectorOpacity: pressed ? 0.68 : 0.5,
+      strokeWidth: pressed ? 2.5 : 2,
     );
   }
 
@@ -3941,8 +4279,7 @@ class SeriesElement implements DataHitElement {
           markerPath,
           _scatterMarkerStyleAt(series, geometry.pointIndex),
           baseColor,
-          hasAnySelectedPoints &&
-                  !selectedPointIndices.contains(geometry.pointIndex)
+          hasAnySelectedPoints && !_isPointSelected(geometry.pointIndex)
               ? interactionOpacity * series.interactionStyle.dimmedOpacity
               : interactionOpacity,
         );
@@ -3991,9 +4328,7 @@ class SeriesElement implements DataHitElement {
     if (config.showZones && config.zoneOpacity > 0) {
       final zoneRadius = Radius.circular(math.min(12, config.cellSize * 0.2));
       for (final cluster in layout.clusters) {
-        final selected = cluster.sourcePointIndices.any(
-          selectedPointIndices.contains,
-        );
+        final selected = cluster.sourcePointIndices.any(_isPointSelected);
         final dimmed = hasAnySelectedPoints && !selected;
         final zoneOpacity =
             config.zoneOpacity *
@@ -4024,8 +4359,7 @@ class SeriesElement implements DataHitElement {
         path,
         _scatterMarkerStyleAt(series, geometry.pointIndex),
         baseColor,
-        hasAnySelectedPoints &&
-                !selectedPointIndices.contains(geometry.pointIndex)
+        hasAnySelectedPoints && !_isPointSelected(geometry.pointIndex)
             ? interactionOpacity * series.interactionStyle.dimmedOpacity
             : interactionOpacity,
       );
@@ -4033,7 +4367,7 @@ class SeriesElement implements DataHitElement {
 
     for (final cluster in layout.clusters) {
       final selectedCount = cluster.sourcePointIndices
-          .where(selectedPointIndices.contains)
+          .where(_isPointSelected)
           .length;
       final focused = cluster.sourcePointIndices.any(
         focusedPointIndices.contains,
@@ -4126,7 +4460,7 @@ class SeriesElement implements DataHitElement {
     final config = series.binConfig;
     for (final bin in layout.bins) {
       final selectedCount = bin.sourcePointIndices
-          .where(selectedPointIndices.contains)
+          .where(_isPointSelected)
           .length;
       final focused = bin.sourcePointIndices.any(focusedPointIndices.contains);
       var opacity =
@@ -4967,8 +5301,7 @@ class SeriesElement implements DataHitElement {
       final barColor = _resolvedBarColor(series, geometry, baseColor);
       final pointOpacity =
           opacity *
-          (hasAnySelectedPoints &&
-                  !selectedPointIndices.contains(geometry.pointIndex)
+          (hasAnySelectedPoints && !_isPointSelected(geometry.pointIndex)
               ? series.barStyle.interaction.dimmedOpacity
               : 1.0);
       final lollipop = series.lollipopStyle;
@@ -6146,6 +6479,7 @@ class SeriesElement implements DataHitElement {
       barGroupInfo: barGroupInfo, // Preserve bar group info for grouped bars
       focusedPointIndices: focusedPointIndices,
       selectedPointIndices: selectedPointIndices,
+      selectionExpression: selectionExpression,
       pointFocusColor: pointFocusColor,
       pointSelectionColor: pointSelectionColor,
       fontFamily: fontFamily,

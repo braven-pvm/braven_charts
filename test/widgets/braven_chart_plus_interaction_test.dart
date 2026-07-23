@@ -934,9 +934,11 @@ void main() {
           semantics.properties.value,
           'Actual, Tuesday, 61.0 kg, target 75.0 kg, uncertainty 55.0 to 70.0 kg',
         );
+        expect(semantics.properties.liveRegion, isTrue);
         expect(semantics.properties.selected, isFalse);
+        expect(semantics.properties.onTap, isNotNull);
 
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        semantics.properties.onTap!();
         await tester.pump();
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'actual', pointIndex: 1),
@@ -1187,8 +1189,10 @@ void main() {
           ),
         );
         expect(semantics.properties.value, contains('falling'));
+        expect(semantics.properties.liveRegion, isTrue);
+        expect(semantics.properties.onTap, isNotNull);
 
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        semantics.properties.onTap!();
         await tester.pump();
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'price', pointIndex: 1),
@@ -1197,7 +1201,7 @@ void main() {
     );
 
     testWidgets(
-      'range area keyboard navigation skips gaps and announces both bounds',
+      'range composition keyboard navigation traverses bands and centre line',
       (tester) async {
         final controller = BravenChartController();
         addTearDown(controller.dispose);
@@ -1232,8 +1236,30 @@ void main() {
                         ),
                       ],
                     ),
+                    RangeAreaChartSeries(
+                      id: 'likely',
+                      name: 'Likely interval',
+                      unit: '°C',
+                      points: [
+                        RangeAreaDataPoint(
+                          x: 0,
+                          low: 12,
+                          high: 14,
+                          label: 'Monday',
+                        ),
+                        RangeAreaDataPoint.gap(x: 1),
+                        RangeAreaDataPoint(
+                          x: 2,
+                          low: 14,
+                          high: 16,
+                          label: 'Wednesday',
+                        ),
+                      ],
+                    ),
                     const LineChartSeries(
                       id: 'observed',
+                      name: 'Observed centre',
+                      unit: '°C',
                       points: [
                         ChartDataPoint(x: 0, y: 13),
                         ChartDataPoint(x: 2, y: 15),
@@ -1264,7 +1290,7 @@ void main() {
           find.byWidgetPredicate(
             (widget) =>
                 widget is Semantics &&
-                widget.properties.label == 'Interactive range area chart',
+                widget.properties.label == 'Interactive range area composition',
           ),
         );
         expect(
@@ -1280,6 +1306,267 @@ void main() {
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'expected', pointIndex: 2),
         });
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'likely', pointIndex: 2),
+        });
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'observed', pointIndex: 1),
+        });
+
+        final updatedSemantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive range area composition',
+          ),
+        );
+        expect(
+          updatedSemantics.properties.value,
+          contains(
+            'Observed centre, X 2.00, 15.00 °C, point 2 of 2, not selected',
+          ),
+        );
+        expect(updatedSemantics.properties.liveRegion, isTrue);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'observed', pointIndex: 1),
+        });
+      },
+    );
+
+    testWidgets(
+      'range area complete-series scope selects the whole band from its interior',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  interactionConfig: const InteractionConfig(
+                    enableSelection: true,
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.point,
+                      scope: ChartSelectionScope.wholeSeries,
+                    ),
+                  ),
+                  series: [
+                    RangeAreaChartSeries(
+                      id: 'expected',
+                      name: 'Expected interval',
+                      points: [
+                        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+                        RangeAreaDataPoint(x: 5, low: 2, high: 8),
+                        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final cacheBeforeHover = renderBox.debugSeriesCachePicture;
+        expect(cacheBeforeHover, isNotNull);
+        final hit = element.dataHitForPointIndex(1)!;
+        final chartOrigin = tester.getTopLeft(renderFinder);
+        final bandInterior =
+            chartOrigin + renderBox.plotToWidget(hit.plotPosition);
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(bandInterior);
+        await tester.pump();
+        expect(
+          renderBox.debugElements.whereType<SeriesElement>().single.isHovered,
+          isTrue,
+        );
+        expect(
+          renderBox.debugSeriesCachePicture,
+          isNot(same(cacheBeforeHover)),
+        );
+
+        await tester.tapAt(bandInterior);
+        await tester.pump();
+        expect(controller.selectedSeriesIds, {'expected'});
+        expect(controller.selectedPointRefs, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'range area point hover remains active when its popup is disabled',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  interactionConfig: const InteractionConfig(
+                    tooltip: TooltipConfig(enabled: false),
+                    crosshair: CrosshairConfig(enabled: false),
+                    enableSelection: true,
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.point,
+                      scope: ChartSelectionScope.mark,
+                    ),
+                  ),
+                  series: [
+                    RangeAreaChartSeries(
+                      id: 'expected',
+                      name: 'Expected interval',
+                      points: [
+                        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+                        RangeAreaDataPoint(x: 5, low: 2, high: 8),
+                        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final hit = element.dataHitForPointIndex(1)!;
+        final chartOrigin = tester.getTopLeft(renderFinder);
+        final intervalCenter =
+            chartOrigin + renderBox.plotToWidget(hit.plotPosition);
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(intervalCenter);
+        await tester.pump();
+
+        expect(renderBox.coordinator.hoveredMarker?.seriesId, 'expected');
+        expect(renderBox.coordinator.hoveredMarker?.markerIndex, 1);
+        expect(
+          renderBox.coordinator.hoveredMarker?.dataHit?.rangeArea,
+          isNotNull,
+        );
+        expect(
+          renderBox.debugElements.whereType<SeriesElement>().single.isHovered,
+          isFalse,
+          reason: 'point hover must not imply complete-band hover',
+        );
+      },
+    );
+
+    testWidgets(
+      'range area selection zoom retains complete low and high tuples',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 700,
+                height: 460,
+                child: ExcludeSemantics(
+                  child: BravenChartPlus(
+                    bravenChartController: controller,
+                    showLegend: false,
+                    series: [
+                      RangeAreaChartSeries(
+                        id: 'outer',
+                        points: [
+                          RangeAreaDataPoint(x: 0, low: 40, high: 60),
+                          RangeAreaDataPoint(x: 1, low: 44, high: 66),
+                          RangeAreaDataPoint(x: 2, low: 46, high: 70),
+                          RangeAreaDataPoint(x: 3, low: 48, high: 72),
+                        ],
+                      ),
+                      RangeAreaChartSeries(
+                        id: 'inner',
+                        points: [
+                          RangeAreaDataPoint(x: 0, low: 47, high: 55),
+                          RangeAreaDataPoint(x: 1, low: 50, high: 60),
+                          RangeAreaDataPoint(x: 2, low: 53, high: 63),
+                          RangeAreaDataPoint(x: 3, low: 54, high: 66),
+                        ],
+                      ),
+                      const LineChartSeries(
+                        id: 'centre',
+                        points: [
+                          ChartDataPoint(x: 0, y: 52),
+                          ChartDataPoint(x: 1, y: 55),
+                          ChartDataPoint(x: 2, y: 58),
+                          ChartDataPoint(x: 3, y: 60),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          controller.selectPoints(const [
+            ChartPointRef(seriesId: 'outer', pointIndex: 1),
+            ChartPointRef(seriesId: 'outer', pointIndex: 2),
+            ChartPointRef(seriesId: 'inner', pointIndex: 1),
+            ChartPointRef(seriesId: 'inner', pointIndex: 2),
+            ChartPointRef(seriesId: 'centre', pointIndex: 1),
+            ChartPointRef(seriesId: 'centre', pointIndex: 2),
+          ], revision: controller.effectiveDocumentRevision.value!),
+          isA<ChartArtifactSuccess<void>>(),
+        );
+        await tester.pump();
+        expect(controller.selectionSnapshot?.extents?.minimumY, 44);
+        expect(controller.selectionSnapshot?.extents?.maximumY, 70);
+
+        expect(
+          controller.zoomToSelection(paddingFraction: 0.08),
+          isA<ChartArtifactSuccess<void>>(),
+        );
+        await tester.pump();
+
+        final transform = tester
+            .renderObject<ChartRenderBox>(_chartRenderFinder())
+            .transform!;
+        expect(transform.dataXMin, closeTo(0.92, 0.02));
+        expect(transform.dataXMax, closeTo(2.08, 0.02));
+        expect(transform.dataYMin, closeTo(41.92, 0.05));
+        expect(transform.dataYMax, closeTo(72.08, 0.05));
       },
     );
 
@@ -2055,6 +2342,15 @@ void main() {
           const ChartPointRef(seriesId: 'low-signal', pointIndex: 1),
           const ChartPointRef(seriesId: 'high-signal', pointIndex: 1),
         });
+        expect(
+          controller.selectionExpression.clauses
+              .whereType<ChartSelectionYIntervalClause>(),
+          hasLength(2),
+        );
+        expect(
+          controller.selectionSnapshot!.pointRefs,
+          controller.selectedPointRefs,
+        );
       },
     );
 
@@ -2245,16 +2541,17 @@ void main() {
             const ChartPointRef(seriesId: 'signal', pointIndex: 0),
             const ChartPointRef(seriesId: 'signal', pointIndex: 1),
           });
-          final intent = controller.selectionExpression.clauses.single;
           if (acquisitionMode == ChartSelectionAcquisitionMode.xInterval) {
-            expect(intent, isA<ChartSelectionXIntervalClause>());
-            final interval = intent as ChartSelectionXIntervalClause;
+            final interval = controller.selectionExpression.clauses
+                .whereType<ChartSelectionXIntervalClause>()
+                .single;
             expect(interval.minimumXInclusive, lessThan(2));
             expect(interval.maximumXInclusive, greaterThan(4));
             expect(interval.seriesIds, {'signal'});
           } else {
-            expect(intent, isA<ChartSelectionYIntervalClause>());
-            final interval = intent as ChartSelectionYIntervalClause;
+            final interval = controller.selectionExpression.clauses
+                .whereType<ChartSelectionYIntervalClause>()
+                .single;
             expect(interval.minimumYInclusive, lessThan(3));
             expect(interval.maximumYInclusive, greaterThan(5));
             expect(interval.seriesIds, {'signal'});
@@ -2262,6 +2559,316 @@ void main() {
           expect(callbackCount, 1);
           await mouse.removePointer();
         }
+      },
+    );
+
+    testWidgets(
+      'sparse pointer interval preserves exact bounds without enclosed markers',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: const [
+                    LineChartSeries(
+                      id: 'sparse',
+                      showDataPointMarkers: true,
+                      points: [
+                        ChartDataPoint(x: 0, y: 20),
+                        ChartDataPoint(x: 10, y: 80),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final startPlot = element.dataToCurrentPlot(3, 20);
+        final endPlot = element.dataToCurrentPlot(7, 20);
+        final start =
+            origin +
+            renderBox.plotToWidget(
+              Offset(startPlot.dx, renderBox.debugPlotArea.bottom - 8),
+            );
+        final end =
+            origin +
+            renderBox.plotToWidget(
+              Offset(endPlot.dx, renderBox.debugPlotArea.bottom - 8),
+            );
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+
+        expect(renderBox.coordinator.previewDataHits, isEmpty);
+        await mouse.up();
+        await tester.pump();
+
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(controller.selectionSnapshot, isNotNull);
+        final clause = controller.selectionExpression.clauses.single;
+        expect(clause, isA<ChartSelectionXIntervalClause>());
+        final interval = clause as ChartSelectionXIntervalClause;
+        expect(interval.minimumXInclusive, closeTo(3, 0.05));
+        expect(interval.maximumXInclusive, closeTo(7, 0.05));
+        expect(interval.seriesIds, {'sparse'});
+      },
+    );
+
+    testWidgets('interval modifiers preserve normalized exact domain intent', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      var operation = ChartSelectionOperation.replace;
+      late StateSetter rebuild;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                return SizedBox(
+                  width: 520,
+                  height: 360,
+                  child: BravenChartPlus(
+                    bravenChartController: controller,
+                    showLegend: false,
+                    series: const [
+                      LineChartSeries(
+                        id: 'signal',
+                        showDataPointMarkers: true,
+                        points: [
+                          ChartDataPoint(x: 0, y: 20),
+                          ChartDataPoint(x: 2, y: 30),
+                          ChartDataPoint(x: 4, y: 40),
+                          ChartDataPoint(x: 6, y: 50),
+                          ChartDataPoint(x: 8, y: 60),
+                          ChartDataPoint(x: 10, y: 70),
+                        ],
+                      ),
+                    ],
+                    interactionConfig: InteractionConfig(
+                      selection: ChartSelectionConfig(
+                        acquisitionMode:
+                            ChartSelectionAcquisitionMode.xInterval,
+                        operation: operation,
+                        useModifierKeys: false,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Future<List<ChartSelectionXIntervalClause>> applyGesture({
+        required ChartSelectionOperation nextOperation,
+        required double minimumX,
+        required double maximumX,
+      }) async {
+        rebuild(() => operation = nextOperation);
+        await tester.pump();
+        final revision = controller.effectiveDocumentRevision.value!;
+        final result = controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 2.2,
+                maximumXInclusive: 8.2,
+                seriesIds: {'signal'},
+              ),
+            ],
+          ),
+          revision: revision,
+        );
+        expect(result, isA<ChartArtifactSuccess<void>>());
+        await tester.pump();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final startPlot = element.dataToCurrentPlot(minimumX, 20);
+        final endPlot = element.dataToCurrentPlot(maximumX, 20);
+        final start =
+            origin +
+            renderBox.plotToWidget(
+              Offset(startPlot.dx, renderBox.debugPlotArea.bottom - 8),
+            );
+        final end =
+            origin +
+            renderBox.plotToWidget(
+              Offset(endPlot.dx, renderBox.debugPlotArea.bottom - 8),
+            );
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+        await mouse.up();
+        await tester.pump();
+        await mouse.removePointer();
+
+        expect(
+          controller.selectionSnapshot!.pointRefs,
+          controller.selectedPointRefs,
+        );
+        return controller.selectionExpression.clauses
+            .whereType<ChartSelectionXIntervalClause>()
+            .toList()
+          ..sort(
+            (first, second) =>
+                first.minimumXInclusive.compareTo(second.minimumXInclusive),
+          );
+      }
+
+      var intervals = await applyGesture(
+        nextOperation: ChartSelectionOperation.add,
+        minimumX: 6.5,
+        maximumX: 9,
+      );
+      expect(intervals, hasLength(1));
+      expect(intervals.single.minimumXInclusive, closeTo(2.2, 0.05));
+      expect(intervals.single.maximumXInclusive, closeTo(9, 0.05));
+
+      intervals = await applyGesture(
+        nextOperation: ChartSelectionOperation.subtract,
+        minimumX: 3.5,
+        maximumX: 6.5,
+      );
+      expect(intervals, hasLength(2));
+      expect(intervals[0].minimumXInclusive, closeTo(2.2, 0.05));
+      expect(intervals[0].maximumXInclusive, closeTo(3.5, 0.05));
+      expect(intervals[1].minimumXInclusive, closeTo(6.5, 0.05));
+      expect(intervals[1].maximumXInclusive, closeTo(8.2, 0.05));
+
+      intervals = await applyGesture(
+        nextOperation: ChartSelectionOperation.toggle,
+        minimumX: 6.5,
+        maximumX: 9,
+      );
+      expect(intervals, hasLength(2));
+      expect(intervals[0].minimumXInclusive, closeTo(2.2, 0.05));
+      expect(intervals[0].maximumXInclusive, closeTo(6.5, 0.05));
+      expect(intervals[1].minimumXInclusive, closeTo(8.2, 0.05));
+      expect(intervals[1].maximumXInclusive, closeTo(9, 0.05));
+    });
+
+    testWidgets(
+      'mounted 100k interval selection stays compact until materialized',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        final points = List<ChartDataPoint>.generate(
+          100000,
+          (index) =>
+              ChartDataPoint(x: index.toDouble(), y: (index % 100).toDouble()),
+          growable: false,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: [
+                    LineChartSeries(
+                      id: 'dense',
+                      points: points,
+                      isXOrdered: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final stopwatch = Stopwatch()..start();
+        final result = controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionXIntervalClause(
+                minimumXInclusive: 10000,
+                maximumXInclusive: 90000,
+                seriesIds: const {'dense'},
+              ),
+            ],
+          ),
+          revision: controller.effectiveDocumentRevision.value!,
+        );
+        stopwatch.stop();
+
+        expect(result, isA<ChartArtifactSuccess<void>>());
+        expect(controller.debugSelectionPointRefsMaterialized, isFalse);
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(500),
+          reason:
+              'Selecting a compact interval must not allocate 80k point references.',
+        );
+        await tester.pump();
+        final element = tester
+            .renderObject<ChartRenderBox>(_chartRenderFinder())
+            .debugElements
+            .whereType<SeriesElement>()
+            .single;
+        expect(element.selectedPointIndices, isEmpty);
+        expect(element.selectionExpression.isNotEmpty, isTrue);
+        expect(element.dataHitForPointIndex(50000)?.isSelected, isTrue);
+        expect(element.dataHitForPointIndex(99999)?.isSelected, isFalse);
+
+        expect(controller.selectedPointRefs, hasLength(80001));
+        expect(controller.debugSelectionPointRefsMaterialized, isTrue);
+
+        final wholeSeriesResult = controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: const [ChartSelectionWholeSeriesClause(seriesId: 'dense')],
+          ),
+          revision: controller.effectiveDocumentRevision.value!,
+        );
+        expect(wholeSeriesResult, isA<ChartArtifactSuccess<void>>());
+        expect(controller.selectedSeriesIds, {'dense'});
+        expect(controller.debugSelectionPointRefsMaterialized, isFalse);
+        expect(controller.selectedPointRefs, isEmpty);
+        expect(controller.debugSelectionPointRefsMaterialized, isFalse);
       },
     );
 

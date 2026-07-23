@@ -128,6 +128,25 @@ void main() {
       _printResult('Animated Range Area revision (5,000 visible)', result);
       expect(result.p95Micros, lessThan(_frameBudgetMicros));
     });
+
+    test('5K interval hover overlay stays below one millisecond', () {
+      final element = _rangeElement(_intervals(5000));
+      // Resolve and cache the visible geometry before measuring the dynamic
+      // overlay path used on every pointer move.
+      _paint(element);
+
+      final result = _measure(
+        () => _paintRangeAreaHover(element, pointIndex: 2500),
+      );
+
+      _printResult('Range Area hover overlay (5,000 visible)', result);
+      expect(
+        result.p95Micros,
+        lessThan(1000),
+        reason:
+            'Range Area hover feedback must stay far below the frame budget.',
+      );
+    });
   });
 }
 
@@ -220,6 +239,16 @@ void _paintAll(List<SeriesElement> elements) {
   for (final element in elements) {
     element.paint(canvas, _size);
   }
+  recorder.endRecording().dispose();
+}
+
+void _paintRangeAreaHover(SeriesElement element, {required int pointIndex}) {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  element.paintRangeAreaInteractionOverlay(
+    canvas,
+    hoveredPointIndex: pointIndex,
+  );
   recorder.endRecording().dispose();
 }
 

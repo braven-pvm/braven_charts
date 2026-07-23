@@ -103,7 +103,7 @@ class ChartSelectionProjectionOptions {
     this.annotationProjection =
         ChartSelectionAnnotationProjection.clipToSelectionBounds,
     this.intervalBoundaryProjection =
-        ChartSelectionIntervalBoundaryProjection.interpolateContinuousSeries,
+        ChartSelectionIntervalBoundaryProjection.sourcePointsOnly,
   });
 
   final ChartSelectionSeriesProjection seriesProjection;

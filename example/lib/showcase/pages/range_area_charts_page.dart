@@ -501,7 +501,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
           showCoordinateLabels: _showCoordinateLabels,
           showIntersectionMarkers: _showIntersectionMarkers,
         ),
-        tooltip: const TooltipConfig(enabled: true),
+        tooltip: TooltipConfig(enabled: options.showDataPointPopup),
         valueSummary: CartesianValueSummaryConfig(
           enabled: _showValueSummary,
           presentation: switch (_summaryPresentation) {
@@ -822,6 +822,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     ),
     StandardChartOptions(
       controller: _optionsController,
+      showDataPointPopupOption: true,
       showLineStyleOption: false,
     ),
   ];
