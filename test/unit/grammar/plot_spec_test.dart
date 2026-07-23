@@ -395,4 +395,59 @@ void main() {
       expect(_line is Mark<Sample>, isTrue);
     });
   });
+
+  group('facet field', () {
+    test('facet defaults to null and a non-faceted spec is unchanged', () {
+      const spec = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_line],
+      );
+      expect(spec.facet, isNull);
+    });
+
+    test('facet is carried on the spec and compared by value', () {
+      const facet = FacetSpec<Sample>(by: sampleZone, columns: 2);
+      const left = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_line],
+        facet: facet,
+      );
+      const right = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_line],
+        facet: facet,
+      );
+      expect(left, right);
+      expect(left.hashCode, right.hashCode);
+      expect(
+        left,
+        isNot(
+          const PlotSpec<Sample>(
+            data: <Sample>[],
+            marks: <Mark<Sample>>[_line],
+          ),
+        ),
+      );
+    });
+
+    test('facetCleared drops the facet and keeps everything else', () {
+      const facet = FacetSpec<Sample>(by: sampleZone);
+      const faceted = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_line],
+        transposed: false,
+        xAxis: XAxisConfig(label: 'Time'),
+        facet: facet,
+      );
+      final cleared = faceted.facetCleared();
+      expect(cleared.facet, isNull);
+      expect(cleared.marks, faceted.marks);
+      expect(cleared.xAxis, faceted.xAxis);
+      expect(cleared, const PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_line],
+        xAxis: XAxisConfig(label: 'Time'),
+      ));
+    });
+  });
 }
