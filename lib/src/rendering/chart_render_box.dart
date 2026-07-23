@@ -3385,28 +3385,35 @@ class ChartRenderBox extends RenderBox {
       return true;
     }
 
-    // Tooltip is visible or animating
-    if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
-      if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) {
-        return true;
-      }
-      if (_resolveSelectedTooltipMarker() != null) return true;
-      // Check if there's a marker that would trigger a tooltip
-      final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-      final hasHoveredMarker = coordinator.hoveredMarker != null;
-      final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
-      if (hasHoveredMarker &&
-          (config.triggerMode == TooltipTriggerMode.hover ||
-              config.triggerMode == TooltipTriggerMode.both)) {
-        return true;
-      }
-      if (hasTappedMarker &&
-          (config.triggerMode == TooltipTriggerMode.tap ||
-              config.triggerMode == TooltipTriggerMode.both)) {
-        return true;
-      }
-    }
+    if (_hasActiveTooltipOverlay()) return true;
 
+    return false;
+  }
+
+  /// Whether the overlay pass contains tooltip primitives.
+  ///
+  /// Tooltip shadows and translucent surfaces retain an isolated compositing
+  /// layer so their blending stays stable across renderers. Lightweight
+  /// crosshair, selection, and mark-feedback overlays paint directly and avoid
+  /// allocating a full-widget offscreen texture.
+  bool _hasActiveTooltipOverlay() {
+    if (!_tooltipsEnabled || coordinator.isPanningOrZooming) return false;
+    if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) return true;
+    if (_resolveSelectedTooltipMarker() != null) return true;
+
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+    final hasHoveredMarker = coordinator.hoveredMarker != null;
+    final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
+    if (hasHoveredMarker &&
+        (config.triggerMode == TooltipTriggerMode.hover ||
+            config.triggerMode == TooltipTriggerMode.both)) {
+      return true;
+    }
+    if (hasTappedMarker &&
+        (config.triggerMode == TooltipTriggerMode.tap ||
+            config.triggerMode == TooltipTriggerMode.both)) {
+      return true;
+    }
     return false;
   }
 
@@ -4171,10 +4178,16 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 3: Overlays (dynamic, always rendered fresh).
     // Crosshair, selection box, and interaction feedback paint directly.
-    // A saveLayer does not isolate RenderBox invalidation and would allocate a
-    // full-widget offscreen texture on every hover frame.
+    // Tooltip surfaces retain an isolated layer for stable shadow/translucency
+    // blending, while lightweight overlays avoid the full-widget allocation.
     if (_hasActiveOverlayContent()) {
-      _paintOverlayLayer(canvas, size);
+      if (_hasActiveTooltipOverlay()) {
+        canvas.saveLayer(Offset.zero & size, Paint());
+        _paintOverlayLayer(canvas, size);
+        canvas.restore();
+      } else {
+        _paintOverlayLayer(canvas, size);
+      }
     } else if (!_valueSummaryTrackingActive) {
       // No overlay content means no tracking source either (cursor gone or
       // crosshair gated off): publish the null snapshot so future consumers

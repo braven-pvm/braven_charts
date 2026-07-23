@@ -37,7 +37,7 @@ committed before user inspection.
 | SEL-H07 | P1 | Complete | Range Area lasso uses an invisible midpoint while rectangle selection uses the full interval. | Lasso containment and edge intersection now use the visible low-to-high interval, matching rectangle semantics. |
 | SEL-H08 | P1 | Complete | A non-empty expression that resolves no current data reports an active selection. | Snapshots short-circuit against live data without materializing references; stale intent is empty and every Workbench action disables. |
 | SEL-H09 | P1 | Complete | Exact interval expressions are lost during artifact capture and hydration. | `ChartViewState` now round-trips a typed compact expression document through JSON, mounted restoration, and generated Dart while older artifacts retain legacy selection fields. |
-| SEL-H10 | P2 | Complete | Range Area hover activates a full-widget `saveLayer` without a focused benchmark. | Dynamic overlays now paint directly without an offscreen full-widget texture; the 5K Range Area hover overlay measures about 0.008 ms p95 locally. |
+| SEL-H10 | P2 | Complete | Range Area hover activates a full-widget `saveLayer` without a focused benchmark. | Lightweight crosshair, selection, and mark-feedback overlays paint directly; tooltip shadows/translucency alone retain isolated compositing. The 5K Range Area hover overlay measures about 0.016 ms p95 locally. |
 | SEL-H11 | P2 | Complete | Public interaction comments still describe Line/Area-only scaling. | Keyboard and selection styling dartdoc now describe marks, path/band series, and mixed Range Area composition behavior. |
 | SEL-H12 | P1 | Complete | Current changed files and the repository-wide format baseline fail the documented format gate. | Every Dart file touched by hardening is formatter-clean. The broad gate separately reports 143 pre-existing baseline files; they remain recorded here rather than creating an unrelated repository-wide formatting rewrite in the Selection lane. |
 | SEL-H13 | P0 | Complete | Hardening branch was behind current `master` and missing codec convergence gates. | Fast-forwarded again to `origin/master` `6892ee42` on 2026-07-23 before final verification; `HEAD` and `origin/master` match. |
@@ -88,7 +88,8 @@ Completed on 2026-07-23 against `origin/master` `6892ee42`:
 - release web build passed, including Flutter's Wasm dry run;
 - direct `/?page=selection` route returned HTTP 200 from the local server;
 - sequential selection summary benchmarks covered 100K and 1M observations;
-- sequential 5K Range Area hover overlay measured 0.017 ms p95;
+- sequential 5K Range Area hover overlay measured 0.016 ms p95 after the
+  tooltip-only compositing compatibility fix;
 - `git diff --check` passed.
 
 `dart pub publish --dry-run` validates the complete archive and reports only

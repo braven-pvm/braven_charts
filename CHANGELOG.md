@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Persisted typed compact selection expressions through artifact JSON,
   hydration, and generated Dart while retaining legacy artifact fields.
 - Normalized stale expressions to an empty live selection, disabled invalid
-  Workbench actions, and removed a full-widget offscreen overlay layer from
-  dynamic selection/hover painting.
+  Workbench actions, and removed full-widget offscreen compositing from
+  lightweight selection/hover painting while retaining it for tooltip shadows
+  and translucent surfaces.
 - Selection-scoped chart creation now retains the canonical selected source
   observations by default, so Line and Area X-range selections create the same
   rows shown in the Workbench data table. Exact interpolated continuous
