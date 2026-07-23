@@ -52,34 +52,39 @@ void main() {
     });
 
     test('two facet specs over the same tear-off are equal', () {
-      expect(
-        const FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone'),
-        const FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone'),
-      );
-      expect(
-        const FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone')
-            .hashCode,
-        const FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone')
-            .hashCode,
-      );
+      // Built at RUNTIME (no `const`) so the two are DISTINCT instances.
+      // Dart canonicalizes identical const expressions to the same object, so
+      // a const-vs-const `expect(a, b)` passes on identity even with no custom
+      // operator== — it would stay green if operator==/hashCode were deleted.
+      // Distinct runtime instances force identity and value equality to
+      // diverge, so a passing assertion genuinely exercises value equality.
+      final a = FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone');
+      final b = FacetSpec<Sample>(by: sampleZone, columns: 2, label: 'Zone');
+      expect(identical(a, b), isFalse);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
     });
 
     test('a different accessor, columns, scales or label is not equal', () {
+      // Runtime-built (no `const`) so each `isNot` genuinely invokes
+      // operator==: a value-equality bug that dropped one of these fields would
+      // make the pair compare equal and fail the assertion. Const canonical
+      // instances would instead pass trivially on identity, guarding nothing.
       expect(
-        const FacetSpec<Sample>(by: sampleZone),
-        isNot(const FacetSpec<Sample>(by: sampleOther)),
+        FacetSpec<Sample>(by: sampleZone),
+        isNot(FacetSpec<Sample>(by: sampleOther)),
       );
       expect(
-        const FacetSpec<Sample>(by: sampleZone, columns: 2),
-        isNot(const FacetSpec<Sample>(by: sampleZone, columns: 3)),
+        FacetSpec<Sample>(by: sampleZone, columns: 2),
+        isNot(FacetSpec<Sample>(by: sampleZone, columns: 3)),
       );
       expect(
-        const FacetSpec<Sample>(by: sampleZone, scales: FacetScales.free),
-        isNot(const FacetSpec<Sample>(by: sampleZone)),
+        FacetSpec<Sample>(by: sampleZone, scales: FacetScales.free),
+        isNot(FacetSpec<Sample>(by: sampleZone)),
       );
       expect(
-        const FacetSpec<Sample>(by: sampleZone, label: 'Zone'),
-        isNot(const FacetSpec<Sample>(by: sampleZone, label: 'Athlete')),
+        FacetSpec<Sample>(by: sampleZone, label: 'Zone'),
+        isNot(FacetSpec<Sample>(by: sampleZone, label: 'Athlete')),
       );
     });
   });
