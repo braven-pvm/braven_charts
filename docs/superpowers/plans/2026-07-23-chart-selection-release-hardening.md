@@ -1,6 +1,7 @@
 # Chart Selection Release Hardening
 
-**Status:** Remediations complete; delivery pending commit
+**Status:** Complete; merged in
+[PR #91](https://github.com/braven-pvm/braven_charts/pull/91)
 
 **Source review:** Full adversarial pass completed 2026-07-23
 
@@ -14,15 +15,15 @@
 
 ## Release decision
 
-Selection is feature-complete and the implementation remediations are
-release-ready. The implementation remains inside the established chart,
-controller, renderer, Workbench, artifact, and table layers. Hardening closes
-the places where those layers disagreed about one selection and brings the
-mounted chart back within the documented compact-performance contract.
+Selection is feature-complete and the implementation remediations shipped at
+merge commit `3b5d4284`. The implementation remains inside the established
+chart, controller, renderer, Workbench, artifact, and table layers. Hardening
+closed the places where those layers disagreed about one selection and brought
+the mounted chart back within the documented compact-performance contract.
 
-The publish archive has no package-content warnings. Its remaining dirty-tree
-warning is a delivery-state condition: this review has deliberately not been
-committed before user inspection.
+The dirty-tree warning captured during the pre-commit review was historical
+delivery-state evidence, not an unresolved release blocker. PR #91 passed
+package-quality CI before merge.
 
 ## Issue ledger
 
@@ -92,6 +93,7 @@ Completed on 2026-07-23 against `origin/master` `6892ee42`:
   tooltip-only compositing compatibility fix;
 - `git diff --check` passed.
 
-`dart pub publish --dry-run` validates the complete archive and reports only
-the expected dirty-tree warning. Repeat it after the reviewed changes are
-committed to satisfy the clean-branch delivery gate.
+At the historical review checkpoint, `dart pub publish --dry-run` validated
+the complete archive and reported only the expected dirty-tree warning. The
+reviewed changes were subsequently committed and merged through PR #91 with a
+successful package-quality gate.

@@ -1,10 +1,12 @@
 # Mobile Interaction Phase 3: Bounded pan inertia
 
-## Status — implementation
+## Status — complete
 
-Phase 3 starts from the accepted phase-1/phase-2 release candidate in PR #97.
-The first slice adds opt-in, velocity-aware touch pan inertia without creating
-a second viewport or animation system.
+Phase 3 shipped in
+[PR #103](https://github.com/braven-pvm/braven_charts/pull/103) at merge commit
+`fee0d936`. Package-quality CI passed and the release-mode LAN build was
+accepted on a physical phone. The implementation adds opt-in, velocity-aware
+touch pan inertia without creating a second viewport or animation system.
 
 ## Outcome
 
@@ -57,6 +59,12 @@ The mobile interaction page enables inertia for testing and exposes:
 
 ## Later phase candidates
 
-- Mobile annotation editing and touch-sized resize handles.
-- Explicit accessibility actions for viewport and selection controls.
-- Android/iOS native packaging and device-lab verification.
+These remain intentionally deferred and are owned outside this completed
+phase:
+
+- Mobile annotation editing and touch-sized resize handles: shared-register
+  item `BC-0002`.
+- Explicit accessibility actions for viewport and selection controls:
+  shared-register item `BC-0001`.
+- Android/iOS native packaging and device-lab verification: shared-register
+  item `BC-0003`.

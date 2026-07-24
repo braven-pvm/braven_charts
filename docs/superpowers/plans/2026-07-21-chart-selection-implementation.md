@@ -1,10 +1,16 @@
 # Chart Selection Implementation Plan
 
-**Status:** Implementation and release hardening complete; delivery pending commit
+**Status:** Complete; merged in
+[PR #84](https://github.com/braven-pvm/braven_charts/pull/84) and hardened in
+[PR #91](https://github.com/braven-pvm/braven_charts/pull/91)
 
-The 2026-07-23 adversarial review reopened release readiness. All findings and
-acceptance evidence are tracked in
+The 2026-07-23 adversarial review reopened and then closed release readiness.
+All findings and acceptance evidence are tracked in
 [`2026-07-23-chart-selection-release-hardening.md`](2026-07-23-chart-selection-release-hardening.md).
+Persistent selection brushes and their follow-up hardening subsequently merged
+in PRs
+[#101](https://github.com/braven-pvm/braven_charts/pull/101) and
+[#105](https://github.com/braven-pvm/braven_charts/pull/105).
 
 **Architecture:**
 [`2026-07-21-chart-selection-architecture.md`](../specs/2026-07-21-chart-selection-architecture.md)
@@ -262,7 +268,8 @@ Focused verification surface:
 
 ### Slice 7 - release hardening
 
-**Status:** Complete; delivery pending commit
+**Status:** Complete; merged in
+[PR #91](https://github.com/braven-pvm/braven_charts/pull/91)
 
 - Complete keyboard and screen-reader semantics for every chart family.
 - Verify touch, compact layouts, RTL, reduced motion, themes, and long labels.
@@ -312,7 +319,8 @@ Current checkpoint:
 
 ### Range Area hover presentation refinement
 
-**Status:** Debt; non-blocking for Selection release
+**Status:** Debt; non-blocking for Selection release; tracked as shared-register
+item `BC-0005`
 
 - Range Area interval hover now resolves and paints the complete low/high datum,
   including paired boundary emphasis and a connecting span, while complete-band
@@ -324,6 +332,17 @@ Current checkpoint:
   hover, focus, and durable selection.
 - A later presentation pass should tune those states against light, dark, and
   high-contrast themes without changing selection semantics or hit geometry.
+
+Other intentionally deferred selection work is tracked independently:
+
+- conjunctive rectangle intent:
+  shared-register item `BC-0008`;
+- bounded selection history and undo:
+  shared-register item `BC-0009`;
+- cross-revision persistence:
+  shared-register item `BC-0010`;
+- radial free-form lasso:
+  shared-register item `BC-0011`.
 
 ## First checkpoint acceptance criteria
 
