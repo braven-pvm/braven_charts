@@ -18,6 +18,8 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
   int _viewportUpdates = 0;
   bool _enableTrackingScrub = true;
   bool _enableHaptics = true;
+  bool _enablePanInertia = true;
+  double _panInertiaDeceleration = 6;
   double? _trackedDay;
 
   late final List<ChartDataPoint> _primary = _signal(phase: 0);
@@ -105,6 +107,8 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
           _TrackingControls(
             enabled: _enableTrackingScrub,
             hapticsEnabled: _enableHaptics,
+            inertiaEnabled: _enablePanInertia,
+            inertiaDeceleration: _panInertiaDeceleration,
             trackedDay: _trackedDay,
             onEnabledChanged: (value) {
               setState(() {
@@ -114,6 +118,12 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
             },
             onHapticsChanged: (value) {
               setState(() => _enableHaptics = value);
+            },
+            onInertiaChanged: (value) {
+              setState(() => _enablePanInertia = value);
+            },
+            onInertiaDecelerationChanged: (value) {
+              setState(() => _panInertiaDeceleration = value);
             },
           ),
           const SizedBox(height: 12),
@@ -146,6 +156,8 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                       interactionConfig: InteractionConfig(
                         touch: TouchInteractionConfig(
                           profile: _profile,
+                          enablePanInertia: _enablePanInertia,
+                          panInertiaDeceleration: _panInertiaDeceleration,
                           enableLongPressTracking: _enableTrackingScrub,
                           enableHapticFeedback: _enableHaptics,
                         ),
@@ -216,16 +228,24 @@ class _TrackingControls extends StatelessWidget {
   const _TrackingControls({
     required this.enabled,
     required this.hapticsEnabled,
+    required this.inertiaEnabled,
+    required this.inertiaDeceleration,
     required this.trackedDay,
     required this.onEnabledChanged,
     required this.onHapticsChanged,
+    required this.onInertiaChanged,
+    required this.onInertiaDecelerationChanged,
   });
 
   final bool enabled;
   final bool hapticsEnabled;
+  final bool inertiaEnabled;
+  final double inertiaDeceleration;
   final double? trackedDay;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<bool> onHapticsChanged;
+  final ValueChanged<bool> onInertiaChanged;
+  final ValueChanged<double> onInertiaDecelerationChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +275,43 @@ class _TrackingControls extends StatelessWidget {
               secondary: const Icon(Icons.vibration_outlined),
               value: hapticsEnabled,
               onChanged: enabled ? onHapticsChanged : null,
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            SwitchListTile.adaptive(
+              title: const Text('Pan inertia'),
+              subtitle: const Text(
+                'Release a moving pan to let the viewport coast and settle.',
+              ),
+              secondary: const Icon(Icons.air_outlined),
+              value: inertiaEnabled,
+              onChanged: onInertiaChanged,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: Row(
+                children: [
+                  const SizedBox(width: 40),
+                  Expanded(
+                    child: Slider(
+                      value: inertiaDeceleration,
+                      min: 3,
+                      max: 12,
+                      divisions: 9,
+                      label: inertiaDeceleration.toStringAsFixed(0),
+                      onChanged: inertiaEnabled
+                          ? onInertiaDecelerationChanged
+                          : null,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 74,
+                    child: Text(
+                      '${inertiaDeceleration.toStringAsFixed(0)} / sec',
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),

@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 
 // All dependencies are in src - the main source folder
@@ -1245,6 +1246,8 @@ class BravenChartPlus extends StatefulWidget {
 class _BravenChartPlusState extends State<BravenChartPlus>
     with TickerProviderStateMixin {
   static const int _maximumAnimatedBarPointCount = 10000;
+  static const double _minimumTouchInertiaVelocity = 180;
+  static const Duration _maximumTouchInertiaDuration = Duration(seconds: 2);
 
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
@@ -1252,6 +1255,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   late PriorityScaleGestureRecognizer _touchViewportRecognizer;
   late PriorityTapGestureRecognizer _tapRecognizer;
   late TapGestureRecognizer _touchTapRecognizer;
+  late Ticker _touchInertiaTicker;
   late FocusNode _focusNode;
 
   MouseCursor _currentCursor = SystemMouseCursors.basic;
@@ -1259,6 +1263,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   Offset? _lastTouchFocalPoint;
   bool _touchScaleActive = false;
   bool _touchViewportChanged = false;
+  Offset _touchInertiaVelocity = Offset.zero;
+  Duration? _touchInertiaLastElapsed;
+  Duration _touchInertiaElapsed = Duration.zero;
+  ChartRenderBox? _touchInertiaRenderBox;
   bool _touchTrackingActive = false;
   double? _lastTouchTrackingX;
   final GlobalKey _renderBoxKey = GlobalKey();
@@ -1557,6 +1565,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _touchTapRecognizer = TapGestureRecognizer(
       supportedDevices: const <PointerDeviceKind>{PointerDeviceKind.touch},
     )..onTapUp = _handleTouchTapUp;
+    _touchInertiaTicker = createTicker(_handleTouchInertiaTick);
 
     _incomingDataAnimationController =
         AnimationController(
@@ -1699,6 +1708,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final touch = widget.interactionConfig?.touch;
+    if (_touchInertiaTicker.isActive &&
+        (!(widget.interactionConfig?.enabled ?? true) ||
+            !(widget.interactionConfig?.enablePan ?? true) ||
+            !(touch?.enabled ?? true) ||
+            !(touch?.enablePan ?? true) ||
+            !(touch?.enablePanInertia ?? false))) {
+      _stopTouchInertia();
+    }
     if (!widget.contextMenuConfig.enableLongPress &&
         oldWidget.contextMenuConfig.enableLongPress) {
       _cancelContextLongPress();
@@ -1994,6 +2012,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _coordinator.dispose();
     _panRecognizer.dispose();
     _touchViewportRecognizer.dispose();
+    _touchInertiaTicker.dispose();
     _tapRecognizer.dispose();
     _touchTapRecognizer.dispose();
     super.dispose();
@@ -5777,6 +5796,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleTouchViewportStart(ScaleStartDetails details) {
+    _stopTouchInertia();
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     if (renderBox == null) return;
@@ -5845,14 +5865,99 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _handleTouchViewportEnd(ScaleEndDetails details) {
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-    if (_touchViewportChanged) {
+    final interaction = widget.interactionConfig ?? const InteractionConfig();
+    final touch = interaction.touch;
+    final releaseVelocity = details.velocity.pixelsPerSecond;
+    final canStartInertia =
+        renderBox != null &&
+        _touchViewportChanged &&
+        interaction.enabled &&
+        interaction.enablePan &&
+        touch.enabled &&
+        touch.enablePan &&
+        touch.enablePanInertia &&
+        releaseVelocity.distance >= _minimumTouchInertiaVelocity;
+    if (canStartInertia) {
+      _startTouchInertia(
+        renderBox,
+        releaseVelocity,
+        touch.maximumPanInertiaVelocity,
+      );
+    } else if (_touchViewportChanged) {
       renderBox?.finalizeViewportInteraction();
     }
     _lastTouchScale = 1;
     _lastTouchFocalPoint = null;
     _touchScaleActive = false;
     _touchViewportChanged = false;
-    _scheduleStreamingResumeIfNeeded();
+    if (!canStartInertia) {
+      _scheduleStreamingResumeIfNeeded();
+    }
+  }
+
+  void _startTouchInertia(
+    ChartRenderBox renderBox,
+    Offset releaseVelocity,
+    double maximumVelocity,
+  ) {
+    final speed = releaseVelocity.distance;
+    final scale = speed <= maximumVelocity ? 1.0 : maximumVelocity / speed;
+    _touchInertiaVelocity = releaseVelocity * scale;
+    _touchInertiaLastElapsed = null;
+    _touchInertiaElapsed = Duration.zero;
+    _touchInertiaRenderBox = renderBox;
+    _touchInertiaTicker.start();
+  }
+
+  void _handleTouchInertiaTick(Duration elapsed) {
+    final renderBox = _touchInertiaRenderBox;
+    if (renderBox == null || !renderBox.attached) {
+      _stopTouchInertia(finalize: false);
+      return;
+    }
+    final previousElapsed = _touchInertiaLastElapsed;
+    _touchInertiaLastElapsed = elapsed;
+    if (previousElapsed == null) return;
+
+    final frameDuration = elapsed - previousElapsed;
+    final seconds = math.min(
+      frameDuration.inMicroseconds / Duration.microsecondsPerSecond,
+      1 / 20,
+    );
+    _touchInertiaElapsed += frameDuration;
+    final deceleration =
+        widget.interactionConfig?.touch.panInertiaDeceleration ??
+        const TouchInteractionConfig().panInertiaDeceleration;
+    final decay = math.exp(-deceleration * seconds);
+    final nextVelocity = _touchInertiaVelocity * decay;
+    final averageVelocity = (_touchInertiaVelocity + nextVelocity) / 2;
+
+    renderBox.panChart(
+      -averageVelocity.dx * seconds,
+      -averageVelocity.dy * seconds,
+    );
+    _touchInertiaVelocity = nextVelocity;
+
+    if (nextVelocity.distance < _minimumTouchInertiaVelocity ||
+        _touchInertiaElapsed >= _maximumTouchInertiaDuration) {
+      _stopTouchInertia();
+    }
+  }
+
+  void _stopTouchInertia({bool finalize = true}) {
+    final wasActive = _touchInertiaTicker.isActive;
+    if (wasActive) _touchInertiaTicker.stop();
+    final renderBox = _touchInertiaRenderBox;
+    _touchInertiaVelocity = Offset.zero;
+    _touchInertiaLastElapsed = null;
+    _touchInertiaElapsed = Duration.zero;
+    _touchInertiaRenderBox = null;
+    if (wasActive && finalize && renderBox?.attached == true) {
+      renderBox!.finalizeViewportInteraction();
+    }
+    if (wasActive) {
+      _scheduleStreamingResumeIfNeeded();
+    }
   }
 
   void _handleTouchTapUp(TapUpDetails details) {
@@ -8352,6 +8457,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleChartPointerDown(PointerDownEvent event) {
+    if (event.kind == PointerDeviceKind.touch) {
+      _stopTouchInertia();
+    }
     _handleContextLongPressPointerDown(event);
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }

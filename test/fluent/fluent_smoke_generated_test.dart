@@ -3297,7 +3297,7 @@ void _smokeGestureConfig(_Verb verb, GestureConfig subject) {
   );
 }
 
-/// Smoke coverage for [TouchInteractionConfig]'s 6 executable verb(s).
+/// Smoke coverage for [TouchInteractionConfig]'s 9 executable verb(s).
 void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
   verb(
     'TouchInteractionConfigFluent.withEnabled',
@@ -3314,6 +3314,18 @@ void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
   verb(
     'TouchInteractionConfigFluent.withEnablePan',
     () => subject.withEnablePan(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnablePanInertia',
+    () => subject.withEnablePanInertia(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withPanInertiaDeceleration',
+    () => subject.withPanInertiaDeceleration(6.0),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withMaximumPanInertiaVelocity',
+    () => subject.withMaximumPanInertiaVelocity(3200.0),
   );
   verb(
     'TouchInteractionConfigFluent.withEnableLongPressTracking',

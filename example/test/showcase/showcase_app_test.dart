@@ -121,14 +121,21 @@ void main() {
 
     expect(find.byType(MobileInteractionPage), findsOneWidget);
     expect(find.text('Mobile interaction'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('mobile-interaction-chart')),
-      findsOneWidget,
-    );
     expect(find.text('Browse'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
     expect(find.text('Long-press tracking'), findsOneWidget);
     expect(find.text('Haptic steps'), findsOneWidget);
+    expect(find.text('Pan inertia'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-interaction-chart')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-interaction-chart')),
+      findsOneWidget,
+    );
     expect(
       tester
           .getSize(
@@ -305,6 +312,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('mobile-chart-chrome-axes')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-touch-options-done')));
+    await tester.pumpAndSettle();
 
     expect(chart().xAxisConfig?.visible, isTrue);
     expect(chart().yAxis!.visible, isTrue);
@@ -325,7 +334,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('phone interaction profiles are explicit and chart-wide', (
+  testWidgets('phone gesture and tap profiles are explicit and chart-wide', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 1200);
@@ -346,31 +355,50 @@ void main() {
     expect(config().enabled, isTrue);
     expect(config().tooltip.enabled, isTrue);
     expect(config().enableSelection, isTrue);
-    expect(config().crosshair.enabled, isFalse);
-    expect(config().enableZoom, isFalse);
-    expect(config().enablePan, isFalse);
+    expect(config().crosshair.enabled, isTrue);
+    expect(config().enableZoom, isTrue);
+    expect(config().enablePan, isTrue);
+    expect(config().touch.profile, TouchInteractionProfile.browse);
+    expect(config().touch.enableLongPressTracking, isTrue);
+    expect(config().touch.enableHapticFeedback, isTrue);
+    expect(config().touch.enablePanInertia, isTrue);
 
-    await tester.tap(find.byKey(const ValueKey('mobile-view-touch-button')));
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-touch-settings-button')),
+    );
     await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-touch-profile-explore')),
+    );
+    await tester.pump();
+    expect(config().touch.profile, TouchInteractionProfile.explore);
+
     await tester.tap(find.byKey(const ValueKey('mobile-touch-mode-details')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(config().tooltip.enabled, isTrue);
     expect(config().enableSelection, isFalse);
+    expect(config().enableZoom, isTrue);
+    expect(config().enablePan, isTrue);
 
-    await tester.tap(find.byKey(const ValueKey('mobile-view-touch-button')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('mobile-touch-mode-select')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(config().tooltip.enabled, isFalse);
     expect(config().enableSelection, isTrue);
 
-    await tester.tap(find.byKey(const ValueKey('mobile-view-touch-button')));
-    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-touch-tracking-switch')),
+    );
+    await tester.pump();
+    expect(config().touch.enableLongPressTracking, isFalse);
+    expect(config().crosshair.enabled, isFalse);
+
     await tester.tap(find.byKey(const ValueKey('mobile-touch-mode-static')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(config().enabled, isFalse);
     expect(config().tooltip.enabled, isFalse);
     expect(config().enableSelection, isFalse);
+    expect(config().enableZoom, isFalse);
+    expect(config().enablePan, isFalse);
     expect(tester.takeException(), isNull);
   });
 
@@ -651,6 +679,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('mobile-view-touch-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('mobile-chart-chrome-axes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-touch-options-done')));
     await tester.pumpAndSettle();
 
     final rose = tester.widget<BravenChartPlus>(

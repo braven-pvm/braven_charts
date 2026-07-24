@@ -256,6 +256,69 @@ void main() {
     expect(scrollController.offset, 0);
   });
 
+  testWidgets(
+    'opt-in touch inertia coasts, settles, and cancels on new touch',
+    (tester) async {
+      final scrollController = ScrollController();
+      final chartController = BravenChartController();
+      addTearDown(scrollController.dispose);
+      addTearDown(chartController.dispose);
+      await tester.pumpWidget(
+        _TouchReleaseHarness(
+          scrollController: scrollController,
+          chartController: chartController,
+          series: _lineSeries(),
+          touch: const TouchInteractionConfig(
+            profile: TouchInteractionProfile.explore,
+            enablePanInertia: true,
+            panInertiaDeceleration: 4,
+            maximumPanInertiaVelocity: 2400,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = _renderBox(tester);
+      expect(chartController.zoomViewport(2), isTrue);
+      await tester.pumpAndSettle();
+      final center = tester.getCenter(find.byType(BravenChartPlus));
+      final pan = await tester.createGesture(
+        pointer: 133,
+        kind: PointerDeviceKind.touch,
+      );
+      await pan.down(center);
+      await tester.pump(const Duration(milliseconds: 16));
+      await pan.moveBy(const Offset(-70, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      await pan.moveBy(const Offset(-70, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      final minAtRelease = renderBox.transform!.dataXMin;
+      await pan.up();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      expect(
+        renderBox.transform!.dataXMin,
+        isNot(minAtRelease),
+        reason: 'release velocity should continue moving the viewport',
+      );
+
+      final cancel = await tester.createGesture(
+        pointer: 134,
+        kind: PointerDeviceKind.touch,
+      );
+      await cancel.down(center);
+      await tester.pump();
+      final minAtCancel = renderBox.transform!.dataXMin;
+      await tester.pump(const Duration(milliseconds: 300));
+    expect(renderBox.transform!.dataXMin, closeTo(minAtCancel, 0.001));
+      await cancel.up();
+      await tester.pumpAndSettle();
+
+      expect(renderBox.coordinator.currentMode, InteractionMode.idle);
+      expect(scrollController.offset, 0);
+    },
+  );
+
   testWidgets('touch and global zoom gates both block pinch scaling', (
     tester,
   ) async {

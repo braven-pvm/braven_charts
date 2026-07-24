@@ -6941,6 +6941,23 @@ const Map<String, Object?> surfaceDefinitions = <String, Object?>{
         'default': true,
         'x-dartType': 'bool',
       },
+      'enablePanInertia': <String, Object?>{
+        'type': 'boolean',
+        'default': false,
+        'x-dartType': 'bool',
+      },
+      'panInertiaDeceleration': <String, Object?>{
+        'type': 'number',
+        'default': 6.0,
+        'exclusiveMinimum': 0,
+        'x-dartType': 'double',
+      },
+      'maximumPanInertiaVelocity': <String, Object?>{
+        'type': 'number',
+        'default': 3200.0,
+        'exclusiveMinimum': 0,
+        'x-dartType': 'double',
+      },
       'enableLongPressTracking': <String, Object?>{
         'type': 'boolean',
         'default': true,

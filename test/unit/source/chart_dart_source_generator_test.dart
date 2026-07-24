@@ -1651,6 +1651,9 @@ void main() {
               touch: TouchInteractionConfig(
                 profile: TouchInteractionProfile.explore,
                 enablePinchZoom: false,
+                enablePanInertia: true,
+                panInertiaDeceleration: 4.5,
+                maximumPanInertiaVelocity: 1800,
                 enableLongPressTracking: false,
                 enableHapticFeedback: false,
               ),
@@ -1665,6 +1668,9 @@ void main() {
         contains('profile: TouchInteractionProfile.explore'),
       );
       expect(generated.source, contains('enablePinchZoom: false'));
+      expect(generated.source, contains('enablePanInertia: true'));
+      expect(generated.source, contains('panInertiaDeceleration: 4.5'));
+      expect(generated.source, contains('maximumPanInertiaVelocity: 1800.0'));
       expect(generated.source, contains('enableLongPressTracking: false'));
       expect(generated.source, contains('enableHapticFeedback: false'));
     });
