@@ -93,6 +93,7 @@ enum ChartSelectionClauseDocumentKind {
   pointKeys,
   xInterval,
   yInterval,
+  rectangle,
   explicitPointRefs,
 }
 
@@ -110,6 +111,10 @@ class ChartSelectionClauseDocument {
     this.pointKeys = const {},
     this.minimumInclusive,
     this.maximumInclusive,
+    this.minimumXInclusive,
+    this.maximumXInclusive,
+    this.minimumYInclusive,
+    this.maximumYInclusive,
     this.seriesIds,
     this.pointRefs = const [],
   });
@@ -162,6 +167,21 @@ class ChartSelectionClauseDocument {
          seriesIds: seriesIds == null ? null : Set.unmodifiable(seriesIds),
        );
 
+  ChartSelectionClauseDocument.rectangle({
+    required double minimumXInclusive,
+    required double maximumXInclusive,
+    required double minimumYInclusive,
+    required double maximumYInclusive,
+    Iterable<String>? seriesIds,
+  }) : this._(
+         kind: ChartSelectionClauseDocumentKind.rectangle,
+         minimumXInclusive: minimumXInclusive,
+         maximumXInclusive: maximumXInclusive,
+         minimumYInclusive: minimumYInclusive,
+         maximumYInclusive: maximumYInclusive,
+         seriesIds: seriesIds == null ? null : Set.unmodifiable(seriesIds),
+       );
+
   ChartSelectionClauseDocument.explicitPointRefs({
     required Iterable<ChartPointRef> pointRefs,
   }) : this._(
@@ -176,6 +196,10 @@ class ChartSelectionClauseDocument {
   final Set<String> pointKeys;
   final double? minimumInclusive;
   final double? maximumInclusive;
+  final double? minimumXInclusive;
+  final double? maximumXInclusive;
+  final double? minimumYInclusive;
+  final double? maximumYInclusive;
   final Set<String>? seriesIds;
   final List<ChartPointRef> pointRefs;
 
@@ -189,6 +213,10 @@ class ChartSelectionClauseDocument {
     if (pointKeys.isNotEmpty) 'pointKeys': pointKeys.toList()..sort(),
     if (minimumInclusive != null) 'minimumInclusive': minimumInclusive,
     if (maximumInclusive != null) 'maximumInclusive': maximumInclusive,
+    if (minimumXInclusive != null) 'minimumXInclusive': minimumXInclusive,
+    if (maximumXInclusive != null) 'maximumXInclusive': maximumXInclusive,
+    if (minimumYInclusive != null) 'minimumYInclusive': minimumYInclusive,
+    if (maximumYInclusive != null) 'maximumYInclusive': maximumYInclusive,
     if (seriesIds != null) 'seriesIds': seriesIds!.toList()..sort(),
     if (pointRefs.isNotEmpty)
       'pointRefs': pointRefs.map((ref) => ref.toJson()).toList(),
@@ -231,6 +259,16 @@ class ChartSelectionClauseDocument {
             : ChartSelectionClauseDocument.yInterval)(
           minimumInclusive: readRequiredDouble(json, 'minimumInclusive'),
           maximumInclusive: readRequiredDouble(json, 'maximumInclusive'),
+          seriesIds: json.containsKey('seriesIds')
+              ? readOptionalStringSet(json, 'seriesIds')
+              : null,
+        ),
+      ChartSelectionClauseDocumentKind.rectangle =>
+        ChartSelectionClauseDocument.rectangle(
+          minimumXInclusive: readRequiredDouble(json, 'minimumXInclusive'),
+          maximumXInclusive: readRequiredDouble(json, 'maximumXInclusive'),
+          minimumYInclusive: readRequiredDouble(json, 'minimumYInclusive'),
+          maximumYInclusive: readRequiredDouble(json, 'maximumYInclusive'),
           seriesIds: json.containsKey('seriesIds')
               ? readOptionalStringSet(json, 'seriesIds')
               : null,

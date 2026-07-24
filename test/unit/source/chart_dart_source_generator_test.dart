@@ -1263,6 +1263,13 @@ void main() {
                     maximumInclusive: 3.75,
                     seriesIds: const {'power'},
                   ),
+                  ChartSelectionClauseDocument.rectangle(
+                    minimumXInclusive: 1.5,
+                    maximumXInclusive: 3.5,
+                    minimumYInclusive: 12,
+                    maximumYInclusive: 36,
+                    seriesIds: const {'power'},
+                  ),
                 ],
               ),
               visibleAxisIds: const ['power-axis'],
@@ -1299,7 +1306,15 @@ void main() {
         generated.source,
         contains('ChartSelectionClauseDocument.xInterval('),
       );
+      expect(
+        generated.source,
+        contains('ChartSelectionClauseDocument.rectangle('),
+      );
       expect(generated.source, contains('minimumInclusive: 1.25'));
+      expect(generated.source, contains('minimumXInclusive: 1.5'));
+      expect(generated.source, contains('maximumXInclusive: 3.5'));
+      expect(generated.source, contains('minimumYInclusive: 12.0'));
+      expect(generated.source, contains('maximumYInclusive: 36.0'));
       expect(generated.source, contains("seriesIds: {'power'}"));
       expect(generated.source, contains("selectedAnnotationId: 'target'"));
       expect(generated.source, contains('ChartPositionDocument('));

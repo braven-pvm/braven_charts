@@ -163,6 +163,53 @@ final class ChartSelectionYIntervalClause extends ChartSelectionClause {
   );
 }
 
+/// Selects finite points inside a closed two-dimensional data rectangle.
+///
+/// The X and Y predicates are conjunctive inside this clause. Top-level
+/// expression clauses remain additive unions. A null [seriesIds] applies the
+/// native Y bounds to every resolved series; independent axes should use one
+/// singleton-targeted clause per series so each clause retains native values.
+@immutable
+final class ChartSelectionRectangleClause extends ChartSelectionClause {
+  ChartSelectionRectangleClause({
+    required this.minimumXInclusive,
+    required this.maximumXInclusive,
+    required this.minimumYInclusive,
+    required this.maximumYInclusive,
+    Set<String>? seriesIds,
+  }) : assert(minimumXInclusive.isFinite),
+       assert(maximumXInclusive.isFinite),
+       assert(minimumXInclusive <= maximumXInclusive),
+       assert(minimumYInclusive.isFinite),
+       assert(maximumYInclusive.isFinite),
+       assert(minimumYInclusive <= maximumYInclusive),
+       seriesIds = seriesIds == null ? null : Set.unmodifiable(seriesIds);
+
+  final double minimumXInclusive;
+  final double maximumXInclusive;
+  final double minimumYInclusive;
+  final double maximumYInclusive;
+  final Set<String>? seriesIds;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChartSelectionRectangleClause &&
+      other.minimumXInclusive == minimumXInclusive &&
+      other.maximumXInclusive == maximumXInclusive &&
+      other.minimumYInclusive == minimumYInclusive &&
+      other.maximumYInclusive == maximumYInclusive &&
+      setEquals(other.seriesIds, seriesIds);
+
+  @override
+  int get hashCode => Object.hash(
+    minimumXInclusive,
+    maximumXInclusive,
+    minimumYInclusive,
+    maximumYInclusive,
+    _nullableSetHash(seriesIds),
+  );
+}
+
 /// Selects explicit source identities that cannot be represented compactly.
 @immutable
 final class ChartSelectionExplicitPointRefsClause extends ChartSelectionClause {
@@ -218,6 +265,14 @@ class ChartSelectionExpression {
             ChartSelectionYIntervalClause(
               minimumYInclusive: clause.minimumInclusive!,
               maximumYInclusive: clause.maximumInclusive!,
+              seriesIds: clause.seriesIds,
+            ),
+          ChartSelectionClauseDocumentKind.rectangle =>
+            ChartSelectionRectangleClause(
+              minimumXInclusive: clause.minimumXInclusive!,
+              maximumXInclusive: clause.maximumXInclusive!,
+              minimumYInclusive: clause.minimumYInclusive!,
+              maximumYInclusive: clause.maximumYInclusive!,
               seriesIds: clause.seriesIds,
             ),
           ChartSelectionClauseDocumentKind.explicitPointRefs =>
@@ -344,6 +399,14 @@ class ChartSelectionExpression {
                   maximumInclusive: clause.maximumYInclusive,
                   seriesIds: clause.seriesIds,
                 ),
+              ChartSelectionRectangleClause() =>
+                ChartSelectionClauseDocument.rectangle(
+                  minimumXInclusive: clause.minimumXInclusive,
+                  maximumXInclusive: clause.maximumXInclusive,
+                  minimumYInclusive: clause.minimumYInclusive,
+                  maximumYInclusive: clause.maximumYInclusive,
+                  seriesIds: clause.seriesIds,
+                ),
               ChartSelectionExplicitPointRefsClause() =>
                 ChartSelectionClauseDocument.explicitPointRefs(
                   pointRefs: clause.pointRefs,
@@ -398,6 +461,11 @@ class ChartSelectionExpression {
                 minimumYInclusive: clause.minimumYInclusive,
                 maximumYInclusive: clause.maximumYInclusive,
               )) {
+            return true;
+          }
+        case ChartSelectionRectangleClause():
+          if (_targetsSeries(clause.seriesIds, series.id) &&
+              _pointMatchesRectangle(point, clause)) {
             return true;
           }
         case ChartSelectionExplicitPointRefsClause():
@@ -469,6 +537,13 @@ class ChartSelectionExpression {
                 return true;
               }
             }
+          }
+        case ChartSelectionRectangleClause():
+          for (final candidate in _targetSeries(
+            orderedSeries,
+            clause.seriesIds,
+          )) {
+            if (_seriesHasRectanglePoint(candidate, clause)) return true;
           }
         case ChartSelectionExplicitPointRefsClause():
           for (final ref in clause.pointRefs) {
@@ -561,6 +636,13 @@ class ChartSelectionExpression {
                 );
               }
             }
+          }
+        case ChartSelectionRectangleClause():
+          for (final candidate in _targetSeries(
+            orderedSeries,
+            clause.seriesIds,
+          )) {
+            _addRectangleRefs(refs, candidate, clause);
           }
         case ChartSelectionExplicitPointRefsClause():
           for (final ref in clause.pointRefs) {
@@ -721,6 +803,12 @@ bool _shouldStreamSummary(
         if (end - start > _streamingSummaryThreshold) return true;
       case ChartSelectionYIntervalClause():
         if (_targetsSeries(clause.seriesIds, series.id)) return true;
+      case ChartSelectionRectangleClause():
+        if (!_targetsSeries(clause.seriesIds, series.id)) continue;
+        if (!series.isXOrdered) return true;
+        final start = _lowerBoundX(series.points, clause.minimumXInclusive);
+        final end = _upperBoundX(series.points, clause.maximumXInclusive);
+        if (end - start > _streamingSummaryThreshold) return true;
       case ChartSelectionPointKeysClause() ||
           ChartSelectionExplicitPointRefsClause():
         break;
@@ -758,6 +846,10 @@ class _SeriesSelectionPredicate {
           if (_targetsSeries(clause.seriesIds, series.id)) {
             _yIntervals.add(clause);
           }
+        case ChartSelectionRectangleClause():
+          if (_targetsSeries(clause.seriesIds, series.id)) {
+            _rectangles.add(clause);
+          }
         case ChartSelectionExplicitPointRefsClause():
           for (final reference in clause.pointRefs) {
             if (reference.seriesId == series.id && reference.pointIndex >= 0) {
@@ -773,6 +865,7 @@ class _SeriesSelectionPredicate {
   final List<ChartSelectionPointIndexSpanClause> _spans = [];
   final List<ChartSelectionXIntervalClause> _xIntervals = [];
   final List<ChartSelectionYIntervalClause> _yIntervals = [];
+  final List<ChartSelectionRectangleClause> _rectangles = [];
   final Set<int> _explicitIndices = {};
 
   bool matches(int index, ChartDataPoint point) {
@@ -797,6 +890,9 @@ class _SeriesSelectionPredicate {
       )) {
         return true;
       }
+    }
+    for (final rectangle in _rectangles) {
+      if (_pointMatchesRectangle(point, rectangle)) return true;
     }
     return false;
   }
@@ -962,6 +1058,62 @@ bool _seriesHasXIntervalPoint(
   }
   return false;
 }
+
+void _addRectangleRefs(
+  Set<ChartPointRef> refs,
+  ChartSeries series,
+  ChartSelectionRectangleClause clause,
+) {
+  final points = series.points;
+  if (points.isEmpty) return;
+  if (!series.isXOrdered) {
+    for (var index = 0; index < points.length; index++) {
+      if (_pointMatchesRectangle(points[index], clause)) {
+        refs.add(ChartPointRef(seriesId: series.id, pointIndex: index));
+      }
+    }
+    return;
+  }
+
+  final start = _lowerBoundX(points, clause.minimumXInclusive);
+  final endExclusive = _upperBoundX(points, clause.maximumXInclusive);
+  for (var index = start; index < endExclusive; index++) {
+    if (_pointMatchesRectangle(points[index], clause)) {
+      refs.add(ChartPointRef(seriesId: series.id, pointIndex: index));
+    }
+  }
+}
+
+bool _seriesHasRectanglePoint(
+  ChartSeries series,
+  ChartSelectionRectangleClause clause,
+) {
+  final points = series.points;
+  if (points.isEmpty) return false;
+  if (!series.isXOrdered) {
+    return points.any((point) => _pointMatchesRectangle(point, clause));
+  }
+
+  final start = _lowerBoundX(points, clause.minimumXInclusive);
+  final endExclusive = _upperBoundX(points, clause.maximumXInclusive);
+  for (var index = start; index < endExclusive; index++) {
+    if (_pointMatchesRectangle(points[index], clause)) return true;
+  }
+  return false;
+}
+
+bool _pointMatchesRectangle(
+  ChartDataPoint point,
+  ChartSelectionRectangleClause clause,
+) =>
+    point.isValid &&
+    point.x >= clause.minimumXInclusive &&
+    point.x <= clause.maximumXInclusive &&
+    chartSelectionPointIntersectsYInterval(
+      point,
+      minimumYInclusive: clause.minimumYInclusive,
+      maximumYInclusive: clause.maximumYInclusive,
+    );
 
 int _lowerBoundX(List<ChartDataPoint> points, double value) {
   var low = 0;

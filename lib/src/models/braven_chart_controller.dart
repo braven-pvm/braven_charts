@@ -370,9 +370,10 @@ class BravenChartController extends ChangeNotifier {
 
   /// Replaces durable selection with renderer-neutral [expression] intent.
   ///
-  /// Interval clauses retain their exact boundaries, allowing a subsequent
-  /// selection-scoped document extraction to interpolate continuous Line/Area
-  /// edges rather than reducing the range to enclosed source observations.
+  /// Interval and rectangle clauses retain their exact boundaries. Interval
+  /// selection can therefore project continuous Line/Area edges, while a
+  /// rectangle remains compact conjunctive X-and-Y intent instead of reducing
+  /// the selection to enclosed source identities.
   ChartArtifactResult<void> selectExpression(
     ChartSelectionExpression expression, {
     required ChartDocumentRevision revision,

@@ -580,6 +580,27 @@ void main() {
       );
       await tester.pump();
       final revision = controller.effectiveDocumentRevision.value!;
+      final missingSeries = controller.selectExpression(
+        ChartSelectionExpression(
+          clauses: [
+            ChartSelectionRectangleClause(
+              minimumXInclusive: 0.5,
+              maximumXInclusive: 2.5,
+              minimumYInclusive: 8,
+              maximumYInclusive: 15,
+              seriesIds: const {'missing'},
+            ),
+          ],
+        ),
+        revision: revision,
+      );
+      expect(missingSeries, isA<ChartArtifactFailure<void>>());
+      expect(
+        (missingSeries as ChartArtifactFailure<void>).error.code,
+        ChartArtifactDiagnosticCodes.invalidPointReference,
+      );
+      expect(controller.selectionExpression.isEmpty, isTrue);
+
       expect(
         controller.selectExpression(
           ChartSelectionExpression(
@@ -662,6 +683,95 @@ void main() {
       expect(restoredClause.minimumXInclusive, 0.5);
       expect(restoredClause.maximumXInclusive, 2.5);
       expect(restoredClause.seriesIds, {'signal'});
+    },
+  );
+
+  testWidgets(
+    'rectangle selection extracts and restores compact conjunctive intent',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: const [
+              LineChartSeries(
+                id: 'signal',
+                isXOrdered: true,
+                points: [
+                  ChartDataPoint(x: 0, y: 0),
+                  ChartDataPoint(x: 1, y: 10),
+                  ChartDataPoint(x: 2, y: 20),
+                  ChartDataPoint(x: 3, y: 5),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      final revision = controller.effectiveDocumentRevision.value!;
+      expect(
+        controller.selectExpression(
+          ChartSelectionExpression(
+            clauses: [
+              ChartSelectionRectangleClause(
+                minimumXInclusive: 0.5,
+                maximumXInclusive: 2.5,
+                minimumYInclusive: 8,
+                maximumYInclusive: 15,
+                seriesIds: const {'signal'},
+              ),
+            ],
+          ),
+          revision: revision,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+
+      final selectedOnly = _success(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(
+            dataScope: ChartDataScope.selection,
+          ),
+        ),
+      ).value;
+      final selectedPoints =
+          (selectedOnly.document.series.single.data as InlinePointPayload)
+              .points;
+      expect(selectedPoints.map((point) => point.x.asDouble), [1]);
+      expect(selectedPoints.map((point) => point.y.asDouble), [10]);
+
+      final captured = _success(controller.extractDocument()).value;
+      final portableClause =
+          captured.viewState!.selectionExpression!.clauses.single;
+      expect(portableClause.kind, ChartSelectionClauseDocumentKind.rectangle);
+      expect(portableClause.minimumXInclusive, 0.5);
+      expect(portableClause.maximumXInclusive, 2.5);
+      expect(portableClause.minimumYInclusive, 8);
+      expect(portableClause.maximumYInclusive, 15);
+      expect(portableClause.seriesIds, {'signal'});
+
+      controller.clearPointSelection();
+      await tester.pump();
+      controller.restoreViewState(
+        ChartViewState.fromJson(captured.viewState!.toJson()),
+      );
+      await tester.pump();
+
+      final restored =
+          controller.selectionExpression.clauses.single
+              as ChartSelectionRectangleClause;
+      expect(restored.minimumXInclusive, 0.5);
+      expect(restored.maximumXInclusive, 2.5);
+      expect(restored.minimumYInclusive, 8);
+      expect(restored.maximumYInclusive, 15);
+      expect(restored.seriesIds, {'signal'});
+      expect(controller.selectionSnapshot?.pointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+      });
     },
   );
 

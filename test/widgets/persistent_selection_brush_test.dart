@@ -177,6 +177,33 @@ void main() {
       );
     });
 
+    testWidgets('transposed horizontal bars retain conjunctive box intent', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_horizontalBarBoxHost(controller));
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.renderObject<ChartRenderBox>(
+        _chartRenderFinder(),
+      );
+      final rect = renderBox.selectionBrushWidgetRect!;
+      expect(rect.width, lessThan(renderBox.debugPlotArea.width));
+      expect(rect.height, lessThan(renderBox.debugPlotArea.height));
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'volume', pointIndex: 1),
+        const ChartPointRef(seriesId: 'volume', pointIndex: 2),
+      });
+      final clause =
+          controller.selectionExpression.clauses.single
+              as ChartSelectionRectangleClause;
+      expect(clause.minimumXInclusive, closeTo(0.5, 0.01));
+      expect(clause.maximumXInclusive, closeTo(2.5, 0.01));
+      expect(clause.minimumYInclusive, closeTo(40, 0.01));
+      expect(clause.maximumYInclusive, closeTo(80, 0.01));
+    });
+
     testWidgets('RTL and chart resize preserve data-domain brush bounds', (
       tester,
     ) async {
@@ -1084,6 +1111,14 @@ void main() {
       expect(state.range.minimum, state.box!.minimumX);
       expect(state.range.maximum, state.box!.maximumX);
       expect(
+        controller.selectionExpression.clauses,
+        everyElement(isA<ChartSelectionRectangleClause>()),
+      );
+      expect(
+        controller.selectionExpression.clauses,
+        isNot(contains(isA<ChartSelectionExplicitPointRefsClause>())),
+      );
+      expect(
         tester.renderObject<ChartRenderBox>(finder).selectionBrushWidgetRect,
         isNotNull,
       );
@@ -1159,6 +1194,14 @@ void main() {
               'A box is an X-and-Y intersection; its durable selection must '
               'not expand to every point in the same X interval.',
         );
+        expect(
+          controller.selectionExpression.clauses,
+          everyElement(isA<ChartSelectionRectangleClause>()),
+        );
+        expect(
+          controller.selectionExpression.clauses,
+          isNot(contains(isA<ChartSelectionExplicitPointRefsClause>())),
+        );
 
         final corner = origin + movedRect.bottomRight;
         await move.moveTo(corner);
@@ -1180,6 +1223,30 @@ void main() {
         };
         expect(controller.selectedPointRefs, resizedRefs);
         expect(controller.selectionSnapshot!.pointRefs, resizedRefs);
+        expect(
+          controller.selectionExpression.clauses,
+          everyElement(isA<ChartSelectionRectangleClause>()),
+        );
+        expect(
+          controller.selectionExpression.resolvePointRefs(const [
+            LineChartSeries(
+              id: 'signal',
+              showDataPointMarkers: true,
+              points: [
+                ChartDataPoint(x: 0, y: 20),
+                ChartDataPoint(x: 2, y: 30),
+                ChartDataPoint(x: 4, y: 40),
+                ChartDataPoint(x: 6, y: 50),
+                ChartDataPoint(x: 8, y: 60),
+                ChartDataPoint(x: 10, y: 70),
+              ],
+            ),
+          ]),
+          resizedRefs,
+          reason:
+              'The native rectangle expression must resolve to the same '
+              'identities as the renderer after every brush edit.',
+        );
       },
     );
 
@@ -1236,6 +1303,80 @@ void main() {
             .renderObject<ChartRenderBox>(_chartRenderFinder())
             .selectionBrushWidgetRect,
         isNotNull,
+      );
+    });
+
+    testWidgets('box expression re-resolves after a compatible data revision', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      StateSetter? rebuild;
+      var points = const [
+        ChartDataPoint(x: 0, y: 20),
+        ChartDataPoint(x: 2, y: 30),
+        ChartDataPoint(x: 4, y: 40),
+        ChartDataPoint(x: 6, y: 50),
+        ChartDataPoint(x: 8, y: 60),
+        ChartDataPoint(x: 10, y: 70),
+      ];
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return _host(
+              controller: controller,
+              points: points,
+              acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+              brush: const ChartSelectionBrushConfig(
+                enabled: true,
+                initialVisible: true,
+                initialBox: ChartSelectionBrushBox(
+                  minimumX: 2,
+                  maximumX: 6,
+                  minimumY: 30,
+                  maximumY: 55,
+                  referenceSeriesId: 'signal',
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final firstRevision = controller.effectiveDocumentRevision.value;
+      expect(controller.selectionSnapshot?.statistics.pointCount, 3);
+      expect(
+        controller.selectionExpression.clauses,
+        everyElement(isA<ChartSelectionRectangleClause>()),
+      );
+
+      rebuild!(() {
+        points = const [
+          ChartDataPoint(x: 0, y: 20),
+          ChartDataPoint(x: 2, y: 30),
+          ChartDataPoint(x: 3, y: 35),
+          ChartDataPoint(x: 4, y: 40),
+          ChartDataPoint(x: 6, y: 50),
+          ChartDataPoint(x: 8, y: 60),
+          ChartDataPoint(x: 10, y: 70),
+        ];
+      });
+      await tester.pumpAndSettle();
+
+      expect(controller.effectiveDocumentRevision.value, isNot(firstRevision));
+      expect(controller.selectionSnapshot?.statistics.pointCount, 4);
+      expect(
+        controller.selectionSnapshot?.pointRefs,
+        contains(const ChartPointRef(seriesId: 'signal', pointIndex: 2)),
+        reason:
+            'The newly inserted point lies inside the durable rectangle and '
+            'must be selected in the new compatible revision.',
+      );
+      expect(
+        controller.selectionExpression.clauses,
+        everyElement(isA<ChartSelectionRectangleClause>()),
       );
     });
 
@@ -1356,6 +1497,7 @@ Widget _host({
   ChartSelectionAcquisitionMode acquisitionMode =
       ChartSelectionAcquisitionMode.xInterval,
   ValueChanged<ChartSelectionResult>? onSelectionResultChanged,
+  List<ChartDataPoint>? points,
   double width = 640,
   TextDirection textDirection = TextDirection.ltr,
 }) => MaterialApp(
@@ -1368,18 +1510,20 @@ Widget _host({
         child: BravenChartPlus(
           bravenChartController: controller,
           showLegend: false,
-          series: const [
+          series: [
             LineChartSeries(
               id: 'signal',
               showDataPointMarkers: true,
-              points: [
-                ChartDataPoint(x: 0, y: 20),
-                ChartDataPoint(x: 2, y: 30),
-                ChartDataPoint(x: 4, y: 40),
-                ChartDataPoint(x: 6, y: 50),
-                ChartDataPoint(x: 8, y: 60),
-                ChartDataPoint(x: 10, y: 70),
-              ],
+              points:
+                  points ??
+                  const [
+                    ChartDataPoint(x: 0, y: 20),
+                    ChartDataPoint(x: 2, y: 30),
+                    ChartDataPoint(x: 4, y: 40),
+                    ChartDataPoint(x: 6, y: 50),
+                    ChartDataPoint(x: 8, y: 60),
+                    ChartDataPoint(x: 10, y: 70),
+                  ],
             ),
           ],
           interactionConfig: InteractionConfig(
@@ -1426,6 +1570,49 @@ Widget _horizontalBarHost(BravenChartController controller) => MaterialApp(
               keyboardEnabled: true,
               initialVisible: true,
               initialRange: ChartSelectionBrushRange(minimum: 0, maximum: 1),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+
+Widget _horizontalBarBoxHost(BravenChartController controller) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 640,
+      height: 420,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        showLegend: false,
+        series: const [
+          BarChartSeries(
+            id: 'volume',
+            orientation: BarOrientation.horizontal,
+            barWidthPercent: 0.7,
+            points: [
+              ChartDataPoint(x: 0, y: 30),
+              ChartDataPoint(x: 1, y: 50),
+              ChartDataPoint(x: 2, y: 70),
+              ChartDataPoint(x: 3, y: 90),
+            ],
+          ),
+        ],
+        interactionConfig: const InteractionConfig(
+          selection: ChartSelectionConfig(
+            acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+            useModifierKeys: false,
+            brush: ChartSelectionBrushConfig(
+              enabled: true,
+              initialVisible: true,
+              initialBox: ChartSelectionBrushBox(
+                minimumX: 0.5,
+                maximumX: 2.5,
+                minimumY: 40,
+                maximumY: 80,
+                referenceSeriesId: 'volume',
+              ),
             ),
           ),
         ),

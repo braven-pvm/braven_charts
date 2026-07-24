@@ -55,6 +55,68 @@ void main() {
     expect(snapshot.statistics.pointCount, 10);
     expect(points.readCount, lessThan(100));
   });
+
+  test('dense rectangle summaries stay lazy at 5k, 100k, and 1m', () {
+    for (final pointCount in const [5000, 100000, 1000000]) {
+      final points = _GeneratedPointList(pointCount);
+      final expression = ChartSelectionExpression(
+        clauses: [
+          ChartSelectionRectangleClause(
+            minimumXInclusive: -1,
+            maximumXInclusive: pointCount.toDouble(),
+            minimumYInclusive: -1,
+            maximumYInclusive: pointCount.toDouble(),
+            seriesIds: const {'benchmark'},
+          ),
+        ],
+      );
+      final snapshot = ChartSelectionSnapshot(
+        expression: expression,
+        revision: ChartDocumentRevision.next(),
+        series: [
+          LineChartSeries(id: 'benchmark', points: points, isXOrdered: true),
+        ],
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final statistics = snapshot.statistics;
+      stopwatch.stop();
+
+      expect(statistics.pointCount, pointCount);
+      expect(snapshot.debugPointRefsMaterialized, isFalse);
+      expect(expression.clauses, hasLength(1));
+      expect(points.readCount, lessThanOrEqualTo(pointCount + 100));
+      // ignore: avoid_print
+      print(
+        'Rectangle summary $pointCount points: '
+        '${stopwatch.elapsedMicroseconds} us',
+      );
+    }
+  });
+
+  test('narrow ordered rectangle remains logarithmic plus output size', () {
+    const pointCount = 1000000;
+    final points = _GeneratedPointList(pointCount);
+    final snapshot = ChartSelectionSnapshot(
+      expression: ChartSelectionExpression(
+        clauses: [
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 500000,
+            maximumXInclusive: 500009,
+            minimumYInclusive: 500000,
+            maximumYInclusive: 500009,
+          ),
+        ],
+      ),
+      revision: ChartDocumentRevision.next(),
+      series: [
+        LineChartSeries(id: 'benchmark', points: points, isXOrdered: true),
+      ],
+    );
+
+    expect(snapshot.pointRefs, hasLength(10));
+    expect(points.readCount, lessThan(100));
+  });
 }
 
 class _GeneratedPointList extends ListBase<ChartDataPoint> {

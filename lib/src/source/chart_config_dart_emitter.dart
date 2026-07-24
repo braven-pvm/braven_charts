@@ -3684,6 +3684,7 @@ class ChartConfigDartEmitter {
           ChartSelectionClauseDocumentKind.pointKeys => 'pointKeys',
           ChartSelectionClauseDocumentKind.xInterval => 'xInterval',
           ChartSelectionClauseDocumentKind.yInterval => 'yInterval',
+          ChartSelectionClauseDocumentKind.rectangle => 'rectangle',
           ChartSelectionClauseDocumentKind.explicitPointRefs =>
             'explicitPointRefs',
         };
@@ -3724,6 +3725,30 @@ class ChartConfigDartEmitter {
             writer.namedArgument(
               'maximumInclusive',
               DartSourceWriter.numberLiteral(clause.maximumInclusive!),
+            );
+          }
+          if (clause.minimumXInclusive != null) {
+            writer.namedArgument(
+              'minimumXInclusive',
+              DartSourceWriter.numberLiteral(clause.minimumXInclusive!),
+            );
+          }
+          if (clause.maximumXInclusive != null) {
+            writer.namedArgument(
+              'maximumXInclusive',
+              DartSourceWriter.numberLiteral(clause.maximumXInclusive!),
+            );
+          }
+          if (clause.minimumYInclusive != null) {
+            writer.namedArgument(
+              'minimumYInclusive',
+              DartSourceWriter.numberLiteral(clause.minimumYInclusive!),
+            );
+          }
+          if (clause.maximumYInclusive != null) {
+            writer.namedArgument(
+              'maximumYInclusive',
+              DartSourceWriter.numberLiteral(clause.maximumYInclusive!),
             );
           }
           if (clause.seriesIds != null) {
