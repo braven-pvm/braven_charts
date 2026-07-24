@@ -1,258 +1,79 @@
-# Legacy Technical Debt Snapshot
+# Technical Debt Rebaseline
 
-**Project**: braven_charts_v2.0  
-**Last Updated**: 2025-10-06  
-**Status**: Historical snapshot; not the active register
+**Package version audited**: 0.13.5
+
+**Repository revision audited**: [`edb9a89c`](https://github.com/braven-pvm/braven_charts/commit/edb9a89c)
+
+**Rebaseline date**: 2026-07-24
+
+**Status**: Historical reconciliation; not an active backlog
 
 > [!IMPORTANT]
-> Active ownership, priority, evidence, and status live in the shared register
-> at `F:\Repositories\_braven_charts_register`. Do not use the entries below
-> for current prioritization without re-verifying them against the repository.
-> Shared-register item `BC-0014` owns the detailed rebaseline and migration of
-> any debt that remains valid.
-> This document is retained unchanged below that authority notice as historical
-> evidence until that audit is complete.
-
-## Purpose
-
-This historical document captured technical debt that was known and deferred
-at the time. Each entry includes:
-- **Impact**: User-facing or internal
-- **Severity**: Critical/High/Medium/Low
-- **Effort**: Estimated complexity to resolve
-- **Target**: When we plan to address it
-
-## Historical Debt Items
-
-### 002-core-rendering (v0.2.0-rendering)
-
-#### TD-001: Performance Metrics Missing Culling Statistics
-**Created**: 2025-10-05 | **Status**: Open | **Severity**: Low | **Impact**: Internal
-
-**Description**:
-`PerformanceMetrics` has `culledElementCount` and `renderedElementCount` fields, but `RenderPipeline` doesn't populate them during rendering. Tests expect these values to be tracked.
-
-**Affected Tests** (5 failures):
-- `test/integration/rendering/stock_chart_10k_test.dart` - Viewport culling validation
-- `test/integration/rendering/performance_dashboard_test.dart` - Metrics tracking
-- Related culling statistics assertions
-
-**Root Cause**:
-`RenderPipeline.renderFrame()` doesn't call `ViewportCuller.cull()` directly - it delegates to layers. Layers perform their own culling internally, so pipeline has no visibility into culling stats.
-
-**Workaround**:
-Tests currently pass with `culledElementCount: 0` (default value). Core functionality works correctly.
-
-**Solution Options**:
-1. **Add callback mechanism**: Let layers report culling stats back to pipeline
-2. **Pipeline-level culling**: Move culling to pipeline (breaks layer encapsulation)
-3. **Remove fields**: Delete unused fields from PerformanceMetrics (breaking change)
-
-**Recommendation**: Option 1 - Add optional callback parameter to RenderLayer.render()
-
-**Effort**: 4 hours (design + implementation + tests)  
-**Target Release**: v0.3.0 (next feature cycle)  
-**Dependencies**: None
-
----
-
-#### TD-004: Async Performance Test Timing Precision
-**Created**: 2025-10-05 | **Status**: Open | **Severity**: Low | **Impact**: Internal (flaky tests)
-
-**Description**:
-Performance monitor tests that use async delays are sensitive to platform overhead. Windows async timing has ~5-10ms variance, causing occasional failures.
-
-**Affected Tests** (9 failures):
-- `test/unit/rendering/performance_monitor_test.dart`:
-  - "jank counter does not increment for exactly 16ms frame" (expecting 0, getting 1 due to overhead)
-  - "large maxHistorySize retains all frames without eviction" (timing-dependent)
-- `test/unit/rendering/edge_cases/rapid_pan_test.dart`:
-  - "Performance remains stable over extended panning" (flaky on slow machines)
-- `test/contract/rendering/performance_monitor_contract_test.dart`:
-  - "frame time measurement accurate to ±0.5ms" (async overhead exceeds tolerance)
-
-**Root Cause**:
-`Future.delayed()` and `Stopwatch` measure different things. Tests use delays to simulate frame time, but `Stopwatch` includes async scheduling overhead.
-
-**Workaround**:
-Widened timing tolerance in some tests (`closeTo(10.0, 8.0)` instead of 3.0). Some tests still flaky.
-
-**Solution Options**:
-1. **Mock time**: Use injectable clock for deterministic timing
-2. **Increase tolerance**: Accept platform variance (less precise tests)
-3. **Remove timing assertions**: Test logical behavior only
-
-**Recommendation**: Option 1 - Add Clock abstraction (matches Flutter best practices)
-
-**Effort**: 8 hours (abstraction + refactor + tests)  
-**Target Release**: v0.3.0 (architectural improvement)  
-**Dependencies**: None
-
----
-
----
-
-
-
-### 005-chart-types (v0.5.0-chart-types)
-
-#### TD-006: Golden Tests Require Chart Widget Layer
-**Created**: 2025-10-06 | **Status**: Open | **Severity**: Medium | **Impact**: Internal (visual regression testing)
-
-**Description**:
-Tasks T062-T065 (golden tests for all 4 chart types) cannot be implemented because Chart Widgets don't exist yet. Layer 4 provides RenderLayer implementations (LineChartLayer, AreaChartLayer, etc.) but not user-facing widgets (LineChart, AreaChart, etc.).
-
-**Affected Tasks** (4 blocked):
-- T062: LineChart golden test
-- T063: AreaChart golden test
-- T064: BarChart golden test
-- T065: ScatterChart golden test
-
-**Root Cause**:
-Architecture defines chart types as RenderLayer extensions for composability. User-facing widgets are intended for a future layer (Layer 5 or separate widget layer). Golden tests require actual widgets to render and compare against golden images.
-
-**Workaround**:
-Visual testing deferred until widget layer created. RenderLayer implementations can be validated through integration tests with manual RenderPipeline setup.
-
-**Solution Options**:
-1. **Create widget layer now**: Add LineChart/AreaChart/BarChart/ScatterChart widgets to Layer 4
-2. **Defer to Layer 5**: Wait for interaction/widget layer specification
-3. **Skip golden tests**: Rely on integration tests and manual testing only
-
-**Recommendation**: Option 2 - Defer to proper widget layer (maintains clean architecture)
-
-**Effort**: N/A (requires widget layer design + implementation)  
-**Target Release**: After widget layer specification complete  
-**Dependencies**: Widget layer architecture decision
-
----
-
-## Resolved Debt Items
-
-#### TD-002: Mock Canvas Missing drawRect Implementation ✅
-**Created**: 2025-10-05 | **Resolved**: 2025-10-07 | **Severity**: Low | **Impact**: Internal (test harness)
-
-**Description**:
-Edge case tests use `_MockCanvas` that implements minimal Canvas API. Missing `drawRect()` caused `UnimplementedError` in some layer tests.
-
-**Resolution**:
-Added simple no-op `drawRect()` stub method to `_MockCanvas` class in overlapping_layers_test.dart.
-
-**Files Modified**:
-- `test/unit/rendering/edge_cases/overlapping_layers_test.dart`
-
-**Tests Fixed**: 5/5 overlapping layer tests now passing  
-**Commit**: 99a75e0  
-**Effort**: 15 minutes (as estimated)
-
----
-
-#### TD-005: PerformanceMetrics Immutability Validation ✅
-**Created**: 2025-10-05 | **Resolved**: 2025-10-07 | **Severity**: Low | **Impact**: Internal (API contract)
-
-**Description**:
-Test expected `PerformanceMetrics` to have `const` constructor with identical object references, but class has computed getters preventing true const instances.
-
-**Resolution**:
-Updated test to validate value equality instead of object identity. Changed from `identical()` check to field-by-field assertions for all 7 final fields (frameTime, averageFrameTime, p99FrameTime, jankCount, poolHitRate, renderedElementCount, culledElementCount).
-
-**Files Modified**:
-- `test/unit/rendering/performance_metrics_test.dart`
-
-**Tests Fixed**: 1 test now properly validates immutability  
-**Commit**: 99a75e0  
-**Effort**: 20 minutes (initial estimate 5 min, required 3 iterations)
-
----
-
-#### TD-003: Text Cache Hit Rate Edge Cases ✅
-**Created**: 2025-10-05 | **Resolved**: 2025-10-07 | **Severity**: Low | **Impact**: Internal (edge cases)
-
-**Description**:
-Text cache hit rate tests failed in edge case scenarios because MockCanvas doesn't simulate real text layout, causing `TextLayoutCache.get()` to always return null.
-
-**Resolution**:
-Skipped 3 unit tests that require real Canvas for cache validation. Cache hit rate testing is already comprehensively covered in:
-- `test/integration/rendering/text_heavy_chart_test.dart` - validates >70% cache hit rate with real Canvas
-- `test/unit/rendering/text_layout_cache_test.dart` - validates LRU eviction logic in isolation
-
-**Rationale**:
-Unit tests with MockCanvas cannot properly validate cache behavior because text layout operations require real Flutter Canvas. The existing integration tests already provide full coverage of cache hit rate functionality in real-world scenarios.
-
-**Files Modified**:
-- `test/unit/rendering/edge_cases/cache_overflow_test.dart` - skipped 2 tests
-- `test/unit/rendering/edge_cases/text_overflow_test.dart` - skipped 1 test
-
-**Tests Status**: 3 tests skipped (covered by integration tests)  
-**Commit**: (pending - will be in next commit)  
-**Effort**: 90 minutes (analysis, attempted integration test creation, final resolution with skip)
-
----
-
-*Items moved here when completed. Includes resolution date and commit hash.*
-
----
-
-## Debt Statistics
-
-**Total Active Items**: 4  
-**By Severity**:
-- Critical: 0
-- High: 0
-- Medium: 1
-- Low: 3
-
-**By Target Release**:
-- v0.2.1 (patches): 1 item (~2 hours effort)
-- v0.3.0 (features): 2 items (~12 hours effort)
-- Future (widget layer): 1 item (TBD)
-
-**Test Impact**:
-- Total failing tests: 16/739 (2.2%)
-- Critical path blocked: 0
-- User-facing features affected: 0 (chart widgets deferred)
-
-**Recently Resolved** (2025-10-07):
-- TD-002: Mock Canvas drawRect stub (+5 tests passing)
-- TD-005: PerformanceMetrics immutability test (+1 test passing)
-
----
-
-## Debt Management Process
-
-### When to Add Items
-- Known issues that don't block release
-- Test failures in edge cases (not happy path)
-- Performance optimizations deferred for pragmatism
-- Code quality improvements (refactoring, abstractions)
-
-### When to Address Items
-- **Immediately**: Critical severity or blocking user features
-- **Next patch (v0.2.1)**: Low-effort fixes (<1 hour), test reliability
-- **Next minor (v0.3.0)**: Medium-effort improvements, architectural changes
-- **Next major (v1.0)**: Breaking changes, major refactors
-
-### Review Cadence
-- **Weekly**: Check for new items from test failures
-- **Per Release**: Prioritize items for upcoming cycle
-- **Quarterly**: Clean up resolved items, re-evaluate priorities
-
----
-
-## Notes
-
-**Philosophy**: Technical debt is not failure - it's pragmatic prioritization. We track it to ensure:
-1. **Transparency**: Team knows what corners were cut
-2. **Planning**: Can budget time to address items
-3. **Quality**: Prevents accumulation of unknown issues
-
-**Current Status (v0.2.0-rendering)**: 
-- ✅ Core functionality: 100% complete
-- ✅ Performance targets: All met
-- ✅ Integration tests: Passing (real-world scenarios work)
-- ⚠️ Unit/edge tests: 97% passing (edge cases and mocks need refinement)
-- 🎯 **Ready for production use** with documented limitations
-
----
-
-*This register is a living document. Update when debt is added, resolved, or re-prioritized.*
+> The shared Braven Charts register is authoritative for current status,
+> priority, ownership, dependencies, and next actions. Maintainers access it at
+> `F:\Repositories\_braven_charts_register`; agents must follow the register
+> protocol in [`AGENTS.md`](../AGENTS.md). This page records why the old
+> `TD-*` entries were retired and points to successor `BC-*` items. Do not add
+> a second active backlog here.
+
+## Current verification baseline
+
+The historical document described a 739-test package with 16 failures and a
+missing public widget layer. Those figures and assumptions no longer describe
+the package.
+
+At the audited revision, the package-quality workflow for
+[PR #109](https://github.com/braven-pvm/braven_charts/pull/109) completed
+successfully:
+
+- `flutter analyze lib` passed;
+- `flutter test` reported **3,710 passed and 6 skipped**;
+- `flutter analyze` in `example/` passed with no issues;
+- public-documentation, generated-surface, dartdoc, and publish dry-run checks
+  passed.
+
+See the
+[package-quality workflow](../.github/workflows/package-quality.yml) and its
+[successful run](https://github.com/braven-pvm/braven_charts/actions/runs/30090377846)
+for the exact commands and immutable result. Test counts are evidence for this
+revision, not a manually maintained quality target.
+
+## Legacy entry audit
+
+| Legacy entry | Current classification | Evidence and successor |
+| --- | --- | --- |
+| **TD-001 — Performance Metrics Missing Culling Statistics** | **Obsolete; superseded by the current rendering architecture.** | `PerformanceMetrics`, `RenderPipeline`, `ViewportCuller`, `culledElementCount`, and `renderedElementCount` do not exist in current `lib/` or `test/`. Current rendering uses [`ChartRenderBox`](../lib/src/rendering/chart_render_box.dart), [`SeriesCacheManager`](../lib/src/rendering/modules/series_cache_manager.dart), plot transforms, and spatial indexing. The legacy implementation remains only in [`docs/archive_release_1.0`](archive_release_1.0). No active debt was preserved under the old metric contract. |
+| **TD-004 — Async Performance Test Timing Precision** | **Obsolete as written; one narrower current cleanup item preserved.** | Every named `PerformanceMonitor` test path and the production type are absent. The remaining unused [`performance_test_utils.dart`](../test/performance/performance_test_utils.dart) still contains delay-based frame collection and synthetic memory values. That current concern is tracked as **BC-0021 — Retire or replace the synthetic performance test utility**. |
+| **TD-006 — Golden Tests Require Chart Widget Layer** | **Architecture blocker obsolete; one visual-coverage gap preserved.** | The package now exposes `BravenChartPlus` and ten chart families. Current goldens cover Line, Area, Bar, Candlestick, Range Area, Pie, Donut, Concentric Donut, Polar Column, multi-axis, artifacts, workbench, streaming, and other public surfaces under [`test/golden`](../test/golden). Scatter has extensive behavioral and benchmark coverage but no dedicated visual golden; that narrower gap is tracked as **BC-0022 — Add a dedicated Scatter visual regression golden**. |
+| **TD-002 — Mock Canvas Missing `drawRect`** | **Historically resolved, then removed with the legacy harness.** | Commit [`99a75e01`](https://github.com/braven-pvm/braven_charts/commit/99a75e01) fixed the old mock. Its referenced test file no longer exists in the current suite. |
+| **TD-005 — `PerformanceMetrics` Immutability Validation** | **Historically resolved, then removed with the legacy metrics model.** | Commit [`99a75e01`](https://github.com/braven-pvm/braven_charts/commit/99a75e01) corrected the old assertion. Neither the named test nor the legacy model exists in the current package. |
+| **TD-003 — Text Cache Hit Rate Edge Cases** | **Superseded by the rendering rewrite.** | The four named cache/mock test files and `TextLayoutCache` are absent. The three historical skips therefore are not current skip inventory. Current CI still reports six skips, which must be assessed from the current suite rather than attributed to TD-003. |
+
+## Active successor items
+
+This rebaseline preserved only current, reproducible concerns:
+
+- **BC-0021 — Retire or replace the synthetic performance test utility**:
+  remove the unused helper or replace its fake memory and delay-based timing
+  with a supported measurement harness.
+- **BC-0022 — Add a dedicated Scatter visual regression golden**:
+  add one deterministic visual baseline through the current public chart API.
+
+Their priority, owner, status, acceptance criteria, and evidence live only in
+the shared register. If either item moves or changes scope, update the register
+rather than this historical reconciliation.
+
+## Debt management
+
+When current debt is found:
+
+1. search the shared register for an existing item or dependency;
+2. create or update one `BC-*` item with observed evidence, measurable
+   acceptance criteria, priority, lane, and next action;
+3. claim it before implementation by recording owner, branch, and worktree;
+4. keep implementation plans and GitHub issues linked from that item;
+5. move it to review or completion only after recording verification and
+   residual risk.
+
+Use this page only when a future architectural migration needs to explain the
+fate of these six historical `TD-*` identifiers.
