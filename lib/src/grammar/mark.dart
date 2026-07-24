@@ -78,6 +78,8 @@ final class LineMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    this.colorBy,
+    this.colorEncoding,
     this.strokeWidth,
     this.dashPattern,
     this.interpolation,
@@ -90,6 +92,15 @@ final class LineMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel: each segment's stroke is the ramp colour of the
+  /// leading point's value over the data's finite domain, baked at lowering
+  /// into `ChartDataPoint.segmentStyle.color`. Requires [colorEncoding].
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
 
   /// Stroke width in logical pixels. Null keeps the series default.
   final double? strokeWidth;
@@ -118,6 +129,8 @@ final class LineMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
           listEquals(other.dashPattern, dashPattern) &&
           other.interpolation == interpolation &&
@@ -132,6 +145,8 @@ final class LineMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    colorBy,
+    colorEncoding,
     strokeWidth,
     dashPattern == null ? null : Object.hashAll(dashPattern!),
     interpolation,
@@ -153,6 +168,8 @@ final class AreaMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    this.colorBy,
+    this.colorEncoding,
     this.baseline,
     this.fillOpacity,
     this.strokeWidth,
@@ -167,6 +184,15 @@ final class AreaMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel. Colours the area's TOP EDGE per segment (the
+  /// leading-point rule), NOT the fill — value-driven fill is not yet
+  /// supported. Baked at lowering into `ChartDataPoint.segmentStyle.color`.
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
 
   /// Value the fill is anchored to. Null fills to the axis floor.
   final double? baseline;
@@ -201,6 +227,8 @@ final class AreaMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
           other.fillOpacity == fillOpacity &&
           other.strokeWidth == strokeWidth &&
@@ -217,6 +245,8 @@ final class AreaMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    colorBy,
+    colorEncoding,
     baseline,
     fillOpacity,
     strokeWidth,
@@ -250,6 +280,10 @@ final class BarMark<T> extends Mark<T> {
     this.groupId,
     this.baselineValue,
     this.labelStyle,
+    this.colorBy,
+    this.colorEncoding,
+    this.sizeBy,
+    this.sizeEncoding,
   });
 
   /// Horizontal position accessor.
@@ -257,6 +291,25 @@ final class BarMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Optional colour channel: each bar's fill is the ramp colour of this
+  /// field's value over the data's finite domain, baked at lowering into
+  /// `ChartDataPoint.pointStyle.color`. Requires [colorEncoding].
+  final Channel<T>? colorBy;
+
+  /// Colour ramp for [colorBy] (reused from scatter). Required when [colorBy]
+  /// is set; inert otherwise (raises `orphanChannelEncoding`).
+  final ScatterColorEncoding? colorEncoding;
+
+  /// Optional size channel driving each bar's WIDTH. The value is mapped
+  /// LINEARLY into [sizeEncoding]'s `[minimumRadius, maximumRadius]` range,
+  /// reinterpreted as a width MULTIPLIER (scatter's sqrt/area radius mapping is
+  /// wrong for width). Baked at lowering into `ChartDataPoint.pointStyle.size`.
+  final Channel<T>? sizeBy;
+
+  /// Width-multiplier range for [sizeBy] (min/max interpreted as multipliers).
+  /// Defaults to 0.3..1.0 when [sizeBy] is set and this is null.
+  final ScatterSizeEncoding? sizeEncoding;
 
   /// Bar width as a fraction of the slot, `0..1`.
   ///
@@ -301,7 +354,11 @@ final class BarMark<T> extends Mark<T> {
           other.layoutMode == layoutMode &&
           other.groupId == groupId &&
           other.baselineValue == baselineValue &&
-          other.labelStyle == labelStyle;
+          other.labelStyle == labelStyle &&
+          other.colorBy == colorBy &&
+          other.colorEncoding == colorEncoding &&
+          other.sizeBy == sizeBy &&
+          other.sizeEncoding == sizeEncoding;
 
   @override
   int get hashCode => Object.hash(
@@ -318,6 +375,10 @@ final class BarMark<T> extends Mark<T> {
     groupId,
     baselineValue,
     labelStyle,
+    colorBy,
+    colorEncoding,
+    sizeBy,
+    sizeEncoding,
   );
 
   @override

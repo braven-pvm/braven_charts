@@ -38,6 +38,8 @@ import 'grammar_diagnostics.dart';
 import 'mark.dart';
 import 'plot_spec.dart';
 
+/// **Beta — work in progress; this API may change before a stable release.**
+///
 /// The chained, grammar-of-graphics way to author a chart.
 ///
 /// ```dart
@@ -216,6 +218,8 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    Channel<T>? colorBy,
+    ScatterColorEncoding? colorEncoding,
     double? strokeWidth,
     List<double>? dashPattern,
     LineInterpolation? interpolation,
@@ -229,6 +233,8 @@ final class BravenChart<T> {
       y: _resolveY('geomLine', y),
       name: name,
       color: color,
+      colorBy: colorBy,
+      colorEncoding: colorEncoding,
       strokeWidth: strokeWidth,
       dashPattern: dashPattern,
       interpolation: interpolation,
@@ -239,12 +245,18 @@ final class BravenChart<T> {
   );
 
   /// Appends a filled band between `y` and a baseline.
+  ///
+  /// [colorBy] colours the area's TOP EDGE per segment (the leading-point
+  /// rule), NOT the fill — value-driven fill is not yet supported. It requires
+  /// [colorEncoding]; the package ships no default colour ramp.
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    Channel<T>? colorBy,
+    ScatterColorEncoding? colorEncoding,
     double? baseline,
     double? fillOpacity,
     double? strokeWidth,
@@ -260,6 +272,8 @@ final class BravenChart<T> {
       y: _resolveY('geomArea', y),
       name: name,
       color: color,
+      colorBy: colorBy,
+      colorEncoding: colorEncoding,
       baseline: baseline,
       fillOpacity: fillOpacity,
       strokeWidth: strokeWidth,
@@ -288,6 +302,10 @@ final class BravenChart<T> {
     String? groupId,
     double? baselineValue,
     BarLabelStyle? labelStyle,
+    Channel<T>? colorBy,
+    ScatterColorEncoding? colorEncoding,
+    Channel<T>? sizeBy,
+    ScatterSizeEncoding? sizeEncoding,
     String? yAxisId,
   }) => _append(
     BarMark<T>(
@@ -303,6 +321,10 @@ final class BravenChart<T> {
       groupId: groupId,
       baselineValue: baselineValue,
       labelStyle: labelStyle,
+      colorBy: colorBy,
+      colorEncoding: colorEncoding,
+      sizeBy: sizeBy,
+      sizeEncoding: sizeEncoding,
       yAxisId: yAxisId,
     ),
   );

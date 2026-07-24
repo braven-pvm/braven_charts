@@ -36,6 +36,7 @@ import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'pages/value_summary_page.dart';
+import 'widgets/beta_badge.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
@@ -101,6 +102,7 @@ class NavDestination {
     this.routeAliases = const [],
     this.parentSlug,
     this.reviewProposal,
+    this.beta = false,
   });
 
   final String label;
@@ -111,6 +113,10 @@ class NavDestination {
   final List<String> routeAliases;
   final String? parentSlug;
   final ShowcaseReviewProposal? reviewProposal;
+
+  /// Marks a work-in-progress destination (the Beta Grammar/Fluent surface),
+  /// rendered with a [BetaBadge] in the rail.
+  final bool beta;
 
   bool get isNested => parentSlug != null;
 
@@ -248,6 +254,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.auto_awesome_motion,
       page: ChartGrammarPage(),
       routeSlug: 'chart-grammar',
+      beta: true,
     ),
     const NavDestination(
       label: 'Annotations',
@@ -642,6 +649,10 @@ class _ScrollableNav extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (dest.beta) ...[
+                                  const SizedBox(width: 6),
+                                  const BetaBadge(compact: true),
+                                ],
                                 if (dest.reviewProposal != null) ...[
                                   const SizedBox(width: 6),
                                   const _ReviewBadge(compact: true),
@@ -653,6 +664,12 @@ class _ScrollableNav extends StatelessWidget {
                                 clipBehavior: Clip.none,
                                 children: [
                                   icon,
+                                  if (dest.beta)
+                                    const Positioned(
+                                      right: -6,
+                                      top: -5,
+                                      child: BetaDot(),
+                                    ),
                                   if (dest.reviewProposal != null)
                                     const Positioned(
                                       right: -6,

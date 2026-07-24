@@ -114,15 +114,29 @@ class _ChartSourceViewState extends State<ChartSourceView> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: ChartCodeBlock(
-            code: source.source,
-            wrapLines: _wrapLines,
-            surfaceKey: isGrammar
-                ? const ValueKey('chart-grammar-source-dark-window')
-                : const ValueKey('chart-source-dark-window'),
-            codeKey: isGrammar
-                ? const ValueKey('chart-grammar-source-code')
-                : const ValueKey('chart-source-code'),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ChartCodeBlock(
+                  code: source.source,
+                  wrapLines: _wrapLines,
+                  surfaceKey: isGrammar
+                      ? const ValueKey('chart-grammar-source-dark-window')
+                      : const ValueKey('chart-source-dark-window'),
+                  codeKey: isGrammar
+                      ? const ValueKey('chart-grammar-source-code')
+                      : const ValueKey('chart-source-code'),
+                ),
+              ),
+              // The grammar source is Beta: pin the pill to the top-right of the
+              // code window so it persists over the scrolling code.
+              if (isGrammar)
+                const Positioned(
+                  top: 10,
+                  right: 12,
+                  child: _GrammarBetaChip(),
+                ),
+            ],
           ),
         ),
       ],
@@ -145,8 +159,16 @@ class _ChartSourceViewState extends State<ChartSourceView> {
           ),
           ButtonSegment<ChartSourceForm>(
             value: ChartSourceForm.grammar,
-            label: Text('Grammar'),
-            tooltip: 'The BravenChart.of(rows) chain that rebuilds this chart',
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Grammar'),
+                SizedBox(width: 6),
+                _GrammarBetaChip(),
+              ],
+            ),
+            tooltip:
+                'The BravenChart.of(rows) chain that rebuilds this chart (Beta)',
           ),
         ],
         selected: <ChartSourceForm>{widget.form},
@@ -184,6 +206,34 @@ class _SourceStatus extends StatelessWidget {
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.labelMedium),
       ],
+    ),
+  );
+}
+
+/// A small "Beta" pill marking the grammar source view as work-in-progress —
+/// the `BravenChart` grammar / fluent authoring API it emits is still Beta.
+class _GrammarBetaChip extends StatelessWidget {
+  const _GrammarBetaChip();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Beta',
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6C5CE7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        'Beta',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+          letterSpacing: 0.2,
+          height: 1,
+        ),
+      ),
     ),
   );
 }

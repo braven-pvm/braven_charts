@@ -1,5 +1,9 @@
 # Chart grammar and the fluent surface
 
+> ⚠️ **Beta / Work in progress.** The grammar-of-graphics and fluent authoring
+> APIs are experimental and may change before a stable release. Pin a version if
+> you depend on them.
+
 Braven Charts has one configuration API — `BravenChartPlus` with
 `ChartSeries`, `ChartAnnotation` and the config classes — and **two optional
 authoring layers above it**. Both are additive: they change nothing about the
@@ -236,9 +240,11 @@ own — they append an annotation — and carry no `copyWith`.
 
 **Channels exist only where they can be honoured.** `Channel<T>` (quantitative)
 and `CategoryChannel<T>` (categorical) are constructor parameters of
-`ScatterMark` and of no other mark, because scatter is the only family in this
-package with scale-driven encodings today. The coordinate × geometry validity
-matrix is therefore a compile-time property, not a runtime throw.
+`ScatterMark`; `geomBar`, `geomLine` and `geomArea` additionally carry a
+`colorBy` colour channel and `geomBar` a `sizeBy` width channel, baked at
+lowering, while `size`, `opacityBy` and `categoryBy` remain scatter-only. The
+coordinate × geometry validity matrix is therefore a compile-time property, not
+a runtime throw.
 
 A channel says *which field to read*; the matching `Scatter*Encoding` says how
 the scale is configured:
@@ -642,9 +648,11 @@ Deferred deliberately, so the V1 mark list stays closed:
   `YAxisConfig`.
 - **String-column data adapters.** The grammar reads typed rows through typed
   accessors; there is no `data['column']` form.
-- **Scale-driven channels on non-scatter families.** Colour/size/opacity
-  channels exist only on `ScatterMark`, because scatter is the only family the
-  render pipeline scales today.
+- **Opacity channels and value-driven area fill on non-scatter families.**
+  Colour channels now bake onto `geomBar`/`geomLine`/`geomArea` (area colours
+  the top *edge*, not the fill) and `geomBar` carries a linear `sizeBy` width
+  multiplier; opacity on non-scatter families and value-driven area *fill*
+  remain deferred.
 - **The remaining chart-level options.** `legendStyle`, the toolbar toggle,
   `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization
   knobs, width/height and background live on `BravenChartPlus`, not on
