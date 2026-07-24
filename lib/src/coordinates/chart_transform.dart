@@ -3,7 +3,9 @@
 
 import 'dart:ui';
 
+import '../axis/log_ticks.dart';
 import '../meta/chart_surface.dart';
+import '../models/axis_scale_type.dart';
 
 /// Handles bidirectional conversion between DATA space and PLOT space.
 ///
@@ -66,6 +68,10 @@ class ChartTransform {
     required this.plotHeight,
     this.invertY = true,
     this.transposed = false,
+    this.xScaleType = AxisScaleType.linear,
+    this.yScaleType = AxisScaleType.linear,
+    this.xLogBase = 10,
+    this.yLogBase = 10,
   }) : assert(dataXMax > dataXMin, 'dataXMax must be greater than dataXMin'),
        assert(dataYMax > dataYMin, 'dataYMax must be greater than dataYMin'),
        assert(plotWidth > 0, 'plotWidth must be positive'),
@@ -98,6 +104,20 @@ class ChartTransform {
   /// Horizontal bar charts use this while retaining their public data model:
   /// X remains the category and Y remains the measured value.
   final bool transposed;
+
+  /// How X values map to positions. [AxisScaleType.linear] (the default) keeps
+  /// the byte-identical linear mapping; [AxisScaleType.log] maps in log-space.
+  /// [AxisScaleType.time] positions epoch-millis linearly (same as linear here).
+  final AxisScaleType xScaleType;
+
+  /// How Y values map to positions (see [xScaleType]).
+  final AxisScaleType yScaleType;
+
+  /// Log base for the X mapping when [xScaleType] is [AxisScaleType.log].
+  final double xLogBase;
+
+  /// Log base for the Y mapping when [yScaleType] is [AxisScaleType.log].
+  final double yLogBase;
 
   // ============================================================================
   // Computed Properties
@@ -133,6 +153,45 @@ class ChartTransform {
   // Core Transformations
   // ============================================================================
 
+  /// Maps a data value to its `[0, 1]` fraction of the axis given its
+  /// [type]/[base]. The [AxisScaleType.linear] arm is the original expression
+  /// verbatim (`(v - min) / range`); the [AxisScaleType.log] arm maps in
+  /// log-space. [AxisScaleType.time] falls through to the linear arm.
+  double _relative(
+    double v,
+    double min,
+    double max,
+    AxisScaleType type,
+    double base,
+  ) {
+    if (type == AxisScaleType.log) {
+      final lo = logValue(min, base);
+      final hi = logValue(max, base);
+      return hi == lo ? 0.5 : (logValue(v, base) - lo) / (hi - lo);
+    }
+    // linear — byte-identical to the original (v - min) / range.
+    return (v - min) / (max - min);
+  }
+
+  /// Inverse of [_relative]: maps a `[0, 1]` axis fraction back to a data value.
+  /// The [AxisScaleType.linear] arm is the original expression verbatim
+  /// (`min + relative * range`), so it is exactly symmetric with [_relative].
+  double _relativeInverse(
+    double t,
+    double min,
+    double max,
+    AxisScaleType type,
+    double base,
+  ) {
+    if (type == AxisScaleType.log) {
+      final lo = logValue(min, base);
+      final hi = logValue(max, base);
+      return logInverse(lo + t * (hi - lo), base);
+    }
+    // linear — byte-identical to the original min + relative * range.
+    return min + (t * (max - min));
+  }
+
   /// Converts a data coordinate to plot coordinate.
   ///
   /// **Example**:
@@ -147,8 +206,8 @@ class ChartTransform {
   /// - Output: Plot space (0,0 → plotWidth,plotHeight)
   Offset dataToPlot(double dataX, double dataY) {
     // Calculate relative position in data range [0, 1]
-    final relativeX = (dataX - dataXMin) / dataXRange;
-    final relativeY = (dataY - dataYMin) / dataYRange;
+    final relativeX = _relative(dataX, dataXMin, dataXMax, xScaleType, xLogBase);
+    final relativeY = _relative(dataY, dataYMin, dataYMax, yScaleType, yLogBase);
 
     if (transposed) {
       return Offset(relativeY * plotWidth, relativeX * plotHeight);
@@ -183,8 +242,8 @@ class ChartTransform {
       final relativeX = plotY / plotHeight;
       final relativeY = plotX / plotWidth;
       return Offset(
-        dataXMin + (relativeX * dataXRange),
-        dataYMin + (relativeY * dataYRange),
+        _relativeInverse(relativeX, dataXMin, dataXMax, xScaleType, xLogBase),
+        _relativeInverse(relativeY, dataYMin, dataYMax, yScaleType, yLogBase),
       );
     }
 
@@ -196,8 +255,20 @@ class ChartTransform {
         : plotY / plotHeight; // Standard: Y=0 at top
 
     // Convert to data values
-    final dataX = dataXMin + (relativeX * dataXRange);
-    final dataY = dataYMin + (relativeY * dataYRange);
+    final dataX = _relativeInverse(
+      relativeX,
+      dataXMin,
+      dataXMax,
+      xScaleType,
+      xLogBase,
+    );
+    final dataY = _relativeInverse(
+      relativeY,
+      dataYMin,
+      dataYMax,
+      yScaleType,
+      yLogBase,
+    );
 
     return Offset(dataX, dataY);
   }
@@ -423,6 +494,10 @@ class ChartTransform {
     double? plotHeight,
     bool? invertY,
     bool? transposed,
+    AxisScaleType? xScaleType,
+    AxisScaleType? yScaleType,
+    double? xLogBase,
+    double? yLogBase,
   }) {
     return ChartTransform(
       dataXMin: dataXMin ?? this.dataXMin,
@@ -433,6 +508,10 @@ class ChartTransform {
       plotHeight: plotHeight ?? this.plotHeight,
       invertY: invertY ?? this.invertY,
       transposed: transposed ?? this.transposed,
+      xScaleType: xScaleType ?? this.xScaleType,
+      yScaleType: yScaleType ?? this.yScaleType,
+      xLogBase: xLogBase ?? this.xLogBase,
+      yLogBase: yLogBase ?? this.yLogBase,
     );
   }
 
@@ -452,7 +531,11 @@ class ChartTransform {
         other.plotWidth == plotWidth &&
         other.plotHeight == plotHeight &&
         other.invertY == invertY &&
-        other.transposed == transposed;
+        other.transposed == transposed &&
+        other.xScaleType == xScaleType &&
+        other.yScaleType == yScaleType &&
+        other.xLogBase == xLogBase &&
+        other.yLogBase == yLogBase;
   }
 
   @override
@@ -466,6 +549,10 @@ class ChartTransform {
       plotHeight,
       invertY,
       transposed,
+      xScaleType,
+      yScaleType,
+      xLogBase,
+      yLogBase,
     );
   }
 
