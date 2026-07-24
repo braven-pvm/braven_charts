@@ -782,6 +782,14 @@ void main() {
 
       expect(chartController.selectionBrushState?.box, isNotNull);
       expect(chartController.selectedPointRefs, isNotEmpty);
+      expect(
+        chartController.selectionExpression.clauses,
+        everyElement(isA<ChartSelectionRectangleClause>()),
+      );
+      expect(
+        chartController.selectionExpression.clauses,
+        isNot(contains(isA<ChartSelectionExplicitPointRefsClause>())),
+      );
       expect(workbenchController.tableIsStale, isFalse);
       expect(workbenchController.tableSnapshot, isNot(same(initialSnapshot)));
       expect(
@@ -795,6 +803,19 @@ void main() {
             ?.selectionExpression
             ?.isNotEmpty,
         isTrue,
+      );
+      expect(
+        workbenchController
+            .tableSnapshot
+            ?.viewState
+            ?.selectionExpression
+            ?.clauses,
+        everyElement(
+          predicate<ChartSelectionClauseDocument>(
+            (clause) =>
+                clause.kind == ChartSelectionClauseDocumentKind.rectangle,
+          ),
+        ),
       );
       expect(
         workbenchController.tableSnapshot?.viewState?.selectionBrush?.box,

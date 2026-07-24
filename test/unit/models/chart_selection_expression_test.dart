@@ -90,6 +90,92 @@ void main() {
       });
     });
 
+    test('rectangle clauses require both axes to match', () {
+      final expression = ChartSelectionExpression(
+        clauses: [
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 1,
+            maximumXInclusive: 3,
+            minimumYInclusive: 20,
+            maximumYInclusive: 40,
+            seriesIds: const {'signal'},
+          ),
+        ],
+      );
+      final series = _series('signal', const [
+        (0, 30), // Y only.
+        (1, 10), // X only.
+        (2, 30), // X and Y.
+        (3, 40), // Inclusive upper bounds.
+        (4, 30), // Y only.
+      ], isXOrdered: true);
+
+      expect(expression.resolvePointRefs([series]), {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 2),
+        const ChartPointRef(seriesId: 'signal', pointIndex: 3),
+      });
+      expect(expression.selectsPoint(series, 0), isFalse);
+      expect(expression.selectsPoint(series, 1), isFalse);
+      expect(expression.selectsPoint(series, 2), isTrue);
+      expect(expression.resolvesAny([series]), isTrue);
+    });
+
+    test('per-series rectangle clauses preserve independent Y intervals', () {
+      final expression = ChartSelectionExpression(
+        clauses: [
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 1,
+            maximumXInclusive: 2,
+            minimumYInclusive: 100,
+            maximumYInclusive: 120,
+            seriesIds: const {'power'},
+          ),
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 1,
+            maximumXInclusive: 2,
+            minimumYInclusive: 40,
+            maximumYInclusive: 50,
+            seriesIds: const {'heart-rate'},
+          ),
+        ],
+      );
+
+      expect(
+        expression.resolvePointRefs([
+          _series('power', const [(0, 110), (1, 110), (2, 130)]),
+          _series('heart-rate', const [(0, 45), (1, 60), (2, 45)]),
+        ]),
+        {
+          const ChartPointRef(seriesId: 'power', pointIndex: 1),
+          const ChartPointRef(seriesId: 'heart-rate', pointIndex: 2),
+        },
+      );
+    });
+
+    test('rectangle Y membership intersects complete interval marks', () {
+      final expression = ChartSelectionExpression(
+        clauses: [
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 0,
+            maximumXInclusive: 1,
+            minimumYInclusive: 58,
+            maximumYInclusive: 62,
+          ),
+        ],
+      );
+      final range = RangeAreaChartSeries(
+        id: 'range',
+        points: [
+          RangeAreaDataPoint(x: 0, low: 40, high: 60),
+          RangeAreaDataPoint(x: 1, low: 20, high: 30),
+        ],
+      );
+
+      expect(expression.resolvePointRefs([range]), {
+        const ChartPointRef(seriesId: 'range', pointIndex: 0),
+      });
+    });
+
     test('stable point keys resolve after reorder and reject ambiguity', () {
       final original = const LineChartSeries(
         id: 'signal',
@@ -154,6 +240,13 @@ void main() {
           ChartSelectionYIntervalClause(
             minimumYInclusive: -4,
             maximumYInclusive: 12,
+          ),
+          ChartSelectionRectangleClause(
+            minimumXInclusive: 2,
+            maximumXInclusive: 8,
+            minimumYInclusive: -3,
+            maximumYInclusive: 11,
+            seriesIds: const {'rectangle'},
           ),
           ChartSelectionExplicitPointRefsClause(
             pointRefs: {

@@ -183,6 +183,13 @@ void main() {
                 maximumInclusive: 0.75,
                 seriesIds: const {'power'},
               ),
+              ChartSelectionClauseDocument.rectangle(
+                minimumXInclusive: 0.35,
+                maximumXInclusive: 0.65,
+                minimumYInclusive: 145,
+                maximumYInclusive: 165,
+                seriesIds: const {'power'},
+              ),
             ],
           ),
         ),

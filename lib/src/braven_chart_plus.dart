@@ -6730,12 +6730,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       return;
     }
     if (gesture.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
-      // Selection-expression clauses are additive unions. Encoding a box as
-      // one X interval plus per-series Y intervals would therefore select
-      // every point matching either axis instead of only points enclosed by
-      // both axes. The ordinary selection pipeline has already committed the
-      // exact rectangle hits, so retain those resolved identities until the
-      // expression model has a native two-axis conjunction clause.
+      final clauses = _seriesRectangleClauses(gesture);
+      if (clauses.isEmpty) return;
+      final expression = _composeRectangleSelectionExpression(
+        previousExpression: previousExpression,
+        gestureClauses: clauses,
+        operation: operation,
+      );
+      if (_selectionIntentExpression == expression) return;
+      _selectionIntentExpression = expression;
+      _captureStateRevision++;
+      _syncControllerSelectionSnapshot(widget.bravenChartController);
       return;
     }
     final clauses = switch (gesture.acquisitionMode) {
@@ -6777,6 +6782,57 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           seriesIds: {entry.key},
         ),
     ];
+  }
+
+  List<ChartSelectionClause> _seriesRectangleClauses(
+    ChartSelectionGestureResult gesture,
+  ) {
+    final plotBounds = gesture.plotBounds;
+    final minimumXInclusive = gesture.minimumXInclusive;
+    final maximumXInclusive = gesture.maximumXInclusive;
+    if (plotBounds == null ||
+        minimumXInclusive == null ||
+        maximumXInclusive == null) {
+      return const [];
+    }
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return const [];
+    final intervals = renderBox.seriesYIntervalsForPlotRect(plotBounds);
+    return [
+      for (final entry in intervals.entries)
+        ChartSelectionRectangleClause(
+          minimumXInclusive: minimumXInclusive,
+          maximumXInclusive: maximumXInclusive,
+          minimumYInclusive: entry.value.minimum,
+          maximumYInclusive: entry.value.maximum,
+          seriesIds: {entry.key},
+        ),
+    ];
+  }
+
+  ChartSelectionExpression _composeRectangleSelectionExpression({
+    required ChartSelectionExpression previousExpression,
+    required List<ChartSelectionClause> gestureClauses,
+    required ChartSelectionOperation operation,
+  }) {
+    if (operation == ChartSelectionOperation.replace) {
+      return ChartSelectionExpression(clauses: gestureClauses);
+    }
+    if (operation == ChartSelectionOperation.add) {
+      return ChartSelectionExpression(
+        clauses: [...previousExpression.clauses, ...gestureClauses],
+      );
+    }
+
+    // Rectangle subtraction and symmetric difference require general boolean
+    // set algebra. Preserve the already-resolved result without pretending a
+    // union of positive clauses can encode either operation.
+    return ChartSelectionExpression.fromResolvedIdentities(
+      wholeSeriesIds: _selectedSeriesIds,
+      pointRefs: _selectedPointRefs,
+      series: _resolvedChartData.allSeries,
+    );
   }
 
   ChartSelectionExpression _composeIntervalSelectionExpression({
@@ -8095,6 +8151,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     final allSeries = _resolvedChartData.allSeries;
     final validSeriesIds = {for (final series in allSeries) series.id};
+    final missingRectangleSeriesIds = <String>{
+      for (final clause
+          in expression.clauses.whereType<ChartSelectionRectangleClause>())
+        if (clause.seriesIds case final seriesIds?)
+          ...seriesIds.where((seriesId) => !validSeriesIds.contains(seriesId)),
+    };
+    if (missingRectangleSeriesIds.isNotEmpty) {
+      final orderedMissing = missingRectangleSeriesIds.toList()..sort();
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidPointReference,
+          message:
+              'Rectangle selection targets missing series: '
+              '${orderedMissing.join(', ')}.',
+        ),
+      );
+    }
     final wholeSeriesIds = <String>{
       for (final clause in expression.clauses)
         if (clause is ChartSelectionWholeSeriesClause &&
@@ -8224,6 +8297,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ? clause.maximumXInclusive
               : math.max(xMax, clause.maximumXInclusive);
         case ChartSelectionYIntervalClause():
+          yMin = yMin == null
+              ? clause.minimumYInclusive
+              : math.min(yMin, clause.minimumYInclusive);
+          yMax = yMax == null
+              ? clause.maximumYInclusive
+              : math.max(yMax, clause.maximumYInclusive);
+        case ChartSelectionRectangleClause():
+          xMin = xMin == null
+              ? clause.minimumXInclusive
+              : math.min(xMin, clause.minimumXInclusive);
+          xMax = xMax == null
+              ? clause.maximumXInclusive
+              : math.max(xMax, clause.maximumXInclusive);
           yMin = yMin == null
               ? clause.minimumYInclusive
               : math.min(yMin, clause.minimumYInclusive);

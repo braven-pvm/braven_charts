@@ -2410,6 +2410,122 @@ void main() {
       },
     );
 
+    testWidgets(
+      'rectangle acquisition preserves per-series native Y-axis bounds',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        final lowAxis = YAxisConfig.withId(
+          id: 'low',
+          position: YAxisPosition.left,
+          min: 0,
+          max: 10,
+        );
+        final highAxis = YAxisConfig.withId(
+          id: 'high',
+          position: YAxisPosition.right,
+          min: 100,
+          max: 200,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 560,
+                height: 400,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  normalizationMode: NormalizationMode.perSeries,
+                  series: [
+                    LineChartSeries(
+                      id: 'low-signal',
+                      yAxisId: 'low',
+                      yAxisConfig: lowAxis,
+                      points: const [
+                        ChartDataPoint(x: 2, y: 2),
+                        ChartDataPoint(x: 5, y: 5),
+                        ChartDataPoint(x: 8, y: 8),
+                      ],
+                    ),
+                    LineChartSeries(
+                      id: 'high-signal',
+                      yAxisId: 'high',
+                      yAxisConfig: highAxis,
+                      points: const [
+                        ChartDataPoint(x: 2, y: 120),
+                        ChartDataPoint(x: 5, y: 150),
+                        ChartDataPoint(x: 8, y: 180),
+                      ],
+                    ),
+                  ],
+                  interactionConfig: const InteractionConfig(
+                    selection: ChartSelectionConfig(
+                      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                      useModifierKeys: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final origin = tester.getTopLeft(renderFinder);
+        renderBox.hitTestElements(renderBox.debugPlotArea.center);
+        final elements = renderBox.debugElements.whereType<SeriesElement>();
+        final low = elements.singleWhere(
+          (element) => element.id == 'low-signal',
+        );
+        final high = elements.singleWhere(
+          (element) => element.id == 'high-signal',
+        );
+        final lowPoint = low.dataToCurrentPlot(5, 5);
+        final highPoint = high.dataToCurrentPlot(5, 150);
+        expect(lowPoint.dx, closeTo(highPoint.dx, 0.01));
+        expect(lowPoint.dy, closeTo(highPoint.dy, 0.01));
+        final start =
+            origin + renderBox.plotToWidget(lowPoint - const Offset(12, 12));
+        final end =
+            origin + renderBox.plotToWidget(lowPoint + const Offset(12, 12));
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(start);
+        await mouse.down(start);
+        await mouse.moveTo(end);
+        await tester.pump();
+        expect(renderBox.coordinator.previewDataHits, hasLength(2));
+        await mouse.up();
+        await tester.pump();
+
+        final clauses = controller.selectionExpression.clauses
+            .whereType<ChartSelectionRectangleClause>()
+            .toList(growable: false);
+        expect(clauses, hasLength(2));
+        final lowClause = clauses.singleWhere(
+          (clause) => clause.seriesIds!.contains('low-signal'),
+        );
+        final highClause = clauses.singleWhere(
+          (clause) => clause.seriesIds!.contains('high-signal'),
+        );
+        expect(lowClause.minimumXInclusive, highClause.minimumXInclusive);
+        expect(lowClause.maximumXInclusive, highClause.maximumXInclusive);
+        expect(lowClause.minimumYInclusive, lessThan(10));
+        expect(highClause.minimumYInclusive, greaterThan(100));
+        expect(
+          controller.selectionExpression.resolvePointRefs([
+            low.series,
+            high.series,
+          ]),
+          controller.selectedPointRefs,
+        );
+      },
+    );
+
     testWidgets('rectangle selection commits every enclosed scatter point', (
       tester,
     ) async {
@@ -2491,6 +2607,14 @@ void main() {
       expect(callbackResult.statistics.pointCount, 2);
       expect(callbackResult.extents?.minimumX, 2);
       expect(callbackResult.extents?.maximumX, 4);
+      final clause =
+          controller.selectionExpression.clauses.single
+              as ChartSelectionRectangleClause;
+      expect(clause.seriesIds, {'accounts'});
+      expect(clause.minimumXInclusive, lessThan(2));
+      expect(clause.maximumXInclusive, greaterThan(4));
+      expect(clause.minimumYInclusive, lessThan(3));
+      expect(clause.maximumYInclusive, greaterThan(5));
     });
 
     testWidgets(
