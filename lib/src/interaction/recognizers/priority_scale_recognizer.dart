@@ -52,6 +52,7 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
   double _currentScale = 1;
   Duration? _sourceTimeStamp;
   PointerDeviceKind? _kind;
+  VelocityTracker? _focalVelocityTracker;
 
   @override
   bool isPointerAllowed(PointerDownEvent event) =>
@@ -158,6 +159,14 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
     _started = true;
     _previousGlobalFocalPoint = _globalFocalPoint;
     _previousLocalFocalPoint = _localFocalPoint;
+    final kind = _kind;
+    if (kind != null) {
+      _focalVelocityTracker = VelocityTracker.withKind(kind)
+        ..addPosition(
+          _sourceTimeStamp ?? Duration.zero,
+          _previousGlobalFocalPoint,
+        );
+    }
     _rebaseScaleSegment();
     invokeCallback<void>('onStart', () {
       onStart(
@@ -178,6 +187,7 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
     final span = _spanAround(globalFocalPoint, _globalPositions.values);
     final segmentScale = _referenceSpan <= 0 ? 1 : span / _referenceSpan;
     _currentScale = _segmentScaleBase * segmentScale;
+    _focalVelocityTracker?.addPosition(timeStamp, globalFocalPoint);
 
     final details = ScaleUpdateDetails(
       focalPoint: globalFocalPoint,
@@ -196,8 +206,14 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
 
   void _finish() {
     _ended = true;
+    final velocity = _focalVelocityTracker?.getVelocity() ?? Velocity.zero;
     invokeCallback<void>('onEnd', () {
-      onEnd(ScaleEndDetails(pointerCount: _globalPositions.length));
+      onEnd(
+        ScaleEndDetails(
+          velocity: velocity,
+          pointerCount: _globalPositions.length,
+        ),
+      );
     });
     if (coordinator.currentMode == InteractionMode.transformingViewport) {
       coordinator.releaseMode();
@@ -248,6 +264,7 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
     _ended = false;
     _sourceTimeStamp = null;
     _kind = null;
+    _focalVelocityTracker = null;
     _referenceSpan = 1;
     _segmentScaleBase = 1;
     _currentScale = 1;

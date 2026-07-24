@@ -205,6 +205,18 @@ extension TouchInteractionConfigFluent on TouchInteractionConfig {
   TouchInteractionConfig withEnablePan(bool value) =>
       copyWith(enablePan: value);
 
+  /// Replaces [TouchInteractionConfig.enablePanInertia] with [value].
+  TouchInteractionConfig withEnablePanInertia(bool value) =>
+      copyWith(enablePanInertia: value);
+
+  /// Replaces [TouchInteractionConfig.panInertiaDeceleration] with [value].
+  TouchInteractionConfig withPanInertiaDeceleration(double value) =>
+      copyWith(panInertiaDeceleration: value);
+
+  /// Replaces [TouchInteractionConfig.maximumPanInertiaVelocity] with [value].
+  TouchInteractionConfig withMaximumPanInertiaVelocity(double value) =>
+      copyWith(maximumPanInertiaVelocity: value);
+
   /// Replaces [TouchInteractionConfig.enableLongPressTracking] with [value].
   TouchInteractionConfig withEnableLongPressTracking(bool value) =>
       copyWith(enableLongPressTracking: value);

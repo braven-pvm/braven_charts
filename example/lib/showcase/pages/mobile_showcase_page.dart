@@ -35,6 +35,10 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
   _MobileVisualStyle _visualStyle = _MobileVisualStyle.vivid;
   _MobileChartChrome _chartChrome = _MobileChartChrome.clean;
   _MobileTouchMode _touchMode = _MobileTouchMode.detailsAndSelection;
+  TouchInteractionProfile _touchProfile = TouchInteractionProfile.browse;
+  bool _enableLongPressTracking = true;
+  bool _enableHaptics = true;
+  bool _enablePanInertia = true;
 
   @override
   void initState() {
@@ -79,6 +83,11 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
   void _selectTouchMode(_MobileTouchMode mode) {
     if (mode == _touchMode) return;
     setState(() => _touchMode = mode);
+  }
+
+  void _selectTouchProfile(TouchInteractionProfile profile) {
+    if (profile == _touchProfile) return;
+    setState(() => _touchProfile = profile);
   }
 
   void _scheduleSelectedChartTypeVisibility({required bool animate}) {
@@ -198,8 +207,19 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
                     _MobileBehaviorSelector(
                       chartChrome: _chartChrome,
                       touchMode: _touchMode,
+                      touchProfile: _touchProfile,
+                      enableLongPressTracking: _enableLongPressTracking,
+                      enableHaptics: _enableHaptics,
+                      enablePanInertia: _enablePanInertia,
                       onChartChromeSelected: _selectChartChrome,
                       onTouchModeSelected: _selectTouchMode,
+                      onTouchProfileSelected: _selectTouchProfile,
+                      onLongPressTrackingChanged: (value) =>
+                          setState(() => _enableLongPressTracking = value),
+                      onHapticsChanged: (value) =>
+                          setState(() => _enableHaptics = value),
+                      onPanInertiaChanged: (value) =>
+                          setState(() => _enablePanInertia = value),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -216,7 +236,9 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                _touchMode.description,
+                                _touchMode == _MobileTouchMode.static
+                                    ? _touchMode.description
+                                    : '${_touchProfile.label}: ${_touchProfile.summary}',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: scheme.onSurfaceVariant),
                               ),
@@ -255,6 +277,10 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
                     visualStyle: _visualStyle,
                     chartChrome: _chartChrome,
                     touchMode: _touchMode,
+                    touchProfile: _touchProfile,
+                    enableLongPressTracking: _enableLongPressTracking,
+                    enableHaptics: _enableHaptics,
+                    enablePanInertia: _enablePanInertia,
                     index: index,
                   ),
                 ),
@@ -693,11 +719,68 @@ extension on _MobileTouchMode {
     _MobileTouchMode.static => Icons.lock_outline,
   };
 
-  InteractionConfig get interactionConfig => switch (this) {
-    _MobileTouchMode.details => InteractionConfig.tap(enableSelection: false),
-    _MobileTouchMode.selection => InteractionConfig.tap(enableTooltip: false),
-    _MobileTouchMode.detailsAndSelection => InteractionConfig.tap(),
-    _MobileTouchMode.static => InteractionConfig.none(),
+  InteractionConfig interactionConfig({
+    required TouchInteractionProfile profile,
+    required bool enableLongPressTracking,
+    required bool enableHaptics,
+    required bool enablePanInertia,
+  }) {
+    if (this == _MobileTouchMode.static) {
+      return InteractionConfig.none();
+    }
+
+    final enableTooltip =
+        this == _MobileTouchMode.details ||
+        this == _MobileTouchMode.detailsAndSelection;
+    final enableSelection =
+        this == _MobileTouchMode.selection ||
+        this == _MobileTouchMode.detailsAndSelection;
+
+    return InteractionConfig(
+      crosshair: CrosshairConfig(
+        enabled: enableLongPressTracking,
+        displayMode: CrosshairDisplayMode.tracking,
+        showTrackingTooltip: enableLongPressTracking,
+      ),
+      tooltip: TooltipConfig(
+        enabled: enableTooltip,
+        triggerMode: TooltipTriggerMode.tap,
+      ),
+      touch: TouchInteractionConfig(
+        profile: profile,
+        enableLongPressTracking: enableLongPressTracking,
+        enableHapticFeedback: enableHaptics,
+        enablePanInertia: enablePanInertia,
+      ),
+      keyboard: const KeyboardConfig(enabled: false),
+      enableZoom: true,
+      enablePan: true,
+      enableSelection: enableSelection,
+      valueSummary: const CartesianValueSummaryConfig(enabled: false),
+      showFocusBorder: false,
+      enableFocusOnHover: false,
+      showXScrollbar: false,
+      showYScrollbar: false,
+    );
+  }
+}
+
+extension on TouchInteractionProfile {
+  String get label => switch (this) {
+    TouchInteractionProfile.browse => 'Browse',
+    TouchInteractionProfile.explore => 'Explore',
+  };
+
+  String get summary => switch (this) {
+    TouchInteractionProfile.browse =>
+      'one finger scrolls; two fingers pan or zoom.',
+    TouchInteractionProfile.explore =>
+      'one finger pans; pinch zooms the chart.',
+  };
+
+  IconData get icon => switch (this) {
+    TouchInteractionProfile.browse => Icons.chrome_reader_mode_outlined,
+    TouchInteractionProfile.explore => Icons.travel_explore_outlined,
   };
 }
 
@@ -816,80 +899,193 @@ class _MobileBehaviorSelector extends StatelessWidget {
   const _MobileBehaviorSelector({
     required this.chartChrome,
     required this.touchMode,
+    required this.touchProfile,
+    required this.enableLongPressTracking,
+    required this.enableHaptics,
+    required this.enablePanInertia,
     required this.onChartChromeSelected,
     required this.onTouchModeSelected,
+    required this.onTouchProfileSelected,
+    required this.onLongPressTrackingChanged,
+    required this.onHapticsChanged,
+    required this.onPanInertiaChanged,
   });
 
   final _MobileChartChrome chartChrome;
   final _MobileTouchMode touchMode;
+  final TouchInteractionProfile touchProfile;
+  final bool enableLongPressTracking;
+  final bool enableHaptics;
+  final bool enablePanInertia;
   final ValueChanged<_MobileChartChrome> onChartChromeSelected;
   final ValueChanged<_MobileTouchMode> onTouchModeSelected;
+  final ValueChanged<TouchInteractionProfile> onTouchProfileSelected;
+  final ValueChanged<bool> onLongPressTrackingChanged;
+  final ValueChanged<bool> onHapticsChanged;
+  final ValueChanged<bool> onPanInertiaChanged;
 
   Future<void> _showOptions(BuildContext context) {
     final theme = Theme.of(context);
+    var currentChrome = chartChrome;
+    var currentMode = touchMode;
+    var currentProfile = touchProfile;
+    var currentTracking = enableLongPressTracking;
+    var currentHaptics = enableHaptics;
+    var currentInertia = enablePanInertia;
+
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'View & touch',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final controlsEnabled = currentMode != _MobileTouchMode.static;
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.88,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'View & touch',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose how the examples look, share gestures with the page, and respond to touch.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Gesture mode',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _MobileOptionSelector<TouchInteractionProfile>(
+                    key: const ValueKey('mobile-touch-profile-selector'),
+                    optionKeyPrefix: 'mobile-touch-profile',
+                    values: TouchInteractionProfile.values,
+                    selected: currentProfile,
+                    labelFor: (value) => value.label,
+                    onSelected: (value) {
+                      setSheetState(() => currentProfile = value);
+                      onTouchProfileSelected(value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _MobileTouchContract(profile: currentProfile),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Tap response',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _MobileOptionSelector<_MobileTouchMode>(
+                    key: const ValueKey('mobile-touch-mode-selector'),
+                    optionKeyPrefix: 'mobile-touch-mode',
+                    values: _MobileTouchMode.values,
+                    selected: currentMode,
+                    labelFor: (value) => value.label,
+                    onSelected: (value) {
+                      setSheetState(() => currentMode = value);
+                      onTouchModeSelected(value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Touch options',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _MobileTouchSwitch(
+                    key: const ValueKey('mobile-touch-tracking-switch'),
+                    icon: Icons.straighten_outlined,
+                    title: 'Hold to inspect',
+                    subtitle: 'Long-press and drag to scrub values.',
+                    value: currentTracking,
+                    enabled: controlsEnabled,
+                    onChanged: (value) {
+                      setSheetState(() => currentTracking = value);
+                      onLongPressTrackingChanged(value);
+                    },
+                  ),
+                  _MobileTouchSwitch(
+                    key: const ValueKey('mobile-touch-haptics-switch'),
+                    icon: Icons.vibration_outlined,
+                    title: 'Haptic steps',
+                    subtitle: 'Confirm tracking activation and value changes.',
+                    value: currentHaptics,
+                    enabled: controlsEnabled && currentTracking,
+                    onChanged: (value) {
+                      setSheetState(() => currentHaptics = value);
+                      onHapticsChanged(value);
+                    },
+                  ),
+                  _MobileTouchSwitch(
+                    key: const ValueKey('mobile-touch-inertia-switch'),
+                    icon: Icons.motion_photos_on_outlined,
+                    title: 'Pan momentum',
+                    subtitle: 'Let a released chart pan settle naturally.',
+                    value: currentInertia,
+                    enabled: controlsEnabled,
+                    onChanged: (value) {
+                      setSheetState(() => currentInertia = value);
+                      onPanInertiaChanged(value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Chart chrome',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _MobileOptionSelector<_MobileChartChrome>(
+                    key: const ValueKey('mobile-chart-chrome-selector'),
+                    optionKeyPrefix: 'mobile-chart-chrome',
+                    values: _MobileChartChrome.values,
+                    selected: currentChrome,
+                    labelFor: (value) => value.label,
+                    onSelected: (value) {
+                      setSheetState(() => currentChrome = value);
+                      onChartChromeSelected(value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      key: const ValueKey('mobile-touch-options-done'),
+                      onPressed: () => Navigator.pop(sheetContext),
+                      style: const ButtonStyle(
+                        minimumSize: WidgetStatePropertyAll(
+                          Size.fromHeight(48),
+                        ),
+                      ),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Choose how much chart chrome and touch behavior the examples expose.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Chart chrome',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _MobileOptionSelector<_MobileChartChrome>(
-              key: const ValueKey('mobile-chart-chrome-selector'),
-              optionKeyPrefix: 'mobile-chart-chrome',
-              values: _MobileChartChrome.values,
-              selected: chartChrome,
-              labelFor: (value) => value.label,
-              onSelected: (value) {
-                onChartChromeSelected(value);
-                Navigator.pop(sheetContext);
-              },
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Chart interaction',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _MobileOptionSelector<_MobileTouchMode>(
-              key: const ValueKey('mobile-touch-mode-selector'),
-              optionKeyPrefix: 'mobile-touch-mode',
-              values: _MobileTouchMode.values,
-              selected: touchMode,
-              labelFor: (value) => value.label,
-              onSelected: (value) {
-                onTouchModeSelected(value);
-                Navigator.pop(sheetContext);
-              },
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -913,13 +1109,85 @@ class _MobileBehaviorSelector extends StatelessWidget {
         Expanded(
           child: _MobileSettingTile(
             key: const ValueKey('mobile-touch-settings-button'),
-            icon: touchMode.icon,
-            label: 'Touch',
-            value: touchMode.label,
+            icon: touchMode == _MobileTouchMode.static
+                ? touchMode.icon
+                : touchProfile.icon,
+            label: 'Touch controls',
+            value: touchMode == _MobileTouchMode.static
+                ? touchMode.label
+                : '${touchProfile.label} · ${touchMode.label}',
             onPressed: () => _showOptions(context),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MobileTouchContract extends StatelessWidget {
+  const _MobileTouchContract({required this.profile});
+
+  final TouchInteractionProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(profile.icon, size: 20, color: scheme.onPrimaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                profile.summary,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onPrimaryContainer,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileTouchSwitch extends StatelessWidget {
+  const _MobileTouchSwitch({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      minTileHeight: 56,
+      secondary: Icon(icon, size: 21),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      onChanged: enabled ? onChanged : null,
     );
   }
 }
@@ -976,6 +1244,8 @@ class _MobileSettingTile extends StatelessWidget {
                     children: [
                       Text(
                         label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
@@ -983,6 +1253,8 @@ class _MobileSettingTile extends StatelessWidget {
                       ),
                       Text(
                         value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: scheme.onSurface,
                           fontWeight: FontWeight.w800,
@@ -1272,6 +1544,10 @@ class _MobileChartCard extends StatelessWidget {
     required this.visualStyle,
     required this.chartChrome,
     required this.touchMode,
+    required this.touchProfile,
+    required this.enableLongPressTracking,
+    required this.enableHaptics,
+    required this.enablePanInertia,
     required this.index,
   });
 
@@ -1280,6 +1556,10 @@ class _MobileChartCard extends StatelessWidget {
   final _MobileVisualStyle visualStyle;
   final _MobileChartChrome chartChrome;
   final _MobileTouchMode touchMode;
+  final TouchInteractionProfile touchProfile;
+  final bool enableLongPressTracking;
+  final bool enableHaptics;
+  final bool enablePanInertia;
   final int index;
 
   @override
@@ -1563,7 +1843,12 @@ class _MobileChartCard extends StatelessWidget {
                 yAxis: showAxes
                     ? styledYAxis
                     : styledYAxis.copyWith(visible: false),
-                interactionConfig: touchMode.interactionConfig,
+                interactionConfig: touchMode.interactionConfig(
+                  profile: touchProfile,
+                  enableLongPressTracking: enableLongPressTracking,
+                  enableHaptics: enableHaptics,
+                  enablePanInertia: enablePanInertia,
+                ),
                 concentricDonutConfig:
                     example.concentricDonutConfig ??
                     (chartType.slug == 'concentric-donut'
@@ -1584,14 +1869,18 @@ class _MobileChartCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  touchMode.icon,
+                  touchMode == _MobileTouchMode.static
+                      ? touchMode.icon
+                      : touchProfile.icon,
                   size: 17,
                   color: presentation.palette[index % 5],
                 ),
                 const SizedBox(width: 7),
                 Expanded(
                   child: Text(
-                    touchMode.cardHint,
+                    touchMode == _MobileTouchMode.static
+                        ? touchMode.cardHint
+                        : '${touchProfile.label} · ${touchMode.cardHint}',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: presentation.onSurfaceVariant,
                     ),

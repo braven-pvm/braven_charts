@@ -5130,6 +5130,24 @@ class ChartConfigDartEmitter {
       _valueIf(writer, 'enablePan', config.enablePan, defaultValue: true);
       _valueIf(
         writer,
+        'enablePanInertia',
+        config.enablePanInertia,
+        defaultValue: false,
+      );
+      _numberIf(
+        writer,
+        'panInertiaDeceleration',
+        config.panInertiaDeceleration,
+        6.0,
+      );
+      _numberIf(
+        writer,
+        'maximumPanInertiaVelocity',
+        config.maximumPanInertiaVelocity,
+        3200.0,
+      );
+      _valueIf(
+        writer,
         'enableLongPressTracking',
         config.enableLongPressTracking,
         defaultValue: true,

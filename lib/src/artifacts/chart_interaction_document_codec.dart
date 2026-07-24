@@ -423,6 +423,9 @@ Map<String, Object?> _encodeTouch(TouchInteractionConfig value) => {
   'profile': value.profile.name,
   'enablePinchZoom': value.enablePinchZoom,
   'enablePan': value.enablePan,
+  'enablePanInertia': value.enablePanInertia,
+  'panInertiaDeceleration': _n(value.panInertiaDeceleration),
+  'maximumPanInertiaVelocity': _n(value.maximumPanInertiaVelocity),
   'enableLongPressTracking': value.enableLongPressTracking,
   'enableHapticFeedback': value.enableHapticFeedback,
 };
@@ -433,6 +436,15 @@ TouchInteractionConfig _decodeTouch(Map<String, Object?> map) =>
       profile: _enum(map, 'profile', TouchInteractionProfile.values),
       enablePinchZoom: _bool(map, 'enablePinchZoom'),
       enablePan: _bool(map, 'enablePan'),
+      enablePanInertia: map['enablePanInertia'] == null
+          ? false
+          : _bool(map, 'enablePanInertia'),
+      panInertiaDeceleration: map['panInertiaDeceleration'] == null
+          ? 6.0
+          : _double(map, 'panInertiaDeceleration'),
+      maximumPanInertiaVelocity: map['maximumPanInertiaVelocity'] == null
+          ? 3200.0
+          : _double(map, 'maximumPanInertiaVelocity'),
       enableLongPressTracking: map['enableLongPressTracking'] == null
           ? true
           : _bool(map, 'enableLongPressTracking'),

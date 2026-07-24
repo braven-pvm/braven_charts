@@ -874,9 +874,18 @@ class TouchInteractionConfig {
     this.profile = TouchInteractionProfile.browse,
     this.enablePinchZoom = true,
     this.enablePan = true,
+    this.enablePanInertia = false,
+    this.panInertiaDeceleration = 6.0,
+    this.maximumPanInertiaVelocity = 3200.0,
     this.enableLongPressTracking = true,
     this.enableHapticFeedback = true,
-  });
+  }) : assert(
+         panInertiaDeceleration > 0 && panInertiaDeceleration < double.infinity,
+       ),
+       assert(
+         maximumPanInertiaVelocity > 0 &&
+             maximumPanInertiaVelocity < double.infinity,
+       );
 
   /// Whether direct touch viewport gestures are enabled.
   final bool enabled;
@@ -892,6 +901,24 @@ class TouchInteractionConfig {
   /// Browse mode requires two pointers. Explore mode permits one pointer after
   /// the configured pan threshold is crossed.
   final bool enablePan;
+
+  /// Whether a released touch pan may continue with bounded inertial motion.
+  ///
+  /// Disabled by default to preserve the deterministic phase-1 behavior.
+  /// Inertia remains subordinate to [enabled], [enablePan], and the top-level
+  /// `InteractionConfig.enablePan` gate.
+  final bool enablePanInertia;
+
+  /// Exponential velocity decay applied during touch pan inertia.
+  ///
+  /// The value is measured per second. Higher values stop sooner.
+  final double panInertiaDeceleration;
+
+  /// Maximum release velocity admitted by touch pan inertia, in pixels/second.
+  ///
+  /// Limiting the release velocity prevents short noisy gestures from
+  /// producing an unexpectedly large viewport displacement.
+  final double maximumPanInertiaVelocity;
 
   /// Whether holding one finger may activate transient tracking inspection.
   ///
@@ -911,6 +938,9 @@ class TouchInteractionConfig {
     TouchInteractionProfile? profile,
     bool? enablePinchZoom,
     bool? enablePan,
+    bool? enablePanInertia,
+    double? panInertiaDeceleration,
+    double? maximumPanInertiaVelocity,
     bool? enableLongPressTracking,
     bool? enableHapticFeedback,
   }) {
@@ -919,6 +949,11 @@ class TouchInteractionConfig {
       profile: profile ?? this.profile,
       enablePinchZoom: enablePinchZoom ?? this.enablePinchZoom,
       enablePan: enablePan ?? this.enablePan,
+      enablePanInertia: enablePanInertia ?? this.enablePanInertia,
+      panInertiaDeceleration:
+          panInertiaDeceleration ?? this.panInertiaDeceleration,
+      maximumPanInertiaVelocity:
+          maximumPanInertiaVelocity ?? this.maximumPanInertiaVelocity,
       enableLongPressTracking:
           enableLongPressTracking ?? this.enableLongPressTracking,
       enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
@@ -933,6 +968,9 @@ class TouchInteractionConfig {
         other.profile == profile &&
         other.enablePinchZoom == enablePinchZoom &&
         other.enablePan == enablePan &&
+        other.enablePanInertia == enablePanInertia &&
+        other.panInertiaDeceleration == panInertiaDeceleration &&
+        other.maximumPanInertiaVelocity == maximumPanInertiaVelocity &&
         other.enableLongPressTracking == enableLongPressTracking &&
         other.enableHapticFeedback == enableHapticFeedback;
   }
@@ -943,6 +981,9 @@ class TouchInteractionConfig {
     profile,
     enablePinchZoom,
     enablePan,
+    enablePanInertia,
+    panInertiaDeceleration,
+    maximumPanInertiaVelocity,
     enableLongPressTracking,
     enableHapticFeedback,
   );

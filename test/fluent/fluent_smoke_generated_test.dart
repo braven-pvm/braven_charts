@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1556 verbs total; 9 of them have an argument type with no
+// 1559 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -3297,7 +3297,7 @@ void _smokeGestureConfig(_Verb verb, GestureConfig subject) {
   );
 }
 
-/// Smoke coverage for [TouchInteractionConfig]'s 6 executable verb(s).
+/// Smoke coverage for [TouchInteractionConfig]'s 9 executable verb(s).
 void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
   verb(
     'TouchInteractionConfigFluent.withEnabled',
@@ -3314,6 +3314,18 @@ void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
   verb(
     'TouchInteractionConfigFluent.withEnablePan',
     () => subject.withEnablePan(true),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withEnablePanInertia',
+    () => subject.withEnablePanInertia(false),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withPanInertiaDeceleration',
+    () => subject.withPanInertiaDeceleration(6.0),
+  );
+  verb(
+    'TouchInteractionConfigFluent.withMaximumPanInertiaVelocity',
+    () => subject.withMaximumPanInertiaVelocity(3200.0),
   );
   verb(
     'TouchInteractionConfigFluent.withEnableLongPressTracking',
