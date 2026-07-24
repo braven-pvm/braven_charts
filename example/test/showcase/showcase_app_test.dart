@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:braven_charts_example/showcase/showcase_app.dart';
 import 'package:braven_charts_example/showcase/pages/mobile_showcase_page.dart';
 import 'package:braven_charts_example/showcase/pages/mobile_interaction_page.dart';
@@ -943,6 +945,71 @@ void main() {
 
     expect(find.text('Performance Lab'), findsOneWidget);
     expect(find.text('Needs review'), findsNothing);
+  });
+
+  testWidgets('wide rail opens the public package and repository links', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final openedUrls = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp(home: ShowcaseHome(onOpenPublicUrl: openedUrls.add)),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.byKey(const ValueKey('showcase-public-links')), findsOneWidget);
+    expect(find.text('pub.dev'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('pub.dev')).style?.decoration,
+      TextDecoration.none,
+    );
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(const ValueKey('showcase-pubdev-link'))),
+    );
+    await tester.pump();
+    expect(
+      tester.widget<Text>(find.text('pub.dev')).style?.decoration,
+      TextDecoration.underline,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('showcase-pubdev-link')));
+    await tester.tap(find.byKey(const ValueKey('showcase-github-link')));
+    await mouse.removePointer();
+
+    expect(openedUrls, [showcasePubDevUrl, showcaseRepositoryUrl]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact rail keeps both public links accessible', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final openedUrls = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp(home: ShowcaseHome(onOpenPublicUrl: openedUrls.add)),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('pub.dev'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.byKey(const ValueKey('showcase-pubdev-link')), findsOneWidget);
+    expect(find.byKey(const ValueKey('showcase-github-link')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('showcase-pubdev-link')));
+    await tester.tap(find.byKey(const ValueKey('showcase-github-link')));
+
+    expect(openedUrls, [showcasePubDevUrl, showcaseRepositoryUrl]);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('streaming is consolidated into the live stream destination', (

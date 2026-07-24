@@ -7,12 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.5 - 2026-07-24
+
 ### Added
 
+- Opt-in, velocity-aware touch-pan inertia with bounded decay and cancellation
+  when a new interaction starts, carried through artifacts, generated source,
+  fluent modifiers, and AI metadata. The phone showcase now exposes Browse and
+  Explore gesture ownership, independent tap responses, long-press tracking,
+  haptics, momentum, and chart-chrome controls across every chart family.
 - Scale-driven colour channels on bar, line, and area geometries and a width
   channel on bars in the Chart Grammar, reusing the scatter colour/size
   encodings, baked at lowering into per-element styles with a colour-ramp
   legend, plus a Scale-driven channels showcase with hand-built parity.
+- Persistent Cartesian box brushes with exact initial geometry, move and
+  edge/corner resize behavior, configurable grid subdivisions, keyboard focus
+  styling, controller commands, and complete artifact, generated source,
+  fluent, and AI support. Selection geometry and Workbench table projection
+  remain exact after live edits on pointer and touch surfaces.
+- Direct pub.dev package and GitHub repository links in the persistent showcase
+  navigation.
 
 ### Notes
 

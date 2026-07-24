@@ -5,6 +5,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'platform/open_public_url.dart';
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_showcase_page.dart';
@@ -42,6 +43,9 @@ import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
 import 'widgets/polar_column_gallery_cards.dart';
 import 'widgets/gallery_flagships.dart';
+
+const showcasePubDevUrl = 'https://pub.dev/packages/braven_charts';
+const showcaseRepositoryUrl = 'https://github.com/braven-pvm/braven_charts';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -151,13 +155,20 @@ class ShowcaseReviewProposal {
 
 /// Home page with adaptive navigation layout.
 class ShowcaseHome extends StatefulWidget {
-  const ShowcaseHome({super.key, this.requestedPageOverride});
+  const ShowcaseHome({
+    super.key,
+    this.requestedPageOverride,
+    this.onOpenPublicUrl,
+  });
 
   /// Test and embedder override for the initial direct-route destination.
   ///
   /// The hosted application leaves this null and reads `?page=` from
   /// [Uri.base].
   final String? requestedPageOverride;
+
+  /// Test and embedder override for opening external showcase destinations.
+  final ValueChanged<String>? onOpenPublicUrl;
 
   @override
   State<ShowcaseHome> createState() => _ShowcaseHomeState();
@@ -401,6 +412,15 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     if (index >= 0) _selectDestination(index);
   }
 
+  void _openPublicUrl(String url) {
+    final override = widget.onOpenPublicUrl;
+    if (override != null) {
+      override(url);
+      return;
+    }
+    openPublicUrl(url);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChartWorkbenchScope(
@@ -488,6 +508,8 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             destinations: _destinations,
             selectedIndex: _selectedIndex,
             onDestinationSelected: _selectDestination,
+            onOpenPubDev: () => _openPublicUrl(showcasePubDevUrl),
+            onOpenRepository: () => _openPublicUrl(showcaseRepositoryUrl),
           ),
           const VerticalDivider(width: 1, thickness: 1),
           Expanded(child: _buildSelectedPage()),
@@ -555,12 +577,16 @@ class _ScrollableNav extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.onOpenPubDev,
+    required this.onOpenRepository,
   });
 
   final bool extended;
   final List<NavDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onOpenPubDev;
+  final VoidCallback onOpenRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -578,9 +604,20 @@ class _ScrollableNav extends StatelessWidget {
               vertical: 20,
               horizontal: extended ? 16 : 12,
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: BravenBrand(compact: !extended),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BravenBrand(compact: !extended),
+                ),
+                const SizedBox(height: 8),
+                _ShowcasePublicLinks(
+                  extended: extended,
+                  onOpenPubDev: onOpenPubDev,
+                  onOpenRepository: onOpenRepository,
+                ),
+              ],
             ),
           ),
           // Scrollable destinations
@@ -718,6 +755,116 @@ class _ScrollableNav extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ShowcasePublicLinks extends StatelessWidget {
+  const _ShowcasePublicLinks({
+    required this.extended,
+    required this.onOpenPubDev,
+    required this.onOpenRepository,
+  });
+
+  final bool extended;
+  final VoidCallback onOpenPubDev;
+  final VoidCallback onOpenRepository;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!extended) {
+      return Column(
+        children: [
+          _PlainTextLink(
+            key: const ValueKey('showcase-pubdev-link'),
+            label: 'pub.dev',
+            semanticsLabel: 'Open pub.dev package',
+            onTap: onOpenPubDev,
+          ),
+          _PlainTextLink(
+            key: const ValueKey('showcase-github-link'),
+            label: 'GitHub',
+            semanticsLabel: 'Open GitHub repository',
+            onTap: onOpenRepository,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      key: const ValueKey('showcase-public-links'),
+      children: [
+        _PlainTextLink(
+          key: const ValueKey('showcase-pubdev-link'),
+          label: 'pub.dev',
+          semanticsLabel: 'Open pub.dev package',
+          onTap: onOpenPubDev,
+        ),
+        const SizedBox(width: 20),
+        _PlainTextLink(
+          key: const ValueKey('showcase-github-link'),
+          label: 'GitHub',
+          semanticsLabel: 'Open GitHub repository',
+          onTap: onOpenRepository,
+        ),
+      ],
+    );
+  }
+}
+
+class _PlainTextLink extends StatefulWidget {
+  const _PlainTextLink({
+    super.key,
+    required this.label,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  final String label;
+  final String semanticsLabel;
+  final VoidCallback onTap;
+
+  @override
+  State<_PlainTextLink> createState() => _PlainTextLinkState();
+}
+
+class _PlainTextLinkState extends State<_PlainTextLink> {
+  bool _isHovered = false;
+  bool _hasFocus = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final linkColor = isDark
+        ? const Color(0xFF8AB4F8)
+        : const Color(0xFF1A73E8);
+
+    return Semantics(
+      link: true,
+      label: widget.semanticsLabel,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: InkWell(
+          onTap: widget.onTap,
+          onFocusChange: (hasFocus) => setState(() => _hasFocus = hasFocus),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text(
+              widget.label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: linkColor,
+                decoration: _isHovered || _hasFocus
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
+                decorationColor: linkColor,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
