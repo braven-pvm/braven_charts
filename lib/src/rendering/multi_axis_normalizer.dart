@@ -1,3 +1,5 @@
+import '../axis/log_ticks.dart';
+import '../models/axis_scale_type.dart';
 import '../models/data_range.dart';
 import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
@@ -53,6 +55,26 @@ class MultiAxisNormalizer {
 
     // Standard linear normalization
     return (value - min) / range;
+  }
+
+  /// Scale-aware [normalize]: maps [value] to `[0, 1]` honoring [scaleType].
+  ///
+  /// The [AxisScaleType.linear] arm delegates to [normalize] verbatim, so its
+  /// `range == 0 → 0.5` and `range.isInfinite → 0.0` edge cases are preserved.
+  /// The [AxisScaleType.log] arm uses [logFraction] (of [base]) — the same
+  /// mapping [ChartTransform] applies to the marks — so log ticks and marks
+  /// stay registered. [AxisScaleType.time] falls through to the linear arm.
+  static double normalizeScaled(
+    double value,
+    double min,
+    double max,
+    AxisScaleType scaleType,
+    double base,
+  ) {
+    if (scaleType == AxisScaleType.log) {
+      return logFraction(value, min, max, base);
+    }
+    return normalize(value, min, max);
   }
 
   /// Converts normalized [normalizedValue] back to original data value.

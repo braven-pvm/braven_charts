@@ -14,6 +14,19 @@ double logValue(double v, double base) => math.log(v) / math.log(base);
 /// `logInverse(logValue(v, base), base) == v` (within floating-point error).
 double logInverse(double t, double base) => math.pow(base, t).toDouble();
 
+/// The `[0, 1]` fraction of [v] within a log-scaled `[min, max]` of [base].
+///
+/// This is the single source of truth for the log relative-position mapping:
+/// it mirrors `ChartTransform`'s log arm exactly so that axis ticks (X painter
+/// `tickRatio`, Y painter `MultiAxisNormalizer.normalizeScaled`) land on the
+/// same pixels as the marks. Returns `0.5` for a degenerate (`min == max`)
+/// range, matching the transform.
+double logFraction(double v, double min, double max, double base) {
+  final lo = logValue(min, base);
+  final hi = logValue(max, base);
+  return hi == lo ? 0.5 : (logValue(v, base) - lo) / (hi - lo);
+}
+
 /// Decade tick values within a positive `[min, max]` for a log axis of [base].
 ///
 /// Returns one value per whole power of [base] that falls inside the range
