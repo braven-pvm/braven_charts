@@ -364,6 +364,73 @@ class ChartTransform {
   // Viewport Manipulation
   // ============================================================================
 
+  /// Computes the zoomed `(min, max)` for one axis about a data-space [center].
+  ///
+  /// The [AxisScaleType.linear] arm is the original zoom arithmetic verbatim
+  /// (`range / factor`, `(center - min) / range`, `center ± newRange * …`); the
+  /// [AxisScaleType.log] arm performs the identical proportion math in log-space
+  /// so the data value under [center] is preserved (a log-correct zoom).
+  /// [AxisScaleType.time] falls through to the linear arm (epoch-millis).
+  ({double min, double max}) _zoomAxis(
+    double min,
+    double max,
+    double center,
+    double factor,
+    AxisScaleType type,
+    double base,
+  ) {
+    if (type == AxisScaleType.log) {
+      final lo = logValue(min, base);
+      final hi = logValue(max, base);
+      final c = logValue(center, base);
+      final range = hi - lo;
+      final newRange = range / factor;
+      final proportion = (c - lo) / range;
+      return (
+        min: logInverse(c - (newRange * proportion), base),
+        max: logInverse(c + (newRange * (1.0 - proportion)), base),
+      );
+    }
+    // linear — byte-identical to the original zoom arithmetic.
+    final range = max - min;
+    final newRange = range / factor;
+    final proportion = (center - min) / range;
+    return (
+      min: center - (newRange * proportion),
+      max: center + (newRange * (1.0 - proportion)),
+    );
+  }
+
+  /// Computes the panned `(min, max)` for one axis.
+  ///
+  /// The [AxisScaleType.linear] arm shifts both bounds by the precomputed
+  /// [dataDelta] (byte-identical to `min + dataDelta` / `max + dataDelta`); the
+  /// [AxisScaleType.log] arm shifts by an equal *log-space* step derived from
+  /// the signed [pixelDelta] over the axis's [axisPixels] extent, so a pan is a
+  /// pure pixel translation of the content. [AxisScaleType.time] uses the linear
+  /// arm.
+  ({double min, double max}) _panAxis(
+    double min,
+    double max,
+    double dataDelta,
+    double pixelDelta,
+    double axisPixels,
+    AxisScaleType type,
+    double base,
+  ) {
+    if (type == AxisScaleType.log) {
+      final lo = logValue(min, base);
+      final hi = logValue(max, base);
+      final logDelta = pixelDelta * (hi - lo) / axisPixels;
+      return (
+        min: logInverse(lo + logDelta, base),
+        max: logInverse(hi + logDelta, base),
+      );
+    }
+    // linear — byte-identical to the original min + dataDelta / max + dataDelta.
+    return (min: min + dataDelta, max: max + dataDelta);
+  }
+
   /// Creates a new transform with viewport zoomed around a plot-space center point.
   ///
   /// **Parameters**:
@@ -386,31 +453,38 @@ class ChartTransform {
     final dataCenterX = dataCenterOffset.dx;
     final dataCenterY = dataCenterOffset.dy;
 
-    // Calculate new data ranges (centered on data center point)
-    final newDataXRange = dataXRange / factor;
-    final newDataYRange = dataYRange / factor;
-
-    // Calculate proportion of center point in current range
-    final centerProportionX = (dataCenterX - dataXMin) / dataXRange;
-    final centerProportionY = (dataCenterY - dataYMin) / dataYRange;
-
-    // Calculate new bounds preserving center proportion
-    final newDataXMin = dataCenterX - (newDataXRange * centerProportionX);
-    final newDataXMax =
-        dataCenterX + (newDataXRange * (1.0 - centerProportionX));
-    final newDataYMin = dataCenterY - (newDataYRange * centerProportionY);
-    final newDataYMax =
-        dataCenterY + (newDataYRange * (1.0 - centerProportionY));
+    // Calculate new bounds preserving the center's data value. The linear arm
+    // is the original proportion math verbatim; the log arm zooms in log-space.
+    final xBounds = _zoomAxis(
+      dataXMin,
+      dataXMax,
+      dataCenterX,
+      factor,
+      xScaleType,
+      xLogBase,
+    );
+    final yBounds = _zoomAxis(
+      dataYMin,
+      dataYMax,
+      dataCenterY,
+      factor,
+      yScaleType,
+      yLogBase,
+    );
 
     return ChartTransform(
-      dataXMin: newDataXMin,
-      dataXMax: newDataXMax,
-      dataYMin: newDataYMin,
-      dataYMax: newDataYMax,
+      dataXMin: xBounds.min,
+      dataXMax: xBounds.max,
+      dataYMin: yBounds.min,
+      dataYMax: yBounds.max,
       plotWidth: plotWidth,
       plotHeight: plotHeight,
       invertY: invertY,
       transposed: transposed,
+      xScaleType: xScaleType,
+      yScaleType: yScaleType,
+      xLogBase: xLogBase,
+      yLogBase: yLogBase,
     );
   }
 
@@ -434,15 +508,40 @@ class ChartTransform {
     if (transposed) {
       final dataDx = plotDy * dataPerPixelX;
       final dataDy = plotDx * dataPerPixelY;
+      // Transposed: X maps vertically (plotDy / plotHeight), Y horizontally
+      // (plotDx / plotWidth). The log arm shifts in log-space; linear shifts by
+      // the precomputed data delta (byte-identical).
+      final xBounds = _panAxis(
+        dataXMin,
+        dataXMax,
+        dataDx,
+        plotDy,
+        plotHeight,
+        xScaleType,
+        xLogBase,
+      );
+      final yBounds = _panAxis(
+        dataYMin,
+        dataYMax,
+        dataDy,
+        plotDx,
+        plotWidth,
+        yScaleType,
+        yLogBase,
+      );
       return ChartTransform(
-        dataXMin: dataXMin + dataDx,
-        dataXMax: dataXMax + dataDx,
-        dataYMin: dataYMin + dataDy,
-        dataYMax: dataYMax + dataDy,
+        dataXMin: xBounds.min,
+        dataXMax: xBounds.max,
+        dataYMin: yBounds.min,
+        dataYMax: yBounds.max,
         plotWidth: plotWidth,
         plotHeight: plotHeight,
         invertY: invertY,
         transposed: true,
+        xScaleType: xScaleType,
+        yScaleType: yScaleType,
+        xLogBase: xLogBase,
+        yLogBase: yLogBase,
       );
     }
 
@@ -453,21 +552,42 @@ class ChartTransform {
               dataPerPixelY // Invert Y movement
         : plotDy * dataPerPixelY;
 
-    // Shift data bounds
-    final newDataXMin = dataXMin + dataDx;
-    final newDataXMax = dataXMax + dataDx;
-    final newDataYMin = dataYMin + dataDy;
-    final newDataYMax = dataYMax + dataDy;
+    // Shift data bounds. The linear arm adds the precomputed data delta
+    // (byte-identical); the log arm shifts by an equal log-space step derived
+    // from the signed pixel delta (Y is negated under invertY, as above).
+    final xBounds = _panAxis(
+      dataXMin,
+      dataXMax,
+      dataDx,
+      plotDx,
+      plotWidth,
+      xScaleType,
+      xLogBase,
+    );
+    final signedPixelDeltaY = invertY ? -plotDy : plotDy;
+    final yBounds = _panAxis(
+      dataYMin,
+      dataYMax,
+      dataDy,
+      signedPixelDeltaY,
+      plotHeight,
+      yScaleType,
+      yLogBase,
+    );
 
     return ChartTransform(
-      dataXMin: newDataXMin,
-      dataXMax: newDataXMax,
-      dataYMin: newDataYMin,
-      dataYMax: newDataYMax,
+      dataXMin: xBounds.min,
+      dataXMax: xBounds.max,
+      dataYMin: yBounds.min,
+      dataYMax: yBounds.max,
       plotWidth: plotWidth,
       plotHeight: plotHeight,
       invertY: invertY,
       transposed: transposed,
+      xScaleType: xScaleType,
+      yScaleType: yScaleType,
+      xLogBase: xLogBase,
+      yLogBase: yLogBase,
     );
   }
 
