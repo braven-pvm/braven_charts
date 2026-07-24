@@ -215,13 +215,20 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   };
 
   // Data-INDEPENDENT: a time or log scale positions its axis numerically, which
-  // a category axis (discrete slots) contradicts. Only X can carry a category
-  // axis, so the conflict is only expressible there.
+  // the DISCRETE SLOTS of a categorical axis contradict. The conflict is the
+  // slots, so it is `isCategorical` (categories non-empty) that clashes — NOT
+  // the mere presence of a CategoryAxisConfig. An empty CategoryAxisConfig
+  // (categories: []) carries no slots; it is a documented label-styling carrier
+  // on non-categorical axes (see XAxisConfig.effectiveTickLabelRotationDegrees /
+  // effectiveTickLabelCollisionPolicy, which read categoryAxis regardless of
+  // scaleType), and the render path treats it as non-categorical too. So a
+  // time/log axis may attach one purely for label rotation/density. Only X can
+  // carry a category axis, so the conflict is only expressible there.
   final xAxis = spec.xAxis;
   if (xAxis != null &&
       (xAxis.scaleType == AxisScaleType.time ||
           xAxis.scaleType == AxisScaleType.log) &&
-      xAxis.categoryAxis != null) {
+      xAxis.isCategorical) {
     throw GrammarSpecException.conflictingAxisMode(
       'the x axis is a ${xAxis.scaleType.name} scale but also declares a '
       'category axis',
