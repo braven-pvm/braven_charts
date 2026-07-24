@@ -27,4 +27,7 @@ enum ChartType {
 
   /// Category columns rendered against angular and radial polar axes.
   polarColumn,
+
+  /// Independent category tracks whose absolute values map to angular sweep.
+  radialBar,
 }

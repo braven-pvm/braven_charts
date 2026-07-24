@@ -7,6 +7,7 @@ import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/pie_chart_config.dart';
 import '../models/polar_chart_config.dart';
+import '../models/radial_bar_chart_config.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_configuration_documents.dart';
 import 'chart_data_payload.dart';
@@ -438,6 +439,115 @@ abstract final class ChartConfigurationDocumentCodec {
       return _polarConfigurationFailure(error, path);
     }
   }
+
+  /// Encodes the pane, track layout, scale guides, and thresholds shared by a
+  /// Radial Bar plot. The numeric domain remains series-owned.
+  static ChartArtifactResult<JsonObjectValue> encodeRadialBarChart(
+    RadialBarChartConfig config,
+  ) {
+    const path = r'$.configuration.radialBarChart';
+    try {
+      config.validate();
+      return ChartArtifactSuccess(
+        value: JsonObjectValue({
+          'radialBarChart': JsonValue.fromJson({
+            'pane': {
+              'startAngleDegrees': config.pane.startAngleDegrees,
+              'sweepAngleDegrees': config.pane.sweepAngleDegrees,
+              'clockwise': config.pane.clockwise,
+              'innerRadiusFactor': config.pane.innerRadiusFactor,
+              'outerRadiusFactor': config.pane.outerRadiusFactor,
+              'clipMarks': config.pane.clipMarks,
+            },
+            'trackGap': config.trackGap,
+            'trackOrder': config.trackOrder.name,
+            'showCategoryLabels': config.showCategoryLabels,
+            'showScaleLabels': config.showScaleLabels,
+            'showGridLines': config.showGridLines,
+            'tickCount': config.tickCount,
+            'thresholds': [
+              for (final threshold in config.thresholds)
+                {
+                  'value': threshold.value,
+                  if (threshold.label != null) 'label': threshold.label,
+                  if (threshold.color != null)
+                    'color': threshold.color!.toARGB32(),
+                  'width': threshold.width,
+                  'dashPattern': threshold.dashPattern,
+                },
+            ],
+          }, path: path),
+        }),
+      );
+    } on Object catch (error) {
+      return _radialBarConfigurationFailure(error, path);
+    }
+  }
+
+  /// Decodes an optional Radial Bar plot configuration.
+  static ChartArtifactResult<RadialBarChartConfig?> decodeRadialBarChart(
+    JsonObjectValue configuration,
+  ) {
+    const path = r'$.configuration.radialBarChart';
+    final raw = configuration.values['radialBarChart'];
+    if (raw == null) {
+      return ChartArtifactSuccess<RadialBarChartConfig?>(value: null);
+    }
+    if (raw is! JsonObjectValue) {
+      return _radialBarConfigurationFailure(
+        'Radial Bar chart configuration must be an object.',
+        path,
+      );
+    }
+    try {
+      final map = raw.toJson() as Map<String, Object?>;
+      final pane = _requiredMap(map, 'pane', path);
+      final config = RadialBarChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: _requiredDouble(
+            pane,
+            'startAngleDegrees',
+            '$path.pane',
+          ),
+          sweepAngleDegrees: _requiredDouble(
+            pane,
+            'sweepAngleDegrees',
+            '$path.pane',
+          ),
+          clockwise: _requiredBool(pane, 'clockwise', '$path.pane'),
+          innerRadiusFactor: _requiredDouble(
+            pane,
+            'innerRadiusFactor',
+            '$path.pane',
+          ),
+          outerRadiusFactor: _requiredDouble(
+            pane,
+            'outerRadiusFactor',
+            '$path.pane',
+          ),
+          clipMarks: _requiredBool(pane, 'clipMarks', '$path.pane'),
+        ),
+        trackGap: _requiredDouble(map, 'trackGap', path),
+        trackOrder: _requiredEnum(
+          map,
+          'trackOrder',
+          RadialBarTrackOrder.values,
+          path,
+        ),
+        showCategoryLabels: _requiredBool(map, 'showCategoryLabels', path),
+        showScaleLabels: _requiredBool(map, 'showScaleLabels', path),
+        showGridLines: _requiredBool(map, 'showGridLines', path),
+        tickCount: _requiredInt(map, 'tickCount', path),
+        thresholds: _decodeRadialBarThresholds(map['thresholds'], path),
+      );
+      config.validate();
+      return ChartArtifactSuccess(value: config);
+    } on _ConfigurationFormatException catch (error) {
+      return _radialBarConfigurationFailure(error.message, error.path);
+    } on Object catch (error) {
+      return _radialBarConfigurationFailure(error, path);
+    }
+  }
 }
 
 List<PolarThreshold> _decodePolarThresholds(Object? value, String path) {
@@ -484,6 +594,63 @@ PolarThreshold _decodePolarThreshold(Object? value, String path) {
     );
   }
   return PolarThreshold(
+    value: _requiredDouble(map, 'value', path),
+    label: label as String?,
+    color: _optionalColor(color as int?),
+    width: _requiredDouble(map, 'width', path),
+    dashPattern: <double>[
+      for (final interval in rawPattern) (interval as num).toDouble(),
+    ],
+  );
+}
+
+List<RadialBarThreshold> _decodeRadialBarThresholds(
+  Object? value,
+  String path,
+) {
+  if (value == null) return const <RadialBarThreshold>[];
+  if (value is! List) {
+    throw _ConfigurationFormatException(
+      'Optional thresholds field must be a list.',
+      '$path.thresholds',
+    );
+  }
+  return <RadialBarThreshold>[
+    for (final (index, rawThreshold) in value.indexed)
+      _decodeRadialBarThreshold(rawThreshold, '$path.thresholds[$index]'),
+  ];
+}
+
+RadialBarThreshold _decodeRadialBarThreshold(Object? value, String path) {
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Radial Bar threshold must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final label = map['label'];
+  if (label != null && label is! String) {
+    throw _ConfigurationFormatException(
+      'Optional threshold label must be text.',
+      '$path.label',
+    );
+  }
+  final color = map['color'];
+  if (color != null && color is! int) {
+    throw _ConfigurationFormatException(
+      'Optional threshold color must be an ARGB integer.',
+      '$path.color',
+    );
+  }
+  final rawPattern = map['dashPattern'];
+  if (rawPattern is! List || rawPattern.any((interval) => interval is! num)) {
+    throw _ConfigurationFormatException(
+      'Threshold dashPattern must be a numeric list.',
+      '$path.dashPattern',
+    );
+  }
+  return RadialBarThreshold(
     value: _requiredDouble(map, 'value', path),
     label: label as String?,
     color: _optionalColor(color as int?),
@@ -755,6 +922,17 @@ ChartArtifactFailure<T> _polarConfigurationFailure<T>(
   error: ChartArtifactError(
     code: ChartArtifactDiagnosticCodes.invalidArtifact,
     message: 'Invalid Polar chart configuration: $error',
+    path: path,
+  ),
+);
+
+ChartArtifactFailure<T> _radialBarConfigurationFailure<T>(
+  Object error,
+  String path,
+) => ChartArtifactFailure(
+  error: ChartArtifactError(
+    code: ChartArtifactDiagnosticCodes.invalidArtifact,
+    message: 'Invalid Radial Bar chart configuration: $error',
     path: path,
   ),
 );

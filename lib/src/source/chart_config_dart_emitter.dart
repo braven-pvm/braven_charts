@@ -51,6 +51,8 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_bar_chart_config.dart';
+import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/range_area_chart_series.dart';
@@ -196,6 +198,9 @@ class ChartConfigDartEmitter {
       if (configuration.polarChartConfig case final polarConfig?) {
         _emitPolarChartConfig(body, polarConfig);
       }
+      if (configuration.radialBarChartConfig case final radialBarConfig?) {
+        _emitRadialBarChartConfig(body, radialBarConfig);
+      }
       if (configuration.annotations.isNotEmpty) {
         _emitAnnotationList(body, 'annotations', configuration.annotations);
       }
@@ -338,6 +343,7 @@ class ChartConfigDartEmitter {
       PieChartSeries() => 'PieChartSeries',
       DonutChartSeries() => 'DonutChartSeries',
       PolarColumnChartSeries() => 'PolarColumnChartSeries',
+      RadialBarChartSeries() => 'RadialBarChartSeries',
       ChartSeries() => 'ChartSeries',
     };
     writer.writeLine('$constructor(');
@@ -359,6 +365,7 @@ class ChartConfigDartEmitter {
         );
       }
       if (series is! PolarColumnChartSeries &&
+          series is! RadialBarChartSeries &&
           series is! CandlestickChartSeries &&
           series is! RangeAreaChartSeries) {
         _valueIf(
@@ -445,6 +452,8 @@ class ChartConfigDartEmitter {
           _emitDonutOptions(writer, series, seriesIndex);
         case PolarColumnChartSeries():
           _emitPolarColumnOptions(writer, series);
+        case RadialBarChartSeries():
+          _emitRadialBarOptions(writer, series);
         case ChartSeries():
           break;
       }
@@ -2691,6 +2700,39 @@ class ChartConfigDartEmitter {
     }
   }
 
+  void _emitRadialBarOptions(
+    DartSourceWriter writer,
+    RadialBarChartSeries series,
+  ) {
+    _numberIf(writer, 'minimum', series.minimum, 0);
+    _numberIf(writer, 'maximum', series.maximum, 100);
+    _numberIf(writer, 'baseline', series.baseline, 0);
+    if (options.includeDefaultValues ||
+        series.radialBarStyle != const RadialBarStyle()) {
+      final style = series.radialBarStyle;
+      writer.writeLine('radialBarStyle: RadialBarStyle(');
+      writer.indented(() {
+        _numberIf(writer, 'cornerRadius', style.cornerRadius, 8);
+        _numberIf(writer, 'opacity', style.opacity, 1);
+        _optionalColor(writer, 'borderColor', style.borderColor);
+        _numberIf(writer, 'borderWidth', style.borderWidth, 0);
+        _optionalColor(writer, 'trackColor', style.trackColor);
+        _numberIf(writer, 'trackOpacity', style.trackOpacity, 0.12);
+        _valueIf(
+          writer,
+          'showDataLabels',
+          style.showDataLabels,
+          defaultValue: true,
+        );
+      });
+      writer.writeLine('),');
+    }
+    if (options.includeDefaultValues ||
+        series.selectionStyle != const RadialSelectionStyle()) {
+      _emitRadialSelectionStyle(writer, series.selectionStyle);
+    }
+  }
+
   void _emitRadialSelectionStyle(
     DartSourceWriter writer,
     RadialSelectionStyle style,
@@ -2937,6 +2979,89 @@ class ChartConfigDartEmitter {
         writer.indented(() {
           for (final threshold in config.thresholds) {
             writer.writeLine('PolarThreshold(');
+            writer.indented(() {
+              writer.namedArgument(
+                'value',
+                DartSourceWriter.numberLiteral(threshold.value),
+              );
+              _optionalString(writer, 'label', threshold.label);
+              _optionalColor(writer, 'color', threshold.color);
+              _numberIf(writer, 'width', threshold.width, 1.5);
+              if (options.includeDefaultValues ||
+                  !listEquals(threshold.dashPattern, const <double>[6, 4])) {
+                writer.namedArgument(
+                  'dashPattern',
+                  '<double>[${threshold.dashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
+                );
+              }
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitRadialBarChartConfig(
+    DartSourceWriter writer,
+    RadialBarChartConfig config,
+  ) {
+    writer.writeLine('radialBarChartConfig: RadialBarChartConfig(');
+    writer.indented(() {
+      final pane = config.pane;
+      if (options.includeDefaultValues ||
+          pane !=
+              const PolarPaneConfig(
+                innerRadiusFactor: 0.22,
+                outerRadiusFactor: 0.82,
+              )) {
+        writer.writeLine('pane: PolarPaneConfig(');
+        writer.indented(() {
+          _numberIf(writer, 'startAngleDegrees', pane.startAngleDegrees, -90);
+          _numberIf(writer, 'sweepAngleDegrees', pane.sweepAngleDegrees, 360);
+          _valueIf(writer, 'clockwise', pane.clockwise, defaultValue: true);
+          _numberIf(writer, 'innerRadiusFactor', pane.innerRadiusFactor, 0.22);
+          _numberIf(writer, 'outerRadiusFactor', pane.outerRadiusFactor, 0.82);
+          _valueIf(writer, 'clipMarks', pane.clipMarks, defaultValue: true);
+        });
+        writer.writeLine('),');
+      }
+      _numberIf(writer, 'trackGap', config.trackGap, 6);
+      _enumIf(
+        writer,
+        'trackOrder',
+        'RadialBarTrackOrder',
+        config.trackOrder.name,
+        defaultName: 'outerToInner',
+      );
+      _valueIf(
+        writer,
+        'showCategoryLabels',
+        config.showCategoryLabels,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'showScaleLabels',
+        config.showScaleLabels,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'showGridLines',
+        config.showGridLines,
+        defaultValue: true,
+      );
+      if (options.includeDefaultValues || config.tickCount != 5) {
+        writer.namedArgument('tickCount', config.tickCount.toString());
+      }
+      if (config.thresholds.isNotEmpty) {
+        writer.writeLine('thresholds: [');
+        writer.indented(() {
+          for (final threshold in config.thresholds) {
+            writer.writeLine('RadialBarThreshold(');
             writer.indented(() {
               writer.namedArgument(
                 'value',

@@ -404,7 +404,10 @@ class ChartTableModel {
         .where((series) => series.type == 'pie' || series.type == 'donut')
         .toList();
     final polarSeries = selected
-        .where((series) => series.type == 'polarColumn')
+        .where(
+          (series) =>
+              series.type == 'polarColumn' || series.type == 'radialBar',
+        )
         .toList();
     final candlestickSeries = selected
         .where((series) => series.type == 'candlestick')
@@ -521,7 +524,7 @@ class ChartTableModel {
           ),
         );
       }
-      if (series.type == 'polarColumn') {
+      if (series.type == 'polarColumn' || series.type == 'radialBar') {
         polarRows.addAll(
           _projectPolarRows(
             series,
@@ -553,7 +556,7 @@ class ChartTableModel {
             reference: reference,
             seriesName: series.name ?? series.id,
             xRaw: x,
-            xDisplay: series.type == 'polarColumn'
+            xDisplay: series.type == 'polarColumn' || series.type == 'radialBar'
                 ? (point.label?.trim().isNotEmpty == true
                       ? point.label!.trim()
                       : 'No category')

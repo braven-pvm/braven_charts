@@ -57,7 +57,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(showcaseChartTypes, hasLength(10));
+    expect(showcaseChartTypes, hasLength(11));
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(3));
     for (final family in ['Pie', 'Donut', 'Concentric Donut']) {
       expect(find.text(family), findsOneWidget);
@@ -75,6 +75,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('chart-type-polar-grid')), findsOneWidget);
     expect(find.text('Polar Column'), findsOneWidget);
+    expect(find.text('Radial Bar'), findsOneWidget);
   });
 
   testWidgets('family cards open the matching deep guides', (tester) async {
@@ -132,6 +133,10 @@ void main() {
     );
     await tester.pump();
     expect(selectedSlug, 'polar-column');
+
+    await tester.tap(find.byKey(const ValueKey('chart-type-card-radial-bar')));
+    await tester.pump();
+    expect(selectedSlug, 'radial-bar');
   });
 
   testWidgets('radial catalog previews fill their cards with concise actions', (
@@ -190,6 +195,12 @@ void main() {
     expect(polar.series.single, isA<PolarColumnChartSeries>());
     expect(polar.polarChartConfig.angularAxis.showLabels, isFalse);
     expect(find.text('View Polar Column'), findsOneWidget);
+    final radialBar = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-radial-bar')),
+    );
+    expect(radialBar.series.single, isA<RadialBarChartSeries>());
+    expect(radialBar.radialBarChartConfig.showCategoryLabels, isFalse);
+    expect(find.text('View Radial Bar'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -586,6 +586,7 @@ class _MobileChartBackdropPainter extends CustomPainter {
       case ChartType.pie:
       case ChartType.donut:
       case ChartType.polarColumn:
+      case ChartType.radialBar:
         final center = Offset(size.width * 0.54, size.height * 0.50);
         final radius = size.shortestSide * 0.34;
         final radialStroke = Paint()
@@ -607,7 +608,9 @@ class _MobileChartBackdropPainter extends CustomPainter {
               fill..color = arcColor,
             );
           } else {
-            final effectiveRadius = chartType.type == ChartType.polarColumn
+            final effectiveRadius =
+                chartType.type == ChartType.polarColumn ||
+                    chartType.type == ChartType.radialBar
                 ? radius * (0.62 + index * 0.13)
                 : radius;
             canvas.drawArc(
@@ -1396,6 +1399,7 @@ class _MobileChartExample {
     this.yAxis,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radialBarChartConfig,
     this.chartHeight,
     this.badges = const [],
     this.legendStyle,
@@ -1412,6 +1416,7 @@ class _MobileChartExample {
   final YAxisConfig? yAxis;
   final ConcentricDonutConfig? concentricDonutConfig;
   final PolarChartConfig? polarChartConfig;
+  final RadialBarChartConfig? radialBarChartConfig;
   final double? chartHeight;
   final List<String> badges;
   final LegendStyle? legendStyle;
@@ -1569,7 +1574,8 @@ class _MobileChartCard extends StatelessWidget {
     final isRadial =
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
-        chartType.type == ChartType.polarColumn;
+        chartType.type == ChartType.polarColumn ||
+        chartType.type == ChartType.radialBar;
     final showAxes = chartChrome == _MobileChartChrome.axes;
     final axisLineColor = presentation.palette[index % 5];
     final axisLabelColor = presentation.palette[(index + 1) % 5];
@@ -1863,6 +1869,20 @@ class _MobileChartCard extends StatelessWidget {
                           )
                         : const ConcentricDonutConfig()),
                 polarChartConfig: effectivePolarConfig,
+                radialBarChartConfig:
+                    example.radialBarChartConfig ??
+                    (chartType.type == ChartType.radialBar
+                        ? const RadialBarChartConfig(
+                            pane: PolarPaneConfig(
+                              innerRadiusFactor: 0.16,
+                              outerRadiusFactor: 0.88,
+                            ),
+                            trackGap: 4,
+                            showCategoryLabels: true,
+                            showScaleLabels: false,
+                            showGridLines: false,
+                          )
+                        : const RadialBarChartConfig()),
               ),
             ),
             const SizedBox(height: 10),
@@ -2014,6 +2034,24 @@ const _mobileExampleCopy = <String, List<(String, String)>>{
       'Positive supply layers and negative shortfall share a stacked scale.',
     ),
   ],
+  'radial-bar': [
+    (
+      'Journey progress',
+      'Independent progress tracks share one explicit 0–100 scale.',
+    ),
+    (
+      'Signed drivers',
+      'Positive and negative values grow from a visible zero baseline.',
+    ),
+    (
+      'Channel targets',
+      'A partial sweep compares every channel with one absolute target.',
+    ),
+    (
+      'Regional profile',
+      'Dense concentric tracks remain selectable on a compact phone pane.',
+    ),
+  ],
 };
 
 List<_MobileChartExample> _mobileExamples(
@@ -2047,6 +2085,9 @@ List<_MobileChartExample> _mobileExamples(
             : null,
         polarChartConfig: slug == 'polar-column'
             ? _mobilePolarConfig(index)
+            : null,
+        radialBarChartConfig: slug == 'radial-bar'
+            ? _mobileRadialBarConfig(index)
             : null,
         grid: slug == 'bar-charts' && index == 2
             ? const GridConfig(horizontal: false, vertical: true)
@@ -2784,6 +2825,7 @@ List<ChartSeries> _mobileSeries(
       ),
     ),
   ],
+  'radial-bar' => [_mobileRadialBarSeries(0, presentation)],
   _ => const <ChartSeries>[],
 };
 
@@ -3176,8 +3218,85 @@ List<ChartSeries> _mobileVariantSeries(
   ],
   'concentric-donut' => _concentricSeries(variant, presentation),
   'polar-column' => _mobilePolarSeries(variant, presentation),
+  'radial-bar' => [_mobileRadialBarSeries(variant, presentation)],
   _ => const <ChartSeries>[],
 };
+
+RadialBarChartSeries _mobileRadialBarSeries(
+  int variant,
+  _MobileStylePresentation presentation,
+) {
+  final values = switch (variant) {
+    1 => const <String, num>{
+      'Acquisition': 64,
+      'Support': -36,
+      'Reliability': 82,
+      'Churn': -52,
+      'Advocacy': 48,
+    },
+    2 => const <String, num>{
+      'Search': 88,
+      'Social': 72,
+      'Direct': 94,
+      'Partner': 63,
+      'Referral': 79,
+    },
+    3 => const <String, num>{
+      'North': 82,
+      'North-east': 64,
+      'East': 91,
+      'South-east': 58,
+      'South': 76,
+      'South-west': 49,
+      'West': 86,
+      'North-west': 69,
+    },
+    _ => const <String, num>{
+      'Activation': 92,
+      'Retention': 78,
+      'Adoption': 66,
+      'Expansion': 57,
+    },
+  };
+  final signed = variant == 1;
+  return RadialBarChartSeries.fromMap(
+    id: 'mobile-radial-bar-$variant',
+    name: variant == 1 ? 'Net contribution' : 'Progress',
+    values: values,
+    barColors: _sliceColors(values.keys.toList(), presentation.palette),
+    minimum: signed ? -100 : 0,
+    maximum: 100,
+    baseline: 0,
+    radialBarStyle: RadialBarStyle(
+      cornerRadius: variant == 3 ? 4 : 8,
+      trackOpacity: 0.12,
+      showDataLabels: true,
+    ),
+  );
+}
+
+RadialBarChartConfig _mobileRadialBarConfig(int variant) =>
+    RadialBarChartConfig(
+      pane: PolarPaneConfig(
+        startAngleDegrees: variant == 2 ? -135 : -90,
+        sweepAngleDegrees: variant == 2 ? 270 : 360,
+        innerRadiusFactor: variant == 3 ? 0.1 : 0.18,
+        outerRadiusFactor: 0.9,
+      ),
+      trackGap: variant == 3 ? 3 : 5,
+      showCategoryLabels: true,
+      showScaleLabels: false,
+      showGridLines: variant == 1,
+      thresholds: variant == 2
+          ? const [
+              RadialBarThreshold(
+                value: 80,
+                label: 'Target',
+                dashPattern: [5, 3],
+              ),
+            ]
+          : const [],
+    );
 
 LineChartSeries _mobileLine({
   required String id,

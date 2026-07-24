@@ -18,6 +18,8 @@ import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_bar_chart_config.dart';
+import '../models/radial_bar_chart_series.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_annotation_document_codec.dart';
@@ -78,6 +80,7 @@ class HydratedChartConfiguration {
     this.height,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radialBarChartConfig,
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes);
@@ -116,6 +119,9 @@ class HydratedChartConfiguration {
 
   /// Plot-level pane and axes restored for an axis-based polar chart.
   final PolarChartConfig? polarChartConfig;
+
+  /// Plot-level pane, tracks, and guides restored for a Radial Bar chart.
+  final RadialBarChartConfig? radialBarChartConfig;
 
   YAxisConfig? get primaryYAxis {
     for (final axis in axes) {
@@ -230,6 +236,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       concentricDonutConfig:
           config.concentricDonutConfig ?? const ConcentricDonutConfig(),
       polarChartConfig: config.polarChartConfig ?? const PolarChartConfig(),
+      radialBarChartConfig:
+          config.radialBarChartConfig ?? const RadialBarChartConfig(),
       donutCenterBuilder: widget.donutCenterBuilder,
       onDonutCenterTap: widget.onDonutCenterTap,
       showToolbar: config.showToolbar,
@@ -298,11 +306,14 @@ abstract final class ChartDocumentHydrator {
     'series.donut.variable-radius.v1',
     'series.donut.concentric.v1',
     'series.polarColumn',
+    'series.radialBar',
     'series.polar.column.v1',
     PolarColumnChartSeries.cornerRadiusModeCapability,
     PolarColumnChartSeries.appearanceCapability,
     'series.polar.column.targets.v1',
     'series.polar.column.intervals.v1',
+    'series.radial.bar.v1',
+    'chart.radial.bar.config.v1',
     'chart.polar.config.v1',
     'chart.polar.thresholds.v1',
     'chart.cartesian.value-summary.v1',
@@ -341,6 +352,7 @@ abstract final class ChartDocumentHydrator {
     'pie',
     'donut',
     'polarColumn',
+    'radialBar',
   };
   static const _builtInAnnotationTypes = <String>{
     'point',
@@ -655,6 +667,17 @@ abstract final class ChartDocumentHydrator {
         series: series,
         config: polarChartConfig,
       );
+      final radialBarChartConfig = _requireValue(
+        ChartConfigurationDocumentCodec.decodeRadialBarChart(
+          document.configuration,
+        ),
+        warnings,
+      );
+      _validateRadialBarComposition(
+        document: document,
+        series: series,
+        config: radialBarChartConfig,
+      );
       final layout = document.layout;
 
       return ChartArtifactSuccess(
@@ -684,6 +707,7 @@ abstract final class ChartDocumentHydrator {
           height: layout.height?.asDouble,
           concentricDonutConfig: concentricDonutConfig,
           polarChartConfig: polarChartConfig,
+          radialBarChartConfig: radialBarChartConfig,
         ),
         warnings: warnings,
       );
@@ -1089,6 +1113,69 @@ abstract final class ChartDocumentHydrator {
         ),
         const [],
       );
+    }
+  }
+
+  static void _validateRadialBarComposition({
+    required ChartDocument document,
+    required List<ChartSeries> series,
+    required RadialBarChartConfig? config,
+  }) {
+    final radialBarSeries = series.whereType<RadialBarChartSeries>().toList(
+      growable: false,
+    );
+    if (config == null) {
+      if (radialBarSeries.isNotEmpty) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Radial Bar series require chart-level Radial Bar configuration.',
+            path: r'$.document.configuration.radialBarChart',
+          ),
+          [],
+        );
+      }
+      return;
+    }
+    if (!document.requiredCapabilities.contains('chart.radial.bar.config.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Radial Bar configuration must declare chart.radial.bar.config.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (radialBarSeries.length != 1 || series.length != 1) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Radial Bar V1 requires exactly one Radial Bar series and cannot mix chart families.',
+          path: r'$.document.configuration.radialBarChart',
+        ),
+        [],
+      );
+    }
+    final radialBar = radialBarSeries.single;
+    for (final (index, threshold) in config.thresholds.indexed) {
+      if (threshold.value < radialBar.minimum ||
+          threshold.value > radialBar.maximum) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Radial Bar threshold ${threshold.value} is outside the series domain.',
+            path:
+                r'$.document.configuration.radialBarChart.thresholds['
+                '$index]',
+          ),
+          const [],
+        );
+      }
     }
   }
 

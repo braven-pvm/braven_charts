@@ -65,10 +65,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The emitter source under audit.
 String get _emitterSource => File(
-      '${Directory.current.path}${Platform.pathSeparator}lib'
-      '${Platform.pathSeparator}src${Platform.pathSeparator}source'
-      '${Platform.pathSeparator}chart_config_dart_emitter.dart',
-    ).readAsStringSync();
+  '${Directory.current.path}${Platform.pathSeparator}lib'
+  '${Platform.pathSeparator}src${Platform.pathSeparator}source'
+  '${Platform.pathSeparator}chart_config_dart_emitter.dart',
+).readAsStringSync();
 
 /// `@chartSurface` classes the source emitter does not emit AT ALL, because
 /// they are not reachable from the captured `HydratedChartConfiguration` /
@@ -82,26 +82,26 @@ String get _emitterSource => File(
 const Map<String, String> _classesNotEmittedBySource = <String, String>{
   'ChartDataTableTheme':
       'Data-table view theme (lib/src/table). It themes the tabular data view, '
-          'not the chart, and is never part of the config graph the source '
-          'generator captures.',
+      'not the chart, and is never part of the config graph the source '
+      'generator captures.',
   'StreamingConfig':
       'Runtime streaming config. A BravenChartPlus parameter that is NOT '
-          'captured in ChartDocument / HydratedChartConfiguration, so the '
-          'source generator has no value to emit.',
+      'captured in ChartDocument / HydratedChartConfiguration, so the '
+      'source generator has no value to emit.',
   'AutoScrollConfig':
       'Runtime auto-scroll config. Like StreamingConfig it is a live '
-          'BravenChartPlus parameter absent from the captured document, so '
-          'there is nothing for the emitter to reconstruct.',
+      'BravenChartPlus parameter absent from the captured document, so '
+      'there is nothing for the emitter to reconstruct.',
   'ChartDocumentExtractOptions':
       'Artifact extraction policy supplied to ChartDocumentExtractor at '
-          'capture time. It controls how an existing chart is projected into '
-          'a document; it is not part of the hydrated chart configuration that '
-          'ChartConfigDartEmitter reconstructs.',
+      'capture time. It controls how an existing chart is projected into '
+      'a document; it is not part of the hydrated chart configuration that '
+      'ChartConfigDartEmitter reconstructs.',
   'CartesianValueSummaryTheme':
       'Theme-level value-summary defaults. The theme document codec does not '
-          'persist this component, so the hydrated ChartTheme never carries a '
-          'non-default value and the emitter has nothing to write. (The '
-          'per-chart CartesianValueSummaryConfig IS emitted via _emitValueSummary.)',
+      'persist this component, so the hydrated ChartTheme never carries a '
+      'non-default value and the emitter has nothing to write. (The '
+      'per-chart CartesianValueSummaryConfig IS emitted via _emitValueSummary.)',
 };
 
 /// Individual modelled properties the emitter does not name, inside classes it
@@ -110,12 +110,12 @@ const Map<String, String> _classesNotEmittedBySource = <String, String>{
 const Map<String, String> _propertyGaps = <String, String>{
   'ChartTheme.cartesianValueSummaryTheme':
       'The cartesian value-summary theme component (see '
-          'CartesianValueSummaryTheme above): ChartTheme is emitted, but this '
-          'field is not, because the theme codec does not persist it.',
+      'CartesianValueSummaryTheme above): ChartTheme is emitted, but this '
+      'field is not, because the theme codec does not persist it.',
   'MultiAxisConfig.bindings':
       'Series-to-axis bindings are emitted per series as yAxisId / yAxisConfig, '
-          'not as a MultiAxisConfig.bindings map. There is no MultiAxisConfig '
-          'object in the emitted graph.',
+      'not as a MultiAxisConfig.bindings map. There is no MultiAxisConfig '
+      'object in the emitted graph.',
 };
 
 // ===========================================================================
@@ -135,20 +135,20 @@ const Map<String, String> _propertyGaps = <String, String>{
 const Map<String, String> _classAwareResidualClasses = <String, String>{
   'XAxisConfig':
       'Emitted via _emitAxisFields; the XAxisConfig( opener in _emitXAxis only '
-          'calls the helper, so the construction-block slice carries none of the '
-          'axis field names. Covered by the flat-union gate.',
+      'calls the helper, so the construction-block slice carries none of the '
+      'axis field names. Covered by the flat-union gate.',
   'YAxisConfig':
       'Emitted via _emitYAxisFields; the YAxisConfig( opener in _emitYAxis only '
-          'calls the helper, so the construction-block slice carries none of the '
-          'axis field names. Covered by the flat-union gate.',
+      'calls the helper, so the construction-block slice carries none of the '
+      'axis field names. Covered by the flat-union gate.',
   'ChartTheme':
       'Emitted via _emitResolvedThemeFields; the ChartTheme( opener in _emitTheme '
-          'only calls the helper, so the construction-block slice carries none of '
-          'the theme component names. Covered by the flat-union gate.',
+      'only calls the helper, so the construction-block slice carries none of '
+      'the theme component names. Covered by the flat-union gate.',
   'InteractionConfig':
       'Emitted via _emitInteractionFields; the InteractionConfig( opener only '
-          'calls the helper, so the construction-block slice carries none of the '
-          'interaction field names. Covered by the flat-union gate.',
+      'calls the helper, so the construction-block slice carries none of the '
+      'interaction field names. Covered by the flat-union gate.',
 };
 
 /// Individual `Class.property` pairs the class-aware slice reports as a gap and
@@ -193,6 +193,7 @@ const Map<String, List<String>> _seriesEmitMethods = <String, List<String>>{
   'PieChartSeries': <String>['_emitPieOptions', '_emitAdvancedRadial'],
   'DonutChartSeries': <String>['_emitDonutOptions', '_emitAdvancedRadial'],
   'PolarColumnChartSeries': <String>['_emitPolarColumnOptions'],
+  'RadialBarChartSeries': <String>['_emitRadialBarOptions'],
   'ScatterChartSeries': <String>[],
 };
 
@@ -219,16 +220,17 @@ Map<String, Set<String>> _surfaceProperties() {
 /// The generous set of property names the emitter NAMES: field reads, emitted
 /// argument-name literals, and object-pattern bindings.
 Set<String> _emitterMentions(String source) => <String>{
-      for (final match
-          in RegExp(r"""(?:!|\?)?\.([a-z][A-Za-z0-9_]*)\b""").allMatches(source))
-        match.group(1)!,
-      for (final match
-          in RegExp(r"""'([a-z][A-Za-z0-9_]*)'""").allMatches(source))
-        match.group(1)!,
-      for (final match
-          in RegExp(r""":\s*final\s+([a-z][A-Za-z0-9_]*)""").allMatches(source))
-        match.group(1)!,
-    };
+  for (final match in RegExp(
+    r"""(?:!|\?)?\.([a-z][A-Za-z0-9_]*)\b""",
+  ).allMatches(source))
+    match.group(1)!,
+  for (final match in RegExp(r"""'([a-z][A-Za-z0-9_]*)'""").allMatches(source))
+    match.group(1)!,
+  for (final match in RegExp(
+    r""":\s*final\s+([a-z][A-Za-z0-9_]*)""",
+  ).allMatches(source))
+    match.group(1)!,
+};
 
 /// Attributes emitted property names to the CLASS whose construction block
 /// names them — the class-aware complement to the flat [_emitterMentions]
@@ -253,10 +255,11 @@ Set<String> _emitterMentions(String source) => <String>{
 /// `_emitInteractionFields`) — is attributed with an empty body; those classes
 /// are declared as [_classAwareResidualClasses] parser misses, not pinned.
 ({Map<String, Set<String>> mentions, Map<String, int> blocks})
-    _attributeConstructionBlocks(String source) {
+_attributeConstructionBlocks(String source) {
   final lines = source.replaceAll('\r\n', '\n').split('\n');
   final openerRe = RegExp(
-      r"""writer\.writeLine\('(?:[A-Za-z_$][\w$]*: )?([A-Z][A-Za-z0-9_]*)\('\)""");
+    r"""writer\.writeLine\('(?:[A-Za-z_$][\w$]*: )?([A-Z][A-Za-z0-9_]*)\('\)""",
+  );
   final anyOpenerRe = RegExp(r"""writer\.writeLine\('[^']*\('\)""");
   final closerRe = RegExp(r"""writer\.writeLine\('\),'\)""");
   final methodEndRe = RegExp(r'^  \}$');
@@ -332,7 +335,9 @@ String _sharedSeriesBaseSlice(String source) {
   // dispatch (the LAST occurrence) — including the base-field emission between
   // the two switches.
   final switchIdx = emitSeries.lastIndexOf('switch (series)');
-  final base = switchIdx == -1 ? emitSeries : emitSeries.substring(0, switchIdx);
+  final base = switchIdx == -1
+      ? emitSeries
+      : emitSeries.substring(0, switchIdx);
   // Strip the isXOrdered gate (the `if (series is! …) { _valueIf(… 'isXOrdered'
   // …); }` block) so the shared base does not credit `isXOrdered` to every
   // series — it is attributed per-series below.
@@ -367,8 +372,9 @@ Set<String> _styleAllowlist(String source) {
 /// in `_emitSeries`. A series emits `isXOrdered` iff it is NOT in this set.
 Set<String> _isXOrderedExcluded(String source) {
   final emitSeries = _methodSlice(source, '_emitSeries');
-  final gate =
-      RegExp(r"if \(series is![\s\S]*?'isXOrdered'").firstMatch(emitSeries);
+  final gate = RegExp(
+    r"if \(series is![\s\S]*?'isXOrdered'",
+  ).firstMatch(emitSeries);
   if (gate == null) return const <String>{};
   return <String>{
     for (final match in RegExp(r'series is! (\w+)').allMatches(gate.group(0)!))
@@ -427,16 +433,23 @@ void main() {
   test('the extraction produced plausible sets', () {
     // A manifest that failed to load or a regex that stopped matching would
     // make the gate vacuous.
-    expect(surface, hasLength(greaterThan(80)),
-        reason: 'the surface manifest resolved almost no classes');
+    expect(
+      surface,
+      hasLength(greaterThan(80)),
+      reason: 'the surface manifest resolved almost no classes',
+    );
     expect(
       surface.values.fold<int>(0, (sum, props) => sum + props.length),
       greaterThan(700),
       reason: 'the surface manifest resolved almost no properties',
     );
-    expect(mentioned, hasLength(greaterThan(500)),
-        reason: 'the emitter scan found almost no names — the emitter was '
-            'probably restructured and this extraction needs revisiting');
+    expect(
+      mentioned,
+      hasLength(greaterThan(500)),
+      reason:
+          'the emitter scan found almost no names — the emitter was '
+          'probably restructured and this extraction needs revisiting',
+    );
     // Spot-check a property known to be emitted and one class known to exist.
     expect(surface.containsKey('LegendStyle'), isTrue);
     expect(isEmitted('strokeWidth'), isTrue);
@@ -444,35 +457,51 @@ void main() {
 
   test('every reviewed hole names a real class/property and a real reason', () {
     for (final className in _classesNotEmittedBySource.keys) {
-      expect(surface.containsKey(className), isTrue,
-          reason: '$className is pinned as not-emitted but is not a '
-              '@chartSurface class in the manifest — delete it from '
-              '_classesNotEmittedBySource.');
+      expect(
+        surface.containsKey(className),
+        isTrue,
+        reason:
+            '$className is pinned as not-emitted but is not a '
+            '@chartSurface class in the manifest — delete it from '
+            '_classesNotEmittedBySource.',
+      );
     }
     for (final key in _propertyGaps.keys) {
       final parts = key.split('.');
       final className = parts[0];
       final property = parts[1];
-      expect(surface.containsKey(className), isTrue,
-          reason: '$key pins a property on $className, which is not a '
-              '@chartSurface class.');
+      expect(
+        surface.containsKey(className),
+        isTrue,
+        reason:
+            '$key pins a property on $className, which is not a '
+            '@chartSurface class.',
+      );
       expect(
         _classesNotEmittedBySource.containsKey(className),
         isFalse,
-        reason: '$key pins a property on $className, but $className is already '
+        reason:
+            '$key pins a property on $className, but $className is already '
             'pinned as a whole not-emitted class — a property gap there is '
             'redundant.',
       );
-      expect(surface[className]!.contains(property), isTrue,
-          reason: '$key pins property "$property", which $className does not '
-              'model — delete it from _propertyGaps.');
+      expect(
+        surface[className]!.contains(property),
+        isTrue,
+        reason:
+            '$key pins property "$property", which $className does not '
+            'model — delete it from _propertyGaps.',
+      );
     }
     for (final reason in [
       ..._classesNotEmittedBySource.values,
       ..._propertyGaps.values,
     ]) {
-      expect(reason.length, greaterThanOrEqualTo(20),
-          reason: 'a pinned hole has a placeholder reason');
+      expect(
+        reason.length,
+        greaterThanOrEqualTo(20),
+        reason: 'a pinned hole has a placeholder reason',
+      );
     }
   });
 
@@ -491,7 +520,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'NEW source-emitter drift: these modelled config properties are '
+      reason:
+          'NEW source-emitter drift: these modelled config properties are '
           'not named anywhere in chart_config_dart_emitter.dart, so the '
           'generated Source silently drops them on round-trip. Add an '
           '_emit path (with a source-generator test proving the property '
@@ -502,54 +532,56 @@ void main() {
   });
 
   test('the pinned property gaps are all still real', () {
-    final stale = _propertyGaps.keys
-        .where((key) => isEmitted(key.split('.')[1]))
-        .toList()
-      ..sort();
+    final stale =
+        _propertyGaps.keys.where((key) => isEmitted(key.split('.')[1])).toList()
+          ..sort();
     expect(
       stale,
       isEmpty,
-      reason: 'these property gaps are now emitted but still pinned. Delete '
+      reason:
+          'these property gaps are now emitted but still pinned. Delete '
           'them from _propertyGaps:\n${stale.join('\n')}',
     );
   });
 
-  test('COVERAGE REPORT (not a gate): source-emitter coverage of the surface',
-      () {
-    var modelledProps = 0;
-    var emittedProps = 0;
-    var exemptProps = 0;
-    for (final entry in surface.entries) {
-      final exempt = _classesNotEmittedBySource.containsKey(entry.key);
-      for (final property in entry.value) {
-        modelledProps++;
-        if (exempt) {
-          exemptProps++;
-        } else if (isEmitted(property)) {
-          emittedProps++;
+  test(
+    'COVERAGE REPORT (not a gate): source-emitter coverage of the surface',
+    () {
+      var modelledProps = 0;
+      var emittedProps = 0;
+      var exemptProps = 0;
+      for (final entry in surface.entries) {
+        final exempt = _classesNotEmittedBySource.containsKey(entry.key);
+        for (final property in entry.value) {
+          modelledProps++;
+          if (exempt) {
+            exemptProps++;
+          } else if (isEmitted(property)) {
+            emittedProps++;
+          }
         }
       }
-    }
-    // ignore: avoid_print
-    print(
-      '\n[source emitter drift]\n'
-      '  @chartSurface classes:        ${surface.length}\n'
-      '  modelled properties:          $modelledProps\n'
-      '  classes not emitted (pinned): ${_classesNotEmittedBySource.length}\n'
-      '  property gaps (pinned):       ${_propertyGaps.length}\n'
-      '  emitter names (union):        ${mentioned.length}\n'
-      '  properties in exempt classes: $exemptProps\n'
-      '  properties the emitter names: $emittedProps of '
-      '${modelledProps - exemptProps} in gated classes\n'
-      '  NOTE: this gates the MODELLED surface only. The ~29 copyWith-less '
-      'config\n'
-      '  classes the emitter also writes (BarChartStyle, the Bar*Style / '
-      'Scatter*\n'
-      '  families) carry no @chartSurface and are invisible here — a separate '
-      'slice.',
-    );
-    expect(emittedProps, greaterThan(0));
-  });
+      // ignore: avoid_print
+      print(
+        '\n[source emitter drift]\n'
+        '  @chartSurface classes:        ${surface.length}\n'
+        '  modelled properties:          $modelledProps\n'
+        '  classes not emitted (pinned): ${_classesNotEmittedBySource.length}\n'
+        '  property gaps (pinned):       ${_propertyGaps.length}\n'
+        '  emitter names (union):        ${mentioned.length}\n'
+        '  properties in exempt classes: $exemptProps\n'
+        '  properties the emitter names: $emittedProps of '
+        '${modelledProps - exemptProps} in gated classes\n'
+        '  NOTE: this gates the MODELLED surface only. The ~29 copyWith-less '
+        'config\n'
+        '  classes the emitter also writes (BarChartStyle, the Bar*Style / '
+        'Scatter*\n'
+        '  families) carry no @chartSurface and are invisible here — a separate '
+        'slice.',
+      );
+      expect(emittedProps, greaterThan(0));
+    },
+  );
 
   // =========================================================================
   // CLASS-AWARE gate (ADDITIVE — the flat-union tests above stay authoritative)
@@ -581,28 +613,47 @@ void main() {
 
   test('class-aware allowlists name real classes/properties with reasons', () {
     for (final className in _classAwareResidualClasses.keys) {
-      expect(surface.containsKey(className), isTrue,
-          reason: '$className is a class-aware residual but not a @chartSurface '
-              'class — delete it from _classAwareResidualClasses.');
+      expect(
+        surface.containsKey(className),
+        isTrue,
+        reason:
+            '$className is a class-aware residual but not a @chartSurface '
+            'class — delete it from _classAwareResidualClasses.',
+      );
     }
     for (final key in _classAwareExpectedGaps.keys) {
       final parts = key.split('.');
-      expect(surface.containsKey(parts[0]), isTrue,
-          reason: '$key pins a property on ${parts[0]}, not a @chartSurface '
-              'class.');
-      expect(surface[parts[0]]!.contains(parts[1]), isTrue,
-          reason: '$key pins property "${parts[1]}", which ${parts[0]} does not '
-              'model — delete it from _classAwareExpectedGaps.');
-      expect(_classAwareResidualClasses.containsKey(parts[0]), isFalse,
-          reason: '$key pins a property on ${parts[0]}, which is already an '
-              'excluded residual class — the per-property pin is redundant.');
+      expect(
+        surface.containsKey(parts[0]),
+        isTrue,
+        reason:
+            '$key pins a property on ${parts[0]}, not a @chartSurface '
+            'class.',
+      );
+      expect(
+        surface[parts[0]]!.contains(parts[1]),
+        isTrue,
+        reason:
+            '$key pins property "${parts[1]}", which ${parts[0]} does not '
+            'model — delete it from _classAwareExpectedGaps.',
+      );
+      expect(
+        _classAwareResidualClasses.containsKey(parts[0]),
+        isFalse,
+        reason:
+            '$key pins a property on ${parts[0]}, which is already an '
+            'excluded residual class — the per-property pin is redundant.',
+      );
     }
     for (final reason in [
       ..._classAwareResidualClasses.values,
       ..._classAwareExpectedGaps.values,
     ]) {
-      expect(reason.length, greaterThanOrEqualTo(20),
-          reason: 'a class-aware allowlist entry has a placeholder reason');
+      expect(
+        reason.length,
+        greaterThanOrEqualTo(20),
+        reason: 'a class-aware allowlist entry has a placeholder reason',
+      );
     }
   });
 
@@ -613,10 +664,12 @@ void main() {
       final className = entry.key;
       if (_classAwareResidualClasses.containsKey(className)) continue;
       final names = attributed.mentions[className];
-      if (names == null) continue; // no in-scope block: the flat-union gate owns it.
+      if (names == null)
+        continue; // no in-scope block: the flat-union gate owns it.
       for (final property in entry.value) {
         if (names.contains(property)) continue;
-        if (_classAwareExpectedGaps.containsKey('$className.$property')) continue;
+        if (_classAwareExpectedGaps.containsKey('$className.$property'))
+          continue;
         gaps.add('$className.$property');
       }
     }
@@ -624,7 +677,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'NEW class-aware source-emitter drift: these properties are NOT '
+      reason:
+          'NEW class-aware source-emitter drift: these properties are NOT '
           "named inside their own class's construction block in "
           'chart_config_dart_emitter.dart, even though a same-named property on '
           'another class may hide this from the flat-union gate. Add the _emit '
@@ -642,25 +696,27 @@ void main() {
       final parts = key.split('.');
       final names = attributed.mentions[parts[0]];
       return names != null && names.contains(parts[1]);
-    }).toList()
-      ..sort();
+    }).toList()..sort();
     expect(
       staleGaps,
       isEmpty,
-      reason: 'these class-aware gaps are now covered by their block but still '
+      reason:
+          'these class-aware gaps are now covered by their block but still '
           'pinned. Delete them from _classAwareExpectedGaps:\n'
           '${staleGaps.join('\n')}',
     );
     // A residual-excluded class with no attributed block would be auto-residual
     // anyway, so its explicit exclusion is stale (or the block moved).
-    final staleResidual = _classAwareResidualClasses.keys
-        .where((className) => attributed.blocks[className] == null)
-        .toList()
-      ..sort();
+    final staleResidual =
+        _classAwareResidualClasses.keys
+            .where((className) => attributed.blocks[className] == null)
+            .toList()
+          ..sort();
     expect(
       staleResidual,
       isEmpty,
-      reason: 'these classes have no attributed construction block, so they are '
+      reason:
+          'these classes have no attributed construction block, so they are '
           'already residual and do not need an explicit exclusion. Delete them '
           'from _classAwareResidualClasses:\n${staleResidual.join('\n')}',
     );
@@ -669,9 +725,11 @@ void main() {
   test('COVERAGE REPORT (not a gate): class-aware block attribution', () {
     final attributed = _attributeConstructionBlocks(_emitterSource);
     final gatedClasses = attributed.mentions.keys
-        .where((c) =>
-            surface.containsKey(c) &&
-            !_classAwareResidualClasses.containsKey(c))
+        .where(
+          (c) =>
+              surface.containsKey(c) &&
+              !_classAwareResidualClasses.containsKey(c),
+        )
         .length;
     // ignore: avoid_print
     print(
@@ -710,15 +768,17 @@ void main() {
   // =========================================================================
 
   test('the per-series map covers every manifest series subclass', () {
-    final manifestSeries =
-        surface.keys.where((c) => c.endsWith('Series')).toSet();
+    final manifestSeries = surface.keys
+        .where((c) => c.endsWith('Series'))
+        .toSet();
     final unmapped =
         manifestSeries.difference(_seriesEmitMethods.keys.toSet()).toList()
           ..sort();
     expect(
       unmapped,
       isEmpty,
-      reason: 'these manifest series subclasses are NOT mapped in '
+      reason:
+          'these manifest series subclasses are NOT mapped in '
           '_seriesEmitMethods — add each with the emit method(s) that name its '
           'fields. This is the maintenance guard: a new series must be wired '
           'into the per-series gate or it silently escapes coverage:\n'
@@ -730,7 +790,8 @@ void main() {
     expect(
       stale,
       isEmpty,
-      reason: 'these _seriesEmitMethods keys are not @chartSurface series '
+      reason:
+          'these _seriesEmitMethods keys are not @chartSurface series '
           'classes in the manifest — delete them:\n${stale.join('\n')}',
     );
     // Every method the slicer names must resolve to a real, non-empty body, or
@@ -749,14 +810,16 @@ void main() {
     expect(
       missing,
       isEmpty,
-      reason: 'these methods named by the per-series slicer no longer exist in '
+      reason:
+          'these methods named by the per-series slicer no longer exist in '
           'chart_config_dart_emitter.dart (renamed?) — update '
           '_seriesEmitMethods / the slicers:\n${missing.join('\n')}',
     );
     expect(
       _scatterCaseSlice(source),
       isNotEmpty,
-      reason: 'the inline ScatterChartSeries case in _emitSeries was not found '
+      reason:
+          'the inline ScatterChartSeries case in _emitSeries was not found '
           '— the scatter-case slicer needs revisiting.',
     );
   });
@@ -779,7 +842,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'NEW per-series source-emitter drift: these modelled series '
+      reason:
+          'NEW per-series source-emitter drift: these modelled series '
           "properties are NOT named inside their own series' emit method(s) "
           'plus the shared _emitSeries base, even though a same-named property '
           'on another series can hide this from the flat-union gate (the '
@@ -792,8 +856,7 @@ void main() {
     );
   });
 
-  test(
-      'style and isXOrdered are attributed per-series against the emitter '
+  test('style and isXOrdered are attributed per-series against the emitter '
       'allowlists, not credited via the shared base slice', () {
     final source = _emitterSource;
 
@@ -804,23 +867,37 @@ void main() {
     // isXOrdered negative gate) would still pass the per-series gate because
     // the shared base carried the field name for all series.
     final baseNames = _emitterMentions(_sharedSeriesBaseSlice(source));
-    expect(baseNames.contains('style'), isFalse,
-        reason: 'the shared series base slice still names `style`; exclude '
-            "_emitSeriesStyle's body from _sharedSeriesBaseSlice so `style` is "
-            'attributed per-series.');
-    expect(baseNames.contains('isXOrdered'), isFalse,
-        reason: 'the shared series base slice still names `isXOrdered`; strip '
-            'its _valueIf gate from _sharedSeriesBaseSlice so it is attributed '
-            'per-series.');
+    expect(
+      baseNames.contains('style'),
+      isFalse,
+      reason:
+          'the shared series base slice still names `style`; exclude '
+          "_emitSeriesStyle's body from _sharedSeriesBaseSlice so `style` is "
+          'attributed per-series.',
+    );
+    expect(
+      baseNames.contains('isXOrdered'),
+      isFalse,
+      reason:
+          'the shared series base slice still names `isXOrdered`; strip '
+          'its _valueIf gate from _sharedSeriesBaseSlice so it is attributed '
+          'per-series.',
+    );
 
     // (2) The mirrored allowlists parse a plausible set — a rename/refactor that
     // emptied them would make the per-series enforcement below vacuous.
     final styleAllowlist = _styleAllowlist(source);
     final isXOrderedExcluded = _isXOrderedExcluded(source);
-    expect(styleAllowlist, contains('LineChartSeries'),
-        reason: 'could not parse the _emitSeriesStyle `series is` allowlist');
-    expect(isXOrderedExcluded, contains('CandlestickChartSeries'),
-        reason: 'could not parse the isXOrdered `series is!` negative gate');
+    expect(
+      styleAllowlist,
+      contains('LineChartSeries'),
+      reason: 'could not parse the _emitSeriesStyle `series is` allowlist',
+    );
+    expect(
+      isXOrderedExcluded,
+      contains('CandlestickChartSeries'),
+      reason: 'could not parse the isXOrdered `series is!` negative gate',
+    );
 
     // (3) Each manifest series that MODELS the field is credited iff the
     // emitter's own allowlist emits it for that series — required-covered for
@@ -841,7 +918,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'these series model style/isXOrdered but the emitter allowlist '
+      reason:
+          'these series model style/isXOrdered but the emitter allowlist '
           'parsed from source does NOT emit them for that series, so they are '
           'dropped on round-trip:\n${gaps.join('\n')}',
     );
@@ -853,13 +931,15 @@ void main() {
       expect(
         _seriesEmitMethods.containsKey(parts[0]),
         isTrue,
-        reason: '$key pins a property on ${parts[0]}, which is not a mapped '
+        reason:
+            '$key pins a property on ${parts[0]}, which is not a mapped '
             'series in _seriesEmitMethods.',
       );
       expect(
         surface[parts[0]]?.contains(parts[1]) ?? false,
         isTrue,
-        reason: '$key pins property "${parts[1]}", which ${parts[0]} does not '
+        reason:
+            '$key pins property "${parts[1]}", which ${parts[0]} does not '
             'model — delete it from _seriesExpectedGaps.',
       );
     }
@@ -877,12 +957,12 @@ void main() {
     final stale = _seriesExpectedGaps.keys.where((key) {
       final parts = key.split('.');
       return _seriesEmittedNames(source, parts[0]).contains(parts[1]);
-    }).toList()
-      ..sort();
+    }).toList()..sort();
     expect(
       stale,
       isEmpty,
-      reason: 'these per-series gaps are now named by their series slice but '
+      reason:
+          'these per-series gaps are now named by their series slice but '
           'still pinned. Delete them from _seriesExpectedGaps:\n'
           '${stale.join('\n')}',
     );
