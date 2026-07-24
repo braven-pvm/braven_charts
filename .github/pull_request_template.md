@@ -2,6 +2,11 @@
 
 Closes #
 
+## Shared register
+
+- Register item: BC-#### | N/A — external contribution
+- Final register status/evidence sync: Complete | Pending — explain
+
 ## Outcome
 
 Describe the behavior delivered for package consumers or maintainers. Do not use the commit list as the summary.
@@ -36,6 +41,8 @@ Attach before/after images or a recording for user-visible changes. Mark genuine
 ## Review checklist
 
 - [ ] The linked issue is implementation-ready and this PR satisfies its acceptance criteria.
+- [ ] The shared-register item is linked and current, or this is an external
+      contribution for which it is explicitly not applicable.
 - [ ] The diff stays within the documented scope and preserves unrelated work.
 - [ ] Tests prove the requested behavior and relevant failure modes, not only construction or non-null results.
 - [ ] Touched Dart files analyze with no errors, warnings, or infos.
@@ -43,3 +50,5 @@ Attach before/after images or a recording for user-visible changes. Mark genuine
 - [ ] Visual changes include evidence for representative themes, sizes, and interaction states.
 - [ ] Breaking changes are explicitly identified and justified.
 - [ ] Verification failures, skipped checks, and residual risks are recorded above.
+- [ ] Delivery status, verification evidence, PR link, and follow-up debt are
+      synchronized back to the register before merge.

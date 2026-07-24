@@ -2,6 +2,25 @@
 
 Auto-generated from all feature plans. Last updated: 2025-10-04
 
+## Repository bootstrap
+
+Read the root `AGENTS.md` before planning, reviewing, or changing this
+repository. It defines the mandatory shared-development-register workflow and
+the safe fallback for machines that cannot access the register.
+
+The branch-independent register is at
+`F:\Repositories\_braven_charts_register`. Read its `README.md`, then list the
+current items with:
+
+```powershell
+& 'F:\Repositories\_braven_charts_register\register.ps1' list
+```
+
+Treat register entries as coordination state, not implementation proof.
+Reconcile drift-prone claims against current Git, GitHub, code, tests, and CI.
+If the external path is unavailable, continue from repository evidence and
+report `Shared register sync pending`; never invent or vendor register state.
+
 ## Active Technologies
 - Dart 3.10+ (Pure Dart) + `dart:typed_data`, `dart:math` (001-data-input-api)
 - In-memory `Float64List` / `Int64List` (Columnar) (001-data-input-api)

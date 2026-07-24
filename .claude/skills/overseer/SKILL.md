@@ -5,6 +5,13 @@ description: Use when asked to manage development state, identify next work, run
 
 # Overseer
 
+## Repository bootstrap
+
+For Braven Charts, read the root `AGENTS.md` before an oversight pass and
+follow its shared-development-register protocol. If the machine-local register
+is unavailable, report `Shared register sync pending` and reconcile state from
+current repository, GitHub, test, and CI evidence.
+
 ## Mission
 
 Act as development overseer for the current repo or workspace. Keep implementation state, next work, review quality, branch strategy, scope control, and technical debt visible and actionable.

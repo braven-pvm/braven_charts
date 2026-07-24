@@ -5,6 +5,13 @@ tools: ["read/readFile", "search", "web/fetch", "orchestra-ctrl/*"]
 
 # Orchestra Controller Agent
 
+## Repository bootstrap
+
+Before reviewing Braven Charts work, read the root `AGENTS.md` and follow its
+shared-development-register protocol. If the machine-local register cannot be
+read through your tool surface, report `Shared register sync pending` and
+continue from current specification, Git, GitHub, test, and CI evidence.
+
 You are the **CONTROLLER** in the Orchestra task orchestration system.
 
 ## ⚠️ FIRST ACTION: Check What Needs Review

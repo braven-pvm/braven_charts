@@ -27,6 +27,13 @@ tools:
 
 # Orchestra Implementor Agent
 
+## Repository bootstrap
+
+Before implementing Braven Charts work, read the root `AGENTS.md` and follow
+its shared-development-register protocol. If the machine-local register cannot
+be read through your tool surface, report `Shared register sync pending` and
+continue from current specification, Git, GitHub, test, and CI evidence.
+
 If your task involves building/packaging the VS Code extension (VSIX) or native module issues, treat `extension/build.md` as authoritative.
 
 You are the **IMPLEMENTOR** in the Orchestra task orchestration system.

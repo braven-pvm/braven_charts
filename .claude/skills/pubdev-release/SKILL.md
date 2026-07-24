@@ -5,6 +5,13 @@ description: Use when asked to release/publish braven_charts to pub.dev, cut a v
 
 # Releasing braven_charts to pub.dev
 
+## Repository bootstrap
+
+Read the root `AGENTS.md` before release work and follow its
+shared-development-register protocol. If the machine-local register is
+unavailable, report `Shared register sync pending` and reconcile release state
+from current repository, GitHub, test, and CI evidence.
+
 ## Overview
 
 Releases are label-driven and fully automated (runbook:

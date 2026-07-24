@@ -4,6 +4,16 @@ Thank you for your interest in contributing to Braven Charts! We welcome contrib
 
 ## 🤝 How to Contribute
 
+### Maintainer and agent coordination
+
+Braven Charts maintainers and agents use the machine-local shared development
+register described in [AGENTS.md](AGENTS.md) to coordinate roadmap, debt,
+review, decision, and release state across concurrent worktrees.
+
+External contributors are not expected to have access to that register. A
+GitHub issue remains the implementation contract. Maintainers will associate
+the contribution with a register item when needed.
+
 ### Reporting Issues
 
 Found a bug or have a feature request?
@@ -137,6 +147,8 @@ class TimeSeriesChart extends StatelessWidget {
 - Documentation filenames must be **lowercase** only (no uppercase letters).
 - Use `snake_case` for multi-word filenames.
 - If a document is renamed, **update every internal link** that references it.
+- Conventional repository control files such as `README.md`, `CONTRIBUTING.md`,
+  and `AGENTS.md` are explicit exceptions.
 
 ### Naming Conventions
 
