@@ -653,6 +653,21 @@ final class BravenChart<T> {
     },
   );
 
+  /// Binds a `DateTime` field to the X channel as a time axis.
+  ///
+  /// The [accessor] is wrapped to project each row's `DateTime` to its
+  /// epoch-milliseconds (`num`), so every geometry positions it through the
+  /// ordinary numeric X path — there is no `DateTime` branch at lowering. The
+  /// scale intent ([AxisScaleType.time]) is recorded like [xLog]; [toSpec]
+  /// folds it onto the synthesized X axis, where ticks land on calendar
+  /// boundaries with date labels. [label] names the axis (as [x] does).
+  BravenChart<T> xTime(FieldAccessor<T, DateTime> accessor, {String? label}) =>
+      _copy(
+        defaultX: (T row) => accessor(row).millisecondsSinceEpoch,
+        xLabel: label,
+        xScaleType: AxisScaleType.time,
+      );
+
   /// Sets the chart's grid configuration, forwarded to the chart unchanged.
   BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
 
