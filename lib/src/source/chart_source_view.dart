@@ -64,7 +64,6 @@ class _ChartSourceViewState extends State<ChartSourceView> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (widget.onFormChanged != null) _buildFormToggle(context),
-              if (isGrammar) const _GrammarBetaChip(),
               Text(
                 'Dart · '
                 '${isGrammar ? 'Grammar chain' : 'Effective configuration'} · '
@@ -115,15 +114,29 @@ class _ChartSourceViewState extends State<ChartSourceView> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: ChartCodeBlock(
-            code: source.source,
-            wrapLines: _wrapLines,
-            surfaceKey: isGrammar
-                ? const ValueKey('chart-grammar-source-dark-window')
-                : const ValueKey('chart-source-dark-window'),
-            codeKey: isGrammar
-                ? const ValueKey('chart-grammar-source-code')
-                : const ValueKey('chart-source-code'),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ChartCodeBlock(
+                  code: source.source,
+                  wrapLines: _wrapLines,
+                  surfaceKey: isGrammar
+                      ? const ValueKey('chart-grammar-source-dark-window')
+                      : const ValueKey('chart-source-dark-window'),
+                  codeKey: isGrammar
+                      ? const ValueKey('chart-grammar-source-code')
+                      : const ValueKey('chart-source-code'),
+                ),
+              ),
+              // The grammar source is Beta: pin the pill to the top-right of the
+              // code window so it persists over the scrolling code.
+              if (isGrammar)
+                const Positioned(
+                  top: 10,
+                  right: 12,
+                  child: _GrammarBetaChip(),
+                ),
+            ],
           ),
         ),
       ],
@@ -206,7 +219,7 @@ class _GrammarBetaChip extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     label: 'Beta',
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF6C5CE7),
         borderRadius: BorderRadius.circular(999),

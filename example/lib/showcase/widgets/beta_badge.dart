@@ -17,8 +17,8 @@ class BetaBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 7 : 11,
-        vertical: compact ? 2 : 4,
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 4 : 5,
       ),
       decoration: BoxDecoration(
         color: color,
