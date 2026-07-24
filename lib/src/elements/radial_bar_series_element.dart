@@ -14,7 +14,7 @@ import '../models/radial_bar_chart_series.dart';
 import '../models/radial_selection_style.dart';
 import '../utils/dashed_path.dart';
 
-/// Track, guide, label, and interaction element for Radial Bar V1.
+/// Track, guide, label, and interaction element for Radial Bar v0.1.
 class RadialBarSeriesElement implements DataHitElement {
   factory RadialBarSeriesElement({
     required RadialBarChartSeries series,

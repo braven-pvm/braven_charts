@@ -1154,7 +1154,7 @@ abstract final class ChartDocumentHydrator {
         ChartArtifactError(
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
-              'Radial Bar V1 requires exactly one Radial Bar series and cannot mix chart families.',
+              'Radial Bar v0.1 requires exactly one Radial Bar series and cannot mix chart families.',
           path: r'$.document.configuration.radialBarChart',
         ),
         [],

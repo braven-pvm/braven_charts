@@ -550,7 +550,7 @@ Each feature is specified in polar coordinate terms. Existing Cartesian Bar
 algorithms may share scale/domain utilities, but Cartesian geometry is not
 treated as the source of truth for polar layout.
 
-### Phase 4 — Radial Bar V1
+### Phase 4 — Radial Bar v0.1
 
 Deliver:
 

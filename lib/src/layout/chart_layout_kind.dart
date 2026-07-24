@@ -79,7 +79,7 @@ class ChartLayoutResolver {
         throw ArgumentError.value(
           radialBarSeries.length,
           'series',
-          'Radial Bar V1 accepts exactly one RadialBarChartSeries',
+          'Radial Bar v0.1 accepts exactly one RadialBarChartSeries',
         );
       }
       return ChartLayoutKind.polarAxis;

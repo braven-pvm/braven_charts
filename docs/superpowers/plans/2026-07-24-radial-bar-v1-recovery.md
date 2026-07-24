@@ -1,4 +1,4 @@
-# Radial Bar V1 recovery plan
+# Radial Bar v0.1 recovery plan
 
 ## Purpose
 
