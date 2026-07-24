@@ -21,6 +21,7 @@ import 'package:flutter/services.dart'
 
 import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../axis/axis.dart' as chart_axis;
+import '../axis/log_ticks.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/pie_series_element.dart';
@@ -37,6 +38,7 @@ import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../interaction/summary/value_summary_coordinator.dart';
+import '../models/axis_scale_type.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/bar_chart_style.dart';
 import '../models/braven_chart_controller.dart' show ChartSelectionBrushState;
@@ -4572,6 +4574,90 @@ class ChartRenderBox extends RenderBox {
     canvas.restore();
   }
 
+  /// Computes the canvas-space grid-line positions for the current axes,
+  /// transform, and plot area.
+  ///
+  /// Returns the vertical grid X pixels ([xTicks]) and horizontal grid Y pixels
+  /// ([yTicks]). Only valid when both [_xAxis] and [_yAxis] are non-null (the
+  /// paint-time guard); the debug accessor mirrors that precondition.
+  ({List<double> xTicks, List<double> yTicks}) _computeGridLinePositions() {
+    final List<double> xTicks;
+    final List<double> yTicks;
+    if (_isHorizontalBarChart && _transform != null) {
+      xTicks = _buildTransposedAxesPainter().valueGridPositions(_plotArea);
+      final categoryTicks = _buildXAxisPainter(
+        bounds: DataRange(
+          min: _transform!.dataXMin,
+          max: _transform!.dataXMax,
+        ),
+      ).resolveTickValues(_plotArea.height);
+      yTicks = categoryTicks
+          .map(
+            (tick) =>
+                _plotArea.top +
+                (tick - _transform!.dataXMin) /
+                    _transform!.dataXRange *
+                    _plotArea.height,
+          )
+          .toList();
+    } else {
+      final categoryTicks = _buildXAxisPainter(
+        bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+      ).resolveTickValues(_plotArea.width);
+      // Grid pixels must register with the axis painters and the data marks.
+      // The linear arm is the original expression verbatim; the log arm routes
+      // through the same [logFraction] mapping the X painter (`tickRatio`) and
+      // [ChartTransform] apply to the ticks/marks, so decade grid lines land on
+      // their own tick marks and on the data instead of the linear positions.
+      xTicks = categoryTicks
+          .map(
+            (tick) => _xAxis!.scaleType == AxisScaleType.linear
+                ? _xAxis!.scale.dataToPixel(tick)
+                : _plotArea.left +
+                      logFraction(
+                            tick,
+                            _xAxis!.dataMin,
+                            _xAxis!.dataMax,
+                            _xAxis!.logBase,
+                          ) *
+                          _plotArea.width,
+          )
+          .toList();
+      // The linear arm keeps the legacy nice-number tick values at their linear
+      // pixels verbatim; the log arm uses decade tick values placed by
+      // [logFraction] so grid lines register with the Y multi-axis painter
+      // (`normalizeScaled`) and the data marks.
+      yTicks = _yAxis!.scaleType == AxisScaleType.linear
+          ? _yAxis!.ticks
+                .map((t) => _yAxis!.scale.dataToPixel(t.value))
+                .toList()
+          : decadeTicks(
+              _yAxis!.dataMin,
+              _yAxis!.dataMax,
+              base: _yAxis!.logBase,
+            )
+                .map(
+                  (v) =>
+                      _plotArea.bottom -
+                      logFraction(
+                            v,
+                            _yAxis!.dataMin,
+                            _yAxis!.dataMax,
+                            _yAxis!.logBase,
+                          ) *
+                          _plotArea.height,
+                )
+                .toList();
+    }
+    return (xTicks: xTicks, yTicks: yTicks);
+  }
+
+  /// The canvas-space grid-line positions for the current frame, for
+  /// render-path verification. Only call when both axes are present.
+  @visibleForTesting
+  ({List<double> xTicks, List<double> yTicks}) debugGridLinePositions() =>
+      _computeGridLinePositions();
+
   @override
   void paint(PaintingContext context, Offset offset) {
     final canvas = context.canvas;
@@ -4589,40 +4675,9 @@ class ChartRenderBox extends RenderBox {
     // Paint grid lines (behind everything)
     if (_xAxis != null && _yAxis != null) {
       final gridRenderer = GridRenderer(theme: _theme, config: _gridConfig);
-
-      final List<double> xTicks;
-      final List<double> yTicks;
-      if (_isHorizontalBarChart && _transform != null) {
-        xTicks = _buildTransposedAxesPainter().valueGridPositions(_plotArea);
-        final categoryTicks = _buildXAxisPainter(
-          bounds: DataRange(
-            min: _transform!.dataXMin,
-            max: _transform!.dataXMax,
-          ),
-        ).resolveTickValues(_plotArea.height);
-        yTicks = categoryTicks
-            .map(
-              (tick) =>
-                  _plotArea.top +
-                  (tick - _transform!.dataXMin) /
-                      _transform!.dataXRange *
-                      _plotArea.height,
-            )
-            .toList();
-      } else {
-        final categoryTicks = _buildXAxisPainter(
-          bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
-        ).resolveTickValues(_plotArea.width);
-        xTicks = categoryTicks
-            .map((tick) => _xAxis!.scale.dataToPixel(tick))
-            .toList();
-        yTicks = _yAxis!.ticks
-            .map((t) => _yAxis!.scale.dataToPixel(t.value))
-            .toList();
-      }
-
-      gridRenderer.paintVerticalGrid(canvas, _plotArea, xTicks);
-      gridRenderer.paintHorizontalGrid(canvas, _plotArea, yTicks);
+      final gridPositions = _computeGridLinePositions();
+      gridRenderer.paintVerticalGrid(canvas, _plotArea, gridPositions.xTicks);
+      gridRenderer.paintHorizontalGrid(canvas, _plotArea, gridPositions.yTicks);
     }
 
     // Paint axes (behind all chart elements).
