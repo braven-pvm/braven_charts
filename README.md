@@ -6,16 +6,16 @@
 
 Braven Charts is a native Flutter charting system for interactive, production-grade data visualization.
 
-Render ten chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
+Render eleven chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
 
-[![Ten chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
+[![Eleven chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
 **[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
 
 ## Why Braven Charts
 
 <!-- BEGIN GENERATED: FEATURES -->
-- **[Ten chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
+- **[Eleven chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
 - **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Zoom, pan, track, annotate, select, and manipulate durable interval brushes.
 - **[Multi-axis analysis](https://braven-pvm.github.io/braven_charts/?page=multi-axis):** Coordinate independent axes, normalized series, navigators, and summaries.
 - **[Typed authoring and source](https://braven-pvm.github.io/braven_charts/?page=chart-grammar):** Choose direct config, checked Grammar, fluent modifiers, or generated Dart.
@@ -54,6 +54,11 @@ relevant Chart, Data, Split, and Source views.
 | --- | --- |
 | [![Three concentric donut rings with independent totals and Service-level health](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_concentric_donut_pair.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Area-correct rose columns arranged on a polar axis and Lifecycle arc](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_polar_column_pair.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |
 | Comparing distributions across periods, cohorts, or groups<br>[Concentric Donut chart family](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) · [Service-level health](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)<br>[Open all Concentric Donut examples](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) · [Concentric Donut guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/concentric_donut_charts.md) | Cyclical categories and compact magnitude profiles<br>[Polar Column and Rose chart family](https://braven-pvm.github.io/braven_charts/?page=polar-column) · [Lifecycle arc](https://braven-pvm.github.io/braven_charts/?page=polar-column)<br>[Open all Polar Column / Rose examples](https://braven-pvm.github.io/braven_charts/?page=polar-column) · [Polar Column / Rose guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/polar_column_charts.md) |
+
+| **[Radial Bar](https://braven-pvm.github.io/braven_charts/?page=radial-bar)** |
+| --- |
+| [![Radial bars comparing category progress on an explicit numeric scale and Signed baseline comparison](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_radial_bar_pair.png)](https://braven-pvm.github.io/braven_charts/?page=radial-bar) |
+| Category progress, targets, signed baselines, and compact KPI tracks<br>[Radial Bar chart family](https://braven-pvm.github.io/braven_charts/?page=radial-bar) · [Signed baseline comparison](https://braven-pvm.github.io/braven_charts/?page=radial-bar)<br>[Open all Radial Bar examples](https://braven-pvm.github.io/braven_charts/?page=radial-bar) · [Radial Bar guide](https://github.com/braven-pvm/braven_charts/blob/master/docs/guides/radial-bar-charts.md) |
 <!-- END GENERATED: FAMILIES -->
 
 ## Install

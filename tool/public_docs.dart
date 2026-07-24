@@ -187,8 +187,8 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   if (features.length != 6) {
     errors.add('features must contain exactly 6 evergreen groups.');
   }
-  if (families.length != 10) {
-    errors.add('chartFamilies must contain exactly 10 built-in families.');
+  if (families.length != 11) {
+    errors.add('chartFamilies must contain exactly 11 built-in families.');
   }
   if (gallery.length < 12 || gallery.length > 18) {
     errors.add('gallery must contain between 12 and 18 curated entries.');
