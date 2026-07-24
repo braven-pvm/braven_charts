@@ -7,10 +7,43 @@ For issue-driven work, also read [Issue and delivery workflow](issue_workflow.md
 and treat the linked issue's scope, acceptance criteria, and verification as the
 shared implementation contract.
 
+## Shared Development Register — mandatory for agents
+
+The branch-independent roadmap, debt, review, decision, and release register
+lives outside Git at:
+
+`F:\Repositories\_braven_charts_register`
+
+Before selecting work or reporting roadmap/readiness state:
+
+1. Read `F:\Repositories\_braven_charts_register\README.md`.
+2. Run:
+
+   ```powershell
+   & 'F:\Repositories\_braven_charts_register\register.ps1' list
+   ```
+
+3. Read the complete authoritative `items\BC-####-*.md` file for the relevant
+   lane.
+4. Reconcile drift-prone status against current Git, GitHub, code, tests, and
+   CI.
+5. Follow the register's claim, evidence, history, validation, and refresh
+   protocol when changing status.
+
+The register is a cross-lane tracking surface, not implementation proof.
+`CURRENT.md` is generated; item files are authoritative. Never copy the
+register into a worktree.
+
+If the machine-local path is unavailable, report `Shared register sync pending`;
+rely on current repository/GitHub evidence and ask a maintainer to perform the
+reconciliation. External contributors are not required to have access to the
+register.
+
 ---
 
 ## Table of Contents
 
+0. [Shared Development Register — mandatory for agents](#shared-development-register--mandatory-for-agents)
 1. [Project Overview](#project-overview)
 2. [Tech Stack & Constraints](#tech-stack--constraints)
 3. [Directory Structure](#directory-structure)

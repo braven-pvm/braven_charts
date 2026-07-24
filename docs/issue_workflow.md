@@ -2,6 +2,32 @@
 
 GitHub issues are the execution contract between reporters, maintainers, implementation agents, and reviewers. An issue should preserve the problem and desired result while leaving room for the implementer to choose the smallest sound solution.
 
+## Shared portfolio register
+
+Maintainer and agent work also uses the branch-independent register at:
+
+`F:\Repositories\_braven_charts_register`
+
+The register answers which roadmap, debt, verification, decision, and release
+items exist across concurrent lanes. GitHub remains the execution contract for
+issue-driven implementation. A register item should link its issue/branch/PR;
+the issue and PR should name the corresponding `BC-####` ID.
+
+Before triage, planning, readiness review, or implementation:
+
+```powershell
+& 'F:\Repositories\_braven_charts_register\register.ps1' list
+```
+
+Read the complete item, then verify its status against current GitHub, Git,
+code, tests, and CI. Claim or update it using the protocol in the register's
+`README.md`. After delivery, record exact evidence and residual risks and run
+`validate` plus `refresh`.
+
+If the path is unavailable, continue from current GitHub/repository evidence
+and record `Shared register sync pending`; never invent or silently duplicate
+the missing register state. External contributors do not need access.
+
 ## Choose the right issue type
 
 | Type | Use it for | Minimum useful evidence |
@@ -27,7 +53,11 @@ not a public issue.
 6. **Review** — the pull request closes the issue, maps the implementation to acceptance criteria, and records exact verification results and residual risks.
 7. **Done** — merge closes the issue. Release-specific follow-up remains linked as a separate issue when publication or migration work is still required.
 
-Avoid parallel status documents that can drift from GitHub. Link durable specifications and architecture decisions from the issue instead of duplicating them.
+Avoid ad hoc parallel status documents that can drift from GitHub and the
+shared register. Link durable specifications and architecture decisions from
+the issue and register item instead of duplicating them. If the two disagree,
+current implementation/CI evidence and the issue's approved scope determine
+the correction; update the stale surface explicitly.
 
 ## Definition of ready
 
@@ -49,10 +79,14 @@ If implementation would require guessing at any of these, keep the issue in tria
 Before editing:
 
 1. Read `docs/agent_onboarding.md`, this workflow, the complete issue, and linked specifications.
-2. Confirm the issue is ready and that no newer comment changes its scope.
-3. Refresh from the latest `master` and work on a dedicated issue branch/worktree.
-4. Snapshot the existing dirty state and preserve unrelated changes.
-5. Comment with the branch name, intended acceptance-criteria slice, and any immediate blocker.
+2. Read and reconcile the matching shared-register item; create one when
+   maintainer-approved work has no existing item.
+3. Confirm the issue is ready and that no newer comment changes its scope.
+4. Claim the register item and record the planned branch/worktree.
+5. Refresh from the latest `master` and work on a dedicated issue branch/worktree.
+6. Snapshot the existing dirty state and preserve unrelated changes.
+7. Comment with the register ID, branch name, intended acceptance-criteria
+   slice, and any immediate blocker.
 
 During implementation:
 
@@ -78,13 +112,15 @@ Next: <single next action>
 Every implementation pull request should:
 
 - use `Closes #<issue>` for the execution issue;
+- name the shared-register `BC-####` item, or state why it is not applicable;
 - describe the delivered outcome rather than listing commits;
 - confirm what remained out of scope;
 - explain important runtime or API decisions;
 - record exact analyzer, test, build, manual, and visual results;
 - identify skipped gates with reasons;
 - call out compatibility changes and residual risks; and
-- link follow-up issues for deferred work.
+- link follow-up issues for deferred work; and
+- update the register's status, evidence, PR, next action, and residual risks.
 
 The repository pull request template provides this structure automatically.
 
