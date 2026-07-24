@@ -26,6 +26,8 @@ class ChartAxisDocument {
     this.showCrosshairLabel = true,
     this.crosshairLabelPosition = 'overAxis',
     this.labelDisplay = 'labelWithUnit',
+    this.scaleType = 'linear',
+    this.logBase = 10,
     this.layoutMinimum,
     this.layoutMaximum,
     this.tickLabelPadding,
@@ -68,6 +70,8 @@ class ChartAxisDocument {
   final bool showCrosshairLabel;
   final String crosshairLabelPosition;
   final String labelDisplay;
+  final String scaleType;
+  final double logBase;
   final ChartNumberDocument? layoutMinimum;
   final ChartNumberDocument? layoutMaximum;
   final ChartNumberDocument? tickLabelPadding;
@@ -110,6 +114,8 @@ class ChartAxisDocument {
     if (crosshairLabelPosition != 'overAxis')
       'crosshairLabelPosition': crosshairLabelPosition,
     if (labelDisplay != 'labelWithUnit') 'labelDisplay': labelDisplay,
+    if (scaleType != 'linear') 'scaleType': scaleType,
+    if (logBase != 10) 'logBase': logBase,
     if (layoutMinimum != null) 'layoutMinimum': layoutMinimum!.toJson(),
     if (layoutMaximum != null) 'layoutMaximum': layoutMaximum!.toJson(),
     if (tickLabelPadding != null)
@@ -175,6 +181,8 @@ class ChartAxisDocument {
     crosshairLabelPosition:
         readOptionalString(json, 'crosshairLabelPosition') ?? 'overAxis',
     labelDisplay: readOptionalString(json, 'labelDisplay') ?? 'labelWithUnit',
+    scaleType: readOptionalString(json, 'scaleType') ?? 'linear',
+    logBase: readOptionalDouble(json, 'logBase') ?? 10,
     layoutMinimum: json['layoutMinimum'] == null
         ? null
         : ChartNumberDocument.fromJson(json['layoutMinimum']),
