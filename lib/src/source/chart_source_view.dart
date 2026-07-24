@@ -64,6 +64,7 @@ class _ChartSourceViewState extends State<ChartSourceView> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (widget.onFormChanged != null) _buildFormToggle(context),
+              if (isGrammar) const _GrammarBetaChip(),
               Text(
                 'Dart · '
                 '${isGrammar ? 'Grammar chain' : 'Effective configuration'} · '
@@ -145,8 +146,16 @@ class _ChartSourceViewState extends State<ChartSourceView> {
           ),
           ButtonSegment<ChartSourceForm>(
             value: ChartSourceForm.grammar,
-            label: Text('Grammar'),
-            tooltip: 'The BravenChart.of(rows) chain that rebuilds this chart',
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Grammar'),
+                SizedBox(width: 6),
+                _GrammarBetaChip(),
+              ],
+            ),
+            tooltip:
+                'The BravenChart.of(rows) chain that rebuilds this chart (Beta)',
           ),
         ],
         selected: <ChartSourceForm>{widget.form},
@@ -184,6 +193,34 @@ class _SourceStatus extends StatelessWidget {
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.labelMedium),
       ],
+    ),
+  );
+}
+
+/// A small "Beta" pill marking the grammar source view as work-in-progress —
+/// the `BravenChart` grammar / fluent authoring API it emits is still Beta.
+class _GrammarBetaChip extends StatelessWidget {
+  const _GrammarBetaChip();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Beta',
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6C5CE7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        'Beta',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+          letterSpacing: 0.2,
+          height: 1,
+        ),
+      ),
     ),
   );
 }

@@ -316,6 +316,7 @@ class ChartPageLayout extends StatelessWidget {
     this.optionsChildren = const [],
     this.bottomPanel,
     this.actions,
+    this.titleBadge,
     this.playground,
     this.randomizerKeyPrefix = 'showcase-randomizer',
   });
@@ -327,6 +328,9 @@ class ChartPageLayout extends StatelessWidget {
   final List<Widget> optionsChildren;
   final Widget? bottomPanel;
   final List<Widget>? actions;
+
+  /// Optional pill rendered immediately beside the [title] (e.g. a Beta badge).
+  final Widget? titleBadge;
   final ChartPlaygroundConfig? playground;
   final String randomizerKeyPrefix;
 
@@ -401,15 +405,27 @@ class ChartPageLayout extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
+              final titleRow = Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (titleBadge != null) ...[
+                    const SizedBox(width: 10),
+                    titleBadge!,
+                  ],
+                ],
+              );
               final titleBlock = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  titleRow,
                   if (subtitle != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -453,12 +469,15 @@ class ChartPageLayout extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // The title block takes all width the (content-sized) actions
+                  // leave — so the subtitle never wraps into a narrow column.
                   Expanded(child: titleBlock),
                   if (headerActions.isNotEmpty) ...[
                     const SizedBox(width: 16),
-                    Flexible(
-                      flex: 2,
-                      fit: FlexFit.loose,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * 0.45,
+                      ),
                       child: Align(
                         alignment: Alignment.topRight,
                         child: actionGroup,

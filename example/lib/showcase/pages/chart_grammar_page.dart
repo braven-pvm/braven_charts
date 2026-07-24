@@ -4,6 +4,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/beta_badge.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
@@ -1178,8 +1179,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'BravenChart facade — then read the ordinary config Dart it lowers '
           'to in the Source tab',
       // The grammar-of-graphics + fluent authoring layers are still Beta, so
-      // the page header carries a small "work in progress" pill.
-      actions: const [_BetaBadge()],
+      // the page heading carries the shared Beta pill right beside the title.
+      titleBadge: const BetaBadge(),
       optionsChildren: _buildOptionsChildren(),
       chart: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1838,35 +1839,3 @@ extension on _GrammarPreset {
 /// page flags that plainly. Styled after the existing showcase badge/InfoBox
 /// widgets — a rounded warning-tone pill using `labelSmall` — so it reads as
 /// part of the same design system.
-class _BetaBadge extends StatelessWidget {
-  const _BetaBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final foreground = Colors.orange.shade900;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.science_outlined, size: 14, color: foreground),
-          const SizedBox(width: 5),
-          Text(
-            'Beta · Work in progress',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
