@@ -4,6 +4,7 @@
 import 'dart:ui' show Color;
 
 import '../meta/chart_surface.dart';
+import 'axis_scale_type.dart';
 import 'category_axis_config.dart';
 import 'x_axis_position.dart';
 import 'y_axis_config.dart';
@@ -82,6 +83,8 @@ class XAxisConfig {
     this.axisLabelPadding = 5.0,
     this.axisMargin = 8.0,
     this.tickCount,
+    this.scaleType = AxisScaleType.linear,
+    this.logBase = 10,
     this.labelFormatter,
     this.tickLabelRotationDegrees,
     this.tickLabelCollisionPolicy,
@@ -240,6 +243,12 @@ class XAxisConfig {
   /// handling can retain fewer labels than ticks. Must be >= 2.
   final int? tickCount;
 
+  /// How this axis maps values to positions and generates ticks.
+  final AxisScaleType scaleType;
+
+  /// Base for [AxisScaleType.log]; ignored otherwise.
+  final double logBase;
+
   /// Custom formatter for tick labels.
   ///
   /// If provided, overrides default number formatting.
@@ -375,6 +384,8 @@ class XAxisConfig {
     double? axisMargin,
     int? tickCount,
     bool clearTickCount = false,
+    AxisScaleType? scaleType,
+    double? logBase,
     XAxisLabelFormatter? labelFormatter,
     double? tickLabelRotationDegrees,
     bool clearTickLabelRotationDegrees = false,
@@ -410,6 +421,8 @@ class XAxisConfig {
       axisLabelPadding: axisLabelPadding ?? this.axisLabelPadding,
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: clearTickCount ? null : (tickCount ?? this.tickCount),
+      scaleType: scaleType ?? this.scaleType,
+      logBase: logBase ?? this.logBase,
       labelFormatter: labelFormatter ?? this.labelFormatter,
       tickLabelRotationDegrees: clearTickLabelRotationDegrees
           ? null
@@ -454,6 +467,8 @@ class XAxisConfig {
           axisLabelPadding == other.axisLabelPadding &&
           axisMargin == other.axisMargin &&
           tickCount == other.tickCount &&
+          scaleType == other.scaleType &&
+          logBase == other.logBase &&
           labelFormatter == other.labelFormatter &&
           tickLabelRotationDegrees == other.tickLabelRotationDegrees &&
           tickLabelCollisionPolicy == other.tickLabelCollisionPolicy &&
@@ -486,6 +501,8 @@ class XAxisConfig {
     axisLabelPadding,
     axisMargin,
     tickCount,
+    scaleType,
+    logBase,
     labelFormatter,
     tickLabelRotationDegrees,
     tickLabelCollisionPolicy,
@@ -519,6 +536,8 @@ class XAxisConfig {
         'axisLabelPadding: $axisLabelPadding, '
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount, '
+        'scaleType: $scaleType, '
+        'logBase: $logBase, '
         'labelFormatter: $labelFormatter, '
         'tickLabelRotationDegrees: $tickLabelRotationDegrees, '
         'tickLabelCollisionPolicy: $tickLabelCollisionPolicy, '
