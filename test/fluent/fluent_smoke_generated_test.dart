@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1556 verbs total; 9 of them have an argument type with no
+// 1559 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -3317,7 +3317,7 @@ void _smokeTouchInteractionConfig(_Verb verb, TouchInteractionConfig subject) {
   );
   verb(
     'TouchInteractionConfigFluent.withEnablePanInertia',
-    () => subject.withEnablePanInertia(true),
+    () => subject.withEnablePanInertia(false),
   );
   verb(
     'TouchInteractionConfigFluent.withPanInertiaDeceleration',
