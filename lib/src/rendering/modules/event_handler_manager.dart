@@ -283,7 +283,19 @@ class ChartSelectionGestureResult {
   final bool isFinal;
 }
 
-enum _SelectionBrushDragKind { move, leadingHandle, trailingHandle }
+enum _SelectionBrushDragKind {
+  move,
+  leadingHandle,
+  trailingHandle,
+  topLeft,
+  top,
+  topRight,
+  right,
+  bottomRight,
+  bottom,
+  bottomLeft,
+  left,
+}
 
 /// Manages all pointer event handling for the chart.
 ///
@@ -961,7 +973,7 @@ class EventHandlerManager {
     _delegate.onCursorChange?.call(
       kind == _SelectionBrushDragKind.move
           ? SystemMouseCursors.grabbing
-          : _selectionBrushResizeCursor(state.acquisitionMode),
+          : _selectionBrushResizeCursor(state.acquisitionMode, kind),
     );
     _delegate.markNeedsPaint();
     return true;
@@ -974,12 +986,28 @@ class EventHandlerManager {
   ) {
     final state = _delegate.selectionBrushState;
     if (state == null) return null;
+    final extent = selection.brush.style.handleHitSize;
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      final handles = <(_SelectionBrushDragKind, Offset)>[
+        (_SelectionBrushDragKind.topLeft, rect.topLeft),
+        (_SelectionBrushDragKind.topRight, rect.topRight),
+        (_SelectionBrushDragKind.bottomRight, rect.bottomRight),
+        (_SelectionBrushDragKind.bottomLeft, rect.bottomLeft),
+        (_SelectionBrushDragKind.top, rect.topCenter),
+        (_SelectionBrushDragKind.right, rect.centerRight),
+        (_SelectionBrushDragKind.bottom, rect.bottomCenter),
+        (_SelectionBrushDragKind.left, rect.centerLeft),
+      ];
+      for (final (kind, center) in handles) {
+        if ((position - center).distance <= extent / 2) return kind;
+      }
+      return rect.contains(position) ? _SelectionBrushDragKind.move : null;
+    }
     final transposed = _delegate.transform?.transposed ?? false;
     final usesScreenX =
         state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
         ? !transposed
         : transposed;
-    final extent = selection.brush.style.handleHitSize;
     final leadingCenter = usesScreenX ? rect.centerLeft : rect.topCenter;
     final trailingCenter = usesScreenX ? rect.centerRight : rect.bottomCenter;
     if ((position - leadingCenter).distance <= extent / 2) {
@@ -991,7 +1019,25 @@ class EventHandlerManager {
     return rect.contains(position) ? _SelectionBrushDragKind.move : null;
   }
 
-  MouseCursor _selectionBrushResizeCursor(ChartSelectionAcquisitionMode mode) {
+  MouseCursor _selectionBrushResizeCursor(
+    ChartSelectionAcquisitionMode mode,
+    _SelectionBrushDragKind kind,
+  ) {
+    if (mode == ChartSelectionAcquisitionMode.rectangle) {
+      return switch (kind) {
+        _SelectionBrushDragKind.topLeft ||
+        _SelectionBrushDragKind.bottomRight =>
+          SystemMouseCursors.resizeUpLeftDownRight,
+        _SelectionBrushDragKind.topRight ||
+        _SelectionBrushDragKind.bottomLeft =>
+          SystemMouseCursors.resizeUpRightDownLeft,
+        _SelectionBrushDragKind.top ||
+        _SelectionBrushDragKind.bottom => SystemMouseCursors.resizeUpDown,
+        _SelectionBrushDragKind.left ||
+        _SelectionBrushDragKind.right => SystemMouseCursors.resizeLeftRight,
+        _ => SystemMouseCursors.move,
+      };
+    }
     final transposed = _delegate.transform?.transposed ?? false;
     final usesScreenX = mode == ChartSelectionAcquisitionMode.xInterval
         ? !transposed
@@ -1090,6 +1136,72 @@ class EventHandlerManager {
             .brush
             .style;
     final minimumSpan = math.max(style.handleSize, 2);
+    final pointerDelta = position - startPointer;
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      Rect next;
+      if (kind == _SelectionBrushDragKind.move) {
+        final dx = pointerDelta.dx.clamp(
+          plot.left - startRect.left,
+          plot.right - startRect.right,
+        );
+        final dy = pointerDelta.dy.clamp(
+          plot.top - startRect.top,
+          plot.bottom - startRect.bottom,
+        );
+        next = startRect.shift(Offset(dx, dy));
+      } else {
+        var left = startRect.left;
+        var top = startRect.top;
+        var right = startRect.right;
+        var bottom = startRect.bottom;
+        final changesLeft =
+            kind == _SelectionBrushDragKind.topLeft ||
+            kind == _SelectionBrushDragKind.bottomLeft ||
+            kind == _SelectionBrushDragKind.left;
+        final changesRight =
+            kind == _SelectionBrushDragKind.topRight ||
+            kind == _SelectionBrushDragKind.bottomRight ||
+            kind == _SelectionBrushDragKind.right;
+        final changesTop =
+            kind == _SelectionBrushDragKind.topLeft ||
+            kind == _SelectionBrushDragKind.top ||
+            kind == _SelectionBrushDragKind.topRight;
+        final changesBottom =
+            kind == _SelectionBrushDragKind.bottomLeft ||
+            kind == _SelectionBrushDragKind.bottom ||
+            kind == _SelectionBrushDragKind.bottomRight;
+        if (changesLeft) {
+          left = (startRect.left + pointerDelta.dx).clamp(
+            plot.left,
+            startRect.right - minimumSpan,
+          );
+        }
+        if (changesRight) {
+          right = (startRect.right + pointerDelta.dx).clamp(
+            startRect.left + minimumSpan,
+            plot.right,
+          );
+        }
+        if (changesTop) {
+          top = (startRect.top + pointerDelta.dy).clamp(
+            plot.top,
+            startRect.bottom - minimumSpan,
+          );
+        }
+        if (changesBottom) {
+          bottom = (startRect.bottom + pointerDelta.dy).clamp(
+            startRect.top + minimumSpan,
+            plot.bottom,
+          );
+        }
+        next = Rect.fromLTRB(left, top, right, bottom);
+      }
+      _activeSelectionBrushRect = next;
+      _pendingSelectionBrushRect = next;
+      _scheduleSelectionBrushUpdate();
+      _delegate.markNeedsPaint();
+      return;
+    }
     final delta = usesScreenX
         ? position.dx - startPointer.dx
         : position.dy - startPointer.dy;
@@ -2450,7 +2562,7 @@ class EventHandlerManager {
       _delegate.onCursorChange?.call(
         brushKind == _SelectionBrushDragKind.move || mode == null
             ? SystemMouseCursors.move
-            : _selectionBrushResizeCursor(mode),
+            : _selectionBrushResizeCursor(mode, brushKind),
       );
       return;
     }

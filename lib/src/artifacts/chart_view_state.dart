@@ -281,36 +281,62 @@ class ChartSelectionExpressionDocument {
 class ChartSelectionBrushViewState {
   const ChartSelectionBrushViewState({
     required this.acquisitionMode,
-    required this.range,
+    this.range,
+    this.box,
     required this.visible,
   }) : assert(acquisitionMode != null),
-       assert(range != null),
        assert(
          acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
-             acquisitionMode == ChartSelectionAcquisitionMode.yInterval,
+             acquisitionMode == ChartSelectionAcquisitionMode.yInterval ||
+             acquisitionMode == ChartSelectionAcquisitionMode.rectangle,
+       ),
+       assert(
+         acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+             ? box != null && range == null
+             : range != null && box == null,
        );
 
   const ChartSelectionBrushViewState.cleared()
     : acquisitionMode = null,
       range = null,
+      box = null,
       visible = false;
 
   final ChartSelectionAcquisitionMode? acquisitionMode;
   final ChartSelectionBrushRange? range;
+  final ChartSelectionBrushBox? box;
   final bool visible;
 
-  bool get isCleared => acquisitionMode == null || range == null;
+  bool get isCleared =>
+      acquisitionMode == null ||
+      (acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+          ? box == null
+          : range == null);
 
   Map<String, Object?> toJson() {
     if (isCleared) return const {'cleared': true};
-    return {
+    final value = <String, Object?>{
       'acquisitionMode': acquisitionMode!.name,
-      'minimum': range!.minimum,
-      'maximum': range!.maximum,
-      if (range!.referenceSeriesId != null)
-        'referenceSeriesId': range!.referenceSeriesId,
       'visible': visible,
     };
+    if (box case final box?) {
+      value.addAll({
+        'minimumX': box.minimumX,
+        'maximumX': box.maximumX,
+        'minimumY': box.minimumY,
+        'maximumY': box.maximumY,
+        if (box.referenceSeriesId != null)
+          'referenceSeriesId': box.referenceSeriesId,
+      });
+    } else if (range case final range?) {
+      value.addAll({
+        'minimum': range.minimum,
+        'maximum': range.maximum,
+        if (range.referenceSeriesId != null)
+          'referenceSeriesId': range.referenceSeriesId,
+      });
+    }
+    return value;
   }
 
   factory ChartSelectionBrushViewState.fromJson(Map<String, Object?> json) {
@@ -325,18 +351,30 @@ class ChartSelectionBrushViewState {
       ),
     );
     if (mode != ChartSelectionAcquisitionMode.xInterval &&
-        mode != ChartSelectionAcquisitionMode.yInterval) {
+        mode != ChartSelectionAcquisitionMode.yInterval &&
+        mode != ChartSelectionAcquisitionMode.rectangle) {
       throw const FormatException(
-        'Selection brush acquisition mode must be xInterval or yInterval.',
+        'Selection brush acquisition mode must be xInterval, yInterval, or rectangle.',
       );
     }
     return ChartSelectionBrushViewState(
       acquisitionMode: mode,
-      range: ChartSelectionBrushRange(
-        minimum: readRequiredDouble(json, 'minimum'),
-        maximum: readRequiredDouble(json, 'maximum'),
-        referenceSeriesId: readOptionalString(json, 'referenceSeriesId'),
-      ),
+      range: mode == ChartSelectionAcquisitionMode.rectangle
+          ? null
+          : ChartSelectionBrushRange(
+              minimum: readRequiredDouble(json, 'minimum'),
+              maximum: readRequiredDouble(json, 'maximum'),
+              referenceSeriesId: readOptionalString(json, 'referenceSeriesId'),
+            ),
+      box: mode == ChartSelectionAcquisitionMode.rectangle
+          ? ChartSelectionBrushBox(
+              minimumX: readRequiredDouble(json, 'minimumX'),
+              maximumX: readRequiredDouble(json, 'maximumX'),
+              minimumY: readRequiredDouble(json, 'minimumY'),
+              maximumY: readRequiredDouble(json, 'maximumY'),
+              referenceSeriesId: readOptionalString(json, 'referenceSeriesId'),
+            )
+          : null,
       visible: readRequiredBool(json, 'visible'),
     );
   }

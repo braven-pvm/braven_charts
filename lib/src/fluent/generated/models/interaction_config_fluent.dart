@@ -267,6 +267,62 @@ extension ChartSelectionBrushRangeFluent on ChartSelectionBrushRange {
       copyWith(minimum: minimum, maximum: maximum);
 }
 
+/// Generated fluent modifiers for [ChartSelectionBrushBox].
+extension ChartSelectionBrushBoxFluent on ChartSelectionBrushBox {
+  /// Replaces [ChartSelectionBrushBox.referenceSeriesId] with [value].
+  ChartSelectionBrushBox withReferenceSeriesId(String value) =>
+      copyWith(referenceSeriesId: value);
+
+  /// Clears [ChartSelectionBrushBox.referenceSeriesId] to `null`.
+  ChartSelectionBrushBox clearReferenceSeriesId() =>
+      copyWith(clearReferenceSeriesId: true);
+
+  /// Replaces [ChartSelectionBrushBox.minimumX], [ChartSelectionBrushBox.maximumX], [ChartSelectionBrushBox.minimumY], and [ChartSelectionBrushBox.maximumY] together.
+  ///
+  /// The parameters are assert-coupled, so all four only move together.
+  ChartSelectionBrushBox withBounds({
+    required double minimumX,
+    required double maximumX,
+    required double minimumY,
+    required double maximumY,
+  }) => copyWith(
+    minimumX: minimumX,
+    maximumX: maximumX,
+    minimumY: minimumY,
+    maximumY: maximumY,
+  );
+}
+
+/// Generated fluent modifiers for [ChartSelectionBrushGridStyle].
+extension ChartSelectionBrushGridStyleFluent on ChartSelectionBrushGridStyle {
+  /// Replaces [ChartSelectionBrushGridStyle.direction] with [value].
+  ChartSelectionBrushGridStyle withDirection(
+    ChartSelectionBrushGridDirection value,
+  ) => copyWith(direction: value);
+
+  /// Replaces [ChartSelectionBrushGridStyle.rows] with [value].
+  ChartSelectionBrushGridStyle withRows(int value) => copyWith(rows: value);
+
+  /// Replaces [ChartSelectionBrushGridStyle.columns] with [value].
+  ChartSelectionBrushGridStyle withColumns(int value) =>
+      copyWith(columns: value);
+
+  /// Replaces [ChartSelectionBrushGridStyle.color] with [value].
+  ChartSelectionBrushGridStyle withColor(Color value) => copyWith(color: value);
+
+  /// Clears [ChartSelectionBrushGridStyle.color] to `null`.
+  ChartSelectionBrushGridStyle clearColor() => copyWith(clearColor: true);
+
+  /// Replaces [ChartSelectionBrushGridStyle.lineWidth] with [value].
+  ChartSelectionBrushGridStyle withLineWidth(double value) =>
+      copyWith(lineWidth: value);
+
+  /// Replaces [ChartSelectionBrushGridStyle.pattern] with [value].
+  ChartSelectionBrushGridStyle withPattern(
+    ChartSelectionBrushGridPattern value,
+  ) => copyWith(pattern: value);
+}
+
 /// Generated fluent modifiers for [ChartSelectionBrushStyle].
 extension ChartSelectionBrushStyleFluent on ChartSelectionBrushStyle {
   /// Replaces [ChartSelectionBrushStyle.fillColor] with [value].
@@ -312,6 +368,14 @@ extension ChartSelectionBrushStyleFluent on ChartSelectionBrushStyle {
   ChartSelectionBrushStyle clearHandleBorderColor() =>
       copyWith(clearHandleBorderColor: true);
 
+  /// Replaces [ChartSelectionBrushStyle.keyboardFocusBorderColor] with [value].
+  ChartSelectionBrushStyle withKeyboardFocusBorderColor(Color value) =>
+      copyWith(keyboardFocusBorderColor: value);
+
+  /// Clears [ChartSelectionBrushStyle.keyboardFocusBorderColor] to `null`.
+  ChartSelectionBrushStyle clearKeyboardFocusBorderColor() =>
+      copyWith(clearKeyboardFocusBorderColor: true);
+
   /// Replaces [ChartSelectionBrushStyle.handleBorderWidth] with [value].
   ChartSelectionBrushStyle withHandleBorderWidth(double value) =>
       copyWith(handleBorderWidth: value);
@@ -323,6 +387,19 @@ extension ChartSelectionBrushStyleFluent on ChartSelectionBrushStyle {
   /// Replaces [ChartSelectionBrushStyle.activeOpacity] with [value].
   ChartSelectionBrushStyle withActiveOpacity(double value) =>
       copyWith(activeOpacity: value);
+
+  /// Replaces [ChartSelectionBrushStyle.grid] with [value].
+  ChartSelectionBrushStyle withGrid(ChartSelectionBrushGridStyle value) =>
+      copyWith(grid: value);
+
+  /// Rebuilds [ChartSelectionBrushStyle.grid] from its current value.
+  ///
+  /// `update` receives the current [ChartSelectionBrushGridStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  ChartSelectionBrushStyle updateGrid(
+    ChartSelectionBrushGridStyle Function(ChartSelectionBrushGridStyle current)
+    update,
+  ) => copyWith(grid: update(grid));
 
   /// Replaces [ChartSelectionBrushStyle.handleSize] and [ChartSelectionBrushStyle.handleHitSize] together.
   ///
@@ -338,6 +415,30 @@ extension ChartSelectionBrushConfigFluent on ChartSelectionBrushConfig {
   /// Replaces [ChartSelectionBrushConfig.enabled] with [value].
   ChartSelectionBrushConfig withEnabled(bool value) => copyWith(enabled: value);
 
+  /// Replaces [ChartSelectionBrushConfig.keyboardEnabled] with [value].
+  ChartSelectionBrushConfig withKeyboardEnabled(bool value) =>
+      copyWith(keyboardEnabled: value);
+
+  /// Replaces [ChartSelectionBrushConfig.initialVisible] with [value].
+  ChartSelectionBrushConfig withInitialVisible(bool value) =>
+      copyWith(initialVisible: value);
+
+  /// Replaces [ChartSelectionBrushConfig.initialRange] with [value].
+  ChartSelectionBrushConfig withInitialRange(ChartSelectionBrushRange value) =>
+      copyWith(initialRange: value);
+
+  /// Clears [ChartSelectionBrushConfig.initialRange] to `null`.
+  ChartSelectionBrushConfig clearInitialRange() =>
+      copyWith(clearInitialRange: true);
+
+  /// Replaces [ChartSelectionBrushConfig.initialBox] with [value].
+  ChartSelectionBrushConfig withInitialBox(ChartSelectionBrushBox value) =>
+      copyWith(initialBox: value);
+
+  /// Clears [ChartSelectionBrushConfig.initialBox] to `null`.
+  ChartSelectionBrushConfig clearInitialBox() =>
+      copyWith(clearInitialBox: true);
+
   /// Replaces [ChartSelectionBrushConfig.style] with [value].
   ChartSelectionBrushConfig withStyle(ChartSelectionBrushStyle value) =>
       copyWith(style: value);
@@ -349,18 +450,6 @@ extension ChartSelectionBrushConfigFluent on ChartSelectionBrushConfig {
   ChartSelectionBrushConfig updateStyle(
     ChartSelectionBrushStyle Function(ChartSelectionBrushStyle current) update,
   ) => copyWith(style: update(style));
-
-  /// Replaces [ChartSelectionBrushConfig.initialRange] and [ChartSelectionBrushConfig.initialVisible] together.
-  ///
-  /// The parameters are assert-coupled, so they only move as a pair.
-  ChartSelectionBrushConfig withInitialState(
-    ChartSelectionBrushRange initialRange,
-    bool initialVisible,
-  ) => copyWith(initialRange: initialRange, initialVisible: initialVisible);
-
-  /// Clears [ChartSelectionBrushConfig.initialRange] to `null`.
-  ChartSelectionBrushConfig clearInitialRange() =>
-      copyWith(clearInitialRange: true);
 }
 
 /// Generated fluent modifiers for [ChartSelectionConfig].

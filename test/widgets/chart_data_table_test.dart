@@ -1001,6 +1001,54 @@ void main() {
     );
     expect(find.textContaining('1 formatter warning'), findsOneWidget);
   });
+
+  testWidgets('background refresh keeps table geometry fixed', (tester) async {
+    final model = _model(points: [_point(1, 10), _point(2, 20), _point(3, 30)]);
+    StateSetter? rebuild;
+    var isRefreshing = false;
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return ChartDataTable(model: model, isRefreshing: isRefreshing);
+          },
+        ),
+      ),
+    );
+
+    final refreshSlot = find.byKey(
+      const ValueKey('chart-data-table-refresh-slot'),
+    );
+    final refreshIndicator = find.byKey(
+      const ValueKey('chart-data-table-refresh-indicator'),
+    );
+    final refreshPlaceholder = find.byKey(
+      const ValueKey('chart-data-table-refresh-placeholder'),
+    );
+    final firstRow = find.byKey(ValueKey(model.longRows.first.rowId));
+    final slotSize = tester.getSize(refreshSlot);
+    final rowOrigin = tester.getTopLeft(firstRow);
+    expect(refreshIndicator, findsNothing);
+    expect(refreshPlaceholder, findsOneWidget);
+
+    rebuild!(() => isRefreshing = true);
+    await tester.pump();
+
+    expect(refreshIndicator, findsOneWidget);
+    expect(refreshPlaceholder, findsNothing);
+    expect(tester.getSize(refreshSlot), slotSize);
+    expect(tester.getTopLeft(firstRow), rowOrigin);
+
+    rebuild!(() => isRefreshing = false);
+    await tester.pump();
+
+    expect(refreshIndicator, findsNothing);
+    expect(refreshPlaceholder, findsOneWidget);
+    expect(tester.getSize(refreshSlot), slotSize);
+    expect(tester.getTopLeft(firstRow), rowOrigin);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _host(

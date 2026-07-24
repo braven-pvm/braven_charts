@@ -3575,27 +3575,52 @@ class ChartConfigDartEmitter {
                   'ChartSelectionAcquisitionMode.'
                       '${selectionBrush.acquisitionMode!.name}',
                 );
-                writer.writeLine('range: ChartSelectionBrushRange(');
-                writer.indented(() {
-                  writer.namedArgument(
-                    'minimum',
-                    DartSourceWriter.numberLiteral(
-                      selectionBrush.range!.minimum,
-                    ),
-                  );
-                  writer.namedArgument(
-                    'maximum',
-                    DartSourceWriter.numberLiteral(
-                      selectionBrush.range!.maximum,
-                    ),
-                  );
-                  _optionalString(
-                    writer,
-                    'referenceSeriesId',
-                    selectionBrush.range!.referenceSeriesId,
-                  );
-                });
-                writer.writeLine('),');
+                if (selectionBrush.box case final box?) {
+                  writer.writeLine('box: ChartSelectionBrushBox(');
+                  writer.indented(() {
+                    writer.namedArgument(
+                      'minimumX',
+                      DartSourceWriter.numberLiteral(box.minimumX),
+                    );
+                    writer.namedArgument(
+                      'maximumX',
+                      DartSourceWriter.numberLiteral(box.maximumX),
+                    );
+                    writer.namedArgument(
+                      'minimumY',
+                      DartSourceWriter.numberLiteral(box.minimumY),
+                    );
+                    writer.namedArgument(
+                      'maximumY',
+                      DartSourceWriter.numberLiteral(box.maximumY),
+                    );
+                    _optionalString(
+                      writer,
+                      'referenceSeriesId',
+                      box.referenceSeriesId,
+                    );
+                  });
+                  writer.writeLine('),');
+                } else {
+                  final range = selectionBrush.range!;
+                  writer.writeLine('range: ChartSelectionBrushRange(');
+                  writer.indented(() {
+                    writer.namedArgument(
+                      'minimum',
+                      DartSourceWriter.numberLiteral(range.minimum),
+                    );
+                    writer.namedArgument(
+                      'maximum',
+                      DartSourceWriter.numberLiteral(range.maximum),
+                    );
+                    _optionalString(
+                      writer,
+                      'referenceSeriesId',
+                      range.referenceSeriesId,
+                    );
+                  });
+                  writer.writeLine('),');
+                }
                 writer.namedArgument(
                   'visible',
                   selectionBrush.visible.toString(),
@@ -4497,6 +4522,12 @@ class ChartConfigDartEmitter {
       _valueIf(writer, 'enabled', brush.enabled, defaultValue: false);
       _valueIf(
         writer,
+        'keyboardEnabled',
+        brush.keyboardEnabled,
+        defaultValue: false,
+      );
+      _valueIf(
+        writer,
         'initialVisible',
         brush.initialVisible,
         defaultValue: false,
@@ -4514,6 +4545,30 @@ class ChartConfigDartEmitter {
             DartSourceWriter.numberLiteral(range.maximum),
           );
           _optionalString(writer, 'referenceSeriesId', range.referenceSeriesId);
+        });
+        writer.writeLine('),');
+      }
+      final box = brush.initialBox;
+      if (box != null) {
+        writer.writeLine('initialBox: ChartSelectionBrushBox(');
+        writer.indented(() {
+          writer.namedArgument(
+            'minimumX',
+            DartSourceWriter.numberLiteral(box.minimumX),
+          );
+          writer.namedArgument(
+            'maximumX',
+            DartSourceWriter.numberLiteral(box.maximumX),
+          );
+          writer.namedArgument(
+            'minimumY',
+            DartSourceWriter.numberLiteral(box.minimumY),
+          );
+          writer.namedArgument(
+            'maximumY',
+            DartSourceWriter.numberLiteral(box.maximumY),
+          );
+          _optionalString(writer, 'referenceSeriesId', box.referenceSeriesId);
         });
         writer.writeLine('),');
       }
@@ -4556,11 +4611,52 @@ class ChartConfigDartEmitter {
           DartSourceWriter.colorLiteral(style.handleBorderColor!),
         );
       }
+      if (style.keyboardFocusBorderColor != null) {
+        writer.namedArgument(
+          'keyboardFocusBorderColor',
+          DartSourceWriter.colorLiteral(style.keyboardFocusBorderColor!),
+        );
+      }
       _numberIf(writer, 'handleBorderWidth', style.handleBorderWidth, 1.5);
       _numberIf(writer, 'handleSize', style.handleSize, 10);
       _numberIf(writer, 'handleHitSize', style.handleHitSize, 44);
       _numberIf(writer, 'hoverOpacity', style.hoverOpacity, 0.24);
       _numberIf(writer, 'activeOpacity', style.activeOpacity, 0.30);
+      _emitSelectionBrushGridStyle(writer, style.grid);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitSelectionBrushGridStyle(
+    DartSourceWriter writer,
+    ChartSelectionBrushGridStyle grid,
+  ) {
+    if (grid == const ChartSelectionBrushGridStyle()) return;
+    writer.writeLine('grid: ChartSelectionBrushGridStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'direction',
+        'ChartSelectionBrushGridDirection',
+        grid.direction.name,
+        defaultName: 'none',
+      );
+      _numberIf(writer, 'rows', grid.rows, 2);
+      _numberIf(writer, 'columns', grid.columns, 2);
+      if (grid.color != null) {
+        writer.namedArgument(
+          'color',
+          DartSourceWriter.colorLiteral(grid.color!),
+        );
+      }
+      _numberIf(writer, 'lineWidth', grid.lineWidth, 1);
+      _enumIf(
+        writer,
+        'pattern',
+        'ChartSelectionBrushGridPattern',
+        grid.pattern.name,
+        defaultName: 'solid',
+      );
     });
     writer.writeLine('),');
   }

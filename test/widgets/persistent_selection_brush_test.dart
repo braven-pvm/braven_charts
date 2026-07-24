@@ -21,6 +21,7 @@ void main() {
             controller: controller,
             brush: const ChartSelectionBrushConfig(
               enabled: true,
+              keyboardEnabled: true,
               initialVisible: true,
               initialRange: ChartSelectionBrushRange(minimum: 2, maximum: 6),
             ),
@@ -66,6 +67,37 @@ void main() {
         expect(callbackCount, greaterThanOrEqualTo(2));
       },
     );
+
+    testWidgets('keyboard brush controls and focus chrome are opt-in', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          brush: const ChartSelectionBrushConfig(
+            enabled: true,
+            initialVisible: true,
+            initialRange: ChartSelectionBrushRange(minimum: 2, maximum: 6),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BravenChartPlus));
+      await tester.pump();
+
+      final renderBox = tester.renderObject<ChartRenderBox>(
+        _chartRenderFinder(),
+      );
+      expect(renderBox.debugSelectionBrushKeyboardFocused, isFalse);
+      final initial = controller.selectionBrushState!.range;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+
+      expect(controller.selectionBrushState!.range, initial);
+    });
 
     testWidgets(
       'semantics announce bounds and expose move and resize actions',
@@ -1013,6 +1045,294 @@ void main() {
         );
       },
     );
+
+    testWidgets('completed box selection persists with two-axis data bounds', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+          brush: const ChartSelectionBrushConfig(enabled: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final finder = _chartRenderFinder();
+      final renderBox = tester.renderObject<ChartRenderBox>(finder);
+      final origin = tester.getTopLeft(finder);
+      final plot = renderBox.debugPlotArea;
+      final start = origin + Offset(plot.left + 100, plot.top + 90);
+      final end = origin + Offset(plot.left + 310, plot.top + 240);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(gesture.removePointer);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(start);
+      await gesture.down(start);
+      await gesture.moveTo(end);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      final state = controller.selectionBrushState;
+      expect(state?.acquisitionMode, ChartSelectionAcquisitionMode.rectangle);
+      expect(state?.visible, isTrue);
+      expect(state?.box, isNotNull);
+      expect(state!.box!.minimumX, lessThan(state.box!.maximumX));
+      expect(state.box!.minimumY, lessThan(state.box!.maximumY));
+      expect(state.range.minimum, state.box!.minimumX);
+      expect(state.range.maximum, state.box!.maximumX);
+      expect(
+        tester.renderObject<ChartRenderBox>(finder).selectionBrushWidgetRect,
+        isNotNull,
+      );
+    });
+
+    testWidgets(
+      'box brush moves and corner-resizes through ordinary selection callbacks',
+      (tester) async {
+        final controller = BravenChartController();
+        final results = <ChartSelectionResult>[];
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          _host(
+            controller: controller,
+            acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+            onSelectionResultChanged: results.add,
+            brush: const ChartSelectionBrushConfig(
+              enabled: true,
+              initialVisible: true,
+              initialBox: ChartSelectionBrushBox(
+                minimumX: 2,
+                maximumX: 6,
+                minimumY: 30,
+                maximumY: 55,
+                referenceSeriesId: 'signal',
+              ),
+              style: ChartSelectionBrushStyle(
+                grid: ChartSelectionBrushGridStyle(
+                  direction: ChartSelectionBrushGridDirection.both,
+                  rows: 2,
+                  columns: 2,
+                  pattern: ChartSelectionBrushGridPattern.dotted,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        var renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final origin = tester.getTopLeft(finder);
+        final originalRect = renderBox.selectionBrushWidgetRect!;
+        final originalBox = controller.selectionBrushState!.box!;
+        final callbackCount = results.length;
+        final move = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(move.removePointer);
+        await move.addPointer(location: Offset.zero);
+        final moveStart = origin + originalRect.center;
+        await move.moveTo(moveStart);
+        await move.down(moveStart);
+        await move.moveTo(moveStart + const Offset(32, 18));
+        await tester.pump();
+        await move.up();
+        await tester.pumpAndSettle();
+
+        final movedBox = controller.selectionBrushState!.box!;
+        expect(movedBox.minimumX, isNot(originalBox.minimumX));
+        expect(movedBox.minimumY, isNot(originalBox.minimumY));
+        expect(results.length, greaterThan(callbackCount));
+        renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final movedRect = renderBox.selectionBrushWidgetRect!;
+        final movedRefs = {
+          for (final hit
+              in renderBox.selectionGestureForWidgetRect(movedRect)!.hits)
+            ChartPointRef(seriesId: hit.seriesId, pointIndex: hit.pointIndex),
+        };
+        expect(controller.selectedPointRefs, movedRefs);
+        expect(
+          controller.selectionSnapshot!.pointRefs,
+          movedRefs,
+          reason:
+              'A box is an X-and-Y intersection; its durable selection must '
+              'not expand to every point in the same X interval.',
+        );
+
+        final corner = origin + movedRect.bottomRight;
+        await move.moveTo(corner);
+        await move.down(corner);
+        await move.moveTo(corner + const Offset(28, 24));
+        await tester.pump();
+        await move.up();
+        await tester.pumpAndSettle();
+
+        final resizedBox = controller.selectionBrushState!.box!;
+        expect(resizedBox.maximumX, isNot(movedBox.maximumX));
+        expect(resizedBox.minimumY, isNot(movedBox.minimumY));
+        renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final resizedRect = renderBox.selectionBrushWidgetRect!;
+        final resizedRefs = {
+          for (final hit
+              in renderBox.selectionGestureForWidgetRect(resizedRect)!.hits)
+            ChartPointRef(seriesId: hit.seriesId, pointIndex: hit.pointIndex),
+        };
+        expect(controller.selectedPointRefs, resizedRefs);
+        expect(controller.selectionSnapshot!.pointRefs, resizedRefs);
+      },
+    );
+
+    testWidgets('box brush survives visual style configuration rebuilds', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      StateSetter? rebuild;
+      var grid = const ChartSelectionBrushGridStyle();
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return _host(
+              controller: controller,
+              acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+              brush: ChartSelectionBrushConfig(
+                enabled: true,
+                initialVisible: true,
+                initialBox: const ChartSelectionBrushBox(
+                  minimumX: 2,
+                  maximumX: 6,
+                  minimumY: 30,
+                  maximumY: 55,
+                  referenceSeriesId: 'signal',
+                ),
+                style: ChartSelectionBrushStyle(grid: grid),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final before = controller.selectionBrushState;
+      expect(before?.visible, isTrue);
+      expect(before?.box, isNotNull);
+
+      rebuild!(() {
+        grid = const ChartSelectionBrushGridStyle(
+          direction: ChartSelectionBrushGridDirection.both,
+          rows: 3,
+          columns: 4,
+          lineWidth: 2,
+          pattern: ChartSelectionBrushGridPattern.dashed,
+        );
+      });
+      await tester.pumpAndSettle();
+
+      expect(controller.selectionBrushState, before);
+      expect(
+        tester
+            .renderObject<ChartRenderBox>(_chartRenderFinder())
+            .selectionBrushWidgetRect,
+        isNotNull,
+      );
+    });
+
+    testWidgets('one-finger touch moves and corner-resizes a box brush', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+          brush: const ChartSelectionBrushConfig(
+            enabled: true,
+            initialVisible: true,
+            initialBox: ChartSelectionBrushBox(
+              minimumX: 2,
+              maximumX: 6,
+              minimumY: 30,
+              maximumY: 55,
+              referenceSeriesId: 'signal',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final finder = _chartRenderFinder();
+      var renderBox = tester.renderObject<ChartRenderBox>(finder);
+      final origin = tester.getTopLeft(finder);
+      final originalBox = controller.selectionBrushState!.box!;
+      final touch = await tester.createGesture(kind: PointerDeviceKind.touch);
+      addTearDown(touch.removePointer);
+      await touch.addPointer(location: Offset.zero);
+
+      final moveStart = origin + renderBox.selectionBrushWidgetRect!.center;
+      await touch.moveTo(moveStart);
+      await touch.down(moveStart);
+      await touch.moveTo(moveStart + const Offset(28, 16));
+      await tester.pump();
+      await touch.up();
+      await tester.pumpAndSettle();
+
+      final movedBox = controller.selectionBrushState!.box!;
+      expect(movedBox.minimumX, isNot(originalBox.minimumX));
+      expect(movedBox.minimumY, isNot(originalBox.minimumY));
+
+      renderBox = tester.renderObject<ChartRenderBox>(finder);
+      final corner = origin + renderBox.selectionBrushWidgetRect!.topLeft;
+      await touch.moveTo(corner);
+      await touch.down(corner);
+      await touch.moveTo(corner + const Offset(-24, -20));
+      await tester.pump();
+      await touch.up();
+      await tester.pumpAndSettle();
+
+      final resizedBox = controller.selectionBrushState!.box!;
+      expect(resizedBox.minimumX, isNot(movedBox.minimumX));
+      expect(resizedBox.maximumY, isNot(movedBox.maximumY));
+    });
+
+    testWidgets('controller can set an initially hidden box brush', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+          brush: const ChartSelectionBrushConfig(enabled: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        controller.setSelectionBrushBox(
+          minimumX: 1,
+          maximumX: 5,
+          minimumY: 25,
+          maximumY: 52,
+          referenceSeriesId: 'signal',
+          visible: false,
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.selectionBrushState?.box?.maximumY, 52);
+      expect(controller.selectionBrushState?.visible, isFalse);
+
+      expect(
+        controller.showSelectionBrush(),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.selectionBrushState?.visible, isTrue);
+    });
   });
 }
 
@@ -1103,6 +1423,7 @@ Widget _horizontalBarHost(BravenChartController controller) => MaterialApp(
             useModifierKeys: false,
             brush: ChartSelectionBrushConfig(
               enabled: true,
+              keyboardEnabled: true,
               initialVisible: true,
               initialRange: ChartSelectionBrushRange(minimum: 0, maximum: 1),
             ),

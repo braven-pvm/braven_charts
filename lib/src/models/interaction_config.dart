@@ -1279,6 +1279,153 @@ class ChartSelectionBrushRange {
   int get hashCode => Object.hash(minimum, maximum, referenceSeriesId);
 }
 
+/// Two-dimensional data-domain bounds for a persistent box-selection brush.
+///
+/// [referenceSeriesId] selects the Y transform on multi-axis charts. X always
+/// uses the chart's primary Cartesian X transform.
+@ChartSurface(
+  combinedSetters: [
+    CombinedSetter('withBounds', [
+      'minimumX',
+      'maximumX',
+      'minimumY',
+      'maximumY',
+    ]),
+  ],
+  clearFlags: {'referenceSeriesId': 'clearReferenceSeriesId'},
+)
+class ChartSelectionBrushBox {
+  const ChartSelectionBrushBox({
+    required this.minimumX,
+    required this.maximumX,
+    required this.minimumY,
+    required this.maximumY,
+    this.referenceSeriesId,
+  }) : assert(minimumX == minimumX),
+       assert(minimumX > double.negativeInfinity),
+       assert(minimumX < double.infinity),
+       assert(maximumX == maximumX),
+       assert(maximumX > double.negativeInfinity),
+       assert(maximumX < double.infinity),
+       assert(minimumX <= maximumX),
+       assert(minimumY == minimumY),
+       assert(minimumY > double.negativeInfinity),
+       assert(minimumY < double.infinity),
+       assert(maximumY == maximumY),
+       assert(maximumY > double.negativeInfinity),
+       assert(maximumY < double.infinity),
+       assert(minimumY <= maximumY);
+
+  final double minimumX;
+  final double maximumX;
+  final double minimumY;
+  final double maximumY;
+  final String? referenceSeriesId;
+
+  ChartSelectionBrushBox copyWith({
+    double? minimumX,
+    double? maximumX,
+    double? minimumY,
+    double? maximumY,
+    String? referenceSeriesId,
+    bool clearReferenceSeriesId = false,
+  }) => ChartSelectionBrushBox(
+    minimumX: minimumX ?? this.minimumX,
+    maximumX: maximumX ?? this.maximumX,
+    minimumY: minimumY ?? this.minimumY,
+    maximumY: maximumY ?? this.maximumY,
+    referenceSeriesId: clearReferenceSeriesId
+        ? null
+        : (referenceSeriesId ?? this.referenceSeriesId),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushBox &&
+          other.minimumX == minimumX &&
+          other.maximumX == maximumX &&
+          other.minimumY == minimumY &&
+          other.maximumY == maximumY &&
+          other.referenceSeriesId == referenceSeriesId;
+
+  @override
+  int get hashCode =>
+      Object.hash(minimumX, maximumX, minimumY, maximumY, referenceSeriesId);
+}
+
+/// Axes on which visual subdivision lines are drawn inside a brush.
+enum ChartSelectionBrushGridDirection { none, horizontal, vertical, both }
+
+/// Portable stroke pattern for visual subdivision lines.
+enum ChartSelectionBrushGridPattern { solid, dashed, dotted }
+
+/// Optional visual subdivisions inside a persistent selection brush.
+///
+/// [rows] and [columns] describe cell counts, not line counts. For example,
+/// two rows and two columns create four quadrants using one horizontal and one
+/// vertical interior line. Grid lines are visual only and never affect hits.
+@chartSurface
+class ChartSelectionBrushGridStyle {
+  const ChartSelectionBrushGridStyle({
+    this.direction = ChartSelectionBrushGridDirection.none,
+    this.rows = 2,
+    this.columns = 2,
+    this.color,
+    this.lineWidth = 1,
+    this.pattern = ChartSelectionBrushGridPattern.solid,
+  }) : assert(rows >= 1),
+       assert(columns >= 1),
+       assert(lineWidth >= 0);
+
+  final ChartSelectionBrushGridDirection direction;
+  final int rows;
+  final int columns;
+  final Color? color;
+  final double lineWidth;
+  final ChartSelectionBrushGridPattern pattern;
+
+  bool get showsHorizontal =>
+      direction == ChartSelectionBrushGridDirection.horizontal ||
+      direction == ChartSelectionBrushGridDirection.both;
+
+  bool get showsVertical =>
+      direction == ChartSelectionBrushGridDirection.vertical ||
+      direction == ChartSelectionBrushGridDirection.both;
+
+  ChartSelectionBrushGridStyle copyWith({
+    ChartSelectionBrushGridDirection? direction,
+    int? rows,
+    int? columns,
+    Color? color,
+    double? lineWidth,
+    ChartSelectionBrushGridPattern? pattern,
+    bool clearColor = false,
+  }) => ChartSelectionBrushGridStyle(
+    direction: direction ?? this.direction,
+    rows: rows ?? this.rows,
+    columns: columns ?? this.columns,
+    color: clearColor ? null : (color ?? this.color),
+    lineWidth: lineWidth ?? this.lineWidth,
+    pattern: pattern ?? this.pattern,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartSelectionBrushGridStyle &&
+          other.direction == direction &&
+          other.rows == rows &&
+          other.columns == columns &&
+          other.color == color &&
+          other.lineWidth == lineWidth &&
+          other.pattern == pattern;
+
+  @override
+  int get hashCode =>
+      Object.hash(direction, rows, columns, color, lineWidth, pattern);
+}
+
 /// Visual treatment for a persistent interval-selection brush.
 ///
 /// Null colours inherit from the chart's interaction theme. The visible
@@ -1293,6 +1440,7 @@ class ChartSelectionBrushRange {
     'borderColor': 'clearBorderColor',
     'handleFillColor': 'clearHandleFillColor',
     'handleBorderColor': 'clearHandleBorderColor',
+    'keyboardFocusBorderColor': 'clearKeyboardFocusBorderColor',
   },
 )
 class ChartSelectionBrushStyle {
@@ -1304,11 +1452,13 @@ class ChartSelectionBrushStyle {
     this.borderRadius = 0,
     this.handleFillColor,
     this.handleBorderColor,
+    this.keyboardFocusBorderColor,
     this.handleBorderWidth = 1.5,
     this.handleSize = 10,
     this.handleHitSize = 44,
     this.hoverOpacity = 0.24,
     this.activeOpacity = 0.30,
+    this.grid = const ChartSelectionBrushGridStyle(),
   }) : assert(fillOpacity >= 0 && fillOpacity <= 1),
        assert(borderWidth >= 0),
        assert(borderRadius >= 0),
@@ -1339,6 +1489,11 @@ class ChartSelectionBrushStyle {
   /// Optional handle outline colour. Defaults to the chart background.
   final Color? handleBorderColor;
 
+  /// Optional keyboard-focus outline colour.
+  ///
+  /// Defaults to [borderColor], then the interaction selection colour.
+  final Color? keyboardFocusBorderColor;
+
   /// Handle outline width in logical pixels.
   final double handleBorderWidth;
 
@@ -1354,6 +1509,9 @@ class ChartSelectionBrushStyle {
   /// Fill opacity while the brush is being moved or resized.
   final double activeOpacity;
 
+  /// Optional visual subdivisions drawn inside the brush.
+  final ChartSelectionBrushGridStyle grid;
+
   ChartSelectionBrushStyle copyWith({
     Color? fillColor,
     double? fillOpacity,
@@ -1362,15 +1520,18 @@ class ChartSelectionBrushStyle {
     double? borderRadius,
     Color? handleFillColor,
     Color? handleBorderColor,
+    Color? keyboardFocusBorderColor,
     double? handleBorderWidth,
     double? handleSize,
     double? handleHitSize,
     double? hoverOpacity,
     double? activeOpacity,
+    ChartSelectionBrushGridStyle? grid,
     bool clearFillColor = false,
     bool clearBorderColor = false,
     bool clearHandleFillColor = false,
     bool clearHandleBorderColor = false,
+    bool clearKeyboardFocusBorderColor = false,
   }) => ChartSelectionBrushStyle(
     fillColor: clearFillColor ? null : (fillColor ?? this.fillColor),
     fillOpacity: fillOpacity ?? this.fillOpacity,
@@ -1383,11 +1544,15 @@ class ChartSelectionBrushStyle {
     handleBorderColor: clearHandleBorderColor
         ? null
         : (handleBorderColor ?? this.handleBorderColor),
+    keyboardFocusBorderColor: clearKeyboardFocusBorderColor
+        ? null
+        : (keyboardFocusBorderColor ?? this.keyboardFocusBorderColor),
     handleBorderWidth: handleBorderWidth ?? this.handleBorderWidth,
     handleSize: handleSize ?? this.handleSize,
     handleHitSize: handleHitSize ?? this.handleHitSize,
     hoverOpacity: hoverOpacity ?? this.hoverOpacity,
     activeOpacity: activeOpacity ?? this.activeOpacity,
+    grid: grid ?? this.grid,
   );
 
   @override
@@ -1401,11 +1566,13 @@ class ChartSelectionBrushStyle {
           other.borderRadius == borderRadius &&
           other.handleFillColor == handleFillColor &&
           other.handleBorderColor == handleBorderColor &&
+          other.keyboardFocusBorderColor == keyboardFocusBorderColor &&
           other.handleBorderWidth == handleBorderWidth &&
           other.handleSize == handleSize &&
           other.handleHitSize == handleHitSize &&
           other.hoverOpacity == hoverOpacity &&
-          other.activeOpacity == activeOpacity;
+          other.activeOpacity == activeOpacity &&
+          other.grid == grid;
 
   @override
   int get hashCode => Object.hash(
@@ -1416,58 +1583,88 @@ class ChartSelectionBrushStyle {
     borderRadius,
     handleFillColor,
     handleBorderColor,
+    keyboardFocusBorderColor,
     handleBorderWidth,
     handleSize,
     handleHitSize,
     hoverOpacity,
     activeOpacity,
+    grid,
   );
 }
 
-/// Opt-in persistence and initial state for an interval-selection brush.
+/// Opt-in persistence and initial state for an interval or box-selection brush.
 @ChartSurface(
-  combinedSetters: [
-    CombinedSetter('withInitialState', ['initialRange', 'initialVisible']),
-  ],
-  clearFlags: {'initialRange': 'clearInitialRange'},
+  clearFlags: {
+    'initialRange': 'clearInitialRange',
+    'initialBox': 'clearInitialBox',
+  },
 )
 class ChartSelectionBrushConfig {
   const ChartSelectionBrushConfig({
     this.enabled = false,
+    this.keyboardEnabled = false,
     this.initialVisible = false,
     this.initialRange,
+    this.initialBox,
     this.style = const ChartSelectionBrushStyle(),
-  }) : assert(
-         !initialVisible || initialRange != null,
-         'initialVisible requires an initialRange.',
-       );
+  });
 
-  /// Whether completed X/Y interval selections remain interactive on screen.
+  /// Whether completed X/Y interval or box selections remain interactive.
   final bool enabled;
 
-  /// Whether [initialRange] is visible on the first mounted frame.
+  /// Whether keyboard focus, movement, and resizing are enabled for the brush.
+  ///
+  /// This is opt-in so pointer-only brushes do not show a second focus outline.
+  /// The chart-level [KeyboardConfig.enabled] must also be true.
+  final bool keyboardEnabled;
+
+  /// Whether the initial geometry for the active acquisition mode is visible
+  /// on the first mounted frame.
+  ///
+  /// Interval modes use [initialRange], while rectangle mode uses
+  /// [initialBox]. If no matching geometry exists, the brush remains hidden.
   final bool initialVisible;
 
   /// Optional initial data-domain interval.
   final ChartSelectionBrushRange? initialRange;
 
+  /// Optional initial two-dimensional box.
+  final ChartSelectionBrushBox? initialBox;
+
   /// Brush appearance and handle sizing.
   final ChartSelectionBrushStyle style;
 
+  /// Replaces the initial interval and its first-frame visibility together.
+  ///
+  /// This convenience method preserves the original fluent API while keeping
+  /// [initialVisible] independent in the schema: rectangle configurations use
+  /// [initialBox] with the same visibility flag.
+  ChartSelectionBrushConfig withInitialState(
+    ChartSelectionBrushRange initialRange,
+    bool initialVisible,
+  ) => copyWith(
+    initialRange: initialRange,
+    initialVisible: initialVisible,
+  );
+
   ChartSelectionBrushConfig copyWith({
     bool? enabled,
+    bool? keyboardEnabled,
     bool? initialVisible,
     ChartSelectionBrushRange? initialRange,
+    ChartSelectionBrushBox? initialBox,
     ChartSelectionBrushStyle? style,
     bool clearInitialRange = false,
+    bool clearInitialBox = false,
   }) => ChartSelectionBrushConfig(
     enabled: enabled ?? this.enabled,
-    initialVisible: clearInitialRange
-        ? false
-        : (initialVisible ?? this.initialVisible),
+    keyboardEnabled: keyboardEnabled ?? this.keyboardEnabled,
+    initialVisible: initialVisible ?? this.initialVisible,
     initialRange: clearInitialRange
         ? null
         : (initialRange ?? this.initialRange),
+    initialBox: clearInitialBox ? null : (initialBox ?? this.initialBox),
     style: style ?? this.style,
   );
 
@@ -1476,12 +1673,21 @@ class ChartSelectionBrushConfig {
       identical(this, other) ||
       other is ChartSelectionBrushConfig &&
           other.enabled == enabled &&
+          other.keyboardEnabled == keyboardEnabled &&
           other.initialVisible == initialVisible &&
           other.initialRange == initialRange &&
+          other.initialBox == initialBox &&
           other.style == style;
 
   @override
-  int get hashCode => Object.hash(enabled, initialVisible, initialRange, style);
+  int get hashCode => Object.hash(
+    enabled,
+    keyboardEnabled,
+    initialVisible,
+    initialRange,
+    initialBox,
+    style,
+  );
 }
 
 /// Portable policy for chart point selection.

@@ -64,15 +64,27 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   ChartSelectionScope _selectionScope = ChartSelectionScope.markOrWholeSeries;
   bool _persistentBrushEnabled = false;
   bool _persistentBrushVisible = true;
+  bool _brushKeyboardEnabled = false;
   double _brushStartFraction = 0.22;
   double _brushEndFraction = 0.68;
+  double _brushYStartFraction = 0.24;
+  double _brushYEndFraction = 0.74;
   Color? _brushFillColor;
   Color? _brushBorderColor;
   Color? _brushHandleColor;
+  Color? _brushKeyboardFocusBorderColor;
   double _brushFillOpacity = 0.18;
   double _brushBorderWidth = 1.5;
   double _brushBorderRadius = 0;
   double _brushHandleSize = 10;
+  ChartSelectionBrushGridDirection _brushGridDirection =
+      ChartSelectionBrushGridDirection.none;
+  ChartSelectionBrushGridPattern _brushGridPattern =
+      ChartSelectionBrushGridPattern.solid;
+  int _brushGridRows = 2;
+  int _brushGridColumns = 2;
+  double _brushGridLineWidth = 1;
+  Color? _brushGridColor;
   ChartSelectionSeriesProjection _seriesProjection =
       ChartSelectionSeriesProjection.selectedPointsOnly;
   ChartSelectionAnnotationProjection _annotationProjection =
@@ -80,7 +92,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   ChartSelectionIntervalBoundaryProjection _intervalBoundaryProjection =
       ChartSelectionIntervalBoundaryProjection.sourcePointsOnly;
   double _selectionZoomPadding = 0.08;
-  bool _showProjectionAnnotations = true;
+  bool _showProjectionAnnotations = false;
   bool _showLinkedPeer = false;
   ChartArtifact? _createdSelectionArtifact;
   HydratedChartConfiguration? _createdSelectionChart;
@@ -150,16 +162,19 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   bool get _supportsPersistentBrush =>
       !_family.isRadial &&
       (_acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
-          _acquisitionMode == ChartSelectionAcquisitionMode.yInterval);
+          _acquisitionMode == ChartSelectionAcquisitionMode.yInterval ||
+          _acquisitionMode == ChartSelectionAcquisitionMode.rectangle);
 
-  ({double minimum, double maximum}) _brushDomain(ChartOptions options) {
+  ({double minimum, double maximum}) _brushDomain(
+    ChartOptions options, {
+    bool? xAxis,
+  }) {
+    final usesX =
+        xAxis ?? _acquisitionMode == ChartSelectionAcquisitionMode.xInterval;
     final values = <double>[
       for (final series in _seriesForFamily(options))
         for (final point in series.points)
-          if (_acquisitionMode == ChartSelectionAcquisitionMode.xInterval)
-            point.x
-          else
-            point.y,
+          if (usesX) point.x else point.y,
     ].where((value) => value.isFinite).toList(growable: false);
     if (values.isEmpty) return (minimum: 0, maximum: 1);
     var minimum = values.first;
@@ -187,6 +202,22 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     );
   }
 
+  ChartSelectionBrushBox _currentBrushBox() {
+    final options = _chartOptionsController.options;
+    final xDomain = _brushDomain(options, xAxis: true);
+    final yDomain = _brushDomain(options, xAxis: false);
+    final xSpan = xDomain.maximum - xDomain.minimum;
+    final ySpan = yDomain.maximum - yDomain.minimum;
+    final series = _seriesForFamily(options);
+    return ChartSelectionBrushBox(
+      minimumX: xDomain.minimum + xSpan * _brushStartFraction,
+      maximumX: xDomain.minimum + xSpan * _brushEndFraction,
+      minimumY: yDomain.minimum + ySpan * _brushYStartFraction,
+      maximumY: yDomain.minimum + ySpan * _brushYEndFraction,
+      referenceSeriesId: series.isEmpty ? null : series.first.id,
+    );
+  }
+
   void _scheduleBrushApply({bool? visible}) {
     if (!_persistentBrushEnabled || !_supportsPersistentBrush) return;
     final nextVisible = visible ?? _persistentBrushVisible;
@@ -194,15 +225,29 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       if (!mounted || !_persistentBrushEnabled || !_supportsPersistentBrush) {
         return;
       }
-      final range = _currentBrushRange();
-      _showCommandResult(
-        _chartController.setSelectionBrush(
-          minimum: range.minimum,
-          maximum: range.maximum,
-          referenceSeriesId: range.referenceSeriesId,
-          visible: nextVisible,
-        ),
-      );
+      if (_acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+        final box = _currentBrushBox();
+        _showCommandResult(
+          _chartController.setSelectionBrushBox(
+            minimumX: box.minimumX,
+            maximumX: box.maximumX,
+            minimumY: box.minimumY,
+            maximumY: box.maximumY,
+            referenceSeriesId: box.referenceSeriesId,
+            visible: nextVisible,
+          ),
+        );
+      } else {
+        final range = _currentBrushRange();
+        _showCommandResult(
+          _chartController.setSelectionBrush(
+            minimum: range.minimum,
+            maximum: range.maximum,
+            referenceSeriesId: range.referenceSeriesId,
+            visible: nextVisible,
+          ),
+        );
+      }
     });
   }
 
@@ -492,12 +537,13 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         title: 'Persistent selection brush',
         icon: Icons.select_all_outlined,
         description:
-            'Keep the completed interval visible, then move or resize it while ordinary selection callbacks continue to report changes.',
+            'Keep a completed interval or box visible, then move or resize it while ordinary selection callbacks continue to report changes.',
         children: [
           BoolOption(
             key: const ValueKey('selection-lab-brush-enabled'),
-            label: 'Keep selection range on screen',
-            subtitle: 'Opt-in; existing interval selection stays transient',
+            label: 'Keep selection window on screen',
+            subtitle:
+                'Opt-in; completed drag selection otherwise stays transient',
             value: _persistentBrushEnabled,
             onChanged: _setPersistentBrushEnabled,
           ),
@@ -567,6 +613,87 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _brushBorderRadius = value),
             ),
+            EnumOption<ChartSelectionBrushGridDirection>(
+              key: const ValueKey('selection-lab-brush-grid-direction'),
+              label: 'Interior grid lines',
+              value: _brushGridDirection,
+              values: ChartSelectionBrushGridDirection.values,
+              labelBuilder: (value) => switch (value) {
+                ChartSelectionBrushGridDirection.none => 'Off',
+                ChartSelectionBrushGridDirection.horizontal => 'Horizontal',
+                ChartSelectionBrushGridDirection.vertical => 'Vertical',
+                ChartSelectionBrushGridDirection.both => 'Both',
+              },
+              onChanged: (value) => setState(() => _brushGridDirection = value),
+            ),
+            if (_brushGridDirection ==
+                    ChartSelectionBrushGridDirection.horizontal ||
+                _brushGridDirection == ChartSelectionBrushGridDirection.both)
+              SliderOption(
+                key: const ValueKey('selection-lab-brush-grid-rows'),
+                label: 'Grid rows',
+                value: _brushGridRows.toDouble(),
+                min: 1,
+                max: 8,
+                divisions: 7,
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _brushGridRows = value.round()),
+              ),
+            if (_brushGridDirection ==
+                    ChartSelectionBrushGridDirection.vertical ||
+                _brushGridDirection == ChartSelectionBrushGridDirection.both)
+              SliderOption(
+                key: const ValueKey('selection-lab-brush-grid-columns'),
+                label: 'Grid columns',
+                value: _brushGridColumns.toDouble(),
+                min: 1,
+                max: 8,
+                divisions: 7,
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _brushGridColumns = value.round()),
+              ),
+            if (_brushGridDirection !=
+                ChartSelectionBrushGridDirection.none) ...[
+              EnumOption<ChartSelectionBrushGridPattern>(
+                key: const ValueKey('selection-lab-brush-grid-pattern'),
+                label: 'Grid line pattern',
+                value: _brushGridPattern,
+                values: ChartSelectionBrushGridPattern.values,
+                labelBuilder: (value) => switch (value) {
+                  ChartSelectionBrushGridPattern.solid => 'Solid',
+                  ChartSelectionBrushGridPattern.dashed => 'Dashed',
+                  ChartSelectionBrushGridPattern.dotted => 'Dotted',
+                },
+                onChanged: (value) => setState(() => _brushGridPattern = value),
+              ),
+              SliderOption(
+                key: const ValueKey('selection-lab-brush-grid-width'),
+                label: 'Grid line weight',
+                value: _brushGridLineWidth,
+                min: 0.5,
+                max: 4,
+                divisions: 14,
+                suffix: 'px',
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _brushGridLineWidth = value),
+              ),
+              PaletteColorOption(
+                key: const ValueKey('selection-lab-brush-grid-color'),
+                keyPrefix: 'selection-lab-brush-grid-color',
+                label: 'Grid line colour',
+                subtitle: 'Clear to inherit a softened brush border colour',
+                value: _brushGridColor,
+                customColorFallback:
+                    _brushBorderColor ??
+                    (_chartOptionsController.options.theme ?? ChartTheme.light)
+                        .interactionTheme
+                        .selectionColor,
+                onChanged: (value) => setState(() => _brushGridColor = value),
+              ),
+            ],
             PaletteColorOption(
               key: const ValueKey('selection-lab-brush-handle-color'),
               keyPrefix: 'selection-lab-brush-handle-color',
@@ -590,12 +717,36 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _brushHandleSize = value),
             ),
+            BoolOption(
+              key: const ValueKey('selection-lab-brush-keyboard-enabled'),
+              label: 'Keyboard brush controls',
+              subtitle:
+                  'Opt in to focus chrome, Tab targets, and arrow-key move or resize',
+              value: _brushKeyboardEnabled,
+              onChanged: (value) =>
+                  setState(() => _brushKeyboardEnabled = value),
+            ),
+            if (_brushKeyboardEnabled)
+              PaletteColorOption(
+                key: const ValueKey('selection-lab-brush-keyboard-focus-color'),
+                keyPrefix: 'selection-lab-brush-keyboard-focus-color',
+                label: 'Keyboard focus border',
+                subtitle: 'Clear to inherit the ordinary brush border colour',
+                value: _brushKeyboardFocusBorderColor,
+                customColorFallback:
+                    _brushBorderColor ??
+                    (_chartOptionsController.options.theme ?? ChartTheme.light)
+                        .interactionTheme
+                        .selectionColor,
+                onChanged: (value) =>
+                    setState(() => _brushKeyboardFocusBorderColor = value),
+              ),
             ActionButton(
               key: const ValueKey('selection-lab-brush-apply'),
               label: 'Apply configured range',
               icon: Icons.crop_free,
               description:
-                  'Calls BravenChartController.setSelectionBrush with data-domain bounds.',
+                  'Uses the controller to apply the configured data-domain bounds.',
               onPressed: _scheduleBrushApply,
             ),
             ActionButton(
@@ -607,7 +758,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
             ),
             const InfoBox(
               message:
-                  'Drag inside the band to move it. Drag either persistent handle to resize it. The 44 px hit targets stay larger than the visible handles.',
+                  'Drag inside the window to move it. Interval brushes use two edge handles; box brushes expose corners and edges. Grid rows and columns are cell counts, so 2 × 2 creates four visual-only quadrants. The 44 px hit targets stay larger than the visible handles.',
             ),
           ],
         ],
@@ -940,9 +1091,9 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         ),
         BoolOption(
           key: const ValueKey('selection-lab-projection-annotations'),
-          label: 'Show projection annotations',
+          label: 'Projection test annotations',
           subtitle:
-              'Adds a point and range annotation so projection policies are visible in created charts',
+              'Optional test fixtures for verifying annotation behavior in created charts',
           value: _showProjectionAnnotations,
           onChanged: (value) =>
               setState(() => _showProjectionAnnotations = value),
@@ -1118,6 +1269,22 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textScale = MediaQuery.textScalerOf(context).scale(1);
+        if (constraints.maxWidth < 600) {
+          return SingleChildScrollView(
+            key: const ValueKey('selection-compact-scroll'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                familyGrid,
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 1180 + (180 * (textScale - 1).clamp(0, 2)),
+                  child: chartCard,
+                ),
+              ],
+            ),
+          );
+        }
         if (textScale <= 1.5) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1202,6 +1369,50 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
 
   Widget _buildBrushRangeOption() {
     final theme = Theme.of(context);
+    if (_acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      final box = _currentBrushBox();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Initial box bounds',
+              style: TextStyle(fontSize: 12, color: theme.hintColor),
+            ),
+            const SizedBox(height: 4),
+            _buildBrushFractionSlider(
+              key: const ValueKey('selection-lab-brush-x-range'),
+              label: 'X',
+              values: RangeValues(_brushStartFraction, _brushEndFraction),
+              minimumLabel: box.minimumX,
+              maximumLabel: box.maximumX,
+              onChanged: (values) {
+                setState(() {
+                  _brushStartFraction = values.start;
+                  _brushEndFraction = values.end;
+                });
+                _scheduleBrushApply();
+              },
+            ),
+            _buildBrushFractionSlider(
+              key: const ValueKey('selection-lab-brush-y-range'),
+              label: 'Y',
+              values: RangeValues(_brushYStartFraction, _brushYEndFraction),
+              minimumLabel: box.minimumY,
+              maximumLabel: box.maximumY,
+              onChanged: (values) {
+                setState(() {
+                  _brushYStartFraction = values.start;
+                  _brushYEndFraction = values.end;
+                });
+                _scheduleBrushApply();
+              },
+            ),
+          ],
+        ),
+      );
+    }
     final range = _currentBrushRange();
     final axis = _acquisitionMode == ChartSelectionAcquisitionMode.xInterval
         ? 'X'
@@ -1249,6 +1460,47 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBrushFractionSlider({
+    required Key key,
+    required String label,
+    required RangeValues values,
+    required double minimumLabel,
+    required double maximumLabel,
+    required ValueChanged<RangeValues> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(label, style: theme.textTheme.labelMedium),
+            const Spacer(),
+            Text(
+              '${minimumLabel.toStringAsFixed(2)} – '
+              '${maximumLabel.toStringAsFixed(2)}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        RangeSlider(
+          key: key,
+          values: values,
+          min: 0,
+          max: 1,
+          divisions: 100,
+          labels: RangeLabels(
+            minimumLabel.toStringAsFixed(2),
+            maximumLabel.toStringAsFixed(2),
+          ),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 
@@ -1383,12 +1635,25 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           completeSeriesSelectionStrokeScale: _seriesSelectionStrokeScale,
           brush: ChartSelectionBrushConfig(
             enabled: _persistentBrushEnabled && _supportsPersistentBrush,
+            keyboardEnabled:
+                _persistentBrushEnabled &&
+                _supportsPersistentBrush &&
+                _brushKeyboardEnabled,
             initialVisible:
                 _persistentBrushEnabled &&
                 _supportsPersistentBrush &&
                 _persistentBrushVisible,
-            initialRange: _persistentBrushEnabled && _supportsPersistentBrush
+            initialRange:
+                _persistentBrushEnabled &&
+                    _supportsPersistentBrush &&
+                    _acquisitionMode != ChartSelectionAcquisitionMode.rectangle
                 ? _currentBrushRange()
+                : null,
+            initialBox:
+                _persistentBrushEnabled &&
+                    _supportsPersistentBrush &&
+                    _acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+                ? _currentBrushBox()
                 : null,
             style: ChartSelectionBrushStyle(
               fillColor: _brushFillColor,
@@ -1397,8 +1662,17 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
               borderWidth: _brushBorderWidth,
               borderRadius: _brushBorderRadius,
               handleFillColor: _brushHandleColor,
+              keyboardFocusBorderColor: _brushKeyboardFocusBorderColor,
               handleSize: _brushHandleSize,
               handleHitSize: 44,
+              grid: ChartSelectionBrushGridStyle(
+                direction: _brushGridDirection,
+                rows: _brushGridRows,
+                columns: _brushGridColumns,
+                color: _brushGridColor,
+                lineWidth: _brushGridLineWidth,
+                pattern: _brushGridPattern,
+              ),
             ),
           ),
         ),
@@ -1710,10 +1984,7 @@ class _SelectionStatusState extends State<_SelectionStatus> {
             if (brush != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Persistent ${brush.acquisitionMode.shortLabel} brush · '
-                '${brush.range.minimum.toStringAsFixed(2)}–'
-                '${brush.range.maximum.toStringAsFixed(2)} · '
-                '${brush.visible ? 'visible' : 'hidden'}',
+                _brushStatus(brush),
                 key: const ValueKey('selection-lab-brush-status'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -1727,6 +1998,23 @@ class _SelectionStatusState extends State<_SelectionStatus> {
   String _statusNumber(double value) => value == value.roundToDouble()
       ? value.toStringAsFixed(0)
       : value.toStringAsFixed(2);
+
+  String _brushStatus(ChartSelectionBrushState brush) {
+    final box = brush.box;
+    if (box != null) {
+      return 'Persistent Box brush · '
+          'X ${box.minimumX.toStringAsFixed(2)}–'
+          '${box.maximumX.toStringAsFixed(2)} · '
+          'Y ${box.minimumY.toStringAsFixed(2)}–'
+          '${box.maximumY.toStringAsFixed(2)} · '
+          '${brush.visible ? 'visible' : 'hidden'}';
+    }
+    final range = brush.range;
+    return 'Persistent ${brush.acquisitionMode.shortLabel} brush · '
+        '${range.minimum.toStringAsFixed(2)}–'
+        '${range.maximum.toStringAsFixed(2)} · '
+        '${brush.visible ? 'visible' : 'hidden'}';
+  }
 }
 
 enum _SelectionFamily {

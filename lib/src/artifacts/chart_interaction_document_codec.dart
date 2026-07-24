@@ -507,9 +507,12 @@ ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
 
 Map<String, Object?> _encodeSelectionBrush(ChartSelectionBrushConfig value) => {
   'enabled': value.enabled,
+  'keyboardEnabled': value.keyboardEnabled,
   'initialVisible': value.initialVisible,
   if (value.initialRange != null)
     'initialRange': _encodeSelectionBrushRange(value.initialRange!),
+  if (value.initialBox != null)
+    'initialBox': _encodeSelectionBrushBox(value.initialBox!),
   'style': _encodeSelectionBrushStyle(value.style),
 };
 
@@ -517,12 +520,19 @@ ChartSelectionBrushConfig _decodeSelectionBrush(Map<String, Object?> map) {
   final range = map['initialRange'] == null
       ? null
       : _decodeSelectionBrushRange(_requiredMap(map, 'initialRange'));
+  final box = map['initialBox'] == null
+      ? null
+      : _decodeSelectionBrushBox(_requiredMap(map, 'initialBox'));
   return ChartSelectionBrushConfig(
     enabled: map['enabled'] == null ? false : _bool(map, 'enabled'),
+    keyboardEnabled: map['keyboardEnabled'] == null
+        ? false
+        : _bool(map, 'keyboardEnabled'),
     initialVisible: map['initialVisible'] == null
         ? false
         : _bool(map, 'initialVisible'),
     initialRange: range,
+    initialBox: box,
     style: map['style'] == null
         ? const ChartSelectionBrushStyle()
         : _decodeSelectionBrushStyle(_requiredMap(map, 'style')),
@@ -547,6 +557,26 @@ Map<String, Object?> _encodeSelectionBrushRange(
     'referenceSeriesId': value.referenceSeriesId,
 };
 
+ChartSelectionBrushBox _decodeSelectionBrushBox(Map<String, Object?> map) =>
+    ChartSelectionBrushBox(
+      minimumX: _double(map, 'minimumX'),
+      maximumX: _double(map, 'maximumX'),
+      minimumY: _double(map, 'minimumY'),
+      maximumY: _double(map, 'maximumY'),
+      referenceSeriesId: map['referenceSeriesId'] == null
+          ? null
+          : _string(map, 'referenceSeriesId'),
+    );
+
+Map<String, Object?> _encodeSelectionBrushBox(ChartSelectionBrushBox value) => {
+  'minimumX': _n(value.minimumX),
+  'maximumX': _n(value.maximumX),
+  'minimumY': _n(value.minimumY),
+  'maximumY': _n(value.maximumY),
+  if (value.referenceSeriesId != null)
+    'referenceSeriesId': value.referenceSeriesId,
+};
+
 Map<String, Object?> _encodeSelectionBrushStyle(
   ChartSelectionBrushStyle value,
 ) => {
@@ -559,11 +589,25 @@ Map<String, Object?> _encodeSelectionBrushStyle(
     'handleFillColor': value.handleFillColor!.toARGB32(),
   if (value.handleBorderColor != null)
     'handleBorderColor': value.handleBorderColor!.toARGB32(),
+  if (value.keyboardFocusBorderColor != null)
+    'keyboardFocusBorderColor': value.keyboardFocusBorderColor!.toARGB32(),
   'handleBorderWidth': _n(value.handleBorderWidth),
   'handleSize': _n(value.handleSize),
   'handleHitSize': _n(value.handleHitSize),
   'hoverOpacity': _n(value.hoverOpacity),
   'activeOpacity': _n(value.activeOpacity),
+  'grid': _encodeSelectionBrushGridStyle(value.grid),
+};
+
+Map<String, Object?> _encodeSelectionBrushGridStyle(
+  ChartSelectionBrushGridStyle value,
+) => {
+  'direction': value.direction.name,
+  'rows': value.rows,
+  'columns': value.columns,
+  if (value.color != null) 'color': value.color!.toARGB32(),
+  'lineWidth': _n(value.lineWidth),
+  'pattern': value.pattern.name,
 };
 
 ChartSelectionBrushStyle _decodeSelectionBrushStyle(
@@ -580,6 +624,9 @@ ChartSelectionBrushStyle _decodeSelectionBrushStyle(
   handleBorderColor: map['handleBorderColor'] == null
       ? null
       : _color(map, 'handleBorderColor'),
+  keyboardFocusBorderColor: map['keyboardFocusBorderColor'] == null
+      ? null
+      : _color(map, 'keyboardFocusBorderColor'),
   handleBorderWidth: map['handleBorderWidth'] == null
       ? 1.5
       : _double(map, 'handleBorderWidth'),
@@ -593,6 +640,20 @@ ChartSelectionBrushStyle _decodeSelectionBrushStyle(
   activeOpacity: map['activeOpacity'] == null
       ? 0.30
       : _double(map, 'activeOpacity'),
+  grid: map['grid'] == null
+      ? const ChartSelectionBrushGridStyle()
+      : _decodeSelectionBrushGridStyle(_requiredMap(map, 'grid')),
+);
+
+ChartSelectionBrushGridStyle _decodeSelectionBrushGridStyle(
+  Map<String, Object?> map,
+) => ChartSelectionBrushGridStyle(
+  direction: _enum(map, 'direction', ChartSelectionBrushGridDirection.values),
+  rows: map['rows'] == null ? 2 : _int(map, 'rows'),
+  columns: map['columns'] == null ? 2 : _int(map, 'columns'),
+  color: map['color'] == null ? null : _color(map, 'color'),
+  lineWidth: map['lineWidth'] == null ? 1 : _double(map, 'lineWidth'),
+  pattern: _enum(map, 'pattern', ChartSelectionBrushGridPattern.values),
 );
 
 ChartSelectionAcquisitionMode _decodeSelectionAcquisitionMode(

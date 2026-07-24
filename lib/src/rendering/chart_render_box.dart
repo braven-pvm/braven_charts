@@ -56,6 +56,7 @@ import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/cartesian_value_summary_theme.dart';
 import '../theming/components/scrollbar_config.dart';
+import '../utils/dashed_path.dart';
 import 'grid_renderer.dart';
 import 'bar_label_layout.dart';
 import 'data_point_label_layout.dart';
@@ -3220,12 +3221,28 @@ class ChartRenderBox extends RenderBox {
   }
 
   Rect? _selectionBrushPlotRect(ChartSelectionBrushState state) {
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      final box = state.box;
+      if (box == null) return null;
+      final transform = _selectionBrushReferenceTransform(
+        box.referenceSeriesId,
+      );
+      if (transform == null) return null;
+      final first = transform.dataToPlot(box.minimumX, box.minimumY);
+      final second = transform.dataToPlot(box.maximumX, box.maximumY);
+      return Rect.fromLTRB(
+        math.min(first.dx, second.dx),
+        math.min(first.dy, second.dy),
+        math.max(first.dx, second.dx),
+        math.max(first.dy, second.dy),
+      );
+    }
+    final range = state.range;
     final transform =
         state.acquisitionMode == ChartSelectionAcquisitionMode.yInterval
-        ? _selectionBrushReferenceTransform(state.range.referenceSeriesId)
+        ? _selectionBrushReferenceTransform(range.referenceSeriesId)
         : _transform;
     if (transform == null) return null;
-    final range = state.range;
     final transposed = transform.transposed;
     if (state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval) {
       final first = transform.dataToPlot(range.minimum, transform.dataYMin);
@@ -3305,6 +3322,26 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  /// Converts widget-space brush geometry into two-axis data-domain bounds.
+  ChartSelectionBrushBox? selectionBrushBoxForWidgetRect(
+    Rect widgetRect, {
+    String? referenceSeriesId,
+  }) {
+    final transform = _selectionBrushReferenceTransform(referenceSeriesId);
+    if (transform == null || widgetRect.isEmpty) return null;
+    final firstPlot = widgetToPlot(widgetRect.topLeft);
+    final secondPlot = widgetToPlot(widgetRect.bottomRight);
+    final first = transform.plotToData(firstPlot.dx, firstPlot.dy);
+    final second = transform.plotToData(secondPlot.dx, secondPlot.dy);
+    return ChartSelectionBrushBox(
+      minimumX: math.min(first.dx, second.dx),
+      maximumX: math.max(first.dx, second.dx),
+      minimumY: math.min(first.dy, second.dy),
+      maximumY: math.max(first.dy, second.dy),
+      referenceSeriesId: referenceSeriesId,
+    );
+  }
+
   /// Resolves one brush rectangle through the ordinary selection gesture seam.
   ChartSelectionGestureResult? selectionGestureForWidgetRect(
     Rect widgetRect, {
@@ -3349,8 +3386,12 @@ class ChartRenderBox extends RenderBox {
         !state.visible ||
         selection == null ||
         !selection.brush.enabled ||
+        !selection.brush.keyboardEnabled ||
         transform == null) {
       return false;
+    }
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      return _handleSelectionBrushBoxKeyEvent(event, state);
     }
 
     final key = event.logicalKey;
@@ -3447,9 +3488,10 @@ class ChartRenderBox extends RenderBox {
   ) {
     final limits = _selectionBrushDomainLimits(state);
     if (limits == null) return null;
-    final width = state.range.maximum - state.range.minimum;
-    var minimum = state.range.minimum + delta;
-    var maximum = state.range.maximum + delta;
+    final range = state.range;
+    final width = range.maximum - range.minimum;
+    var minimum = range.minimum + delta;
+    var maximum = range.maximum + delta;
     if (minimum < limits.minimum) {
       minimum = limits.minimum;
       maximum = minimum + width;
@@ -3461,7 +3503,7 @@ class ChartRenderBox extends RenderBox {
     return ChartSelectionBrushRange(
       minimum: minimum,
       maximum: maximum,
-      referenceSeriesId: state.range.referenceSeriesId,
+      referenceSeriesId: range.referenceSeriesId,
     );
   }
 
@@ -3470,38 +3512,40 @@ class ChartRenderBox extends RenderBox {
     double delta, {
     required bool upperBound,
   }) {
+    final range = state.range;
     final limits = _selectionBrushDomainLimits(state);
     if (limits == null) return null;
     final domainSpan = limits.maximum - limits.minimum;
     final minimumSpan = math.max(domainSpan / 1000, 1e-9);
     if (!upperBound) {
-      final minimum = (state.range.minimum + delta).clamp(
+      final minimum = (range.minimum + delta).clamp(
         limits.minimum,
-        state.range.maximum - minimumSpan,
+        range.maximum - minimumSpan,
       );
       return ChartSelectionBrushRange(
         minimum: minimum,
-        maximum: state.range.maximum,
-        referenceSeriesId: state.range.referenceSeriesId,
+        maximum: range.maximum,
+        referenceSeriesId: range.referenceSeriesId,
       );
     }
-    final maximum = (state.range.maximum + delta).clamp(
-      state.range.minimum + minimumSpan,
+    final maximum = (range.maximum + delta).clamp(
+      range.minimum + minimumSpan,
       limits.maximum,
     );
     return ChartSelectionBrushRange(
-      minimum: state.range.minimum,
+      minimum: range.minimum,
       maximum: maximum,
-      referenceSeriesId: state.range.referenceSeriesId,
+      referenceSeriesId: range.referenceSeriesId,
     );
   }
 
   ({double minimum, double maximum})? _selectionBrushDomainLimits(
     ChartSelectionBrushState state,
   ) {
+    final range = state.range;
     final transform =
         state.acquisitionMode == ChartSelectionAcquisitionMode.yInterval
-        ? _selectionBrushReferenceTransform(state.range.referenceSeriesId)
+        ? _selectionBrushReferenceTransform(range.referenceSeriesId)
         : _transform;
     if (transform == null) return null;
     return state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
@@ -3513,6 +3557,56 @@ class ChartRenderBox extends RenderBox {
             minimum: math.min(transform.dataYMin, transform.dataYMax),
             maximum: math.max(transform.dataYMin, transform.dataYMax),
           );
+  }
+
+  bool _handleSelectionBrushBoxKeyEvent(
+    KeyEvent event,
+    ChartSelectionBrushState state,
+  ) {
+    final key = event.logicalKey;
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+    if (!isArrow) return false;
+    if (event is KeyUpEvent) return true;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return false;
+    final rect = _selectionBrushWidgetRectForState(state, clipToPlot: false);
+    if (rect == null) return false;
+    final dx = key == LogicalKeyboardKey.arrowLeft
+        ? -_selectionBrushKeyboardStep
+        : key == LogicalKeyboardKey.arrowRight
+        ? _selectionBrushKeyboardStep
+        : 0.0;
+    final dy = key == LogicalKeyboardKey.arrowUp
+        ? -_selectionBrushKeyboardStep
+        : key == LogicalKeyboardKey.arrowDown
+        ? _selectionBrushKeyboardStep
+        : 0.0;
+    final plot = _plotArea;
+    final shifted = rect.shift(Offset(dx, dy));
+    final clamped = shifted.shift(
+      Offset(
+        shifted.left < plot.left
+            ? plot.left - shifted.left
+            : shifted.right > plot.right
+            ? plot.right - shifted.right
+            : 0,
+        shifted.top < plot.top
+            ? plot.top - shifted.top
+            : shifted.bottom > plot.bottom
+            ? plot.bottom - shifted.bottom
+            : 0,
+      ),
+    );
+    final box = selectionBrushBoxForWidgetRect(
+      clamped,
+      referenceSeriesId: state.box?.referenceSeriesId,
+    );
+    if (box == null || box == state.box) return true;
+    _commitSelectionBrushBox(state, box);
+    return true;
   }
 
   void _commitSelectionBrushRange(
@@ -3530,6 +3624,30 @@ class ChartRenderBox extends RenderBox {
     if (gesture != null) onSelectionGestureComplete?.call(gesture);
   }
 
+  void _commitSelectionBrushBox(
+    ChartSelectionBrushState state,
+    ChartSelectionBrushBox box,
+  ) {
+    final next = ChartSelectionBrushState(
+      acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+      range: ChartSelectionBrushRange(
+        minimum: box.minimumX,
+        maximum: box.maximumX,
+        referenceSeriesId: box.referenceSeriesId,
+      ),
+      box: box,
+      visible: true,
+    );
+    final rect = _selectionBrushWidgetRectForState(next);
+    if (rect == null) return;
+    final gesture = selectionGestureForWidgetRect(
+      rect,
+      isPersistentBrushUpdate: true,
+      isFinal: true,
+    );
+    if (gesture != null) onSelectionGestureComplete?.call(gesture);
+  }
+
   void _performSelectionBrushSemanticAdjustment({
     double moveSteps = 0,
     double lowerSteps = 0,
@@ -3537,6 +3655,9 @@ class ChartRenderBox extends RenderBox {
   }) {
     final state = _selectionBrushState;
     if (state == null) return;
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      return;
+    }
     final limits = _selectionBrushDomainLimits(state);
     if (limits == null) return;
     final step = (limits.maximum - limits.minimum) / 100;
@@ -3544,18 +3665,19 @@ class ChartRenderBox extends RenderBox {
     if (moveSteps != 0) {
       next = _moveSelectionBrushRange(state, step * moveSteps);
     } else {
-      final minimum = (state.range.minimum + step * lowerSteps).clamp(
+      final range = state.range;
+      final minimum = (range.minimum + step * lowerSteps).clamp(
         limits.minimum,
-        state.range.maximum,
+        range.maximum,
       );
-      final maximum = (state.range.maximum + step * upperSteps).clamp(
+      final maximum = (range.maximum + step * upperSteps).clamp(
         minimum,
         limits.maximum,
       );
       next = ChartSelectionBrushRange(
         minimum: minimum,
         maximum: maximum,
-        referenceSeriesId: state.range.referenceSeriesId,
+        referenceSeriesId: range.referenceSeriesId,
       );
     }
     if (next != null && next != state.range) {
@@ -4800,6 +4922,8 @@ class ChartRenderBox extends RenderBox {
         : style.fillOpacity;
     final fillColor = style.fillColor ?? selectionColor;
     final borderColor = style.borderColor ?? selectionColor;
+    final keyboardFocusBorderColor =
+        style.keyboardFocusBorderColor ?? borderColor;
     final rrect = RRect.fromRectAndRadius(
       rect,
       Radius.circular(style.borderRadius),
@@ -4810,6 +4934,7 @@ class ChartRenderBox extends RenderBox {
         ..color = fillColor.withValues(alpha: opacity)
         ..style = PaintingStyle.fill,
     );
+    _paintPersistentSelectionBrushGrid(canvas, rrect, style.grid, borderColor);
     if (style.borderWidth > 0) {
       canvas.drawRRect(
         rrect,
@@ -4824,12 +4949,60 @@ class ChartRenderBox extends RenderBox {
       canvas.drawRRect(
         rrect.inflate(3),
         Paint()
-          ..color = borderColor.withValues(alpha: 0.72)
+          ..color = keyboardFocusBorderColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );
     }
     _paintPersistentSelectionBrushHandles(canvas, rect, state, selectionColor);
+  }
+
+  void _paintPersistentSelectionBrushGrid(
+    Canvas canvas,
+    RRect bounds,
+    ChartSelectionBrushGridStyle grid,
+    Color fallbackColor,
+  ) {
+    if (grid.direction == ChartSelectionBrushGridDirection.none ||
+        grid.lineWidth <= 0) {
+      return;
+    }
+    final rect = bounds.outerRect;
+    final path = Path();
+    if (grid.showsHorizontal && grid.rows > 1) {
+      for (var row = 1; row < grid.rows; row++) {
+        final y = rect.top + rect.height * row / grid.rows;
+        path.moveTo(rect.left, y);
+        path.lineTo(rect.right, y);
+      }
+    }
+    if (grid.showsVertical && grid.columns > 1) {
+      for (var column = 1; column < grid.columns; column++) {
+        final x = rect.left + rect.width * column / grid.columns;
+        path.moveTo(x, rect.top);
+        path.lineTo(x, rect.bottom);
+      }
+    }
+    if (path.computeMetrics().isEmpty) return;
+    final pattern = switch (grid.pattern) {
+      ChartSelectionBrushGridPattern.solid => const <double>[],
+      ChartSelectionBrushGridPattern.dashed => const <double>[6, 4],
+      ChartSelectionBrushGridPattern.dotted => const <double>[1, 4],
+    };
+    final paint = Paint()
+      ..color = grid.color ?? fallbackColor.withValues(alpha: 0.62)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = grid.lineWidth
+      ..strokeCap = grid.pattern == ChartSelectionBrushGridPattern.dotted
+          ? StrokeCap.round
+          : StrokeCap.butt;
+    canvas.save();
+    canvas.clipRRect(bounds);
+    canvas.drawPath(
+      pattern.isEmpty ? path : createDashedPath(path, pattern),
+      paint,
+    );
+    canvas.restore();
   }
 
   void _paintPersistentSelectionBrushHandles(
@@ -4839,17 +5012,32 @@ class ChartRenderBox extends RenderBox {
     Color selectionColor,
   ) {
     final style = _interactionConfig!.selection.brush.style;
+    final isBox =
+        state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle;
     final transposed = _transform?.transposed ?? false;
     final usesScreenX =
         state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
         ? !transposed
         : transposed;
-    final centers = usesScreenX
+    final centers = isBox
+        ? <Offset>[
+            rect.topLeft,
+            rect.topCenter,
+            rect.topRight,
+            rect.centerRight,
+            rect.bottomRight,
+            rect.bottomCenter,
+            rect.bottomLeft,
+            rect.centerLeft,
+          ]
+        : usesScreenX
         ? <Offset>[rect.centerLeft, rect.centerRight]
         : <Offset>[rect.topCenter, rect.bottomCenter];
     final shortSide = style.handleSize;
     final longSide = math.max(style.handleSize, style.handleSize * 1.8);
     final fill = style.handleFillColor ?? selectionColor;
+    final keyboardFocusBorderColor =
+        style.keyboardFocusBorderColor ?? style.borderColor ?? selectionColor;
     final outline =
         style.handleBorderColor ??
         _theme?.backgroundColor ??
@@ -4857,8 +5045,8 @@ class ChartRenderBox extends RenderBox {
     for (final (index, center) in centers.indexed) {
       final handleRect = Rect.fromCenter(
         center: center,
-        width: usesScreenX ? shortSide : longSide,
-        height: usesScreenX ? longSide : shortSide,
+        width: isBox ? shortSide : (usesScreenX ? shortSide : longSide),
+        height: isBox ? shortSide : (usesScreenX ? longSide : shortSide),
       );
       final handle = RRect.fromRectAndRadius(
         handleRect,
@@ -4872,7 +5060,7 @@ class ChartRenderBox extends RenderBox {
         canvas.drawRRect(
           handle.inflate(4),
           Paint()
-            ..color = fill.withValues(alpha: 0.72)
+            ..color = keyboardFocusBorderColor
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2,
         );
@@ -4900,18 +5088,21 @@ class ChartRenderBox extends RenderBox {
     List<Offset> centers,
   ) {
     final target = _selectionBrushKeyboardTarget;
-    if (target == _SelectionBrushKeyboardTarget.body || centers.length != 2) {
+    if (state.acquisitionMode == ChartSelectionAcquisitionMode.rectangle ||
+        target == _SelectionBrushKeyboardTarget.body ||
+        centers.length != 2) {
       return null;
     }
+    final range = state.range;
     final transform =
         state.acquisitionMode == ChartSelectionAcquisitionMode.yInterval
-        ? _selectionBrushReferenceTransform(state.range.referenceSeriesId)
+        ? _selectionBrushReferenceTransform(range.referenceSeriesId)
         : _transform;
     if (transform == null) return null;
     final minimumPlot =
         state.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
-        ? transform.dataToPlot(state.range.minimum, transform.dataYMin)
-        : transform.dataToPlot(transform.dataXMin, state.range.minimum);
+        ? transform.dataToPlot(range.minimum, transform.dataYMin)
+        : transform.dataToPlot(transform.dataXMin, range.minimum);
     final minimumWidget = plotToWidget(minimumPlot);
     final minimumIndex =
         (minimumWidget - centers.first).distanceSquared <=
@@ -5090,34 +5281,45 @@ class ChartRenderBox extends RenderBox {
     final brushState = _selectionBrushState;
     if (selectionBrush != null && brushState != null) {
       const identity = 'selection-brush';
-      final dimension =
-          brushState.acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+      final isBox =
+          brushState.acquisitionMode == ChartSelectionAcquisitionMode.rectangle;
+      final dimension = isBox
+          ? 'Box'
+          : brushState.acquisitionMode ==
+                ChartSelectionAcquisitionMode.xInterval
           ? 'X'
           : 'Y';
+      final semanticValue = isBox
+          ? 'X ${brushState.box!.minimumX.toStringAsFixed(2)} to '
+                '${brushState.box!.maximumX.toStringAsFixed(2)}, '
+                'Y ${brushState.box!.minimumY.toStringAsFixed(2)} to '
+                '${brushState.box!.maximumY.toStringAsFixed(2)}'
+          : '${brushState.range.minimum.toStringAsFixed(2)} to '
+                '${brushState.range.maximum.toStringAsFixed(2)}';
       final semanticConfig = SemanticsConfiguration()
         ..sortKey = const OrdinalSortKey(0)
         ..textDirection = _textDirection
         ..identifier = identity
         ..label = '$dimension range selection'
-        ..value =
-            '${brushState.range.minimum.toStringAsFixed(2)} to '
-            '${brushState.range.maximum.toStringAsFixed(2)}'
+        ..value = semanticValue
         ..isFocusable = true
         ..isFocused = _selectionBrushKeyboardFocused
-        ..customSemanticsActions = {
-          _selectionBrushMoveLowerAction: () =>
-              _performSelectionBrushSemanticAdjustment(moveSteps: -1),
-          _selectionBrushMoveHigherAction: () =>
-              _performSelectionBrushSemanticAdjustment(moveSteps: 1),
-          _selectionBrushLowerBoundLowerAction: () =>
-              _performSelectionBrushSemanticAdjustment(lowerSteps: -1),
-          _selectionBrushLowerBoundHigherAction: () =>
-              _performSelectionBrushSemanticAdjustment(lowerSteps: 1),
-          _selectionBrushUpperBoundLowerAction: () =>
-              _performSelectionBrushSemanticAdjustment(upperSteps: -1),
-          _selectionBrushUpperBoundHigherAction: () =>
-              _performSelectionBrushSemanticAdjustment(upperSteps: 1),
-        };
+        ..customSemanticsActions = isBox
+            ? const {}
+            : {
+                _selectionBrushMoveLowerAction: () =>
+                    _performSelectionBrushSemanticAdjustment(moveSteps: -1),
+                _selectionBrushMoveHigherAction: () =>
+                    _performSelectionBrushSemanticAdjustment(moveSteps: 1),
+                _selectionBrushLowerBoundLowerAction: () =>
+                    _performSelectionBrushSemanticAdjustment(lowerSteps: -1),
+                _selectionBrushLowerBoundHigherAction: () =>
+                    _performSelectionBrushSemanticAdjustment(lowerSteps: 1),
+                _selectionBrushUpperBoundLowerAction: () =>
+                    _performSelectionBrushSemanticAdjustment(upperSteps: -1),
+                _selectionBrushUpperBoundHigherAction: () =>
+                    _performSelectionBrushSemanticAdjustment(upperSteps: 1),
+              };
       final semanticNode =
           _dataSemanticsNodes[identity] ??
           SemanticsNode(key: const ValueKey(identity));

@@ -115,6 +115,7 @@ class ChartDataTable extends StatefulWidget {
     this.model,
     this.controller,
     this.isLoading = false,
+    this.isRefreshing = false,
     this.errorMessage,
     this.onRowFocused,
     this.onRowFocusCleared,
@@ -151,6 +152,13 @@ class ChartDataTable extends StatefulWidget {
   final ChartTableModel? model;
   final ChartTableController? controller;
   final bool isLoading;
+
+  /// Whether an already-usable [model] is being refreshed in the background.
+  ///
+  /// This uses the summary row's permanently reserved status slot, so rapid
+  /// updates never move the table header or rows.
+  final bool isRefreshing;
+
   final String? errorMessage;
 
   /// Called with every point represented by a row when it gains keyboard focus.
@@ -620,6 +628,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
             children: [
               _TableSummary(
                 model: model,
+                isRefreshing: widget.isRefreshing,
                 selectedPointCount: widget.selectedPointRefs.length,
                 onClearSelection: widget.selectedPointRefs.isEmpty
                     ? null
@@ -1940,6 +1949,7 @@ class _TableSummary extends StatelessWidget {
   const _TableSummary({
     required this.model,
     required this.theme,
+    this.isRefreshing = false,
     this.selectedPointCount = 0,
     this.onClearSelection,
     this.onCopyDataset,
@@ -1948,6 +1958,7 @@ class _TableSummary extends StatelessWidget {
 
   final ChartTableModel model;
   final _ResolvedTableTheme theme;
+  final bool isRefreshing;
   final int selectedPointCount;
   final VoidCallback? onClearSelection;
   final VoidCallback? onCopyDataset;
@@ -2015,6 +2026,26 @@ class _TableSummary extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.summaryTextStyle,
                 ),
+              ),
+            ),
+            SizedBox(
+              key: const ValueKey('chart-data-table-refresh-slot'),
+              width: 32,
+              height: 32,
+              child: Center(
+                child: isRefreshing
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(
+                          key: ValueKey('chart-data-table-refresh-indicator'),
+                          strokeWidth: 2,
+                          semanticsLabel: 'Refreshing chart data',
+                        ),
+                      )
+                    : const SizedBox.square(
+                        key: ValueKey('chart-data-table-refresh-placeholder'),
+                        dimension: 16,
+                      ),
               ),
             ),
             if (collapseActions)

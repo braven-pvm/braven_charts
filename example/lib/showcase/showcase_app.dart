@@ -159,6 +159,7 @@ class ShowcaseHome extends StatefulWidget {
 
 class _ShowcaseHomeState extends State<ShowcaseHome> {
   late int _selectedIndex;
+  late final bool _hasRecognizedExplicitPageRequest;
   late final List<NavDestination> _destinations;
   late final ChartWorkbenchGroupController _workbenchGroupController;
 
@@ -356,6 +357,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     final requestedIndex = _destinations.indexWhere(
       (destination) => destination.matchesSlug(requestedPage),
     );
+    _hasRecognizedExplicitPageRequest = requestedIndex >= 0;
     _selectedIndex = requestedIndex < 0 ? 0 : requestedIndex;
   }
 
@@ -452,13 +454,14 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       if (selectedSlug == 'mobile-interaction') {
         return _destinations[_selectedIndex].page;
       }
+      final isChartTypeRoute = showcaseChartTypes.any(
+        (chartType) => chartType.slug == selectedSlug,
+      );
+      if (_hasRecognizedExplicitPageRequest && !isChartTypeRoute) {
+        return selectedDestination.page;
+      }
       return MobileShowcasePage(
-        initialChartSlug:
-            showcaseChartTypes.any(
-              (chartType) => chartType.slug == selectedSlug,
-            )
-            ? selectedSlug
-            : null,
+        initialChartSlug: isChartTypeRoute ? selectedSlug : null,
         onChartTypeSelected: _selectSlug,
       );
     } else if (width < 900) {

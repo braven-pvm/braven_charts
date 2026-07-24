@@ -1,12 +1,12 @@
 # Persistent Cartesian Selection Brush
 
-**Status:** Implemented and automated/release verified — physical mobile review pending
+**Status:** Implemented, product reviewed, and physical mobile interaction reviewed
 **Lane:** `feature/persistent-selection-brush`
-**Scope:** Cartesian X/Y interval selection only
+**Scope:** Cartesian X/Y interval and rectangle selection
 
 ## Product intent
 
-Turn the existing transient X/Y interval acquisition rectangle into an
+Turn the existing transient X/Y interval and rectangle acquisition geometry into an
 optional, durable selection control. When enabled, the brush remains visible
 after pointer-up, can be moved or resized, and continues to drive the same
 semantic selection state and public selection callbacks as a fresh interval
@@ -30,23 +30,28 @@ Add a nested `ChartSelectionBrushConfig` to `ChartSelectionConfig`.
 
 The brush config owns:
 
-- `enabled`: retain and activate an interval brush after selection;
+- `enabled`: retain and activate an interval or box brush after selection;
+- `keyboardEnabled`: opt in to brush focus, movement, and bound resizing;
 - `initialVisible`: show the configured interval on first mounted render;
-- `initialMinimum` / `initialMaximum`: initial data-domain bounds;
-- `referenceSeriesId`: optional Y-axis reference series for multi-axis charts;
+- `initialRange`: optional ordered data-domain bounds and Y-axis reference
+  series for interval modes;
+- `initialBox`: ordered X/Y bounds for rectangle mode;
 - visual style through `ChartSelectionBrushStyle`.
 
-The initial bounds are valid only as a pair. They must be finite and ordered by
-the implementation. `initialVisible` without a complete valid range is a
-configuration error in debug builds and remains hidden in release builds.
+Initial range and box models require finite, ordered bounds. If
+`initialVisible` is true but the active acquisition mode has no corresponding
+initial geometry, the brush remains hidden; this keeps one reusable
+configuration safe while applications switch selection tools dynamically.
 
 The active acquisition mode determines the dimension:
 
 - `xInterval`: minimum/maximum are X-domain values;
 - `yInterval`: minimum/maximum are values on `referenceSeriesId`, or the first
   visible Cartesian series when no reference is supplied.
+- `rectangle`: `initialBox` supplies independent X and Y bounds; its optional
+  reference series chooses the Y transform on multi-axis charts.
 
-Other acquisition modes do not create or activate a persistent brush.
+Point and lasso acquisition do not create or activate a persistent brush.
 
 ### Style
 
@@ -54,8 +59,11 @@ Other acquisition modes do not create or activate a persistent brush.
 
 - fill colour and opacity;
 - border colour, width, and radius;
+- optional keyboard-focus border colour;
 - handle fill, border colour, border width, size, and hit-target size;
 - hover and active opacity/scale treatments.
+- optional visual grid direction, row/column cell counts, colour, weight, and
+  solid/dashed/dotted pattern.
 
 Null colours inherit the chart interaction selection colour and chart
 background. Visible handles remain compact while their pointer hit target is at
@@ -66,7 +74,7 @@ remain distinguishable without relying on colour alone.
 
 Expose an immutable `ChartSelectionBrushState` containing:
 
-- acquisition mode (`xInterval` or `yInterval`);
+- acquisition mode (`xInterval`, `yInterval`, or `rectangle`);
 - ordered data-domain minimum/maximum;
 - reference series ID when applicable;
 - visibility.
@@ -74,6 +82,7 @@ Expose an immutable `ChartSelectionBrushState` containing:
 `BravenChartController` mirrors the current brush state and provides:
 
 - `setSelectionBrush(...)` to set data bounds and visibility;
+- `setSelectionBrushBox(...)` to set X/Y bounds and visibility;
 - `showSelectionBrush()`;
 - `hideSelectionBrush()` (selection remains);
 - `clearSelectionBrush()` (brush and semantic selection clear together).
@@ -104,6 +113,7 @@ domain without changing its span.
 
 - X interval: left and right edge handles resize.
 - Y interval: top and bottom edge handles resize.
+- Rectangle: four edge and four corner handles resize either or both axes.
 
 Crossing handles is not allowed. A minimum visual span keeps the handles
 operable. Values remain continuous; they do not snap to source observations.
@@ -149,6 +159,15 @@ If the reference series is removed or hidden, the brush becomes unavailable
 without mutating the existing semantic selection. The controller reports the
 state and the next valid programmatic update can restore it.
 
+For a rectangle brush, resolved point identities remain the durable semantic
+selection while the box is stationary. The current selection-expression model
+combines clauses as a union and cannot faithfully encode the required
+`X interval AND Y interval` conjunction; synthesizing two clauses would
+reselect points outside the box. Moving or resizing the brush performs a fresh
+two-axis hit test and atomically replaces those identities. A future native
+two-axis expression clause can remove this representation boundary without
+changing the public brush contract.
+
 ## Persistence
 
 `ChartViewState` records brush mode, bounds, reference series, and visibility.
@@ -165,7 +184,8 @@ position and visibility belong to view state.
 - no element regeneration or spatial-index rebuild;
 - no series-cache invalidation;
 - one range hit-resolution/callback publication per rendered frame at most;
-- idle persistent brush adds only simple fill, stroke, and two handles;
+- idle persistent brush adds a fill, stroke, optional clipped grid, and two or
+  eight compact handles;
 - target: under 1 ms median brush hit/paint work on the existing 5,000-point
   selection benchmark.
 
@@ -260,7 +280,7 @@ API before semantics copy is frozen.
 
 ### Slice 8 — Public adoption and release readiness
 
-**Complete, with the physical-device review checkpoint intentionally pending.**
+**Complete.**
 
 - document the opt-in configuration, initial state, styling, runtime state,
   and controller lifecycle in the public API guide;
@@ -271,7 +291,28 @@ API before semantics copy is frozen.
 - validate the public documentation catalog, generated API reference, and
   publish archive;
 - retain physical phone/tablet interaction review as an explicit release
-  checkpoint rather than treating browser pointer emulation as equivalent.
+  checkpoint rather than treating browser pointer emulation as equivalent;
+- physical mobile pointer interaction was subsequently reviewed and accepted
+  after direct-route access and touch ownership fixes.
+
+### Slice 9 — Rectangle persistence and visual subdivisions
+
+**Complete and product reviewed.**
+
+- persist completed rectangle acquisition as two-axis data-domain state;
+- expose programmatic initial bounds and `setSelectionBrushBox(...)`;
+- move the complete box and resize it from four edges or four corners;
+- continue publishing the ordinary selection callbacks during live changes;
+- add optional horizontal, vertical, or combined visual grid subdivisions;
+- configure grid cell counts, colour, weight, and solid/dashed/dotted pattern;
+- preserve grid and box state through artifacts, hydration, generated Dart
+  source, fluent surfaces, and AI schema;
+- expose all controls in the Selection Lab without changing default visuals.
+- keep box selections exact after move and resize by retaining the resolved
+  point identities rather than approximating an X/Y conjunction as additive
+  expression clauses;
+- keep Workbench data-table geometry stable during selection-driven refresh by
+  using a fixed toolbar spinner slot instead of inserting a progress row.
 
 ## Physical mobile review checkpoint
 
@@ -316,8 +357,32 @@ Slice 8 verification on 2026-07-23:
 - `dart pub publish --dry-run --ignore-warnings`: archive validation passed at
   14 MB; the ordinary dry run reports only the expected dirty-worktree warning
   while this uncommitted review lane remains open;
-- physical phone/tablet validation remains pending by product direction and is
-  not represented as complete by the automated touch suites.
+- physical phone/tablet validation was completed in the subsequent product
+  review; direct mobile routing, brush manipulation, and touch ownership were
+  accepted.
+
+Post-review hardening on 2026-07-24:
+
+- `flutter analyze lib`: no issues;
+- root `flutter test`: 3,664 tests passed, 6 generated-smoke
+  construction skips;
+- showcase `flutter analyze`: no issues;
+- showcase `flutter test`: 414 tests passed;
+- showcase release web build passed, including the Wasm dry run;
+- 5,000-point brush benchmark: 0.373 ms median and 0.525 ms p95;
+- rectangle move and corner resize keep controller selection and exported
+  selection snapshots equal to the final two-axis hit test;
+- box persistence survives unrelated style/grid changes and Workbench
+  selection tables rebase automatically to the current chart revision;
+- background table refresh keeps first-row geometry fixed while a reserved
+  toolbar spinner appears and disappears;
+- initial interval and rectangle geometry now share an independent visibility
+  flag in generated schema/fluent surfaces while preserving the existing
+  `withInitialState(range, visible)` convenience API;
+- public documentation generation/check and the pub.dev dry run passed;
+- `dart doc --validate-links` remains blocked before package diagnostics by
+  the Flutter-bundled dartdoc 9.0.4
+  `DocumentationComment._stripDocImports` `RangeError`.
 
 ## Review checkpoint
 
