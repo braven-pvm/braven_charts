@@ -66,6 +66,62 @@ void main() {
       });
     });
 
+    test('round-trips the crosshair guide band appearance', () {
+      final theme = ChartTheme.light.copyWith(
+        interactionTheme: ChartTheme.light.interactionTheme.copyWith(
+          crosshairColor: const Color(0xFF475569),
+          crosshairWidth: 1.5,
+          crosshairDashPattern: const [6, 4],
+          crosshairBandColor: const Color(0x262563EB),
+          crosshairBandWidth: 28,
+        ),
+      );
+
+      final decoded = _success(
+        ChartThemeDocumentCodec.decode(
+          _success(ChartThemeDocumentCodec.encode(theme)),
+        ),
+      );
+
+      expect(decoded.interactionTheme, theme.interactionTheme);
+    });
+
+    test('defaults older themes to no crosshair guide band', () {
+      final encoded = _success(
+        ChartThemeDocumentCodec.encode(
+          ChartTheme.light.copyWith(
+            interactionTheme: ChartTheme.light.interactionTheme.copyWith(
+              crosshairBandColor: const Color(0x262563EB),
+              crosshairBandWidth: 28,
+            ),
+          ),
+        ),
+      );
+      final resolved = Map<String, Object?>.from(
+        encoded.resolved.toJson() as Map<String, Object?>,
+      );
+      final interactionTheme =
+          Map<String, Object?>.from(
+              resolved['interactionTheme']! as Map<String, Object?>,
+            )
+            ..remove('crosshairBandColor')
+            ..remove('crosshairBandWidth');
+      resolved['interactionTheme'] = interactionTheme;
+
+      final decoded = _success(
+        ChartThemeDocumentCodec.decode(
+          ChartThemeDocument(
+            captureMode: encoded.captureMode,
+            reference: encoded.reference,
+            resolved: JsonValue.fromJson(resolved) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.interactionTheme.crosshairBandColor, Colors.transparent);
+      expect(decoded.interactionTheme.crosshairBandWidth, 0);
+    });
+
     test('round-trips advanced Pie theme styling', () {
       final theme = ChartTheme.dark.copyWith(
         pieChartTheme: const PieChartTheme(

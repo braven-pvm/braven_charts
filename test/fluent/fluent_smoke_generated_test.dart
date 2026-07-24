@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1577 verbs total; 9 of them have an argument type with no
+// 1582 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -3112,7 +3112,7 @@ void _smokeGridConfig(_Verb verb, GridConfig subject) {
   );
 }
 
-/// Smoke coverage for [CrosshairStyle]'s 8 executable verb(s).
+/// Smoke coverage for [CrosshairStyle]'s 10 executable verb(s).
 void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
   verb(
     'CrosshairStyleFluent.withLineColor',
@@ -3132,6 +3132,11 @@ void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
     () => subject.withStrokeCap(StrokeCap.round),
   );
   verb(
+    'CrosshairStyleFluent.withBandColor',
+    () => subject.withBandColor(const Color(0x00000000)),
+  );
+  verb('CrosshairStyleFluent.withBandWidth', () => subject.withBandWidth(0.0));
+  verb(
     'CrosshairStyleFluent.withLabelBackgroundColor',
     () => subject.withLabelBackgroundColor(const Color(0xFF333333)),
   );
@@ -3145,7 +3150,7 @@ void _smokeCrosshairStyle(_Verb verb, CrosshairStyle subject) {
   );
 }
 
-/// Smoke coverage for [CrosshairConfig]'s 15 executable verb(s).
+/// Smoke coverage for [CrosshairConfig]'s 16 executable verb(s).
 void _smokeCrosshairConfig(_Verb verb, CrosshairConfig subject) {
   verb('CrosshairConfigFluent.withEnabled', () => subject.withEnabled(true));
   verb(
@@ -3203,6 +3208,10 @@ void _smokeCrosshairConfig(_Verb verb, CrosshairConfig subject) {
   verb(
     'CrosshairConfigFluent.withIntersectionMarkerRadius',
     () => subject.withIntersectionMarkerRadius(4.0),
+  );
+  verb(
+    'CrosshairConfigFluent.withPersistOnPointerExit',
+    () => subject.withPersistOnPointerExit(false),
   );
 }
 
@@ -6225,7 +6234,7 @@ void _smokeGridStyle(_Verb verb, GridStyle subject) {
   verb('GridStyleFluent.clearMinorWidth', () => subject.clearMinorWidth());
 }
 
-/// Smoke coverage for [InteractionTheme]'s 8 executable verb(s).
+/// Smoke coverage for [InteractionTheme]'s 10 executable verb(s).
 void _smokeInteractionTheme(_Verb verb, InteractionTheme subject) {
   verb(
     'InteractionThemeFluent.withCrosshairColor',
@@ -6238,6 +6247,14 @@ void _smokeInteractionTheme(_Verb verb, InteractionTheme subject) {
   verb(
     'InteractionThemeFluent.withCrosshairDashPattern',
     () => subject.withCrosshairDashPattern(const <double>[]),
+  );
+  verb(
+    'InteractionThemeFluent.withCrosshairBandColor',
+    () => subject.withCrosshairBandColor(const Color(0x00000000)),
+  );
+  verb(
+    'InteractionThemeFluent.withCrosshairBandWidth',
+    () => subject.withCrosshairBandWidth(0),
   );
   verb(
     'InteractionThemeFluent.withCrosshairLabelStyle',

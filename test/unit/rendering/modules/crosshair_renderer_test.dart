@@ -395,6 +395,87 @@ void main() {
     });
 
     group('Paint Method', () {
+      test('paints an opt-in guide band behind the center line', () async {
+        const cursor = Offset(200, 150);
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        renderer.paint(
+          canvas: canvas,
+          size: const Size(500, 400),
+          cursorPosition: cursor,
+          plotArea: plotArea,
+          transform: transform,
+          theme: ChartTheme.light,
+          crosshairConfig: const CrosshairConfig(
+            mode: CrosshairMode.vertical,
+            displayMode: CrosshairDisplayMode.standard,
+            showCoordinateLabels: false,
+            style: CrosshairStyle(
+              lineColor: Color(0x00000000),
+              dashPattern: [],
+              bandColor: Color(0x80FF0000),
+              bandWidth: 20,
+            ),
+          ),
+          multiAxisInfo: multiAxisInfo,
+          seriesElements: const [],
+          isRangeCreationMode: false,
+        );
+
+        final image = await recorder.endRecording().toImage(500, 400);
+        final pixels = await image.toByteData(format: ImageByteFormat.rawRgba);
+        addTearDown(image.dispose);
+
+        int alphaAt(int x, int y) => pixels!.getUint8((y * 500 + x) * 4 + 3);
+
+        expect(alphaAt(205, 150), greaterThan(0));
+        expect(alphaAt(215, 150), 0);
+        expect(
+          alphaAt(205, plotArea.top.round() - 2),
+          0,
+          reason: 'the guide band must remain clipped to the plot',
+        );
+      });
+
+      test('honors the configured center-line dash pattern', () async {
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        renderer.paint(
+          canvas: canvas,
+          size: const Size(500, 400),
+          cursorPosition: const Offset(200, 150),
+          plotArea: plotArea,
+          transform: transform,
+          theme: ChartTheme.light,
+          crosshairConfig: const CrosshairConfig(
+            mode: CrosshairMode.vertical,
+            displayMode: CrosshairDisplayMode.standard,
+            showCoordinateLabels: false,
+            style: CrosshairStyle(
+              lineColor: Color(0xFF0066FF),
+              lineWidth: 2,
+              dashPattern: [4, 4],
+              strokeCap: StrokeCap.butt,
+            ),
+          ),
+          multiAxisInfo: multiAxisInfo,
+          seriesElements: const [],
+          isRangeCreationMode: false,
+        );
+
+        final image = await recorder.endRecording().toImage(500, 400);
+        final pixels = await image.toByteData(format: ImageByteFormat.rawRgba);
+        addTearDown(image.dispose);
+
+        int alphaAt(int x, int y) => pixels!.getUint8((y * 500 + x) * 4 + 3);
+
+        expect(alphaAt(200, plotArea.top.round() + 2), greaterThan(0));
+        expect(alphaAt(200, plotArea.top.round() + 6), 0);
+        expect(alphaAt(200, plotArea.top.round() + 10), greaterThan(0));
+      });
+
       test('tracking both paints both cursor lines when transposed', () async {
         const cursor = Offset(250, 180);
         const transposedPlotArea = Rect.fromLTWH(80, 90, 400, 220);

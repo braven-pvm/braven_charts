@@ -76,6 +76,248 @@ void main() {
     },
   );
 
+  testWidgets(
+    'persistent guide stays synchronized across plots, axes, and exit',
+    (tester) async {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      await tester.pumpWidget(_host(group, persistOnPointerExit: true));
+      await tester.pumpAndSettle();
+
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final sourceFinder = find.byElementPredicate(
+        (element) => element == renderElements.first,
+      );
+      final targetFinder = find.byElementPredicate(
+        (element) => element == renderElements.last,
+      );
+      final source = renderElements.first.renderObject! as ChartRenderBox;
+      final target = renderElements.last.renderObject! as ChartRenderBox;
+      final sourcePosition = source.plotToWidget(
+        source.transform!.dataToPlot(
+          4.4,
+          (source.transform!.dataYMin + source.transform!.dataYMax) / 2,
+        ),
+      );
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(tester.getTopLeft(sourceFinder) + sourcePosition);
+      await tester.pump();
+
+      final cursorX = group.cursorX;
+      expect(cursorX, closeTo(4.4, .0001));
+      expect(
+        target,
+        isA<ChartRenderBox>().having(
+          (renderBox) => renderBox.debugSynchronizedCursorX,
+          'synchronized X',
+          closeTo(cursorX!, .0001),
+        ),
+      );
+
+      // Moving over an axis remains inside the chart render box. This used to
+      // clear the group while leaving each pane's local pointer behind.
+      final sourceAxisPosition = Offset(
+        source.debugPlotArea.center.dx,
+        source.debugPlotArea.bottom + 4,
+      );
+      expect(sourceAxisPosition.dy, lessThan(source.size.height));
+      await pointer.moveTo(
+        tester.getTopLeft(sourceFinder) + sourceAxisPosition,
+      );
+      await tester.pump();
+
+      expect(group.cursorX, cursorX);
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(cursorX!, .0001));
+      }
+
+      const nextDataX = 7.2;
+      final targetPosition = target.plotToWidget(
+        target.transform!.dataToPlot(
+          nextDataX,
+          (target.transform!.dataYMin + target.transform!.dataYMax) / 2,
+        ),
+      );
+      await pointer.moveTo(tester.getTopLeft(targetFinder) + targetPosition);
+      await tester.pump();
+
+      expect(group.cursorX, closeTo(nextDataX, .0001));
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(nextDataX, .0001));
+        final expectedX = renderBox
+            .plotToWidget(
+              renderBox.transform!.dataToPlot(
+                nextDataX,
+                renderBox.transform!.dataYMin,
+              ),
+            )
+            .dx;
+        expect(
+          renderBox.debugSynchronizedCursorPosition!.dx,
+          closeTo(expectedX, .0001),
+        );
+      }
+
+      await pointer.moveTo(const Offset(1100, 700));
+      await tester.pump();
+
+      expect(group.cursorX, closeTo(nextDataX, .0001));
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(nextDataX, .0001));
+      }
+    },
+  );
+
+  testWidgets(
+    'persistent guide stays synchronized throughout middle-button panning',
+    (tester) async {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      await tester.pumpWidget(_host(group, persistOnPointerExit: true));
+      await tester.pumpAndSettle();
+
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final sourceElement = renderElements.first;
+      final source = sourceElement.renderObject! as ChartRenderBox;
+      final sourceFinder = find.byElementPredicate(
+        (element) => element == sourceElement,
+      );
+      const dataX = 4.4;
+      final sourcePosition = source.plotToWidget(
+        source.transform!.dataToPlot(
+          dataX,
+          (source.transform!.dataYMin + source.transform!.dataYMax) / 2,
+        ),
+      );
+      final globalSourcePosition =
+          tester.getTopLeft(sourceFinder) + sourcePosition;
+      final pan = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kMiddleMouseButton,
+      );
+      addTearDown(pan.removePointer);
+      await pan.addPointer(location: Offset.zero);
+      await pan.moveTo(globalSourcePosition);
+      await tester.pump();
+
+      expect(group.cursorX, closeTo(dataX, .0001));
+      final initialViewportMin = source.transform!.dataXMin;
+
+      await pan.down(globalSourcePosition);
+      await tester.pump();
+
+      expect(
+        group.cursorX,
+        closeTo(dataX, .0001),
+        reason: 'middle-button down must not clear a persistent shared guide',
+      );
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(dataX, .0001));
+      }
+
+      await pan.moveBy(const Offset(48, 0));
+      await tester.pump();
+
+      expect(
+        source.transform!.dataXMin,
+        isNot(closeTo(initialViewportMin, 1e-6)),
+      );
+      expect(
+        group.cursorX,
+        closeTo(dataX, .0001),
+        reason: 'the retained data-X remains authoritative while panning',
+      );
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(dataX, .0001));
+        final expectedX = renderBox
+            .plotToWidget(
+              renderBox.transform!.dataToPlot(
+                dataX,
+                renderBox.transform!.dataYMin,
+              ),
+            )
+            .dx;
+        expect(
+          renderBox.debugSynchronizedCursorPosition!.dx,
+          closeTo(expectedX, .0001),
+        );
+      }
+
+      await pan.up();
+      await tester.pump();
+      expect(group.cursorX, closeTo(dataX, .0001));
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(dataX, .0001));
+      }
+    },
+  );
+
+  testWidgets(
+    'plain wheel scrolling leaves the persistent guide and viewport untouched',
+    (tester) async {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      await tester.pumpWidget(_host(group, persistOnPointerExit: true));
+      await tester.pumpAndSettle();
+
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final sourceElement = renderElements.first;
+      final source = sourceElement.renderObject! as ChartRenderBox;
+      final sourceFinder = find.byElementPredicate(
+        (element) => element == sourceElement,
+      );
+      const dataX = 4.4;
+      final sourcePosition = source.plotToWidget(
+        source.transform!.dataToPlot(
+          dataX,
+          (source.transform!.dataYMin + source.transform!.dataYMax) / 2,
+        ),
+      );
+      final globalSourcePosition =
+          tester.getTopLeft(sourceFinder) + sourcePosition;
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(globalSourcePosition);
+      await tester.pump();
+
+      expect(group.cursorX, closeTo(dataX, .0001));
+      final viewportBefore = (
+        min: source.transform!.dataXMin,
+        max: source.transform!.dataXMax,
+      );
+
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: globalSourcePosition,
+          scrollDelta: const Offset(0, 60),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        source.coordinator.isPanningOrZooming,
+        isFalse,
+        reason: 'host-page wheel scrolling is not a chart viewport gesture',
+      );
+      expect(source.transform!.dataXMin, closeTo(viewportBefore.min, .0001));
+      expect(source.transform!.dataXMax, closeTo(viewportBefore.max, .0001));
+      expect(group.cursorX, closeTo(dataX, .0001));
+      for (final element in renderElements) {
+        final renderBox = element.renderObject! as ChartRenderBox;
+        expect(renderBox.debugSynchronizedCursorX, closeTo(dataX, .0001));
+      }
+    },
+  );
+
   testWidgets('keeps shared X aligned while resolving nearest local samples', (
     tester,
   ) async {
@@ -337,6 +579,7 @@ void main() {
 Widget _host(
   ChartInteractionGroupController group, {
   bool interpolateValues = true,
+  bool persistOnPointerExit = false,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -355,6 +598,7 @@ Widget _host(
                   crosshair: CrosshairConfig(
                     displayMode: CrosshairDisplayMode.tracking,
                     interpolateValues: interpolateValues,
+                    persistOnPointerExit: persistOnPointerExit,
                   ),
                 ),
                 series: const [
@@ -383,6 +627,7 @@ Widget _host(
                   crosshair: CrosshairConfig(
                     displayMode: CrosshairDisplayMode.tracking,
                     interpolateValues: interpolateValues,
+                    persistOnPointerExit: persistOnPointerExit,
                   ),
                 ),
                 series: const [

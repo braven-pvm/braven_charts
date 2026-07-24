@@ -2531,7 +2531,12 @@ class EventHandlerManager {
   void _handlePointerHover(PointerHoverEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
 
-    _cursorPosition = position;
+    final retainTrackingCursor =
+        !_delegate.plotArea.contains(position) &&
+        (_delegate.interactionConfig?.crosshair.persistOnPointerExit ?? false);
+    if (!retainTrackingCursor) {
+      _cursorPosition = position;
+    }
     _delegate.markNeedsPaint();
 
     // Check scrollbar hover first
@@ -2787,37 +2792,33 @@ class EventHandlerManager {
 
     if (coordinator.currentMode == InteractionMode.scrollbarDragging) return;
 
-    if (coordinator.isShiftPressed &&
-        _delegate.transform != null &&
-        _delegate.originalTransform != null) {
-      _delegate.onViewportInteracted?.call();
-      coordinator.claimMode(InteractionMode.zooming);
-
-      final double scrollAmount = event.scrollDelta.dy;
-      const double zoomSensitivity = 0.0011;
-      final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
-
-      final Offset plotPosition = _delegate.widgetToPlot(position);
-
-      // Mouse wheel zoom: no animation for responsive feel during rapid scrolling
-      _delegate.zoomChart(zoomFactor, plotCenter: plotPosition, animate: false);
-
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!coordinator.isDisposed &&
-            coordinator.currentMode == InteractionMode.zooming) {
-          coordinator.releaseMode();
-        }
-      });
-    } else {
-      coordinator.claimMode(InteractionMode.zooming);
-
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!coordinator.isDisposed &&
-            coordinator.currentMode == InteractionMode.zooming) {
-          coordinator.releaseMode();
-        }
-      });
+    // An unmodified wheel belongs to the host scroll view. Claiming the chart's
+    // zoom mode here, despite applying no transform, temporarily suspended and
+    // cleared synchronized tracking while the page moved beneath the pointer.
+    if (!coordinator.isShiftPressed ||
+        _delegate.transform == null ||
+        _delegate.originalTransform == null) {
+      return;
     }
+
+    _delegate.onViewportInteracted?.call();
+    coordinator.claimMode(InteractionMode.zooming);
+
+    final double scrollAmount = event.scrollDelta.dy;
+    const double zoomSensitivity = 0.0011;
+    final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
+
+    final Offset plotPosition = _delegate.widgetToPlot(position);
+
+    // Mouse wheel zoom: no animation for responsive feel during rapid scrolling
+    _delegate.zoomChart(zoomFactor, plotCenter: plotPosition, animate: false);
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!coordinator.isDisposed &&
+          coordinator.currentMode == InteractionMode.zooming) {
+        coordinator.releaseMode();
+      }
+    });
   }
 
   // ==========================================================================

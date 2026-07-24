@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Opt-in crosshair focus bands with independently configurable translucent
+  fill, width, center-line color, width, dash pattern, and stroke cap. Bands
+  remain plot-clipped and paint-only across standard and synchronized tracking.
+- Opt-in persistent tracking guides through
+  `CrosshairConfig.persistOnPointerExit`, retaining the last resolved cursor
+  across pointer exit, focus loss, and synchronized middle-button viewport
+  panning for inspection-oriented chart stacks. Ordinary host-page wheel
+  scrolling no longer claims a false chart-zoom lifecycle or clears the guide.
+- The Technical Indicators showcase now exposes the complete guide-band
+  appearance and accessible seam-overlay drag handles that redistribute height
+  locally between the price, volume, MACD, momentum, and navigator panes
+  without inserting layout gaps or rebuilding the complete page.
+
 ## 0.13.5 - 2026-07-24
 
 ### Added

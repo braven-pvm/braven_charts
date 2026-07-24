@@ -113,6 +113,24 @@ The public navigator replaces the earlier Candlestick showcase prototype that
 used a draggable `RangeAnnotation`. That prototype remains useful as design
 history, but the package contract is now one reusable Cartesian control.
 
+## Resizable host panes
+
+The navigator's selection handles resize the visible X domain. They do not set
+the navigator widget's height. Vertical pane allocation belongs to the host:
+overlay an accessible drag handle on each pane seam, then update their
+`SizedBox` or flex constraints while retaining the same
+`ChartInteractionGroupController`, chart controllers, and widget keys. An
+overlay keeps the panes visually contiguous while allowing the handle to keep
+a comfortably large hit target.
+
+`CartesianNavigator` and `BravenChartPlus` both relayout from their current
+constraints. No navigator-specific resizing API is required, and a host can
+apply application-specific minimum heights without coupling that policy to
+chart rendering. Keep live resize state inside the pane host so pointer deltas
+only rebuild pane geometry rather than the page's charts and option controls.
+The Technical Indicators showcase demonstrates this pattern between every
+study pane and the navigator.
+
 ## Runnable examples
 
 The showcase keeps navigation opt-in and places it where a full-domain summary

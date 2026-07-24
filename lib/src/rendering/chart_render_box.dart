@@ -3693,10 +3693,20 @@ class ChartRenderBox extends RenderBox {
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     _eventHandlerManager.handleEvent(event);
+    final retainsPersistentGuideDuringMousePan =
+        coordinator.currentMode == InteractionMode.panning &&
+        (_interactionConfig?.crosshair.persistOnPointerExit ?? false);
     if (coordinator.isPanningOrZooming ||
         _eventHandlerManager.isSuppressingTouchSequence) {
-      _publishCrosshairChange(null);
-      onDataXCursorChanged?.call(null);
+      // A persistent synchronized guide represents a durable data-X, not the
+      // current pointer pixel. Middle-button panning must therefore retain the
+      // group's shared value while each participant remaps it through the
+      // moving viewport. Clearing here exposes every pane's stale local hover
+      // position and makes an otherwise synchronized stack visibly diverge.
+      if (!retainsPersistentGuideDuringMousePan) {
+        _publishCrosshairChange(null);
+        onDataXCursorChanged?.call(null);
+      }
       return;
     }
     final publishesPosition =
@@ -3713,8 +3723,19 @@ class ChartRenderBox extends RenderBox {
           transform.plotToData(plotPosition.dx, plotPosition.dy).dx,
         );
       } else {
-        _publishCrosshairChange(null);
-        onDataXCursorChanged?.call(null);
+        // A hover can remain inside the chart widget while leaving its plot
+        // (for example over an axis, pane seam, or overlay control). When the
+        // last guide is configured to persist, that transition must not clear
+        // the interaction group's shared data-X. Otherwise every participant
+        // falls back to its own stale local pointer and synchronized panes
+        // visibly diverge until the pointer re-enters a plot.
+        final persistsAfterPointerDeparture =
+            event is PointerHoverEvent &&
+            (_interactionConfig?.crosshair.persistOnPointerExit ?? false);
+        if (!persistsAfterPointerDeparture) {
+          _publishCrosshairChange(null);
+          onDataXCursorChanged?.call(null);
+        }
       }
     } else if ((event is PointerUpEvent || event is PointerCancelEvent) &&
         event.kind != PointerDeviceKind.mouse) {

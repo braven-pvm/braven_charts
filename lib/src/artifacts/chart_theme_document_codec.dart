@@ -395,6 +395,8 @@ Map<String, Object?> _encodeInteractionTheme(InteractionTheme theme) => {
   'crosshairColor': theme.crosshairColor.toARGB32(),
   'crosshairWidth': _n(theme.crosshairWidth),
   'crosshairDashPattern': theme.crosshairDashPattern.map(_n).toList(),
+  'crosshairBandColor': theme.crosshairBandColor.toARGB32(),
+  'crosshairBandWidth': _n(theme.crosshairBandWidth),
   'crosshairLabelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
     theme.crosshairLabelStyle,
   ).toJson(),
@@ -409,6 +411,12 @@ InteractionTheme _decodeInteractionTheme(Map<String, Object?> map) =>
       crosshairColor: _color(map, 'crosshairColor'),
       crosshairWidth: _double(map, 'crosshairWidth'),
       crosshairDashPattern: _doubleList(map, 'crosshairDashPattern'),
+      crosshairBandColor: map['crosshairBandColor'] == null
+          ? const Color(0x00000000)
+          : _color(map, 'crosshairBandColor'),
+      crosshairBandWidth: map['crosshairBandWidth'] == null
+          ? 0
+          : _double(map, 'crosshairBandWidth'),
       crosshairLabelStyle: ChartStyleDocumentCodec.decodeLabelStyle(
         _object(_requiredMap(map, 'crosshairLabelStyle')),
       ),

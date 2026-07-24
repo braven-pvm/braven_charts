@@ -21,6 +21,14 @@ extension InteractionThemeFluent on InteractionTheme {
   InteractionTheme withCrosshairDashPattern(List<double> value) =>
       copyWith(crosshairDashPattern: value);
 
+  /// Replaces [InteractionTheme.crosshairBandColor] with [value].
+  InteractionTheme withCrosshairBandColor(Color value) =>
+      copyWith(crosshairBandColor: value);
+
+  /// Replaces [InteractionTheme.crosshairBandWidth] with [value].
+  InteractionTheme withCrosshairBandWidth(double value) =>
+      copyWith(crosshairBandWidth: value);
+
   /// Replaces [InteractionTheme.crosshairLabelStyle] with [value].
   InteractionTheme withCrosshairLabelStyle(LabelStyle value) =>
       copyWith(crosshairLabelStyle: value);

@@ -20,9 +20,7 @@ void main() {
       final target =
           tester.getTopLeft(find.byType(BravenChartPlus)) +
           renderBox.plotToWidget(renderBox.transform!.dataToPlot(4.4, 6));
-      final pointer = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(pointer.removePointer);
       await pointer.addPointer(location: Offset.zero);
       await pointer.moveTo(target);
@@ -84,9 +82,7 @@ void main() {
       final target =
           tester.getTopLeft(find.byType(BravenChartPlus)) +
           renderBox.plotToWidget(renderBox.transform!.dataToPlot(4.4, 6));
-      final pointer = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(pointer.removePointer);
       await pointer.addPointer(location: Offset.zero);
       await pointer.moveTo(target);
@@ -134,14 +130,53 @@ void main() {
     await tester.pump();
 
     expect(renderBox.debugTrackingSnapshot, isNull);
-    expect(
-      renderBox.debugTrackingPublishCount,
-      publishCountWhileHovering + 1,
+    expect(renderBox.debugTrackingPublishCount, publishCountWhileHovering + 1);
+  });
+
+  testWidgets('persistent tracking retains the last snapshot on pointer exit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(persistOnPointerExit: true));
+    await tester.pumpAndSettle();
+
+    final renderBox =
+        _chartRenderFinder().evaluate().single.renderObject! as ChartRenderBox;
+    final target =
+        tester.getTopLeft(find.byType(BravenChartPlus)) +
+        renderBox.plotToWidget(renderBox.transform!.dataToPlot(4.4, 6));
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(target);
+    await tester.pump();
+
+    final snapshot = renderBox.debugTrackingSnapshot;
+    final publishCountWhileHovering = renderBox.debugTrackingPublishCount;
+    final retainedPointer = renderBox.debugPointerCursorPosition;
+    expect(snapshot, isNotNull);
+
+    final axisPosition = Offset(
+      renderBox.debugPlotArea.center.dx,
+      renderBox.debugPlotArea.bottom + 4,
     );
+    expect(axisPosition.dy, lessThan(renderBox.size.height));
+    await pointer.moveTo(renderBox.localToGlobal(axisPosition));
+    await tester.pump();
+
+    expect(renderBox.debugTrackingSnapshot, same(snapshot));
+    expect(renderBox.debugTrackingPublishCount, publishCountWhileHovering);
+    expect(renderBox.debugPointerCursorPosition, retainedPointer);
+
+    await pointer.moveTo(const Offset(2, 2));
+    await tester.pump();
+
+    expect(renderBox.debugTrackingSnapshot, same(snapshot));
+    expect(renderBox.debugTrackingPublishCount, publishCountWhileHovering);
+    expect(renderBox.debugPointerCursorPosition, isNotNull);
   });
 }
 
-Widget _host({Color? speedColor}) {
+Widget _host({Color? speedColor, bool persistOnPointerExit = false}) {
   return MaterialApp(
     home: Scaffold(
       body: Center(
@@ -150,9 +185,10 @@ Widget _host({Color? speedColor}) {
           height: 300,
           child: BravenChartPlus(
             showLegend: false,
-            interactionConfig: const InteractionConfig(
+            interactionConfig: InteractionConfig(
               crosshair: CrosshairConfig(
                 displayMode: CrosshairDisplayMode.tracking,
+                persistOnPointerExit: persistOnPointerExit,
               ),
             ),
             series: [

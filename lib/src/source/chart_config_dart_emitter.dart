@@ -4012,6 +4012,14 @@ class ChartConfigDartEmitter {
         'crosshairDashPattern',
         '[${theme.crosshairDashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
       );
+      writer.namedArgument(
+        'crosshairBandColor',
+        DartSourceWriter.colorLiteral(theme.crosshairBandColor),
+      );
+      writer.namedArgument(
+        'crosshairBandWidth',
+        DartSourceWriter.numberLiteral(theme.crosshairBandWidth),
+      );
       _emitLabelStyle(writer, 'crosshairLabelStyle', theme.crosshairLabelStyle);
       _emitLabelStyle(writer, 'tooltipStyle', theme.tooltipStyle);
       writer.namedArgument(
@@ -5075,6 +5083,12 @@ class ChartConfigDartEmitter {
         config.intersectionMarkerRadius,
         4,
       );
+      _valueIf(
+        writer,
+        'persistOnPointerExit',
+        config.persistOnPointerExit,
+        defaultValue: false,
+      );
     });
     writer.writeLine('),');
   }
@@ -5091,6 +5105,8 @@ class ChartConfigDartEmitter {
       if (options.includeDefaultValues || style.strokeCap != StrokeCap.round) {
         writer.namedArgument('strokeCap', 'StrokeCap.${style.strokeCap.name}');
       }
+      _colorIf(writer, 'bandColor', style.bandColor, const Color(0x00000000));
+      _numberIf(writer, 'bandWidth', style.bandWidth, 0);
       _colorIf(
         writer,
         'labelBackgroundColor',

@@ -23,6 +23,7 @@ import '../../models/x_axis_config.dart';
 import '../../models/x_axis_position.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
+import '../../utils/dashed_path.dart';
 import '../../utils/text_direction_resolver.dart';
 import '../multi_axis_normalizer.dart';
 import '../transposed_bar_axis_layout.dart';
@@ -308,19 +309,30 @@ class CrosshairRenderer {
   }) {
     final interactionTheme = theme?.interactionTheme;
     final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
-    final crosshairColor = isRangeCreationMode
-        ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF))
-        : (interactionTheme?.crosshairColor ?? axisColor);
-    final crosshairWidth = isRangeCreationMode
-        ? 1.5
-        : (interactionTheme?.crosshairWidth ?? 1.0);
-
-    final crosshairPaint = Paint()
-      ..color = crosshairColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = crosshairWidth;
+    final visualStyle = isRangeCreationMode
+        ? _CrosshairVisualStyle(
+            lineColor:
+                interactionTheme?.crosshairColor ?? const Color(0xFF448AFF),
+            lineWidth: 1.5,
+            dashPattern: const [],
+            strokeCap: StrokeCap.round,
+            bandColor: const Color(0x00000000),
+            bandWidth: 0,
+          )
+        : _resolveVisualStyle(
+            crosshairConfig: crosshairConfig,
+            theme: theme,
+            fallbackColor: axisColor,
+          );
 
     final mode = crosshairConfig.mode;
+    _paintGuideBand(
+      canvas: canvas,
+      plotArea: plotArea,
+      cursorPosition: cursorPosition,
+      mode: mode,
+      style: visualStyle,
+    );
 
     // Horizontal line
     if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
@@ -363,19 +375,21 @@ class CrosshairRenderer {
         }
       }
 
-      canvas.drawLine(
-        Offset(lineLeft, cursorPosition.dy),
-        Offset(lineRight, cursorPosition.dy),
-        crosshairPaint,
+      _paintGuideLine(
+        canvas: canvas,
+        start: Offset(lineLeft, cursorPosition.dy),
+        end: Offset(lineRight, cursorPosition.dy),
+        style: visualStyle,
       );
     }
 
     // Vertical line
     if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
-      canvas.drawLine(
-        Offset(cursorPosition.dx, plotArea.top),
-        Offset(cursorPosition.dx, plotArea.bottom),
-        crosshairPaint,
+      _paintGuideLine(
+        canvas: canvas,
+        start: Offset(cursorPosition.dx, plotArea.top),
+        end: Offset(cursorPosition.dx, plotArea.bottom),
+        style: visualStyle,
       );
     }
 
@@ -414,24 +428,27 @@ class CrosshairRenderer {
     List<TrendAnnotationElement> trendElements = const [],
     List<PaintedIntersectionMarker>? paintedMarkerSink,
   }) {
-    final interactionTheme = theme?.interactionTheme;
-    final crosshairColor =
-        interactionTheme?.crosshairColor ?? const Color(0x80666666);
-    final crosshairWidth = interactionTheme?.crosshairWidth ?? 1.0;
-
-    final crosshairPaint = Paint()
-      ..color = crosshairColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = crosshairWidth;
-
     final mode = crosshairConfig.mode;
+    final visualStyle = _resolveVisualStyle(
+      crosshairConfig: crosshairConfig,
+      theme: theme,
+      fallbackColor: const Color(0x80666666),
+    );
+    _paintGuideBand(
+      canvas: canvas,
+      plotArea: plotArea,
+      cursorPosition: cursorPosition,
+      mode: mode,
+      style: visualStyle,
+    );
 
     // Vertical line (primary line for tracking mode)
     if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
-      canvas.drawLine(
-        Offset(cursorPosition.dx, plotArea.top),
-        Offset(cursorPosition.dx, plotArea.bottom),
-        crosshairPaint,
+      _paintGuideLine(
+        canvas: canvas,
+        start: Offset(cursorPosition.dx, plotArea.top),
+        end: Offset(cursorPosition.dx, plotArea.bottom),
+        style: visualStyle,
       );
     }
 
@@ -473,10 +490,11 @@ class CrosshairRenderer {
         }
       }
 
-      canvas.drawLine(
-        Offset(lineLeft, cursorPosition.dy),
-        Offset(lineRight, cursorPosition.dy),
-        crosshairPaint,
+      _paintGuideLine(
+        canvas: canvas,
+        start: Offset(lineLeft, cursorPosition.dy),
+        end: Offset(lineRight, cursorPosition.dy),
+        style: visualStyle,
       );
     }
 
@@ -1766,6 +1784,99 @@ class CrosshairRenderer {
     return const Color(0xFF333333);
   }
 
+  _CrosshairVisualStyle _resolveVisualStyle({
+    required CrosshairConfig crosshairConfig,
+    required ChartTheme? theme,
+    required Color fallbackColor,
+  }) {
+    final configuredStyle = crosshairConfig.style;
+    final hasConfiguredStyle = configuredStyle != const CrosshairStyle();
+    if (hasConfiguredStyle) {
+      return _CrosshairVisualStyle(
+        lineColor: configuredStyle.lineColor,
+        lineWidth: configuredStyle.lineWidth,
+        dashPattern: configuredStyle.dashPattern ?? const [],
+        strokeCap: configuredStyle.strokeCap,
+        bandColor: configuredStyle.bandColor,
+        bandWidth: configuredStyle.bandWidth,
+      );
+    }
+
+    final interactionTheme = theme?.interactionTheme;
+    return _CrosshairVisualStyle(
+      lineColor: interactionTheme?.crosshairColor ?? fallbackColor,
+      lineWidth: interactionTheme?.crosshairWidth ?? 1,
+      dashPattern: interactionTheme?.crosshairDashPattern ?? const [],
+      strokeCap: StrokeCap.round,
+      bandColor:
+          interactionTheme?.crosshairBandColor ?? const Color(0x00000000),
+      bandWidth: interactionTheme?.crosshairBandWidth ?? 0,
+    );
+  }
+
+  void _paintGuideBand({
+    required Canvas canvas,
+    required Rect plotArea,
+    required Offset cursorPosition,
+    required CrosshairMode mode,
+    required _CrosshairVisualStyle style,
+  }) {
+    if (style.bandWidth <= 0 || style.bandColor.a == 0) return;
+
+    final halfWidth = style.bandWidth / 2;
+    final paint = Paint()
+      ..color = style.bandColor
+      ..style = PaintingStyle.fill;
+
+    canvas.save();
+    canvas.clipRect(plotArea);
+    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+      canvas.drawRect(
+        Rect.fromLTRB(
+          cursorPosition.dx - halfWidth,
+          plotArea.top,
+          cursorPosition.dx + halfWidth,
+          plotArea.bottom,
+        ),
+        paint,
+      );
+    }
+    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+      canvas.drawRect(
+        Rect.fromLTRB(
+          plotArea.left,
+          cursorPosition.dy - halfWidth,
+          plotArea.right,
+          cursorPosition.dy + halfWidth,
+        ),
+        paint,
+      );
+    }
+    canvas.restore();
+  }
+
+  void _paintGuideLine({
+    required Canvas canvas,
+    required Offset start,
+    required Offset end,
+    required _CrosshairVisualStyle style,
+  }) {
+    final path = Path()
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(end.dx, end.dy);
+    final visiblePath = style.dashPattern.isEmpty
+        ? path
+        : createDashedPath(path, style.dashPattern);
+    canvas.drawPath(
+      visiblePath,
+      Paint()
+        ..color = style.lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = style.lineWidth
+        ..strokeCap = style.strokeCap,
+    );
+  }
+
   double? _nearestDiscreteTrackingX(List<CartesianTrackedSeriesValue> values) {
     for (final value in values) {
       if (!value.isTrend &&
@@ -1825,4 +1936,22 @@ class CrosshairRenderer {
       return value.round().toString();
     }
   }
+}
+
+class _CrosshairVisualStyle {
+  const _CrosshairVisualStyle({
+    required this.lineColor,
+    required this.lineWidth,
+    required this.dashPattern,
+    required this.strokeCap,
+    required this.bandColor,
+    required this.bandWidth,
+  });
+
+  final Color lineColor;
+  final double lineWidth;
+  final List<double> dashPattern;
+  final StrokeCap strokeCap;
+  final Color bandColor;
+  final double bandWidth;
 }

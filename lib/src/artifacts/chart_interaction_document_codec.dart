@@ -308,6 +308,7 @@ Map<String, Object?> _encodeCrosshair(CrosshairConfig value) => {
   'showTrackingTooltip': value.showTrackingTooltip,
   'showIntersectionMarkers': value.showIntersectionMarkers,
   'intersectionMarkerRadius': _n(value.intersectionMarkerRadius),
+  'persistOnPointerExit': value.persistOnPointerExit,
 };
 
 CrosshairConfig _decodeCrosshair(Map<String, Object?> map) => CrosshairConfig(
@@ -328,6 +329,9 @@ CrosshairConfig _decodeCrosshair(Map<String, Object?> map) => CrosshairConfig(
   showTrackingTooltip: _bool(map, 'showTrackingTooltip'),
   showIntersectionMarkers: _bool(map, 'showIntersectionMarkers'),
   intersectionMarkerRadius: _double(map, 'intersectionMarkerRadius'),
+  persistOnPointerExit: map['persistOnPointerExit'] == null
+      ? false
+      : _bool(map, 'persistOnPointerExit'),
 );
 
 Map<String, Object?> _encodeCrosshairStyle(CrosshairStyle value) => {
@@ -336,6 +340,8 @@ Map<String, Object?> _encodeCrosshairStyle(CrosshairStyle value) => {
   if (value.dashPattern != null)
     'dashPattern': value.dashPattern!.map(_n).toList(),
   'strokeCap': value.strokeCap.name,
+  'bandColor': value.bandColor.toARGB32(),
+  'bandWidth': _n(value.bandWidth),
   'labelBackgroundColor': value.labelBackgroundColor.toARGB32(),
   'labelTextColor': value.labelTextColor.toARGB32(),
   'labelPadding': _n(value.labelPadding),
@@ -349,6 +355,10 @@ CrosshairStyle _decodeCrosshairStyle(Map<String, Object?> map) =>
           ? null
           : _doubleList(map, 'dashPattern'),
       strokeCap: _enum(map, 'strokeCap', StrokeCap.values),
+      bandColor: map['bandColor'] == null
+          ? const Color(0x00000000)
+          : _color(map, 'bandColor'),
+      bandWidth: map['bandWidth'] == null ? 0 : _double(map, 'bandWidth'),
       labelBackgroundColor: _color(map, 'labelBackgroundColor'),
       labelTextColor: _color(map, 'labelTextColor'),
       labelPadding: _double(map, 'labelPadding'),
