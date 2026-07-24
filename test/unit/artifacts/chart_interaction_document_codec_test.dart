@@ -24,6 +24,8 @@ void main() {
             lineWidth: 2.5,
             dashPattern: [7, 2],
             strokeCap: StrokeCap.square,
+            bandColor: Color(0x332563EB),
+            bandWidth: 24,
             labelBackgroundColor: Color(0xFF334455),
             labelTextColor: Color(0xFFCCDDEE),
             labelPadding: 6,
@@ -34,6 +36,7 @@ void main() {
           showTrackingTooltip: false,
           showIntersectionMarkers: false,
           intersectionMarkerRadius: 6.5,
+          persistOnPointerExit: true,
         ),
         tooltip: TooltipConfig(
           enabled: false,
@@ -153,6 +156,70 @@ void main() {
 
       expect(decoded, source);
       expect(document.requiredBindings, isEmpty);
+    });
+
+    test('defaults older crosshair documents to no guide band', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            crosshair: CrosshairConfig(
+              style: CrosshairStyle(
+                bandColor: Color(0x332563EB),
+                bandWidth: 24,
+              ),
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final crosshair = Map<String, Object?>.from(
+        configuration['crosshair']! as Map,
+      );
+      final style = Map<String, Object?>.from(crosshair['style']! as Map)
+        ..remove('bandColor')
+        ..remove('bandWidth');
+      crosshair['style'] = style;
+      configuration['crosshair'] = crosshair;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.crosshair.style.bandColor, Colors.transparent);
+      expect(decoded.crosshair.style.bandWidth, 0);
+    });
+
+    test('defaults older crosshair documents to transient pointer exit', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            crosshair: CrosshairConfig(persistOnPointerExit: true),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final crosshair = Map<String, Object?>.from(
+        configuration['crosshair']! as Map,
+      )..remove('persistOnPointerExit');
+      configuration['crosshair'] = crosshair;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.crosshair.persistOnPointerExit, isFalse);
     });
 
     test('defaults older selection documents to a disabled brush', () {

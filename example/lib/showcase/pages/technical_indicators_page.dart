@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
@@ -54,8 +55,17 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
   bool _synchronizeViewport = true;
   bool _showTrackingTooltip = true;
   bool _showIntersections = true;
+  bool _persistTrackingGuide = true;
+  bool _showTrackingBand = true;
+  Color _trackingBandColor = const Color(0xFF2563EB);
+  double _trackingBandOpacity = .10;
+  double _trackingBandWidth = 28;
+  Color _trackingLineColor = const Color(0xFF64748B);
+  double _trackingLineWidth = 1;
+  _TrackingLinePattern _trackingLinePattern = _TrackingLinePattern.solid;
   double _indicatorStrokeWidth = 1.6;
   double _volatilityFillOpacity = .16;
+  final _paneStackKey = GlobalKey<_ResizableFinancialPaneStackState>();
 
   @override
   void initState() {
@@ -323,36 +333,127 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
   Widget _buildStudyCard({required bool compact}) {
     final terminal = _isTerminal;
     const terminalDateAxisHeight = 50.0;
-    final priceHeight =
+    final priceBaseHeight =
         (compact ? 360.0 : 420.0) +
         (_showsTerminalDateAxis(_FinancialStudyPane.price)
             ? terminalDateAxisHeight
             : 0);
-    final volumeHeight =
+    final volumeBaseHeight =
         (compact ? 190.0 : 170.0) +
         (_showsTerminalDateAxis(_FinancialStudyPane.volume)
             ? terminalDateAxisHeight
             : 0);
-    final macdHeight =
+    final macdBaseHeight =
         (compact ? 202.0 : (terminal ? 156.0 : 180.0)) +
         (_showsTerminalDateAxis(_FinancialStudyPane.macd)
             ? terminalDateAxisHeight
             : 0);
-    final momentumHeight =
+    final momentumBaseHeight =
         (compact ? 202.0 : (terminal ? 156.0 : 180.0)) +
         (_showsTerminalDateAxis(_FinancialStudyPane.momentum)
             ? terminalDateAxisHeight
             : 0);
-    final navigatorHeight = compact ? 124.0 : 104.0;
-    final paneSpacing = terminal ? 1.0 : 8.0;
-    final height =
-        priceHeight +
-        (_showVolume ? volumeHeight + paneSpacing : 0) +
-        (_showMacd ? macdHeight + paneSpacing : 0) +
-        (_showMomentum ? momentumHeight + paneSpacing : 0) +
-        (_showNavigator ? navigatorHeight + paneSpacing : 0) +
-        (compact ? 224 : 192);
+    final navigatorBaseHeight = compact ? 124.0 : 104.0;
     final latest = _candles.last;
+    final panes = <_FinancialPaneLayout>[
+      _FinancialPaneLayout(
+        id: _FinancialResizablePane.price,
+        baseHeight: priceBaseHeight,
+        child: _StudyPane(
+          title: 'Price and trend',
+          value: '\$${latest.close.toStringAsFixed(2)}',
+          showHeader: !terminal,
+          child: _alignAxisPane(_buildPriceChart(compact: compact)),
+        ),
+      ),
+      if (_showVolume)
+        _FinancialPaneLayout(
+          id: _FinancialResizablePane.volume,
+          baseHeight: volumeBaseHeight,
+          child: _StudyPane(
+            title: 'Volume',
+            value:
+                '${(latest.metadata!['volumeMillions'] as num).toStringAsFixed(2)}M',
+            showHeader: !terminal,
+            child: _alignAxisPane(_buildVolumeChart(compact: compact)),
+          ),
+        ),
+      if (_showMacd)
+        _FinancialPaneLayout(
+          id: _FinancialResizablePane.macd,
+          baseHeight: macdBaseHeight,
+          child: _StudyPane(
+            title: 'MACD (12, 26, 9)',
+            value: _macd.last.toStringAsFixed(2),
+            showHeader: !terminal,
+            child: _alignAxisPane(_buildMacdChart(compact: compact)),
+          ),
+        ),
+      if (_showMomentum)
+        _FinancialPaneLayout(
+          id: _FinancialResizablePane.momentum,
+          baseHeight: momentumBaseHeight,
+          child: _StudyPane(
+            title: 'Stochastic momentum (14, 3, 3)',
+            value: _smi.last.toStringAsFixed(2),
+            showHeader: !terminal,
+            child: _alignAxisPane(_buildMomentumChart(compact: compact)),
+          ),
+        ),
+      if (_showNavigator)
+        _FinancialPaneLayout(
+          id: _FinancialResizablePane.navigator,
+          baseHeight: navigatorBaseHeight,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: terminal ? 0 : _oppositeGutter,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) => CartesianNavigator(
+                key: const ValueKey('financial-navigator'),
+                height: math.max(
+                  48,
+                  constraints.maxHeight - (compact ? 28 : 24),
+                ),
+                interactionGroupController: _interactionGroup,
+                fullDomain: ChartXViewport(
+                  min: _candles.first.x,
+                  max: _candles.last.x,
+                ),
+                snapPolicy: CartesianNavigatorSnapPolicy.values(
+                  _candles.map((candle) => candle.x),
+                ),
+                behavior: const CartesianNavigatorBehavior(minimumSpan: 10),
+                overviewSeries: AreaChartSeries(
+                  id: 'financial-navigator-close',
+                  name: 'Close',
+                  points: _closePoints,
+                  color: const Color(0xFF0EA5E9),
+                  interpolation: LineInterpolation.monotone,
+                  strokeWidth: 1.2,
+                  fillOpacity: .14,
+                ),
+                theme: _chartTheme,
+                style: const CartesianNavigatorStyle(
+                  borderRadius: 6,
+                  handleVisualHeight: 24,
+                ),
+                semanticLabel: 'Technical indicator session range',
+                onViewportChanged: (_) {
+                  if (_range != _FinancialRange.custom) {
+                    setState(() => _range = _FinancialRange.custom);
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+    ];
+    final paneStackHeight = panes.fold<double>(
+      0,
+      (sum, pane) => sum + pane.baseHeight,
+    );
+    final height = paneStackHeight + (compact ? 224 : 192);
     return SizedBox(
       height: height,
       child: ChartCard(
@@ -367,100 +468,19 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
             _buildMarketSummary(latest),
             const SizedBox(height: 8),
             SizedBox(
-              height: priceHeight,
-              child: _StudyPane(
-                title: 'Price and trend',
-                value: '\$${latest.close.toStringAsFixed(2)}',
-                showHeader: !terminal,
-                child: _alignAxisPane(_buildPriceChart(compact: compact)),
+              height: paneStackHeight,
+              child: _ResizableFinancialPaneStack(
+                key: _paneStackKey,
+                panes: panes,
               ),
             ),
-            if (_showVolume) ...[
-              Divider(height: terminal ? 1 : 16),
-              SizedBox(
-                height: volumeHeight,
-                child: _StudyPane(
-                  title: 'Volume',
-                  value:
-                      '${(latest.metadata!['volumeMillions'] as num).toStringAsFixed(2)}M',
-                  showHeader: !terminal,
-                  child: _alignAxisPane(_buildVolumeChart(compact: compact)),
-                ),
-              ),
-            ],
-            if (_showMacd) ...[
-              Divider(height: terminal ? 1 : 16),
-              SizedBox(
-                height: macdHeight,
-                child: _StudyPane(
-                  title: 'MACD (12, 26, 9)',
-                  value: _macd.last.toStringAsFixed(2),
-                  showHeader: !terminal,
-                  child: _alignAxisPane(_buildMacdChart(compact: compact)),
-                ),
-              ),
-            ],
-            if (_showMomentum) ...[
-              Divider(height: terminal ? 1 : 16),
-              SizedBox(
-                height: momentumHeight,
-                child: _StudyPane(
-                  title: 'Stochastic momentum (14, 3, 3)',
-                  value: _smi.last.toStringAsFixed(2),
-                  showHeader: !terminal,
-                  child: _alignAxisPane(_buildMomentumChart(compact: compact)),
-                ),
-              ),
-            ],
-            if (_showNavigator) ...[
-              Divider(height: terminal ? 1 : 16),
-              SizedBox(
-                height: navigatorHeight,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: terminal ? 0 : _oppositeGutter,
-                  ),
-                  child: CartesianNavigator(
-                    key: const ValueKey('financial-navigator'),
-                    height: compact ? 96 : 80,
-                    interactionGroupController: _interactionGroup,
-                    fullDomain: ChartXViewport(
-                      min: _candles.first.x,
-                      max: _candles.last.x,
-                    ),
-                    snapPolicy: CartesianNavigatorSnapPolicy.values(
-                      _candles.map((candle) => candle.x),
-                    ),
-                    behavior: const CartesianNavigatorBehavior(minimumSpan: 10),
-                    overviewSeries: AreaChartSeries(
-                      id: 'financial-navigator-close',
-                      name: 'Close',
-                      points: _closePoints,
-                      color: const Color(0xFF0EA5E9),
-                      interpolation: LineInterpolation.monotone,
-                      strokeWidth: 1.2,
-                      fillOpacity: .14,
-                    ),
-                    theme: _chartTheme,
-                    style: const CartesianNavigatorStyle(
-                      borderRadius: 6,
-                      handleVisualHeight: 24,
-                    ),
-                    semanticLabel: 'Technical indicator session range',
-                    onViewportChanged: (_) {
-                      if (_range != _FinancialRange.custom) {
-                        setState(() => _range = _FinancialRange.custom);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
+
+  void _resetPaneSizes() => _paneStackKey.currentState?.reset();
 
   Widget _buildMarketSummary(CandlestickDataPoint latest) {
     final theme = Theme.of(context);
@@ -726,7 +746,20 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
         synchronizeViewport: _synchronizeViewport,
       );
 
-  ChartTheme get _chartTheme => _options.options.theme ?? ChartTheme.light;
+  ChartTheme get _chartTheme {
+    final base = _options.options.theme ?? ChartTheme.light;
+    return base.copyWith(
+      interactionTheme: base.interactionTheme.copyWith(
+        crosshairColor: _trackingLineColor,
+        crosshairWidth: _trackingLineWidth,
+        crosshairDashPattern: _trackingLinePattern.dashPattern,
+        crosshairBandColor: _showTrackingBand
+            ? _trackingBandColor.withValues(alpha: _trackingBandOpacity)
+            : const Color(0x00000000),
+        crosshairBandWidth: _showTrackingBand ? _trackingBandWidth : 0,
+      ),
+    );
+  }
 
   GridConfig get _grid =>
       GridConfig(horizontal: _options.showGrid, vertical: false);
@@ -778,6 +811,7 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
       showTrackingTooltip: _showTrackingTooltip,
       showIntersectionMarkers: _showIntersections,
       showCoordinateLabels: true,
+      persistOnPointerExit: _persistTrackingGuide,
     ),
     tooltip: const TooltipConfig(enabled: false),
   );
@@ -859,6 +893,14 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
           onChanged: (value) => setState(() => _synchronizeViewport = value),
         ),
         BoolOption(
+          key: const ValueKey('financial-persist-tracking-guide'),
+          label: 'Keep last tracking guide',
+          subtitle:
+              'Retain the synchronized guide while using adjacent controls',
+          value: _persistTrackingGuide,
+          onChanged: (value) => setState(() => _persistTrackingGuide = value),
+        ),
+        BoolOption(
           label: 'Show tracking tooltip',
           value: _showTrackingTooltip,
           onChanged: (value) => setState(() => _showTrackingTooltip = value),
@@ -868,6 +910,107 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
           value: _showIntersections,
           onChanged: (value) => setState(() => _showIntersections = value),
         ),
+      ],
+    ),
+    OptionSection(
+      title: 'Tracking guide',
+      icon: Icons.vertical_align_center,
+      children: [
+        BoolOption(
+          key: const ValueKey('financial-show-tracking-band'),
+          label: 'Show focus band',
+          subtitle:
+              'Paint a translucent zone behind the synchronized center line',
+          value: _showTrackingBand,
+          onChanged: (value) => setState(() => _showTrackingBand = value),
+        ),
+        if (_showTrackingBand) ...[
+          ColorOption(
+            key: const ValueKey('financial-tracking-band-color'),
+            keyPrefix: 'financial-tracking-band',
+            label: 'Band color',
+            value: _trackingBandColor,
+            colors: const [
+              Color(0xFF2563EB),
+              Color(0xFF0F766E),
+              Color(0xFF7C3AED),
+              Color(0xFFEA580C),
+            ],
+            clearValue: const Color(0xFF2563EB),
+            onChanged: (value) => setState(() => _trackingBandColor = value),
+          ),
+          SliderOption(
+            key: const ValueKey('financial-tracking-band-opacity'),
+            label: 'Band opacity',
+            value: _trackingBandOpacity,
+            min: .02,
+            max: .32,
+            divisions: 15,
+            decimalPlaces: 2,
+            onChanged: (value) => setState(() => _trackingBandOpacity = value),
+          ),
+          SliderOption(
+            key: const ValueKey('financial-tracking-band-width'),
+            label: 'Band width',
+            value: _trackingBandWidth,
+            min: 4,
+            max: 72,
+            divisions: 17,
+            suffix: 'px',
+            onChanged: (value) => setState(() => _trackingBandWidth = value),
+          ),
+        ],
+        ColorOption(
+          key: const ValueKey('financial-tracking-line-color'),
+          keyPrefix: 'financial-tracking-line',
+          label: 'Center line color',
+          value: _trackingLineColor,
+          colors: const [
+            Color(0xFF64748B),
+            Color(0xFF2563EB),
+            Color(0xFF0F766E),
+            Color(0xFFDC2626),
+          ],
+          clearValue: const Color(0xFF64748B),
+          onChanged: (value) => setState(() => _trackingLineColor = value),
+        ),
+        EnumOption<_TrackingLinePattern>(
+          key: const ValueKey('financial-tracking-line-pattern'),
+          label: 'Center line pattern',
+          value: _trackingLinePattern,
+          values: _TrackingLinePattern.values,
+          labelBuilder: (value) => value.label,
+          onChanged: (value) => setState(() => _trackingLinePattern = value),
+        ),
+        SliderOption(
+          key: const ValueKey('financial-tracking-line-width'),
+          label: 'Center line width',
+          value: _trackingLineWidth,
+          min: .5,
+          max: 4,
+          divisions: 14,
+          decimalPlaces: 1,
+          suffix: 'px',
+          onChanged: (value) => setState(() => _trackingLineWidth = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Pane layout',
+      icon: Icons.view_stream_outlined,
+      children: [
+        Text(
+          'Drag the separators between studies—including the navigator—to allocate vertical space. Arrow keys nudge a focused handle.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('financial-reset-pane-sizes'),
+          onPressed: _resetPaneSizes,
+          icon: const Icon(Icons.vertical_distribute, size: 18),
+          label: const Text('Reset pane sizes'),
+        ),
+        const SizedBox(height: 12),
       ],
     ),
     OptionSection(
@@ -1019,10 +1162,19 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
       _synchronizeViewport = true;
       _showTrackingTooltip = true;
       _showIntersections = true;
+      _persistTrackingGuide = true;
+      _showTrackingBand = true;
+      _trackingBandColor = const Color(0xFF2563EB);
+      _trackingBandOpacity = .10;
+      _trackingBandWidth = 28;
+      _trackingLineColor = const Color(0xFF64748B);
+      _trackingLineWidth = 1;
+      _trackingLinePattern = _TrackingLinePattern.solid;
       _indicatorStrokeWidth = 1.6;
       _volatilityFillOpacity = .16;
       _range = _FinancialRange.threeMonths;
     });
+    _resetPaneSizes();
     _applyRange(_FinancialRange.threeMonths);
   }
 
@@ -1081,6 +1233,33 @@ class _TechnicalIndicatorsPageState extends State<TechnicalIndicatorsPage> {
 }
 
 enum _FinancialStudyPane { price, volume, macd, momentum }
+
+enum _FinancialResizablePane {
+  price('price pane', 240, 720),
+  volume('volume pane', 96, 340),
+  macd('MACD pane', 96, 360),
+  momentum('momentum pane', 96, 360),
+  navigator('range navigator', 72, 240);
+
+  const _FinancialResizablePane(this.label, this.minimum, this.maximum);
+
+  final String label;
+  final double minimum;
+  final double maximum;
+
+  ({double min, double max}) get limits => (min: minimum, max: maximum);
+}
+
+enum _TrackingLinePattern {
+  solid('Solid', []),
+  dashed('Dashed', [6, 4]),
+  dotted('Dotted', [1.5, 3.5]);
+
+  const _TrackingLinePattern(this.label, this.dashPattern);
+
+  final String label;
+  final List<double> dashPattern;
+}
 
 enum _FinancialStudyPreset {
   overview(
@@ -1174,6 +1353,250 @@ class _StudyPane extends StatelessWidget {
         const SizedBox(height: 4),
         Expanded(child: child),
       ],
+    );
+  }
+}
+
+class _FinancialPaneLayout {
+  const _FinancialPaneLayout({
+    required this.id,
+    required this.baseHeight,
+    required this.child,
+  });
+
+  final _FinancialResizablePane id;
+  final double baseHeight;
+  final Widget child;
+}
+
+class _ResizableFinancialPaneStack extends StatefulWidget {
+  const _ResizableFinancialPaneStack({super.key, required this.panes});
+
+  final List<_FinancialPaneLayout> panes;
+
+  @override
+  State<_ResizableFinancialPaneStack> createState() =>
+      _ResizableFinancialPaneStackState();
+}
+
+class _ResizableFinancialPaneStackState
+    extends State<_ResizableFinancialPaneStack> {
+  static const _handleHitExtent = 48.0;
+
+  final Map<_FinancialResizablePane, double> _heightOffsets = {};
+
+  @override
+  void didUpdateWidget(_ResizableFinancialPaneStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldGeometry = [
+      for (final pane in oldWidget.panes) (pane.id, pane.baseHeight),
+    ];
+    final newGeometry = [
+      for (final pane in widget.panes) (pane.id, pane.baseHeight),
+    ];
+    if (!_listEquals(oldGeometry, newGeometry)) {
+      _heightOffsets.clear();
+    }
+  }
+
+  double _heightFor(_FinancialPaneLayout pane) {
+    final limits = pane.id.limits;
+    return (pane.baseHeight + (_heightOffsets[pane.id] ?? 0)).clamp(
+      limits.min,
+      limits.max,
+    );
+  }
+
+  void _resizeBoundary(int leadingIndex, double delta) {
+    final leading = widget.panes[leadingIndex];
+    final trailing = widget.panes[leadingIndex + 1];
+    final leadingHeight = _heightFor(leading);
+    final trailingHeight = _heightFor(trailing);
+    final leadingLimits = leading.id.limits;
+    final trailingLimits = trailing.id.limits;
+    final minimumDelta = math.max(
+      leadingLimits.min - leadingHeight,
+      trailingHeight - trailingLimits.max,
+    );
+    final maximumDelta = math.min(
+      leadingLimits.max - leadingHeight,
+      trailingHeight - trailingLimits.min,
+    );
+    final appliedDelta = delta.clamp(minimumDelta, maximumDelta);
+    if (appliedDelta == 0) return;
+
+    setState(() {
+      _heightOffsets[leading.id] =
+          leadingHeight + appliedDelta - leading.baseHeight;
+      _heightOffsets[trailing.id] =
+          trailingHeight - appliedDelta - trailing.baseHeight;
+    });
+  }
+
+  void reset() {
+    if (_heightOffsets.isEmpty) return;
+    setState(_heightOffsets.clear);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final heights = [for (final pane in widget.panes) _heightFor(pane)];
+    final totalHeight = heights.fold<double>(0, (sum, height) => sum + height);
+    var boundary = 0.0;
+    final handles = <Widget>[];
+    for (var index = 0; index < widget.panes.length - 1; index++) {
+      boundary += heights[index];
+      final leading = widget.panes[index];
+      final trailing = widget.panes[index + 1];
+      handles.add(
+        Positioned(
+          left: 0,
+          right: 0,
+          top: boundary - _handleHitExtent / 2,
+          height: _handleHitExtent,
+          child: Align(
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: 72,
+              height: _handleHitExtent,
+              child: _FinancialPaneResizeHandle(
+                key: ValueKey(
+                  'financial-resize-${leading.id.name}-${trailing.id.name}',
+                ),
+                semanticLabel:
+                    'Resize ${leading.id.label} and ${trailing.id.label}',
+                onDragUpdate: (delta) => _resizeBoundary(index, delta),
+                onReset: reset,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: totalHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            children: [
+              for (var index = 0; index < widget.panes.length; index++)
+                SizedBox(
+                  key: ValueKey(
+                    'financial-pane-${widget.panes[index].id.name}',
+                  ),
+                  height: heights[index],
+                  child: widget.panes[index].child,
+                ),
+            ],
+          ),
+          ...handles,
+        ],
+      ),
+    );
+  }
+}
+
+bool _listEquals<T>(List<T> left, List<T> right) {
+  if (identical(left, right)) return true;
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
+}
+
+class _FinancialPaneResizeHandle extends StatefulWidget {
+  const _FinancialPaneResizeHandle({
+    super.key,
+    required this.semanticLabel,
+    required this.onDragUpdate,
+    required this.onReset,
+  });
+
+  final String semanticLabel;
+  final ValueChanged<double> onDragUpdate;
+  final VoidCallback onReset;
+
+  @override
+  State<_FinancialPaneResizeHandle> createState() =>
+      _FinancialPaneResizeHandleState();
+}
+
+class _FinancialPaneResizeHandleState
+    extends State<_FinancialPaneResizeHandle> {
+  final _focusNode = FocusNode();
+  bool _hovered = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      widget.onDragUpdate(-8);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      widget.onDragUpdate(8);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.home ||
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      widget.onReset();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final active = _hovered || _focusNode.hasFocus;
+    final color = active
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outlineVariant;
+    return Semantics(
+      label: widget.semanticLabel,
+      hint:
+          'Drag vertically or use the up and down arrow keys. Double click to reset all pane sizes.',
+      onIncrease: () => widget.onDragUpdate(8),
+      onDecrease: () => widget.onDragUpdate(-8),
+      child: Focus(
+        focusNode: _focusNode,
+        onFocusChange: (_) => setState(() {}),
+        onKeyEvent: _handleKey,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeRow,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _focusNode.requestFocus,
+            onDoubleTap: widget.onReset,
+            onVerticalDragUpdate: (details) =>
+                widget.onDragUpdate(details.delta.dy),
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: active ? 48 : 42,
+                height: active ? 6 : 3,
+                decoration: BoxDecoration(
+                  color: active
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceContainerHighest,
+                  border: Border.all(color: color),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

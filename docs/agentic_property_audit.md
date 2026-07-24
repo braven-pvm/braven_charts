@@ -133,7 +133,7 @@ MISSING: leftOuter, rightOuter
 | ------------ | ------------------- | ----------------------------------------- | ------------- | --------------- | ---------- |
 | `enablePan`  | ✓                   | ✓ `interactions.pan`                      | ✓ dynamic     | ✓               | ✅         |
 | `enableZoom` | ✓                   | ✓ `interactions.zoom`                     | ✓             | ✓               | ✅         |
-| `crosshair`  | ✓ `CrosshairConfig` | ✓ `interactions.crosshair` (boolean only) | ✓             | 🔧 enabled only | ⚠️ PARTIAL |
+| `crosshair`  | ✓ `CrosshairConfig` | ✓ `interactions.crosshair` (boolean only) | ✓             | ✓ full config   | ⚠️ PARTIAL |
 | `tooltip`    | ✓ `TooltipConfig`   | ✓ `interactions.tooltip` (boolean only)   | ✓             | 🔧 enabled only | ⚠️ PARTIAL |
 | `gesture`    | ✓ `GestureConfig`   | ❌                                        | ❌            | ❌              | ❌ MISSING |
 | `keyboard`   | ✓ `KeyboardConfig`  | ❌                                        | ❌            | ❌              | ❌ MISSING |
@@ -147,7 +147,7 @@ MISSING: leftOuter, rightOuter
 | `snapToDataPoint`         | ✓                                                    | ❌          | ❌ MISSING |
 | `snapRadius`              | ✓                                                    | ❌          | ❌ MISSING |
 | `showCoordinateLabels`    | ✓                                                    | ❌          | ❌ MISSING |
-| `style`                   | ✓ `CrosshairStyle`                                   | ❌          | ❌ MISSING |
+| `style`                   | ✓ line, band, labels, pattern, and cap               | ❌          | ❌ MISSING |
 | `displayMode`             | ✓ `CrosshairDisplayMode`                             | ❌          | ❌ MISSING |
 | `interpolateValues`       | ✓                                                    | ❌          | ❌ MISSING |
 | `showIntersectionMarkers` | ✓                                                    | ❌          | ❌ MISSING |

@@ -344,7 +344,13 @@ only when the corresponding data exists. See
 
 - `InteractionConfig` — interaction configuration root.
 - `CrosshairConfig`, `CrosshairMode`, `CrosshairDisplayMode` — crosshair and
-  tracking behavior.
+  tracking behavior, including opt-in retention of the last guide after
+  pointer exit or focus loss.
+- `CrosshairStyle` — chart-specific center-line color, width, dash pattern,
+  stroke cap, plot-clipped focus-band color and width, and coordinate-label
+  appearance.
+- `InteractionTheme` — theme-level crosshair line and focus-band defaults,
+  tooltip, selection, hover, and zoom appearance.
 - `TooltipConfig`, `TooltipStyle`, `TooltipTriggerMode` — marker and tracking
   tooltip behavior.
 - `InteractionCallbacks` and chart callbacks — point, series, background, and

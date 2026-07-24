@@ -25,6 +25,12 @@ extension CrosshairStyleFluent on CrosshairStyle {
   /// Replaces [CrosshairStyle.strokeCap] with [value].
   CrosshairStyle withStrokeCap(StrokeCap value) => copyWith(strokeCap: value);
 
+  /// Replaces [CrosshairStyle.bandColor] with [value].
+  CrosshairStyle withBandColor(Color value) => copyWith(bandColor: value);
+
+  /// Replaces [CrosshairStyle.bandWidth] with [value].
+  CrosshairStyle withBandWidth(double value) => copyWith(bandWidth: value);
+
   /// Replaces [CrosshairStyle.labelBackgroundColor] with [value].
   CrosshairStyle withLabelBackgroundColor(Color value) =>
       copyWith(labelBackgroundColor: value);
@@ -99,6 +105,10 @@ extension CrosshairConfigFluent on CrosshairConfig {
   /// Replaces [CrosshairConfig.intersectionMarkerRadius] with [value].
   CrosshairConfig withIntersectionMarkerRadius(double value) =>
       copyWith(intersectionMarkerRadius: value);
+
+  /// Replaces [CrosshairConfig.persistOnPointerExit] with [value].
+  CrosshairConfig withPersistOnPointerExit(bool value) =>
+      copyWith(persistOnPointerExit: value);
 }
 
 /// Generated fluent modifiers for [TooltipStyle].

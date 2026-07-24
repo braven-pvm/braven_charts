@@ -2287,6 +2287,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _clearInteractionCursor() {
+    final isNonCartesian =
+        _layoutKind == ChartLayoutKind.partitionRadial ||
+        _layoutKind == ChartLayoutKind.polarAxis;
+    final interactionConfig = isNonCartesian
+        ? _effectiveRadialInteractionConfig()
+        : widget.interactionConfig;
+    if (interactionConfig?.crosshair.persistOnPointerExit ?? false) {
+      return;
+    }
     (_renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?)
         ?.clearCursorPosition();
     _handleLocalDataXCursorChanged(null);

@@ -619,6 +619,7 @@ void main() {
           '.interaction(',
           'InteractionConfig(',
           'CrosshairDisplayMode.tracking',
+          'persistOnPointerExit: true',
         ],
         original: (controller) => BravenChart.of(rows)
             .x(sampleT, label: 'Elapsed')
@@ -628,6 +629,7 @@ void main() {
               const InteractionConfig(
                 crosshair: CrosshairConfig(
                   displayMode: CrosshairDisplayMode.tracking,
+                  persistOnPointerExit: true,
                 ),
               ),
             )
@@ -651,6 +653,7 @@ void main() {
               const InteractionConfig(
                 crosshair: CrosshairConfig(
                   displayMode: CrosshairDisplayMode.tracking,
+                  persistOnPointerExit: true,
                 ),
               ),
             )

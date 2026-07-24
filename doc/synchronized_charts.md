@@ -82,9 +82,9 @@ Mouse hover and touch scrub publish one finite data-X value. Every participating
 chart paints a vertical crosshair and resolves its local Line and Area values
 through the same linear, stepped, Bezier, or monotone geometry used to paint
 the paths by default. Interpolated intersection markers therefore remain on
-both the shared crosshair and each visible curve. Pointer exit, focus loss,
-touch completion, touch cancellation, detach, and controller changes clear the
-transient cursor.
+both the shared crosshair and each visible curve. Pointer exit and focus loss
+clear the transient cursor by default. Touch completion, touch cancellation,
+detach, and controller changes also clear their related cursor state.
 
 Each participant keeps its own `CrosshairConfig`. A synchronized cursor forces
 only the continuous data-X tracking mechanics; it does not replace the chart's
@@ -108,6 +108,7 @@ BravenChartPlus(
       showCoordinateLabels: true,
       showIntersectionMarkers: true,
       intersectionMarkerRadius: 4,
+      persistOnPointerExit: true,
     ),
   ),
 )
@@ -116,6 +117,47 @@ BravenChartPlus(
 Set `mode: CrosshairMode.vertical` to retain the shared synchronized X cursor
 without drawing each participant's horizontal Y guide. Tooltips, intersection
 markers, and X coordinate labels remain independently configurable.
+
+Set `persistOnPointerExit: true` when the last inspected guide should remain
+visible while the user moves into an adjacent pane or host control. The source
+chart keeps its last local cursor while the pointer crosses axis chrome, pane
+seams, the widget boundary, or a middle-button viewport pan and does not publish
+a synchronized `null`. During a pan, that retained data X remains authoritative
+while every pane remaps it through the synchronized moving viewport. The
+default is `false` for transient hover behavior.
+
+Unmodified mouse-wheel input remains host-page scrolling and does not claim a
+chart viewport mode or clear the retained cursor. Hold Shift while using the
+wheel when the chart should zoom around the pointer instead.
+
+## Focus band and center-line appearance
+
+A crosshair can place a translucent focus band behind its exact center line.
+The band is clipped to each participant's plot, while the shared data-X
+controller keeps its center aligned across independently sized panes:
+
+```dart
+final baseTheme = ChartTheme.light;
+final trackingTheme = baseTheme.copyWith(
+  interactionTheme: baseTheme.interactionTheme.copyWith(
+    crosshairBandColor: const Color(0x242563EB),
+    crosshairBandWidth: 28,
+    crosshairColor: const Color(0xFF64748B),
+    crosshairWidth: 1,
+    crosshairDashPattern: const [6, 4],
+  ),
+);
+```
+
+Use `CrosshairStyle.bandColor`, `bandWidth`, `lineColor`, `lineWidth`,
+`dashPattern`, and `strokeCap` for one chart-specific treatment. A
+`bandWidth` of zero or a transparent `bandColor` disables the band without
+changing tracking. Vertical, horizontal, and two-axis crosshairs all support
+the same treatment.
+
+The band and line are overlay paint only. They do not change hit testing,
+series geometry, layout, document revision, selection, or the published
+synchronized cursor.
 
 The horizontal guide follows the participant's first local series value using
 the transform already used to paint that series. This remains a paint-only
@@ -158,6 +200,13 @@ Column(
   ],
 )
 ```
+
+Pane height is host layout policy rather than chart state. A host may place
+drag handles between stable, keyed `BravenChartPlus` and
+`CartesianNavigator` children and redistribute the adjacent heights. Keep the
+same chart keys and controllers while dragging: every participant accepts its
+new constraints, preserves its runtime, and continues to resolve the shared
+data X inside its newly laid-out plot.
 
 Call `interactions.reset()` before a composition change if a cursor or viewport
 may currently be active. The Line showcase exposes membership and independent

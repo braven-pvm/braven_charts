@@ -34,10 +34,16 @@ class InteractionTheme {
       crosshairDashPattern: (json['crosshairDashPattern'] as List)
           .map((e) => (e as num).toDouble())
           .toList(),
+      crosshairBandColor: json['crosshairBandColor'] == null
+          ? const Color(0x00000000)
+          : _parseColor(json['crosshairBandColor'] as String),
+      crosshairBandWidth: (json['crosshairBandWidth'] as num?)?.toDouble() ?? 0,
       crosshairLabelStyle: LabelStyle.fromJson(
-          json['crosshairLabelStyle'] as Map<String, dynamic>),
-      tooltipStyle:
-          LabelStyle.fromJson(json['tooltipStyle'] as Map<String, dynamic>),
+        json['crosshairLabelStyle'] as Map<String, dynamic>,
+      ),
+      tooltipStyle: LabelStyle.fromJson(
+        json['tooltipStyle'] as Map<String, dynamic>,
+      ),
       selectionColor: _parseColor(json['selectionColor'] as String),
     );
   }
@@ -45,10 +51,13 @@ class InteractionTheme {
     required this.crosshairColor,
     required this.crosshairWidth,
     required this.crosshairDashPattern,
+    this.crosshairBandColor = const Color(0x00000000),
+    this.crosshairBandWidth = 0,
     required this.crosshairLabelStyle,
     required this.tooltipStyle,
     required this.selectionColor,
-  }) : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0');
+  }) : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0'),
+       assert(crosshairBandWidth >= 0, 'crosshairBandWidth must be >= 0');
 
   /// Color of the crosshair lines.
   final Color crosshairColor;
@@ -59,6 +68,14 @@ class InteractionTheme {
   /// Dash pattern for crosshair lines.
   /// Empty list means solid line. Non-empty list defines dash/gap pattern.
   final List<double> crosshairDashPattern;
+
+  /// Fill painted symmetrically around each active crosshair guide.
+  ///
+  /// A transparent color or zero [crosshairBandWidth] disables the band.
+  final Color crosshairBandColor;
+
+  /// Width of the guide band in logical pixels.
+  final double crosshairBandWidth;
 
   /// Style for crosshair coordinate labels (X/Y values at chart edges).
   final LabelStyle crosshairLabelStyle;
@@ -127,9 +144,10 @@ class InteractionTheme {
     crosshairDashPattern: [4.0, 2.0],
     crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFF1976D2),
-          fontSize: 10.0,
-          fontWeight: FontWeight.w500),
+        color: Color(0xFF1976D2),
+        fontSize: 10.0,
+        fontWeight: FontWeight.w500,
+      ),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF1976D2),
       borderWidth: 0.5,
@@ -138,9 +156,10 @@ class InteractionTheme {
     ),
     tooltipStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFF1565C0),
-          fontSize: 12.0,
-          fontWeight: FontWeight.w500),
+        color: Color(0xFF1565C0),
+        fontSize: 12.0,
+        fontWeight: FontWeight.w500,
+      ),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF1976D2),
       borderWidth: 1.5,
@@ -156,9 +175,10 @@ class InteractionTheme {
     crosshairDashPattern: [6.0, 3.0],
     crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFFE91E63),
-          fontSize: 10.0,
-          fontWeight: FontWeight.w600),
+        color: Color(0xFFE91E63),
+        fontSize: 10.0,
+        fontWeight: FontWeight.w600,
+      ),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFFE91E63),
       borderWidth: 0.5,
@@ -167,9 +187,10 @@ class InteractionTheme {
     ),
     tooltipStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFF880E4F),
-          fontSize: 12.0,
-          fontWeight: FontWeight.w600),
+        color: Color(0xFF880E4F),
+        fontSize: 12.0,
+        fontWeight: FontWeight.w600,
+      ),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFFE91E63),
       borderWidth: 2.0,
@@ -210,9 +231,10 @@ class InteractionTheme {
     crosshairDashPattern: [],
     crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFFFFFF00),
-          fontSize: 12.0,
-          fontWeight: FontWeight.bold),
+        color: Color(0xFFFFFF00),
+        fontSize: 12.0,
+        fontWeight: FontWeight.bold,
+      ),
       backgroundColor: Color(0xFF000000),
       borderColor: Color(0xFFFFFFFF),
       borderWidth: 2.0,
@@ -221,9 +243,10 @@ class InteractionTheme {
     ),
     tooltipStyle: LabelStyle(
       textStyle: TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 14.0,
-          fontWeight: FontWeight.bold),
+        color: Color(0xFFFFFFFF),
+        fontSize: 14.0,
+        fontWeight: FontWeight.bold,
+      ),
       backgroundColor: Color(0xFF000000),
       borderColor: Color(0xFFFFFFFF),
       borderWidth: 2.0,
@@ -262,6 +285,8 @@ class InteractionTheme {
     Color? crosshairColor,
     double? crosshairWidth,
     List<double>? crosshairDashPattern,
+    Color? crosshairBandColor,
+    double? crosshairBandWidth,
     LabelStyle? crosshairLabelStyle,
     LabelStyle? tooltipStyle,
     Color? selectionColor,
@@ -270,6 +295,8 @@ class InteractionTheme {
       crosshairColor: crosshairColor ?? this.crosshairColor,
       crosshairWidth: crosshairWidth ?? this.crosshairWidth,
       crosshairDashPattern: crosshairDashPattern ?? this.crosshairDashPattern,
+      crosshairBandColor: crosshairBandColor ?? this.crosshairBandColor,
+      crosshairBandWidth: crosshairBandWidth ?? this.crosshairBandWidth,
       crosshairLabelStyle: crosshairLabelStyle ?? this.crosshairLabelStyle,
       tooltipStyle: tooltipStyle ?? this.tooltipStyle,
       selectionColor: selectionColor ?? this.selectionColor,
@@ -282,6 +309,9 @@ class InteractionTheme {
           '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
       'crosshairWidth': crosshairWidth,
       'crosshairDashPattern': crosshairDashPattern,
+      'crosshairBandColor':
+          '#${crosshairBandColor.value.toRadixString(16).padLeft(8, '0')}',
+      'crosshairBandWidth': crosshairBandWidth,
       'crosshairLabelStyle': crosshairLabelStyle.toJson(),
       'tooltipStyle': tooltipStyle.toJson(),
       'selectionColor':
@@ -296,6 +326,8 @@ class InteractionTheme {
         crosshairColor == other.crosshairColor &&
         crosshairWidth == other.crosshairWidth &&
         _listEquals(crosshairDashPattern, other.crosshairDashPattern) &&
+        crosshairBandColor == other.crosshairBandColor &&
+        crosshairBandWidth == other.crosshairBandWidth &&
         crosshairLabelStyle == other.crosshairLabelStyle &&
         tooltipStyle == other.tooltipStyle &&
         selectionColor == other.selectionColor;
@@ -303,13 +335,15 @@ class InteractionTheme {
 
   @override
   int get hashCode => Object.hash(
-        crosshairColor,
-        crosshairWidth,
-        Object.hashAll(crosshairDashPattern),
-        crosshairLabelStyle,
-        tooltipStyle,
-        selectionColor,
-      );
+    crosshairColor,
+    crosshairWidth,
+    Object.hashAll(crosshairDashPattern),
+    crosshairBandColor,
+    crosshairBandWidth,
+    crosshairLabelStyle,
+    tooltipStyle,
+    selectionColor,
+  );
 
   static Color _parseColor(String hex) {
     final hexValue = hex.replaceFirst('#', '');

@@ -158,10 +158,13 @@ class CrosshairStyle {
     this.lineWidth = 1.0,
     this.dashPattern = const [5, 3], // Default dashed pattern per spec
     this.strokeCap = StrokeCap.round,
+    this.bandColor = const Color(0x00000000),
+    this.bandWidth = 0.0,
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
     this.labelPadding = 4.0,
   }) : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
+       assert(bandWidth >= 0, 'bandWidth must be non-negative'),
        assert(labelPadding >= 0, 'labelPadding must be non-negative');
 
   /// The color of the crosshair lines.
@@ -181,6 +184,18 @@ class CrosshairStyle {
   /// The stroke cap style for crosshair lines.
   final StrokeCap strokeCap;
 
+  /// Fill painted symmetrically around each visible crosshair guide.
+  ///
+  /// Keep this transparent, or set [bandWidth] to zero, to disable the band.
+  /// The band is clipped to the plot and painted behind the center line.
+  final Color bandColor;
+
+  /// Width of the translucent guide band in logical pixels.
+  ///
+  /// The same width is used for a vertical band's horizontal span and a
+  /// horizontal band's vertical span.
+  final double bandWidth;
+
   /// The background color of coordinate labels.
   final Color labelBackgroundColor;
 
@@ -198,6 +213,8 @@ class CrosshairStyle {
     double? lineWidth,
     List<double>? dashPattern,
     StrokeCap? strokeCap,
+    Color? bandColor,
+    double? bandWidth,
     Color? labelBackgroundColor,
     Color? labelTextColor,
     double? labelPadding,
@@ -208,6 +225,8 @@ class CrosshairStyle {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
       strokeCap: strokeCap ?? this.strokeCap,
+      bandColor: bandColor ?? this.bandColor,
+      bandWidth: bandWidth ?? this.bandWidth,
       labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
       labelTextColor: labelTextColor ?? this.labelTextColor,
       labelPadding: labelPadding ?? this.labelPadding,
@@ -223,6 +242,8 @@ class CrosshairStyle {
         other.lineWidth == lineWidth &&
         _listEquals(other.dashPattern, dashPattern) &&
         other.strokeCap == strokeCap &&
+        other.bandColor == bandColor &&
+        other.bandWidth == bandWidth &&
         other.labelBackgroundColor == labelBackgroundColor &&
         other.labelTextColor == labelTextColor &&
         other.labelPadding == labelPadding;
@@ -235,6 +256,8 @@ class CrosshairStyle {
       lineWidth,
       dashPattern == null ? null : Object.hashAll(dashPattern!),
       strokeCap,
+      bandColor,
+      bandWidth,
       labelBackgroundColor,
       labelTextColor,
       labelPadding,
@@ -298,6 +321,7 @@ class CrosshairConfig {
     this.showTrackingTooltip = true,
     this.showIntersectionMarkers = true,
     this.intersectionMarkerRadius = 4.0,
+    this.persistOnPointerExit = false,
   }) : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
        assert(
          trackingModeThreshold > 0,
@@ -387,6 +411,17 @@ class CrosshairConfig {
   /// The radius of intersection markers in pixels.
   final double intersectionMarkerRadius;
 
+  /// Whether the last tracking guide remains visible after pointer exit.
+  ///
+  /// When enabled, the chart retains its most recently resolved cursor,
+  /// coordinate labels, intersection markers, and tracking tooltip when the
+  /// pointer leaves the chart or the chart loses focus. This is useful for
+  /// synchronized analytical panes where the last inspected sample should
+  /// remain available while the user interacts with adjacent controls.
+  ///
+  /// Defaults to false so existing charts keep their transient hover behavior.
+  final bool persistOnPointerExit;
+
   /// Determines if tracking mode should be used based on configuration
   /// and data point count.
   bool shouldUseTrackingMode(int totalDataPoints) {
@@ -417,6 +452,7 @@ class CrosshairConfig {
     bool? showTrackingTooltip,
     bool? showIntersectionMarkers,
     double? intersectionMarkerRadius,
+    bool? persistOnPointerExit,
     bool clearCoordinateLabelStyle = false,
   }) {
     return CrosshairConfig(
@@ -438,6 +474,7 @@ class CrosshairConfig {
           showIntersectionMarkers ?? this.showIntersectionMarkers,
       intersectionMarkerRadius:
           intersectionMarkerRadius ?? this.intersectionMarkerRadius,
+      persistOnPointerExit: persistOnPointerExit ?? this.persistOnPointerExit,
     );
   }
 
@@ -458,7 +495,8 @@ class CrosshairConfig {
         other.interpolateValues == interpolateValues &&
         other.showTrackingTooltip == showTrackingTooltip &&
         other.showIntersectionMarkers == showIntersectionMarkers &&
-        other.intersectionMarkerRadius == intersectionMarkerRadius;
+        other.intersectionMarkerRadius == intersectionMarkerRadius &&
+        other.persistOnPointerExit == persistOnPointerExit;
   }
 
   @override
@@ -477,6 +515,7 @@ class CrosshairConfig {
       showTrackingTooltip,
       showIntersectionMarkers,
       intersectionMarkerRadius,
+      persistOnPointerExit,
     ]);
   }
 }
