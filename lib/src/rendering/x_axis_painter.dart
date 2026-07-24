@@ -9,6 +9,7 @@ import 'package:flutter/painting.dart'
     show FontWeight, TextPainter, TextSpan, TextStyle;
 
 import '../axis/log_ticks.dart';
+import '../axis/time_ticks.dart';
 import '../models/axis_scale_type.dart';
 import '../models/chart_series.dart';
 import '../models/category_axis_config.dart';
@@ -90,10 +91,12 @@ class XAxisPainter {
   }
 
   List<double> _candidateTickValues() {
-    // A log axis generates decade values directly and must win before the
-    // category branch and before any legacy linear ticks supplied via
-    // [tickValues]. (Linear behavior below is unchanged.)
-    if (config.scaleType == AxisScaleType.log) {
+    // A log or time axis generates its tick values directly (decades / calendar
+    // boundaries) and must win before the category branch and before any legacy
+    // linear ticks supplied via [tickValues]. (Linear behavior below is
+    // unchanged.)
+    if (config.scaleType == AxisScaleType.log ||
+        config.scaleType == AxisScaleType.time) {
       return generateTicks(axisBounds);
     }
     final categoryAxis = config.categoryAxis;
@@ -491,6 +494,12 @@ class XAxisPainter {
       return decadeTicks(bounds.min, bounds.max, base: config.logBase);
     }
 
+    // Time axes land on real calendar boundaries; positions stay linear
+    // (epoch-millis map linearly through ChartTransform's linear arm).
+    if (config.scaleType == AxisScaleType.time) {
+      return dateTicks(bounds.min, bounds.max);
+    }
+
     // Use config.tickCount if provided, otherwise use maxTicks parameter
     maxTicks = config.tickCount ?? maxTicks ?? 10;
 
@@ -568,6 +577,16 @@ class XAxisPainter {
     // before the numeric-default block. An explicit formatter above still wins.
     if (config.scaleType == AxisScaleType.log) {
       return _formatLogValue(value);
+    }
+
+    // Time axes label ticks with a calendar-nice date string chosen by the
+    // span's interval (year→"2026", month→"Feb 2026", …), before the
+    // numeric-default block. An explicit labelFormatter above still wins.
+    if (config.scaleType == AxisScaleType.time) {
+      return dateLabel(
+        value,
+        intervalFor(axisBounds.min, axisBounds.max),
+      );
     }
 
     // Default formatting

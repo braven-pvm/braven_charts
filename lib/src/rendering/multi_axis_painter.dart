@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/painting.dart';
 
 import '../axis/log_ticks.dart';
+import '../axis/time_ticks.dart';
 import '../layout/axis_layout_manager.dart';
 import '../layout/multi_axis_layout.dart';
 import '../models/axis_scale_type.dart';
@@ -493,6 +494,11 @@ class MultiAxisPainter {
       return decadeTicks(bounds.min, bounds.max, base: logBase);
     }
 
+    // Time axes land on real calendar boundaries; positions stay linear.
+    if (scaleType == AxisScaleType.time) {
+      return dateTicks(bounds.min, bounds.max);
+    }
+
     if (bounds.span == 0) {
       return [bounds.min];
     }
@@ -543,6 +549,16 @@ class MultiAxisPainter {
     // before the numeric-default block. An explicit formatter above still wins.
     if (axis.scaleType == AxisScaleType.log) {
       return _formatLogValue(value);
+    }
+
+    // Time axes label ticks with a calendar-nice date string chosen by the
+    // axis span's interval, before the numeric-default block. An explicit
+    // labelFormatter above still wins.
+    if (axis.scaleType == AxisScaleType.time) {
+      final bounds = axisBounds[axis.id];
+      if (bounds != null) {
+        return dateLabel(value, intervalFor(bounds.min, bounds.max));
+      }
     }
 
     String formatted;
