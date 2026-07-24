@@ -2714,6 +2714,10 @@ class ChartRenderBox extends RenderBox {
           plotHeight: _plotArea.height,
           invertY: true, // Standard chart convention (Y=0 at bottom)
           transposed: _isHorizontalBarChart,
+          xScaleType: _xAxis!.scaleType,
+          xLogBase: _xAxis!.logBase,
+          yScaleType: _yAxis!.scaleType,
+          yLogBase: _yAxis!.logBase,
         );
 
         // Capture original transform for reset and constraint calculations
@@ -3086,6 +3090,10 @@ class ChartRenderBox extends RenderBox {
       for (final binding in effectiveBindings)
         binding.seriesId: binding.yAxisId,
     };
+    // Per-axis Y scale (log/linear), keyed by the same axis IDs as axisBounds.
+    final axisConfigsById = {
+      for (final axis in _getEffectiveYAxes()) axis.id: axis,
+    };
 
     // Update transform for each SeriesElement candidate
     for (final element in candidates) {
@@ -3093,9 +3101,12 @@ class ChartRenderBox extends RenderBox {
         final axisId = seriesToAxisMap[element.id];
         if (axisId != null && axisBounds.containsKey(axisId)) {
           final axisRange = axisBounds[axisId]!;
+          final axisConfig = axisConfigsById[axisId];
           final perSeriesTransform = _transform!.copyWith(
             dataYMin: axisRange.min,
             dataYMax: axisRange.max,
+            yScaleType: axisConfig?.scaleType,
+            yLogBase: axisConfig?.logBase,
           );
           element.updateTransform(perSeriesTransform);
         } else {
@@ -3924,6 +3935,10 @@ class ChartRenderBox extends RenderBox {
               binding.seriesId: binding.yAxisId,
           }
         : null;
+    // Per-axis Y scale (log/linear), keyed by the same axis IDs as axisBounds.
+    final Map<String, YAxisConfig>? axisConfigsById = axisBounds != null
+        ? {for (final axis in _getEffectiveYAxes()) axis.id: axis}
+        : null;
 
     final barLabelLayout = BarLabelLayoutCoordinator(
       plotBounds: Offset.zero & size,
@@ -3945,10 +3960,13 @@ class ChartRenderBox extends RenderBox {
           final axisId = seriesToAxisMap[series.id];
           if (axisId != null && axisBounds.containsKey(axisId)) {
             final axisRange = axisBounds[axisId]!;
+            final axisConfig = axisConfigsById?[axisId];
             // Create transform with per-axis Y bounds for proper normalization
             final perSeriesTransform = _transform!.copyWith(
               dataYMin: axisRange.min,
               dataYMax: axisRange.max,
+              yScaleType: axisConfig?.scaleType,
+              yLogBase: axisConfig?.logBase,
             );
             series.updateTransform(perSeriesTransform);
           } else {

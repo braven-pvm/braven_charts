@@ -5,6 +5,7 @@
 
 import 'dart:math' show log, ln10, pow;
 
+import '../models/axis_scale_type.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'axis_config.dart';
@@ -123,6 +124,12 @@ class Axis {
   ///
   /// If provided, used instead of default formatting.
   final String Function(double value)? labelFormatter;
+
+  /// How this axis maps values to positions (from the source config).
+  AxisScaleType get scaleType => config.scaleType;
+
+  /// Base for [AxisScaleType.log]; ignored for other scale types.
+  double get logBase => config.logBase;
 
   /// Current data range (visible viewport).
   double get dataMin => scale.dataMin;
