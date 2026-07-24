@@ -139,6 +139,19 @@ void main() {
       final cleared = ChartViewState(
         selectionBrush: const ChartSelectionBrushViewState.cleared(),
       );
+      final box = ChartViewState(
+        selectionBrush: const ChartSelectionBrushViewState(
+          acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+          box: ChartSelectionBrushBox(
+            minimumX: 2,
+            maximumX: 6,
+            minimumY: 20,
+            maximumY: 55,
+            referenceSeriesId: 'signal',
+          ),
+          visible: true,
+        ),
+      );
 
       expect(
         ChartViewState.fromJson(active.toJson()).selectionBrush?.visible,
@@ -151,6 +164,12 @@ void main() {
       expect(
         ChartViewState.fromJson(cleared.toJson()).selectionBrush?.isCleared,
         isTrue,
+      );
+      expect(
+        ChartViewState.fromJson(
+          box.toJson(),
+        ).selectionBrush?.box?.maximumY,
+        55,
       );
       expect(ChartViewState.fromJson(const {}).selectionBrush, isNull);
     });

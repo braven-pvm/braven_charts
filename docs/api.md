@@ -190,13 +190,13 @@ portable chart from the selected data; `ChartSelectionProjectionOptions`
 controls series completion, annotation clipping, and continuous Line/Area
 boundary interpolation.
 
-#### Persistent X/Y interval brush
+#### Persistent interval and box brush
 
-`ChartSelectionBrushConfig` turns an X- or Y-interval selection into an
-opt-in, durable control. The brush remains on the native Cartesian surface
-after pointer-up, can be dragged or resized, and continues to publish
+`ChartSelectionBrushConfig` turns an X interval, Y interval, or rectangular
+box selection into an opt-in, durable control. The brush remains on the native
+Cartesian surface after pointer-up, can be dragged or resized, and continues to publish
 `onSelectionChanged` and `onSelectionResultChanged` through the ordinary
-selection pipeline. Point, box, and lasso acquisition remain transient.
+selection pipeline. Point and lasso acquisition remain transient.
 
 ```dart
 final controller = BravenChartController();
@@ -220,6 +220,8 @@ BravenChartPlus(
       acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
       brush: ChartSelectionBrushConfig(
         enabled: true,
+        // Opt in only when the brush should receive keyboard focus.
+        keyboardEnabled: true,
         initialVisible: true,
         initialRange: ChartSelectionBrushRange(
           minimum: 1.5,
@@ -228,7 +230,15 @@ BravenChartPlus(
         style: ChartSelectionBrushStyle(
           fillColor: Color(0xFF2563EB),
           borderColor: Color(0xFF1D4ED8),
+          keyboardFocusBorderColor: Color(0xFFF97316),
           borderRadius: 6,
+          grid: ChartSelectionBrushGridStyle(
+            direction: ChartSelectionBrushGridDirection.both,
+            rows: 2,
+            columns: 2,
+            lineWidth: 1,
+            pattern: ChartSelectionBrushGridPattern.dashed,
+          ),
         ),
       ),
     ),
@@ -245,6 +255,15 @@ set `ChartSelectionBrushRange.referenceSeriesId` so the initial band uses the
 intended Y transform. The renderer reprojects the range after resize, zoom,
 pan, transpose, axis placement, and RTL changes.
 
+For `ChartSelectionAcquisitionMode.rectangle`, configure
+`ChartSelectionBrushConfig.initialBox` with ordered X and Y bounds. Box brushes
+expose four edge and four corner resize handles. Use
+`BravenChartController.setSelectionBrushBox(...)` to set or reposition the box
+programmatically. `ChartSelectionBrushGridStyle` adds visual-only horizontal,
+vertical, or combined subdivisions: `rows` and `columns` are cell counts, so
+2 × 2 creates four quadrants. Grid colour, line width, and solid/dashed/dotted
+pattern are portable; the default direction is `none`.
+
 Use `BravenChartController.selectionBrushState` to read the live bounds and
 visibility. `setSelectionBrush(minimum:, maximum:, referenceSeriesId:,
 visible:)` creates or moves the brush programmatically.
@@ -255,9 +274,13 @@ structured `ChartArtifactResult`, including failures for detached charts,
 unsupported acquisition modes, invalid bounds, or ambiguous Y-axis mappings.
 
 The feature defaults off, so existing interval-selection behavior is
-unchanged. The runnable [Selection Lab](https://braven-pvm.github.io/braven_charts/?page=selection)
+unchanged. Brush keyboard manipulation is independently opt-in through
+`keyboardEnabled`; when enabled, its focus outline defaults to the ordinary
+brush border and can be overridden with `keyboardFocusBorderColor`. The
+runnable [Selection Lab](https://braven-pvm.github.io/braven_charts/?page=selection)
 exposes initial bounds, visibility, movement, resizing, styling, X/Y modes,
-multi-axis mapping, callbacks, keyboard control, and touch coexistence.
+box mode, grid subdivisions, multi-axis mapping, callbacks, keyboard control,
+and touch coexistence.
 
 ### `ChartAnnotation`
 

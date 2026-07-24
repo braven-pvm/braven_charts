@@ -150,6 +150,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Selection route remains reachable on a phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ShowcaseHome(requestedPageOverride: 'selection')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MobileShowcasePage), findsNothing);
+    expect(find.text('Selection lab'), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-family-grid')), findsOneWidget);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow showcase uses the focused phone chart browser', (
     tester,
   ) async {

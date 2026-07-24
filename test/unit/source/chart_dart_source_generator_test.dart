@@ -102,6 +102,7 @@ void main() {
                 acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
                 brush: ChartSelectionBrushConfig(
                   enabled: true,
+                  keyboardEnabled: true,
                   initialVisible: true,
                   initialRange: ChartSelectionBrushRange(
                     minimum: 2,
@@ -109,6 +110,7 @@ void main() {
                   ),
                   style: ChartSelectionBrushStyle(
                     fillColor: Color(0xFF123456),
+                    keyboardFocusBorderColor: Color(0xFFF97316),
                     borderRadius: 6,
                   ),
                 ),
@@ -127,13 +129,82 @@ void main() {
       );
 
       expect(generated.source, contains('brush: ChartSelectionBrushConfig('));
+      expect(generated.source, contains('keyboardEnabled: true,'));
       expect(generated.source, contains('fillColor: Color(0xFF123456),'));
+      expect(
+        generated.source,
+        contains('keyboardFocusBorderColor: Color(0xFFF97316),'),
+      );
       expect(
         generated.source,
         contains('selectionBrush: ChartSelectionBrushViewState('),
       );
       expect(generated.source, contains('minimum: 4.0,'));
       expect(generated.source, contains('visible: false,'));
+    });
+
+    test('emits persistent box bounds and visual brush grid styling', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const LineChartSeries(
+              id: 'signal',
+              points: [ChartDataPoint(x: 0, y: 1)],
+            ),
+            interaction: const InteractionConfig(
+              selection: ChartSelectionConfig(
+                acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                brush: ChartSelectionBrushConfig(
+                  enabled: true,
+                  initialVisible: true,
+                  initialBox: ChartSelectionBrushBox(
+                    minimumX: 2,
+                    maximumX: 6,
+                    minimumY: 20,
+                    maximumY: 55,
+                  ),
+                  style: ChartSelectionBrushStyle(
+                    grid: ChartSelectionBrushGridStyle(
+                      direction: ChartSelectionBrushGridDirection.both,
+                      rows: 2,
+                      columns: 3,
+                      lineWidth: 1.5,
+                      pattern: ChartSelectionBrushGridPattern.dotted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            viewState: ChartViewState(
+              selectionBrush: const ChartSelectionBrushViewState(
+                acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+                box: ChartSelectionBrushBox(
+                  minimumX: 3,
+                  maximumX: 7,
+                  minimumY: 25,
+                  maximumY: 58,
+                ),
+                visible: true,
+              ),
+            ),
+          ),
+          options: const ChartDartSourceOptions(includeViewState: true),
+        ),
+      );
+
+      expect(generated.source, contains('initialBox: ChartSelectionBrushBox('));
+      expect(generated.source, contains('minimumY: 20.0,'));
+      expect(
+        generated.source,
+        contains('direction: ChartSelectionBrushGridDirection.both,'),
+      );
+      expect(generated.source, contains('columns: 3,'));
+      expect(
+        generated.source,
+        contains('pattern: ChartSelectionBrushGridPattern.dotted,'),
+      );
+      expect(generated.source, contains('box: ChartSelectionBrushBox('));
+      expect(generated.source, contains('maximumY: 58.0,'));
     });
 
     test('generates every built-in chart family constructor', () {

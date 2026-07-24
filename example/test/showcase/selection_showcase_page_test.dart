@@ -610,6 +610,7 @@ void main() {
         find.byKey(const ValueKey('selection-chart-line')),
       );
       expect(chart.interactionConfig?.selection.brush.enabled, isTrue);
+      expect(chart.interactionConfig?.selection.brush.keyboardEnabled, isFalse);
       expect(chart.interactionConfig?.selection.brush.initialVisible, isTrue);
       expect(chart.interactionConfig?.selection.brush.initialRange, isNotNull);
       expect(
@@ -622,6 +623,28 @@ void main() {
       expect(
         find.byKey(
           const ValueKey('selection-lab-brush-fill-color'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      final keyboard = inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-keyboard-enabled'),
+      );
+      expect(keyboard.value, isFalse);
+      keyboard.onChanged(true);
+      await tester.pumpAndSettle();
+      final keyboardChart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-line')),
+      );
+      expect(
+        keyboardChart.interactionConfig?.selection.brush.keyboardEnabled,
+        isTrue,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-keyboard-focus-color'),
           skipOffstage: false,
         ),
         findsOneWidget,
@@ -644,10 +667,167 @@ void main() {
     },
   );
 
+  testWidgets(
+    'box mode exposes two-axis persistence and visual grid controls',
+    (tester) async {
+      await pumpSelectionLab(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey('selection-lab-tool-rectangle')),
+      );
+      await tester.pumpAndSettle();
+      inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-enabled'),
+      ).onChanged(true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-x-range'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-y-range'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      inspectorEntry<EnumOption<ChartSelectionBrushGridDirection>>(
+        tester,
+        const ValueKey('selection-lab-brush-grid-direction'),
+      ).onChanged(ChartSelectionBrushGridDirection.both);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-grid-rows'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-grid-columns'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('selection-lab-brush-grid-pattern'),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-line')),
+      );
+      final brush = chart.interactionConfig!.selection.brush;
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('selection-workbench')),
+      );
+      expect(brush.initialBox, isNotNull);
+      expect(brush.initialRange, isNull);
+      expect(brush.style.grid.direction, ChartSelectionBrushGridDirection.both);
+      expect(workbench.chartController!.selectionBrushState?.visible, isTrue);
+      expect(workbench.chartController!.selectionBrushState?.box, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'box selection automatically rebases the visible Workbench table',
+    (tester) async {
+      await pumpSelectionLab(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey('selection-lab-tool-rectangle')),
+      );
+      await tester.pumpAndSettle();
+      inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-enabled'),
+      ).onChanged(true);
+      await tester.pumpAndSettle();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('selection-workbench')),
+      );
+      final workbenchController = workbench.workbenchController!;
+      final chartController = workbench.chartController!;
+      workbenchController.setDisplayMode(ChartDisplayMode.split);
+      await tester.pumpAndSettle();
+      final initialSnapshot = workbenchController.tableSnapshot;
+      expect(initialSnapshot, isNotNull);
+
+      expect(
+        chartController.setSelectionBrushBox(
+          minimumX: 2,
+          maximumX: 4,
+          minimumY: 38,
+          maximumY: 61,
+          referenceSeriesId: 'observed',
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(chartController.selectionBrushState?.box, isNotNull);
+      expect(chartController.selectedPointRefs, isNotEmpty);
+      expect(workbenchController.tableIsStale, isFalse);
+      expect(workbenchController.tableSnapshot, isNot(same(initialSnapshot)));
+      expect(
+        workbenchController.tableSnapshot?.revision,
+        chartController.effectiveDocumentRevision.value,
+      );
+      expect(
+        workbenchController
+            .tableSnapshot
+            ?.viewState
+            ?.selectionExpression
+            ?.isNotEmpty,
+        isTrue,
+      );
+      expect(
+        workbenchController.tableSnapshot?.viewState?.selectionBrush?.box,
+        chartController.selectionBrushState?.box,
+      );
+      expect(
+        find.textContaining(
+          '${chartController.selectedPointRefs.length} selected ·',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'The point reference belongs to an older chart document revision.',
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('selection action policies are wired into the Workbench', (
     tester,
   ) async {
     await pumpSelectionLab(tester);
+
+    expect(
+      inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-projection-annotations'),
+      ).value,
+      isFalse,
+    );
 
     final seriesProjection =
         inspectorEntry<EnumOption<ChartSelectionSeriesProjection>>(

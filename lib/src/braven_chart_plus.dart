@@ -1652,6 +1652,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onZoomViewport: _zoomViewportFromController,
       onFitData: _fitDataFromController,
       onSetSelectionBrush: _setSelectionBrush,
+      onSetSelectionBrushBox: _setSelectionBrushBox,
       onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
       onClearSelectionBrush: _clearSelectionBrush,
       onClearPointFocus: _clearPointFocus,
@@ -1819,6 +1820,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onZoomViewport: _zoomViewportFromController,
         onFitData: _fitDataFromController,
         onSetSelectionBrush: _setSelectionBrush,
+        onSetSelectionBrushBox: _setSelectionBrushBox,
         onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
         onClearSelectionBrush: _clearSelectionBrush,
         onClearPointFocus: _clearPointFocus,
@@ -1837,7 +1839,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final supportsBrush =
           selection.acquisitionMode ==
               ChartSelectionAcquisitionMode.xInterval ||
-          selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval;
+          selection.acquisitionMode ==
+              ChartSelectionAcquisitionMode.yInterval ||
+          selection.acquisitionMode == ChartSelectionAcquisitionMode.rectangle;
+      final hasInitialGeometry =
+          selection.acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+          ? selection.brush.initialBox != null
+          : selection.brush.initialRange != null;
       if (!selection.brush.enabled || !supportsBrush) {
         _selectionBrushState = null;
       } else if (_selectionBrushState != null &&
@@ -1845,7 +1853,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _selectionBrushState = null;
       } else if (_selectionBrushState == null &&
           !(oldWidget.interactionConfig?.selection.brush.enabled ?? false) &&
-          selection.brush.initialRange != null) {
+          hasInitialGeometry) {
         _initializeSelectionBrushFromConfig();
         _scheduleInitialSelectionBrushCommit();
       }
@@ -2746,7 +2754,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                 ? const ChartSelectionBrushViewState.cleared()
                 : ChartSelectionBrushViewState(
                     acquisitionMode: brushState.acquisitionMode,
-                    range: brushState.range,
+                    range:
+                        brushState.acquisitionMode ==
+                            ChartSelectionAcquisitionMode.rectangle
+                        ? null
+                        : brushState.range,
+                    box: brushState.box,
                     visible: brushState.visible,
                   )
           : null,
@@ -6418,7 +6431,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (interaction.selection.brush.enabled &&
         (gesture.acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
             gesture.acquisitionMode ==
-                ChartSelectionAcquisitionMode.yInterval)) {
+                ChartSelectionAcquisitionMode.yInterval ||
+            gesture.acquisitionMode ==
+                ChartSelectionAcquisitionMode.rectangle)) {
       _updateSelectionBrushFromGesture(gesture);
     }
   }
@@ -6427,16 +6442,29 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final selection =
         (widget.interactionConfig ?? const InteractionConfig()).selection;
     final initialRange = selection.brush.initialRange;
+    final initialBox = selection.brush.initialBox;
     final supportsBrush =
         selection.acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
-        selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval;
-    if (!selection.brush.enabled || !supportsBrush || initialRange == null) {
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.yInterval ||
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.rectangle;
+    final hasInitialGeometry =
+        selection.acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+        ? initialBox != null
+        : initialRange != null;
+    if (!selection.brush.enabled || !supportsBrush || !hasInitialGeometry) {
       _selectionBrushState = null;
       return;
     }
     _selectionBrushState = ChartSelectionBrushState(
       acquisitionMode: selection.acquisitionMode,
-      range: initialRange,
+      range:
+          initialRange ??
+          ChartSelectionBrushRange(
+            minimum: initialBox!.minimumX,
+            maximum: initialBox.maximumX,
+            referenceSeriesId: initialBox.referenceSeriesId,
+          ),
+      box: initialBox,
       visible: selection.brush.initialVisible,
     );
   }
@@ -6453,6 +6481,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _updateSelectionBrushFromGesture(ChartSelectionGestureResult gesture) {
     final current = _selectionBrushState;
     ChartSelectionBrushRange? range;
+    ChartSelectionBrushBox? box;
     if (gesture.acquisitionMode == ChartSelectionAcquisitionMode.xInterval &&
         gesture.minimumXInclusive != null &&
         gesture.maximumXInclusive != null) {
@@ -6479,11 +6508,35 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           referenceSeriesId: current?.range.referenceSeriesId,
         );
       }
+    } else if (gesture.acquisitionMode ==
+            ChartSelectionAcquisitionMode.rectangle &&
+        gesture.plotBounds != null) {
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      final plotBounds = gesture.plotBounds!;
+      final widgetRect = renderBox == null
+          ? null
+          : Rect.fromPoints(
+              renderBox.plotToWidget(plotBounds.topLeft),
+              renderBox.plotToWidget(plotBounds.bottomRight),
+            );
+      if (widgetRect != null) {
+        box = renderBox!.selectionBrushBoxForWidgetRect(
+          widgetRect,
+          referenceSeriesId: current?.box?.referenceSeriesId,
+        );
+      }
     }
-    if (range == null) return;
+    if (range == null && box == null) return;
+    range ??= ChartSelectionBrushRange(
+      minimum: box!.minimumX,
+      maximum: box.maximumX,
+      referenceSeriesId: box.referenceSeriesId,
+    );
     final next = ChartSelectionBrushState(
       acquisitionMode: gesture.acquisitionMode,
       range: range,
+      box: box,
       visible: true,
     );
     if (_selectionBrushState == next) {
@@ -6557,6 +6610,64 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     return ChartArtifactSuccess(value: null);
   }
 
+  ChartArtifactResult<void> _setSelectionBrushBox(
+    ChartSelectionBrushBox box, {
+    required bool visible,
+  }) {
+    final selection =
+        (widget.interactionConfig ?? const InteractionConfig()).selection;
+    if (!selection.brush.enabled) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+          message: 'Persistent selection brushes are disabled for this chart.',
+        ),
+      );
+    }
+    if (selection.acquisitionMode != ChartSelectionAcquisitionMode.rectangle) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Persistent selection boxes require rectangle selection.',
+        ),
+      );
+    }
+    if (box.referenceSeriesId != null &&
+        !_resolvedChartData.allSeries.any(
+          (series) => series.id == box.referenceSeriesId,
+        )) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidPointReference,
+          message:
+              'Selection brush reference series "${box.referenceSeriesId}" '
+              'is not present in the mounted chart.',
+        ),
+      );
+    }
+    final next = ChartSelectionBrushState(
+      acquisitionMode: selection.acquisitionMode,
+      range: ChartSelectionBrushRange(
+        minimum: box.minimumX,
+        maximum: box.maximumX,
+        referenceSeriesId: box.referenceSeriesId,
+      ),
+      box: box,
+      visible: visible,
+    );
+    if (_selectionBrushState == next) {
+      return ChartArtifactSuccess(value: null);
+    }
+    _captureStateRevision++;
+    setState(() => _selectionBrushState = next);
+    widget.bravenChartController?.updateSelectionBrushState(next);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectionBrushState != next) return;
+      _commitSelectionBrushState(next);
+    });
+    return ChartArtifactSuccess(value: null);
+  }
+
   ChartArtifactResult<void> _setSelectionBrushVisibility(bool visible) {
     final current = _selectionBrushState;
     if (current == null) {
@@ -6607,6 +6718,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     ChartSelectionExpression previousExpression,
   ) {
     if (targets.seriesIds.isNotEmpty) {
+      return;
+    }
+    if (gesture.acquisitionMode == ChartSelectionAcquisitionMode.rectangle) {
+      // Selection-expression clauses are additive unions. Encoding a box as
+      // one X interval plus per-series Y intervals would therefore select
+      // every point matching either axis instead of only points enclosed by
+      // both axes. The ordinary selection pipeline has already committed the
+      // exact rectangle hits, so retain those resolved identities until the
+      // expression model has a native two-axis conjunction clause.
       return;
     }
     final clauses = switch (gesture.acquisitionMode) {
@@ -7816,7 +7936,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         } else {
           _selectionBrushState = ChartSelectionBrushState(
             acquisitionMode: restoredBrush.acquisitionMode!,
-            range: restoredBrush.range!,
+            range:
+                restoredBrush.range ??
+                ChartSelectionBrushRange(
+                  minimum: restoredBrush.box!.minimumX,
+                  maximum: restoredBrush.box!.maximumX,
+                  referenceSeriesId: restoredBrush.box!.referenceSeriesId,
+                ),
+            box: restoredBrush.box,
             visible: restoredBrush.visible,
           );
         }
@@ -10350,6 +10477,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           interactionConfig: effectiveInteractionConfig,
                           selectionBrushState: _selectionBrushState,
                           selectionBrushKeyboardFocused:
+                              (effectiveInteractionConfig
+                                      ?.selection
+                                      .brush
+                                      .keyboardEnabled ??
+                                  false) &&
+                              (effectiveInteractionConfig?.keyboard.enabled ??
+                                  true) &&
                               _focusNode.hasFocus &&
                               (_selectionBrushState?.visible ?? false),
                           textScaleFactor: _textScaleFactor,

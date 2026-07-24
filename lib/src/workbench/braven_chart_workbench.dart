@@ -1955,8 +1955,6 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.phase == ChartWorkbenchTablePhase.refreshing)
-          const LinearProgressIndicator(minHeight: 2),
         if (_pointLinkError != null && model != null)
           _WorkbenchTableMessage(
             icon: Icons.link_off_outlined,
@@ -2028,6 +2026,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                     model == null &&
                     (state.phase == ChartWorkbenchTablePhase.uninitialized ||
                         state.phase == ChartWorkbenchTablePhase.loading),
+                isRefreshing:
+                    model != null &&
+                    state.phase == ChartWorkbenchTablePhase.refreshing,
                 errorMessage: model == null ? state.error?.message : null,
                 focusedPointRefs: _chartController.focusedPointRefs,
                 selectedPointRefs: model == null

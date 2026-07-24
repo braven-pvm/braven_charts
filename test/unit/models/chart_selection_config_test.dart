@@ -144,14 +144,24 @@ void main() {
         borderRadius: 6,
         handleFillColor: Color(0xFFFFFFFF),
         handleBorderColor: Color(0xFF1D4ED8),
+        keyboardFocusBorderColor: Color(0xFFF97316),
         handleBorderWidth: 2,
         handleSize: 12,
         handleHitSize: 48,
         hoverOpacity: 0.28,
         activeOpacity: 0.34,
+        grid: ChartSelectionBrushGridStyle(
+          direction: ChartSelectionBrushGridDirection.both,
+          rows: 3,
+          columns: 4,
+          color: Color(0xFF334155),
+          lineWidth: 1.5,
+          pattern: ChartSelectionBrushGridPattern.dashed,
+        ),
       );
       const brush = ChartSelectionBrushConfig(
         enabled: true,
+        keyboardEnabled: true,
         initialVisible: true,
         initialRange: range,
         style: style,
@@ -176,6 +186,9 @@ void main() {
       );
       expect(style.copyWith(clearFillColor: true).fillColor, isNull);
       expect(style.copyWith(clearBorderColor: true).borderColor, isNull);
+      expect(style.grid.showsHorizontal, isTrue);
+      expect(style.grid.showsVertical, isTrue);
+      expect(style.grid.rows * style.grid.columns, 12);
       expect(
         style.copyWith(clearHandleFillColor: true).handleFillColor,
         isNull,
@@ -185,16 +198,59 @@ void main() {
         isNull,
       );
       expect(
+        style
+            .copyWith(clearKeyboardFocusBorderColor: true)
+            .keyboardFocusBorderColor,
+        isNull,
+      );
+      expect(
         brush.copyWith(clearInitialRange: true),
-        const ChartSelectionBrushConfig(enabled: true, style: style),
+        const ChartSelectionBrushConfig(
+          enabled: true,
+          keyboardEnabled: true,
+          initialVisible: true,
+          style: style,
+        ),
+      );
+      expect(
+        brush
+            .copyWith(clearInitialRange: true)
+            .withInitialState(range, false),
+        const ChartSelectionBrushConfig(
+          enabled: true,
+          keyboardEnabled: true,
+          initialRange: range,
+          style: style,
+        ),
       );
       expect(config.copyWith(), config);
     });
 
-    test('visible initial brush requires an initial range', () {
+    test('box bounds are ordered, immutable, and separately configurable', () {
+      const box = ChartSelectionBrushBox(
+        minimumX: 2,
+        maximumX: 6,
+        minimumY: 30,
+        maximumY: 55,
+        referenceSeriesId: 'signal',
+      );
       expect(
-        () => ChartSelectionBrushConfig(enabled: true, initialVisible: true),
-        throwsAssertionError,
+        box.copyWith(minimumX: 3, maximumY: 60),
+        const ChartSelectionBrushBox(
+          minimumX: 3,
+          maximumX: 6,
+          minimumY: 30,
+          maximumY: 60,
+          referenceSeriesId: 'signal',
+        ),
+      );
+      expect(
+        const ChartSelectionBrushConfig(
+          enabled: true,
+          initialVisible: true,
+          initialBox: box,
+        ).copyWith(clearInitialRange: true).initialBox,
+        box,
       );
     });
   });

@@ -13,6 +13,7 @@ import 'chart_selection_expression.dart';
 import 'interaction_config.dart'
     show
         ChartSelectionAcquisitionMode,
+        ChartSelectionBrushBox,
         ChartSelectionBrushRange,
         ChartSelectionOperation;
 
@@ -60,6 +61,12 @@ typedef ChartSelectionBrushSetCommandHandler =
       required bool visible,
     });
 
+typedef ChartSelectionBrushBoxSetCommandHandler =
+    ChartArtifactResult<void> Function(
+      ChartSelectionBrushBox box, {
+      required bool visible,
+    });
+
 /// Internal chart-state bridge for changing persistent brush visibility.
 typedef ChartSelectionBrushVisibilityCommandHandler =
     ChartArtifactResult<void> Function(bool visible);
@@ -77,17 +84,30 @@ class ChartSelectionBrushState {
   const ChartSelectionBrushState({
     required this.acquisitionMode,
     required this.range,
+    this.box,
     required this.visible,
   }) : assert(
          acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
-             acquisitionMode == ChartSelectionAcquisitionMode.yInterval,
+             acquisitionMode == ChartSelectionAcquisitionMode.yInterval ||
+             acquisitionMode == ChartSelectionAcquisitionMode.rectangle,
+       ),
+       assert(
+         acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+             ? box != null
+             : box == null,
        );
 
-  /// Whether the brush controls the X or Y data interval.
+  /// Whether the brush controls an X interval, Y interval, or rectangle.
   final ChartSelectionAcquisitionMode acquisitionMode;
 
-  /// Current ordered data-domain bounds.
+  /// Current ordered data-domain interval.
+  ///
+  /// For a rectangle this mirrors the X bounds in [box], preserving the
+  /// interval summary used by existing controller listeners.
   final ChartSelectionBrushRange range;
+
+  /// Current ordered two-dimensional data-domain bounds.
+  final ChartSelectionBrushBox? box;
 
   /// Whether the brush geometry is currently painted and interactive.
   final bool visible;
@@ -95,10 +115,12 @@ class ChartSelectionBrushState {
   ChartSelectionBrushState copyWith({
     ChartSelectionAcquisitionMode? acquisitionMode,
     ChartSelectionBrushRange? range,
+    ChartSelectionBrushBox? box,
     bool? visible,
   }) => ChartSelectionBrushState(
     acquisitionMode: acquisitionMode ?? this.acquisitionMode,
     range: range ?? this.range,
+    box: box ?? this.box,
     visible: visible ?? this.visible,
   );
 
@@ -108,10 +130,11 @@ class ChartSelectionBrushState {
       other is ChartSelectionBrushState &&
           other.acquisitionMode == acquisitionMode &&
           other.range == range &&
+          other.box == box &&
           other.visible == visible;
 
   @override
-  int get hashCode => Object.hash(acquisitionMode, range, visible);
+  int get hashCode => Object.hash(acquisitionMode, range, box, visible);
 }
 
 /// Programmatic control over series, point linking, and Y-axis slot state.
@@ -157,6 +180,7 @@ class BravenChartController extends ChangeNotifier {
   ChartViewportZoomCommandHandler? _zoomViewportHandler;
   ChartViewportFitCommandHandler? _fitDataHandler;
   ChartSelectionBrushSetCommandHandler? _setSelectionBrushHandler;
+  ChartSelectionBrushBoxSetCommandHandler? _setSelectionBrushBoxHandler;
   ChartSelectionBrushVisibilityCommandHandler?
   _setSelectionBrushVisibilityHandler;
   ChartSelectionCommandHandler? _clearSelectionBrushHandler;
@@ -439,6 +463,41 @@ class BravenChartController extends ChangeNotifier {
     );
   }
 
+  /// Sets a persistent box brush in the attached chart's X and Y domains.
+  ChartArtifactResult<void> setSelectionBrushBox({
+    required double minimumX,
+    required double maximumX,
+    required double minimumY,
+    required double maximumY,
+    String? referenceSeriesId,
+    bool visible = true,
+  }) {
+    final values = [minimumX, maximumX, minimumY, maximumY];
+    if (values.any((value) => !value.isFinite) ||
+        minimumX > maximumX ||
+        minimumY > maximumY) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Selection box bounds must be finite and ordered on both axes.',
+        ),
+      );
+    }
+    final handler = _setSelectionBrushBoxHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(
+      ChartSelectionBrushBox(
+        minimumX: minimumX,
+        maximumX: maximumX,
+        minimumY: minimumY,
+        maximumY: maximumY,
+        referenceSeriesId: referenceSeriesId,
+      ),
+      visible: visible,
+    );
+  }
+
   /// Shows an existing persistent brush without changing its selection.
   ChartArtifactResult<void> showSelectionBrush() =>
       _setSelectionBrushVisibility(true);
@@ -590,6 +649,7 @@ class BravenChartController extends ChangeNotifier {
     ChartViewportZoomCommandHandler? onZoomViewport,
     ChartViewportFitCommandHandler? onFitData,
     ChartSelectionBrushSetCommandHandler? onSetSelectionBrush,
+    ChartSelectionBrushBoxSetCommandHandler? onSetSelectionBrushBox,
     ChartSelectionBrushVisibilityCommandHandler? onSetSelectionBrushVisibility,
     ChartSelectionCommandHandler? onClearSelectionBrush,
     void Function()? onClearPointFocus,
@@ -616,6 +676,7 @@ class BravenChartController extends ChangeNotifier {
     _zoomViewportHandler = onZoomViewport;
     _fitDataHandler = onFitData;
     _setSelectionBrushHandler = onSetSelectionBrush;
+    _setSelectionBrushBoxHandler = onSetSelectionBrushBox;
     _setSelectionBrushVisibilityHandler = onSetSelectionBrushVisibility;
     _clearSelectionBrushHandler = onClearSelectionBrush;
     _clearPointFocusHandler = onClearPointFocus;
@@ -651,6 +712,7 @@ class BravenChartController extends ChangeNotifier {
     _zoomViewportHandler = null;
     _fitDataHandler = null;
     _setSelectionBrushHandler = null;
+    _setSelectionBrushBoxHandler = null;
     _setSelectionBrushVisibilityHandler = null;
     _clearSelectionBrushHandler = null;
     _clearPointFocusHandler = null;
