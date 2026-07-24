@@ -9,6 +9,7 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../meta/chart_surface.dart';
+import 'axis_scale_type.dart';
 import 'y_axis_position.dart';
 
 /// Controls where crosshair Y-value labels appear when hovering over the chart.
@@ -194,6 +195,8 @@ class YAxisConfig {
     this.axisLabelPadding = 5.0,
     this.axisMargin = 8.0,
     this.tickCount,
+    this.scaleType = AxisScaleType.linear,
+    this.logBase = 10,
     this.labelFormatter,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
@@ -247,6 +250,8 @@ class YAxisConfig {
     this.axisLabelPadding = 5.0,
     this.axisMargin = 8.0,
     this.tickCount,
+    this.scaleType = AxisScaleType.linear,
+    this.logBase = 10,
     this.labelFormatter,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
@@ -283,6 +288,8 @@ class YAxisConfig {
     double axisLabelPadding = 5.0,
     double axisMargin = 8.0,
     int? tickCount,
+    AxisScaleType scaleType = AxisScaleType.linear,
+    double logBase = 10,
     YAxisLabelFormatter? labelFormatter,
     bool showMinorTicks = false,
     int minorTickCount = 4,
@@ -323,6 +330,8 @@ class YAxisConfig {
       axisLabelPadding: axisLabelPadding,
       axisMargin: axisMargin,
       tickCount: tickCount,
+      scaleType: scaleType,
+      logBase: logBase,
       labelFormatter: labelFormatter,
       showMinorTicks: showMinorTicks,
       minorTickCount: minorTickCount,
@@ -505,6 +514,12 @@ class YAxisConfig {
   /// If provided, must be >= 2.
   final int? tickCount;
 
+  /// How this axis maps values to positions and generates ticks.
+  final AxisScaleType scaleType;
+
+  /// Base for [AxisScaleType.log]; ignored otherwise.
+  final double logBase;
+
   /// Custom formatter for tick labels.
   ///
   /// If null, uses default number formatting with [unit] suffix if provided.
@@ -565,6 +580,8 @@ class YAxisConfig {
     double? axisMargin,
     int? tickCount,
     bool clearTickCount = false,
+    AxisScaleType? scaleType,
+    double? logBase,
     YAxisLabelFormatter? labelFormatter,
     bool? showMinorTicks,
     int? minorTickCount,
@@ -594,6 +611,8 @@ class YAxisConfig {
       axisLabelPadding: axisLabelPadding ?? this.axisLabelPadding,
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: clearTickCount ? null : (tickCount ?? this.tickCount),
+      scaleType: scaleType ?? this.scaleType,
+      logBase: logBase ?? this.logBase,
       labelFormatter: labelFormatter ?? this.labelFormatter,
       showMinorTicks: showMinorTicks ?? this.showMinorTicks,
       minorTickCount: minorTickCount ?? this.minorTickCount,
@@ -627,6 +646,8 @@ class YAxisConfig {
         other.axisLabelPadding == axisLabelPadding &&
         other.axisMargin == axisMargin &&
         other.tickCount == tickCount &&
+        other.scaleType == scaleType &&
+        other.logBase == logBase &&
         other.labelFormatter == labelFormatter &&
         other.showMinorTicks == showMinorTicks &&
         other.minorTickCount == minorTickCount &&
@@ -657,6 +678,8 @@ class YAxisConfig {
         axisLabelPadding,
         axisMargin,
         tickCount,
+        scaleType,
+        logBase,
         labelFormatter,
         showMinorTicks,
         minorTickCount,
@@ -687,6 +710,8 @@ class YAxisConfig {
         'axisLabelPadding: $axisLabelPadding, '
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount, '
+        'scaleType: $scaleType, '
+        'logBase: $logBase, '
         'showMinorTicks: $showMinorTicks, '
         'minorTickCount: $minorTickCount, '
         'minorTickLength: $minorTickLength'
