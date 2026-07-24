@@ -11,11 +11,13 @@ String _read(String path) => File(path).readAsStringSync();
 void main() {
   test('all agent discovery surfaces name the canonical shared register', () {
     final agentInstructions = _read('AGENTS.md');
+    final copilotInstructions = _read('.github/copilot-instructions.md');
     final onboarding = _read('docs/agent_onboarding.md');
     final issueWorkflow = _read('docs/issue_workflow.md');
 
     for (final entry in <String, String>{
       'AGENTS.md': agentInstructions,
+      '.github/copilot-instructions.md': copilotInstructions,
       'docs/agent_onboarding.md': onboarding,
       'docs/issue_workflow.md': issueWorkflow,
     }.entries) {
@@ -40,10 +42,12 @@ void main() {
 
   test('guidance separates tracking state from implementation evidence', () {
     final agentInstructions = _read('AGENTS.md');
+    final copilotInstructions = _read('.github/copilot-instructions.md');
     final onboarding = _read('docs/agent_onboarding.md');
     final issueWorkflow = _read('docs/issue_workflow.md');
 
     expect(agentInstructions, contains('not proof'));
+    expect(copilotInstructions, contains('not implementation proof'));
     expect(onboarding, contains('not implementation proof'));
     expect(issueWorkflow, contains('GitHub remains the execution contract'));
     expect(
@@ -64,6 +68,66 @@ void main() {
     );
     expect(pullRequestTemplate, contains('Register item: BC-####'));
     expect(pullRequestTemplate, contains('synchronized back to the register'));
+  });
+
+  test('every custom GitHub agent bootstraps through root AGENTS.md', () {
+    final agentFiles =
+        Directory('.github/agents')
+            .listSync()
+            .whereType<File>()
+            .where((file) => file.path.endsWith('.agent.md'))
+            .toList()
+          ..sort((left, right) => left.path.compareTo(right.path));
+
+    expect(agentFiles, isNotEmpty);
+    for (final file in agentFiles) {
+      final contents = file.readAsStringSync();
+      expect(
+        contents,
+        contains('root `AGENTS.md`'),
+        reason: '${file.path} must enter through the canonical agent guidance.',
+      );
+      expect(
+        contents,
+        contains('Shared register sync pending'),
+        reason: '${file.path} must retain the external-host fallback.',
+      );
+      expect(
+        contents,
+        contains('GitHub'),
+        reason: '${file.path} must prefer live delivery evidence when offline.',
+      );
+    }
+  });
+
+  test('every repository-owned Claude skill bootstraps through AGENTS.md', () {
+    final skillFiles =
+        Directory('.claude/skills')
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((file) => file.path.endsWith('SKILL.md'))
+            .toList()
+          ..sort((left, right) => left.path.compareTo(right.path));
+
+    expect(skillFiles, isNotEmpty);
+    for (final file in skillFiles) {
+      final contents = file.readAsStringSync();
+      expect(
+        contents,
+        contains('root `AGENTS.md`'),
+        reason: '${file.path} must enter through the canonical agent guidance.',
+      );
+      expect(
+        contents,
+        contains('Shared register sync pending'),
+        reason: '${file.path} must retain the external-host fallback.',
+      );
+      expect(
+        contents,
+        contains('GitHub'),
+        reason: '${file.path} must prefer live delivery evidence when offline.',
+      );
+    }
   });
 
   test('the external register is not vendored into this repository', () {
