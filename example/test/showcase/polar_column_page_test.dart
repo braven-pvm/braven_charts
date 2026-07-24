@@ -807,11 +807,9 @@ void main() {
     await _pumpUntil(
       tester,
       () =>
-          tester
-              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-              .workbenchController
-              ?.tableModel !=
-          null,
+          find.byType(ChartDataTable).evaluate().isNotEmpty &&
+          tester.widget<ChartDataTable>(find.byType(ChartDataTable)).model !=
+              null,
     );
     final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
     expect(table.model?.hasPolarIntervals, isTrue);
@@ -831,17 +829,12 @@ void main() {
     );
     await _pumpUntil(
       tester,
-      () =>
-          tester
-              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-              .workbenchController
-              ?.generatedSource !=
-          null,
+      () => find.byType(ChartSourceView).evaluate().isNotEmpty,
     );
-    final workbench = tester.widget<BravenChartWorkbench>(
-      find.byType(BravenChartWorkbench),
-    );
-    final source = workbench.workbenchController?.generatedSource?.source;
+    final source = tester
+        .widget<ChartSourceView>(find.byType(ChartSourceView))
+        .generated
+        .source;
     expect(source, contains('intervalLowerValues:'));
     expect(source, contains('intervalUpperValues:'));
     expect(source, contains('PolarColumnIntervalStyle('));
@@ -873,11 +866,9 @@ void main() {
       await _pumpUntil(
         tester,
         () =>
-            tester
-                .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-                .workbenchController
-                ?.tableModel !=
-            null,
+            find.byType(ChartDataTable).evaluate().isNotEmpty &&
+            tester.widget<ChartDataTable>(find.byType(ChartDataTable)).model !=
+                null,
       );
       final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
       expect(table.model?.hasPolarTargets, isTrue);
@@ -888,17 +879,12 @@ void main() {
       );
       await _pumpUntil(
         tester,
-        () =>
-            tester
-                .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-                .workbenchController
-                ?.generatedSource !=
-            null,
+        () => find.byType(ChartSourceView).evaluate().isNotEmpty,
       );
-      final workbench = tester.widget<BravenChartWorkbench>(
-        find.byType(BravenChartWorkbench),
-      );
-      final source = workbench.workbenchController?.generatedSource?.source;
+      final source = tester
+          .widget<ChartSourceView>(find.byType(ChartSourceView))
+          .generated
+          .source;
       expect(source, contains('targetValues:'));
       expect(source, contains('PolarColumnTargetMarkerStyle('));
       expect(source, contains('PolarThreshold('));
@@ -932,20 +918,9 @@ void main() {
     await _pumpUntil(
       tester,
       () =>
-          tester
-              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-              .workbenchController
-              ?.tableModel !=
-          null,
-    );
-    final dataWorkbench = tester.widget<BravenChartWorkbench>(
-      find.byType(BravenChartWorkbench),
-    );
-    expect(
-      dataWorkbench.workbenchController?.tableModel,
-      isNotNull,
-      reason:
-          '${dataWorkbench.workbenchController?.tableState.phase}: ${dataWorkbench.workbenchController?.tableState.error?.message}',
+          find.byType(ChartDataTable).evaluate().isNotEmpty &&
+          tester.widget<ChartDataTable>(find.byType(ChartDataTable)).model !=
+              null,
     );
     final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
     expect(table.model?.projectionKind, ChartTableProjectionKind.polar);
@@ -974,23 +949,14 @@ void main() {
     );
     await _pumpUntil(
       tester,
-      () =>
-          tester
-              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
-              .workbenchController
-              ?.generatedSource !=
-          null,
+      () => find.byType(ChartSourceView).evaluate().isNotEmpty,
     );
-    final workbench = tester.widget<BravenChartWorkbench>(
-      find.byType(BravenChartWorkbench),
-    );
+    final source = tester
+        .widget<ChartSourceView>(find.byType(ChartSourceView))
+        .generated
+        .source;
     expect(
-      workbench.workbenchController?.sourceState.phase,
-      ChartWorkbenchSourcePhase.ready,
-    );
-    final source = workbench.workbenchController?.generatedSource?.source;
-    expect(
-      RegExp('PolarColumnChartSeries\\(').allMatches(source!),
+      RegExp('PolarColumnChartSeries\\(').allMatches(source),
       hasLength(3),
     );
     expect(source, contains('polarChartConfig: PolarChartConfig('));
