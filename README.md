@@ -129,7 +129,7 @@ lowers to the same `BravenChartPlus` renderer as direct configuration.
 > **Grammar / Fluent API (Beta):** The Grammar of Graphics and fluent modifier
 > authoring layers are experimental and may change before a stable release. Pin
 > a version if you depend on them. See [Chart grammar and the fluent
-> surface](doc/chart_grammar.md).
+> surface](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_grammar.md).
 
 Continue with a runnable example:
 
