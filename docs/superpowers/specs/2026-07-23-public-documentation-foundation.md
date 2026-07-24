@@ -1,12 +1,35 @@
 # Braven Charts public documentation foundation
 
-**Status:** Review needed
+**Status:** Complete; delivered in
+[PR #90](https://github.com/braven-pvm/braven_charts/pull/90) and polished in
+[PR #95](https://github.com/braven-pvm/braven_charts/pull/95)
 
 **Date:** 2026-07-23
 
 **Scope:** pub.dev README, package media, public showcase information
 architecture, hosted guides, generated API reference, and the release rules
 that keep those surfaces aligned.
+
+## Delivery status
+
+The twelve acceptance criteria are implemented: the README has a concise
+first-run path and curated family catalog; exact showcase presets and a stable
+`?page=docs` hub are registry-driven; hosted Dart API documentation is deployed
+under `/api/`; and CI validates catalog, snippet, media, route, and generated
+surface drift. PR #90 delivered the foundation at merge commit `6892ee42`;
+PR #95 polished the public layouts at merge commit `9dd53664`. Release PR #106
+published 0.13.5 with successful package-quality and release-tagger checks.
+
+On 2026-07-24 the public showcase root, Documentation route, hosted `/api/`
+reference, and pub.dev package page each returned HTTP 200.
+
+Two improvements remain intentionally separate from this completed
+foundation:
+
+- visual regression gates for public surfaces:
+  shared-register item `BC-0013`;
+- hosted, searchable long-form end-user guides:
+  shared-register item `BC-0015`.
 
 ## Purpose
 
@@ -862,7 +885,7 @@ The foundation is complete when:
     snippets, and generated README sections;
 12. CI fails when any public surface drifts from that registry.
 
-## Decisions for review
+## Approved decisions
 
 Recommended defaults:
 
@@ -880,4 +903,6 @@ Recommended defaults:
 8. **Generation:** generated README blocks plus tested shared snippets, rather
    than generating all prose.
 
-Approval of these defaults unblocks Phase 1 implementation.
+These defaults were approved and implemented by PR #90. The remaining
+long-form guide and visual-regression work is explicitly tracked above rather
+than keeping this foundation specification open.

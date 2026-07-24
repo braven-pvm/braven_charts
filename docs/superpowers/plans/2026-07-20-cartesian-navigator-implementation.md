@@ -1,9 +1,23 @@
 # Cartesian Navigator Implementation Plan
 
-**Status:** In progress  
+**Status:** Complete; merged in
+[PR #69](https://github.com/braven-pvm/braven_charts/pull/69)
+
 **Authoritative handoff:** `2026-07-20-cartesian-navigator-architecture-handoff.md`  
 **Target:** one reusable, family-neutral X-range navigator for every Cartesian
 `BravenChartPlus` composition.
+
+## Delivery evidence
+
+All seven slices shipped at merge commit `01a56f4b`. The package exports the
+public widget and its behavior, snap-policy, and style models; focused reducer
+and widget tests cover the viewport and interaction lifecycle; integration and
+benchmark suites cover family-neutral synchronization and fan-out behavior.
+The public [`doc/cartesian_navigator.md`](../../../doc/cartesian_navigator.md)
+guide documents the contract and runnable showcase compositions exercise Line,
+Area, Bar, Scatter, Candlestick, Interaction, Live Stream, and Gallery hosts.
+Package quality passed on PR #69. Later Candlestick pane-alignment and
+technical indicator adoption landed separately in PRs #71 and #78.
 
 ## Product contract
 

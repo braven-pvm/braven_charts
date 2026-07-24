@@ -1,18 +1,28 @@
-# Technical Debt Register
+# Legacy Technical Debt Snapshot
 
 **Project**: braven_charts_v2.0  
 **Last Updated**: 2025-10-06  
-**Status**: Active tracking of known issues and deferred improvements
+**Status**: Historical snapshot; not the active register
+
+> [!IMPORTANT]
+> Active ownership, priority, evidence, and status live in the shared register
+> at `F:\Repositories\_braven_charts_register`. Do not use the entries below
+> for current prioritization without re-verifying them against the repository.
+> Shared-register item `BC-0014` owns the detailed rebaseline and migration of
+> any debt that remains valid.
+> This document is retained unchanged below that authority notice as historical
+> evidence until that audit is complete.
 
 ## Purpose
 
-This document tracks technical debt items that are known but deferred for pragmatic reasons. Each item includes:
+This historical document captured technical debt that was known and deferred
+at the time. Each entry includes:
 - **Impact**: User-facing or internal
 - **Severity**: Critical/High/Medium/Low
 - **Effort**: Estimated complexity to resolve
 - **Target**: When we plan to address it
 
-## Active Debt Items
+## Historical Debt Items
 
 ### 002-core-rendering (v0.2.0-rendering)
 
