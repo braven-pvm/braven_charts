@@ -105,6 +105,11 @@ motion has settled.
 
 - [ ] `flutter build web --release --base-href /braven_charts/` succeeds from
   `example/`.
+- [ ] Run `python tool/public_surface_visual_check.py` against the built
+  showcase plus generated `example/build/web/api`; require an empty failure
+  report, no unexplained baseline diffs, and review all phone, tablet, desktop,
+  and dark README captures.
+  Follow [Public surface visual review](public_surface_visual_review.md).
 - [ ] GitHub Pages is configured to use GitHub Actions as its source.
 - [ ] The deployed Gallery route loads directly and after a browser refresh.
 - [ ] The deployed Pie Charts route loads directly and after a browser refresh.

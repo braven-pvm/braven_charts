@@ -1,4 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts_example/showcase/generated/public_docs_catalog.g.dart';
 import 'package:braven_charts_example/showcase/pages/documentation_page.dart';
 import 'package:braven_charts_example/showcase/showcase_app.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,10 @@ void main() {
     expect(find.byKey(const ValueKey('docs-browse-api')), findsOneWidget);
     expect(find.text('Explore by what you need to build'), findsOneWidget);
     expect(find.text('Two ways to build the same chart'), findsOneWidget);
+    expect(
+      find.text('${publicDocsChartFamilies.length} families'),
+      findsOneWidget,
+    );
     expect(
       tester
           .getSize(find.byKey(const ValueKey('docs-feature-chart-families')))
@@ -140,4 +145,47 @@ void main() {
     expect(find.byKey(const ValueKey('documentation-home')), findsOneWidget);
     expect(find.text('Gallery'), findsOneWidget);
   });
+
+  for (final viewport in <String, Size>{
+    'phone': const Size(390, 844),
+    'tablet': const Size(768, 1024),
+    'desktop': const Size(1440, 1000),
+  }.entries) {
+    testWidgets('documentation cards fit the ${viewport.key} viewport', (
+      tester,
+    ) async {
+      tester.view.physicalSize = viewport.value;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(home: DocumentationPage(onOpenPage: (_) {})),
+      );
+      await tester.pump();
+
+      final card = find.byKey(const ValueKey('docs-feature-chart-families'));
+      if (card.evaluate().isEmpty) {
+        await tester.scrollUntilVisible(
+          card,
+          160,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('documentation-home')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+      }
+      await tester.pump();
+      expect(card, findsOneWidget);
+      expect(tester.getSize(card).height, 128);
+      expect(tester.getTopLeft(card).dx, greaterThanOrEqualTo(0));
+      expect(
+        tester.getTopRight(card).dx,
+        lessThanOrEqualTo(viewport.value.width),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

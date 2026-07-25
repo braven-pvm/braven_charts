@@ -15,10 +15,16 @@
   }
 
   #dartdoc-main-content .markdown table {
-    display: block;
+    display: table;
+    table-layout: fixed;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
+  }
+
+  #dartdoc-main-content .markdown th,
+  #dartdoc-main-content .markdown td {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .braven-docs-links {
