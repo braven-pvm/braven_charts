@@ -110,10 +110,10 @@ String _artifactPath(String file) =>
 const Map<String, String> _codecPropertyGaps = <String, String>{
   'ChartTheme.cartesianValueSummaryTheme':
       'The cartesian value-summary theme component: the theme codec does not '
-          'persist it, so ChartTheme neither encodes nor decodes this field.',
+      'persist it, so ChartTheme neither encodes nor decodes this field.',
   'BarLabelStyle.formatter':
       'Runtime `Function` label formatter — unserializable; it fails closed '
-          'through a runtime binding descriptor rather than being persisted.',
+      'through a runtime binding descriptor rather than being persisted.',
 };
 
 /// Classes that DO round-trip but through a mechanism no tier here attributes.
@@ -129,22 +129,22 @@ const Map<String, String> _deferredToLaterTiers = <String, String>{};
 const Map<String, String> _runtimeOnlyClasses = <String, String>{
   'StreamingConfig':
       'Runtime streaming config — a BravenChartPlus parameter that is not '
-          'captured in any ChartDocument, so the codec has no value to persist.',
+      'captured in any ChartDocument, so the codec has no value to persist.',
   'AutoScrollConfig':
       'Runtime auto-scroll config — like StreamingConfig it is a live '
-          'BravenChartPlus parameter absent from the persisted document graph.',
+      'BravenChartPlus parameter absent from the persisted document graph.',
   'ChartDataTableTheme':
       'Data-table view theme (lib/src/table). It themes the tabular data view, '
-          'not the chart, and is never part of the persisted config graph.',
+      'not the chart, and is never part of the persisted config graph.',
   'CartesianValueSummaryTheme':
       'Theme-level value-summary defaults. The theme document codec does not '
-          'persist this component (only the per-chart CartesianValueSummaryConfig '
-          'is round-tripped, by the interaction codec), so there is nothing for '
-          'the codec to encode or decode.',
+      'persist this component (only the per-chart CartesianValueSummaryConfig '
+      'is round-tripped, by the interaction codec), so there is nothing for '
+      'the codec to encode or decode.',
   'ChartDocumentExtractOptions':
       'Artifact extraction policy supplied to ChartDocumentExtractor at capture '
-          'time. It controls how a chart is projected into a document; it is not '
-          'itself a value the codec persists.',
+      'time. It controls how a chart is projected into a document; it is not '
+      'itself a value the codec persists.',
 };
 
 /// TIER-3 scope pins. `@chartSurface` classes that DO round-trip, but through
@@ -154,9 +154,9 @@ const Map<String, String> _runtimeOnlyClasses = <String, String>{
 const Map<String, String> _roundTrippedInExtractorLayer = <String, String>{
   'MultiAxisConfig':
       'Top-level multi-axis binding container. It is assembled by the document '
-          'extractor/hydrator (its axes are persisted individually via the axis '
-          'codec), not by any *_document_codec method — a different mirror, out '
-          'of scope for the codec gate.',
+      'extractor/hydrator (its axes are persisted individually via the axis '
+      'codec), not by any *_document_codec method — a different mirror, out '
+      'of scope for the codec gate.',
 };
 
 // ===========================================================================
@@ -178,8 +178,8 @@ const String _configFile = 'chart_configuration_document_codec.dart';
 const String _interactionFile = 'chart_interaction_document_codec.dart';
 const String _annotationFile = 'chart_annotation_document_codec.dart';
 
-const Map<String, List<List<String>>> _inlineEncodeSources =
-    <String, List<List<String>>>{
+const Map<String, List<List<String>>>
+_inlineEncodeSources = <String, List<List<String>>>{
   // Inline value classes serialized inside a parent encoder.
   'SegmentStyle': [
     [_seriesFile, '_encodePoint'],
@@ -213,6 +213,9 @@ const Map<String, List<List<String>>> _inlineEncodeSources =
   ],
   'PolarThreshold': [
     [_configFile, 'encodePolarChart'],
+  ],
+  'RadialBarThreshold': [
+    [_configFile, 'encodeRadialBarChart'],
   ],
   'PolarPaneConfig': [
     [_configFile, 'encodePolarChart'],
@@ -267,6 +270,7 @@ const List<String> _seriesClasses = <String>[
   'PieChartSeries',
   'DonutChartSeries',
   'PolarColumnChartSeries',
+  'RadialBarChartSeries',
 ];
 
 const List<List<String>> _annotationEncodeSources = <List<String>>[
@@ -476,12 +480,13 @@ bool _isWs(String c) => c == ' ' || c == '\t' || c == '\n' || c == '\r';
 /// side: member reads `.<prop>` (through `.`, `?.` or `!.`) and object-pattern
 /// bindings `:final <prop>`.
 Set<String> _encodeNames(String body) => <String>{
-      for (final m in RegExp(r'\.(' + _identifier + r')').allMatches(body))
-        m.group(1)!,
-      for (final m
-          in RegExp(r':\s*final\s+(' + _identifier + r')').allMatches(body))
-        m.group(1)!,
-    };
+  for (final m in RegExp(r'\.(' + _identifier + r')').allMatches(body))
+    m.group(1)!,
+  for (final m in RegExp(
+    r':\s*final\s+(' + _identifier + r')',
+  ).allMatches(body))
+    m.group(1)!,
+};
 
 /// The top-level (depth-1) named-argument labels of every `Class(` /
 /// `Class.named(` construction of [className] across [stripped] sources.
@@ -549,7 +554,9 @@ String _unwrapType(String raw) {
 /// (`{…}`) or not a plain type.
 String? _firstParamClass(String stripped, int open) {
   final rest = stripped.substring(open + 1);
-  final m = RegExp(r'^\s*([A-Za-z_][\w<>,?.]*)\s+' + _identifier).firstMatch(rest);
+  final m = RegExp(
+    r'^\s*([A-Za-z_][\w<>,?.]*)\s+' + _identifier,
+  ).firstMatch(rest);
   if (m == null) return null;
   var type = m.group(1)!;
   final lt = type.indexOf('<');
@@ -586,11 +593,11 @@ class _CodecModel {
 }
 
 Map<String, String> _strippedSources() => <String, String>{
-      for (final file in _codecFiles)
-        file: _strip(
-          File(_artifactPath(file)).readAsStringSync().replaceAll('\r\n', '\n'),
-        ),
-    };
+  for (final file in _codecFiles)
+    file: _strip(
+      File(_artifactPath(file)).readAsStringSync().replaceAll('\r\n', '\n'),
+    ),
+};
 
 _CodecModel _buildModel(Set<String> manifestClasses) {
   final stripped = _strippedSources();
@@ -618,7 +625,10 @@ _CodecModel _buildModel(Set<String> manifestClasses) {
   // Tier-2 curated inline / delegated encode sources.
   for (final entry in _inlineEncodeSources.entries) {
     for (final where in entry.value) {
-      addEncoded(entry.key, _encodeNames(_methodBody(stripped[where[0]]!, where[1])));
+      addEncoded(
+        entry.key,
+        _encodeNames(_methodBody(stripped[where[0]]!, where[1])),
+      );
     }
   }
 
@@ -716,23 +726,33 @@ void main() {
   });
 
   test('the extraction produced plausible sets', () {
-    expect(surface, hasLength(greaterThan(80)),
-        reason: 'the surface manifest resolved almost no classes');
+    expect(
+      surface,
+      hasLength(greaterThan(80)),
+      reason: 'the surface manifest resolved almost no classes',
+    );
     expect(
       surface.values.fold<int>(0, (sum, props) => sum + props.length),
       greaterThan(700),
       reason: 'the surface manifest resolved almost no properties',
     );
-    expect(gated, hasLength(greaterThan(100)),
-        reason: 'almost no classes resolved both-sided — the encode/decode scan '
-            'was probably broken');
+    expect(
+      gated,
+      hasLength(greaterThan(100)),
+      reason:
+          'almost no classes resolved both-sided — the encode/decode scan '
+          'was probably broken',
+    );
     expect(model.encodedFor('LegendStyle'), contains('markerShape'));
     expect(model.decodedFor('LegendStyle'), contains('markerShape'));
     // Tier-2 spot-checks: the polymorphic + inline + delegated classes resolve.
     expect(model.decodedFor('CandlestickDataPoint'), contains('categoryValue'));
     expect(model.encodedFor('CandlestickDataPoint'), contains('categoryValue'));
-    expect(model.decodedFor('DonutChartStyle'), contains('radiusFactor'),
-        reason: 'the donut→pie decode delegation did not thread the pie fields');
+    expect(
+      model.decodedFor('DonutChartStyle'),
+      contains('radiusFactor'),
+      reason: 'the donut→pie decode delegation did not thread the pie fields',
+    );
     for (final c in <String>[
       'LegendStyle',
       'XAxisConfig',
@@ -747,50 +767,76 @@ void main() {
     }
   });
 
-  test('every reviewed hole names a real class/property with a real reason', () {
-    for (final className in <String>[
-      ..._runtimeOnlyClasses.keys,
-      ..._roundTrippedInExtractorLayer.keys,
-      ..._deferredToLaterTiers.keys,
-    ]) {
-      expect(surface.containsKey(className), isTrue,
-          reason: '$className is pinned as a whole class but is not a '
-              '@chartSurface class in the manifest.');
-    }
-    for (final key in _codecPropertyGaps.keys) {
-      final parts = key.split('.');
-      expect(surface.containsKey(parts[0]), isTrue,
-          reason: '$key pins a property on ${parts[0]}, not a @chartSurface '
-              'class.');
-      expect(pinnedClass(parts[0]), isFalse,
-          reason: '$key pins a property on ${parts[0]}, already pinned as a '
-              'whole class — the per-property pin is redundant.');
-      expect(surface[parts[0]]!.contains(parts[1]), isTrue,
-          reason: '$key pins property "${parts[1]}", which ${parts[0]} does not '
-              'model — delete it.');
-    }
-    // A whole-class scope pin is stale if the codec actually round-trips it.
-    final staleClassPins = <String>[
-      for (final c in <String>[
+  test(
+    'every reviewed hole names a real class/property with a real reason',
+    () {
+      for (final className in <String>[
         ..._runtimeOnlyClasses.keys,
         ..._roundTrippedInExtractorLayer.keys,
-      ])
-        if (model.encoded.containsKey(c) && model.decoded.containsKey(c)) c,
-    ]..sort();
-    expect(staleClassPins, isEmpty,
-        reason: 'these classes are pinned out of scope but the codec now '
+        ..._deferredToLaterTiers.keys,
+      ]) {
+        expect(
+          surface.containsKey(className),
+          isTrue,
+          reason:
+              '$className is pinned as a whole class but is not a '
+              '@chartSurface class in the manifest.',
+        );
+      }
+      for (final key in _codecPropertyGaps.keys) {
+        final parts = key.split('.');
+        expect(
+          surface.containsKey(parts[0]),
+          isTrue,
+          reason:
+              '$key pins a property on ${parts[0]}, not a @chartSurface '
+              'class.',
+        );
+        expect(
+          pinnedClass(parts[0]),
+          isFalse,
+          reason:
+              '$key pins a property on ${parts[0]}, already pinned as a '
+              'whole class — the per-property pin is redundant.',
+        );
+        expect(
+          surface[parts[0]]!.contains(parts[1]),
+          isTrue,
+          reason:
+              '$key pins property "${parts[1]}", which ${parts[0]} does not '
+              'model — delete it.',
+        );
+      }
+      // A whole-class scope pin is stale if the codec actually round-trips it.
+      final staleClassPins = <String>[
+        for (final c in <String>[
+          ..._runtimeOnlyClasses.keys,
+          ..._roundTrippedInExtractorLayer.keys,
+        ])
+          if (model.encoded.containsKey(c) && model.decoded.containsKey(c)) c,
+      ]..sort();
+      expect(
+        staleClassPins,
+        isEmpty,
+        reason:
+            'these classes are pinned out of scope but the codec now '
             'round-trips them both-sided — unpin them:\n'
-            '${staleClassPins.join('\n')}');
-    for (final reason in <String>[
-      ..._runtimeOnlyClasses.values,
-      ..._roundTrippedInExtractorLayer.values,
-      ..._codecPropertyGaps.values,
-      ..._deferredToLaterTiers.values,
-    ]) {
-      expect(reason.length, greaterThanOrEqualTo(20),
-          reason: 'a pinned hole has a placeholder reason');
-    }
-  });
+            '${staleClassPins.join('\n')}',
+      );
+      for (final reason in <String>[
+        ..._runtimeOnlyClasses.values,
+        ..._roundTrippedInExtractorLayer.values,
+        ..._codecPropertyGaps.values,
+        ..._deferredToLaterTiers.values,
+      ]) {
+        expect(
+          reason.length,
+          greaterThanOrEqualTo(20),
+          reason: 'a pinned hole has a placeholder reason',
+        );
+      }
+    },
+  );
 
   test('every gated modelled property is ENCODED (or pinned)', () {
     final gaps = <String>[];
@@ -806,7 +852,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'NEW codec ENCODE drift: these modelled properties are not named '
+      reason:
+          'NEW codec ENCODE drift: these modelled properties are not named '
           'on the encode side, so their value is never persisted. Add the encode '
           'line, or pin the property in _codecPropertyGaps:\n${gaps.join('\n')}',
     );
@@ -826,7 +873,8 @@ void main() {
     expect(
       gaps,
       isEmpty,
-      reason: 'NEW codec DECODE drift: these modelled properties are not a named '
+      reason:
+          'NEW codec DECODE drift: these modelled properties are not a named '
           'constructor argument of their class, so their value is LOST on '
           'restore. Add the decode argument, or pin it in _codecPropertyGaps:\n'
           '${gaps.join('\n')}',
@@ -853,7 +901,8 @@ void main() {
     expect(
       encodedNotDecoded,
       isEmpty,
-      reason: 'ENCODE/DECODE ASYMMETRY — these properties are ENCODED but not '
+      reason:
+          'ENCODE/DECODE ASYMMETRY — these properties are ENCODED but not '
           'DECODED: written to the artifact then silently dropped on restore (a '
           'persisted data-loss bug). Fix the decoder:\n'
           '${encodedNotDecoded.join('\n')}',
@@ -861,7 +910,8 @@ void main() {
     expect(
       decodedNotEncoded,
       isEmpty,
-      reason: 'ENCODE/DECODE ASYMMETRY — these properties are DECODED but not '
+      reason:
+          'ENCODE/DECODE ASYMMETRY — these properties are DECODED but not '
           'ENCODED: the decoder reads a value the encoder never writes. Fix the '
           'encoder or pin it:\n${decodedNotEncoded.join('\n')}',
     );
@@ -879,7 +929,8 @@ void main() {
     expect(
       stale,
       isEmpty,
-      reason: 'these property gaps are now both encoded AND decoded but still '
+      reason:
+          'these property gaps are now both encoded AND decoded but still '
           'pinned. Delete them from _codecPropertyGaps:\n${stale.join('\n')}',
     );
   });
@@ -908,7 +959,8 @@ void main() {
     expect(
       (missing.toSet().toList()..sort()),
       isEmpty,
-      reason: 'these curated encode-source methods no longer exist (renamed?) — '
+      reason:
+          'these curated encode-source methods no longer exist (renamed?) — '
           'the gate would be silently vacuous for the classes they feed. Update '
           'the Tier-2 source maps:\n${missing.join('\n')}',
     );
@@ -917,32 +969,48 @@ void main() {
   test('every polymorphic subclass is wired into a Tier-2 group', () {
     // A new series/annotation subclass must be added to its group or it escapes
     // the per-subclass gate (the emitter gate's maintenance guard, mirrored).
-    final manifestSeries =
-        surface.keys.where((c) => c.endsWith('ChartSeries')).toSet();
-    expect(manifestSeries.difference(_seriesClasses.toSet()), isEmpty,
-        reason: 'unmapped manifest series — add to _seriesClasses');
-    expect(_seriesClasses.toSet().difference(manifestSeries), isEmpty,
-        reason: 'stale _seriesClasses entry — not a manifest series');
+    final manifestSeries = surface.keys
+        .where((c) => c.endsWith('ChartSeries'))
+        .toSet();
+    expect(
+      manifestSeries.difference(_seriesClasses.toSet()),
+      isEmpty,
+      reason: 'unmapped manifest series — add to _seriesClasses',
+    );
+    expect(
+      _seriesClasses.toSet().difference(manifestSeries),
+      isEmpty,
+      reason: 'stale _seriesClasses entry — not a manifest series',
+    );
     final manifestAnnotations =
         surface.keys.where((c) => c.endsWith('Annotation')).toSet()
           ..removeWhere((c) => c.startsWith('CartesianValueSummary'));
-    expect(manifestAnnotations.difference(_annotationClasses.toSet()), isEmpty,
-        reason: 'unmapped manifest annotation — add to _annotationClasses');
+    expect(
+      manifestAnnotations.difference(_annotationClasses.toSet()),
+      isEmpty,
+      reason: 'unmapped manifest annotation — add to _annotationClasses',
+    );
   });
 
   test('the gate is NON-VACUOUS: a synthetic decode drop is detected', () {
     // Prove the construction-site decode scan actually names each argument and
     // would flag a missing one — the same mechanism the live gate relies on, in
     // miniature, so a future refactor that silently emptied it fails here.
-    const present = 'CandlestickDataPoint(x: base.x, categoryValue: '
+    const present =
+        'CandlestickDataPoint(x: base.x, categoryValue: '
         'base.categoryValue, close: close)';
     const dropped = 'CandlestickDataPoint(x: base.x, close: close)';
-    expect(_decodeNames([_strip(present)], 'CandlestickDataPoint'),
-        contains('categoryValue'));
-    expect(_decodeNames([_strip(dropped)], 'CandlestickDataPoint'),
-        isNot(contains('categoryValue')),
-        reason: 'the decode scan failed to notice a dropped ctor arg — the gate '
-            'would be vacuous for exactly the categoryValue-class bug');
+    expect(
+      _decodeNames([_strip(present)], 'CandlestickDataPoint'),
+      contains('categoryValue'),
+    );
+    expect(
+      _decodeNames([_strip(dropped)], 'CandlestickDataPoint'),
+      isNot(contains('categoryValue')),
+      reason:
+          'the decode scan failed to notice a dropped ctor arg — the gate '
+          'would be vacuous for exactly the categoryValue-class bug',
+    );
   });
 
   test('COMPLETENESS: every manifest class is bucketed', () {
@@ -959,15 +1027,18 @@ void main() {
       if (entry.value.isEmpty) continue; // abstract sealed base, no fields.
       final hasEncode = model.encoded.containsKey(className);
       final hasDecode = model.decoded.containsKey(className);
-      fell.add('$className '
-          '(encode=${hasEncode ? 'yes' : 'NO'}, '
-          'decode=${hasDecode ? 'yes' : 'NO'})');
+      fell.add(
+        '$className '
+        '(encode=${hasEncode ? 'yes' : 'NO'}, '
+        'decode=${hasDecode ? 'yes' : 'NO'})',
+      );
     }
     fell.sort();
     expect(
       fell,
       isEmpty,
-      reason: 'these manifest classes fall through every bucket — the codec '
+      reason:
+          'these manifest classes fall through every bucket — the codec '
           'neither round-trips them both-sided nor are they pinned/deferred. A '
           'new modelled class must be wired into the codec (and this gate) or '
           'pinned with a reason, so it cannot silently escape the gate:\n'
@@ -982,8 +1053,7 @@ void main() {
     var exempt = 0;
     for (final entry in surface.entries) {
       final className = entry.key;
-      final classPinned =
-          pinnedClass(className) || !gated.contains(className);
+      final classPinned = pinnedClass(className) || !gated.contains(className);
       for (final property in entry.value) {
         modelled++;
         if (classPinned) {

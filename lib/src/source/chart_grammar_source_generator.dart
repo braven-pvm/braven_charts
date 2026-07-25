@@ -613,6 +613,9 @@ class _GrammarChainEmitter {
       lost.add('concentricDonutConfig');
     }
     if (configuration.polarChartConfig != null) lost.add('polarChartConfig');
+    if (configuration.radialBarChartConfig != null) {
+      lost.add('radialBarChartConfig');
+    }
     return lost;
   }
 

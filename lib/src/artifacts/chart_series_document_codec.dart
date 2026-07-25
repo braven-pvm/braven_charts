@@ -17,6 +17,7 @@ import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/range_area_chart_series.dart';
@@ -235,6 +236,7 @@ abstract final class ChartSeriesDocumentCodec {
               'series.polar.column.targets.v1',
             if (series is PolarColumnChartSeries && series.hasIntervals)
               'series.polar.column.intervals.v1',
+            if (series is RadialBarChartSeries) 'series.radial.bar.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -757,6 +759,21 @@ abstract final class ChartSeriesDocumentCodec {
                   _map(style, 'polarIntervalStyle'),
                 ),
         ),
+        'radialBar' => RadialBarChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          minimum: _double(style, 'radialBarMinimum'),
+          maximum: _double(style, 'radialBarMaximum'),
+          baseline: _double(style, 'radialBarBaseline'),
+          radialBarStyle: _decodeRadialBarStyle(_map(style, 'radialBarStyle')),
+          selectionStyle: _optionalMap(style, 'selectionStyle') == null
+              ? const RadialSelectionStyle()
+              : _decodeRadialSelectionStyle(_map(style, 'selectionStyle')),
+        ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
@@ -814,6 +831,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   PieChartSeries() => 'pie',
   DonutChartSeries() => 'donut',
   PolarColumnChartSeries() => 'polarColumn',
+  RadialBarChartSeries() => 'radialBar',
   ChartSeries() => 'base',
 };
 
@@ -1340,6 +1358,15 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['polarIntervalStyle'] = series.hasIntervals
             ? _encodePolarColumnIntervalStyle(series.intervalStyle)
             : null;
+    case RadialBarChartSeries():
+      result
+        ..['radialBarMinimum'] = _number(series.minimum)
+        ..['radialBarMaximum'] = _number(series.maximum)
+        ..['radialBarBaseline'] = _number(series.baseline)
+        ..['radialBarStyle'] = _encodeRadialBarStyle(series.radialBarStyle)
+        ..['selectionStyle'] = _encodeRadialSelectionStyle(
+          series.selectionStyle,
+        );
     case ChartSeries():
       break;
   }
@@ -2898,6 +2925,33 @@ RadialSelectionStyle _decodeRadialSelectionStyle(Map<String, Object?> value) {
     backdropBlur: _double(value, 'backdropBlur'),
   );
 }
+
+Map<String, Object?> _encodeRadialBarStyle(RadialBarStyle style) => {
+  'cornerRadius': _number(style.cornerRadius),
+  'opacity': _number(style.opacity),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  'borderWidth': _number(style.borderWidth),
+  if (style.trackColor != null) 'trackColor': style.trackColor!.toARGB32(),
+  'trackOpacity': _number(style.trackOpacity),
+  'showDataLabels': style.showDataLabels,
+};
+
+RadialBarStyle _decodeRadialBarStyle(Map<String, Object?> value) =>
+    RadialBarStyle(
+      cornerRadius: _double(value, 'cornerRadius'),
+      opacity: _double(value, 'opacity'),
+      borderColor: _optionalColor(
+        value['borderColor'],
+        r'$.style.radialBarStyle.borderColor',
+      ),
+      borderWidth: _double(value, 'borderWidth'),
+      trackColor: _optionalColor(
+        value['trackColor'],
+        r'$.style.radialBarStyle.trackColor',
+      ),
+      trackOpacity: _double(value, 'trackOpacity'),
+      showDataLabels: _bool(value, 'showDataLabels'),
+    );
 
 Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
   'cornerRadius': _number(style.cornerRadius),

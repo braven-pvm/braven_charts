@@ -3,6 +3,7 @@ import '../models/candlestick_chart_series.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/range_area_chart_series.dart';
 import 'polar_column_composition.dart';
@@ -30,11 +31,15 @@ class ChartLayoutResolver {
     final allSeries = List<ChartSeries>.unmodifiable(series);
     final radialSeries = allSeries.whereType<RadialCategorySeries>().toList();
     final polarSeries = allSeries.whereType<PolarColumnChartSeries>().toList();
+    final radialBarSeries = allSeries
+        .whereType<RadialBarChartSeries>()
+        .toList();
     final invalidRadialHints = allSeries.where(
       (candidate) => switch (candidate.style) {
         SeriesStyle.pie => candidate is! PieChartSeries,
         SeriesStyle.donut => candidate is! DonutChartSeries,
         SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
+        SeriesStyle.radialBar => candidate is! RadialBarChartSeries,
         SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
         SeriesStyle.rangeArea => candidate is! RangeAreaChartSeries,
         _ => false,
@@ -51,6 +56,8 @@ class ChartLayoutResolver {
           SeriesStyle.donut => 'SeriesStyle.donut requires a DonutChartSeries',
           SeriesStyle.polarColumn =>
             'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
+          SeriesStyle.radialBar =>
+            'SeriesStyle.radialBar requires a RadialBarChartSeries',
           SeriesStyle.candlestick =>
             'SeriesStyle.candlestick requires a CandlestickChartSeries',
           SeriesStyle.rangeArea =>
@@ -58,6 +65,24 @@ class ChartLayoutResolver {
           _ => 'Series style does not match its concrete series type',
         },
       );
+    }
+    if (radialBarSeries.isNotEmpty) {
+      if (allSeries.length != radialBarSeries.length) {
+        throw ArgumentError.value(
+          allSeries.length,
+          'series',
+          'Radial Bar cannot be mixed with Cartesian, Polar Column, Pie, or '
+              'Donut series',
+        );
+      }
+      if (radialBarSeries.length != 1) {
+        throw ArgumentError.value(
+          radialBarSeries.length,
+          'series',
+          'Radial Bar v0.1 accepts exactly one RadialBarChartSeries',
+        );
+      }
+      return ChartLayoutKind.polarAxis;
     }
     if (polarSeries.isNotEmpty) {
       if (allSeries.length != polarSeries.length) {

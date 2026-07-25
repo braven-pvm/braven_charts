@@ -403,6 +403,26 @@ void main() {
     );
   });
 
+  testWidgets('capture pub.dev Radial Bar media', (tester) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+    final primary = _chartTypeAssets().singleWhere(
+      (asset) => asset.fileName == 'chart_type_radial_bar.png',
+    );
+
+    await _captureChartType(
+      tester,
+      outputDirectory: outputDirectory,
+      asset: primary,
+    );
+    await _captureChartType(
+      tester,
+      outputDirectory: outputDirectory,
+      asset: _radialBarSignedAsset(),
+    );
+  });
+
   testWidgets('capture pub.dev chart type strip', (tester) async {
     await tester.runAsync(_loadCaptureFont);
     final outputDirectory = Directory(_outputDirectory)
@@ -1040,6 +1060,7 @@ Future<_ChartTypeCapture> _captureChartType(
             interactionConfig: InteractionConfig.none(),
             concentricDonutConfig: asset.concentricDonutConfig,
             polarChartConfig: asset.polarChartConfig,
+            radialBarChartConfig: asset.radialBarChartConfig,
           ),
         ),
       ),
@@ -1198,6 +1219,11 @@ Future<void> _captureFamilyPairs(
       output: 'family_polar_column_pair.png',
       primary: 'chart_type_polar_column.png',
       secondary: 'polar_lifecycle_arc.png',
+    ),
+    (
+      output: 'family_radial_bar_pair.png',
+      primary: 'chart_type_radial_bar.png',
+      secondary: 'radial_bar_signed.png',
     ),
   ];
 
@@ -1361,6 +1387,7 @@ class _ChartTypeAsset {
     this.grid = const GridConfig(horizontal: true, vertical: false),
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
+    this.radialBarChartConfig = const RadialBarChartConfig(),
   });
 
   final String label;
@@ -1372,6 +1399,7 @@ class _ChartTypeAsset {
   final GridConfig grid;
   final ConcentricDonutConfig concentricDonutConfig;
   final PolarChartConfig polarChartConfig;
+  final RadialBarChartConfig radialBarChartConfig;
 }
 
 class _ChartTypeCapture {
@@ -1451,6 +1479,9 @@ List<_ChartTypeAsset> _chartTypeAssets() {
   );
   final polarTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFF4FAFF),
+  );
+  final radialBarTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFF8FAFF),
   );
 
   return [
@@ -2014,8 +2045,109 @@ List<_ChartTypeAsset> _chartTypeAssets() {
         ),
       ],
     ),
+    _ChartTypeAsset(
+      label: 'Radial Bar',
+      fileName: 'chart_type_radial_bar.png',
+      theme: radialBarTheme,
+      headerColor: const Color(0xFFE8E7FF),
+      headerTextColor: const Color(0xFF3730A3),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      radialBarChartConfig: const RadialBarChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: -90,
+          sweepAngleDegrees: 260,
+          innerRadiusFactor: 0.2,
+          outerRadiusFactor: 0.88,
+        ),
+        trackGap: 5,
+        showCategoryLabels: false,
+        showScaleLabels: false,
+        showGridLines: true,
+        tickCount: 5,
+        thresholds: [RadialBarThreshold(value: 75, color: Color(0xFFEA580C))],
+      ),
+      series: [
+        RadialBarChartSeries.fromMap(
+          id: 'radial-bar',
+          name: 'Readiness',
+          values: const {
+            'Build': 92,
+            'Quality': 84,
+            'Docs': 76,
+            'Adoption': 63,
+            'Support': 48,
+          },
+          barColors: const {
+            'Build': Color(0xFF2563EB),
+            'Quality': Color(0xFF4F46E5),
+            'Docs': Color(0xFF7C3AED),
+            'Adoption': Color(0xFFDB2777),
+            'Support': Color(0xFFF97316),
+          },
+          radialBarStyle: const RadialBarStyle(
+            cornerRadius: 8,
+            trackOpacity: 0.1,
+            showDataLabels: true,
+          ),
+        ),
+      ],
+    ),
   ];
 }
+
+_ChartTypeAsset _radialBarSignedAsset() => _ChartTypeAsset(
+  label: 'Signed Radial Bar',
+  fileName: 'radial_bar_signed.png',
+  theme: ChartTheme.dark.copyWith(backgroundColor: const Color(0xFF101827)),
+  headerColor: const Color(0xFF1E293B),
+  headerTextColor: const Color(0xFFE2E8F0),
+  grid: const GridConfig(horizontal: false, vertical: false),
+  radialBarChartConfig: const RadialBarChartConfig(
+    pane: PolarPaneConfig(
+      startAngleDegrees: -90,
+      sweepAngleDegrees: 320,
+      innerRadiusFactor: 0.2,
+      outerRadiusFactor: 0.88,
+    ),
+    trackGap: 5,
+    showCategoryLabels: false,
+    showScaleLabels: false,
+    showGridLines: true,
+    tickCount: 5,
+    thresholds: [
+      RadialBarThreshold(value: 0, color: Color(0xFFF8FAFC), dashPattern: []),
+    ],
+  ),
+  series: [
+    RadialBarChartSeries.fromMap(
+      id: 'radial-bar-signed',
+      name: 'Change',
+      values: const {
+        'Search': 42,
+        'Social': -18,
+        'Email': 31,
+        'Referral': -36,
+        'Direct': 54,
+      },
+      minimum: -60,
+      maximum: 60,
+      baseline: 0,
+      barColors: const {
+        'Search': Color(0xFF38BDF8),
+        'Social': Color(0xFFFB7185),
+        'Email': Color(0xFF2DD4BF),
+        'Referral': Color(0xFFF97316),
+        'Direct': Color(0xFFA78BFA),
+      },
+      unit: 'pts',
+      radialBarStyle: const RadialBarStyle(
+        cornerRadius: 8,
+        trackOpacity: 0.12,
+        showDataLabels: true,
+      ),
+    ),
+  ],
+);
 
 Future<void> _loadCaptureFont() async {
   final fontDirectory = _findFlutterMaterialFontDirectory();

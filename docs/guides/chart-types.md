@@ -1,12 +1,13 @@
 # Chart types
 
 Braven Charts renders line, area, Range Area, bar, scatter, Candlestick, Pie,
-Donut, and Polar Column as first-class series through `BravenChartPlus`. Two or
-more Donut series form the Concentric Donut composition. Line, area, Range
-Area, bar, scatter, and Candlestick use the Cartesian layout. Pie and
-standalone Donut are single-series partition-radial charts; Concentric Donut
-is multi-series; Polar Column uses angular categories and a numeric radial
-axis.
+Donut, Polar Column, and Radial Bar as first-class series through
+`BravenChartPlus`. Two or more Donut series form the Concentric Donut
+composition. Line, area, Range Area, bar, scatter, and Candlestick use the
+Cartesian layout. Pie and standalone Donut are single-series partition-radial
+charts; Concentric Donut is multi-series; Polar Column uses angular categories
+and a numeric radial axis; Radial Bar uses concentric categories and an
+explicit angular numeric scale.
 
 Import only the public package entrypoint:
 
@@ -27,11 +28,19 @@ import 'package:braven_charts/braven_charts.dart';
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
 | `DonutChartSeries` | Parts of one whole with a meaningful center | inner radius, partial sweep, center content, selection |
 | two or more `DonutChartSeries` | Compare several independent wholes | ring allocation, weights, grouped legend, shared center |
+| `PolarColumnChartSeries` | Cyclical categories whose magnitude grows outwards | angular categories, radial scale, composition |
+| `RadialBarChartSeries` | Independent category progress or signed values on concentric tracks | explicit domain and baseline, pane, track geometry, thresholds |
 
 Use pie only when every category contributes to the same total. Use bars when
 precise comparison matters more than contribution to a whole, when values may
 be negative, or when the number of categories is too dense for readable
 slices.
+
+Use Radial Bar when every ring is an independent absolute value on the same
+known scale. It is not a multi-ring Donut: values are not divided by a
+per-ring total. See the complete
+[Radial Bar guide](radial-bar-charts.md) and runnable `?page=radial-bar`
+showcase.
 
 ## Shared data model
 
@@ -45,8 +54,10 @@ const points = [
 ];
 ```
 
-`x` and `y` are the plotted Cartesian coordinates. For Pie and Donut, `x` is a
-stable ordering ordinal, `y` is the contribution, and `label` is the category.
+`x` and `y` are the plotted Cartesian coordinates. For Pie, Donut, and Radial
+Bar, `x` is a stable ordering ordinal and `label` is the category. Pie and
+Donut interpret `y` as a contribution; Radial Bar interprets `y` as an
+absolute value inside its explicit numeric domain.
 `ChartPointRef(seriesId, pointIndex)` remains the portable identity across
 charts, tables, artifacts, and restored runtimes.
 

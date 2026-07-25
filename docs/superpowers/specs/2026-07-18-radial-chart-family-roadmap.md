@@ -39,6 +39,15 @@ axis and grid colors, wider stroke ranges, and solid/dashed/dotted grid styles.
 Polar rings and spokes honor the generated grid pattern in the renderer while
 pane and axis boundaries remain solid.
 
+Phase 4 Radial Bar recovery began on 2026-07-24 in
+`feature/radial-bar-v1-recovery`. The stale discovery lane is preserved
+outside Git under BC-0012 evidence. The recovered V1 keeps one first-class
+series, explicit minimum/maximum/baseline semantics, concentric category
+tracks, signed and partial sweeps, shared selection/accessibility contracts,
+portable artifacts, native tables, generated Dart source, Workbench, a
+searchable inspector, and a deterministic property randomizer. Grouped and
+stacked Radial Bar remain deferred pending a separate composition contract.
+
 ## Executive decision
 
 Braven Charts should not grow one universal `RadialSeries` with flags for Pie,
@@ -541,7 +550,7 @@ Each feature is specified in polar coordinate terms. Existing Cartesian Bar
 algorithms may share scale/domain utilities, but Cartesian geometry is not
 treated as the source of truth for polar layout.
 
-### Phase 4 — Radial Bar V1
+### Phase 4 — Radial Bar v0.1
 
 Deliver:
 

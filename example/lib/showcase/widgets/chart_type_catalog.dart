@@ -135,6 +135,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     accent: Color(0xFF0369A1),
     highlights: ['Numeric radius', 'Rose preset', 'Partial sweeps'],
   ),
+  ShowcaseChartType(
+    type: ChartType.radialBar,
+    label: 'Radial Bar',
+    slug: 'radial-bar',
+    summary: 'Independent progress tracks',
+    bestFor: 'Comparing category values on one explicit numeric scale',
+    icon: Icons.donut_small_outlined,
+    accent: Color(0xFF4F46E5),
+    highlights: ['Explicit domain', 'Signed baseline', 'Targets + selection'],
+  ),
 ];
 
 ShowcaseChartType showcaseChartTypeForSlug(String slug) =>
@@ -232,7 +242,8 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
     final isRadial =
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
-        chartType.type == ChartType.polarColumn;
+        chartType.type == ChartType.polarColumn ||
+        chartType.type == ChartType.radialBar;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseTheme = isDark ? ChartTheme.dark : ChartTheme.light;
     final background = Color.alphaBlend(
@@ -272,6 +283,18 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
               ),
             )
           : const PolarChartConfig(),
+      radialBarChartConfig: chartType.type == ChartType.radialBar
+          ? const RadialBarChartConfig(
+              pane: PolarPaneConfig(
+                innerRadiusFactor: 0.18,
+                outerRadiusFactor: 0.84,
+              ),
+              trackGap: 3,
+              showCategoryLabels: false,
+              showScaleLabels: false,
+              showGridLines: false,
+            )
+          : const RadialBarChartConfig(),
       theme: baseTheme.copyWith(backgroundColor: background),
       showLegend: false,
       grid: isRadial
@@ -452,8 +475,8 @@ class ChartTypeCatalogCard extends StatelessWidget {
 /// A compact family sampler with purposeful Cartesian and radial rows.
 ///
 /// Each row scrolls independently only when its cards cannot retain a useful
-/// preview width. The three radial families therefore receive more space than
-/// they would in one mixed-family strip.
+/// preview width. Cartesian and radial-axis families stay in purposeful rows
+/// so compact radial previews retain enough physical area to remain legible.
 class ChartTypeCatalogStrip extends StatelessWidget {
   const ChartTypeCatalogStrip({super.key, this.onOpenChartType});
 
@@ -466,14 +489,14 @@ class ChartTypeCatalogStrip extends StatelessWidget {
       children: [
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.take(5).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(6).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.skip(5).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(6).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
@@ -1108,6 +1131,28 @@ List<ChartSeries> _previewSeries(
           borderWidth: 0.5,
           showDataLabels: false,
           animationMode: PolarColumnAnimationMode.sweep,
+        ),
+      ),
+    ],
+    ChartType.radialBar => [
+      RadialBarChartSeries.fromMap(
+        id: 'catalog-radial-bar',
+        values: const {
+          'Activation': 88,
+          'Retention': 72,
+          'Adoption': 61,
+          'Expansion': 79,
+        },
+        barColors: const {
+          'Activation': Color(0xFF2563EB),
+          'Retention': Color(0xFF0891B2),
+          'Adoption': Color(0xFF0D9488),
+          'Expansion': Color(0xFF7C3AED),
+        },
+        radialBarStyle: const RadialBarStyle(
+          cornerRadius: 5,
+          trackOpacity: 0.1,
+          showDataLabels: false,
         ),
       ),
     ],

@@ -14,7 +14,7 @@ const publicDocsApiBaseUrl = "https://braven-pvm.github.io/braven_charts/api/";
 const publicDocsFeatures = <PublicDocsFeatureEntry>[
   (
     id: "chart-families",
-    title: "Ten chart families",
+    title: "Eleven chart families",
     summary: "Build Cartesian, financial, radial, and polar charts in one native renderer.",
     page: "chart-types",
   ),
@@ -180,6 +180,19 @@ const publicDocsChartFamilies = <PublicDocsChartFamilyEntry>[
     apiSymbols: <String>["PolarColumnChartSeries", "PolarChartConfig"],
     primaryExample: (title: "Polar Column and Rose chart family", asset: "doc/screenshots/chart_type_polar_column.png", page: "polar-column", preset: null, view: null, animated: false),
     secondaryExample: (title: "Lifecycle arc", asset: "doc/screenshots/polar_lifecycle_arc.png", page: "polar-column", preset: null, view: null, animated: false),
+  ),
+  (
+    id: "radial-bar",
+    label: "Radial Bar",
+    group: "Polar",
+    summary: "Independent progress tracks",
+    bestFor: "Category progress, targets, signed baselines, and compact KPI tracks",
+    page: "radial-bar",
+    guide: "docs/guides/radial-bar-charts.md",
+    pairAsset: "doc/screenshots/family_radial_bar_pair.png",
+    apiSymbols: <String>["RadialBarChartSeries", "RadialBarChartConfig"],
+    primaryExample: (title: "Radial Bar chart family", asset: "doc/screenshots/chart_type_radial_bar.png", page: "radial-bar", preset: null, view: null, animated: false),
+    secondaryExample: (title: "Signed baseline comparison", asset: "doc/screenshots/radial_bar_signed.png", page: "radial-bar", preset: null, view: null, animated: false),
   ),
 ];
 

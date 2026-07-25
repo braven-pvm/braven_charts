@@ -21,8 +21,6 @@ class PolarColumnPage extends StatefulWidget {
 
 class _PolarColumnPageState extends State<PolarColumnPage> {
   final BravenChartController _chartController = BravenChartController();
-  final ChartWorkbenchController _workbenchController =
-      ChartWorkbenchController();
   final math.Random _random = math.Random(47);
 
   late final ShowcaseRandomizerController<PolarShowcaseRandomization>
@@ -328,7 +326,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   @override
   void dispose() {
     _showcaseRandomizer.dispose();
-    _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
   }
@@ -556,7 +553,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                 key: const ValueKey('polar-column-live-chart'),
                 child: BravenChartWorkbench(
                   chartController: _chartController,
-                  workbenchController: _workbenchController,
                   initialDisplayMode: ChartDisplayMode.chart,
                   availableDisplayModes: const {
                     ChartDisplayMode.chart,
@@ -680,17 +676,13 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   }
 
   void _focusTablePoints(List<ChartPointRef> points) {
-    final revision =
-        _chartController.effectiveDocumentRevision.value ??
-        _workbenchController.tableSnapshot?.revision;
+    final revision = _chartController.effectiveDocumentRevision.value;
     if (revision == null) return;
     _chartController.focusPoints(points, revision: revision);
   }
 
   void _selectTablePoints(List<ChartPointRef> points) {
-    final revision =
-        _chartController.effectiveDocumentRevision.value ??
-        _workbenchController.tableSnapshot?.revision;
+    final revision = _chartController.effectiveDocumentRevision.value;
     if (revision == null || points.isEmpty) return;
     final target = points.first;
     if (_chartController.selectedPointRefs.contains(target)) {

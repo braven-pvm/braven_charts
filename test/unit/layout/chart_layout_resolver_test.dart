@@ -156,6 +156,68 @@ void main() {
       expect(ChartLayoutResolver.resolve([polar]), ChartLayoutKind.polarAxis);
     });
 
+    test('uses polar-axis layout for exactly one RadialBarChartSeries', () {
+      final radialBar = RadialBarChartSeries.fromMap(
+        id: 'progress',
+        values: const {'A': 60, 'B': 80},
+      );
+
+      expect(
+        ChartLayoutResolver.resolve([radialBar]),
+        ChartLayoutKind.polarAxis,
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          radialBar,
+          radialBar.copyWith(id: 'second'),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('exactly one RadialBarChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects mixed and fake Radial Bar compositions', () {
+      final radialBar = RadialBarChartSeries.fromMap(
+        id: 'progress',
+        values: const {'A': 60},
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([
+          radialBar,
+          const LineChartSeries(id: 'line', points: []),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('cannot be mixed'),
+          ),
+        ),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve(const [
+          ChartSeries(
+            id: 'fake-radial-bar',
+            points: [],
+            style: SeriesStyle.radialBar,
+          ),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('requires a RadialBarChartSeries'),
+          ),
+        ),
+      );
+    });
+
     test('accepts compatible layered Polar Column series', () {
       final first = PolarColumnChartSeries.fromMap(
         id: 'first',

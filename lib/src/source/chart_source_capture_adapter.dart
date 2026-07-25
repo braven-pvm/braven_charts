@@ -12,6 +12,7 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_bar_chart_series.dart';
 
 /// Builds source-only extraction options for runtime-owned chart values.
 ///
@@ -202,6 +203,7 @@ abstract final class ChartSourceCaptureAdapter {
         DonutChartSeries() => withoutCallbacks,
         PieChartSeries() => withoutCallbacks,
         PolarColumnChartSeries() => withoutCallbacks,
+        RadialBarChartSeries() => withoutCallbacks,
         ChartSeries() => withoutCallbacks.copyWith(annotations: annotations),
       };
     };
@@ -226,6 +228,7 @@ abstract final class ChartSourceCaptureAdapter {
       height: source.height,
       concentricDonutConfig: source.concentricDonutConfig,
       polarChartConfig: source.polarChartConfig,
+      radialBarChartConfig: source.radialBarChartConfig,
       selectionSnapshot: source.selectionSnapshot,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,

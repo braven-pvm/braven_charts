@@ -18,6 +18,7 @@ import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
+import '../models/radial_bar_chart_config.dart';
 import '../models/range_area_data_point.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -307,6 +308,7 @@ class ChartDocumentExtractionSource {
     this.height,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radialBarChartConfig,
     this.selectionSnapshot,
   }) : allSeries = List.unmodifiable(allSeries),
        visibleSeries = List.unmodifiable(visibleSeries),
@@ -333,6 +335,7 @@ class ChartDocumentExtractionSource {
   final double? height;
   final ConcentricDonutConfig? concentricDonutConfig;
   final PolarChartConfig? polarChartConfig;
+  final RadialBarChartConfig? radialBarChartConfig;
   final Color backgroundColor;
   final bool showToolbar;
   final bool interactiveAnnotations;
@@ -460,6 +463,16 @@ abstract final class ChartDocumentExtractor {
           ).values,
         );
       }
+      if (source.radialBarChartConfig case final radialBarConfig?) {
+        configurationValues.addAll(
+          _requireValue(
+            ChartConfigurationDocumentCodec.encodeRadialBarChart(
+              radialBarConfig,
+            ),
+            warnings,
+          ).values,
+        );
+      }
       final configuration = JsonObjectValue(configurationValues);
       final requiredCapabilities = <String>{
         for (final series in seriesDocuments) ...series.requiredCapabilities,
@@ -467,6 +480,7 @@ abstract final class ChartDocumentExtractor {
           ...annotation.requiredCapabilities,
         if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (source.polarChartConfig != null) 'chart.polar.config.v1',
+        if (source.radialBarChartConfig != null) 'chart.radial.bar.config.v1',
         if (source.polarChartConfig?.thresholds.isNotEmpty == true)
           'chart.polar.thresholds.v1',
         if (source.polarChartConfig?.hasCustomLabelAppearance == true)

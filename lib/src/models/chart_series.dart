@@ -39,6 +39,7 @@ enum SeriesStyle {
   donut,
   candlestick,
   polarColumn,
+  radialBar,
 }
 
 /// Base class for chart series.
@@ -410,9 +411,7 @@ class LineChartSeries extends ChartSeries {
       style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
-      yAxisConfig: clearYAxisConfig
-          ? null
-          : (yAxisConfig ?? this.yAxisConfig),
+      yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
@@ -427,9 +426,7 @@ class LineChartSeries extends ChartSeries {
       dataPointLabels: clearDataPointLabels
           ? null
           : (dataPointLabels ?? this.dataPointLabels),
-      inlineLabel: clearInlineLabel
-          ? null
-          : (inlineLabel ?? this.inlineLabel),
+      inlineLabel: clearInlineLabel ? null : (inlineLabel ?? this.inlineLabel),
       pathAnimation: pathAnimation ?? this.pathAnimation,
       dashPattern: dashPattern ?? this.dashPattern,
     );
@@ -578,9 +575,7 @@ class ScatterChartSeries extends ChartSeries {
       style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
-      yAxisConfig: clearYAxisConfig
-          ? null
-          : (yAxisConfig ?? this.yAxisConfig),
+      yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
       markerRadius: markerRadius ?? this.markerRadius,
       markerShape: markerShape ?? this.markerShape,
@@ -830,9 +825,7 @@ class AreaChartSeries extends ChartSeries {
       style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
-      yAxisConfig: clearYAxisConfig
-          ? null
-          : (yAxisConfig ?? this.yAxisConfig),
+      yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
@@ -851,9 +844,7 @@ class AreaChartSeries extends ChartSeries {
       dataPointLabels: clearDataPointLabels
           ? null
           : (dataPointLabels ?? this.dataPointLabels),
-      inlineLabel: clearInlineLabel
-          ? null
-          : (inlineLabel ?? this.inlineLabel),
+      inlineLabel: clearInlineLabel ? null : (inlineLabel ?? this.inlineLabel),
       baselineValue: clearBaselineValue
           ? null
           : (baselineValue ?? this.baselineValue),
@@ -1399,9 +1390,7 @@ class BarChartSeries extends ChartSeries {
       style: clearStyle ? null : (style ?? this.style),
       annotations: annotations ?? this.annotations,
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
-      yAxisConfig: clearYAxisConfig
-          ? null
-          : (yAxisConfig ?? this.yAxisConfig),
+      yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,

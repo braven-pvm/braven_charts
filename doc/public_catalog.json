@@ -7,7 +7,7 @@
   "features": [
     {
       "id": "chart-families",
-      "title": "Ten chart families",
+      "title": "Eleven chart families",
       "summary": "Build Cartesian, financial, radial, and polar charts in one native renderer.",
       "page": "chart-types"
     },
@@ -265,6 +265,28 @@
         "title": "Lifecycle arc",
         "asset": "doc/screenshots/polar_lifecycle_arc.png",
         "page": "polar-column"
+      }
+    },
+    {
+      "id": "radial-bar",
+      "label": "Radial Bar",
+      "group": "Polar",
+      "summary": "Independent progress tracks",
+      "bestFor": "Category progress, targets, signed baselines, and compact KPI tracks",
+      "page": "radial-bar",
+      "guide": "docs/guides/radial-bar-charts.md",
+      "apiSymbols": ["RadialBarChartSeries", "RadialBarChartConfig"],
+      "pairAsset": "doc/screenshots/family_radial_bar_pair.png",
+      "primaryExample": {
+        "title": "Radial Bar chart family",
+        "alt": "Radial bars comparing category progress on an explicit numeric scale",
+        "asset": "doc/screenshots/chart_type_radial_bar.png",
+        "page": "radial-bar"
+      },
+      "secondaryExample": {
+        "title": "Signed baseline comparison",
+        "asset": "doc/screenshots/radial_bar_signed.png",
+        "page": "radial-bar"
       }
     }
   ],

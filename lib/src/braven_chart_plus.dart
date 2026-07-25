@@ -31,6 +31,7 @@ import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
 import 'elements/pie_series_element.dart';
 import 'elements/polar_column_series_element.dart';
+import 'elements/radial_bar_series_element.dart';
 import 'elements/resize_handle_element.dart';
 import 'elements/series_element.dart';
 import 'interaction/core/chart_element.dart';
@@ -75,6 +76,8 @@ import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
 import 'models/polar_chart_config.dart';
 import 'models/polar_column_chart_series.dart';
+import 'models/radial_bar_chart_config.dart';
+import 'models/radial_bar_chart_series.dart';
 import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
@@ -227,6 +230,7 @@ class BravenChartPlus extends StatefulWidget {
     this.radialLegendItemBuilder,
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
+    this.radialBarChartConfig = const RadialBarChartConfig(),
     this.donutCenterBuilder,
     this.onDonutCenterTap,
     this.showToolbar = false,
@@ -341,6 +345,12 @@ class BravenChartPlus extends StatefulWidget {
         'Use PolarColumnChartSeries.fromMap with BravenChartPlus instead.',
       );
     }
+    if (chartType == ChartType.radialBar) {
+      throw ArgumentError(
+        'BravenChartPlus.fromValues cannot infer Radial Bar category labels. '
+        'Use RadialBarChartSeries.fromMap with BravenChartPlus instead.',
+      );
+    }
     if (chartType == ChartType.candlestick) {
       throw ArgumentError(
         'BravenChartPlus.fromValues cannot infer open, high, low, and close. '
@@ -422,8 +432,8 @@ class BravenChartPlus extends StatefulWidget {
   ///
   /// For Cartesian chart types, keys must be numbers or numeric strings and
   /// are interpreted as X values. For [ChartType.pie], [ChartType.donut], and
-  /// [ChartType.polarColumn], keys become category labels and insertion order
-  /// becomes stable angular order.
+  /// [ChartType.polarColumn], and [ChartType.radialBar], keys become category
+  /// labels and insertion order becomes stable angular order.
   factory BravenChartPlus.fromMap({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -490,7 +500,8 @@ class BravenChartPlus extends StatefulWidget {
     final ChartSeries series;
     if (chartType == ChartType.pie ||
         chartType == ChartType.donut ||
-        chartType == ChartType.polarColumn) {
+        chartType == ChartType.polarColumn ||
+        chartType == ChartType.radialBar) {
       final values = <String, num>{
         for (final entry in data.entries) entry.key.toString(): entry.value,
       };
@@ -508,6 +519,12 @@ class BravenChartPlus extends StatefulWidget {
           color: seriesColor,
         ),
         ChartType.polarColumn => PolarColumnChartSeries.fromMap(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          values: values,
+          color: seriesColor,
+        ),
+        ChartType.radialBar => RadialBarChartSeries.fromMap(
           id: seriesId,
           name: seriesName ?? seriesId,
           values: values,
@@ -799,6 +816,10 @@ class BravenChartPlus extends StatefulWidget {
         'Polar Column requires category labels. Use '
         'PolarColumnChartSeries.fromMap instead.',
       ),
+      ChartType.radialBar => throw ArgumentError(
+        'Radial Bar requires category labels. Use '
+        'RadialBarChartSeries.fromMap instead.',
+      ),
     };
   }
 
@@ -1050,6 +1071,12 @@ class BravenChartPlus extends StatefulWidget {
   /// Cartesian axis arguments are ignored by Polar Column. Pie and Donut do
   /// not consume this configuration.
   final PolarChartConfig polarChartConfig;
+
+  /// Plot-level pane, track layout, and guides used by [RadialBarChartSeries].
+  ///
+  /// Radial Bar owns an angular numeric scale and concentric category tracks;
+  /// it does not consume Cartesian axes or Pie/Donut share configuration.
+  final RadialBarChartConfig radialBarChartConfig;
 
   /// Builds runtime-only content inside a Donut chart's shared center opening.
   ///
@@ -1895,6 +1922,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.annotations != oldWidget.annotations ||
         widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||
         widget.polarChartConfig != oldWidget.polarChartConfig ||
+        widget.radialBarChartConfig != oldWidget.radialBarChartConfig ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
@@ -2809,6 +2837,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           resolved.allSeries.whereType<PolarColumnChartSeries>().isNotEmpty
           ? widget.polarChartConfig
           : null,
+      radialBarChartConfig:
+          resolved.allSeries.whereType<RadialBarChartSeries>().isNotEmpty
+          ? widget.radialBarChartConfig
+          : null,
       selectionSnapshot: ChartSelectionSnapshot(
         expression: _selectionExpressionForSnapshot(),
         revision: _effectiveDocumentRevision,
@@ -2869,13 +2901,32 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
     if (_layoutKind == ChartLayoutKind.polarAxis) {
-      widget.polarChartConfig.validate();
-      PolarColumnComposition.validate(
-        _resolvedChartData.allSeries.whereType<PolarColumnChartSeries>().toList(
-          growable: false,
-        ),
-        config: widget.polarChartConfig,
-      );
+      final polarColumns = _resolvedChartData.allSeries
+          .whereType<PolarColumnChartSeries>()
+          .toList(growable: false);
+      if (polarColumns.isNotEmpty) {
+        widget.polarChartConfig.validate();
+        PolarColumnComposition.validate(
+          polarColumns,
+          config: widget.polarChartConfig,
+        );
+      } else {
+        widget.radialBarChartConfig.validate();
+        final radialBar = _resolvedChartData.allSeries
+            .whereType<RadialBarChartSeries>()
+            .single;
+        for (final threshold in widget.radialBarChartConfig.thresholds) {
+          if (threshold.value < radialBar.minimum ||
+              threshold.value > radialBar.maximum) {
+            throw ArgumentError.value(
+              threshold.value,
+              'radialBarChartConfig.thresholds',
+              'Radial Bar thresholds must be inside the explicit series '
+                  'domain [${radialBar.minimum}, ${radialBar.maximum}]',
+            );
+          }
+        }
+      }
     }
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
       final focusRef = _radialKeyboardFocusRef;
@@ -3641,6 +3692,31 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   List<ChartElement> _buildPolarElements(ChartTransform transform) {
+    final radialBars = _effectiveRenderSeries
+        .whereType<RadialBarChartSeries>()
+        .toList(growable: false);
+    if (radialBars.isNotEmpty) {
+      final series = radialBars.single;
+      return <ChartElement>[
+        RadialBarSeriesElement(
+          series: series,
+          config: widget.radialBarChartConfig,
+          size: Size(transform.plotWidth, transform.plotHeight),
+          theme: widget.theme ?? ChartTheme.light,
+          textScaleFactor: _textScaleFactor,
+          textDirection: _textDirection,
+          revealProgress: _radialRevealProgress,
+          focusedPointIndices: {
+            for (final ref in _focusedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+          },
+          selectedPointIndices: {
+            for (final ref in _selectedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+          },
+        ),
+      ];
+    }
     final polarSeries = _effectiveRenderSeries
         .whereType<PolarColumnChartSeries>()
         .toList(growable: false);
@@ -4787,15 +4863,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   bool _canAnimatePolar(Duration duration) =>
       !_disableAnimations &&
       duration > Duration.zero &&
-      _effectiveRenderSeries.whereType<PolarColumnChartSeries>().any(
+      _effectiveRenderSeries.any(
         (series) =>
-            series.polarStyle.animationMode != PolarColumnAnimationMode.none,
+            series is RadialBarChartSeries ||
+            (series is PolarColumnChartSeries &&
+                series.polarStyle.animationMode !=
+                    PolarColumnAnimationMode.none),
       );
 
   void _startRadialRevealAnimation() {
     final series = _effectiveRadialSeries;
     final hasPolarSeries = _effectiveRenderSeries.any(
-      (series) => series is PolarColumnChartSeries,
+      (series) =>
+          series is PolarColumnChartSeries || series is RadialBarChartSeries,
     );
     if (series == null && !hasPolarSeries) {
       _radialRevealAnimationController
@@ -4825,7 +4905,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (!mounted ||
           (_effectiveRadialSeries == null &&
               !_effectiveRenderSeries.any(
-                (series) => series is PolarColumnChartSeries,
+                (series) =>
+                    series is PolarColumnChartSeries ||
+                    series is RadialBarChartSeries,
               ))) {
         return;
       }
@@ -7540,8 +7622,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool announceHover = true,
   }) {
     final series = _effectiveRenderSeries
-        .whereType<PolarColumnChartSeries>()
-        .where((candidate) => candidate.id == seriesId)
+        .where(
+          (candidate) =>
+              (candidate is PolarColumnChartSeries ||
+                  candidate is RadialBarChartSeries) &&
+              candidate.id == seriesId,
+        )
         .firstOrNull;
     if (series == null ||
         pointIndex < 0 ||
@@ -7582,7 +7668,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final interaction = _effectiveRadialInteractionConfig();
     if (!interaction.enabled || !interaction.keyboard.enabled) return false;
     final polarSeries = _effectiveRenderSeries
-        .whereType<PolarColumnChartSeries>()
+        .where(
+          (candidate) =>
+              candidate is PolarColumnChartSeries ||
+              candidate is RadialBarChartSeries,
+        )
         .toList(growable: false);
     if (polarSeries.isEmpty) return false;
 
@@ -7591,7 +7681,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         for (var index = 0; index < series.points.length; index++)
           ChartPointRef(seriesId: series.id, pointIndex: index),
     ];
-    PolarColumnChartSeries? seriesForRef(ChartPointRef ref) {
+    ChartSeries? seriesForRef(ChartPointRef ref) {
       for (final series in polarSeries) {
         if (series.id == ref.seriesId) return series;
       }
