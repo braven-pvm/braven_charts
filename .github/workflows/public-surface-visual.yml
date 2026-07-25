@@ -1,0 +1,82 @@
+name: Public surface visual gate
+
+on:
+  pull_request:
+    paths:
+      - .github/visual-baselines/**
+      - .github/workflows/public-surface-visual.yml
+      - README.md
+      - doc/**
+      - example/**
+      - lib/**
+      - pubspec.yaml
+      - tool/public_docs.dart
+      - tool/public_docs_support.dart
+      - tool/public_surface_visual_check.py
+      - tool/public_surface_visual_check_test.py
+      - tool/requirements-public-surface-visual.txt
+      - test/contract/public_docs_support_test.dart
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve package dependencies
+        run: flutter pub get
+
+      - name: Resolve showcase dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Install browser-review dependencies
+        run: python -m pip install -r tool/requirements-public-surface-visual.txt
+
+      - name: Prepare public surface review artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/public-surface-visual | Out-Null
+          @"
+          Public surface visual review
+          Commit: $env:GITHUB_SHA
+          Run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          The capture report and screenshots are added when the visual check runs.
+          "@ | Set-Content build/public-surface-visual/ci-context.txt
+
+      - name: Test visual comparison contract
+        run: python tool/public_surface_visual_check_test.py
+
+      - name: Build showcase release artifact
+        working-directory: example
+        run: flutter build web --release --base-href /braven_charts/
+
+      - name: Generate hosted API reference
+        run: |
+          dart pub global activate dartdoc
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dart pub global run dartdoc --validate-links --output example/build/web/api
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dart run tool/public_docs.dart --check --api-dir=example/build/web/api
+
+      - name: Capture and verify public surfaces
+        run: python tool/public_surface_visual_check.py
+
+      - name: Upload public surface review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-surface-visual-review
+          path: build/public-surface-visual
+          if-no-files-found: error

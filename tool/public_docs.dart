@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'public_docs_support.dart';
+
 const _catalogPath = 'doc/public_catalog.json';
 const _readmePath = 'README.md';
 const _generatedCatalogPath =
@@ -80,7 +82,8 @@ void main(List<String> arguments) {
     generatedFile.parent.createSync(recursive: true);
     generatedFile.writeAsStringSync(generatedCatalog);
   } else if (!generatedFile.existsSync() ||
-      generatedFile.readAsStringSync() != generatedCatalog) {
+      normalizePublicDocsText(generatedFile.readAsStringSync()) !=
+          normalizePublicDocsText(generatedCatalog)) {
     stale.add(_generatedCatalogPath);
   }
 
@@ -107,7 +110,9 @@ void main(List<String> arguments) {
     return;
   }
 
-  if (check && readmeFile.readAsStringSync() != readme) {
+  if (check &&
+      normalizePublicDocsText(readmeFile.readAsStringSync()) !=
+          normalizePublicDocsText(readme)) {
     stale.add(_readmePath);
   }
 

@@ -258,7 +258,7 @@ class _ReferenceSummary extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final items = [
-      ('10', 'families'),
+      ('${publicDocsChartFamilies.length}', 'families'),
       ('6', 'guide groups'),
       ('1', 'API index'),
     ];
