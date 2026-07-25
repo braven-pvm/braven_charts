@@ -113,8 +113,7 @@ braven_charts_v2.0/
 │   │   └── chart_utils_test.dart     # Chart utility tests
 │   ├── golden/                        # Golden file tests
 │   │   └── golden_test_utils.dart    # Golden test framework
-│   ├── performance/                   # Performance tests
-│   │   └── performance_test_utils.dart
+│   ├── benchmarks/                    # Focused deterministic benchmarks
 │   ├── integration/                   # Integration test utilities
 │   │   └── integration_test_utils.dart
 │   ├── test_utils.dart               # Shared test utilities
