@@ -2150,17 +2150,30 @@ class ChartRenderBox extends RenderBox {
     // TODO: Create separate _fullDataTransform field for pan constraints that can be
     // updated with expanded data range, while keeping _originalTransform frozen.
 
-    // Update current transform so viewport shows the new data
-    _transform = ChartTransform(
-      plotWidth: _plotArea.width,
-      plotHeight: _plotArea.height,
-      dataXMin: dataXMin,
-      dataXMax: dataXMax,
-      dataYMin: dataYMin,
-      dataYMax: dataYMax,
-      invertY: _transform?.invertY ?? false,
-      transposed: _transform?.transposed ?? _isHorizontalBarChart,
-    );
+    // Update current transform so viewport shows the new data. copyWith on the
+    // existing transform preserves invertY, transposed AND the per-axis scale
+    // fields (scaleType/logBase); without it a streaming range expansion would
+    // revert a log/time chart to linear positioning.
+    final source = _transform;
+    _transform = source != null
+        ? source.copyWith(
+            plotWidth: _plotArea.width,
+            plotHeight: _plotArea.height,
+            dataXMin: dataXMin,
+            dataXMax: dataXMax,
+            dataYMin: dataYMin,
+            dataYMax: dataYMax,
+          )
+        : ChartTransform(
+            plotWidth: _plotArea.width,
+            plotHeight: _plotArea.height,
+            dataXMin: dataXMin,
+            dataXMax: dataXMax,
+            dataYMin: dataYMin,
+            dataYMax: dataYMax,
+            invertY: false,
+            transposed: _isHorizontalBarChart,
+          );
 
     _updateAxesFromTransform();
     _rebuildElementsWithTransform();
