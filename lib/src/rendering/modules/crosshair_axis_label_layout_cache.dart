@@ -8,12 +8,12 @@ import 'package:flutter/painting.dart';
 /// Ambient inputs used to resolve a crosshair axis-label layout request.
 @immutable
 class CrosshairAxisLabelLayoutEnvironment {
-  const CrosshairAxisLabelLayoutEnvironment({
+  CrosshairAxisLabelLayoutEnvironment({
     this.textDirection = TextDirection.ltr,
     this.locale,
     this.textScaler = TextScaler.noScaling,
-    this.devicePixelRatio = 1,
-  }) : assert(devicePixelRatio > 0);
+    double devicePixelRatio = 1,
+  }) : devicePixelRatio = _validateDevicePixelRatio(devicePixelRatio);
 
   final TextDirection textDirection;
   final Locale? locale;
@@ -24,18 +24,18 @@ class CrosshairAxisLabelLayoutEnvironment {
 /// Complete compatibility key for one crosshair axis-label layout.
 @immutable
 class CrosshairAxisLabelLayoutRequest {
-  const CrosshairAxisLabelLayoutRequest({
+  CrosshairAxisLabelLayoutRequest({
     required this.text,
     required this.style,
     required this.textDirection,
-    this.locale,
-    this.textScaler = TextScaler.noScaling,
-    this.devicePixelRatio = 1,
-    this.minWidth = 0,
-    this.maxWidth = double.infinity,
-  }) : assert(devicePixelRatio > 0),
-       assert(minWidth >= 0),
-       assert(maxWidth >= minWidth);
+    required this.locale,
+    required this.textScaler,
+    required double devicePixelRatio,
+    double minWidth = 0,
+    double maxWidth = double.infinity,
+  }) : devicePixelRatio = _validateDevicePixelRatio(devicePixelRatio),
+       minWidth = _validateMinWidth(minWidth),
+       maxWidth = _validateMaxWidth(maxWidth, minWidth);
 
   final String text;
   final TextStyle style;
@@ -75,7 +75,8 @@ class CrosshairAxisLabelLayoutRequest {
 
 /// Bounded least-recently-used cache of laid-out axis-label painters.
 class CrosshairAxisLabelLayoutCache {
-  CrosshairAxisLabelLayoutCache({this.capacity = 16}) : assert(capacity > 0);
+  CrosshairAxisLabelLayoutCache({int capacity = 16})
+    : capacity = _validateCapacity(capacity);
 
   final int capacity;
   final LinkedHashMap<CrosshairAxisLabelLayoutRequest, TextPainter> _entries =
@@ -98,6 +99,9 @@ class CrosshairAxisLabelLayoutCache {
   @visibleForTesting
   int get debugDisposedPainterCount => _disposedPainterCount;
 
+  /// Returns a borrowed painter owned by this cache.
+  ///
+  /// Callers must not mutate or dispose the returned [TextPainter].
   TextPainter layout(CrosshairAxisLabelLayoutRequest request) {
     if (_isDisposed) {
       throw StateError('CrosshairAxisLabelLayoutCache has been disposed.');
@@ -144,4 +148,50 @@ class CrosshairAxisLabelLayoutCache {
     _isDisposed = true;
     clear();
   }
+}
+
+double _validateDevicePixelRatio(double value) {
+  if (!value.isFinite || value <= 0) {
+    throw ArgumentError.value(
+      value,
+      'devicePixelRatio',
+      'must be finite and greater than zero',
+    );
+  }
+  return value;
+}
+
+double _validateMinWidth(double value) {
+  if (!value.isFinite || value < 0) {
+    throw ArgumentError.value(
+      value,
+      'minWidth',
+      'must be finite and non-negative',
+    );
+  }
+  return value;
+}
+
+double _validateMaxWidth(double value, double minWidth) {
+  if (value.isNaN || value < 0 || value < minWidth) {
+    throw ArgumentError.value(
+      value,
+      'maxWidth',
+      'must be non-negative and no less than minWidth',
+    );
+  }
+  return value;
+}
+
+int _validateCapacity(int value) {
+  if (value <= 0) {
+    throw RangeError.range(
+      value,
+      1,
+      null,
+      'capacity',
+      'must be greater than zero',
+    );
+  }
+  return value;
 }

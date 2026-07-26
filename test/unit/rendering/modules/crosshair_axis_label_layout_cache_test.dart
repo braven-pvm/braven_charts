@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('CrosshairAxisLabelLayoutEnvironment', () {
     test('provides safe ambient defaults', () {
-      const environment = CrosshairAxisLabelLayoutEnvironment();
+      final environment = CrosshairAxisLabelLayoutEnvironment();
 
       expect(environment.textDirection, TextDirection.ltr);
       expect(environment.locale, isNull);
@@ -16,10 +16,10 @@ void main() {
     });
 
     test('retains every ambient layout input', () {
-      const environment = CrosshairAxisLabelLayoutEnvironment(
+      final environment = CrosshairAxisLabelLayoutEnvironment(
         textDirection: TextDirection.rtl,
-        locale: Locale('ar'),
-        textScaler: TextScaler.linear(1.5),
+        locale: const Locale('ar'),
+        textScaler: const TextScaler.linear(1.5),
         devicePixelRatio: 2,
       );
 
@@ -29,11 +29,22 @@ void main() {
       expect(environment.devicePixelRatio, 2);
     });
 
-    test('rejects a non-positive device pixel ratio', () {
-      expect(
-        () => CrosshairAxisLabelLayoutEnvironment(devicePixelRatio: 0),
-        throwsAssertionError,
-      );
+    test('rejects non-finite or non-positive device pixel ratios', () {
+      for (final devicePixelRatio in [
+        0.0,
+        -1.0,
+        double.nan,
+        double.infinity,
+        double.negativeInfinity,
+      ]) {
+        expect(
+          () => CrosshairAxisLabelLayoutEnvironment(
+            devicePixelRatio: devicePixelRatio,
+          ),
+          throwsArgumentError,
+          reason: 'devicePixelRatio: $devicePixelRatio',
+        );
+      }
     });
   });
 
@@ -46,10 +57,54 @@ void main() {
       expect(first.hashCode, second.hashCode);
     });
 
-    test('rejects invalid device pixel ratio and width constraints', () {
-      expect(() => _request(devicePixelRatio: 0), throwsAssertionError);
-      expect(() => _request(minWidth: -1), throwsAssertionError);
-      expect(() => _request(minWidth: 20, maxWidth: 10), throwsAssertionError);
+    test('rejects non-finite or non-positive device pixel ratios', () {
+      for (final devicePixelRatio in [
+        0.0,
+        -1.0,
+        double.nan,
+        double.infinity,
+        double.negativeInfinity,
+      ]) {
+        expect(
+          () => _request(devicePixelRatio: devicePixelRatio),
+          throwsArgumentError,
+          reason: 'devicePixelRatio: $devicePixelRatio',
+        );
+      }
+    });
+
+    test('rejects negative or non-finite minimum widths', () {
+      for (final minWidth in [
+        -1.0,
+        double.nan,
+        double.infinity,
+        double.negativeInfinity,
+      ]) {
+        expect(
+          () => _request(minWidth: minWidth),
+          throwsArgumentError,
+          reason: 'minWidth: $minWidth',
+        );
+      }
+    });
+
+    test('rejects invalid maximum widths', () {
+      for (final (minWidth, maxWidth) in [
+        (0.0, double.nan),
+        (0.0, -1.0),
+        (0.0, double.negativeInfinity),
+        (20.0, 10.0),
+      ]) {
+        expect(
+          () => _request(minWidth: minWidth, maxWidth: maxWidth),
+          throwsArgumentError,
+          reason: 'minWidth: $minWidth, maxWidth: $maxWidth',
+        );
+      }
+    });
+
+    test('permits positive infinity as the maximum width', () {
+      expect(() => _request(maxWidth: double.infinity), returnsNormally);
     });
   });
 
@@ -64,6 +119,34 @@ void main() {
       cache.dispose();
     });
 
+    test('defaults to a bounded capacity of 16', () {
+      final defaultCache = CrosshairAxisLabelLayoutCache();
+      addTearDown(defaultCache.dispose);
+
+      for (var index = 0; index < 16; index++) {
+        defaultCache.layout(_request(text: '$index'));
+      }
+
+      expect(defaultCache.capacity, 16);
+      expect(defaultCache.debugEntryCount, 16);
+      expect(defaultCache.debugDisposedPainterCount, 0);
+
+      defaultCache.layout(_request(text: 'sixteen'));
+
+      expect(defaultCache.debugEntryCount, 16);
+      expect(defaultCache.debugDisposedPainterCount, 1);
+    });
+
+    test('rejects zero capacity before a cache can be returned', () {
+      CrosshairAxisLabelLayoutCache? invalidCache;
+
+      expect(
+        () => invalidCache = CrosshairAxisLabelLayoutCache(capacity: 0),
+        throwsArgumentError,
+      );
+      expect(invalidCache, isNull);
+    });
+
     test('returns the identical painter for an exact compatible request', () {
       final first = cache.layout(_request());
       final second = cache.layout(_request());
@@ -73,6 +156,57 @@ void main() {
       expect(cache.debugHitCount, 1);
       expect(cache.debugMissCount, 1);
       expect(cache.debugDisposedPainterCount, 0);
+    });
+
+    test('reuses equal but nonidentical text styles', () {
+      final firstStyle = TextStyle(fontSize: double.parse('11'));
+      final secondStyle = TextStyle(fontSize: double.parse('11'));
+
+      expect(firstStyle, isNot(same(secondStyle)));
+      expect(firstStyle, secondStyle);
+
+      final first = cache.layout(_request(style: firstStyle));
+      final second = cache.layout(_request(style: secondStyle));
+
+      expect(second, same(first));
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugMissCount, 1);
+    });
+
+    test('reuses equal but nonidentical locales', () {
+      final firstLocale = Locale.fromSubtags(
+        languageCode: ['e', 'n'].join(),
+        countryCode: ['Z', 'A'].join(),
+      );
+      final secondLocale = Locale.fromSubtags(
+        languageCode: ['e', 'n'].join(),
+        countryCode: ['Z', 'A'].join(),
+      );
+
+      expect(firstLocale, isNot(same(secondLocale)));
+      expect(firstLocale, secondLocale);
+
+      final first = cache.layout(_request(locale: firstLocale));
+      final second = cache.layout(_request(locale: secondLocale));
+
+      expect(second, same(first));
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugMissCount, 1);
+    });
+
+    test('reuses equal but nonidentical text scalers', () {
+      final firstScaler = TextScaler.linear(double.parse('1.5'));
+      final secondScaler = TextScaler.linear(double.parse('1.5'));
+
+      expect(firstScaler, isNot(same(secondScaler)));
+      expect(firstScaler, secondScaler);
+
+      final first = cache.layout(_request(textScaler: firstScaler));
+      final second = cache.layout(_request(textScaler: secondScaler));
+
+      expect(second, same(first));
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugMissCount, 1);
     });
 
     final incompatibleRequests =
