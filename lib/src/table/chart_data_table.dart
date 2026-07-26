@@ -98,6 +98,12 @@ class ChartDataTable extends StatefulWidget {
                     (model.hasPolarTargets ? 1 : 0) +
                     (model.hasPolarIntervals ? 2 : 0)) +
             actionWidth,
+      ChartTableProjectionKind.gauge =>
+        theme.rowNumberWidth +
+            192 +
+            theme.seriesColumnWidth * 6 +
+            128 +
+            actionWidth,
       ChartTableProjectionKind.candlestick =>
         theme.rowNumberWidth +
             176 +
@@ -367,6 +373,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
           rowByPoint[rows[index].reference] = index;
         }
         break;
+      case ChartTableProjectionKind.gauge:
+        final rows = _sortedGaugeRows(model);
+        for (var index = 0; index < rows.length; index++) {
+          rowByPoint[rows[index].reference] = index;
+        }
+        break;
       case ChartTableProjectionKind.candlestick:
         final rows = _sortedCandlestickRows(model);
         for (var index = 0; index < rows.length; index++) {
@@ -420,6 +432,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
         model,
       ).indexWhere((row) => row.reference == point),
       ChartTableProjectionKind.polar => _sortedPolarRows(
+        model,
+      ).indexWhere((row) => row.reference == point),
+      ChartTableProjectionKind.gauge => _sortedGaugeRows(
         model,
       ).indexWhere((row) => row.reference == point),
       ChartTableProjectionKind.candlestick =>
@@ -575,6 +590,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
     final polarRows = model.projectionKind == ChartTableProjectionKind.polar
         ? _sortedPolarRows(model)
         : const <ChartTablePolarRow>[];
+    final gaugeRows = model.projectionKind == ChartTableProjectionKind.gauge
+        ? _sortedGaugeRows(model)
+        : const <ChartTableGaugeRow>[];
     final candlestickRows =
         model.projectionKind == ChartTableProjectionKind.candlestick
         ? _sortedCandlestickRows(model)
@@ -590,6 +608,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       wideRows: wideRows,
       pieRows: pieRows,
       polarRows: polarRows,
+      gaugeRows: gaugeRows,
       candlestickRows: candlestickRows,
     );
     final displayedPoints = List<ChartPointRef>.unmodifiable(
@@ -619,6 +638,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
               wideRows: wideRows,
               pieRows: pieRows,
               polarRows: polarRows,
+              gaugeRows: gaugeRows,
               candlestickRows: candlestickRows,
             );
         return SizedBox(
@@ -675,6 +695,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                                     wideRows: wideRows,
                                     pieRows: pieRows,
                                     polarRows: polarRows,
+                                    gaugeRows: gaugeRows,
                                     candlestickRows: candlestickRows,
                                     displayedRows: displayedRows,
                                     displayedPoints: displayedPoints,
@@ -703,6 +724,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
     required List<ChartTablePolarRow> polarRows,
+    required List<ChartTableGaugeRow> gaugeRows,
     required List<ChartTableCandlestickRow> candlestickRows,
   }) => List.unmodifiable(switch (model.projectionKind) {
     ChartTableProjectionKind.cartesianLong => [
@@ -721,6 +743,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
     ],
     ChartTableProjectionKind.polar => [
       for (final row in polarRows)
+        _DisplayedTableRow(row.rowId, [row.reference]),
+    ],
+    ChartTableProjectionKind.gauge => [
+      for (final row in gaugeRows)
         _DisplayedTableRow(row.rowId, [row.reference]),
     ],
     ChartTableProjectionKind.candlestick => [
@@ -980,6 +1006,59 @@ class _ChartDataTableState extends State<ChartDataTable> {
         ],
       );
     }
+    if (model.projectionKind == ChartTableProjectionKind.gauge) {
+      final unit = model.series.single.unit;
+      return _TableHeader(
+        theme: tableTheme,
+        children: [
+          if (widget.showCopyRowAction)
+            _StaticHeader(
+              key: const ValueKey('chart-table-header-row-actions'),
+              label: '',
+              semanticsLabel: 'Row actions',
+              width: 44,
+              theme: tableTheme,
+            ),
+          _StaticHeader(
+            key: const ValueKey('chart-table-header-index'),
+            label: '#',
+            width: tableTheme.rowNumberWidth,
+            theme: tableTheme,
+            numeric: true,
+          ),
+          _SortHeader(
+            key: const ValueKey('chart-table-header-metric'),
+            label: 'Metric',
+            columnId: 'metric',
+            width: 192,
+            controller: _controller,
+            theme: tableTheme,
+          ),
+          for (final field in <(String, String)>[
+            (unit == null ? 'Value' : 'Value ($unit)', 'value'),
+            ('Minimum', 'minimum'),
+            ('Maximum', 'maximum'),
+            ('Progress', 'progress'),
+            ('Target', 'target'),
+          ])
+            _SortHeader(
+              label: field.$1,
+              columnId: field.$2,
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
+          _SortHeader(
+            label: 'Status',
+            columnId: 'status',
+            width: 128,
+            controller: _controller,
+            theme: tableTheme,
+          ),
+        ],
+      );
+    }
     if (model.projectionKind == ChartTableProjectionKind.cartesianWide) {
       return _TableHeader(
         theme: tableTheme,
@@ -1119,6 +1198,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
     required List<ChartTablePolarRow> polarRows,
+    required List<ChartTableGaugeRow> gaugeRows,
     required List<ChartTableCandlestickRow> candlestickRows,
     required List<_DisplayedTableRow> displayedRows,
     required List<ChartPointRef> displayedPoints,
@@ -1369,6 +1449,73 @@ class _ChartDataTableState extends State<ChartDataTable> {
               theme: theme,
             ),
           ],
+        ],
+      );
+    }
+    if (model.projectionKind == ChartTableProjectionKind.gauge) {
+      final row = gaugeRows[index];
+      final references = List<ChartPointRef>.unmodifiable([row.reference]);
+      final unitSuffix = row.unit == null ? '' : ' ${row.unit}';
+      return _FocusableTableRow(
+        key: ValueKey(row.rowId),
+        semanticsLabel:
+            'Row ${index + 1}, ${row.metric}, ${row.valueDisplay}$unitSuffix, '
+            'range ${row.minimumDisplay} to ${row.maximumDisplay}$unitSuffix, '
+            '${row.progressDisplay} progress, '
+            '${row.targetDisplay == null ? 'no target' : 'target ${row.targetDisplay}$unitSuffix'}, '
+            '${row.status ?? 'no status'}',
+        references: references,
+        displayedPoints: displayedPoints,
+        onSelectAllPoints: null,
+        onClearSelection: null,
+        chartFocused: _isRowFocused(references),
+        selected: false,
+        rowIndex: index,
+        theme: theme,
+        focusNode: _focusNodeFor(row.rowId),
+        onMoveVertical: (_) {},
+        onMovePage: (_) {},
+        onMoveToStart: () {},
+        onMoveToEnd: () {},
+        onMoveHorizontal: (delta) =>
+            _moveHorizontal(delta, theme.seriesColumnWidth),
+        onFocused: widget.onRowFocused,
+        onFocusCleared: widget.onRowFocusCleared,
+        onHoverChanged: widget.onRowHoverChanged,
+        onActivation: null,
+        onActivated: null,
+        children: [
+          if (widget.showCopyRowAction)
+            _CopyRowButton(
+              tooltip: 'Copy ${row.metric} row',
+              onPressed: () => _copyRow(
+                ChartTableExporter.gaugeRow(model, row, index),
+                index,
+              ),
+            ),
+          _TableCell(
+            text: '${index + 1}',
+            width: theme.rowNumberWidth,
+            numeric: true,
+            theme: theme,
+            rowNumber: true,
+          ),
+          _TableCell(text: row.metric, width: 192, theme: theme),
+          for (final value in <String>[
+            row.valueDisplay,
+            row.minimumDisplay,
+            row.maximumDisplay,
+            row.progressDisplay,
+            row.targetDisplay ?? '—',
+          ])
+            _TableCell(
+              text: value,
+              width: theme.seriesColumnWidth,
+              numeric: true,
+              invalid: !row.isValid,
+              theme: theme,
+            ),
+          _TableCell(text: row.status ?? '—', width: 128, theme: theme),
         ],
       );
     }
@@ -1896,6 +2043,30 @@ class _ChartDataTableState extends State<ChartDataTable> {
         'intervalUpper' => _compareNullableNumbers(
           left.intervalUpperRaw,
           right.intervalUpperRaw,
+        ),
+        _ => 0,
+      };
+      return _controller.sortAscending ? result : -result;
+    });
+    return rows;
+  }
+
+  List<ChartTableGaugeRow> _sortedGaugeRows(ChartTableModel model) {
+    final rows = [...model.gaugeRows];
+    final column = _controller.sortColumnId;
+    if (column == null) return rows;
+    rows.sort((left, right) {
+      final result = switch (column) {
+        'metric' => left.metric.toLowerCase().compareTo(
+          right.metric.toLowerCase(),
+        ),
+        'value' => _compareNumbers(left.valueRaw, right.valueRaw),
+        'minimum' => _compareNumbers(left.minimumRaw, right.minimumRaw),
+        'maximum' => _compareNumbers(left.maximumRaw, right.maximumRaw),
+        'progress' => _compareNumbers(left.progressRaw, right.progressRaw),
+        'target' => _compareNullableNumbers(left.targetRaw, right.targetRaw),
+        'status' => (left.status ?? '').toLowerCase().compareTo(
+          (right.status ?? '').toLowerCase(),
         ),
         _ => 0,
       };

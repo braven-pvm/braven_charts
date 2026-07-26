@@ -52,6 +52,8 @@ class ChartDataHit {
     this.aggregateLabel,
     this.aggregateSampleCount,
     this.activationHint,
+    this.semanticLabelOverride,
+    this.isActivatable = true,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -183,6 +185,16 @@ class ChartDataHit {
   /// action, such as drilling into the observations represented by a cluster.
   final String? activationHint;
 
+  /// Complete renderer-owned semantic label when the generic point wording
+  /// cannot express the datum's meaning.
+  final String? semanticLabelOverride;
+
+  /// Whether assistive activation is meaningful for this datum.
+  ///
+  /// Passive operational indicators remain focusable while avoiding false
+  /// button semantics and selection-like activation.
+  final bool isActivatable;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -209,6 +221,7 @@ class ChartDataHit {
 
   /// Complete non-color-only announcement for assistive technologies.
   String get semanticLabel {
+    if (semanticLabelOverride case final label?) return label;
     final name = category ?? point.label ?? 'Data point';
     final parts = <String>[?groupLabel, ?groupName, name];
     if (candlestick case final details?) {

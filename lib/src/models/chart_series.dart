@@ -40,6 +40,7 @@ enum SeriesStyle {
   candlestick,
   polarColumn,
   radialBar,
+  gauge,
 }
 
 /// Base class for chart series.

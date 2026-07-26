@@ -587,6 +587,7 @@ class _MobileChartBackdropPainter extends CustomPainter {
       case ChartType.donut:
       case ChartType.polarColumn:
       case ChartType.radialBar:
+      case ChartType.gauge:
         final center = Offset(size.width * 0.54, size.height * 0.50);
         final radius = size.shortestSide * 0.34;
         final radialStroke = Paint()
@@ -1400,6 +1401,7 @@ class _MobileChartExample {
     this.concentricDonutConfig,
     this.polarChartConfig,
     this.radialBarChartConfig,
+    this.gaugeChartConfig,
     this.chartHeight,
     this.badges = const [],
     this.legendStyle,
@@ -1417,6 +1419,7 @@ class _MobileChartExample {
   final ConcentricDonutConfig? concentricDonutConfig;
   final PolarChartConfig? polarChartConfig;
   final RadialBarChartConfig? radialBarChartConfig;
+  final GaugeChartConfig? gaugeChartConfig;
   final double? chartHeight;
   final List<String> badges;
   final LegendStyle? legendStyle;
@@ -1575,7 +1578,8 @@ class _MobileChartCard extends StatelessWidget {
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
         chartType.type == ChartType.polarColumn ||
-        chartType.type == ChartType.radialBar;
+        chartType.type == ChartType.radialBar ||
+        chartType.type == ChartType.gauge;
     final showAxes = chartChrome == _MobileChartChrome.axes;
     final axisLineColor = presentation.palette[index % 5];
     final axisLabelColor = presentation.palette[(index + 1) % 5];
@@ -1883,6 +1887,19 @@ class _MobileChartCard extends StatelessWidget {
                             showGridLines: false,
                           )
                         : const RadialBarChartConfig()),
+                gaugeChartConfig:
+                    example.gaugeChartConfig ??
+                    (chartType.type == ChartType.gauge
+                        ? const GaugeChartConfig(
+                            pane: PolarPaneConfig(
+                              startAngleDegrees: -135,
+                              sweepAngleDegrees: 270,
+                              innerRadiusFactor: 0.48,
+                              outerRadiusFactor: 0.92,
+                            ),
+                            tickCount: 5,
+                          )
+                        : const GaugeChartConfig()),
               ),
             ),
             const SizedBox(height: 10),
@@ -2052,6 +2069,24 @@ const _mobileExampleCopy = <String, List<(String, String)>>{
       'Dense concentric tracks remain selectable on a compact phone pane.',
     ),
   ],
+  'gauge-charts': [
+    (
+      'CPU utilization',
+      'A needle, operational zones, and target summarize one live reading.',
+    ),
+    (
+      'Service availability',
+      'A solid arc preserves a precise non-zero domain and SLO target.',
+    ),
+    (
+      'Battery reserve',
+      'A compact partial sweep focuses attention on the usable charge range.',
+    ),
+    (
+      'Response latency',
+      'Dense ticks, threshold, status text, and units remain phone-readable.',
+    ),
+  ],
 };
 
 List<_MobileChartExample> _mobileExamples(
@@ -2089,6 +2124,9 @@ List<_MobileChartExample> _mobileExamples(
         radialBarChartConfig: slug == 'radial-bar'
             ? _mobileRadialBarConfig(index)
             : null,
+        gaugeChartConfig: slug == 'gauge-charts'
+            ? _mobileGaugeConfig(index)
+            : null,
         grid: slug == 'bar-charts' && index == 2
             ? const GridConfig(horizontal: false, vertical: true)
             : null,
@@ -2103,6 +2141,7 @@ List<_MobileChartExample> _mobileExamples(
           ('pie-charts', 1) => 330,
           ('concentric-donut', _) => 310,
           ('polar-column', _) => 310,
+          ('gauge-charts', _) => 310,
           _ => null,
         },
         badges: _mobileBadges(slug, index),
@@ -2341,6 +2380,10 @@ List<String> _mobileBadges(String slug, int index) => switch ((slug, index)) {
     'Signed values',
     'Shared radial scale',
   ],
+  ('gauge-charts', 0) => const ['Needle', '3 zones', 'Target', 'Status'],
+  ('gauge-charts', 1) => const ['Solid', '99–100%', 'SLO', 'Precision'],
+  ('gauge-charts', 2) => const ['Partial sweep', 'Solid', 'Compact', 'Charge'],
+  ('gauge-charts', 3) => const ['Needle', 'Threshold', 'Dense ticks', 'ms'],
   _ => const [],
 };
 
@@ -2826,6 +2869,7 @@ List<ChartSeries> _mobileSeries(
     ),
   ],
   'radial-bar' => [_mobileRadialBarSeries(0, presentation)],
+  'gauge-charts' => [_mobileGaugeSeries(0, presentation)],
   _ => const <ChartSeries>[],
 };
 
@@ -3219,6 +3263,7 @@ List<ChartSeries> _mobileVariantSeries(
   'concentric-donut' => _concentricSeries(variant, presentation),
   'polar-column' => _mobilePolarSeries(variant, presentation),
   'radial-bar' => [_mobileRadialBarSeries(variant, presentation)],
+  'gauge-charts' => [_mobileGaugeSeries(variant, presentation)],
   _ => const <ChartSeries>[],
 };
 
@@ -3297,6 +3342,176 @@ RadialBarChartConfig _mobileRadialBarConfig(int variant) =>
             ]
           : const [],
     );
+
+GaugeChartSeries _mobileGaugeSeries(
+  int variant,
+  _MobileStylePresentation presentation,
+) => switch (variant) {
+  1 => GaugeChartSeries.solid(
+    id: 'mobile-gauge-availability',
+    name: 'Service availability',
+    metric: 'Availability',
+    unit: '%',
+    value: 99.94,
+    minimum: 99,
+    maximum: 100,
+    color: presentation.palette[0],
+    target: GaugeTarget(
+      value: 99.9,
+      label: 'SLO',
+      color: presentation.palette[2],
+    ),
+    zones: [
+      GaugeZone(
+        from: 99,
+        to: 99.9,
+        status: 'At risk',
+        color: presentation.palette[3],
+      ),
+      GaugeZone(
+        from: 99.9,
+        to: 100,
+        status: 'Healthy',
+        color: presentation.palette[4],
+      ),
+    ],
+    style: SolidGaugeStyle(
+      trackColor: presentation.border,
+      cornerRadius: 9,
+      borderColor: presentation.onSurfaceVariant,
+      borderWidth: 0.8,
+    ),
+  ),
+  2 => GaugeChartSeries.solid(
+    id: 'mobile-gauge-battery',
+    name: 'Battery reserve',
+    metric: 'Battery',
+    unit: '%',
+    value: 43,
+    minimum: 0,
+    maximum: 100,
+    color: presentation.palette[1],
+    zones: [
+      GaugeZone(from: 0, to: 20, status: 'Low', color: presentation.palette[3]),
+      GaugeZone(
+        from: 20,
+        to: 100,
+        status: 'Available',
+        color: presentation.palette[4],
+      ),
+    ],
+    style: SolidGaugeStyle(
+      trackColor: presentation.border,
+      trackOpacity: 0.22,
+      cornerRadius: 10,
+    ),
+  ),
+  3 => GaugeChartSeries.needle(
+    id: 'mobile-gauge-latency',
+    name: 'Response latency',
+    metric: 'Latency',
+    unit: 'ms',
+    value: 184,
+    minimum: 0,
+    maximum: 300,
+    color: presentation.palette[0],
+    target: GaugeTarget(
+      value: 120,
+      label: 'Target',
+      color: presentation.palette[4],
+    ),
+    thresholds: [
+      GaugeThreshold(
+        value: 200,
+        label: 'Limit',
+        color: presentation.palette[3],
+      ),
+    ],
+    zones: [
+      GaugeZone(
+        from: 0,
+        to: 120,
+        status: 'Fast',
+        color: presentation.palette[4],
+      ),
+      GaugeZone(
+        from: 120,
+        to: 200,
+        status: 'Elevated',
+        color: presentation.palette[2],
+      ),
+      GaugeZone(
+        from: 200,
+        to: 300,
+        status: 'Slow',
+        color: presentation.palette[3],
+      ),
+    ],
+    style: NeedleGaugeStyle(
+      needleColor: presentation.palette[0],
+      pivotColor: presentation.palette[0],
+      axisColor: presentation.border,
+      axisThickness: 13,
+    ),
+  ),
+  _ => GaugeChartSeries.needle(
+    id: 'mobile-gauge-cpu',
+    name: 'CPU utilization',
+    metric: 'CPU',
+    unit: '%',
+    value: 72,
+    minimum: 0,
+    maximum: 100,
+    color: presentation.palette[0],
+    target: GaugeTarget(
+      value: 70,
+      label: 'Target',
+      color: presentation.palette[1],
+    ),
+    zones: [
+      GaugeZone(
+        from: 0,
+        to: 60,
+        status: 'Healthy',
+        color: presentation.palette[4],
+      ),
+      GaugeZone(
+        from: 60,
+        to: 85,
+        status: 'Elevated',
+        color: presentation.palette[2],
+      ),
+      GaugeZone(
+        from: 85,
+        to: 100,
+        status: 'Critical',
+        color: presentation.palette[3],
+      ),
+    ],
+    style: NeedleGaugeStyle(
+      needleColor: presentation.palette[0],
+      pivotColor: presentation.palette[0],
+      axisColor: presentation.border,
+    ),
+  ),
+};
+
+GaugeChartConfig _mobileGaugeConfig(int variant) => GaugeChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: variant == 2 ? -110 : -135,
+    sweepAngleDegrees: variant == 2 ? 220 : 270,
+    innerRadiusFactor: variant == 1 || variant == 2 ? 0.58 : 0.48,
+    outerRadiusFactor: 0.92,
+  ),
+  tickCount: variant == 3 ? 9 : 5,
+  showTickLabels: variant != 2,
+  center: GaugeCenterConfig(
+    showMetric: true,
+    showValue: true,
+    showTarget: variant == 1 || variant == 3,
+    showStatus: true,
+  ),
+);
 
 LineChartSeries _mobileLine({
   required String id,

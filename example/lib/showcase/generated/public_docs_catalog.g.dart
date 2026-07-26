@@ -14,7 +14,7 @@ const publicDocsApiBaseUrl = "https://braven-pvm.github.io/braven_charts/api/";
 const publicDocsFeatures = <PublicDocsFeatureEntry>[
   (
     id: "chart-families",
-    title: "Eleven chart families",
+    title: "Twelve chart families",
     summary: "Build Cartesian, financial, radial, and polar charts in one native renderer.",
     page: "chart-types",
   ),
@@ -193,6 +193,19 @@ const publicDocsChartFamilies = <PublicDocsChartFamilyEntry>[
     apiSymbols: <String>["RadialBarChartSeries", "RadialBarChartConfig"],
     primaryExample: (title: "Radial Bar chart family", asset: "doc/screenshots/chart_type_radial_bar.png", page: "radial-bar", preset: null, view: null, animated: false),
     secondaryExample: (title: "Signed baseline comparison", asset: "doc/screenshots/radial_bar_signed.png", page: "radial-bar", preset: null, view: null, animated: false),
+  ),
+  (
+    id: "gauge",
+    label: "Gauge / Solid Gauge",
+    group: "Indicator radial",
+    summary: "One measurement in a known range",
+    bestFor: "Operational state, targets, thresholds, zones, and compact KPI status",
+    page: "gauge-charts",
+    guide: "docs/guides/gauge-charts.md",
+    pairAsset: "doc/screenshots/family_gauge_pair.png",
+    apiSymbols: <String>["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterContext"],
+    primaryExample: (title: "Gauge and Solid Gauge family", asset: "doc/screenshots/chart_type_gauge.png", page: "gauge-charts", preset: null, view: null, animated: false),
+    secondaryExample: null,
   ),
 ];
 

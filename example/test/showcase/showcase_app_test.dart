@@ -89,6 +89,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Gauge route attaches the native Workbench', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'gauge-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gauge Charts'), findsWidgets);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(find.byKey(const ValueKey('gauge-chart-0')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('direct Selection route mounts the cross-family test lab', (
     tester,
   ) async {
@@ -920,11 +940,13 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(find.text('Technical Indicators'));
     await tester.tap(find.text('Technical Indicators'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('financial-price-chart')), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Pie Charts'));
     await tester.tap(find.text('Pie Charts'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
@@ -932,6 +954,7 @@ void main() {
     expect(find.text('Choose a category story'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Donut Charts'));
     await tester.tap(find.text('Donut Charts'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);

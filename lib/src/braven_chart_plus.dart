@@ -29,11 +29,13 @@ import 'controllers/chart_controller.dart';
 import 'controllers/chart_interaction_group_controller.dart';
 import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
+import 'elements/gauge_series_element.dart';
 import 'elements/pie_series_element.dart';
 import 'elements/polar_column_series_element.dart';
 import 'elements/radial_bar_series_element.dart';
 import 'elements/resize_handle_element.dart';
 import 'elements/series_element.dart';
+import 'formatting/multi_axis_value_formatter.dart';
 import 'interaction/core/chart_element.dart';
 import 'interaction/core/coordinator.dart';
 import 'interaction/core/data_hit.dart';
@@ -71,6 +73,9 @@ import 'models/donut_chart_config.dart';
 import 'models/donut_chart_series.dart';
 import 'models/enums.dart';
 import 'models/grid_config.dart';
+import 'models/gauge_center_builder.dart';
+import 'models/gauge_chart_config.dart';
+import 'models/gauge_chart_series.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/pie_chart_series.dart';
@@ -232,6 +237,8 @@ class BravenChartPlus extends StatefulWidget {
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
     this.radialBarChartConfig = const RadialBarChartConfig(),
+    this.gaugeChartConfig = const GaugeChartConfig(),
+    this.gaugeCenterBuilder,
     this.donutCenterBuilder,
     this.onDonutCenterTap,
     this.showToolbar = false,
@@ -821,6 +828,10 @@ class BravenChartPlus extends StatefulWidget {
         'Radial Bar requires category labels. Use '
         'RadialBarChartSeries.fromMap instead.',
       ),
+      ChartType.gauge => throw ArgumentError(
+        'Gauge requires an explicit metric and numeric domain. Use '
+        'GaugeChartSeries.needle or GaugeChartSeries.solid instead.',
+      ),
     };
   }
 
@@ -1079,6 +1090,20 @@ class BravenChartPlus extends StatefulWidget {
   /// it does not consume Cartesian axes or Pie/Donut share configuration.
   final RadialBarChartConfig radialBarChartConfig;
 
+  /// Plot-level pane, ticks, zones, and center content used by Gauge.
+  ///
+  /// Gauge owns one explicit numeric domain and does not consume Cartesian
+  /// axes or categorical radial composition settings.
+  final GaugeChartConfig gaugeChartConfig;
+
+  /// Builds runtime-only content inside the resolved Gauge center opening.
+  ///
+  /// The portable [GaugeChartConfig.center] remains the artifact and preview
+  /// fallback. It is painted whenever this builder is not rebound after
+  /// hydration. The chart retains Gauge geometry, tracking, and semantics;
+  /// this builder owns only the bounded center widget.
+  final GaugeCenterBuilder? gaugeCenterBuilder;
+
   /// Builds runtime-only content inside a Donut chart's shared center opening.
   ///
   /// Braven Charts retains the circular clip, measured constraints, selection
@@ -1326,6 +1351,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   double _textScaleFactor = 1;
   TextDirection _textDirection = TextDirection.ltr;
   bool _disableAnimations = false;
+  bool _highContrast = false;
   ChartPointRef? _radialKeyboardFocusRef;
   bool _radialFocusIndicatorVisible = false;
 
@@ -1402,6 +1428,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   _candlestickSeriesTransitions =
       <String, _ActiveCandlestickSeriesTransition>{};
   _ActiveRadialSeriesTransition? _radialSeriesTransition;
+  _ActiveGaugeSeriesTransition? _gaugeSeriesTransition;
   final Map<String, _ActivePathSeriesTransition> _pathSeriesTransitions =
       <String, _ActivePathSeriesTransition>{};
   final Map<String, PathSeriesPointMap> _pathPointMapsBySeries =
@@ -1704,12 +1731,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     super.didChangeDependencies();
     final nextTextScale = MediaQuery.maybeOf(context)?.textScaler.scale(1) ?? 1;
     final nextDisableAnimations = MediaQuery.disableAnimationsOf(context);
+    final nextHighContrast = MediaQuery.maybeOf(context)?.highContrast ?? false;
     final nextTextDirection = Directionality.of(context);
     if (nextTextScale != _textScaleFactor ||
         nextDisableAnimations != _disableAnimations ||
+        nextHighContrast != _highContrast ||
         nextTextDirection != _textDirection) {
       _textScaleFactor = nextTextScale;
       _disableAnimations = nextDisableAnimations;
+      _highContrast = nextHighContrast;
       _textDirection = nextTextDirection;
       if (_disableAnimations) {
         _barDataAnimationController
@@ -1725,6 +1755,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
         _radialSeriesTransition = null;
+        _gaugeSeriesTransition = null;
         _radialSelectionAnimationController
           ..stop()
           ..value = 1;
@@ -1912,6 +1943,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       nextTheme: widget.theme ?? ChartTheme.light,
     );
     final radialCenterRuntimeChanged =
+        widget.gaugeCenterBuilder != oldWidget.gaugeCenterBuilder ||
         widget.donutCenterBuilder != oldWidget.donutCenterBuilder ||
         widget.onDonutCenterTap != oldWidget.onDonutCenterTap;
     if (radialDataChanged) {
@@ -1924,6 +1956,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||
         widget.polarChartConfig != oldWidget.polarChartConfig ||
         widget.radialBarChartConfig != oldWidget.radialBarChartConfig ||
+        widget.gaugeChartConfig != oldWidget.gaugeChartConfig ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
@@ -2318,7 +2351,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _clearInteractionCursor() {
     final isNonCartesian =
         _layoutKind == ChartLayoutKind.partitionRadial ||
-        _layoutKind == ChartLayoutKind.polarAxis;
+        _layoutKind == ChartLayoutKind.polarAxis ||
+        _layoutKind == ChartLayoutKind.gauge;
     final interactionConfig = isNonCartesian
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
@@ -2842,6 +2876,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           resolved.allSeries.whereType<RadialBarChartSeries>().isNotEmpty
           ? widget.radialBarChartConfig
           : null,
+      gaugeChartConfig:
+          resolved.allSeries.whereType<GaugeChartSeries>().isNotEmpty
+          ? widget.gaugeChartConfig
+          : null,
       selectionSnapshot: ChartSelectionSnapshot(
         expression: _selectionExpressionForSnapshot(),
         revision: _effectiveDocumentRevision,
@@ -2928,6 +2966,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           }
         }
       }
+    }
+    if (_layoutKind == ChartLayoutKind.gauge) {
+      widget.gaugeChartConfig.validate();
     }
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
       final focusRef = _radialKeyboardFocusRef;
@@ -3214,6 +3255,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         elements = _buildRadialElements(transform);
       } else if (_layoutKind == ChartLayoutKind.polarAxis) {
         elements = _buildPolarElements(transform);
+      } else if (_layoutKind == ChartLayoutKind.gauge) {
+        elements = _buildGaugeElements(transform);
       } else {
         elements = DataConverter.seriesToElements(
           series: _effectiveRenderSeries,
@@ -3808,6 +3851,27 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     ];
   }
 
+  List<ChartElement> _buildGaugeElements(ChartTransform transform) {
+    final series = _effectiveRenderSeries.whereType<GaugeChartSeries>().single;
+    return <ChartElement>[
+      GaugeSeriesElement(
+        series: series,
+        config: widget.gaugeChartConfig,
+        size: Size(transform.plotWidth, transform.plotHeight),
+        theme: widget.theme ?? ChartTheme.light,
+        textScaleFactor: _textScaleFactor,
+        textDirection: _textDirection,
+        revealProgress: _radialRevealProgress,
+        paintCenterContent: widget.gaugeCenterBuilder == null,
+        highContrast: _highContrast,
+        focusedPointIndices: {
+          for (final ref in _focusedPointRefs)
+            if (ref.seriesId == series.id) ref.pointIndex,
+        },
+      ),
+    ];
+  }
+
   List<LegendAnnotation> _buildAutomaticSizeLegends(LegendStyle baseStyle) {
     final groups = <ScatterSizeEncoding, List<(ScatterChartSeries, int)>>{};
     for (var index = 0; index < _effectiveRenderSeries.length; index++) {
@@ -4172,7 +4236,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleRadialDataAnimationTick() {
-    if (!mounted || _radialSeriesTransition == null) return;
+    if (!mounted ||
+        (_radialSeriesTransition == null && _gaugeSeriesTransition == null)) {
+      return;
+    }
     setState(() {
       _refreshAnimatedRenderSeries();
       _elementGeneratorVersion++;
@@ -4191,6 +4258,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _radialSeriesTransition = null;
+      _gaugeSeriesTransition = null;
       _refreshAnimatedRenderSeries();
       _elementGeneratorVersion++;
     });
@@ -4235,7 +4303,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _handleRadialAnimationTick() {
     if (!mounted ||
         (_layoutKind != ChartLayoutKind.partitionRadial &&
-            _layoutKind != ChartLayoutKind.polarAxis)) {
+            _layoutKind != ChartLayoutKind.polarAxis &&
+            _layoutKind != ChartLayoutKind.gauge)) {
       return;
     }
     setState(() => _elementGeneratorVersion++);
@@ -4326,7 +4395,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   };
 
   void _replaySeriesEntrance() {
-    if (_layoutKind == ChartLayoutKind.partitionRadial) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial ||
+        _layoutKind == ChartLayoutKind.polarAxis ||
+        _layoutKind == ChartLayoutKind.gauge) {
       _startRadialRevealAnimation();
     } else {
       _startPathEntranceAnimation();
@@ -4621,13 +4692,39 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required List<ChartSeries> nextSeries,
   }) {
     _radialSeriesTransition = null;
+    _gaugeSeriesTransition = null;
     _radialDataAnimationController.stop();
-    if (_layoutKind != ChartLayoutKind.partitionRadial ||
-        nextSeries.length != 1) {
+    if (nextSeries.length != 1) {
       _radialDataAnimationController.value = 1;
       return;
     }
     final next = nextSeries.single;
+    if (_layoutKind == ChartLayoutKind.gauge && next is GaugeChartSeries) {
+      final previous = previousSeriesById[next.id];
+      if (previous is! GaugeChartSeries ||
+          previous.value == next.value ||
+          _disableAnimations ||
+          _barDataAnimationDuration == Duration.zero) {
+        _radialDataAnimationController.value = 1;
+        return;
+      }
+      _gaugeSeriesTransition = _ActiveGaugeSeriesTransition(
+        fromValue: previous.value.clamp(next.minimum, next.maximum),
+        to: next,
+      );
+      _radialDataAnimationController
+        ..duration = _barDataAnimationDuration
+        ..value = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _gaugeSeriesTransition == null) return;
+        _radialDataAnimationController.forward();
+      });
+      return;
+    }
+    if (_layoutKind != ChartLayoutKind.partitionRadial) {
+      _radialDataAnimationController.value = 1;
+      return;
+    }
     if (next is! RadialCategorySeries || !_canAnimateRadialData(next)) {
       _radialDataAnimationController.value = 1;
       return;
@@ -4656,6 +4753,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (previous.length != 1 || next.length != 1) return false;
     final previousRadial = previous.single;
     final nextRadial = next.single;
+    if (previousRadial is GaugeChartSeries && nextRadial is GaugeChartSeries) {
+      return previousRadial != nextRadial;
+    }
     if (previousRadial is! RadialCategorySeries ||
         nextRadial is! RadialCategorySeries) {
       return false;
@@ -4887,13 +4987,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                     PolarColumnAnimationMode.none),
       );
 
+  bool _canAnimateGauge(Duration duration) =>
+      !_disableAnimations &&
+      duration > Duration.zero &&
+      _effectiveRenderSeries.any((series) => series is GaugeChartSeries);
+
   void _startRadialRevealAnimation() {
     final series = _effectiveRadialSeries;
     final hasPolarSeries = _effectiveRenderSeries.any(
       (series) =>
           series is PolarColumnChartSeries || series is RadialBarChartSeries,
     );
-    if (series == null && !hasPolarSeries) {
+    final hasGaugeSeries = _effectiveRenderSeries.any(
+      (series) => series is GaugeChartSeries,
+    );
+    if (series == null && !hasPolarSeries && !hasGaugeSeries) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -4905,7 +5013,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     final duration = animationTheme.dataUpdateDuration;
     final canAnimate = series == null
-        ? _canAnimatePolar(duration)
+        ? hasGaugeSeries
+              ? _canAnimateGauge(duration)
+              : _canAnimatePolar(duration)
         : _canAnimateRadial(series, duration);
     if (!canAnimate) {
       _radialRevealAnimationController
@@ -4923,7 +5033,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               !_effectiveRenderSeries.any(
                 (series) =>
                     series is PolarColumnChartSeries ||
-                    series is RadialBarChartSeries,
+                    series is RadialBarChartSeries ||
+                    series is GaugeChartSeries,
               ))) {
         return;
       }
@@ -5097,6 +5208,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           to: radialTransition.to,
           progress: _radialDataAnimationProgress,
           effectiveOpacity: targetOpacity,
+        ),
+      ];
+    }
+    final gaugeTransition = _gaugeSeriesTransition;
+    if (gaugeTransition != null) {
+      final progress = _radialDataAnimationProgress;
+      renderSeries = <ChartSeries>[
+        gaugeTransition.to.copyWith(
+          value:
+              gaugeTransition.fromValue +
+              (gaugeTransition.to.value - gaugeTransition.fromValue) * progress,
         ),
       ];
     }
@@ -7317,6 +7439,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required Offset position,
     bool showFocusIndicator = false,
   }) {
+    if (_layoutKind == ChartLayoutKind.gauge) {
+      _focusPolarPoint(hit.pointIndex, seriesId: hit.seriesId);
+      widget.onPointTap?.call(hit.point, hit.seriesId);
+      _effectiveRadialInteractionConfig().onDataPointTap?.call(
+        hit.point,
+        position,
+      );
+      return;
+    }
     if (_layoutKind == ChartLayoutKind.polarAxis) {
       _focusPolarPoint(hit.pointIndex, seriesId: hit.seriesId);
       _commitRadialPointActivation(
@@ -7641,7 +7772,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         .where(
           (candidate) =>
               (candidate is PolarColumnChartSeries ||
-                  candidate is RadialBarChartSeries) &&
+                  candidate is RadialBarChartSeries ||
+                  candidate is GaugeChartSeries) &&
               candidate.id == seriesId,
         )
         .firstOrNull;
@@ -7687,7 +7819,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         .where(
           (candidate) =>
               candidate is PolarColumnChartSeries ||
-              candidate is RadialBarChartSeries,
+              candidate is RadialBarChartSeries ||
+              candidate is GaugeChartSeries,
         )
         .toList(growable: false);
     if (polarSeries.isEmpty) return false;
@@ -7731,6 +7864,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final ref = _focusedPointRefs.firstOrNull ?? visible.first;
       final focusedSeries = seriesForRef(ref);
       _focusPolarPoint(ref.pointIndex, seriesId: ref.seriesId);
+      if (_layoutKind == ChartLayoutKind.gauge) {
+        final point = focusedSeries!.points[ref.pointIndex];
+        final renderBox =
+            _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        final hit = renderBox?.dataHitForPointIndex(
+          ref.seriesId,
+          ref.pointIndex,
+        );
+        final position = hit == null
+            ? Offset.zero
+            : _widgetPositionForDataHit(hit);
+        widget.onPointTap?.call(point, ref.seriesId);
+        interaction.onDataPointTap?.call(point, position);
+        interaction.onKeyboardAction?.call('inspect_gauge', point);
+        return true;
+      }
       final handled = _activateKeyboardNonCartesianPoint(ref, visible);
       interaction.onKeyboardAction?.call(
         'select_column',
@@ -10455,7 +10604,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         : workbenchActionScope?.actionListenable;
     final isPartitionRadial = _layoutKind == ChartLayoutKind.partitionRadial;
     final isPolarAxis = _layoutKind == ChartLayoutKind.polarAxis;
-    final isNonCartesian = isPartitionRadial || isPolarAxis;
+    final isGauge = _layoutKind == ChartLayoutKind.gauge;
+    final isNonCartesian = isPartitionRadial || isPolarAxis || isGauge;
     final hasCandlesticks =
         !isNonCartesian &&
         _effectiveDataSeries.any((series) => series is CandlestickChartSeries);
@@ -10503,6 +10653,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             growable: false,
           )
         : const <DonutChartSeries>[];
+    final GaugeChartSeries? gaugeCenterSeries = isGauge
+        ? _effectiveRenderSeries.whereType<GaugeChartSeries>().single
+        : null;
     if (isPartitionRadial) {
       for (final pointRef in _selectedPointRefs) {
         final selectedSeries = _effectiveRadialSeriesForId(pointRef.seriesId);
@@ -10535,7 +10688,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           return KeyEventResult.handled;
         }
         if (isNonCartesian) {
-          final handled = isPolarAxis
+          final handled = isPolarAxis || isGauge
               ? _handlePolarKeyEvent(event)
               : _handleRadialKeyEvent(event);
           return handled ? KeyEventResult.handled : KeyEventResult.ignored;
@@ -10703,7 +10856,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               ? _activateCandlestickDataHit
                               : null,
                           onDataHitFocus: isNonCartesian
-                              ? (hit) => isPolarAxis
+                              ? (hit) => isPolarAxis || isGauge
                                     ? _focusPolarPoint(
                                         hit.pointIndex,
                                         seriesId: hit.seriesId,
@@ -10823,6 +10976,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         selectionProgress: _radialSelectionProgress,
                         builder: widget.donutCenterBuilder,
                         onTap: widget.onDonutCenterTap,
+                      ),
+                    ),
+                  if (gaugeCenterSeries != null &&
+                      widget.gaugeCenterBuilder != null)
+                    Positioned.fill(
+                      child: _GaugeCenterOverlay(
+                        series: gaugeCenterSeries,
+                        config: widget.gaugeChartConfig,
+                        chartTheme: widget.theme ?? ChartTheme.light,
+                        textScaleFactor: _textScaleFactor,
+                        textDirection: _textDirection,
+                        plotInsets: widget.axislessPlotInsets,
+                        builder: widget.gaugeCenterBuilder!,
                       ),
                     ),
                   if (widget.showDebugInfo)
@@ -11612,6 +11778,90 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   }
 }
 
+class _GaugeCenterOverlay extends StatelessWidget {
+  const _GaugeCenterOverlay({
+    required this.series,
+    required this.config,
+    required this.chartTheme,
+    required this.textScaleFactor,
+    required this.textDirection,
+    required this.plotInsets,
+    required this.builder,
+  });
+
+  final GaugeChartSeries series;
+  final GaugeChartConfig config;
+  final ChartTheme chartTheme;
+  final double textScaleFactor;
+  final TextDirection textDirection;
+  final EdgeInsets plotInsets;
+  final GaugeCenterBuilder builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fullSize = constraints.biggest;
+        if (!fullSize.width.isFinite ||
+            !fullSize.height.isFinite ||
+            fullSize.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final plotSize = Size(
+          math.max(0, fullSize.width - plotInsets.horizontal),
+          math.max(0, fullSize.height - plotInsets.vertical),
+        );
+        if (plotSize.isEmpty) return const SizedBox.shrink();
+
+        final element = GaugeSeriesElement(
+          series: series,
+          config: config,
+          size: plotSize,
+          theme: chartTheme,
+          textScaleFactor: textScaleFactor,
+          textDirection: textDirection,
+          paintCenterContent: false,
+        );
+        final localBounds = element.geometry.centerBounds;
+        if (localBounds.isEmpty) return const SizedBox.shrink();
+
+        final center = GaugeCenterContext(
+          seriesId: series.id,
+          seriesName: series.name,
+          metric: series.metric,
+          unit: series.unit,
+          value: series.value,
+          formattedValue: MultiAxisValueFormatter.format(
+            value: series.value,
+            unit: series.unit,
+          ),
+          minimum: series.minimum,
+          maximum: series.maximum,
+          normalizedProgress: series.normalizedProgress,
+          target: series.target,
+          activeZone: series.activeZone,
+          status: series.status,
+          indicatorColor: element.resolvedIndicatorColor,
+          availableSize: localBounds.size,
+        );
+        final resolvedBounds = localBounds.shift(
+          Offset(plotInsets.left, plotInsets.top),
+        );
+        return Stack(
+          children: [
+            Positioned.fromRect(
+              rect: resolvedBounds,
+              child: ClipRect(
+                child: ExcludeSemantics(child: builder(context, center)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _DonutCenterOverlay extends StatelessWidget {
   const _DonutCenterOverlay({
     required this.series,
@@ -12031,6 +12281,16 @@ class _ActiveRadialSeriesTransition {
 
   final RadialCategorySeries from;
   final RadialCategorySeries to;
+}
+
+class _ActiveGaugeSeriesTransition {
+  const _ActiveGaugeSeriesTransition({
+    required this.fromValue,
+    required this.to,
+  });
+
+  final double fromValue;
+  final GaugeChartSeries to;
 }
 
 class _ActivePathSeriesTransition {

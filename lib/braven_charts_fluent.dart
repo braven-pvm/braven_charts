@@ -46,6 +46,8 @@ export 'src/fluent/generated/models/concentric_donut_config_fluent.dart';
 export 'src/fluent/generated/models/data_point_label_config_fluent.dart';
 export 'src/fluent/generated/models/donut_chart_config_fluent.dart';
 export 'src/fluent/generated/models/donut_chart_series_fluent.dart';
+export 'src/fluent/generated/models/gauge_chart_config_fluent.dart';
+export 'src/fluent/generated/models/gauge_chart_series_fluent.dart';
 export 'src/fluent/generated/models/grid_config_fluent.dart';
 export 'src/fluent/generated/models/interaction_config_fluent.dart';
 export 'src/fluent/generated/models/legend_style_fluent.dart';

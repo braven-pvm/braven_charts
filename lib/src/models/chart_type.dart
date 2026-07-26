@@ -30,4 +30,7 @@ enum ChartType {
 
   /// Independent category tracks whose absolute values map to angular sweep.
   radialBar,
+
+  /// One operational measurement against an explicit domain and status zones.
+  gauge,
 }

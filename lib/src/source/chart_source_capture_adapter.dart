@@ -9,6 +9,7 @@ import '../models/chart_annotation.dart';
 import '../models/bar_chart_style.dart';
 import '../models/data_point_label_config.dart';
 import '../models/donut_chart_series.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
@@ -204,6 +205,7 @@ abstract final class ChartSourceCaptureAdapter {
         PieChartSeries() => withoutCallbacks,
         PolarColumnChartSeries() => withoutCallbacks,
         RadialBarChartSeries() => withoutCallbacks,
+        GaugeChartSeries() => withoutCallbacks,
         ChartSeries() => withoutCallbacks.copyWith(annotations: annotations),
       };
     };
@@ -229,6 +231,7 @@ abstract final class ChartSourceCaptureAdapter {
       concentricDonutConfig: source.concentricDonutConfig,
       polarChartConfig: source.polarChartConfig,
       radialBarChartConfig: source.radialBarChartConfig,
+      gaugeChartConfig: source.gaugeChartConfig,
       selectionSnapshot: source.selectionSnapshot,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,

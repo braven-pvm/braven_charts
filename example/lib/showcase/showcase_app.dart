@@ -20,6 +20,7 @@ import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/documentation_page.dart';
 import 'pages/gallery_page.dart';
+import 'pages/gauge_charts_page.dart';
 import 'pages/technical_indicators_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
@@ -362,6 +363,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'concentric-donut' => const ConcentricDonutPage(),
     'polar-column' => const PolarColumnPage(),
     'radial-bar' => const RadialBarPage(),
+    'gauge-charts' => const GaugeChartsPage(),
     _ => throw StateError('No showcase page is registered for $slug'),
   };
 

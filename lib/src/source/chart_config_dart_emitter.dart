@@ -44,6 +44,8 @@ import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
+import '../models/gauge_chart_config.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/path_animation_style.dart';
@@ -201,6 +203,9 @@ class ChartConfigDartEmitter {
       if (configuration.radialBarChartConfig case final radialBarConfig?) {
         _emitRadialBarChartConfig(body, radialBarConfig);
       }
+      if (configuration.gaugeChartConfig case final gaugeConfig?) {
+        _emitGaugeChartConfig(body, gaugeConfig);
+      }
       if (configuration.annotations.isNotEmpty) {
         _emitAnnotationList(body, 'annotations', configuration.annotations);
       }
@@ -333,6 +338,10 @@ class ChartConfigDartEmitter {
     ChartSeries series,
     int seriesIndex,
   ) {
+    if (series is GaugeChartSeries) {
+      _emitGaugeSeries(writer, series);
+      return;
+    }
     final constructor = switch (series) {
       CandlestickChartSeries() => 'CandlestickChartSeries',
       LineChartSeries() => 'LineChartSeries',
@@ -2733,6 +2742,140 @@ class ChartConfigDartEmitter {
     }
   }
 
+  void _emitGaugeSeries(DartSourceWriter writer, GaugeChartSeries series) {
+    final factory = series.indicatorStyle is NeedleGaugeStyle
+        ? 'needle'
+        : 'solid';
+    writer.writeLine('GaugeChartSeries.$factory(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(series.id));
+      _optionalString(writer, 'name', series.name);
+      writer.namedArgument(
+        'metric',
+        DartSourceWriter.stringLiteral(series.metric),
+      );
+      writer.namedArgument(
+        'value',
+        DartSourceWriter.numberLiteral(series.value),
+      );
+      writer.namedArgument(
+        'minimum',
+        DartSourceWriter.numberLiteral(series.minimum),
+      );
+      writer.namedArgument(
+        'maximum',
+        DartSourceWriter.numberLiteral(series.maximum),
+      );
+      _optionalColor(writer, 'color', series.color);
+      if (series.metadata != null && series.metadata!.isNotEmpty) {
+        writer.namedArgument('metadata', _dynamicLiteral(series.metadata!));
+      }
+      _optionalString(writer, 'unit', series.unit);
+      if (series.target case final target?) {
+        writer.writeLine('target: GaugeTarget(');
+        writer.indented(() {
+          writer.namedArgument(
+            'value',
+            DartSourceWriter.numberLiteral(target.value),
+          );
+          _optionalString(writer, 'label', target.label);
+          _optionalColor(writer, 'color', target.color);
+          _numberIf(writer, 'width', target.width, 3);
+        });
+        writer.writeLine('),');
+      }
+      if (series.zones.isNotEmpty) {
+        writer.writeLine('zones: [');
+        writer.indented(() {
+          for (final zone in series.zones) {
+            writer.writeLine('GaugeZone(');
+            writer.indented(() {
+              writer.namedArgument(
+                'from',
+                DartSourceWriter.numberLiteral(zone.from),
+              );
+              writer.namedArgument(
+                'to',
+                DartSourceWriter.numberLiteral(zone.to),
+              );
+              writer.namedArgument(
+                'status',
+                DartSourceWriter.stringLiteral(zone.status),
+              );
+              _optionalColor(writer, 'color', zone.color);
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
+      }
+      if (series.thresholds.isNotEmpty) {
+        writer.writeLine('thresholds: [');
+        writer.indented(() {
+          for (final threshold in series.thresholds) {
+            writer.writeLine('GaugeThreshold(');
+            writer.indented(() {
+              writer.namedArgument(
+                'value',
+                DartSourceWriter.numberLiteral(threshold.value),
+              );
+              _optionalString(writer, 'label', threshold.label);
+              _optionalColor(writer, 'color', threshold.color);
+              _numberIf(writer, 'width', threshold.width, 1.5);
+              if (options.includeDefaultValues ||
+                  !listEquals(threshold.dashPattern, const <double>[6, 4])) {
+                writer.namedArgument(
+                  'dashPattern',
+                  '<double>[${threshold.dashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
+                );
+              }
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
+      }
+      switch (series.indicatorStyle) {
+        case final NeedleGaugeStyle style:
+          if (options.includeDefaultValues ||
+              style != const NeedleGaugeStyle()) {
+            writer.writeLine('style: NeedleGaugeStyle(');
+            writer.indented(() {
+              _numberIf(
+                writer,
+                'needleLengthFactor',
+                style.needleLengthFactor,
+                0.88,
+              );
+              _numberIf(writer, 'needleWidth', style.needleWidth, 3);
+              _optionalColor(writer, 'needleColor', style.needleColor);
+              _numberIf(writer, 'pivotRadius', style.pivotRadius, 6);
+              _optionalColor(writer, 'pivotColor', style.pivotColor);
+              _numberIf(writer, 'axisThickness', style.axisThickness, 12);
+              _optionalColor(writer, 'axisColor', style.axisColor);
+              _numberIf(writer, 'axisOpacity', style.axisOpacity, 0.16);
+            });
+            writer.writeLine('),');
+          }
+        case final SolidGaugeStyle style:
+          if (options.includeDefaultValues ||
+              style != const SolidGaugeStyle()) {
+            writer.writeLine('style: SolidGaugeStyle(');
+            writer.indented(() {
+              _optionalColor(writer, 'trackColor', style.trackColor);
+              _numberIf(writer, 'trackOpacity', style.trackOpacity, 0.14);
+              _numberIf(writer, 'cornerRadius', style.cornerRadius, 8);
+              _optionalColor(writer, 'borderColor', style.borderColor);
+              _numberIf(writer, 'borderWidth', style.borderWidth, 0);
+              _numberIf(writer, 'opacity', style.opacity, 1);
+            });
+            writer.writeLine('),');
+          }
+      }
+    });
+    writer.writeLine('),');
+  }
+
   void _emitRadialSelectionStyle(
     DartSourceWriter writer,
     RadialSelectionStyle style,
@@ -3082,6 +3225,113 @@ class ChartConfigDartEmitter {
           }
         });
         writer.writeLine('],');
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitGaugeChartConfig(DartSourceWriter writer, GaugeChartConfig config) {
+    writer.writeLine('gaugeChartConfig: GaugeChartConfig(');
+    writer.indented(() {
+      final pane = config.pane;
+      const defaultPane = PolarPaneConfig(
+        startAngleDegrees: -135,
+        sweepAngleDegrees: 270,
+        innerRadiusFactor: 0.56,
+        outerRadiusFactor: 0.88,
+      );
+      if (options.includeDefaultValues || pane != defaultPane) {
+        writer.writeLine('pane: PolarPaneConfig(');
+        writer.indented(() {
+          _numberIf(writer, 'startAngleDegrees', pane.startAngleDegrees, -135);
+          _numberIf(writer, 'sweepAngleDegrees', pane.sweepAngleDegrees, 270);
+          _valueIf(writer, 'clockwise', pane.clockwise, defaultValue: true);
+          _numberIf(writer, 'innerRadiusFactor', pane.innerRadiusFactor, 0.56);
+          _numberIf(writer, 'outerRadiusFactor', pane.outerRadiusFactor, 0.88);
+          _valueIf(writer, 'clipMarks', pane.clipMarks, defaultValue: true);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues || config.tickCount != 6) {
+        writer.namedArgument('tickCount', config.tickCount.toString());
+      }
+      _valueIf(writer, 'showAxis', config.showAxis, defaultValue: true);
+      _valueIf(writer, 'showTicks', config.showTicks, defaultValue: true);
+      _valueIf(
+        writer,
+        'showTickLabels',
+        config.showTickLabels,
+        defaultValue: true,
+      );
+      _valueIf(writer, 'showZones', config.showZones, defaultValue: true);
+      _valueIf(
+        writer,
+        'colorIndicatorByActiveZone',
+        config.colorIndicatorByActiveZone,
+        defaultValue: true,
+      );
+      if (options.includeDefaultValues ||
+          config.center != const GaugeCenterConfig()) {
+        writer.writeLine('center: GaugeCenterConfig(');
+        writer.indented(() {
+          _valueIf(
+            writer,
+            'showMetric',
+            config.center.showMetric,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'showValue',
+            config.center.showValue,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'showTarget',
+            config.center.showTarget,
+            defaultValue: false,
+          );
+          _valueIf(
+            writer,
+            'showStatus',
+            config.center.showStatus,
+            defaultValue: true,
+          );
+          if (options.includeDefaultValues ||
+              config.center.metricStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(
+              writer,
+              'metricStyle',
+              config.center.metricStyle,
+            );
+          }
+          if (options.includeDefaultValues ||
+              config.center.valueStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(
+              writer,
+              'valueStyle',
+              config.center.valueStyle,
+            );
+          }
+          if (options.includeDefaultValues ||
+              config.center.targetStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(
+              writer,
+              'targetStyle',
+              config.center.targetStyle,
+            );
+          }
+          if (options.includeDefaultValues ||
+              config.center.statusStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(
+              writer,
+              'statusStyle',
+              config.center.statusStyle,
+            );
+          }
+        });
+        writer.writeLine('),');
       }
     });
     writer.writeLine('),');

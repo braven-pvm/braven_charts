@@ -81,6 +81,7 @@ abstract final class ChartTableExporter {
     Iterable<ChartTableWideRow> wideRows = const [],
     Iterable<ChartTablePieRow> pieRows = const [],
     Iterable<ChartTablePolarRow> polarRows = const [],
+    Iterable<ChartTableGaugeRow> gaugeRows = const [],
     Iterable<ChartTableCandlestickRow> candlestickRows = const [],
   }) {
     final rows = switch (model.projectionKind) {
@@ -96,6 +97,10 @@ abstract final class ChartTableExporter {
       ChartTableProjectionKind.polar => [
         for (final (index, row) in polarRows.indexed)
           polarRow(model, row, index),
+      ],
+      ChartTableProjectionKind.gauge => [
+        for (final (index, row) in gaugeRows.indexed)
+          gaugeRow(model, row, index),
       ],
       ChartTableProjectionKind.candlestick => [
         for (final (index, row) in candlestickRows.indexed)
@@ -280,6 +285,36 @@ abstract final class ChartTableExporter {
     ],
   );
 
+  static ChartTableRowExport gaugeRow(
+    ChartTableModel model,
+    ChartTableGaugeRow row,
+    int displayIndex,
+  ) => ChartTableRowExport(
+    rowId: row.rowId,
+    headers: headers(model),
+    rawValues: [
+      displayIndex + 1,
+      row.metric,
+      row.valueRaw,
+      row.minimumRaw,
+      row.maximumRaw,
+      row.progressRaw,
+      row.targetRaw,
+      row.status,
+    ],
+    displayValues: [
+      '${displayIndex + 1}',
+      row.metric,
+      row.valueDisplay,
+      row.minimumDisplay,
+      row.maximumDisplay,
+      row.progressDisplay,
+      row.targetDisplay ?? 'No target',
+      row.status ?? 'No status',
+    ],
+    references: [row.reference],
+  );
+
   static List<String> headers(ChartTableModel model) =>
       switch (model.projectionKind) {
         ChartTableProjectionKind.cartesianWide => [
@@ -341,6 +376,18 @@ abstract final class ChartTableExporter {
                 ? 'Upper'
                 : 'Upper (${model.commonRadialUnit})',
           ],
+        ],
+        ChartTableProjectionKind.gauge => [
+          '#',
+          'Metric',
+          model.series.single.unit == null
+              ? 'Value'
+              : 'Value (${model.series.single.unit})',
+          'Minimum',
+          'Maximum',
+          'Progress',
+          'Target',
+          'Status',
         ],
         ChartTableProjectionKind.candlestick => [
           '#',

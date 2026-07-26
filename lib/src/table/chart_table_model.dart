@@ -293,6 +293,48 @@ class ChartTablePolarRow {
   final int? colorValue;
 }
 
+/// Native one-measurement projection for a Gauge or Solid Gauge.
+@immutable
+class ChartTableGaugeRow {
+  const ChartTableGaugeRow({
+    required this.rowId,
+    required this.reference,
+    required this.seriesId,
+    required this.metric,
+    required this.valueRaw,
+    required this.valueDisplay,
+    required this.minimumRaw,
+    required this.minimumDisplay,
+    required this.maximumRaw,
+    required this.maximumDisplay,
+    required this.progressRaw,
+    required this.progressDisplay,
+    required this.isValid,
+    this.unit,
+    this.targetRaw,
+    this.targetDisplay,
+    this.status,
+  });
+
+  final String rowId;
+  final ChartTablePointReference reference;
+  final String seriesId;
+  final String metric;
+  final double valueRaw;
+  final String valueDisplay;
+  final double minimumRaw;
+  final String minimumDisplay;
+  final double maximumRaw;
+  final String maximumDisplay;
+  final double progressRaw;
+  final String progressDisplay;
+  final String? unit;
+  final double? targetRaw;
+  final String? targetDisplay;
+  final String? status;
+  final bool isValid;
+}
+
 /// Native financial projection for one source candlestick and exact-X overlays.
 @immutable
 class ChartTableCandlestickRow {
@@ -361,6 +403,9 @@ enum ChartTableProjectionKind {
   /// Category, series, and value projection for an axis-based polar series.
   polar,
 
+  /// One operational measurement against an explicit Gauge domain.
+  gauge,
+
   /// Time/X, OHLC, price-change, and exact-X Cartesian overlay projection.
   candlestick,
 }
@@ -382,6 +427,7 @@ class ChartTableModel {
     required Iterable<ChartTableWideRow> wideRows,
     required Iterable<ChartTablePieRow> pieRows,
     required Iterable<ChartTablePolarRow> polarRows,
+    required Iterable<ChartTableGaugeRow> gaugeRows,
     required Iterable<ChartTableCandlestickRow> candlestickRows,
     required Iterable<ChartArtifactWarning> warnings,
   }) : series = List.unmodifiable(series),
@@ -389,6 +435,7 @@ class ChartTableModel {
        wideRows = List.unmodifiable(wideRows),
        pieRows = List.unmodifiable(pieRows),
        polarRows = List.unmodifiable(polarRows),
+       gaugeRows = List.unmodifiable(gaugeRows),
        candlestickRows = List.unmodifiable(candlestickRows),
        warnings = List.unmodifiable(warnings);
 
@@ -412,6 +459,19 @@ class ChartTableModel {
     final candlestickSeries = selected
         .where((series) => series.type == 'candlestick')
         .toList();
+    final gaugeSeries = selected
+        .where((series) => series.type == 'gauge')
+        .toList();
+    if (gaugeSeries.length > 1) {
+      throw UnsupportedError(
+        'Gauge table projection supports exactly one measurement.',
+      );
+    }
+    if (gaugeSeries.isNotEmpty && gaugeSeries.length != selected.length) {
+      throw UnsupportedError(
+        'Gauge table projection cannot mix chart families.',
+      );
+    }
     if (candlestickSeries.length > 1) {
       throw UnsupportedError(
         'Candlestick table projection supports exactly one OHLC series.',
@@ -437,6 +497,8 @@ class ChartTableModel {
     }
     final projectionKind = candlestickSeries.isNotEmpty
         ? ChartTableProjectionKind.candlestick
+        : gaugeSeries.isNotEmpty
+        ? ChartTableProjectionKind.gauge
         : radialSeries.isNotEmpty
         ? ChartTableProjectionKind.pie
         : polarSeries.isNotEmpty
@@ -459,6 +521,7 @@ class ChartTableModel {
     final longRows = <ChartTableLongRow>[];
     final pieRows = <ChartTablePieRow>[];
     final polarRows = <ChartTablePolarRow>[];
+    final gaugeRows = <ChartTableGaugeRow>[];
     final unitsBySeries = <String, String?>{};
     final formattersBySeries = <String, String Function(double)?>{};
     final hiddenBySeries = <String, bool>{};
@@ -531,6 +594,16 @@ class ChartTableModel {
             payload.points,
             unit: unit,
             themeSeriesColors: themeSeriesColors,
+          ),
+        );
+      }
+      if (series.type == 'gauge') {
+        gaugeRows.addAll(
+          _projectGaugeRows(
+            series,
+            payload.points,
+            unit: unit,
+            formatter: yFormatter,
           ),
         );
       }
@@ -611,6 +684,8 @@ class ChartTableModel {
           projectionKind == ChartTableProjectionKind.pie ||
               projectionKind == ChartTableProjectionKind.polar
           ? 'Category'
+          : projectionKind == ChartTableProjectionKind.gauge
+          ? 'Metric'
           : _xColumnLabel(document.xAxis),
       projectionKind: projectionKind,
       options: options,
@@ -621,6 +696,7 @@ class ChartTableModel {
           : const [],
       pieRows: pieRows,
       polarRows: polarRows,
+      gaugeRows: gaugeRows,
       candlestickRows: candlestickRows,
       warnings: warnings,
     );
@@ -641,6 +717,7 @@ class ChartTableModel {
   final List<ChartTableWideRow> wideRows;
   final List<ChartTablePieRow> pieRows;
   final List<ChartTablePolarRow> polarRows;
+  final List<ChartTableGaugeRow> gaugeRows;
   final List<ChartTableCandlestickRow> candlestickRows;
   final List<ChartArtifactWarning> warnings;
 
@@ -657,6 +734,7 @@ class ChartTableModel {
     ChartTableProjectionKind.cartesianWide => wideRows.length,
     ChartTableProjectionKind.pie => pieRows.length,
     ChartTableProjectionKind.polar => polarRows.length,
+    ChartTableProjectionKind.gauge => gaugeRows.length,
     ChartTableProjectionKind.candlestick => candlestickRows.length,
   };
 
@@ -795,6 +873,91 @@ List<ChartTablePolarRow> _projectPolarRows(
                 ? null
                 : themeSeriesColors[pointIndex % themeSeriesColors.length]),
       ),
+  ];
+}
+
+List<ChartTableGaugeRow> _projectGaugeRows(
+  ChartSeriesDocument series,
+  List<ChartPointDocument> points, {
+  required String? unit,
+  required String Function(double)? formatter,
+}) {
+  if (points.length != 1) {
+    throw const FormatException(
+      'Gauge table projection requires one canonical measurement point.',
+    );
+  }
+  final style = series.style?.values;
+  if (style == null) {
+    throw const FormatException(
+      'Gauge table projection requires Gauge series style data.',
+    );
+  }
+  final metricValue = style['gaugeMetric']?.toJson();
+  final minimumValue = style['gaugeMinimum']?.toJson();
+  final maximumValue = style['gaugeMaximum']?.toJson();
+  if (metricValue is! String ||
+      metricValue.trim().isEmpty ||
+      minimumValue is! num ||
+      maximumValue is! num) {
+    throw const FormatException('Gauge table style data is incomplete.');
+  }
+  final point = points.single;
+  final value = point.y.asDouble;
+  final minimum = minimumValue.toDouble();
+  final maximum = maximumValue.toDouble();
+  final valid =
+      value.isFinite &&
+      minimum.isFinite &&
+      maximum.isFinite &&
+      minimum < maximum &&
+      value >= minimum &&
+      value <= maximum;
+  final progress = valid ? (value - minimum) / (maximum - minimum) : double.nan;
+  final targetJson = style['gaugeTarget']?.toJson();
+  final targetMap = targetJson is Map ? targetJson : null;
+  final targetValue = targetMap?['value'];
+  final target = targetValue is num ? targetValue.toDouble() : null;
+  final zonesJson = style['gaugeZones']?.toJson();
+  String? status;
+  if (zonesJson is List) {
+    for (final zone in zonesJson.whereType<Map>()) {
+      final from = zone['from'];
+      final to = zone['to'];
+      final zoneStatus = zone['status'];
+      if (from is num &&
+          to is num &&
+          zoneStatus is String &&
+          value >= from.toDouble() &&
+          (value < to.toDouble() ||
+              (value == maximum && to.toDouble() == maximum))) {
+        status = zoneStatus;
+        break;
+      }
+    }
+  }
+  return <ChartTableGaugeRow>[
+    ChartTableGaugeRow(
+      rowId: '${Uri.encodeComponent(series.id)}:0',
+      reference: ChartTablePointReference(seriesId: series.id, pointIndex: 0),
+      seriesId: series.id,
+      metric: metricValue.trim(),
+      valueRaw: value,
+      valueDisplay: _displayNumber(value, formatter),
+      minimumRaw: minimum,
+      minimumDisplay: _displayNumber(minimum, formatter),
+      maximumRaw: maximum,
+      maximumDisplay: _displayNumber(maximum, formatter),
+      progressRaw: progress,
+      progressDisplay: valid
+          ? '${(progress * 100).toStringAsFixed(2)}%'
+          : 'No value',
+      unit: unit,
+      targetRaw: target,
+      targetDisplay: target == null ? null : _displayNumber(target, formatter),
+      status: status,
+      isValid: valid,
+    ),
   ];
 }
 
