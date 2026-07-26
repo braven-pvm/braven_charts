@@ -578,8 +578,8 @@ class ChartRenderBox extends RenderBox {
   static const TooltipRenderer _tooltipRenderer = TooltipRenderer();
 
   // Crosshair axis-label layout remains intentionally uncached. BC-0019's
-  // focused benchmark did not meet the approved p95 benefit and regression
-  // gates; see the committed design evidence.
+  // focused benchmark did not meet the approved absolute p95 benefit floor;
+  // see the committed design evidence.
 
   // ==========================================================================
   // Zoom/Pan Constraints

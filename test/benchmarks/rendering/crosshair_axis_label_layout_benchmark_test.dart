@@ -252,6 +252,7 @@ _TrialResult _measureUncachedTrial(_Scenario scenario) {
 
 _LayoutRequest _requestFor(
   String text, {
+  TextStyle style = _labelStyle,
   TextDirection direction = TextDirection.ltr,
   Locale? locale = const Locale('en', 'ZA'),
   TextScaler textScaler = TextScaler.noScaling,
@@ -259,7 +260,7 @@ _LayoutRequest _requestFor(
 }) {
   return _LayoutRequest(
     text: text,
-    style: _labelStyle,
+    style: style,
     textDirection: direction,
     locale: locale,
     textScaler: textScaler,
@@ -523,6 +524,40 @@ void _verifyEnvironmentMisses() {
   expect(cache.disposedPainterCount, _environmentCases.length);
 }
 
+void _verifyStyleCompatibility() {
+  final firstStyle = TextStyle(
+    fontSize: double.parse('11'),
+    color: Color(int.parse('FF202124', radix: 16)),
+  );
+  final equalStyle = TextStyle(
+    fontSize: double.parse('11'),
+    color: Color(int.parse('FF202124', radix: 16)),
+  );
+  final changedStyle = TextStyle(
+    fontSize: double.parse('12'),
+    color: Color(int.parse('FF202124', radix: 16)),
+  );
+  expect(firstStyle, isNot(same(equalStyle)));
+  expect(firstStyle, equalStyle);
+
+  final cache = _BoundedCandidateCache();
+  try {
+    final first = cache.layout(_requestFor('42 W', style: firstStyle));
+    final equal = cache.layout(_requestFor('42 W', style: equalStyle));
+    final changed = cache.layout(_requestFor('42 W', style: changedStyle));
+
+    expect(equal, same(first));
+    expect(changed, isNot(same(first)));
+    expect(cache.entryCount, 2);
+    expect(cache.hitCount, 1);
+    expect(cache.missCount, 2);
+  } finally {
+    cache.dispose();
+  }
+  expect(cache.entryCount, 0);
+  expect(cache.disposedPainterCount, 2);
+}
+
 void main() {
   test('reports paired crosshair axis-label layout diagnostics', () {
     final unchanged = _measurePairedScenario(_Scenario.singleAxisUnchanged);
@@ -569,5 +604,6 @@ void main() {
     // bounded-cache behavior rather than machine-sensitive thresholds.
     _verifyMultiAxisBehavior();
     _verifyEnvironmentMisses();
+    _verifyStyleCompatibility();
   });
 }
