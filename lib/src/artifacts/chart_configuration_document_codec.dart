@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/grid_config.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/donut_chart_config.dart';
+import '../models/gauge_chart_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/pie_chart_config.dart';
@@ -548,6 +549,134 @@ abstract final class ChartConfigurationDocumentCodec {
       return _radialBarConfigurationFailure(error, path);
     }
   }
+
+  /// Encodes one Gauge pane and its portable center-label fallback.
+  static ChartArtifactResult<JsonObjectValue> encodeGaugeChart(
+    GaugeChartConfig config,
+  ) {
+    const path = r'$.configuration.gaugeChart';
+    try {
+      config.validate();
+      return ChartArtifactSuccess(
+        value: JsonObjectValue({
+          'gaugeChart': JsonValue.fromJson({
+            'pane': {
+              'startAngleDegrees': config.pane.startAngleDegrees,
+              'sweepAngleDegrees': config.pane.sweepAngleDegrees,
+              'clockwise': config.pane.clockwise,
+              'innerRadiusFactor': config.pane.innerRadiusFactor,
+              'outerRadiusFactor': config.pane.outerRadiusFactor,
+              'clipMarks': config.pane.clipMarks,
+            },
+            'tickCount': config.tickCount,
+            'showAxis': config.showAxis,
+            'showTicks': config.showTicks,
+            'showTickLabels': config.showTickLabels,
+            'showZones': config.showZones,
+            'colorIndicatorByActiveZone': config.colorIndicatorByActiveZone,
+            'center': {
+              'showMetric': config.center.showMetric,
+              'showValue': config.center.showValue,
+              'showTarget': config.center.showTarget,
+              'showStatus': config.center.showStatus,
+              'metricStyle': _encodePolarLabelStyle(config.center.metricStyle),
+              'valueStyle': _encodePolarLabelStyle(config.center.valueStyle),
+              'targetStyle': _encodePolarLabelStyle(config.center.targetStyle),
+              'statusStyle': _encodePolarLabelStyle(config.center.statusStyle),
+            },
+          }, path: path),
+        }),
+      );
+    } on Object catch (error) {
+      return _gaugeConfigurationFailure(error, path);
+    }
+  }
+
+  /// Decodes an optional Gauge plot configuration.
+  static ChartArtifactResult<GaugeChartConfig?> decodeGaugeChart(
+    JsonObjectValue configuration,
+  ) {
+    const path = r'$.configuration.gaugeChart';
+    final raw = configuration.values['gaugeChart'];
+    if (raw == null) {
+      return ChartArtifactSuccess<GaugeChartConfig?>(value: null);
+    }
+    if (raw is! JsonObjectValue) {
+      return _gaugeConfigurationFailure(
+        'Gauge chart configuration must be an object.',
+        path,
+      );
+    }
+    try {
+      final map = raw.toJson() as Map<String, Object?>;
+      final pane = _requiredMap(map, 'pane', path);
+      final center = _requiredMap(map, 'center', path);
+      final config = GaugeChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: _requiredDouble(
+            pane,
+            'startAngleDegrees',
+            '$path.pane',
+          ),
+          sweepAngleDegrees: _requiredDouble(
+            pane,
+            'sweepAngleDegrees',
+            '$path.pane',
+          ),
+          clockwise: _requiredBool(pane, 'clockwise', '$path.pane'),
+          innerRadiusFactor: _requiredDouble(
+            pane,
+            'innerRadiusFactor',
+            '$path.pane',
+          ),
+          outerRadiusFactor: _requiredDouble(
+            pane,
+            'outerRadiusFactor',
+            '$path.pane',
+          ),
+          clipMarks: _requiredBool(pane, 'clipMarks', '$path.pane'),
+        ),
+        tickCount: _requiredInt(map, 'tickCount', path),
+        showAxis: _requiredBool(map, 'showAxis', path),
+        showTicks: _requiredBool(map, 'showTicks', path),
+        showTickLabels: _requiredBool(map, 'showTickLabels', path),
+        showZones: _requiredBool(map, 'showZones', path),
+        colorIndicatorByActiveZone: _requiredBool(
+          map,
+          'colorIndicatorByActiveZone',
+          path,
+        ),
+        center: GaugeCenterConfig(
+          showMetric: _requiredBool(center, 'showMetric', '$path.center'),
+          showValue: _requiredBool(center, 'showValue', '$path.center'),
+          showTarget: _requiredBool(center, 'showTarget', '$path.center'),
+          showStatus: _requiredBool(center, 'showStatus', '$path.center'),
+          metricStyle: _decodePolarLabelStyle(
+            center['metricStyle'],
+            '$path.center.metricStyle',
+          ),
+          valueStyle: _decodePolarLabelStyle(
+            center['valueStyle'],
+            '$path.center.valueStyle',
+          ),
+          targetStyle: _decodePolarLabelStyle(
+            center['targetStyle'],
+            '$path.center.targetStyle',
+          ),
+          statusStyle: _decodePolarLabelStyle(
+            center['statusStyle'],
+            '$path.center.statusStyle',
+          ),
+        ),
+      );
+      config.validate();
+      return ChartArtifactSuccess(value: config);
+    } on _ConfigurationFormatException catch (error) {
+      return _gaugeConfigurationFailure(error.message, error.path);
+    } on Object catch (error) {
+      return _gaugeConfigurationFailure(error, path);
+    }
+  }
 }
 
 List<PolarThreshold> _decodePolarThresholds(Object? value, String path) {
@@ -933,6 +1062,17 @@ ChartArtifactFailure<T> _radialBarConfigurationFailure<T>(
   error: ChartArtifactError(
     code: ChartArtifactDiagnosticCodes.invalidArtifact,
     message: 'Invalid Radial Bar chart configuration: $error',
+    path: path,
+  ),
+);
+
+ChartArtifactFailure<T> _gaugeConfigurationFailure<T>(
+  Object error,
+  String path,
+) => ChartArtifactFailure(
+  error: ChartArtifactError(
+    code: ChartArtifactDiagnosticCodes.invalidArtifact,
+    message: 'Invalid Gauge chart configuration: $error',
     path: path,
   ),
 );

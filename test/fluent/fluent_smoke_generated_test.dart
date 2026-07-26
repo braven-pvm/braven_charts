@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 131 of 131 classes have a synthesizable subject: every verb they
+// 138 of 139 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1622 verbs total; 9 of them have an argument type with no
+// 1698 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,10 +62,10 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 131;
+const int _executedClasses = 138;
 
 /// How many classes have no synthesizable subject.
-const int _skippedClasses = 0;
+const int _skippedClasses = 1;
 
 /// Smoke coverage for [ChartDocumentExtractOptions]'s 14 executable verb(s).
 void _smokeChartDocumentExtractOptions(
@@ -3080,6 +3080,257 @@ void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
     'DonutChartSeriesFluent.clearSliceGroupingConfig',
     () => subject.clearSliceGroupingConfig(),
   );
+}
+
+/// Smoke coverage for [GaugeCenterConfig]'s 12 executable verb(s).
+void _smokeGaugeCenterConfig(_Verb verb, GaugeCenterConfig subject) {
+  verb(
+    'GaugeCenterConfigFluent.withShowMetric',
+    () => subject.withShowMetric(true),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withShowValue',
+    () => subject.withShowValue(true),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withShowTarget',
+    () => subject.withShowTarget(false),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withShowStatus',
+    () => subject.withShowStatus(true),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withMetricStyle',
+    () => subject.withMetricStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'GaugeCenterConfigFluent.updateMetricStyle',
+    () => subject.updateMetricStyle((current) => current),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withValueStyle',
+    () => subject.withValueStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'GaugeCenterConfigFluent.updateValueStyle',
+    () => subject.updateValueStyle((current) => current),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withTargetStyle',
+    () => subject.withTargetStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'GaugeCenterConfigFluent.updateTargetStyle',
+    () => subject.updateTargetStyle((current) => current),
+  );
+  verb(
+    'GaugeCenterConfigFluent.withStatusStyle',
+    () => subject.withStatusStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'GaugeCenterConfigFluent.updateStatusStyle',
+    () => subject.updateStatusStyle((current) => current),
+  );
+}
+
+/// Smoke coverage for [GaugeChartConfig]'s 10 executable verb(s).
+void _smokeGaugeChartConfig(_Verb verb, GaugeChartConfig subject) {
+  verb(
+    'GaugeChartConfigFluent.withPane',
+    () => subject.withPane(PolarPaneConfig()),
+  );
+  verb(
+    'GaugeChartConfigFluent.updatePane',
+    () => subject.updatePane((current) => current),
+  );
+  verb('GaugeChartConfigFluent.withTickCount', () => subject.withTickCount(6));
+  verb('GaugeChartConfigFluent.withShowAxis', () => subject.withShowAxis(true));
+  verb(
+    'GaugeChartConfigFluent.withShowTicks',
+    () => subject.withShowTicks(true),
+  );
+  verb(
+    'GaugeChartConfigFluent.withShowTickLabels',
+    () => subject.withShowTickLabels(true),
+  );
+  verb(
+    'GaugeChartConfigFluent.withShowZones',
+    () => subject.withShowZones(true),
+  );
+  verb(
+    'GaugeChartConfigFluent.withColorIndicatorByActiveZone',
+    () => subject.withColorIndicatorByActiveZone(true),
+  );
+  verb(
+    'GaugeChartConfigFluent.withCenter',
+    () => subject.withCenter(const GaugeCenterConfig()),
+  );
+  verb(
+    'GaugeChartConfigFluent.updateCenter',
+    () => subject.updateCenter((current) => current),
+  );
+}
+
+/// Smoke coverage for [GaugeZone]'s 5 executable verb(s).
+void _smokeGaugeZone(_Verb verb, GaugeZone subject) {
+  verb('GaugeZoneFluent.withFrom', () => subject.withFrom(1.0));
+  verb('GaugeZoneFluent.withTo', () => subject.withTo(1.0));
+  verb('GaugeZoneFluent.withStatus', () => subject.withStatus('y'));
+  verb(
+    'GaugeZoneFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('GaugeZoneFluent.clearColor', () => subject.clearColor());
+}
+
+/// Smoke coverage for [GaugeTarget]'s 6 executable verb(s).
+void _smokeGaugeTarget(_Verb verb, GaugeTarget subject) {
+  verb('GaugeTargetFluent.withValue', () => subject.withValue(1.0));
+  verb('GaugeTargetFluent.withLabel', () => subject.withLabel('y'));
+  verb('GaugeTargetFluent.clearLabel', () => subject.clearLabel());
+  verb(
+    'GaugeTargetFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('GaugeTargetFluent.clearColor', () => subject.clearColor());
+  verb('GaugeTargetFluent.withWidth', () => subject.withWidth(3));
+}
+
+/// Smoke coverage for [GaugeThreshold]'s 7 executable verb(s).
+void _smokeGaugeThreshold(_Verb verb, GaugeThreshold subject) {
+  verb('GaugeThresholdFluent.withValue', () => subject.withValue(1.0));
+  verb('GaugeThresholdFluent.withLabel', () => subject.withLabel('y'));
+  verb('GaugeThresholdFluent.clearLabel', () => subject.clearLabel());
+  verb(
+    'GaugeThresholdFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('GaugeThresholdFluent.clearColor', () => subject.clearColor());
+  verb('GaugeThresholdFluent.withWidth', () => subject.withWidth(1.5));
+  verb(
+    'GaugeThresholdFluent.withDashPattern',
+    () => subject.withDashPattern(const <double>[]),
+  );
+}
+
+/// Smoke coverage for [NeedleGaugeStyle]'s 11 executable verb(s).
+void _smokeNeedleGaugeStyle(_Verb verb, NeedleGaugeStyle subject) {
+  verb(
+    'NeedleGaugeStyleFluent.withNeedleLengthFactor',
+    () => subject.withNeedleLengthFactor(0.88),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withNeedleWidth',
+    () => subject.withNeedleWidth(3),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withNeedleColor',
+    () => subject.withNeedleColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.clearNeedleColor',
+    () => subject.clearNeedleColor(),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withPivotRadius',
+    () => subject.withPivotRadius(6),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withPivotColor',
+    () => subject.withPivotColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.clearPivotColor',
+    () => subject.clearPivotColor(),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withAxisThickness',
+    () => subject.withAxisThickness(12),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withAxisColor',
+    () => subject.withAxisColor(const Color(0xFF2196F3)),
+  );
+  verb('NeedleGaugeStyleFluent.clearAxisColor', () => subject.clearAxisColor());
+  verb(
+    'NeedleGaugeStyleFluent.withAxisOpacity',
+    () => subject.withAxisOpacity(0.16),
+  );
+}
+
+/// Smoke coverage for [SolidGaugeStyle]'s 8 executable verb(s).
+void _smokeSolidGaugeStyle(_Verb verb, SolidGaugeStyle subject) {
+  verb(
+    'SolidGaugeStyleFluent.withTrackColor',
+    () => subject.withTrackColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SolidGaugeStyleFluent.clearTrackColor',
+    () => subject.clearTrackColor(),
+  );
+  verb(
+    'SolidGaugeStyleFluent.withTrackOpacity',
+    () => subject.withTrackOpacity(0.14),
+  );
+  verb(
+    'SolidGaugeStyleFluent.withCornerRadius',
+    () => subject.withCornerRadius(8),
+  );
+  verb(
+    'SolidGaugeStyleFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SolidGaugeStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'SolidGaugeStyleFluent.withBorderWidth',
+    () => subject.withBorderWidth(0),
+  );
+  verb('SolidGaugeStyleFluent.withOpacity', () => subject.withOpacity(1));
+}
+
+/// Smoke coverage for [GaugeChartSeries]'s 16 executable verb(s).
+void _smokeGaugeChartSeries(_Verb verb, GaugeChartSeries subject) {
+  verb('GaugeChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('GaugeChartSeriesFluent.clearName', () => subject.clearName());
+  verb('GaugeChartSeriesFluent.withMetric', () => subject.withMetric('y'));
+  verb('GaugeChartSeriesFluent.withValue', () => subject.withValue(1.0));
+  verb('GaugeChartSeriesFluent.withMinimum', () => subject.withMinimum(1.0));
+  verb('GaugeChartSeriesFluent.withMaximum', () => subject.withMaximum(1.0));
+  verb(
+    'GaugeChartSeriesFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('GaugeChartSeriesFluent.clearColor', () => subject.clearColor());
+  verb(
+    'GaugeChartSeriesFluent.withMetadata',
+    () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb('GaugeChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
+  verb('GaugeChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('GaugeChartSeriesFluent.clearUnit', () => subject.clearUnit());
+  verb(
+    'GaugeChartSeriesFluent.withTarget',
+    () => subject.withTarget(GaugeTarget(value: 1.0)),
+  );
+  verb('GaugeChartSeriesFluent.clearTarget', () => subject.clearTarget());
+  verb('GaugeChartSeriesFluent.withZones', () => subject.withZones(const []));
+  verb(
+    'GaugeChartSeriesFluent.withThresholds',
+    () => subject.withThresholds(const []),
+  );
+}
+
+/// Compile-only coverage for [GaugeChartSeries]'s 1 verb(s)
+/// whose argument type has no synthesizable value.
+void _compileGaugeChartSeries(
+  GaugeChartSeries subject,
+  GaugeIndicatorStyle a0,
+) {
+  subject.withIndicatorStyle(a0);
 }
 
 /// Smoke coverage for [GridConfig]'s 8 executable verb(s).
@@ -6655,6 +6906,7 @@ const List<Function> _compileOnlyCases = <Function>[
   _compileCandlestickDataPoint,
   _compileScatterChartSeries,
   _compileAreaChartSeries,
+  _compileGaugeChartSeries,
   _compileRangeAreaChartSeries,
 ];
 
@@ -6668,6 +6920,7 @@ const List<String> _compileOnlyVerbs = <String>[
   'ScatterChartSeriesFluent.withOpacityEncoding — no synthesizable value for ScatterOpacityEncoding',
   'ScatterChartSeriesFluent.withCategoryEncoding — no synthesizable value for ScatterCategoryEncoding',
   'AreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
+  'GaugeChartSeriesFluent.withIndicatorStyle — no synthesizable value for GaugeIndicatorStyle',
   'RangeAreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
 ];
 
@@ -7333,6 +7586,77 @@ void main() {
         reason: 'generated DonutChartSeriesFluent verb(s) threw',
       );
     });
+    test('GaugeCenterConfig', () {
+      final subject = _subject(() => GaugeCenterConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeCenterConfig, subject),
+        isEmpty,
+        reason: 'generated GaugeCenterConfigFluent verb(s) threw',
+      );
+    });
+    test('GaugeChartConfig', () {
+      final subject = _subject(() => GaugeChartConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeChartConfig, subject),
+        isEmpty,
+        reason: 'generated GaugeChartConfigFluent verb(s) threw',
+      );
+    });
+    test('GaugeZone', () {
+      final subject = _subject(
+        () => GaugeZone(from: 0.5, to: 0.5, status: 'x'),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeZone, subject),
+        isEmpty,
+        reason: 'generated GaugeZoneFluent verb(s) threw',
+      );
+    });
+    test('GaugeTarget', () {
+      final subject = _subject(() => GaugeTarget(value: 0.5));
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeTarget, subject),
+        isEmpty,
+        reason: 'generated GaugeTargetFluent verb(s) threw',
+      );
+    });
+    test('GaugeThreshold', () {
+      final subject = _subject(() => GaugeThreshold(value: 0.5));
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeThreshold, subject),
+        isEmpty,
+        reason: 'generated GaugeThresholdFluent verb(s) threw',
+      );
+    });
+    test('NeedleGaugeStyle', () {
+      final subject = _subject(() => NeedleGaugeStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeNeedleGaugeStyle, subject),
+        isEmpty,
+        reason: 'generated NeedleGaugeStyleFluent verb(s) threw',
+      );
+    });
+    test('SolidGaugeStyle', () {
+      final subject = _subject(() => SolidGaugeStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeSolidGaugeStyle, subject),
+        isEmpty,
+        reason: 'generated SolidGaugeStyleFluent verb(s) threw',
+      );
+    });
+    test(
+      'GaugeChartSeries',
+      () {},
+      skip:
+          'no synthesizable subject: required parameter `indicatorStyle` of type GaugeIndicatorStyle',
+    );
     test('GridConfig', () {
       final subject = _subject(() => GridConfig());
       if (subject == null) return;
@@ -8339,9 +8663,9 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 131);
-    expect(_skippedClasses, 0);
-    expect(_compileOnlyCases, hasLength(5));
-    expect(_compileOnlyVerbs, hasLength(9));
+    expect(_executedClasses, 138);
+    expect(_skippedClasses, 1);
+    expect(_compileOnlyCases, hasLength(6));
+    expect(_compileOnlyVerbs, hasLength(10));
   });
 }

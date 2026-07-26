@@ -3,6 +3,7 @@ import 'package:braven_charts_example/showcase/pages/candlestick_charts_page.dar
 import 'package:braven_charts_example/showcase/pages/cartesian_chart_type_pages.dart';
 import 'package:braven_charts_example/showcase/pages/concentric_donut_page.dart';
 import 'package:braven_charts_example/showcase/pages/donut_charts_page.dart';
+import 'package:braven_charts_example/showcase/pages/gauge_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
@@ -123,6 +124,17 @@ void main() {
           authoredChartText: 'Channel volume',
           playgroundChartText: 'Polar Column playground',
           page: const PolarColumnPage(),
+        ),
+        (
+          name: 'Gauge',
+          prefix: 'gauge-randomizer',
+          playgroundKey: const ValueKey('gauge-playground'),
+          selectorKey: const ValueKey('gauge-presentation-selector'),
+          lastAuthoredLabel: 'Density',
+          authoredLabel: 'Needle',
+          authoredChartText: 'Operational utilization',
+          playgroundChartText: 'Operational utilization',
+          page: const GaugeChartsPage(),
         ),
       ];
 

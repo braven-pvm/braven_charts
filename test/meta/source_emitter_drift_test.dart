@@ -194,6 +194,7 @@ const Map<String, List<String>> _seriesEmitMethods = <String, List<String>>{
   'DonutChartSeries': <String>['_emitDonutOptions', '_emitAdvancedRadial'],
   'PolarColumnChartSeries': <String>['_emitPolarColumnOptions'],
   'RadialBarChartSeries': <String>['_emitRadialBarOptions'],
+  'GaugeChartSeries': <String>['_emitGaugeSeries'],
   'ScatterChartSeries': <String>[],
 };
 

@@ -1,13 +1,14 @@
 # Chart types
 
 Braven Charts renders line, area, Range Area, bar, scatter, Candlestick, Pie,
-Donut, Polar Column, and Radial Bar as first-class series through
+Donut, Polar Column, Radial Bar, and Gauge as first-class series through
 `BravenChartPlus`. Two or more Donut series form the Concentric Donut
 composition. Line, area, Range Area, bar, scatter, and Candlestick use the
 Cartesian layout. Pie and standalone Donut are single-series partition-radial
 charts; Concentric Donut is multi-series; Polar Column uses angular categories
 and a numeric radial axis; Radial Bar uses concentric categories and an
-explicit angular numeric scale.
+explicit angular numeric scale; Gauge presents one measurement on its own
+indicator axis.
 
 Import only the public package entrypoint:
 
@@ -30,6 +31,7 @@ import 'package:braven_charts/braven_charts.dart';
 | two or more `DonutChartSeries` | Compare several independent wholes | ring allocation, weights, grouped legend, shared center |
 | `PolarColumnChartSeries` | Cyclical categories whose magnitude grows outwards | angular categories, radial scale, composition |
 | `RadialBarChartSeries` | Independent category progress or signed values on concentric tracks | explicit domain and baseline, pane, track geometry, thresholds |
+| `GaugeChartSeries` | One operational measurement inside a known range | explicit domain, needle or solid style, zones, target, thresholds, center content |
 
 Use pie only when every category contributes to the same total. Use bars when
 precise comparison matters more than contribution to a whole, when values may
@@ -41,6 +43,11 @@ known scale. It is not a multi-ring Donut: values are not divided by a
 per-ring total. See the complete
 [Radial Bar guide](radial-bar-charts.md) and runnable `?page=radial-bar`
 showcase.
+
+Use Gauge when one current reading needs operational zones, status, target, or
+threshold context. It is not a one-slice Donut and not a one-category Radial
+Bar. See the complete [Gauge guide](gauge-charts.md) and runnable
+`?page=gauge-charts` showcase.
 
 ## Shared data model
 
@@ -58,6 +65,8 @@ const points = [
 Bar, `x` is a stable ordering ordinal and `label` is the category. Pie and
 Donut interpret `y` as a contribution; Radial Bar interprets `y` as an
 absolute value inside its explicit numeric domain.
+Gauge owns one compatibility point internally, while authors provide its
+`metric` and absolute `value` directly.
 `ChartPointRef(seriesId, pointIndex)` remains the portable identity across
 charts, tables, artifacts, and restored runtimes.
 
@@ -686,5 +695,8 @@ point identity and type-specific configuration.
 - [Donut Charts](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
 - [Concentric Donut](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
   demonstrates center content, partial sweeps, linked data, and transport.
+- [Gauge Charts](https://braven-pvm.github.io/braven_charts/?page=gauge-charts)
+  demonstrates Needle and Solid indicators, zones, references, precise
+  non-zero domains, center content, Workbench, and deterministic randomization.
 - [Gallery](https://braven-pvm.github.io/braven_charts/) demonstrates radial
   and mixed Cartesian product compositions.

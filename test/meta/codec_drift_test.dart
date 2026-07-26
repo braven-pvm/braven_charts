@@ -217,6 +217,15 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'RadialBarThreshold': [
     [_configFile, 'encodeRadialBarChart'],
   ],
+  'GaugeCenterConfig': [
+    [_configFile, 'encodeGaugeChart'],
+  ],
+  'NeedleGaugeStyle': [
+    [_seriesFile, '_encodeGaugeIndicatorStyle'],
+  ],
+  'SolidGaugeStyle': [
+    [_seriesFile, '_encodeGaugeIndicatorStyle'],
+  ],
   'PolarPaneConfig': [
     [_configFile, 'encodePolarChart'],
   ],
@@ -271,6 +280,7 @@ const List<String> _seriesClasses = <String>[
   'DonutChartSeries',
   'PolarColumnChartSeries',
   'RadialBarChartSeries',
+  'GaugeChartSeries',
 ];
 
 const List<List<String>> _annotationEncodeSources = <List<String>>[

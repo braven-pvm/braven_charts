@@ -145,6 +145,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     accent: Color(0xFF4F46E5),
     highlights: ['Explicit domain', 'Signed baseline', 'Targets + selection'],
   ),
+  ShowcaseChartType(
+    type: ChartType.gauge,
+    label: 'Gauge',
+    slug: 'gauge-charts',
+    summary: 'One operational measurement',
+    bestFor: 'Status, target, and threshold against an explicit range',
+    icon: Icons.speed_outlined,
+    accent: Color(0xFF0F766E),
+    highlights: ['Needle + solid', 'Status zones', 'Targets + thresholds'],
+  ),
 ];
 
 ShowcaseChartType showcaseChartTypeForSlug(String slug) =>
@@ -243,7 +253,8 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
         chartType.type == ChartType.polarColumn ||
-        chartType.type == ChartType.radialBar;
+        chartType.type == ChartType.radialBar ||
+        chartType.type == ChartType.gauge;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseTheme = isDark ? ChartTheme.dark : ChartTheme.light;
     final background = Color.alphaBlend(
@@ -295,6 +306,19 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
               showGridLines: false,
             )
           : const RadialBarChartConfig(),
+      gaugeChartConfig: chartType.type == ChartType.gauge
+          ? const GaugeChartConfig(
+              pane: PolarPaneConfig(
+                startAngleDegrees: -135,
+                sweepAngleDegrees: 270,
+                innerRadiusFactor: 0.58,
+                outerRadiusFactor: 0.86,
+              ),
+              showTickLabels: false,
+              tickCount: 5,
+              center: GaugeCenterConfig(showMetric: false, showStatus: false),
+            )
+          : const GaugeChartConfig(),
       theme: baseTheme.copyWith(backgroundColor: background),
       showLegend: false,
       grid: isRadial
@@ -1154,6 +1178,38 @@ List<ChartSeries> _previewSeries(
           trackOpacity: 0.1,
           showDataLabels: false,
         ),
+      ),
+    ],
+    ChartType.gauge => [
+      GaugeChartSeries.solid(
+        id: 'catalog-gauge',
+        metric: 'Capacity',
+        value: 72,
+        minimum: 0,
+        maximum: 100,
+        unit: '%',
+        zones: const [
+          GaugeZone(
+            from: 0,
+            to: 60,
+            status: 'Healthy',
+            color: Color(0xFF16A34A),
+          ),
+          GaugeZone(
+            from: 60,
+            to: 85,
+            status: 'Elevated',
+            color: Color(0xFFF59E0B),
+          ),
+          GaugeZone(
+            from: 85,
+            to: 100,
+            status: 'Critical',
+            color: Color(0xFFDC2626),
+          ),
+        ],
+        target: const GaugeTarget(value: 75, label: 'Target'),
+        style: const SolidGaugeStyle(cornerRadius: 8),
       ),
     ],
   };

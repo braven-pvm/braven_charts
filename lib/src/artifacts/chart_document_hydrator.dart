@@ -13,6 +13,9 @@ import '../models/concentric_donut_config.dart';
 import '../models/donut_center_builder.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
+import '../models/gauge_center_builder.dart';
+import '../models/gauge_chart_config.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
@@ -81,6 +84,7 @@ class HydratedChartConfiguration {
     this.concentricDonutConfig,
     this.polarChartConfig,
     this.radialBarChartConfig,
+    this.gaugeChartConfig,
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes);
@@ -123,6 +127,9 @@ class HydratedChartConfiguration {
   /// Plot-level pane, tracks, and guides restored for a Radial Bar chart.
   final RadialBarChartConfig? radialBarChartConfig;
 
+  /// Plot-level pane, ticks, zones, and center fallback restored for Gauge.
+  final GaugeChartConfig? gaugeChartConfig;
+
   YAxisConfig? get primaryYAxis {
     for (final axis in axes) {
       if (axis.id == 'y' || axis.id == 'primary_axis') return axis;
@@ -135,12 +142,14 @@ class HydratedChartConfiguration {
   HydratedBravenChart build({
     Key? key,
     BravenChartController? bravenChartController,
+    GaugeCenterBuilder? gaugeCenterBuilder,
     DonutCenterBuilder? donutCenterBuilder,
     DonutCenterTapCallback? onDonutCenterTap,
   }) => HydratedBravenChart(
     key: key,
     configuration: this,
     bravenChartController: bravenChartController,
+    gaugeCenterBuilder: gaugeCenterBuilder,
     donutCenterBuilder: donutCenterBuilder,
     onDonutCenterTap: onDonutCenterTap,
   );
@@ -152,12 +161,14 @@ class HydratedBravenChart extends StatefulWidget {
     super.key,
     required this.configuration,
     this.bravenChartController,
+    this.gaugeCenterBuilder,
     this.donutCenterBuilder,
     this.onDonutCenterTap,
   });
 
   final HydratedChartConfiguration configuration;
   final BravenChartController? bravenChartController;
+  final GaugeCenterBuilder? gaugeCenterBuilder;
   final DonutCenterBuilder? donutCenterBuilder;
   final DonutCenterTapCallback? onDonutCenterTap;
 
@@ -238,6 +249,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       polarChartConfig: config.polarChartConfig ?? const PolarChartConfig(),
       radialBarChartConfig:
           config.radialBarChartConfig ?? const RadialBarChartConfig(),
+      gaugeChartConfig: config.gaugeChartConfig ?? const GaugeChartConfig(),
+      gaugeCenterBuilder: widget.gaugeCenterBuilder,
       donutCenterBuilder: widget.donutCenterBuilder,
       onDonutCenterTap: widget.onDonutCenterTap,
       showToolbar: config.showToolbar,
@@ -314,6 +327,9 @@ abstract final class ChartDocumentHydrator {
     'series.polar.column.intervals.v1',
     'series.radial.bar.v1',
     'chart.radial.bar.config.v1',
+    'series.gauge',
+    'series.gauge.v1',
+    'chart.gauge.config.v1',
     'chart.polar.config.v1',
     'chart.polar.thresholds.v1',
     'chart.cartesian.value-summary.v1',
@@ -353,6 +369,7 @@ abstract final class ChartDocumentHydrator {
     'donut',
     'polarColumn',
     'radialBar',
+    'gauge',
   };
   static const _builtInAnnotationTypes = <String>{
     'point',
@@ -678,6 +695,17 @@ abstract final class ChartDocumentHydrator {
         series: series,
         config: radialBarChartConfig,
       );
+      final gaugeChartConfig = _requireValue(
+        ChartConfigurationDocumentCodec.decodeGaugeChart(
+          document.configuration,
+        ),
+        warnings,
+      );
+      _validateGaugeComposition(
+        document: document,
+        series: series,
+        config: gaugeChartConfig,
+      );
       final layout = document.layout;
 
       return ChartArtifactSuccess(
@@ -708,6 +736,7 @@ abstract final class ChartDocumentHydrator {
           concentricDonutConfig: concentricDonutConfig,
           polarChartConfig: polarChartConfig,
           radialBarChartConfig: radialBarChartConfig,
+          gaugeChartConfig: gaugeChartConfig,
         ),
         warnings: warnings,
       );
@@ -1176,6 +1205,48 @@ abstract final class ChartDocumentHydrator {
           const [],
         );
       }
+    }
+  }
+
+  static void _validateGaugeComposition({
+    required ChartDocument document,
+    required List<ChartSeries> series,
+    required GaugeChartConfig? config,
+  }) {
+    final gauges = series.whereType<GaugeChartSeries>().toList(growable: false);
+    if (config == null) {
+      if (gauges.isNotEmpty) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message: 'Gauge series require chart-level Gauge configuration.',
+            path: r'$.document.configuration.gaugeChart',
+          ),
+          [],
+        );
+      }
+      return;
+    }
+    if (!document.requiredCapabilities.contains('chart.gauge.config.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Gauge configuration must declare chart.gauge.config.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (gauges.length != 1 || series.length != 1) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Gauge V1 requires exactly one Gauge series and cannot mix chart families.',
+          path: r'$.document.configuration.gaugeChart',
+        ),
+        [],
+      );
     }
   }
 

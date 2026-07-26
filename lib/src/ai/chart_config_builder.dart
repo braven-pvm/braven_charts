@@ -369,6 +369,10 @@ class ChartConfigBuilder {
         'Radial Bar is not yet part of the agentic chart schema; construct '
         'RadialBarChartSeries through the public API.',
       ),
+      SeriesStyle.gauge => throw const FormatException(
+        'Gauge is not yet part of the agentic chart schema; construct '
+        'GaugeChartSeries through the public API.',
+      ),
       SeriesStyle.candlestick => CandlestickChartSeries(
         id: id,
         name: name ?? id,

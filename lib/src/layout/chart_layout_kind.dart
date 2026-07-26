@@ -1,6 +1,7 @@
 import '../models/chart_series.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/donut_chart_series.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
@@ -34,12 +35,14 @@ class ChartLayoutResolver {
     final radialBarSeries = allSeries
         .whereType<RadialBarChartSeries>()
         .toList();
+    final gaugeSeries = allSeries.whereType<GaugeChartSeries>().toList();
     final invalidRadialHints = allSeries.where(
       (candidate) => switch (candidate.style) {
         SeriesStyle.pie => candidate is! PieChartSeries,
         SeriesStyle.donut => candidate is! DonutChartSeries,
         SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
         SeriesStyle.radialBar => candidate is! RadialBarChartSeries,
+        SeriesStyle.gauge => candidate is! GaugeChartSeries,
         SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
         SeriesStyle.rangeArea => candidate is! RangeAreaChartSeries,
         _ => false,
@@ -58,6 +61,7 @@ class ChartLayoutResolver {
             'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
           SeriesStyle.radialBar =>
             'SeriesStyle.radialBar requires a RadialBarChartSeries',
+          SeriesStyle.gauge => 'SeriesStyle.gauge requires a GaugeChartSeries',
           SeriesStyle.candlestick =>
             'SeriesStyle.candlestick requires a CandlestickChartSeries',
           SeriesStyle.rangeArea =>
@@ -65,6 +69,24 @@ class ChartLayoutResolver {
           _ => 'Series style does not match its concrete series type',
         },
       );
+    }
+    if (gaugeSeries.isNotEmpty) {
+      if (allSeries.length != gaugeSeries.length) {
+        throw ArgumentError.value(
+          allSeries.length,
+          'series',
+          'Gauge cannot be mixed with Cartesian, Polar Column, Radial Bar, '
+              'Pie, or Donut series',
+        );
+      }
+      if (gaugeSeries.length != 1) {
+        throw ArgumentError.value(
+          gaugeSeries.length,
+          'series',
+          'Gauge V1 accepts exactly one GaugeChartSeries',
+        );
+      }
+      return ChartLayoutKind.gauge;
     }
     if (radialBarSeries.isNotEmpty) {
       if (allSeries.length != radialBarSeries.length) {

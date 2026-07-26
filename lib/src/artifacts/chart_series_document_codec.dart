@@ -12,6 +12,7 @@ import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
@@ -237,6 +238,7 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is PolarColumnChartSeries && series.hasIntervals)
               'series.polar.column.intervals.v1',
             if (series is RadialBarChartSeries) 'series.radial.bar.v1',
+            if (series is GaugeChartSeries) 'series.gauge.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -774,6 +776,12 @@ abstract final class ChartSeriesDocumentCodec {
               ? const RadialSelectionStyle()
               : _decodeRadialSelectionStyle(_map(style, 'selectionStyle')),
         ),
+        'gauge' => _decodeGaugeSeries(
+          document: document,
+          points: points,
+          style: style,
+          metadata: metadata,
+        ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
@@ -832,6 +840,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   DonutChartSeries() => 'donut',
   PolarColumnChartSeries() => 'polarColumn',
   RadialBarChartSeries() => 'radialBar',
+  GaugeChartSeries() => 'gauge',
   ChartSeries() => 'base',
 };
 
@@ -1366,6 +1375,24 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['radialBarStyle'] = _encodeRadialBarStyle(series.radialBarStyle)
         ..['selectionStyle'] = _encodeRadialSelectionStyle(
           series.selectionStyle,
+        );
+    case GaugeChartSeries():
+      result
+        ..['gaugeMetric'] = series.metric
+        ..['gaugeMinimum'] = _number(series.minimum)
+        ..['gaugeMaximum'] = _number(series.maximum)
+        ..['gaugeTarget'] = series.target == null
+            ? null
+            : _encodeGaugeTarget(series.target!)
+        ..['gaugeZones'] = [
+          for (final zone in series.zones) _encodeGaugeZone(zone),
+        ]
+        ..['gaugeThresholds'] = [
+          for (final threshold in series.thresholds)
+            _encodeGaugeThreshold(threshold),
+        ]
+        ..['gaugeIndicatorStyle'] = _encodeGaugeIndicatorStyle(
+          series.indicatorStyle,
         );
     case ChartSeries():
       break;
@@ -2952,6 +2979,206 @@ RadialBarStyle _decodeRadialBarStyle(Map<String, Object?> value) =>
       trackOpacity: _double(value, 'trackOpacity'),
       showDataLabels: _bool(value, 'showDataLabels'),
     );
+
+GaugeChartSeries _decodeGaugeSeries({
+  required ChartSeriesDocument document,
+  required List<ChartDataPoint> points,
+  required Map<String, Object?> style,
+  required Map<String, dynamic>? metadata,
+}) {
+  if (points.length != 1) {
+    throw const _UnsupportedModelException(
+      'Gauge documents must contain exactly one canonical measurement point.',
+      r'$.data',
+    );
+  }
+  final indicator = _decodeGaugeIndicatorStyle(
+    _map(style, 'gaugeIndicatorStyle'),
+  );
+  final common = (
+    id: document.id,
+    name: document.name,
+    metric: _string(style, 'gaugeMetric'),
+    value: points.single.y,
+    minimum: _double(style, 'gaugeMinimum'),
+    maximum: _double(style, 'gaugeMaximum'),
+    color: _optionalColor(style['color'], r'$.style.color'),
+    metadata: metadata,
+    unit: document.unit,
+    target: _optionalMap(style, 'gaugeTarget') == null
+        ? null
+        : _decodeGaugeTarget(_map(style, 'gaugeTarget')),
+    zones: _decodeGaugeZones(style['gaugeZones']),
+    thresholds: _decodeGaugeThresholds(style['gaugeThresholds']),
+  );
+  return GaugeChartSeries(
+    id: common.id,
+    name: common.name,
+    metric: common.metric,
+    value: common.value,
+    minimum: common.minimum,
+    maximum: common.maximum,
+    color: common.color,
+    metadata: common.metadata,
+    unit: common.unit,
+    target: common.target,
+    zones: common.zones,
+    thresholds: common.thresholds,
+    indicatorStyle: indicator,
+  );
+}
+
+Map<String, Object?> _encodeGaugeZone(GaugeZone zone) => {
+  'from': _number(zone.from),
+  'to': _number(zone.to),
+  'status': zone.status,
+  if (zone.color != null) 'color': zone.color!.toARGB32(),
+};
+
+GaugeZone _decodeGaugeZone(Map<String, Object?> value, String path) =>
+    GaugeZone(
+      from: _double(value, 'from'),
+      to: _double(value, 'to'),
+      status: _string(value, 'status'),
+      color: _optionalColor(value['color'], '$path.color'),
+    );
+
+List<GaugeZone> _decodeGaugeZones(Object? value) {
+  if (value is! List) {
+    throw const _UnsupportedModelException(
+      'Gauge zones must be a list.',
+      r'$.style.gaugeZones',
+    );
+  }
+  return <GaugeZone>[
+    for (final (index, raw) in value.indexed)
+      if (raw is Map<String, Object?>)
+        _decodeGaugeZone(raw, '\$.style.gaugeZones[$index]')
+      else
+        throw _UnsupportedModelException(
+          'Gauge zone must be an object.',
+          '\$.style.gaugeZones[$index]',
+        ),
+  ];
+}
+
+Map<String, Object?> _encodeGaugeTarget(GaugeTarget target) => {
+  'value': _number(target.value),
+  if (target.label != null) 'label': target.label,
+  if (target.color != null) 'color': target.color!.toARGB32(),
+  'width': _number(target.width),
+};
+
+GaugeTarget _decodeGaugeTarget(Map<String, Object?> value) => GaugeTarget(
+  value: _double(value, 'value'),
+  label: _optionalString(value['label']),
+  color: _optionalColor(value['color'], r'$.style.gaugeTarget.color'),
+  width: _double(value, 'width'),
+);
+
+Map<String, Object?> _encodeGaugeThreshold(GaugeThreshold threshold) => {
+  'value': _number(threshold.value),
+  if (threshold.label != null) 'label': threshold.label,
+  if (threshold.color != null) 'color': threshold.color!.toARGB32(),
+  'width': _number(threshold.width),
+  'dashPattern': [
+    for (final interval in threshold.dashPattern) _number(interval),
+  ],
+};
+
+List<GaugeThreshold> _decodeGaugeThresholds(Object? value) {
+  if (value is! List) {
+    throw const _UnsupportedModelException(
+      'Gauge thresholds must be a list.',
+      r'$.style.gaugeThresholds',
+    );
+  }
+  return <GaugeThreshold>[
+    for (final (index, raw) in value.indexed)
+      if (raw is Map<String, Object?>)
+        GaugeThreshold(
+          value: _double(raw, 'value'),
+          label: _optionalString(raw['label']),
+          color: _optionalColor(
+            raw['color'],
+            '\$.style.gaugeThresholds[$index].color',
+          ),
+          width: _double(raw, 'width'),
+          dashPattern: _decodeDashPattern(raw['dashPattern']),
+        )
+      else
+        throw _UnsupportedModelException(
+          'Gauge threshold must be an object.',
+          '\$.style.gaugeThresholds[$index]',
+        ),
+  ];
+}
+
+Map<String, Object?> _encodeGaugeIndicatorStyle(
+  GaugeIndicatorStyle style,
+) => switch (style) {
+  NeedleGaugeStyle() => {
+    'type': 'needle',
+    'needleLengthFactor': _number(style.needleLengthFactor),
+    'needleWidth': _number(style.needleWidth),
+    if (style.needleColor != null) 'needleColor': style.needleColor!.toARGB32(),
+    'pivotRadius': _number(style.pivotRadius),
+    if (style.pivotColor != null) 'pivotColor': style.pivotColor!.toARGB32(),
+    'axisThickness': _number(style.axisThickness),
+    if (style.axisColor != null) 'axisColor': style.axisColor!.toARGB32(),
+    'axisOpacity': _number(style.axisOpacity),
+  },
+  SolidGaugeStyle() => {
+    'type': 'solid',
+    if (style.trackColor != null) 'trackColor': style.trackColor!.toARGB32(),
+    'trackOpacity': _number(style.trackOpacity),
+    'cornerRadius': _number(style.cornerRadius),
+    if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+    'borderWidth': _number(style.borderWidth),
+    'opacity': _number(style.opacity),
+  },
+};
+
+GaugeIndicatorStyle _decodeGaugeIndicatorStyle(Map<String, Object?> value) =>
+    switch (_string(value, 'type')) {
+      'needle' => NeedleGaugeStyle(
+        needleLengthFactor: _double(value, 'needleLengthFactor'),
+        needleWidth: _double(value, 'needleWidth'),
+        needleColor: _optionalColor(
+          value['needleColor'],
+          r'$.style.gaugeIndicatorStyle.needleColor',
+        ),
+        pivotRadius: _double(value, 'pivotRadius'),
+        pivotColor: _optionalColor(
+          value['pivotColor'],
+          r'$.style.gaugeIndicatorStyle.pivotColor',
+        ),
+        axisThickness: _double(value, 'axisThickness'),
+        axisColor: _optionalColor(
+          value['axisColor'],
+          r'$.style.gaugeIndicatorStyle.axisColor',
+        ),
+        axisOpacity: _double(value, 'axisOpacity'),
+      ),
+      'solid' => SolidGaugeStyle(
+        trackColor: _optionalColor(
+          value['trackColor'],
+          r'$.style.gaugeIndicatorStyle.trackColor',
+        ),
+        trackOpacity: _double(value, 'trackOpacity'),
+        cornerRadius: _double(value, 'cornerRadius'),
+        borderColor: _optionalColor(
+          value['borderColor'],
+          r'$.style.gaugeIndicatorStyle.borderColor',
+        ),
+        borderWidth: _double(value, 'borderWidth'),
+        opacity: _double(value, 'opacity'),
+      ),
+      final type => throw _UnsupportedModelException(
+        'Unsupported Gauge indicator type "$type".',
+        r'$.style.gaugeIndicatorStyle.type',
+      ),
+    };
 
 Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
   'cornerRadius': _number(style.cornerRadius),

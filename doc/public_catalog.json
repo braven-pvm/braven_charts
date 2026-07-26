@@ -7,7 +7,7 @@
   "features": [
     {
       "id": "chart-families",
-      "title": "Eleven chart families",
+      "title": "Twelve chart families",
       "summary": "Build Cartesian, financial, radial, and polar charts in one native renderer.",
       "page": "chart-types"
     },
@@ -287,6 +287,23 @@
         "title": "Signed baseline comparison",
         "asset": "doc/screenshots/radial_bar_signed.png",
         "page": "radial-bar"
+      }
+    },
+    {
+      "id": "gauge",
+      "label": "Gauge / Solid Gauge",
+      "group": "Indicator radial",
+      "summary": "One measurement in a known range",
+      "bestFor": "Operational state, targets, thresholds, zones, and compact KPI status",
+      "page": "gauge-charts",
+      "guide": "docs/guides/gauge-charts.md",
+      "apiSymbols": ["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterBuilder"],
+      "pairAsset": "doc/screenshots/family_gauge_pair.png",
+      "primaryExample": {
+        "title": "Gauge and Solid Gauge family",
+        "alt": "Needle and Solid Gauge indicators with zones and targets",
+        "asset": "doc/screenshots/chart_type_gauge.png",
+        "page": "gauge-charts"
       }
     }
   ],

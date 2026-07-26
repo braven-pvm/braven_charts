@@ -3,6 +3,7 @@ import 'package:braven_charts_example/showcase/pages/candlestick_charts_page.dar
 import 'package:braven_charts_example/showcase/pages/cartesian_chart_type_pages.dart';
 import 'package:braven_charts_example/showcase/pages/concentric_donut_page.dart';
 import 'package:braven_charts_example/showcase/pages/donut_charts_page.dart';
+import 'package:braven_charts_example/showcase/pages/gauge_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
@@ -158,6 +159,28 @@ void main() {
             'Show intervals',
             'Selected column effect',
             'Show tooltips',
+          },
+        ),
+        (
+          name: 'Gauge',
+          playgroundKey: const ValueKey('gauge-playground'),
+          page: const GaugeChartsPage(),
+          properties: {
+            'Indicator',
+            'Value',
+            'Minimum',
+            'Maximum',
+            'Indicator color',
+            'Sweep angle',
+            'Tick count',
+            'Zone bands',
+            'Color indicator by active zone',
+            'Configure zones',
+            'Target',
+            'Threshold',
+            'Metric label',
+            'Status label',
+            'Data point popup',
           },
         ),
       ];

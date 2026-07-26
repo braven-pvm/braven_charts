@@ -5443,11 +5443,14 @@ class ChartRenderBox extends RenderBox {
         ..textDirection = _textDirection
         ..identifier = identity
         ..label = hit.semanticLabel
-        ..isButton = true
         ..isSelected = hit.isSelected
         ..isFocusable = true
-        ..isFocused = hit.isFocused
-        ..onTap = () => onDataHitActivate?.call(hit);
+        ..isFocused = hit.isFocused;
+      if (hit.isActivatable) {
+        semanticConfig
+          ..isButton = true
+          ..onTap = () => onDataHitActivate?.call(hit);
+      }
       semanticConfig.onDidGainAccessibilityFocus = () {
         onDataHitFocus?.call(hit);
       };

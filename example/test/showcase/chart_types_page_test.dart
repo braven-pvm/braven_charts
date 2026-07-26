@@ -57,7 +57,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(showcaseChartTypes, hasLength(11));
+    expect(showcaseChartTypes, hasLength(12));
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(3));
     for (final family in ['Pie', 'Donut', 'Concentric Donut']) {
       expect(find.text(family), findsOneWidget);
@@ -76,6 +76,7 @@ void main() {
     expect(find.byKey(const ValueKey('chart-type-polar-grid')), findsOneWidget);
     expect(find.text('Polar Column'), findsOneWidget);
     expect(find.text('Radial Bar'), findsOneWidget);
+    expect(find.text('Gauge'), findsOneWidget);
   });
 
   testWidgets('family cards open the matching deep guides', (tester) async {
@@ -137,6 +138,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chart-type-card-radial-bar')));
     await tester.pump();
     expect(selectedSlug, 'radial-bar');
+
+    await tester.tap(find.byKey(const ValueKey('chart-type-card-gauge')));
+    await tester.pump();
+    expect(selectedSlug, 'gauge-charts');
   });
 
   testWidgets('radial catalog previews fill their cards with concise actions', (
@@ -201,6 +206,12 @@ void main() {
     expect(radialBar.series.single, isA<RadialBarChartSeries>());
     expect(radialBar.radialBarChartConfig.showCategoryLabels, isFalse);
     expect(find.text('View Radial Bar'), findsOneWidget);
+    final gauge = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-gauge')),
+    );
+    expect(gauge.series.single, isA<GaugeChartSeries>());
+    expect(gauge.gaugeChartConfig.showTickLabels, isFalse);
+    expect(find.text('View Gauge'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
