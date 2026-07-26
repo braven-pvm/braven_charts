@@ -203,7 +203,7 @@ const publicDocsChartFamilies = <PublicDocsChartFamilyEntry>[
     page: "gauge-charts",
     guide: "docs/guides/gauge-charts.md",
     pairAsset: "doc/screenshots/family_gauge_pair.png",
-    apiSymbols: <String>["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterBuilder"],
+    apiSymbols: <String>["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterContext"],
     primaryExample: (title: "Gauge and Solid Gauge family", asset: "doc/screenshots/chart_type_gauge.png", page: "gauge-charts", preset: null, view: null, animated: false),
     secondaryExample: null,
   ),

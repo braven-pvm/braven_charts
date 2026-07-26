@@ -297,7 +297,7 @@
       "bestFor": "Operational state, targets, thresholds, zones, and compact KPI status",
       "page": "gauge-charts",
       "guide": "docs/guides/gauge-charts.md",
-      "apiSymbols": ["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterBuilder"],
+      "apiSymbols": ["GaugeChartSeries", "GaugeChartConfig", "GaugeCenterContext"],
       "pairAsset": "doc/screenshots/family_gauge_pair.png",
       "primaryExample": {
         "title": "Gauge and Solid Gauge family",
