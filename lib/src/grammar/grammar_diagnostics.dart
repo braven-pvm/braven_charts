@@ -99,6 +99,13 @@ enum GrammarDiagnosticCode {
 
   /// A radial spec also requested faceting, which radial does not yet support.
   facetedRadialUnsupported,
+
+  /// A mark fed a value <= 0 to a log axis, where a log scale is undefined.
+  nonPositiveLogValue,
+
+  /// An axis combined incompatible modes (a time or log scale with a category
+  /// axis on the same axis).
+  conflictingAxisMode,
 }
 
 /// Raised when a [PlotSpec] cannot be lowered onto the config surface.
@@ -348,6 +355,23 @@ final class GrammarSpecException implements Exception {
         GrammarDiagnosticCode.facetedRadialUnsupported,
         'The radial mark "$markId" is on a faceted spec. Faceting a radial '
         'geom is not supported; author the radial chart without .facet(...).',
+      );
+
+  /// A mark fed a non-positive value to a log axis.
+  factory GrammarSpecException.nonPositiveLogValue(String markId, num value) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.nonPositiveLogValue,
+        'The mark "$markId" feeds a log axis but produced the value $value. A '
+        'log scale is undefined for values <= 0; filter or transform them '
+        'first.',
+      );
+
+  /// An axis combined a time or log scale with a category axis.
+  factory GrammarSpecException.conflictingAxisMode(String detail) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.conflictingAxisMode,
+        'An axis set conflicting modes: $detail. A time or log scale cannot '
+        'combine with a category axis on the same axis.',
       );
 
   /// The machine-readable diagnostic.

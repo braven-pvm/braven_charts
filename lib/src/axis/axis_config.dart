@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/axis_scale_type.dart';
 import '../models/enums.dart';
 import '../models/x_axis_config.dart';
 
@@ -30,6 +31,8 @@ class InternalAxisConfig {
     this.showTickMarks = true,
     this.tickLength = 6,
     this.labelPadding = 8,
+    this.scaleType = AxisScaleType.linear,
+    this.logBase = 10,
   });
 
   /// Creates an internal config from the public XAxisConfig.
@@ -52,6 +55,8 @@ class InternalAxisConfig {
       showTickMarks: config.visible && config.showTicks,
       tickLength: 6,
       labelPadding: 8,
+      scaleType: config.scaleType,
+      logBase: config.logBase,
     );
   }
 
@@ -75,6 +80,8 @@ class InternalAxisConfig {
       showTickMarks: config.visible && config.showTicks,
       tickLength: 6,
       labelPadding: 8,
+      scaleType: config.scaleType,
+      logBase: config.logBase,
     );
   }
 
@@ -127,6 +134,13 @@ class InternalAxisConfig {
   /// Padding between tick mark and label.
   final double labelPadding;
 
+  /// How this axis maps values to positions (mirrors the source config's
+  /// [XAxisConfig.scaleType] / [YAxisConfig.scaleType]).
+  final AxisScaleType scaleType;
+
+  /// Base for [AxisScaleType.log]; ignored otherwise.
+  final double logBase;
+
   InternalAxisConfig copyWith({
     String? label,
     AxisOrientation? orientation,
@@ -140,6 +154,8 @@ class InternalAxisConfig {
     bool? showTickMarks,
     double? tickLength,
     double? labelPadding,
+    AxisScaleType? scaleType,
+    double? logBase,
   }) {
     return InternalAxisConfig(
       label: label ?? this.label,
@@ -154,6 +170,8 @@ class InternalAxisConfig {
       showTickMarks: showTickMarks ?? this.showTickMarks,
       tickLength: tickLength ?? this.tickLength,
       labelPadding: labelPadding ?? this.labelPadding,
+      scaleType: scaleType ?? this.scaleType,
+      logBase: logBase ?? this.logBase,
     );
   }
 }

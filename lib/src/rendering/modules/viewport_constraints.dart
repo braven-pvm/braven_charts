@@ -95,15 +95,15 @@ class ViewportConstraints {
     final newDataYMin = centerY - newYRange / 2;
     final newDataYMax = centerY + newYRange / 2;
 
-    return ChartTransform(
+    // Build from the input transform via copyWith so its plot dims, invertY,
+    // transposed AND per-axis scale fields (scaleType/logBase) survive the
+    // clamp — clampZoomLevel runs on EVERY zoom, so dropping them here would
+    // revert a log/time chart to linear positioning at the zoom limits.
+    return transform.copyWith(
       dataXMin: newDataXMin,
       dataXMax: newDataXMax,
       dataYMin: newDataYMin,
       dataYMax: newDataYMax,
-      plotWidth: transform.plotWidth,
-      plotHeight: transform.plotHeight,
-      invertY: transform.invertY,
-      transposed: transform.transposed,
     );
   }
 

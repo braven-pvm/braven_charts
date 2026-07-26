@@ -31,6 +31,7 @@ class GrammarSample {
     this.low = 0,
     this.close = 0,
     this.group = '',
+    this.date,
   });
 
   /// Elapsed minutes — also the bar preset's zone ordinal and the
@@ -50,6 +51,10 @@ class GrammarSample {
 
   /// The concentric-ring group for the radial preset (e.g. a season).
   final String group;
+
+  /// The calendar instant the scales preset's time-X family reads. Null on
+  /// every other preset's rows — only `.xTime` projects it to epoch-millis.
+  final DateTime? date;
 }
 
 // Accessors are TOP-LEVEL TEAR-OFFS, never inline closures: `Mark` and
@@ -67,6 +72,7 @@ double sampleHigh(GrammarSample row) => row.high;
 double sampleLow(GrammarSample row) => row.low;
 double sampleClose(GrammarSample row) => row.close;
 Object sampleGroup(GrammarSample row) => row.group;
+DateTime sampleDate(GrammarSample row) => row.date!;
 
 /// The ride the line, multi-axis and scatter presets read.
 const List<GrammarSample> rideRows = <GrammarSample>[
@@ -241,6 +247,33 @@ const ScatterSizeEncoding channelWidthEncoding = ScatterSizeEncoding(
   maximumRadius: 1,
 );
 
+/// The scales preset's log-Y rows: a geometric progression (each step 4x the
+/// last) spanning three decades in `power`, so the curve is a bowl on a linear
+/// axis and a straight line under `.yLog()`. Every value is positive — a log
+/// axis is undefined at or below zero, which `nonPositiveLogValue` guards.
+const List<GrammarSample> scaleLogRows = <GrammarSample>[
+  GrammarSample(minute: 0, power: 2),
+  GrammarSample(minute: 1, power: 8),
+  GrammarSample(minute: 2, power: 32),
+  GrammarSample(minute: 3, power: 128),
+  GrammarSample(minute: 4, power: 512),
+  GrammarSample(minute: 5, power: 2048),
+];
+
+/// The scales preset's time-X rows: one sample per quarter across three years,
+/// so `.xTime()` lands ticks on calendar (year) boundaries with date labels.
+/// A `DateTime` is not a const expression, so this list — unlike the others —
+/// cannot be `const`.
+final List<GrammarSample> scaleTimeRows = <GrammarSample>[
+  GrammarSample(minute: 0, power: 168, date: DateTime.utc(2024, 1)),
+  GrammarSample(minute: 1, power: 204, date: DateTime.utc(2024, 7)),
+  GrammarSample(minute: 2, power: 232, date: DateTime.utc(2025, 1)),
+  GrammarSample(minute: 3, power: 221, date: DateTime.utc(2025, 7)),
+  GrammarSample(minute: 4, power: 268, date: DateTime.utc(2026, 1)),
+  GrammarSample(minute: 5, power: 289, date: DateTime.utc(2026, 7)),
+  GrammarSample(minute: 6, power: 312, date: DateTime.utc(2027, 1)),
+];
+
 // ============================================================================
 // Page
 // ============================================================================
@@ -318,6 +351,8 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   _RadialFamily _radialFamily = _RadialFamily.pie;
   // Scale-driven-channels preset knob.
   _ChannelFamily _channelFamily = _ChannelFamily.colourBar;
+  // Log / Time scales preset knob.
+  _ScaleFamily _scaleFamily = _ScaleFamily.logY;
 
   @override
   void dispose() {
@@ -637,6 +672,46 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     };
   }
 
+  /// Log and time axis scales, authored through the chained facade only.
+  ///
+  /// `.yLog()` folds a log scale onto the synthesized Y axis (ticks become
+  /// decades; the geometric-progression rows straighten), and `.xTime()` binds
+  /// a `DateTime` field to X as epoch-millis and marks the axis a time scale
+  /// (ticks land on calendar boundaries with date labels). Both are pure axis
+  /// intent — the `.x`/`.y` labels still reach the config, which is what the
+  /// scale-parity suite asserts.
+  BravenChart<GrammarSample> _scalesChart() {
+    switch (_scaleFamily) {
+      case _ScaleFamily.logY:
+        return BravenChart.of(scaleLogRows)
+            .x(sampleMinute, label: 'Interval')
+            .y(samplePower, label: 'Power (W)')
+            .geomLine(
+              name: 'Power',
+              color: const Color(0xFF2563EB),
+              strokeWidth: 2.4,
+              interpolation: LineInterpolation.monotone,
+              showDataPointMarkers: true,
+            )
+            .yLog()
+            .theme(_theme)
+            .interaction(_interaction);
+      case _ScaleFamily.timeX:
+        return BravenChart.of(scaleTimeRows)
+            .xTime(sampleDate, label: 'Date')
+            .y(samplePower, label: 'Power (W)')
+            .geomLine(
+              name: 'Power',
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2.4,
+              interpolation: LineInterpolation.monotone,
+              showDataPointMarkers: true,
+            )
+            .theme(_theme)
+            .interaction(_interaction);
+    }
+  }
+
   BravenChart<GrammarSample> get _activeChart => switch (_preset) {
     _GrammarPreset.lineTrend => _lineTrendChart(),
     _GrammarPreset.multiAxis => _multiAxisChart(),
@@ -647,6 +722,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.faceted => _facetedChart(),
     _GrammarPreset.radial => _radialChart(),
     _GrammarPreset.channels => _channelsChart(),
+    _GrammarPreset.scales => _scalesChart(),
   };
 
   // ==========================================================================
@@ -1151,6 +1227,70 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     }
   }
 
+  /// The hand-written `BravenChartPlus` the scales preset's chain lowers to:
+  /// the same synthesized `axis-0` carrying the `.y()` label, but with a
+  /// `scaleType: log` Y axis (log-Y family) or a `scaleType: time` X axis whose
+  /// points are the `DateTime`s projected to epoch-millis (time-X family).
+  Widget _handBuiltScales(BravenChartController controller) {
+    switch (_scaleFamily) {
+      case _ScaleFamily.logY:
+        final axis = YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'Power (W)',
+        ).copyWith(id: 'axis-0', scaleType: AxisScaleType.log);
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          interactionConfig: _interaction,
+          xAxisConfig: const XAxisConfig(label: 'Interval'),
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'mark-0',
+              name: 'Power',
+              points: _points(scaleLogRows, sampleMinute, samplePower),
+              color: const Color(0xFF2563EB),
+              strokeWidth: 2.4,
+              interpolation: LineInterpolation.monotone,
+              showDataPointMarkers: true,
+              yAxisId: 'axis-0',
+              yAxisConfig: axis,
+            ),
+          ],
+        );
+      case _ScaleFamily.timeX:
+        return BravenChartPlus(
+          key: const ValueKey('chart-grammar-stage-chart'),
+          bravenChartController: controller,
+          theme: _theme,
+          interactionConfig: _interaction,
+          xAxisConfig: const XAxisConfig(
+            label: 'Date',
+            scaleType: AxisScaleType.time,
+          ),
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'mark-0',
+              name: 'Power',
+              points: <ChartDataPoint>[
+                for (final row in scaleTimeRows)
+                  ChartDataPoint(
+                    x: row.date!.millisecondsSinceEpoch.toDouble(),
+                    y: row.power,
+                  ),
+              ],
+              color: const Color(0xFF16A34A),
+              strokeWidth: 2.4,
+              interpolation: LineInterpolation.monotone,
+              showDataPointMarkers: true,
+              yAxisId: 'axis-0',
+              yAxisConfig: _defaultAxis('Power (W)'),
+            ),
+          ],
+        );
+    }
+  }
+
   Widget _buildHandBuilt(BravenChartController controller) => switch (_preset) {
     _GrammarPreset.lineTrend => _handBuiltLineTrend(controller),
     _GrammarPreset.multiAxis => _handBuiltMultiAxis(controller),
@@ -1164,6 +1304,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     _GrammarPreset.faceted => const SizedBox.shrink(),
     _GrammarPreset.radial => _handBuiltRadial(controller),
     _GrammarPreset.channels => _handBuiltChannels(controller),
+    _GrammarPreset.scales => _handBuiltScales(controller),
   };
 
   // ==========================================================================
@@ -1386,6 +1527,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             _GrammarPreset.faceted => _facetControls(),
             _GrammarPreset.radial => _radialControls(),
             _GrammarPreset.channels => _channelControls(),
+            _GrammarPreset.scales => _scaleControls(),
             _GrammarPreset.candlestick => const <Widget>[],
           },
         ),
@@ -1684,6 +1826,34 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           'maps LINEARLY into a width multiplier (not scatter\'s area radius).',
     ),
   ];
+
+  List<Widget> _scaleControls() => [
+    Text(
+      'Axis scale',
+      style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+    ),
+    const SizedBox(height: 4),
+    SegmentedOption<_ScaleFamily>(
+      key: const ValueKey('chart-grammar-scale-family'),
+      value: _scaleFamily,
+      options: _ScaleFamily.values,
+      labelBuilder: (family) => switch (family) {
+        _ScaleFamily.logY => 'Log Y',
+        _ScaleFamily.timeX => 'Time X',
+      },
+      onChanged: (family) => setState(() => _scaleFamily = family),
+    ),
+    const SizedBox(height: 4),
+    const InfoBox(
+      message:
+          '.yLog() folds a log scale onto the synthesized Y axis — ticks '
+          'become decades and the geometric rows straighten. .xTime(accessor) '
+          'binds a DateTime field to X as epoch-millis and marks the axis a '
+          'time scale, so ticks land on calendar boundaries with date labels. '
+          'Both keep the .x / .y label, which is what the scale-parity suite '
+          'asserts against the hand-built config.',
+    ),
+  ];
 }
 
 // ============================================================================
@@ -1699,6 +1869,7 @@ enum _GrammarPreset {
   faceted,
   radial,
   channels,
+  scales,
   // barTransposed is kept LAST: BravenChartPlus retains exiting horizontal bars
   // through a cross-fade, and unioning those with a non-bar chart's entering
   // series trips its all-horizontal bounds check. Keeping the transposed preset
@@ -1714,6 +1885,10 @@ enum _RadialFamily { pie, donut, concentric, polar }
 /// non-scatter family, plus the bar width channel.
 enum _ChannelFamily { colourBar, colourLine, edgeArea, widthBar }
 
+/// The scales preset's family toggle: a log-Y line (`.yLog()`) or a time-X line
+/// (`.xTime()`).
+enum _ScaleFamily { logY, timeX }
+
 extension on _GrammarPreset {
   String get label => switch (this) {
     _GrammarPreset.lineTrend => 'Line + Trend',
@@ -1725,6 +1900,7 @@ extension on _GrammarPreset {
     _GrammarPreset.faceted => 'Faceting',
     _GrammarPreset.radial => 'Radial',
     _GrammarPreset.channels => 'Scale-driven channels',
+    _GrammarPreset.scales => 'Log / Time scales',
   };
 
   IconData get icon => switch (this) {
@@ -1737,6 +1913,7 @@ extension on _GrammarPreset {
     _GrammarPreset.faceted => Icons.grid_view,
     _GrammarPreset.radial => Icons.pie_chart_outline,
     _GrammarPreset.channels => Icons.gradient,
+    _GrammarPreset.scales => Icons.timeline,
   };
 
   String get stageTitle => switch (this) {
@@ -1749,6 +1926,7 @@ extension on _GrammarPreset {
     _GrammarPreset.faceted => 'One metric across small-multiple panels',
     _GrammarPreset.radial => 'Radial geoms: pie, donut, concentric, polar',
     _GrammarPreset.channels => 'Colour and width driven by a data field',
+    _GrammarPreset.scales => 'Logarithmic and time axis scales',
   };
 
   String get stageSubtitle => switch (this) {
@@ -1770,6 +1948,8 @@ extension on _GrammarPreset {
       'A radial geom makes the spec radial — one geom, no Cartesian axes',
     _GrammarPreset.channels =>
       'colorBy on bar/line/area and sizeBy width on bar, baked at lowering',
+    _GrammarPreset.scales =>
+      '.yLog() folds a log scale; .xTime() binds a DateTime field to X',
   };
 
   /// Whether this preset has any genuinely applicable per-preset control.
@@ -1830,6 +2010,15 @@ extension on _GrammarPreset {
           'channel, a LINEAR map into a width multiplier. Turn on "Compare '
           'hand-built" to see the same baked pointStyle / segmentStyle and '
           'legend written by hand — the work the channel automates.',
+    _GrammarPreset.scales =>
+      'Switch the Axis scale control. Log Y calls .yLog() on a geometric '
+          'progression — on a linear axis it is a bowl, on the log axis the '
+          'decade ticks make it a straight line. Time X calls '
+          '.xTime((r) => r.date), which projects a DateTime field to '
+          'epoch-millis and lands ticks on year boundaries with date labels. '
+          'Turn on "Compare hand-built" to see the YAxisConfig(scaleType: log) '
+          'and XAxisConfig(scaleType: time) the chain lowers to — the two '
+          'renders are indistinguishable.',
   };
 }
 

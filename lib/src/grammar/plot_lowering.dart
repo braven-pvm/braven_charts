@@ -3,6 +3,7 @@
 
 import 'package:flutter/painting.dart' show Color;
 
+import '../models/axis_scale_type.dart';
 import '../models/bar_chart_style.dart' show BarOrientation;
 import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_data_point.dart';
@@ -213,6 +214,27 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     for (final axis in axes) axis.id: axis,
   };
 
+  // Data-INDEPENDENT: a time or log scale positions its axis numerically, which
+  // the DISCRETE SLOTS of a categorical axis contradict. The conflict is the
+  // slots, so it is `isCategorical` (categories non-empty) that clashes — NOT
+  // the mere presence of a CategoryAxisConfig. An empty CategoryAxisConfig
+  // (categories: []) carries no slots; it is a documented label-styling carrier
+  // on non-categorical axes (see XAxisConfig.effectiveTickLabelRotationDegrees /
+  // effectiveTickLabelCollisionPolicy, which read categoryAxis regardless of
+  // scaleType), and the render path treats it as non-categorical too. So a
+  // time/log axis may attach one purely for label rotation/density. Only X can
+  // carry a category axis, so the conflict is only expressible there.
+  final xAxis = spec.xAxis;
+  if (xAxis != null &&
+      (xAxis.scaleType == AxisScaleType.time ||
+          xAxis.scaleType == AxisScaleType.log) &&
+      xAxis.isCategorical) {
+    throw GrammarSpecException.conflictingAxisMode(
+      'the x axis is a ${xAxis.scaleType.name} scale but also declares a '
+      'category axis',
+    );
+  }
+
   if (spec.transposed) {
     for (var index = 0; index < spec.marks.length; index++) {
       if (spec.marks[index] is! BarMark<T>) {
@@ -331,6 +353,9 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     final mark = spec.marks[index];
     final markId = markIds[index];
     final axis = boundAxes[index];
+    if (axis != null) {
+      _validateLogPositive(mark, markId, spec.xAxis, axis, spec.data);
+    }
     switch (mark) {
       case LineMark<T>():
         series.add(_lowerLine(mark, markId, axis!, spec.data));
@@ -398,6 +423,67 @@ YAxisConfig _bindAxis<T>(
   }
   boundAxisIds.add(axisId);
   return axis;
+}
+
+/// Rejects a non-positive value fed to a log axis.
+///
+/// Data-DEPENDENT: reached only in the materialization pass, below the
+/// emptyData guard, because it must read the values the mark positions. When
+/// the mark's bound X axis (or its Y axis) is [AxisScaleType.log], every value
+/// it positions there must be > 0 — a log scale is undefined at or below zero.
+/// The first offending value is reported with the mark id. A non-finite value
+/// (a NaN gap) is not `<= 0`, so it is left to the pipeline's usual
+/// invalid-point handling, exactly as on a linear axis.
+void _validateLogPositive<T>(
+  Mark<T> mark,
+  String markId,
+  XAxisConfig? xAxis,
+  YAxisConfig yAxis,
+  List<T> data,
+) {
+  final xLog = xAxis?.scaleType == AxisScaleType.log;
+  final yLog = yAxis.scaleType == AxisScaleType.log;
+  if (!xLog && !yLog) return;
+
+  void check(FieldAccessor<T, num> accessor) {
+    for (final row in data) {
+      final value = accessor(row);
+      if (value <= 0) {
+        throw GrammarSpecException.nonPositiveLogValue(markId, value);
+      }
+    }
+  }
+
+  switch (mark) {
+    case LineMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) check(mark.y);
+    case AreaMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) check(mark.y);
+    case BarMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) check(mark.y);
+    case ScatterMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) check(mark.y);
+    case CandlestickMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) {
+        check(mark.open);
+        check(mark.high);
+        check(mark.low);
+        check(mark.close);
+      }
+    case TrendMark<T>() ||
+        ThresholdMark<T>() ||
+        BandMark<T>() ||
+        PointMark<T>() ||
+        RadialMark<T>():
+      // These bind no geometry axis of their own; nothing to position on a
+      // log scale here.
+      break;
+  }
 }
 
 /// Validates a scatter mark's channel/encoding pairing, without touching rows.

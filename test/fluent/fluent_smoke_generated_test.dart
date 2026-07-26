@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1622 verbs total; 9 of them have an argument type with no
+// 1626 verbs total; 9 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -5540,7 +5540,7 @@ void _smokeStreamingConfig(_Verb verb, StreamingConfig subject) {
   );
 }
 
-/// Smoke coverage for [XAxisConfig]'s 37 executable verb(s).
+/// Smoke coverage for [XAxisConfig]'s 39 executable verb(s).
 void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   verb(
     'XAxisConfigFluent.withPosition',
@@ -5592,6 +5592,11 @@ void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   verb('XAxisConfigFluent.withAxisMargin', () => subject.withAxisMargin(8.0));
   verb('XAxisConfigFluent.withTickCount', () => subject.withTickCount(2));
   verb('XAxisConfigFluent.clearTickCount', () => subject.clearTickCount());
+  verb(
+    'XAxisConfigFluent.withScaleType',
+    () => subject.withScaleType(AxisScaleType.linear),
+  );
+  verb('XAxisConfigFluent.withLogBase', () => subject.withLogBase(10));
   verb(
     'XAxisConfigFluent.withTickLabelRotationDegrees',
     () => subject.withTickLabelRotationDegrees(1.0),
@@ -5645,7 +5650,7 @@ void _smokeXAxisConfig(_Verb verb, XAxisConfig subject) {
   );
 }
 
-/// Smoke coverage for [YAxisConfig]'s 30 executable verb(s).
+/// Smoke coverage for [YAxisConfig]'s 32 executable verb(s).
 void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
   verb(
     'YAxisConfigFluent.withPosition',
@@ -5697,6 +5702,11 @@ void _smokeYAxisConfig(_Verb verb, YAxisConfig subject) {
   verb('YAxisConfigFluent.withAxisMargin', () => subject.withAxisMargin(8.0));
   verb('YAxisConfigFluent.withTickCount', () => subject.withTickCount(2));
   verb('YAxisConfigFluent.clearTickCount', () => subject.clearTickCount());
+  verb(
+    'YAxisConfigFluent.withScaleType',
+    () => subject.withScaleType(AxisScaleType.linear),
+  );
+  verb('YAxisConfigFluent.withLogBase', () => subject.withLogBase(10));
   verb(
     'YAxisConfigFluent.withShowMinorTicks',
     () => subject.withShowMinorTicks(false),

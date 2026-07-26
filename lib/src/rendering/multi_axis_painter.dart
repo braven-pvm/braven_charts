@@ -5,8 +5,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import '../axis/log_ticks.dart';
+import '../axis/time_ticks.dart';
 import '../layout/axis_layout_manager.dart';
 import '../layout/multi_axis_layout.dart';
+import '../models/axis_scale_type.dart';
 import '../models/chart_series.dart';
 import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
@@ -231,7 +234,12 @@ class MultiAxisPainter {
     // Uses shouldShowTickLabels helper to check labelDisplay mode
     if (axis.showTicks || axis.shouldShowTickLabels) {
       final maxTicks = axis.tickCount ?? _computeMaxTicks(plotArea.height);
-      final ticks = generateTicks(bounds, maxTicks: maxTicks);
+      final ticks = generateTicks(
+        bounds,
+        maxTicks: maxTicks,
+        scaleType: axis.scaleType,
+        logBase: axis.logBase,
+      );
 
       final effectiveRenderMin = axis.renderMin ?? bounds.min;
       final effectiveRenderMax = axis.renderMax ?? bounds.max;
@@ -241,9 +249,15 @@ class MultiAxisPainter {
           continue;
         }
 
-        // Convert tick value to Y position using shared normalizer
-        final normalizedY =
-            MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
+        // Convert tick value to Y position using the shared scale-aware
+        // normalizer (linear arm is byte-identical to normalize).
+        final normalizedY = MultiAxisNormalizer.normalizeScaled(
+          tickValue,
+          bounds.min,
+          bounds.max,
+          axis.scaleType,
+          axis.logBase,
+        );
         // Invert Y because screen coordinates go down
         final screenY = plotArea.bottom - (normalizedY * plotArea.height);
 
@@ -268,8 +282,13 @@ class MultiAxisPainter {
           for (int j = 1; j <= axis.minorTickCount; j++) {
             final v = a + (b - a) * j / (axis.minorTickCount + 1);
             if (v < effectiveRenderMin || v > effectiveRenderMax) continue;
-            final normalizedY =
-                MultiAxisNormalizer.normalize(v, bounds.min, bounds.max);
+            final normalizedY = MultiAxisNormalizer.normalizeScaled(
+              v,
+              bounds.min,
+              bounds.max,
+              axis.scaleType,
+              axis.logBase,
+            );
             final screenY = plotArea.bottom - (normalizedY * plotArea.height);
             if (screenY >= plotArea.top && screenY <= plotArea.bottom) {
               _paintMinorTickMark(
@@ -459,9 +478,27 @@ class MultiAxisPainter {
   ///
   /// [bounds] is the data range for the axis.
   /// [maxTicks] is the maximum number of tick marks to generate.
+  /// [scaleType]/[logBase] select the tick family: [AxisScaleType.log] emits
+  /// decades, everything else keeps the nice-number path below.
   ///
   /// Returns a list of tick values within the bounds.
-  List<double> generateTicks(DataRange bounds, {int maxTicks = 10}) {
+  List<double> generateTicks(
+    DataRange bounds, {
+    int maxTicks = 10,
+    AxisScaleType scaleType = AxisScaleType.linear,
+    double logBase = 10,
+  }) {
+    // Log axes emit decade values; the linear nice-number path below is
+    // unchanged.
+    if (scaleType == AxisScaleType.log) {
+      return decadeTicks(bounds.min, bounds.max, base: logBase);
+    }
+
+    // Time axes land on real calendar boundaries; positions stay linear.
+    if (scaleType == AxisScaleType.time) {
+      return dateTicks(bounds.min, bounds.max);
+    }
+
     if (bounds.span == 0) {
       return [bounds.min];
     }
@@ -506,6 +543,22 @@ class MultiAxisPainter {
   String formatTickLabel(double value, YAxisConfig axis) {
     if (axis.labelFormatter != null) {
       return axis.labelFormatter!(value);
+    }
+
+    // Log axes label their decades plainly (the value itself, e.g. "1000"),
+    // before the numeric-default block. An explicit formatter above still wins.
+    if (axis.scaleType == AxisScaleType.log) {
+      return _formatLogValue(value);
+    }
+
+    // Time axes label ticks with a calendar-nice date string chosen by the
+    // axis span's interval, before the numeric-default block. An explicit
+    // labelFormatter above still wins.
+    if (axis.scaleType == AxisScaleType.time) {
+      final bounds = axisBounds[axis.id];
+      if (bounds != null) {
+        return dateLabel(value, intervalFor(bounds.min, bounds.max));
+      }
     }
 
     String formatted;
@@ -581,5 +634,15 @@ class MultiAxisPainter {
   double _roundToDecimals(double value, int decimals) {
     final factor = math.pow(10, decimals);
     return (value * factor).round() / factor;
+  }
+
+  /// Formats a log-axis decade value plainly (the value itself): whole decades
+  /// render as integers (`1000`), fractional decades keep their minimal decimal
+  /// form (`0.1`). Mirrored by the X painter and the Y width-measure path.
+  String _formatLogValue(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
   }
 }

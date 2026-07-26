@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:flutter/widgets.dart' show Key;
 
 import '../controllers/chart_interaction_group_controller.dart';
+import '../models/axis_scale_type.dart' show AxisScaleType;
 import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
@@ -94,6 +95,9 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    AxisScaleType xScaleType = AxisScaleType.linear,
+    double xLogBase = 10,
+    Map<String, ({AxisScaleType type, double base})> yScales = const {},
     GridConfig? grid,
     String? title,
     String? subtitle,
@@ -110,6 +114,9 @@ final class BravenChart<T> {
        _theme = theme,
        _interaction = interaction,
        _xAxis = xAxis,
+       _xScaleType = xScaleType,
+       _xLogBase = xLogBase,
+       _yScales = yScales,
        _grid = grid,
        _title = title,
        _subtitle = subtitle,
@@ -134,6 +141,16 @@ final class BravenChart<T> {
   final ChartTheme? _theme;
   final InteractionConfig? _interaction;
   final XAxisConfig? _xAxis;
+
+  /// Scale intent for the X axis, folded onto the synthesized/explicit axis in
+  /// [toSpec]. Kept off `_xAxis` because `_copy`'s `??`-merge cannot clear a
+  /// half-built axis and `toSpec` would drop the `.x(label:)` under it.
+  final AxisScaleType _xScaleType;
+  final double _xLogBase;
+
+  /// Per-axis Y scale intent, keyed by axis id ([_defaultYKey] for the id-less
+  /// synthesized default), folded onto the resolved axes in [toSpec].
+  final Map<String, ({AxisScaleType type, double base})> _yScales;
   final GridConfig? _grid;
   final String? _title;
   final String? _subtitle;
@@ -151,6 +168,9 @@ final class BravenChart<T> {
     ChartTheme? theme,
     InteractionConfig? interaction,
     XAxisConfig? xAxis,
+    AxisScaleType? xScaleType,
+    double? xLogBase,
+    Map<String, ({AxisScaleType type, double base})>? yScales,
     GridConfig? grid,
     String? title,
     String? subtitle,
@@ -168,6 +188,9 @@ final class BravenChart<T> {
     theme: theme ?? _theme,
     interaction: interaction ?? _interaction,
     xAxis: xAxis ?? _xAxis,
+    xScaleType: xScaleType ?? _xScaleType,
+    xLogBase: xLogBase ?? _xLogBase,
+    yScales: yScales ?? _yScales,
     grid: grid ?? _grid,
     title: title ?? _title,
     subtitle: subtitle ?? _subtitle,
@@ -608,6 +631,43 @@ final class BravenChart<T> {
   BravenChart<T> yAxis(YAxisConfig config) =>
       _copy(yAxes: <YAxisConfig>[..._yAxes, config]);
 
+  /// Sentinel [_yScales] key for the id-less synthesized default Y axis.
+  static const String _defaultYKey = ' __braven_default_y__';
+
+  /// Makes the X axis logarithmic (base [base]); ticks become decades.
+  ///
+  /// Records scale intent only — [toSpec] folds it onto whichever X axis it
+  /// synthesizes, so a `.x(label:)` set earlier still reaches the config.
+  BravenChart<T> xLog({double base = 10}) =>
+      _copy(xScaleType: AxisScaleType.log, xLogBase: base);
+
+  /// Makes a Y axis logarithmic (base [base]).
+  ///
+  /// [id] targets a declared axis by its id; omitting it targets the default
+  /// synthesized left axis. Records scale intent only — [toSpec] folds it onto
+  /// the resolved axis, so a `.y(label:)` set earlier still reaches the config.
+  BravenChart<T> yLog({String? id, double base = 10}) => _copy(
+    yScales: <String, ({AxisScaleType type, double base})>{
+      ..._yScales,
+      (id ?? _defaultYKey): (type: AxisScaleType.log, base: base),
+    },
+  );
+
+  /// Binds a `DateTime` field to the X channel as a time axis.
+  ///
+  /// The [accessor] is wrapped to project each row's `DateTime` to its
+  /// epoch-milliseconds (`num`), so every geometry positions it through the
+  /// ordinary numeric X path — there is no `DateTime` branch at lowering. The
+  /// scale intent ([AxisScaleType.time]) is recorded like [xLog]; [toSpec]
+  /// folds it onto the synthesized X axis, where ticks land on calendar
+  /// boundaries with date labels. [label] names the axis (as [x] does).
+  BravenChart<T> xTime(FieldAccessor<T, DateTime> accessor, {String? label}) =>
+      _copy(
+        defaultX: (T row) => accessor(row).millisecondsSinceEpoch,
+        xLabel: label,
+        xScaleType: AxisScaleType.time,
+      );
+
   /// Sets the chart's grid configuration, forwarded to the chart unchanged.
   BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
 
@@ -643,26 +703,53 @@ final class BravenChart<T> {
 
   /// The specification this chain describes.
   PlotSpec<T> toSpec() {
-    final xLabel = _xLabel;
-    final yLabel = _yLabel;
     return PlotSpec<T>(
       data: _rows,
       marks: _marks,
       transposed: _transposed,
       theme: _theme,
       interaction: _interaction,
-      xAxis: _xAxis ?? (xLabel == null ? null : XAxisConfig(label: xLabel)),
-      yAxes: _yAxes.isNotEmpty || yLabel == null
-          ? _yAxes
-          : <YAxisConfig>[
-              YAxisConfig(position: YAxisPosition.left, label: yLabel),
-            ],
+      xAxis: _specXAxis(_xLabel),
+      yAxes: _specYAxes(_yLabel),
       grid: _grid,
       title: _title,
       subtitle: _subtitle,
       showLegend: _showLegend,
       facet: _facet,
     );
+  }
+
+  /// The X axis for the spec, folding in any `.xLog()`/`.xTime()` scale intent.
+  ///
+  /// With no scale verb this returns exactly the pre-scale synthesis
+  /// (`_xAxis ?? XAxisConfig(label:)`) — byte-identical to the linear path.
+  XAxisConfig? _specXAxis(String? xLabel) {
+    final base = _xAxis ?? (xLabel == null ? null : XAxisConfig(label: xLabel));
+    if (_xScaleType == AxisScaleType.linear) return base;
+    return (base ?? const XAxisConfig())
+        .copyWith(scaleType: _xScaleType, logBase: _xLogBase);
+  }
+
+  /// The Y axes for the spec, folding in any `.yLog()` scale intent.
+  ///
+  /// With no `.yLog()` this returns the same declared/synthesized list as
+  /// before — byte-identical to the linear path.
+  List<YAxisConfig> _specYAxes(String? yLabel) {
+    final hasDefaultScale = _yScales.containsKey(_defaultYKey);
+    final base = _yAxes.isNotEmpty || (yLabel == null && !hasDefaultScale)
+        ? _yAxes
+        : <YAxisConfig>[
+            YAxisConfig(position: YAxisPosition.left, label: yLabel),
+          ];
+    if (_yScales.isEmpty) return base;
+    return <YAxisConfig>[for (final axis in base) _foldYScale(axis)];
+  }
+
+  YAxisConfig _foldYScale(YAxisConfig axis) {
+    final scale = _yScales[axis.id.isEmpty ? _defaultYKey : axis.id];
+    return scale == null
+        ? axis
+        : axis.copyWith(scaleType: scale.type, logBase: scale.base);
   }
 
   /// Renders this chain as a single panel.
