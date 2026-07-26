@@ -1,6 +1,6 @@
+import 'dart:collection';
 import 'dart:math' as math;
 
-import 'package:braven_charts/src/rendering/modules/crosshair_axis_label_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,6 +39,99 @@ typedef _EnvironmentCase = ({
   TextScaler textScaler,
   double devicePixelRatio,
 });
+
+final class _LayoutRequest {
+  const _LayoutRequest({
+    required this.text,
+    required this.style,
+    required this.textDirection,
+    required this.locale,
+    required this.textScaler,
+    required this.devicePixelRatio,
+  });
+
+  final String text;
+  final TextStyle style;
+  final TextDirection textDirection;
+  final Locale? locale;
+  final TextScaler textScaler;
+  final double devicePixelRatio;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _LayoutRequest &&
+            text == other.text &&
+            style == other.style &&
+            textDirection == other.textDirection &&
+            locale == other.locale &&
+            textScaler == other.textScaler &&
+            devicePixelRatio == other.devicePixelRatio;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    text,
+    style,
+    textDirection,
+    locale,
+    textScaler,
+    devicePixelRatio,
+  );
+}
+
+/// Test-only bounded candidate retained for future benchmark comparisons.
+///
+/// BC-0019 rejected production integration because the candidate missed the
+/// approved absolute p95 benefit floor. Keeping the smallest representative
+/// implementation here lets future Flutter engine changes be re-measured
+/// without adding cache state to the rendering pipeline.
+final class _BoundedCandidateCache {
+  _BoundedCandidateCache({this.capacity = 16});
+
+  final int capacity;
+  final LinkedHashMap<_LayoutRequest, TextPainter> _entries =
+      LinkedHashMap<_LayoutRequest, TextPainter>();
+
+  var hitCount = 0;
+  var missCount = 0;
+  var disposedPainterCount = 0;
+
+  int get entryCount => _entries.length;
+
+  TextPainter layout(_LayoutRequest request) {
+    final cached = _entries.remove(request);
+    if (cached != null) {
+      _entries[request] = cached;
+      hitCount++;
+      return cached;
+    }
+
+    missCount++;
+    final painter = TextPainter(
+      text: TextSpan(text: request.text, style: request.style),
+      textDirection: request.textDirection,
+      locale: request.locale,
+      textScaler: request.textScaler,
+    )..layout();
+    _entries[request] = painter;
+
+    if (_entries.length > capacity) {
+      final oldestRequest = _entries.keys.first;
+      _entries.remove(oldestRequest)!.dispose();
+      disposedPainterCount++;
+    }
+    return painter;
+  }
+
+  void dispose() {
+    for (final painter in _entries.values) {
+      painter.dispose();
+      disposedPainterCount++;
+    }
+    _entries.clear();
+  }
+}
 
 const _environmentCases = <_EnvironmentCase>[
   (
@@ -157,14 +250,14 @@ _TrialResult _measureUncachedTrial(_Scenario scenario) {
   );
 }
 
-CrosshairAxisLabelLayoutRequest _requestFor(
+_LayoutRequest _requestFor(
   String text, {
   TextDirection direction = TextDirection.ltr,
   Locale? locale = const Locale('en', 'ZA'),
   TextScaler textScaler = TextScaler.noScaling,
   double devicePixelRatio = 1,
 }) {
-  return CrosshairAxisLabelLayoutRequest(
+  return _LayoutRequest(
     text: text,
     style: _labelStyle,
     textDirection: direction,
@@ -177,7 +270,7 @@ CrosshairAxisLabelLayoutRequest _requestFor(
 void _layoutCachedFrame({
   required _Scenario scenario,
   required int frame,
-  required CrosshairAxisLabelLayoutCache cache,
+  required _BoundedCandidateCache cache,
 }) {
   for (final text in _labelsForFrame(scenario, frame)) {
     cache.layout(_requestFor(text));
@@ -185,7 +278,7 @@ void _layoutCachedFrame({
 }
 
 void _warmCached(_Scenario scenario) {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   try {
     for (var frame = 0; frame < _warmupFrameCount; frame++) {
       _layoutCachedFrame(scenario: scenario, frame: frame, cache: cache);
@@ -196,7 +289,7 @@ void _warmCached(_Scenario scenario) {
 }
 
 _TrialResult _measureCachedTrial(_Scenario scenario) {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   final frameMicros = <int>[];
 
   try {
@@ -270,9 +363,7 @@ TextPainter _uncachedEnvironmentPainter(_EnvironmentCase environment) {
   )..layout();
 }
 
-CrosshairAxisLabelLayoutRequest _environmentRequest(
-  _EnvironmentCase environment,
-) {
+_LayoutRequest _environmentRequest(_EnvironmentCase environment) {
   return _requestFor(
     '42.00 unit',
     direction: environment.direction,
@@ -297,7 +388,7 @@ void _warmUncachedEnvironment() {
 }
 
 void _warmCachedEnvironment() {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   try {
     for (var frame = 0; frame < _warmupFrameCount; frame++) {
       final environment = _environmentCases[frame % _environmentCases.length];
@@ -333,7 +424,7 @@ _TrialResult _measureUncachedEnvironmentTrial() {
 }
 
 _TrialResult _measureCachedEnvironmentTrial() {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   final frameMicros = <int>[];
   try {
     for (var frame = 0; frame < _frameCount; frame++) {
@@ -375,7 +466,7 @@ _PairedTrials _measurePairedEnvironment() {
 }
 
 void _verifyMultiAxisBehavior() {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   try {
     final unchanged = _labelsForFrame(_Scenario.multiAxisUnchanged, 0);
     expect(unchanged, hasLength(7));
@@ -387,9 +478,9 @@ void _verifyMultiAxisBehavior() {
     for (final text in unchanged) {
       cache.layout(_requestFor(text));
     }
-    expect(cache.debugEntryCount, 7);
-    expect(cache.debugMissCount, 7);
-    expect(cache.debugHitCount, 7);
+    expect(cache.entryCount, 7);
+    expect(cache.missCount, 7);
+    expect(cache.hitCount, 7);
 
     // Changing frame zero deliberately repeats the unchanged sample. The next
     // four frames introduce 28 distinct labels and deterministically exercise
@@ -398,38 +489,38 @@ void _verifyMultiAxisBehavior() {
       for (final text in _labelsForFrame(_Scenario.multiAxisChanging, frame)) {
         cache.layout(_requestFor(text));
       }
-      expect(cache.debugEntryCount, lessThanOrEqualTo(16));
+      expect(cache.entryCount, lessThanOrEqualTo(16));
     }
-    expect(cache.debugHitCount, 14);
-    expect(cache.debugMissCount, 35);
-    expect(cache.debugEntryCount, 16);
-    expect(cache.debugDisposedPainterCount, 19);
+    expect(cache.hitCount, 14);
+    expect(cache.missCount, 35);
+    expect(cache.entryCount, 16);
+    expect(cache.disposedPainterCount, 19);
   } finally {
     cache.dispose();
   }
 }
 
 void _verifyEnvironmentMisses() {
-  final cache = CrosshairAxisLabelLayoutCache();
+  final cache = _BoundedCandidateCache();
   try {
     for (final environment in _environmentCases) {
       cache.layout(_environmentRequest(environment));
     }
-    expect(cache.debugMissCount, _environmentCases.length);
-    expect(cache.debugHitCount, 0);
-    expect(cache.debugEntryCount, _environmentCases.length);
+    expect(cache.missCount, _environmentCases.length);
+    expect(cache.hitCount, 0);
+    expect(cache.entryCount, _environmentCases.length);
 
     cache.layout(_environmentRequest(_environmentCases.first));
-    expect(cache.debugMissCount, _environmentCases.length);
-    expect(cache.debugHitCount, 1);
-    expect(cache.debugEntryCount, _environmentCases.length);
+    expect(cache.missCount, _environmentCases.length);
+    expect(cache.hitCount, 1);
+    expect(cache.entryCount, _environmentCases.length);
   } finally {
     cache.dispose();
   }
 }
 
 void main() {
-  test('applies the paired crosshair axis-label layout gate', () {
+  test('reports paired crosshair axis-label layout diagnostics', () {
     final unchanged = _measurePairedScenario(_Scenario.singleAxisUnchanged);
     final changing = _measurePairedScenario(_Scenario.singleAxisChanging);
     final multiAxisUnchanged = _measurePairedScenario(
@@ -445,7 +536,9 @@ void main() {
     final changingBaseline = _medianTrialP95(changing.uncached);
     final changingCandidate = _medianTrialP95(changing.cached);
     final savedMicros = unchangedBaseline - unchangedCandidate;
-    final savedPercent = savedMicros / unchangedBaseline * 100;
+    final savedPercent = unchangedBaseline == 0
+        ? 0.0
+        : savedMicros / unchangedBaseline * 100;
     final changingRegression = changingCandidate - changingBaseline;
     final changingLimit = math.max(changingBaseline * 0.10, 50);
 
@@ -467,10 +560,10 @@ void main() {
       'changingLimit=${changingLimit.toStringAsFixed(2)} us',
     );
 
+    // Timing is diagnostic only. BC-0019's production decision is recorded
+    // from stable paired runs in the design document; CI asserts deterministic
+    // bounded-cache behavior rather than machine-sensitive thresholds.
     _verifyMultiAxisBehavior();
     _verifyEnvironmentMisses();
-    expect(savedPercent, greaterThanOrEqualTo(20));
-    expect(savedMicros, greaterThanOrEqualTo(100));
-    expect(changingRegression, lessThanOrEqualTo(changingLimit));
   });
 }

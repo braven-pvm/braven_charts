@@ -577,31 +577,9 @@ class ChartRenderBox extends RenderBox {
   /// - Styling with background, border, shadow, and opacity animation
   static const TooltipRenderer _tooltipRenderer = TooltipRenderer();
 
-  // ==========================================================================
-  // Crosshair Label Caching (Sprint 3 Optimization)
-  // ==========================================================================
-
-  /// Cached TextPainter for X coordinate label.
-  ///
-  /// Reused across frames to avoid expensive TextPainter.layout() calls.
-  /// Only re-layout when label text actually changes.
-  // TODO: Implement crosshair label caching
-  // TextPainter? _cachedXLabelPainter;
-
-  /// Cached TextPainter for Y coordinate label.
-  ///
-  /// Reused across frames to avoid expensive TextPainter.layout() calls.
-  /// Only re-layout when label text actually changes.
-  // TODO: Implement crosshair label caching
-  // TextPainter? _cachedYLabelPainter;
-
-  /// Last X label text rendered (for change detection).
-  // TODO: Implement crosshair label caching
-  // final String _lastXLabelText = '';
-
-  /// Last Y label text rendered (for change detection).
-  // TODO: Implement crosshair label caching
-  // final String _lastYLabelText = '';
+  // Crosshair axis-label layout remains intentionally uncached. BC-0019's
+  // focused benchmark did not meet the approved p95 benefit and regression
+  // gates; see the committed design evidence.
 
   // ==========================================================================
   // Zoom/Pan Constraints

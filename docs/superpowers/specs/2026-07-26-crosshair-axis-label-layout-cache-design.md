@@ -1,7 +1,7 @@
 # Crosshair Axis-Label Layout Cache
 
 **Register:** `BC-0019`
-**Status:** Reviewed and approved for measurement-gated implementation
+**Status:** Measurement complete; production cache rejected
 **Lane:** `perf/crosshair-label-cache`
 
 ## Goal
@@ -21,7 +21,41 @@ It will retain the benchmark evidence, remove the four stale caching TODOs in
 `ChartRenderBox`, document that caching is not currently justified, and close
 `BC-0019`.
 
-## Current architecture
+## Decision and recorded evidence
+
+The production optimization is rejected. Two consecutive paired runs on
+2026-07-26 reached the same decision:
+
+| Workload | Run A uncached / candidate p95 | Run B uncached / candidate p95 |
+| --- | ---: | ---: |
+| Single axis, unchanged labels | 38 / 2 us | 44 / 3 us |
+| Single axis, changing labels | 71 / 47 us | 75 / 55 us |
+| Multiple axes, unchanged labels | 95 / 5 us | 97 / 6 us |
+| Multiple axes, changing labels | 209 / 168 us | 216 / 190 us |
+| Rendering environment changes | 12 / 1 us | 14 / 1 us |
+
+The gating single-axis unchanged-label workload saved 36 us (94.74 percent)
+in Run A and 41 us (93.18 percent) in Run B. Both runs passed the 20 percent
+relative threshold but missed the required 100 us absolute saving by a wide
+margin. The changing-label workload improved by 24 us in Run A and 20 us in
+Run B, so it passed the regression guard; it does not override the failed
+absolute-benefit gate.
+
+No cache is integrated into `ChartRenderBox` or `CrosshairRenderer`. The
+prototype production file and its unit test were removed. A minimal private,
+bounded candidate remains only in the focused benchmark, which retains
+deterministic hit, miss, environment-key, capacity, eviction, and disposal
+checks. Its paired timings are printed as diagnostics without
+machine-sensitive threshold assertions, so CI does not turn this rejected
+optimization into a flaky gate.
+
+The existing uncached renderer is therefore the accepted production design.
+The four stale cache TODO blocks were replaced with one explanatory BC-0019
+comment. Re-evaluation should occur only if Flutter engine behavior or the
+crosshair label workload changes enough to make the approved absolute
+100 us/frame benefit plausible.
+
+## Production architecture
 
 `ChartRenderBox` owns each chart's mutable rendering lifecycle. It keeps one
 shared, stateless `const CrosshairRenderer` and delegates crosshair painting to
@@ -38,12 +72,16 @@ across:
 - transposed category and value labels; and
 - top, bottom, mirrored, and multi-axis layouts.
 
-Four TODO blocks in `ChartRenderBox` suggest retaining one X painter, one Y
-painter, and the last label strings. That design is incomplete: it cannot
-represent multiple Y axes, transposed labels, mirrored X axes, formatter or
-theme changes, or inherited rendering environment changes.
+Before BC-0019, four TODO blocks in `ChartRenderBox` suggested retaining one X
+painter, one Y painter, and the last label strings. That design was incomplete:
+it could not represent multiple Y axes, transposed labels, mirrored X axes,
+formatter or theme changes, or inherited rendering environment changes. The
+TODO blocks are now removed, and production label layout remains stateless.
 
-## Ownership decision
+## Evaluated candidate ownership
+
+The following candidate architecture was implemented only far enough to
+measure and reject it; it is not the production architecture.
 
 Introduce an internal, per-chart `CrosshairAxisLabelLayoutCache`.
 
@@ -106,17 +144,16 @@ axis-dependent paragraph layout, those values become mandatory key fields.
 ## Rendering environment
 
 The render-object bridge already supplies ambient text scale and text
-direction. The bridge will additionally supply the effective locale and
-device-pixel ratio needed by the compatibility contract.
+direction. A shipped candidate would additionally need the effective locale
+and device-pixel ratio required by the compatibility contract.
 
-Crosshair axis-label painters will use those effective values rather than
-silently relying on `TextPainter` defaults. This closes the current gap where
-crosshair text layout does not consume the chart's existing text-scale input.
+The candidate key included those effective values rather than silently relying
+on `TextPainter` defaults.
 
-Changes to text scale, text direction, locale, or device-pixel ratio mark the
-chart for repaint and clear the label cache defensively. Equality in the cache
-key remains the primary correctness boundary; explicit clearing prevents
-obsolete entries from consuming memory.
+Had the cache shipped, changes to text scale, text direction, locale, or
+device-pixel ratio would have marked the chart for repaint and cleared the
+label cache defensively. Key equality was the primary candidate correctness
+boundary.
 
 ## Capacity and lifecycle
 
@@ -181,7 +218,7 @@ The changing-label decision p95 must not regress by more than the greater of
 10 percent or 0.05 ms. A cache that passes the unchanged-label gate but fails
 this guard during normal cursor motion will not ship.
 
-## Correctness tests
+## Candidate correctness matrix
 
 Focused tests must prove:
 
@@ -221,7 +258,7 @@ This lane does not:
 - add a global text-layout cache; or
 - optimize unrelated series or axis painting.
 
-## Delivery sequence
+## Delivery sequence and outcome
 
 1. Add the focused benchmark and record the uncached baseline.
 2. Add the internal cache behind a benchmark/test seam, not a public API.
@@ -235,6 +272,6 @@ This lane does not:
    and the proportional package test suite.
 8. Update `BC-0019` with evidence, accepted deferrals, and residual risk.
 
-This written specification is reviewed and approved. Tasks 1–3 may proceed;
-production integration remains contingent on the unchanged-label benefit gate
-and changing-label regression guard above.
+Tasks 1–3 measured the candidate. The absolute benefit gate failed, so Task 7
+removed the production prototype and stale TODOs, retained a private
+benchmark-only comparison, and closed BC-0019 without production cache state.
