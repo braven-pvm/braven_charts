@@ -207,6 +207,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('state review exposes nested bands and interaction guidance', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: RangeAreaChartsPage())),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('range-area-preset-interactionStates')),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('range-area-chart-interactionStates')),
+    );
+    expect(chart.series, hasLength(2));
+    expect(chart.series, everyElement(isA<RangeAreaChartSeries>()));
+    expect(chart.interactionConfig!.enableSelection, isTrue);
+    expect(chart.interactionConfig!.keyboard.enabled, isTrue);
+    expect(chart.interactionConfig!.crosshair.enabled, isFalse);
+    expect(chart.interactionConfig!.tooltip.enabled, isTrue);
+    expect(chart.interactionConfig!.valueSummary.enabled, isFalse);
+    expect(
+      find.byKey(const ValueKey('range-area-interaction-guide')),
+      findsOneWidget,
+    );
+    for (final label in [
+      'Interval hover',
+      'Band hover',
+      'Keyboard focus',
+      'Selection',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('animates an atomic low-high update without changing gaps', (
     tester,
   ) async {

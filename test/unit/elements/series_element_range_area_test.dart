@@ -159,6 +159,65 @@ void main() {
     expect(_alphaAt(bytes, 50, 80), greaterThan(0));
   });
 
+  test('keyboard focus uses a dashed interval connector', () async {
+    final series = RangeAreaChartSeries(
+      id: 'range',
+      points: [
+        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+        RangeAreaDataPoint(x: 5, low: 2, high: 8),
+        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+      ],
+      fillOpacity: 0,
+      borderMode: RangeAreaBorderMode.none,
+      showBoundaryMarkers: false,
+    );
+    final focused = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        focusedPointIndices: const {1},
+      ),
+    );
+    final selected = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        selectedPointIndices: const {1},
+      ),
+    );
+
+    expect(_alphaAt(focused, 50, 32), lessThan(32));
+    expect(_alphaAt(selected, 50, 32), greaterThan(128));
+  });
+
+  test('durable selection has a wider halo than interval hover', () async {
+    final series = RangeAreaChartSeries(
+      id: 'range',
+      points: [
+        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+        RangeAreaDataPoint(x: 5, low: 2, high: 8),
+        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+      ],
+      fillOpacity: 0,
+      borderMode: RangeAreaBorderMode.none,
+      showBoundaryMarkers: false,
+    );
+    final hovered = await _paintRangeAreaHover(
+      SeriesElement(series: series, transform: transform),
+      pointIndex: 1,
+    );
+    final selected = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        selectedPointIndices: const {1},
+      ),
+    );
+
+    expect(_alphaAt(hovered, 58, 20), 0);
+    expect(_alphaAt(selected, 58, 20), greaterThan(0));
+  });
+
   test('hovered interval feedback spans both boundaries', () async {
     final element = SeriesElement(
       series: RangeAreaChartSeries(
@@ -224,6 +283,62 @@ void main() {
     expect(_alphaAt(hovered, 50, 50), greaterThan(_alphaAt(normal, 50, 50)));
   });
 
+  test('selected band keeps its selection accent while hovered', () async {
+    final series = RangeAreaChartSeries(
+      id: 'range',
+      points: [
+        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+      ],
+      color: const ui.Color(0xFF2563EB),
+      fillOpacity: 0.2,
+      borderMode: RangeAreaBorderMode.boundaries,
+    );
+    final selected = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        isSelected: true,
+        isHovered: true,
+        rangeAreaTheme: RangeAreaTheme.light.copyWith(
+          selectionColor: const ui.Color(0xFFDC2626),
+        ),
+      ),
+    );
+
+    final boundary = _rgbaAt(selected, 50, 20);
+    expect(boundary.$1, greaterThan(boundary.$3));
+  });
+
+  test('hover and selection fill emphasis remain additive', () async {
+    final series = RangeAreaChartSeries(
+      id: 'range',
+      points: [
+        RangeAreaDataPoint(x: 0, low: 2, high: 8),
+        RangeAreaDataPoint(x: 10, low: 2, high: 8),
+      ],
+      color: const ui.Color(0xFF2563EB),
+      fillOpacity: 0.2,
+      borderMode: RangeAreaBorderMode.none,
+    );
+    final selected = await _paint(
+      SeriesElement(series: series, transform: transform, isSelected: true),
+    );
+    final selectedAndHovered = await _paint(
+      SeriesElement(
+        series: series,
+        transform: transform,
+        isSelected: true,
+        isHovered: true,
+      ),
+    );
+
+    expect(
+      _alphaAt(selectedAndHovered, 50, 50),
+      greaterThan(_alphaAt(selected, 50, 50)),
+    );
+  });
+
   test('gaps remain non-interactive and preserve visible source indices', () {
     final element = SeriesElement(
       series: RangeAreaChartSeries(
@@ -287,3 +402,13 @@ Future<ByteData> _paintRangeAreaHover(
 
 int _alphaAt(ByteData bytes, int x, int y) =>
     bytes.getUint8(((y * 100) + x) * 4 + 3);
+
+(int, int, int, int) _rgbaAt(ByteData bytes, int x, int y) {
+  final offset = ((y * 100) + x) * 4;
+  return (
+    bytes.getUint8(offset),
+    bytes.getUint8(offset + 1),
+    bytes.getUint8(offset + 2),
+    bytes.getUint8(offset + 3),
+  );
+}

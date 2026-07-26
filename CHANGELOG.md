@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   locally between the price, volume, MACD, momentum, and navigator panes
   without inserting layout gaps or rebuilding the complete page.
 
+### Changed
+
+- Refined Range Area interaction feedback so transient interval and whole-band
+  hover, keyboard focus, durable point selection, and selected-band emphasis
+  remain visually distinct in nested and overlapping compositions across
+  light, dark, and high-contrast themes.
+
 ## 0.13.5 - 2026-07-24
 
 ### Added
