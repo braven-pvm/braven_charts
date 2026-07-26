@@ -19,6 +19,7 @@ enum _RangeAreaPreset {
   forecastFan,
   volatility,
   gapsAndSteps,
+  interactionStates,
 }
 
 enum _SummaryPresentation { overlay, draggableAnnotation }
@@ -238,6 +239,11 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
                   label: 'Gaps & steps',
                   icon: Icons.stacked_line_chart_outlined,
                 ),
+                _presetChip(
+                  _RangeAreaPreset.interactionStates,
+                  label: 'State review',
+                  icon: Icons.ads_click_outlined,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -276,10 +282,14 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
         ? LineInterpolation.stepped
         : LineInterpolation.monotone;
     _showObservedLine = switch (preset) {
-      _RangeAreaPreset.seasonal || _RangeAreaPreset.gapsAndSteps => false,
+      _RangeAreaPreset.seasonal ||
+      _RangeAreaPreset.gapsAndSteps ||
+      _RangeAreaPreset.interactionStates => false,
       _ => true,
     };
     _useGradient = preset != _RangeAreaPreset.gapsAndSteps;
+    _trackingEnabled = preset != _RangeAreaPreset.interactionStates;
+    _showValueSummary = preset != _RangeAreaPreset.interactionStates;
     _connectGaps = false;
     _pointCount = _baseRangePoints.length.toDouble();
     _breadthScale = 1;
@@ -313,6 +323,8 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       'A rolling price envelope uses paired boundaries and an independently tracked close line.',
     _RangeAreaPreset.gapsAndSteps =>
       'Stepped intervals preserve explicit missing windows and demonstrate optional gap connection.',
+    _RangeAreaPreset.interactionStates =>
+      'Nested bands expose interval hover, whole-band hover, keyboard focus, and durable selection as four distinct visual states.',
   };
 
   Widget _buildChartCard({required bool compact}) {
@@ -326,37 +338,49 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
           subtitle:
               '${_rangePoints.where((point) => !point.isGap).length} intervals · ${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill${_useGradient ? ' · gradient' : ''} · typed tracking',
           padding: EdgeInsets.all(compact ? 8 : 16),
-          child: BravenChartWorkbench(
-            key: const ValueKey('range-area-workbench'),
-            chartController: _chartController,
-            workbenchController: _workbenchController,
-            availableDisplayModes: const {
-              ChartDisplayMode.chart,
-              ChartDisplayMode.data,
-              ChartDisplayMode.split,
-              ChartDisplayMode.source,
-            },
-            documentOptions: ChartDocumentExtractOptions(
-              documentId: 'range-area-${_preset.name}-showcase',
-              includeViewState: true,
-              dataStorage: ChartDataStorage.inlineColumns,
-            ),
-            tableOptions: const ChartTableOptions(includeMetadata: true),
-            tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
-            sourceOptions: const ChartDartSourceOptions(
-              variableName: 'rangeAreaChart',
-            ),
-            splitBreakpoint: 760,
-            splitAxis: compact ? Axis.vertical : Axis.horizontal,
-            splitGap: 8,
-            splitRatio: compact ? .52 : .58,
-            minimumChartPaneExtent: compact ? 260 : 340,
-            minimumTablePaneExtent: compact ? 260 : 420,
-            maximumAutoTablePaneExtent: 640,
-            autoFitTablePane: true,
-            isSplitResizable: true,
-            chartBuilder: (context, controller) =>
-                _buildChart(options, controller),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_preset == _RangeAreaPreset.interactionStates) ...[
+                const _RangeAreaInteractionGuide(),
+                const SizedBox(height: 8),
+              ],
+              Expanded(
+                child: BravenChartWorkbench(
+                  key: const ValueKey('range-area-workbench'),
+                  chartController: _chartController,
+                  workbenchController: _workbenchController,
+                  availableDisplayModes: const {
+                    ChartDisplayMode.chart,
+                    ChartDisplayMode.data,
+                    ChartDisplayMode.split,
+                    ChartDisplayMode.source,
+                  },
+                  documentOptions: ChartDocumentExtractOptions(
+                    documentId: 'range-area-${_preset.name}-showcase',
+                    includeViewState: true,
+                    dataStorage: ChartDataStorage.inlineColumns,
+                  ),
+                  tableOptions: const ChartTableOptions(includeMetadata: true),
+                  tableRefreshPolicy:
+                      ChartTableRefreshPolicy.onDocumentRevision,
+                  sourceOptions: const ChartDartSourceOptions(
+                    variableName: 'rangeAreaChart',
+                  ),
+                  splitBreakpoint: 760,
+                  splitAxis: compact ? Axis.vertical : Axis.horizontal,
+                  splitGap: 8,
+                  splitRatio: compact ? .52 : .58,
+                  minimumChartPaneExtent: compact ? 260 : 340,
+                  minimumTablePaneExtent: compact ? 260 : 420,
+                  maximumAutoTablePaneExtent: 640,
+                  autoFitTablePane: true,
+                  isSplitResizable: true,
+                  chartBuilder: (context, controller) =>
+                      _buildChart(options, controller),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -445,7 +469,9 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       if (_secondaryRangePoints case final secondaryPoints?)
         buildBand(
           id: '${_preset.name}-inner-range',
-          name: '50% forecast interval',
+          name: _preset == _RangeAreaPreset.interactionStates
+              ? 'Inner target interval'
+              : '50% forecast interval',
           bandPoints: secondaryPoints,
           color: Color.lerp(baseColor, _lineColor, 0.3)!,
           opacityScale: 1.45,
@@ -834,6 +860,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => 'Nested demand forecast fan',
     _RangeAreaPreset.volatility => 'Rolling price volatility band',
     _RangeAreaPreset.gapsAndSteps => 'Service-level windows and outages',
+    _RangeAreaPreset.interactionStates => 'Nested band interaction states',
   };
 
   String get _rangeSeriesName => switch (_preset) {
@@ -843,6 +870,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => '95% forecast interval',
     _RangeAreaPreset.volatility => 'Volatility range',
     _RangeAreaPreset.gapsAndSteps => 'Service-level range',
+    _RangeAreaPreset.interactionStates => 'Outer operating interval',
   };
 
   String get _lineSeriesName => switch (_preset) {
@@ -852,13 +880,15 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => 'Forecast centre',
     _RangeAreaPreset.volatility => 'Close',
     _RangeAreaPreset.gapsAndSteps => 'Service level',
+    _RangeAreaPreset.interactionStates => 'Reference',
   };
 
   String get _unit => switch (_preset) {
     _RangeAreaPreset.temperature || _RangeAreaPreset.seasonal => '°C',
     _RangeAreaPreset.confidence ||
     _RangeAreaPreset.forecastFan ||
-    _RangeAreaPreset.gapsAndSteps => '%',
+    _RangeAreaPreset.gapsAndSteps ||
+    _RangeAreaPreset.interactionStates => '%',
     _RangeAreaPreset.volatility => 'USD',
   };
 
@@ -869,6 +899,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => 'Forecast horizon',
     _RangeAreaPreset.volatility => 'Trading session',
     _RangeAreaPreset.gapsAndSteps => 'Service window',
+    _RangeAreaPreset.interactionStates => 'Review interval',
   };
 
   String get _yAxisLabel => switch (_preset) {
@@ -878,6 +909,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => 'Demand (%)',
     _RangeAreaPreset.volatility => 'Price (USD)',
     _RangeAreaPreset.gapsAndSteps => 'Service level (%)',
+    _RangeAreaPreset.interactionStates => 'Operating range (%)',
   };
 
   Color get _presetColor => switch (_preset) {
@@ -887,6 +919,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => const Color(0xFF4F46E5),
     _RangeAreaPreset.volatility => const Color(0xFF0F766E),
     _RangeAreaPreset.gapsAndSteps => const Color(0xFF0891B2),
+    _RangeAreaPreset.interactionStates => const Color(0xFF0F766E),
   };
 
   Color get _lineColor => switch (_preset) {
@@ -896,6 +929,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => const Color(0xFFEC4899),
     _RangeAreaPreset.volatility => const Color(0xFFF97316),
     _RangeAreaPreset.gapsAndSteps => const Color(0xFF0F766E),
+    _RangeAreaPreset.interactionStates => const Color(0xFF7C3AED),
   };
 
   List<RangeAreaDataPoint> get _baseRangePoints => switch (_preset) {
@@ -905,6 +939,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     _RangeAreaPreset.forecastFan => _forecastOuterRanges,
     _RangeAreaPreset.volatility => _volatilityRanges,
     _RangeAreaPreset.gapsAndSteps => _gapsAndStepsRanges,
+    _RangeAreaPreset.interactionStates => _forecastOuterRanges,
   };
 
   List<RangeAreaDataPoint> get _rangePoints {
@@ -912,7 +947,8 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
   }
 
   List<RangeAreaDataPoint>? get _secondaryRangePoints =>
-      _preset == _RangeAreaPreset.forecastFan
+      _preset == _RangeAreaPreset.forecastFan ||
+          _preset == _RangeAreaPreset.interactionStates
       ? _transformRangePoints(_forecastInnerRanges)
       : null;
 
@@ -958,6 +994,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
             _RangeAreaPreset.volatility =>
               point.midpoint! + math.cos(point.x * 0.55) * 1.6,
             _RangeAreaPreset.gapsAndSteps => point.midpoint!,
+            _RangeAreaPreset.interactionStates => point.midpoint!,
           },
         ),
   ];
@@ -1080,6 +1117,60 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
     RangeAreaDataPoint(x: 16, low: 94, high: 99),
     RangeAreaDataPoint(x: 17, low: 97, high: 102),
   ];
+}
+
+class _RangeAreaInteractionGuide extends StatelessWidget {
+  const _RangeAreaInteractionGuide();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    const states = [
+      (Icons.mouse_outlined, 'Interval hover', 'Move across a vertical span'),
+      (Icons.layers_outlined, 'Band hover', 'Move between interval anchors'),
+      (Icons.keyboard_outlined, 'Keyboard focus', 'Tab, then use arrow keys'),
+      (Icons.touch_app_outlined, 'Selection', 'Click an interval to retain it'),
+    ];
+    return DecoratedBox(
+      key: const ValueKey('range-area-interaction-guide'),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Wrap(
+          spacing: 18,
+          runSpacing: 8,
+          children: [
+            for (final (icon, label, detail) in states)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 17, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    detail,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _RangeAreaCoverageStrip extends StatelessWidget {

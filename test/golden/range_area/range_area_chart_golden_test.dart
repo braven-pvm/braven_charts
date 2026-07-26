@@ -5,11 +5,16 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _pixelTolerance = 0.035;
 const _surfaceKey = ValueKey('range-area-golden-surface');
+const _interactionSurfaceKey = ValueKey(
+  'range-area-interaction-golden-surface',
+);
 
 void main() {
   late GoldenFileComparator previousComparator;
@@ -116,6 +121,232 @@ void main() {
 
     await _expectGolden(tester, 'goldens/range_area_compact_high_contrast.png');
   });
+
+  testWidgets('interaction hierarchy stays distinct across themes', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: _materialTheme(false),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: _interactionSurfaceKey,
+              child: SizedBox(
+                width: 960,
+                height: 690,
+                child: Column(
+                  children: [
+                    _RangeAreaInteractionMatrixRow(
+                      label: 'Light',
+                      chartTheme: ChartTheme.light,
+                    ),
+                    _RangeAreaInteractionMatrixRow(
+                      label: 'Dark',
+                      chartTheme: ChartTheme.dark,
+                    ),
+                    _RangeAreaInteractionMatrixRow(
+                      label: 'High contrast',
+                      chartTheme: ChartTheme.highContrast,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byKey(_interactionSurfaceKey),
+      matchesGoldenFile('goldens/range_area_interaction_hierarchy.png'),
+    );
+  });
+}
+
+enum _RangeAreaInteractionState {
+  intervalHover,
+  bandHover,
+  keyboardFocus,
+  durableSelection,
+}
+
+class _RangeAreaInteractionMatrixRow extends StatelessWidget {
+  const _RangeAreaInteractionMatrixRow({
+    required this.label,
+    required this.chartTheme,
+  });
+
+  final String label;
+  final ChartTheme chartTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = chartTheme.textColor;
+    return ColoredBox(
+      color: chartTheme.backgroundColor,
+      child: SizedBox(
+        height: 230,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: textColor,
+                  fontFamily: 'Ahem',
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Row(
+                  children: [
+                    for (final state in _RangeAreaInteractionState.values)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                switch (state) {
+                                  _RangeAreaInteractionState.intervalHover =>
+                                    'Interval hover',
+                                  _RangeAreaInteractionState.bandHover =>
+                                    'Band hover',
+                                  _RangeAreaInteractionState.keyboardFocus =>
+                                    'Keyboard focus',
+                                  _RangeAreaInteractionState.durableSelection =>
+                                    'Durable selection',
+                                },
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontFamily: 'Ahem',
+                                  fontSize: 9,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Expanded(
+                                child: CustomPaint(
+                                  painter: _RangeAreaInteractionMatrixPainter(
+                                    state: state,
+                                    chartTheme: chartTheme,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RangeAreaInteractionMatrixPainter extends CustomPainter {
+  const _RangeAreaInteractionMatrixPainter({
+    required this.state,
+    required this.chartTheme,
+  });
+
+  final _RangeAreaInteractionState state;
+  final ChartTheme chartTheme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final plotSize = Size(size.width - 16, size.height - 10);
+    final transform = ChartTransform(
+      dataXMin: 0,
+      dataXMax: 10,
+      dataYMin: 0,
+      dataYMax: 100,
+      plotWidth: plotSize.width,
+      plotHeight: plotSize.height,
+    );
+    final outer = SeriesElement(
+      series: RangeAreaChartSeries(
+        id: 'outer',
+        color: const Color(0xFF38BDF8),
+        fillOpacity: .16,
+        borderMode: RangeAreaBorderMode.boundaries,
+        interpolation: LineInterpolation.monotone,
+        points: _interactionIntervals(spread: 26),
+      ),
+      transform: transform,
+      rangeAreaTheme: chartTheme.rangeAreaTheme,
+    );
+    final middle = SeriesElement(
+      series: RangeAreaChartSeries(
+        id: 'middle',
+        color: const Color(0xFF14B8A6),
+        fillOpacity: .2,
+        borderMode: RangeAreaBorderMode.boundaries,
+        interpolation: LineInterpolation.monotone,
+        points: _interactionIntervals(spread: 18),
+      ),
+      transform: transform,
+      rangeAreaTheme: chartTheme.rangeAreaTheme,
+    );
+    final inner = SeriesElement(
+      series: RangeAreaChartSeries(
+        id: 'inner',
+        color: const Color(0xFF8B5CF6),
+        fillOpacity: .3,
+        borderMode: RangeAreaBorderMode.boundaries,
+        interpolation: LineInterpolation.monotone,
+        points: _interactionIntervals(spread: 10),
+      ),
+      transform: transform,
+      rangeAreaTheme: chartTheme.rangeAreaTheme,
+      isHovered: state == _RangeAreaInteractionState.bandHover,
+      focusedPointIndices: state == _RangeAreaInteractionState.keyboardFocus
+          ? const {2}
+          : const {},
+      selectedPointIndices: state == _RangeAreaInteractionState.durableSelection
+          ? const {2}
+          : const {},
+    );
+
+    canvas.save();
+    canvas.translate(8, 5);
+    outer.paint(canvas, plotSize);
+    middle.paint(canvas, plotSize);
+    inner.paint(canvas, plotSize);
+    if (state == _RangeAreaInteractionState.intervalHover) {
+      inner.paintRangeAreaInteractionOverlay(canvas, hoveredPointIndex: 2);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_RangeAreaInteractionMatrixPainter oldDelegate) =>
+      oldDelegate.state != state || oldDelegate.chartTheme != chartTheme;
+}
+
+List<RangeAreaDataPoint> _interactionIntervals({required double spread}) {
+  return [
+    for (var index = 0; index < 5; index++)
+      RangeAreaDataPoint(
+        x: index * 2.5,
+        low: 50 + math.sin(index * .9) * 10 - spread,
+        high: 50 + math.sin(index * .9) * 10 + spread,
+      ),
+  ];
 }
 
 Future<void> _pumpSurface(

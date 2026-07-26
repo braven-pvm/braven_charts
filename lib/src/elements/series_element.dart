@@ -235,6 +235,8 @@ List<_StyleRegion> _analyzeStyleRegions(
 // Series Element
 // =============================================================================
 
+enum _RangeAreaPointFeedbackKind { hover, pressed, focus, selected }
+
 /// Wraps a ChartSeries as a ChartElement for the interaction system.
 ///
 /// **Purpose**: Bridge ChartSeries data model to ChartElement interface so
@@ -2896,11 +2898,11 @@ class SeriesElement implements DataHitElement {
     canvas.save();
     canvas.clipRect(plotBounds);
 
-    final interactionFillBoost = isHovered
-        ? 0.12
-        : isSelected
-        ? 0.08
-        : 0.0;
+    // Hover is transient and selection is durable. Their fill contributions
+    // are additive so a selected band does not lose its persistent treatment
+    // when the pointer enters it.
+    final interactionFillBoost =
+        (isHovered ? 0.08 : 0.0) + (isSelected ? 0.05 : 0.0);
     final fillPaint = _rangeAreaFillPaint(
       rangeSeries,
       baseColor,
@@ -2936,6 +2938,11 @@ class SeriesElement implements DataHitElement {
             fallbackColor: baseColor.withValues(alpha: 0.72),
           );
         }
+      }
+    }
+    if (isSelected) {
+      for (final run in runs) {
+        _paintRangeAreaSelectionAccent(canvas, run);
       }
     }
 
@@ -3215,7 +3222,12 @@ class SeriesElement implements DataHitElement {
 
   void _paintLinkedRangeArea(Canvas canvas) {
     _resolveRangeAreaGeometry();
-    void paintPoints(Set<int> indices, Color color, double radius) {
+    void paintPoints(
+      Iterable<int> indices,
+      Color color,
+      double radius,
+      _RangeAreaPointFeedbackKind kind,
+    ) {
       for (final index in indices) {
         final point = _rangeAreaPointBySourceIndex[index];
         if (point == null) continue;
@@ -3224,8 +3236,7 @@ class SeriesElement implements DataHitElement {
           point: point,
           color: color,
           radius: radius,
-          connectorOpacity: 0.58,
-          strokeWidth: 2.5,
+          kind: kind,
         );
       }
     }
@@ -3234,11 +3245,13 @@ class SeriesElement implements DataHitElement {
       focusedPointIndices,
       pointFocusColor ?? rangeAreaTheme.focusColor,
       5,
+      _RangeAreaPointFeedbackKind.focus,
     );
     paintPoints(
-      selectedPointIndices,
+      _selectedPointIndicesForPaint(),
       pointSelectionColor ?? rangeAreaTheme.selectionColor,
-      6,
+      6.5,
+      _RangeAreaPointFeedbackKind.selected,
     );
   }
 
@@ -3247,9 +3260,20 @@ class SeriesElement implements DataHitElement {
     required RangeAreaScreenPoint point,
     required Color color,
     required double radius,
-    required double connectorOpacity,
-    required double strokeWidth,
+    required _RangeAreaPointFeedbackKind kind,
   }) {
+    final connectorOpacity = switch (kind) {
+      _RangeAreaPointFeedbackKind.hover => 0.46,
+      _RangeAreaPointFeedbackKind.pressed => 0.72,
+      _RangeAreaPointFeedbackKind.focus => 0.86,
+      _RangeAreaPointFeedbackKind.selected => 0.76,
+    };
+    final strokeWidth = switch (kind) {
+      _RangeAreaPointFeedbackKind.hover => 1.75,
+      _RangeAreaPointFeedbackKind.pressed => 2.75,
+      _RangeAreaPointFeedbackKind.focus => 2.25,
+      _RangeAreaPointFeedbackKind.selected => 3.0,
+    };
     final fill = Paint()
       ..color = rangeAreaTheme.markerFillColor
       ..style = PaintingStyle.fill;
@@ -3260,14 +3284,53 @@ class SeriesElement implements DataHitElement {
     final connector = Paint()
       ..color = color.withValues(alpha: connectorOpacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(2.5, radius * 0.52)
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
+    final connectorPath = Path()
+      ..moveTo(point.upper.dx, point.upper.dy)
+      ..lineTo(point.lower.dx, point.lower.dy);
+    final effectiveConnectorPath = kind == _RangeAreaPointFeedbackKind.focus
+        ? createDashedPath(connectorPath, const [4, 3])
+        : connectorPath;
+    if (kind == _RangeAreaPointFeedbackKind.selected ||
+        kind == _RangeAreaPointFeedbackKind.pressed) {
+      final haloRadius =
+          radius + (kind == _RangeAreaPointFeedbackKind.pressed ? 3.5 : 2.5);
+      final halo = Paint()
+        ..color = color.withValues(
+          alpha: kind == _RangeAreaPointFeedbackKind.pressed ? 0.2 : 0.14,
+        )
+        ..style = PaintingStyle.fill;
+      canvas
+        ..drawCircle(point.upper, haloRadius, halo)
+        ..drawCircle(point.lower, haloRadius, halo);
+    }
     canvas
-      ..drawLine(point.upper, point.lower, connector)
+      ..drawPath(effectiveConnectorPath, connector)
       ..drawCircle(point.upper, radius, fill)
       ..drawCircle(point.upper, radius, stroke)
       ..drawCircle(point.lower, radius, fill)
       ..drawCircle(point.lower, radius, stroke);
+    if (kind == _RangeAreaPointFeedbackKind.selected) {
+      final core = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+      canvas
+        ..drawCircle(point.upper, 2, core)
+        ..drawCircle(point.lower, 2, core);
+    }
+  }
+
+  void _paintRangeAreaSelectionAccent(Canvas canvas, RangeAreaGeometryRun run) {
+    final accent = Paint()
+      ..color = rangeAreaTheme.selectionColor.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.25, rangeAreaTheme.boundaryWidth * 0.7)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas
+      ..drawPath(run.upperPath, accent)
+      ..drawPath(run.lowerPath, accent);
   }
 
   void _paintLinkedScatter(Canvas canvas) {
@@ -3832,8 +3895,9 @@ class SeriesElement implements DataHitElement {
       point: point,
       color: color,
       radius: radius,
-      connectorOpacity: pressed ? 0.68 : 0.5,
-      strokeWidth: pressed ? 2.5 : 2,
+      kind: pressed
+          ? _RangeAreaPointFeedbackKind.pressed
+          : _RangeAreaPointFeedbackKind.hover,
     );
   }
 
