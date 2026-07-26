@@ -1227,13 +1227,20 @@ For manager-backed setters, use this shape rather than clearing unconditionally:
 void setNormalizationMode(NormalizationMode? mode) {
   if (_multiAxisManager.setNormalizationMode(mode)) {
     _crosshairAxisLabelLayoutCache.clear();
+    _seriesCacheManager.invalidate();
+    _invalidateTrackingResolution();
     markNeedsLayout();
+    markNeedsPaint();
   }
 }
 ```
 
 Apply the same changed-branch placement to `setSeries`, `setMaxAxesPerSide`,
-and `setAxisSwapMode`.
+and `setAxisSwapMode`. Preserve every pre-existing side effect in those
+setters—including series-cache invalidation, tracking-resolution invalidation,
+layout, and paint scheduling where currently present—and add only
+`_crosshairAxisLabelLayoutCache.clear()` to their existing changed-value
+branches.
 
 This Task 4 bridge intentionally uses `locale: null` and DPR `1`; Task 5
 upgrades those defaults to inherited values. Task 4 must compile and pass on
