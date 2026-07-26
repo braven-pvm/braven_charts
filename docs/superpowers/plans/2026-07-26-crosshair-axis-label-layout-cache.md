@@ -887,49 +887,58 @@ and DPR each produce a miss despite identical text/style.
 
 - [ ] **Step 5: Calculate and print the exact decision**
 
-In the decision test, measure all workloads, print every trial's median and
-p95, and apply thresholds only to the single-axis pair:
+Replace Task 1's baseline-only `main()` with this named decision test. It
+measures all workloads, prints every trial's median and p95, and applies
+thresholds only to the single-axis pair:
 
 ```dart
-final unchanged = _measurePairedScenario(_Scenario.singleAxisUnchanged);
-final changing = _measurePairedScenario(_Scenario.singleAxisChanging);
-final multiAxisUnchanged = _measurePairedScenario(
-  _Scenario.multiAxisUnchanged,
-);
-final multiAxisChanging = _measurePairedScenario(_Scenario.multiAxisChanging);
-final environment = _measurePairedEnvironment();
+void main() {
+  test('applies the paired crosshair axis-label layout gate', () {
+    final unchanged = _measurePairedScenario(
+      _Scenario.singleAxisUnchanged,
+    );
+    final changing = _measurePairedScenario(_Scenario.singleAxisChanging);
+    final multiAxisUnchanged = _measurePairedScenario(
+      _Scenario.multiAxisUnchanged,
+    );
+    final multiAxisChanging = _measurePairedScenario(
+      _Scenario.multiAxisChanging,
+    );
+    final environment = _measurePairedEnvironment();
 
-final unchangedBaseline = _medianTrialP95(unchanged.uncached);
-final unchangedCandidate = _medianTrialP95(unchanged.cached);
-final changingBaseline = _medianTrialP95(changing.uncached);
-final changingCandidate = _medianTrialP95(changing.cached);
-final savedMicros = unchangedBaseline - unchangedCandidate;
-final savedPercent = savedMicros / unchangedBaseline * 100;
-final changingRegression = changingCandidate - changingBaseline;
-final changingLimit = math.max(changingBaseline * 0.10, 50);
+    final unchangedBaseline = _medianTrialP95(unchanged.uncached);
+    final unchangedCandidate = _medianTrialP95(unchanged.cached);
+    final changingBaseline = _medianTrialP95(changing.uncached);
+    final changingCandidate = _medianTrialP95(changing.cached);
+    final savedMicros = unchangedBaseline - unchangedCandidate;
+    final savedPercent = savedMicros / unchangedBaseline * 100;
+    final changingRegression = changingCandidate - changingBaseline;
+    final changingLimit = math.max(changingBaseline * 0.10, 50);
 
-// ignore: avoid_print
-print(_formatPaired('singleAxisUnchanged', unchanged));
-// ignore: avoid_print
-print(_formatPaired('singleAxisChanging', changing));
-// ignore: avoid_print
-print(_formatPaired('multiAxisUnchanged', multiAxisUnchanged));
-// ignore: avoid_print
-print(_formatPaired('multiAxisChanging', multiAxisChanging));
-// ignore: avoid_print
-print(_formatPaired('environmentChanging', environment));
-// ignore: avoid_print
-print(
-  'gate: saved=$savedMicros us ($savedPercent%); '
-  'changingRegression=$changingRegression us; '
-  'changingLimit=$changingLimit us',
-);
+    // ignore: avoid_print
+    print(_formatPaired('singleAxisUnchanged', unchanged));
+    // ignore: avoid_print
+    print(_formatPaired('singleAxisChanging', changing));
+    // ignore: avoid_print
+    print(_formatPaired('multiAxisUnchanged', multiAxisUnchanged));
+    // ignore: avoid_print
+    print(_formatPaired('multiAxisChanging', multiAxisChanging));
+    // ignore: avoid_print
+    print(_formatPaired('environmentChanging', environment));
+    // ignore: avoid_print
+    print(
+      'gate: saved=$savedMicros us ($savedPercent%); '
+      'changingRegression=$changingRegression us; '
+      'changingLimit=$changingLimit us',
+    );
 
-_verifyMultiAxisBehavior();
-_verifyEnvironmentMisses();
-expect(savedPercent, greaterThanOrEqualTo(20));
-expect(savedMicros, greaterThanOrEqualTo(100));
-expect(changingRegression, lessThanOrEqualTo(changingLimit));
+    _verifyMultiAxisBehavior();
+    _verifyEnvironmentMisses();
+    expect(savedPercent, greaterThanOrEqualTo(20));
+    expect(savedMicros, greaterThanOrEqualTo(100));
+    expect(changingRegression, lessThanOrEqualTo(changingLimit));
+  });
+}
 ```
 
 `_measurePairedEnvironment` must return `_PairedTrials`, so the same
@@ -970,6 +979,7 @@ git commit -m "test: gate crosshair label layout caching"
 
 **Files:**
 - Modify: `lib/src/rendering/modules/crosshair_renderer.dart`
+- Modify: `lib/src/rendering/chart_render_box.dart`
 - Modify:
   `test/unit/rendering/modules/crosshair_renderer_test.dart`
 - Modify:
@@ -1163,26 +1173,94 @@ placement and live colors are resolved. Use stable roles `x`, `range-upper`,
 `range-lower`, `transposed-x`, and `y`; put the series ID for range labels or
 Y-axis ID for Y labels in `axisId`.
 
-- [ ] **Step 5: Run focused renderer tests**
+- [ ] **Step 5: Wire the minimum compilable per-chart caller**
+
+Import the cache module in `chart_render_box.dart`, replace the four stale
+cache-comment blocks with this owned field, and add an initial environment
+derived entirely from values already present on `ChartRenderBox`:
+
+```dart
+/// Per-chart crosshair axis-label paragraph cache.
+///
+/// The render box owns lifecycle/invalidation; the stateless renderer owns
+/// formatting, lookup, live placement, and painting.
+final CrosshairAxisLabelLayoutCache _crosshairAxisLabelLayoutCache =
+    CrosshairAxisLabelLayoutCache();
+
+CrosshairAxisLabelLayoutEnvironment
+get _crosshairAxisLabelLayoutEnvironment =>
+    CrosshairAxisLabelLayoutEnvironment(
+      textDirection: _textDirection,
+      textScaler: TextScaler.linear(_textScaleFactor),
+      locale: null,
+      devicePixelRatio: 1,
+    );
+```
+
+Pass the required arguments at the existing `_crosshairRenderer.paint` call:
+
+```dart
+axisLabelLayoutCache: _crosshairAxisLabelLayoutCache,
+axisLabelLayoutEnvironment: _crosshairAxisLabelLayoutEnvironment,
+```
+
+Clear the owned cache when existing setters change paragraph inputs or
+effective axes. Preserve each setter's existing equality/change predicate and
+call `_crosshairAxisLabelLayoutCache.clear()` only inside the branch where the
+value actually changed:
+
+- `setTheme`;
+- `setTextScaleFactor` and `setTextDirection`;
+- `setXAxis` and `setXAxisConfig`;
+- `setYAxis` and `setPrimaryYAxisConfig`;
+- `setNormalizationMode`, `setSeries`, `setMaxAxesPerSide`, and
+  `setAxisSwapMode`.
+
+Keep formatter output as the primary key boundary; these structural clears
+remove predictably obsolete entries. Add
+`_crosshairAxisLabelLayoutCache.dispose()` exactly once in
+`ChartRenderBox.dispose()`.
+
+For manager-backed setters, use this shape rather than clearing unconditionally:
+
+```dart
+void setNormalizationMode(NormalizationMode? mode) {
+  if (_multiAxisManager.setNormalizationMode(mode)) {
+    _crosshairAxisLabelLayoutCache.clear();
+    markNeedsLayout();
+  }
+}
+```
+
+Apply the same changed-branch placement to `setSeries`, `setMaxAxesPerSide`,
+and `setAxisSwapMode`.
+
+This Task 4 bridge intentionally uses `locale: null` and DPR `1`; Task 5
+upgrades those defaults to inherited values. Task 4 must compile and pass on
+its own.
+
+- [ ] **Step 6: Run focused renderer tests and the product analyzer**
 
 Run:
 
 ```powershell
-dart format lib/src/rendering/modules/crosshair_renderer.dart test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
+dart format lib/src/rendering/modules/crosshair_renderer.dart lib/src/rendering/chart_render_box.dart test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
 flutter test test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
+flutter analyze --no-pub lib
 ```
 
 Expected: all renderer tests pass. Every matrix test observes the specified
-hit/miss delta and changed live text, color, or placement.
+hit/miss delta and changed live text, color, or placement. Analysis reports no
+issues, proving the production caller supplies every newly required argument.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit the compilable renderer integration**
 
 ```powershell
-git add lib/src/rendering/modules/crosshair_renderer.dart test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
+git add lib/src/rendering/modules/crosshair_renderer.dart lib/src/rendering/chart_render_box.dart test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
 git commit -m "perf: reuse crosshair axis label layouts"
 ```
 
-### Task 5: Wire per-chart environment, invalidation, and disposal
+### Task 5: Upgrade the cache to the inherited rendering environment
 
 **Files:**
 - Modify: `lib/src/braven_chart_plus.dart`
@@ -1248,9 +1326,14 @@ await pumpChart(
 );
 var renderBox = tester.renderObject<ChartRenderBox>(_chartRenderFinder());
 final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-await mouse.addPointer(
-  location: tester.getCenter(_chartRenderFinder()),
-);
+var mouseActive = false;
+addTearDown(() async {
+  if (mouseActive) await mouse.removePointer();
+});
+await mouse.addPointer(location: Offset.zero);
+mouseActive = true;
+final chartCenter = tester.getCenter(_chartRenderFinder());
+await mouse.moveTo(chartCenter);
 await tester.pump();
 
 expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, greaterThan(0));
@@ -1267,6 +1350,7 @@ immediately rebuild entries:
 
 ```dart
 await mouse.removePointer();
+mouseActive = false;
 await tester.pump();
 
 await pumpChart(
@@ -1286,9 +1370,13 @@ expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, 0);
 final reenteredMouse = await tester.createGesture(
   kind: PointerDeviceKind.mouse,
 );
-await reenteredMouse.addPointer(
-  location: tester.getCenter(_chartRenderFinder()),
-);
+var reenteredMouseActive = false;
+addTearDown(() async {
+  if (reenteredMouseActive) await reenteredMouse.removePointer();
+});
+await reenteredMouse.addPointer(location: Offset.zero);
+reenteredMouseActive = true;
+await reenteredMouse.moveTo(tester.getCenter(_chartRenderFinder()));
 await tester.pump();
 expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, greaterThan(0));
 expect(
@@ -1296,6 +1384,7 @@ expect(
   greaterThan(missesBeforeEnvironmentChange),
 );
 await reenteredMouse.removePointer();
+reenteredMouseActive = false;
 ```
 
 The stable clearing assertion is made only while no cursor is active. The
@@ -1339,13 +1428,13 @@ assignment. Pass `textScaler`, `locale`, and `devicePixelRatio` into
 `_ChartRenderWidget`; add matching fields, constructor arguments, creation
 arguments, and update setters.
 
-- [ ] **Step 4: Own and invalidate the cache in `ChartRenderBox`**
+- [ ] **Step 4: Upgrade the already-wired render-box environment**
 
-Add:
+Keep the cache ownership, renderer call, structural invalidation, disposal, and
+current ownership comment added in Task 4. Do not add a second cache or a second
+dispose call. Add only the inherited environment state:
 
 ```dart
-final CrosshairAxisLabelLayoutCache _crosshairAxisLabelLayoutCache =
-    CrosshairAxisLabelLayoutCache();
 TextScaler _textScaler = TextScaler.noScaling;
 Locale? _locale;
 double _devicePixelRatio = 1;
@@ -1378,24 +1467,22 @@ void setDevicePixelRatio(double value) {
 }
 ```
 
-Clear the cache in existing setters for theme, text direction, X-axis config,
-legacy X axis, primary Y-axis config, legacy Y axis, normalization mode,
-effective series, maximum axes per side, and axis swap mode.
-
-Pass the owned cache and this live environment into `_crosshairRenderer.paint`:
+Replace Task 4's temporary environment getter body with inherited values. The
+existing `_crosshairRenderer.paint` call continues to consume this getter; do
+not rewire the caller:
 
 ```dart
-axisLabelLayoutCache: _crosshairAxisLabelLayoutCache,
-axisLabelLayoutEnvironment: CrosshairAxisLabelLayoutEnvironment(
-  textDirection: _textDirection,
-  locale: _locale,
-  textScaler: _textScaler,
-  devicePixelRatio: _devicePixelRatio,
-),
+CrosshairAxisLabelLayoutEnvironment
+get _crosshairAxisLabelLayoutEnvironment =>
+    CrosshairAxisLabelLayoutEnvironment(
+      textDirection: _textDirection,
+      locale: _locale,
+      textScaler: _textScaler,
+      devicePixelRatio: _devicePixelRatio,
+    );
 ```
 
-Expose these exact `@visibleForTesting` read-only debug getters and dispose the
-cache once in `ChartRenderBox.dispose()`:
+Expose these exact `@visibleForTesting` read-only debug getters:
 
 ```dart
 int get debugCrosshairAxisLabelCacheEntryCount =>
@@ -1412,8 +1499,11 @@ Locale? get debugCrosshairLocale => _locale;
 double get debugCrosshairDevicePixelRatio => _devicePixelRatio;
 ```
 
-Replace the four stale cache-comment blocks near the render-box tracking state
-with one current ownership comment on `_crosshairAxisLabelLayoutCache`.
+In `_ChartRenderWidget.createRenderObject` and `updateRenderObject`, supply
+both the existing scalar (`textScaleFactor: textScaler.scale(1)`) and the new
+`textScaler`, `locale`, and `devicePixelRatio` values. The scalar remains for
+existing tooltip behavior; the full scaler drives the already-wired crosshair
+environment.
 
 - [ ] **Step 5: Run widget and focused renderer tests**
 
@@ -1423,10 +1513,11 @@ Run:
 dart format lib/src/braven_chart_plus.dart lib/src/rendering/chart_render_box.dart test/widgets/braven_chart_plus_interaction_test.dart
 flutter test test/widgets/braven_chart_plus_interaction_test.dart --plain-name "crosshair label cache follows inherited rendering environment"
 flutter test test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
+flutter analyze --no-pub lib
 ```
 
 Expected: all commands pass; the cache clears on inherited-environment change
-and repopulates on the next crosshair paint.
+and repopulates on the next crosshair paint, and analysis reports no issues.
 
 - [ ] **Step 6: Commit**
 
