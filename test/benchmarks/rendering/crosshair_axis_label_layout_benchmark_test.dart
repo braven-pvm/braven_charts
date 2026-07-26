@@ -466,7 +466,7 @@ _PairedTrials _measurePairedEnvironment() {
 }
 
 void _verifyMultiAxisBehavior() {
-  final cache = _BoundedCandidateCache();
+  final cache = _BoundedCandidateCache(capacity: 16);
   try {
     final unchanged = _labelsForFrame(_Scenario.multiAxisUnchanged, 0);
     expect(unchanged, hasLength(7));
@@ -498,6 +498,8 @@ void _verifyMultiAxisBehavior() {
   } finally {
     cache.dispose();
   }
+  expect(cache.entryCount, 0);
+  expect(cache.disposedPainterCount, 35);
 }
 
 void _verifyEnvironmentMisses() {
@@ -517,6 +519,8 @@ void _verifyEnvironmentMisses() {
   } finally {
     cache.dispose();
   }
+  expect(cache.entryCount, 0);
+  expect(cache.disposedPainterCount, _environmentCases.length);
 }
 
 void main() {
