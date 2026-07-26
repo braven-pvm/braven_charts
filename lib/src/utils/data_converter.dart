@@ -5,10 +5,12 @@ import 'dart:math' as math;
 
 import 'dart:ui' show TextDirection;
 
+import '../axis/log_ticks.dart';
 import '../coordinates/chart_transform.dart';
 import '../artifacts/chart_view_state.dart';
 import '../elements/series_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../models/axis_scale_type.dart';
 import '../models/bar_group_info.dart';
 import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
@@ -137,8 +139,19 @@ class DataConverter {
   /// For bar charts, adds extra X padding to ensure edge bars aren't clipped.
   /// The padding is based on the average spacing between data points (bar width).
   ///
+  /// **Log axes**: pass [xScaleType]/[yScaleType] == [AxisScaleType.log] (with
+  /// the matching [xLogBase]/[yLogBase]) so that axis is padded in log-space and
+  /// its domain stays strictly positive. Callers that omit these keep the
+  /// original linear 5% padding, byte-identical.
+  ///
   /// **Returns**: DataBounds with xMin, xMax, yMin, yMax
-  static DataBounds computeDataBounds(List<ChartSeries> series) {
+  static DataBounds computeDataBounds(
+    List<ChartSeries> series, {
+    AxisScaleType xScaleType = AxisScaleType.linear,
+    double xLogBase = 10,
+    AxisScaleType yScaleType = AxisScaleType.linear,
+    double yLogBase = 10,
+  }) {
     if (series.isEmpty || series.every((s) => s.isEmpty)) {
       return const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
     }
@@ -289,11 +302,52 @@ class DataConverter {
       }
     }
 
+    // Linear padding (byte-identical to the original behavior). A log axis
+    // overrides its own bound below with log-space padding so the domain stays
+    // strictly positive; a linear axis is untouched.
+    var paddedXMin = xMin - xPadding;
+    var paddedXMax = xMax + xPadding;
+    var paddedYMin = yMin - yPadding;
+    var paddedYMax = yMax + yPadding;
+
+    if (xScaleType == AxisScaleType.log) {
+      final padded = _paddedLogBounds(xMin, xMax, xLogBase);
+      paddedXMin = padded.$1;
+      paddedXMax = padded.$2;
+    }
+    if (yScaleType == AxisScaleType.log) {
+      final padded = _paddedLogBounds(yMin, yMax, yLogBase);
+      paddedYMin = padded.$1;
+      paddedYMax = padded.$2;
+    }
+
     return DataBounds(
-      xMin: xMin - xPadding,
-      xMax: xMax + xPadding,
-      yMin: yMin - yPadding,
-      yMax: yMax + yPadding,
+      xMin: paddedXMin,
+      xMax: paddedXMax,
+      yMin: paddedYMin,
+      yMax: paddedYMax,
+    );
+  }
+
+  /// Positive floor for a log axis whose data extent is <= 0, non-finite, or
+  /// degenerate; keeps [logValue] finite. Mirrors the multi-axis manager's
+  /// log-space padding so the primary and multi-axis paths stay consistent.
+  static const double _minimumPositiveLogFloor = 1e-6;
+
+  /// Log-space `(min, max)` padding for an [AxisScaleType.log] axis: pads by
+  /// five percent of the log span so the domain stays strictly positive (a
+  /// linear pad could push the min <= 0), flooring a non-positive/degenerate
+  /// extent to a small positive value with a one-decade span.
+  static (double, double) _paddedLogBounds(double min, double max, double base) {
+    final safeBase = base > 1 ? base : 10.0;
+    final lo = (min.isFinite && min > 0) ? min : _minimumPositiveLogFloor;
+    final hi = (max.isFinite && max > lo) ? max : lo * safeBase;
+    final logLo = logValue(lo, safeBase);
+    final logHi = logValue(hi, safeBase);
+    final logPad = (logHi - logLo) * 0.05;
+    return (
+      logInverse(logLo - logPad, safeBase),
+      logInverse(logHi + logPad, safeBase),
     );
   }
 

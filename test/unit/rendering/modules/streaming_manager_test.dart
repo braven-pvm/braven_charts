@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/models/axis_scale_type.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/rendering/modules/streaming_manager.dart';
@@ -321,6 +322,39 @@ void main() {
         // Transform should be reset to initial 0-1 state
         expect(delegate.transform!.dataXMin, equals(0));
         expect(delegate.transform!.dataXMax, equals(1));
+      });
+
+      test('reset transform preserves the axis scale type and log base', () {
+        // A log-Y streaming chart that is cleared and re-streamed must keep its
+        // log positioning. Every subsequent streaming update rebuilds the
+        // viewport with `transform.copyWith(...)`, inheriting the scale type
+        // FROM this reset transform — so if the reset drops it, the re-streamed
+        // chart silently reverts to linear forever.
+        final delegate = MockStreamingDelegate(
+          transform: const ChartTransform(
+            dataXMin: 0,
+            dataXMax: 100,
+            dataYMin: 1,
+            dataYMax: 1000,
+            plotWidth: 800,
+            plotHeight: 600,
+            yScaleType: AxisScaleType.log,
+            yLogBase: 2,
+          ),
+          originalTransform: createTransform(),
+        );
+        final manager = StreamingManager(delegate: delegate);
+
+        final buffer = createBuffer([(0, 10), (100, 500)]);
+        manager.setStreamingData(seriesId: 'test', buffer: buffer);
+
+        manager.clearStreamingData('test');
+
+        expect(delegate.transform!.dataXMin, equals(0));
+        expect(delegate.transform!.dataXMax, equals(1));
+        expect(delegate.transform!.yScaleType, AxisScaleType.log);
+        expect(delegate.transform!.yLogBase, 2);
+        expect(delegate.transform!.xScaleType, AxisScaleType.linear);
       });
     });
 

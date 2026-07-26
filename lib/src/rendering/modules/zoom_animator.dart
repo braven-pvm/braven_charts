@@ -157,20 +157,20 @@ class ZoomAnimator {
   /// Interpolates between two transforms.
   ///
   /// Linearly interpolates all data bounds to create smooth zoom transition.
+  /// Built from [to] via `copyWith` so the target's plot dims, invertY,
+  /// transposed AND per-axis scale fields (scaleType/logBase) carry through
+  /// every animation frame — otherwise a log/time chart would revert to linear
+  /// positioning mid-zoom. Only the four data bounds are overridden.
   ChartTransform _interpolateTransform(
     ChartTransform from,
     ChartTransform to,
     double t,
   ) {
-    return ChartTransform(
+    return to.copyWith(
       dataXMin: _lerp(from.dataXMin, to.dataXMin, t),
       dataXMax: _lerp(from.dataXMax, to.dataXMax, t),
       dataYMin: _lerp(from.dataYMin, to.dataYMin, t),
       dataYMax: _lerp(from.dataYMax, to.dataYMax, t),
-      plotWidth: to.plotWidth,
-      plotHeight: to.plotHeight,
-      invertY: to.invertY,
-      transposed: to.transposed,
     );
   }
 

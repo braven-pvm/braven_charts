@@ -5,9 +5,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import '../../axis/log_ticks.dart';
 import '../../axis/normalization_detector.dart';
 import '../../coordinates/chart_transform.dart';
 import '../../layout/multi_axis_layout.dart';
+import '../../models/axis_scale_type.dart';
 import '../../models/axis_swap_mode.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/chart_series.dart';
@@ -49,6 +51,10 @@ class MultiAxisManager {
   MultiAxisManager();
 
   static const double _minimumDegenerateHalfSpan = 0.5;
+
+  /// Positive floor for a log axis whose data min is <= 0, non-finite, or only
+  /// derived from the no-data `0.0` fallback. Keeps [logValue] finite.
+  static const double _minimumPositiveLogFloor = 1e-6;
 
   // ============================================================================
   // State
@@ -679,11 +685,21 @@ class MultiAxisManager {
         final fullMin = axis.min!;
         final fullMax = axis.max!;
 
-        // Add 5% padding buffer even for explicit bounds
-        final explicitRange = fullMax - fullMin;
-        final explicitPadding = explicitRange * 0.05;
-        final explicitPaddedMin = fullMin - explicitPadding;
-        final explicitPaddedMax = fullMax + explicitPadding;
+        // Add padding buffer even for explicit bounds. A log axis pads in
+        // log-space so the domain stays strictly positive; the linear arm is
+        // the original 5% padding verbatim.
+        final double explicitPaddedMin;
+        final double explicitPaddedMax;
+        if (axis.scaleType == AxisScaleType.log) {
+          final padded = _paddedLogDataRange(fullMin, fullMax, axis.logBase);
+          explicitPaddedMin = padded.min;
+          explicitPaddedMax = padded.max;
+        } else {
+          final explicitRange = fullMax - fullMin;
+          final explicitPadding = explicitRange * 0.05;
+          explicitPaddedMin = fullMin - explicitPadding;
+          explicitPaddedMax = fullMax + explicitPadding;
+        }
 
         if (usePaintingBounds) {
           // Transform explicit bounds based on viewport (zoom/pan)
@@ -810,7 +826,12 @@ class MultiAxisManager {
 
       // Add 5% padding buffer to prevent data points from being cut off at edges
       // This matches the padding used in DataConverter.computeBounds()
-      final paddedRange = _paddedDataRange(fullMin, fullMax);
+      final paddedRange = _paddedDataRange(
+        fullMin,
+        fullMax,
+        scaleType: axis.scaleType,
+        logBase: axis.logBase,
+      );
       final paddedMin = paddedRange.min;
       final paddedMax = paddedRange.max;
 
@@ -840,7 +861,19 @@ class MultiAxisManager {
   /// absolute floor gives zero and near-zero constants a stable finite range.
   /// Explicit axis limits do not use this fallback and remain governed by
   /// [YAxisConfig]'s `min < max` validation contract.
-  DataRange _paddedDataRange(double min, double max) {
+  ///
+  /// A log axis ([scaleType] == [AxisScaleType.log]) pads in log-space via
+  /// [_paddedLogDataRange] so the domain stays strictly positive; the
+  /// [AxisScaleType.linear] arm below is the original expression verbatim.
+  DataRange _paddedDataRange(
+    double min,
+    double max, {
+    AxisScaleType scaleType = AxisScaleType.linear,
+    double logBase = 10,
+  }) {
+    if (scaleType == AxisScaleType.log) {
+      return _paddedLogDataRange(min, max, logBase);
+    }
     if (min == max && min.isFinite) {
       final relativeHalfSpan = min.abs() * 0.05;
       final halfSpan = relativeHalfSpan > _minimumDegenerateHalfSpan
@@ -862,6 +895,27 @@ class MultiAxisManager {
     final range = max - min;
     final paddingAmount = range * 0.05;
     return DataRange(min: min - paddingAmount, max: max + paddingAmount);
+  }
+
+  /// Log-space equivalent of [_paddedDataRange] for [AxisScaleType.log] axes.
+  ///
+  /// Pads by five percent of the *log* span so the returned domain stays
+  /// strictly positive — a linear 5% pad could push the min to zero or below,
+  /// where [logValue] is undefined. A non-positive, non-finite, or degenerate
+  /// data min (e.g. from the `0.0` no-data fallback) is floored to a small
+  /// positive value and given a one-decade span so log math stays finite.
+  DataRange _paddedLogDataRange(double min, double max, double base) {
+    final safeBase = base > 1 ? base : 10.0;
+    final lo = (min.isFinite && min > 0) ? min : _minimumPositiveLogFloor;
+    final hi = (max.isFinite && max > lo) ? max : lo * safeBase;
+
+    final logLo = logValue(lo, safeBase);
+    final logHi = logValue(hi, safeBase);
+    final logPad = (logHi - logLo) * 0.05;
+    return DataRange(
+      min: logInverse(logLo - logPad, safeBase),
+      max: logInverse(logHi + logPad, safeBase),
+    );
   }
 
   /// Computes rendered Y-axis bounds for each series by series ID.

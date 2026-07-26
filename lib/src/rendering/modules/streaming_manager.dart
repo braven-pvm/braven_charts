@@ -204,28 +204,17 @@ class StreamingManager {
     if (originalTransform != null && buffer.isNotEmpty) {
       final yPadding = (yMax - yMin) * 0.05;
 
-      // DEFENSIVE: If existing transform has invalid bounds, recreate it entirely
-      if (originalTransform.dataXMax <= originalTransform.dataXMin ||
-          originalTransform.dataYMax <= originalTransform.dataYMin) {
-        _delegate.originalTransform = ChartTransform(
-          dataXMin: xMin,
-          dataXMax: xMax,
-          dataYMin: yMin - yPadding,
-          dataYMax: yMax + yPadding,
-          plotWidth: originalTransform.plotWidth,
-          plotHeight: originalTransform.plotHeight,
-          invertY: originalTransform.invertY,
-          transposed: originalTransform.transposed,
-        );
-      } else {
-        // Expand original transform to encompass full streaming data range
-        _delegate.originalTransform = originalTransform.copyWith(
-          dataXMin: xMin,
-          dataXMax: xMax,
-          dataYMin: yMin - yPadding,
-          dataYMax: yMax + yPadding,
-        );
-      }
+      // Expand original transform to encompass full streaming data range.
+      // copyWith replaces all four bounds with the freshly-computed valid
+      // values (so it also repairs a previously invalid transform, satisfying
+      // the constructor's dataXMax > dataXMin / dataYMax > dataYMin asserts),
+      // while preserving invertY, transposed AND the per-axis scale fields.
+      _delegate.originalTransform = originalTransform.copyWith(
+        dataXMin: xMin,
+        dataXMax: xMax,
+        dataYMin: yMin - yPadding,
+        dataYMax: yMax + yPadding,
+      );
     }
 
     // Update viewport transform based on auto-scroll mode
@@ -395,18 +384,19 @@ class StreamingManager {
     _expansionTargetYMax = null;
     _viewportLockedForPause = false;
 
-    // Reset transform to initial state so new streaming mode works correctly
+    // Reset transform to initial state so new streaming mode works correctly.
+    // copyWith preserves invertY, transposed AND the per-axis scale fields
+    // (scaleType/logBase); every subsequent streaming update rebuilds the
+    // viewport with transform.copyWith(...) and inherits the scale type FROM
+    // this reset transform, so dropping it here would silently revert a
+    // re-streamed log/time chart to linear positioning.
     final transform = _delegate.transform;
     if (transform != null) {
-      _delegate.transform = ChartTransform(
+      _delegate.transform = transform.copyWith(
         dataXMin: 0,
         dataXMax: 1,
         dataYMin: 0,
         dataYMax: 1,
-        plotWidth: transform.plotWidth,
-        plotHeight: transform.plotHeight,
-        invertY: transform.invertY,
-        transposed: transform.transposed,
       );
     }
 

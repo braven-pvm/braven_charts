@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import '../models/axis_scale_type.dart';
 import '../models/data_range.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
@@ -174,6 +175,12 @@ class MultiAxisLayoutDelegate {
       return axis.labelFormatter!(value);
     }
 
+    // Mirror the painter's log-decade label default so a log Y strip is sized
+    // for the labels it will actually paint.
+    if (axis.scaleType == AxisScaleType.log) {
+      return _formatLogValue(value);
+    }
+
     String formatted;
     if (value == value.roundToDouble()) {
       formatted = value.toInt().toString();
@@ -275,6 +282,15 @@ class MultiAxisLayoutDelegate {
   double _roundToDecimals(double value, int decimals) {
     final multiplier = _pow10(decimals);
     return (value * multiplier).round() / multiplier;
+  }
+
+  /// Formats a log-axis decade value plainly (the value itself), mirroring
+  /// `MultiAxisPainter._formatLogValue` so widths match painted labels.
+  String _formatLogValue(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
   }
 
   /// Returns 10^n for positive n.

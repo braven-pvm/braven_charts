@@ -123,6 +123,7 @@ export 'src/navigator/cartesian_navigator_models.dart';
 // Models
 export 'src/models/annotation_style.dart';
 export 'src/models/auto_scroll_config.dart';
+export 'src/models/axis_scale_type.dart';
 export 'src/models/bar_chart_style.dart';
 export 'src/models/bar_group_info.dart';
 export 'src/models/category_axis_config.dart';

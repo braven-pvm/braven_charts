@@ -2,6 +2,7 @@
 // Unit tests for ViewportConstraints module
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/models/axis_scale_type.dart';
 import 'package:braven_charts/src/rendering/modules/viewport_constraints.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -131,6 +132,86 @@ void main() {
         final centerY = (result.dataYMin + result.dataYMax) / 2;
         expect(centerX, closeTo(60.0, 0.01));
         expect(centerY, closeTo(40.0, 0.01));
+      });
+
+      // Regression: clampZoomLevel runs on EVERY zoom. At the zoom limits it
+      // builds a fresh transform, which previously dropped the per-axis scale
+      // fields and silently reverted a log/time chart to linear positioning.
+      group('preserves per-axis scale type', () {
+        ChartTransform logTransform({
+          required double dataYMin,
+          required double dataYMax,
+          double yLogBase = 10,
+        }) {
+          return ChartTransform(
+            dataXMin: 0,
+            dataXMax: 100,
+            dataYMin: dataYMin,
+            dataYMax: dataYMax,
+            plotWidth: 800,
+            plotHeight: 600,
+            invertY: true,
+            yScaleType: AxisScaleType.log,
+            yLogBase: yLogBase,
+          );
+        }
+
+        test('non-clamping case keeps the log scale (returned unchanged)', () {
+          final base = logTransform(dataYMin: 1, dataYMax: 1000);
+          // 2x zoom (well within the 0.8..10 limits) => returned unchanged.
+          final zoomed = logTransform(dataYMin: 30, dataYMax: 300);
+
+          final result = constraints.clampZoomLevel(
+            transform: zoomed,
+            baseTransform: base,
+          );
+
+          expect(result.yScaleType, AxisScaleType.log);
+          expect(result.xScaleType, AxisScaleType.linear);
+        });
+
+        test('at-limit clamping keeps the log scale and log base', () {
+          // base Y range = 999; a range of ~40 is ~25x zoom, past the 10x max,
+          // so clampZoomLevel takes the fresh-transform (clamping) branch.
+          final base = logTransform(dataYMin: 1, dataYMax: 1000, yLogBase: 2);
+          final zoomed = logTransform(
+            dataYMin: 480,
+            dataYMax: 520,
+            yLogBase: 2,
+          );
+
+          final result = constraints.clampZoomLevel(
+            transform: zoomed,
+            baseTransform: base,
+          );
+
+          // Clamping happened (range widened back toward the 10x limit)...
+          expect(
+            result.dataYMax - result.dataYMin,
+            greaterThan(zoomed.dataYMax - zoomed.dataYMin),
+          );
+          // ...and the scale fields survived the fresh construction.
+          expect(result.yScaleType, AxisScaleType.log);
+          expect(result.yLogBase, 2);
+        });
+
+        test('linear clamping stays linear (regression)', () {
+          final base = createTransform();
+          final zoomed = createTransform(
+            dataXMin: 47.5,
+            dataXMax: 52.5,
+            dataYMin: 47.5,
+            dataYMax: 52.5,
+          );
+
+          final result = constraints.clampZoomLevel(
+            transform: zoomed,
+            baseTransform: base,
+          );
+
+          expect(result.xScaleType, AxisScaleType.linear);
+          expect(result.yScaleType, AxisScaleType.linear);
+        });
       });
     });
 

@@ -3767,6 +3767,14 @@ class ChartConfigDartEmitter {
     );
     _numberIf(writer, 'minorTickCount', axis.minorTickCount, 4);
     _numberIf(writer, 'minorTickLength', axis.minorTickLength, 3);
+    _enumIf(
+      writer,
+      'scaleType',
+      'AxisScaleType',
+      axis.scaleType.name,
+      defaultName: 'linear',
+    );
+    _numberIf(writer, 'logBase', axis.logBase, 10);
     if (axis.labelFormatter != null) {
       _warn(
         code: ChartSourceWarningCodes.runtimeValueOmitted,
@@ -3849,6 +3857,14 @@ class ChartConfigDartEmitter {
     );
     _numberIf(writer, 'minorTickCount', axis.minorTickCount, 4);
     _numberIf(writer, 'minorTickLength', axis.minorTickLength, 3);
+    _enumIf(
+      writer,
+      'scaleType',
+      'AxisScaleType',
+      axis.scaleType.name,
+      defaultName: 'linear',
+    );
+    _numberIf(writer, 'logBase', axis.logBase, 10);
     if (axis.labelFormatter != null) {
       _warn(
         code: ChartSourceWarningCodes.runtimeValueOmitted,

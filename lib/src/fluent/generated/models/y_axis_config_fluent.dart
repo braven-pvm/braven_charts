@@ -83,6 +83,12 @@ extension YAxisConfigFluent on YAxisConfig {
   /// Clears [YAxisConfig.tickCount] to `null`.
   YAxisConfig clearTickCount() => copyWith(clearTickCount: true);
 
+  /// Replaces [YAxisConfig.scaleType] with [value].
+  YAxisConfig withScaleType(AxisScaleType value) => copyWith(scaleType: value);
+
+  /// Replaces [YAxisConfig.logBase] with [value].
+  YAxisConfig withLogBase(double value) => copyWith(logBase: value);
+
   /// Replaces [YAxisConfig.showMinorTicks] with [value].
   YAxisConfig withShowMinorTicks(bool value) => copyWith(showMinorTicks: value);
 

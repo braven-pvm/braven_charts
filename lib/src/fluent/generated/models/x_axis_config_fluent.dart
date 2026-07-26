@@ -83,6 +83,12 @@ extension XAxisConfigFluent on XAxisConfig {
   /// Clears [XAxisConfig.tickCount] to `null`.
   XAxisConfig clearTickCount() => copyWith(clearTickCount: true);
 
+  /// Replaces [XAxisConfig.scaleType] with [value].
+  XAxisConfig withScaleType(AxisScaleType value) => copyWith(scaleType: value);
+
+  /// Replaces [XAxisConfig.logBase] with [value].
+  XAxisConfig withLogBase(double value) => copyWith(logBase: value);
+
   /// Replaces [XAxisConfig.tickLabelRotationDegrees] with [value].
   XAxisConfig withTickLabelRotationDegrees(double value) =>
       copyWith(tickLabelRotationDegrees: value);

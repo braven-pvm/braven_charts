@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/axis_scale_type.dart';
 import '../models/category_axis_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/x_axis_position.dart';
@@ -39,6 +40,8 @@ abstract final class ChartAxisDocumentCodec {
         showCrosshairLabel: axis.showCrosshairLabel,
         crosshairLabelPosition: axis.crosshairLabelPosition.name,
         labelDisplay: axis.labelDisplay.name,
+        scaleType: axis.scaleType.name,
+        logBase: axis.logBase,
         layoutMinimum: ChartNumberDocument.fromDouble(axis.minHeight),
         layoutMaximum: ChartNumberDocument.fromDouble(axis.maxHeight),
         tickLabelPadding: ChartNumberDocument.fromDouble(axis.tickLabelPadding),
@@ -106,6 +109,8 @@ abstract final class ChartAxisDocumentCodec {
             CrosshairLabelPosition.values,
           ),
           labelDisplay: _enum(document.labelDisplay, AxisLabelDisplay.values),
+        scaleType: _enum(document.scaleType, AxisScaleType.values),
+        logBase: document.logBase,
           minHeight: document.layoutMinimum?.asDouble ?? 0,
           maxHeight: document.layoutMaximum?.asDouble ?? 60,
           tickLabelPadding: document.tickLabelPadding?.asDouble ?? 4,
@@ -179,6 +184,8 @@ abstract final class ChartAxisDocumentCodec {
         showCrosshairLabel: axis.showCrosshairLabel,
         crosshairLabelPosition: axis.crosshairLabelPosition.name,
         labelDisplay: axis.labelDisplay.name,
+        scaleType: axis.scaleType.name,
+        logBase: axis.logBase,
         layoutMinimum: ChartNumberDocument.fromDouble(axis.minWidth),
         layoutMaximum: ChartNumberDocument.fromDouble(axis.maxWidth),
         tickLabelPadding: ChartNumberDocument.fromDouble(axis.tickLabelPadding),
@@ -218,6 +225,8 @@ abstract final class ChartAxisDocumentCodec {
           CrosshairLabelPosition.values,
         ),
         labelDisplay: _enum(document.labelDisplay, AxisLabelDisplay.values),
+        scaleType: _enum(document.scaleType, AxisScaleType.values),
+        logBase: document.logBase,
         minWidth: document.layoutMinimum?.asDouble ?? 0,
         maxWidth: document.layoutMaximum?.asDouble ?? 80,
         tickLabelPadding: document.tickLabelPadding?.asDouble ?? 4,

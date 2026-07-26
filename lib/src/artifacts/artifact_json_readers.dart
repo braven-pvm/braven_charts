@@ -102,6 +102,15 @@ double readRequiredDouble(Map<String, Object?> json, String key) {
   return value.toDouble();
 }
 
+double? readOptionalDouble(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! num || !value.isFinite) {
+    throw FormatException('$key must be a finite number');
+  }
+  return value.toDouble();
+}
+
 DateTime readRequiredDateTime(Map<String, Object?> json, String key) {
   final value = readRequiredString(json, key);
   final parsed = DateTime.tryParse(value);

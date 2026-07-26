@@ -49,6 +49,7 @@ import 'layout/polar_column_composition.dart';
 import 'layout/polar_column_stack_layout.dart';
 import 'layout/concentric_donut_layout.dart';
 import 'models/auto_scroll_config.dart';
+import 'models/axis_scale_type.dart';
 import 'models/axis_swap_mode.dart';
 import 'models/bar_chart_style.dart';
 import 'models/braven_chart_controller.dart';
@@ -3032,8 +3033,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final retainsExitingBars = _barSeriesTransitions.values.any(
       (transition) => transition.retainsExits,
     );
+    final primaryXScaleType =
+        widget.xAxisConfig?.scaleType ?? AxisScaleType.linear;
+    final primaryXLogBase = widget.xAxisConfig?.logBase ?? 10;
+    final primaryYScaleType = widget.yAxis?.scaleType ?? AxisScaleType.linear;
+    final primaryYLogBase = widget.yAxis?.logBase ?? 10;
     DataBounds computeTransitionAwareBounds() {
-      final finalBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
+      final finalBounds = DataConverter.computeDataBounds(
+        _effectiveDataSeries,
+        xScaleType: primaryXScaleType,
+        xLogBase: primaryXLogBase,
+        yScaleType: primaryYScaleType,
+        yLogBase: primaryYLogBase,
+      );
       if (!retainsExitingBars || _effectiveRenderSeries.isEmpty) {
         return finalBounds;
       }
@@ -3041,6 +3053,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // final domain so simultaneous entrances and larger updates never clip.
       final exitingBounds = DataConverter.computeDataBounds(
         _effectiveRenderSeries,
+        xScaleType: primaryXScaleType,
+        xLogBase: primaryXLogBase,
+        yScaleType: primaryYScaleType,
+        yLogBase: primaryYLogBase,
       );
       return DataBounds(
         xMin: math.min(finalBounds.xMin, exitingBounds.xMin),
