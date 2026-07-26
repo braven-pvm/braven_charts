@@ -1,9 +1,13 @@
+import 'dart:math' as math;
+
+import 'package:braven_charts/src/rendering/modules/crosshair_axis_label_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _trialCount = 5;
 const _frameCount = 1000;
 const _warmupFrameCount = 200;
+const _labelStyle = TextStyle(fontSize: 11, color: Color(0xFF202124));
 
 enum _Scenario {
   singleAxisUnchanged,
@@ -25,6 +29,49 @@ extension on _Scenario {
 }
 
 typedef _TrialResult = ({int medianMicros, int p95Micros});
+typedef _PairedTrials = ({
+  List<_TrialResult> uncached,
+  List<_TrialResult> cached,
+});
+typedef _EnvironmentCase = ({
+  TextDirection direction,
+  Locale? locale,
+  TextScaler textScaler,
+  double devicePixelRatio,
+});
+
+const _environmentCases = <_EnvironmentCase>[
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.linear(1.5),
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.rtl,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('ar'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 2,
+  ),
+];
 
 List<String> _labelsForFrame(_Scenario scenario, int frame) {
   final sample = scenario.changing ? frame + 42 : 42;
@@ -56,10 +103,7 @@ void _layoutUncachedFrame({
   for (final text in _labelsForFrame(scenario, frame)) {
     retainedPainters.add(
       TextPainter(
-        text: TextSpan(
-          text: text,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF202124)),
-        ),
+        text: TextSpan(text: text, style: _labelStyle),
         textDirection: TextDirection.ltr,
         textScaler: TextScaler.noScaling,
         locale: const Locale('en', 'ZA'),
@@ -113,6 +157,88 @@ _TrialResult _measureUncachedTrial(_Scenario scenario) {
   );
 }
 
+CrosshairAxisLabelLayoutRequest _requestFor(
+  String text, {
+  TextDirection direction = TextDirection.ltr,
+  Locale? locale = const Locale('en', 'ZA'),
+  TextScaler textScaler = TextScaler.noScaling,
+  double devicePixelRatio = 1,
+}) {
+  return CrosshairAxisLabelLayoutRequest(
+    text: text,
+    style: _labelStyle,
+    textDirection: direction,
+    locale: locale,
+    textScaler: textScaler,
+    devicePixelRatio: devicePixelRatio,
+  );
+}
+
+void _layoutCachedFrame({
+  required _Scenario scenario,
+  required int frame,
+  required CrosshairAxisLabelLayoutCache cache,
+}) {
+  for (final text in _labelsForFrame(scenario, frame)) {
+    cache.layout(_requestFor(text));
+  }
+}
+
+void _warmCached(_Scenario scenario) {
+  final cache = CrosshairAxisLabelLayoutCache();
+  try {
+    for (var frame = 0; frame < _warmupFrameCount; frame++) {
+      _layoutCachedFrame(scenario: scenario, frame: frame, cache: cache);
+    }
+  } finally {
+    cache.dispose();
+  }
+}
+
+_TrialResult _measureCachedTrial(_Scenario scenario) {
+  final cache = CrosshairAxisLabelLayoutCache();
+  final frameMicros = <int>[];
+
+  try {
+    for (var frame = 0; frame < _frameCount; frame++) {
+      final stopwatch = Stopwatch()..start();
+      _layoutCachedFrame(scenario: scenario, frame: frame, cache: cache);
+      stopwatch.stop();
+      frameMicros.add(stopwatch.elapsedMicroseconds);
+    }
+  } finally {
+    // Final cleanup is outside timing, matching uncached trial cleanup. LRU
+    // eviction/disposal caused by changing labels remains inside each sample.
+    cache.dispose();
+  }
+
+  frameMicros.sort();
+  return (
+    medianMicros: frameMicros[frameMicros.length ~/ 2],
+    p95Micros: frameMicros[(frameMicros.length * 0.95).ceil() - 1],
+  );
+}
+
+_PairedTrials _measurePairedScenario(_Scenario scenario) {
+  final uncached = <_TrialResult>[];
+  final cached = <_TrialResult>[];
+  for (var trial = 0; trial < _trialCount; trial++) {
+    final cachedFirst = trial.isEven;
+    if (cachedFirst) {
+      _warmCached(scenario);
+      _warmUncached(scenario);
+      cached.add(_measureCachedTrial(scenario));
+      uncached.add(_measureUncachedTrial(scenario));
+    } else {
+      _warmUncached(scenario);
+      _warmCached(scenario);
+      uncached.add(_measureUncachedTrial(scenario));
+      cached.add(_measureCachedTrial(scenario));
+    }
+  }
+  return (uncached: uncached, cached: cached);
+}
+
 int _medianTrialP95(List<_TrialResult> trials) {
   final p95Micros = [for (final trial in trials) trial.p95Micros]..sort();
   return p95Micros[p95Micros.length ~/ 2];
@@ -126,24 +252,225 @@ String _formatTrials(List<_TrialResult> trials) {
   ].join(' | ');
 }
 
-void main() {
-  test('records uncached crosshair axis-label layout trials', () {
-    for (final scenario in _Scenario.values) {
-      _warmUncached(scenario);
-      final trials = [
-        for (var trial = 0; trial < _trialCount; trial++)
-          _measureUncachedTrial(scenario),
-      ];
-      // ignore: avoid_print
-      print(
-        '${scenario.name} uncached trials: ${_formatTrials(trials)}; '
-        'decision p95=${_medianTrialP95(trials) / 1000}ms',
-      );
-      expect(trials, hasLength(_trialCount));
-      expect(
-        trials.every((trial) => trial.p95Micros >= trial.medianMicros),
-        isTrue,
-      );
+String _formatPaired(String name, _PairedTrials paired) {
+  return '$name\n'
+      '  uncached: ${_formatTrials(paired.uncached)}\n'
+      '  cached: ${_formatTrials(paired.cached)}\n'
+      '  decision p95: '
+      '${_medianTrialP95(paired.uncached)}us uncached / '
+      '${_medianTrialP95(paired.cached)}us cached';
+}
+
+TextPainter _uncachedEnvironmentPainter(_EnvironmentCase environment) {
+  return TextPainter(
+    text: const TextSpan(text: '42.00 unit', style: _labelStyle),
+    textDirection: environment.direction,
+    locale: environment.locale,
+    textScaler: environment.textScaler,
+  )..layout();
+}
+
+CrosshairAxisLabelLayoutRequest _environmentRequest(
+  _EnvironmentCase environment,
+) {
+  return _requestFor(
+    '42.00 unit',
+    direction: environment.direction,
+    locale: environment.locale,
+    textScaler: environment.textScaler,
+    devicePixelRatio: environment.devicePixelRatio,
+  );
+}
+
+void _warmUncachedEnvironment() {
+  final retainedPainters = <TextPainter>[];
+  try {
+    for (var frame = 0; frame < _warmupFrameCount; frame++) {
+      final environment = _environmentCases[frame % _environmentCases.length];
+      retainedPainters.add(_uncachedEnvironmentPainter(environment));
     }
+  } finally {
+    for (final painter in retainedPainters) {
+      painter.dispose();
+    }
+  }
+}
+
+void _warmCachedEnvironment() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  try {
+    for (var frame = 0; frame < _warmupFrameCount; frame++) {
+      final environment = _environmentCases[frame % _environmentCases.length];
+      cache.layout(_environmentRequest(environment));
+    }
+  } finally {
+    cache.dispose();
+  }
+}
+
+_TrialResult _measureUncachedEnvironmentTrial() {
+  final frameMicros = <int>[];
+  final retainedPainters = <TextPainter>[];
+  try {
+    for (var frame = 0; frame < _frameCount; frame++) {
+      final environment = _environmentCases[frame % _environmentCases.length];
+      final stopwatch = Stopwatch()..start();
+      retainedPainters.add(_uncachedEnvironmentPainter(environment));
+      stopwatch.stop();
+      frameMicros.add(stopwatch.elapsedMicroseconds);
+    }
+  } finally {
+    for (final painter in retainedPainters) {
+      painter.dispose();
+    }
+  }
+
+  frameMicros.sort();
+  return (
+    medianMicros: frameMicros[frameMicros.length ~/ 2],
+    p95Micros: frameMicros[(frameMicros.length * 0.95).ceil() - 1],
+  );
+}
+
+_TrialResult _measureCachedEnvironmentTrial() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  final frameMicros = <int>[];
+  try {
+    for (var frame = 0; frame < _frameCount; frame++) {
+      final environment = _environmentCases[frame % _environmentCases.length];
+      final stopwatch = Stopwatch()..start();
+      cache.layout(_environmentRequest(environment));
+      stopwatch.stop();
+      frameMicros.add(stopwatch.elapsedMicroseconds);
+    }
+  } finally {
+    cache.dispose();
+  }
+
+  frameMicros.sort();
+  return (
+    medianMicros: frameMicros[frameMicros.length ~/ 2],
+    p95Micros: frameMicros[(frameMicros.length * 0.95).ceil() - 1],
+  );
+}
+
+_PairedTrials _measurePairedEnvironment() {
+  final uncached = <_TrialResult>[];
+  final cached = <_TrialResult>[];
+  for (var trial = 0; trial < _trialCount; trial++) {
+    final cachedFirst = trial.isEven;
+    if (cachedFirst) {
+      _warmCachedEnvironment();
+      _warmUncachedEnvironment();
+      cached.add(_measureCachedEnvironmentTrial());
+      uncached.add(_measureUncachedEnvironmentTrial());
+    } else {
+      _warmUncachedEnvironment();
+      _warmCachedEnvironment();
+      uncached.add(_measureUncachedEnvironmentTrial());
+      cached.add(_measureCachedEnvironmentTrial());
+    }
+  }
+  return (uncached: uncached, cached: cached);
+}
+
+void _verifyMultiAxisBehavior() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  try {
+    final unchanged = _labelsForFrame(_Scenario.multiAxisUnchanged, 0);
+    expect(unchanged, hasLength(7));
+    expect(unchanged.toSet(), hasLength(7));
+
+    for (final text in unchanged) {
+      cache.layout(_requestFor(text));
+    }
+    for (final text in unchanged) {
+      cache.layout(_requestFor(text));
+    }
+    expect(cache.debugEntryCount, 7);
+    expect(cache.debugMissCount, 7);
+    expect(cache.debugHitCount, 7);
+
+    // Changing frame zero deliberately repeats the unchanged sample. The next
+    // four frames introduce 28 distinct labels and deterministically exercise
+    // eviction from the 16-entry LRU.
+    for (var frame = 0; frame < 5; frame++) {
+      for (final text in _labelsForFrame(_Scenario.multiAxisChanging, frame)) {
+        cache.layout(_requestFor(text));
+      }
+      expect(cache.debugEntryCount, lessThanOrEqualTo(16));
+    }
+    expect(cache.debugHitCount, 14);
+    expect(cache.debugMissCount, 35);
+    expect(cache.debugEntryCount, 16);
+    expect(cache.debugDisposedPainterCount, 19);
+  } finally {
+    cache.dispose();
+  }
+}
+
+void _verifyEnvironmentMisses() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  try {
+    for (final environment in _environmentCases) {
+      cache.layout(_environmentRequest(environment));
+    }
+    expect(cache.debugMissCount, _environmentCases.length);
+    expect(cache.debugHitCount, 0);
+    expect(cache.debugEntryCount, _environmentCases.length);
+
+    cache.layout(_environmentRequest(_environmentCases.first));
+    expect(cache.debugMissCount, _environmentCases.length);
+    expect(cache.debugHitCount, 1);
+    expect(cache.debugEntryCount, _environmentCases.length);
+  } finally {
+    cache.dispose();
+  }
+}
+
+void main() {
+  test('applies the paired crosshair axis-label layout gate', () {
+    final unchanged = _measurePairedScenario(_Scenario.singleAxisUnchanged);
+    final changing = _measurePairedScenario(_Scenario.singleAxisChanging);
+    final multiAxisUnchanged = _measurePairedScenario(
+      _Scenario.multiAxisUnchanged,
+    );
+    final multiAxisChanging = _measurePairedScenario(
+      _Scenario.multiAxisChanging,
+    );
+    final environment = _measurePairedEnvironment();
+
+    final unchangedBaseline = _medianTrialP95(unchanged.uncached);
+    final unchangedCandidate = _medianTrialP95(unchanged.cached);
+    final changingBaseline = _medianTrialP95(changing.uncached);
+    final changingCandidate = _medianTrialP95(changing.cached);
+    final savedMicros = unchangedBaseline - unchangedCandidate;
+    final savedPercent = savedMicros / unchangedBaseline * 100;
+    final changingRegression = changingCandidate - changingBaseline;
+    final changingLimit = math.max(changingBaseline * 0.10, 50);
+
+    // ignore: avoid_print
+    print(_formatPaired('singleAxisUnchanged', unchanged));
+    // ignore: avoid_print
+    print(_formatPaired('singleAxisChanging', changing));
+    // ignore: avoid_print
+    print(_formatPaired('multiAxisUnchanged', multiAxisUnchanged));
+    // ignore: avoid_print
+    print(_formatPaired('multiAxisChanging', multiAxisChanging));
+    // ignore: avoid_print
+    print(_formatPaired('environmentChanging', environment));
+    // ignore: avoid_print
+    print(
+      'gate: saved=$savedMicros us '
+      '(${savedPercent.toStringAsFixed(2)}%); '
+      'changingRegression=$changingRegression us; '
+      'changingLimit=${changingLimit.toStringAsFixed(2)} us',
+    );
+
+    _verifyMultiAxisBehavior();
+    _verifyEnvironmentMisses();
+    expect(savedPercent, greaterThanOrEqualTo(20));
+    expect(savedMicros, greaterThanOrEqualTo(100));
+    expect(changingRegression, lessThanOrEqualTo(changingLimit));
   });
 }
