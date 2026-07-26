@@ -20,8 +20,8 @@
   - Compatibility, LRU, invalidation, and lifecycle unit tests.
 - Create
   `test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart`
-  - Five paired trials for unchanged and changing label frames and the
-    approved p95 decision gate.
+  - Counterbalanced five-pair single-axis gate plus multi-axis and
+    environment-key diagnostic workloads, recording median and p95.
 - Modify `lib/src/rendering/modules/crosshair_renderer.dart`
   - Route the seven axis-label layout sites through the injected cache while
     keeping all placement and paint calculations live.
@@ -55,6 +55,14 @@ Tasks 1–3 are mandatory. After Task 3:
   20 percent and at least 0.10 ms, while changing-label p95 regresses by no
   more than the greater of 10 percent or 0.05 ms;
 - otherwise execute Task 7 instead and do not add production cache state.
+
+The approved gate uses the single-axis workload: exactly one formatted X label
+and one formatted Y label per frame. Its unchanged case drives the benefit
+threshold, and its changing case drives the regression guard. The multi-axis
+and environment-key workloads are non-gating diagnostics: they must report
+median and p95, prove independently formatted Y labels remain distinct, prove
+every environment-key change misses, and prove the cache stays within capacity.
+They do not weaken or replace either approved single-axis threshold.
 
 ### Task 0: Reconcile the claim and current master
 
@@ -113,9 +121,11 @@ change on master, record the actual count rather than retaining 33 as evidence.
 - Create:
   `test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart`
 
-- [ ] **Step 1: Write the baseline benchmark**
+- [ ] **Step 1: Define concrete single- and multi-axis workloads**
 
-Create the benchmark with the real paragraph inputs used by crosshair labels:
+Create the benchmark with the real paragraph inputs used by crosshair labels.
+The single-axis workload emits exactly one X and one Y label. The multi-axis
+workload emits one X and six independently formatted Y labels:
 
 ```dart
 import 'dart:ui';
@@ -125,85 +135,166 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _trialCount = 5;
 const _frameCount = 1000;
-const _labelsPerFrame = 7;
+const _warmupFrameCount = 200;
 
-void main() {
-  test('records uncached crosshair axis-label layout p95', () {
-    for (var warmup = 0; warmup < 200; warmup++) {
-      _layoutUncachedFrame(frame: warmup, changing: false);
-    }
-
-    final unchanged = <int>[];
-    final changing = <int>[];
-    for (var trial = 0; trial < _trialCount; trial++) {
-      unchanged.add(_measureUncachedTrial(changing: false));
-      changing.add(_measureUncachedTrial(changing: true));
-    }
-
-    // ignore: avoid_print
-    print(
-      'Crosshair axis labels uncached: '
-      'unchanged p95 ${_decisionP95(unchanged) / 1000}ms; '
-      'changing p95 ${_decisionP95(changing) / 1000}ms',
-    );
-    expect(unchanged, hasLength(_trialCount));
-    expect(changing, hasLength(_trialCount));
-  });
+enum _Scenario {
+  singleAxisUnchanged,
+  singleAxisChanging,
+  multiAxisUnchanged,
+  multiAxisChanging,
 }
 
-int _measureUncachedTrial({required bool changing}) {
-  final samples = <int>[];
-  for (var frame = 0; frame < _frameCount; frame++) {
-    final watch = Stopwatch()..start();
-    _layoutUncachedFrame(frame: frame, changing: changing);
-    watch.stop();
-    samples.add(watch.elapsedMicroseconds);
+extension on _Scenario {
+  bool get changing =>
+      this == _Scenario.singleAxisChanging ||
+      this == _Scenario.multiAxisChanging;
+
+  bool get multiAxis =>
+      this == _Scenario.multiAxisUnchanged ||
+      this == _Scenario.multiAxisChanging;
+}
+
+typedef _TrialResult = ({int medianMicros, int p95Micros});
+
+List<String> _labelsForFrame(_Scenario scenario, int frame) {
+  final sample = scenario.changing ? frame + 42 : 42;
+  final labels = <String>[
+    '2026-07-${sample.toString().padLeft(2, '0')}',
+  ];
+  if (!scenario.multiAxis) {
+    return [...labels, '${(sample * 1.25).toStringAsFixed(2)} W'];
   }
-  samples.sort();
-  return samples[(samples.length * 0.95).ceil() - 1];
+  return [
+    ...labels,
+    '${(sample * 1.25).toStringAsFixed(0)} W',
+    '${(60 + sample * 0.25).toStringAsFixed(1)} bpm',
+    '${(18 + sample * 0.01).toStringAsFixed(2)} °C',
+    '${(sample / 3).toStringAsFixed(3)} m/s',
+    '${(sample * 2).toStringAsFixed(0)} rpm',
+    '${(sample / 10).toStringAsFixed(1)} mmol/L',
+  ];
+}
+```
+
+- [ ] **Step 2: Measure layout without charging baseline-only disposal**
+
+Add the uncached warm-up and trial helpers. Retain every painter for the
+complete trial and dispose it only after the last timed frame. The stopwatch
+therefore measures paragraph construction/layout, not `TextPainter.dispose()`:
+
+```dart
+void _layoutUncachedFrame({
+  required _Scenario scenario,
+  required int frame,
+  required List<TextPainter> retainedPainters,
+}) {
+  for (final text in _labelsForFrame(scenario, frame)) {
+    retainedPainters.add(
+      TextPainter(
+        text: TextSpan(
+          text: text,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF202124)),
+        ),
+        textDirection: TextDirection.ltr,
+        textScaler: TextScaler.noScaling,
+        locale: const Locale('en', 'ZA'),
+      )..layout(),
+    );
+  }
 }
 
-void _layoutUncachedFrame({
-  required int frame,
-  required bool changing,
-}) {
-  for (var label = 0; label < _labelsPerFrame; label++) {
-    final suffix = changing ? frame : 42;
-    final text = label == 0
-        ? '2026-07-${suffix.toString().padLeft(2, '0')}'
-        : '${(suffix * 1.25 + label).toStringAsFixed(2)} unit';
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(fontSize: 11, color: Color(0xFF202124)),
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: TextScaler.noScaling,
-      locale: const Locale('en', 'ZA'),
-    )..layout();
+void _warmUncached(_Scenario scenario) {
+  final retainedPainters = <TextPainter>[];
+  for (var frame = 0; frame < _warmupFrameCount; frame++) {
+    _layoutUncachedFrame(
+      scenario: scenario,
+      frame: frame,
+      retainedPainters: retainedPainters,
+    );
+  }
+  for (final painter in retainedPainters) {
     painter.dispose();
   }
 }
 
-int _decisionP95(List<int> trialP95s) {
-  final sorted = [...trialP95s]..sort();
-  return sorted[sorted.length ~/ 2];
+_TrialResult _measureUncachedTrial(_Scenario scenario) {
+  final samples = <int>[];
+  final retainedPainters = <TextPainter>[];
+  for (var frame = 0; frame < _frameCount; frame++) {
+    final watch = Stopwatch()..start();
+    _layoutUncachedFrame(
+      scenario: scenario,
+      frame: frame,
+      retainedPainters: retainedPainters,
+    );
+    watch.stop();
+    samples.add(watch.elapsedMicroseconds);
+  }
+  for (final painter in retainedPainters) {
+    painter.dispose();
+  }
+  samples.sort();
+  return (
+    medianMicros: samples[samples.length ~/ 2],
+    p95Micros: samples[(samples.length * 0.95).ceil() - 1],
+  );
+}
+
+int _medianTrialP95(List<_TrialResult> trials) {
+  final p95s = [for (final trial in trials) trial.p95Micros]..sort();
+  return p95s[p95s.length ~/ 2];
+}
+
+String _formatTrials(List<_TrialResult> trials) => trials
+    .map(
+      (trial) =>
+          'median=${trial.medianMicros / 1000}ms '
+          'p95=${trial.p95Micros / 1000}ms',
+    )
+    .join(', ');
+```
+
+- [ ] **Step 3: Record five baseline trials for every workload**
+
+Add the baseline test. It records both median and p95 for every trial, plus the
+median of five p95 values used later by the decision:
+
+```dart
+void main() {
+  test('records uncached crosshair axis-label layout trials', () {
+    for (final scenario in _Scenario.values) {
+      _warmUncached(scenario);
+      final trials = [
+        for (var trial = 0; trial < _trialCount; trial++)
+          _measureUncachedTrial(scenario),
+      ];
+
+      // ignore: avoid_print
+      print(
+        '${scenario.name} uncached trials: ${_formatTrials(trials)}; '
+        'decision p95=${_medianTrialP95(trials) / 1000}ms',
+      );
+      expect(trials, hasLength(_trialCount));
+      expect(trials.every((trial) => trial.p95Micros >= trial.medianMicros), isTrue);
+    }
+  });
 }
 ```
 
-- [ ] **Step 2: Run the baseline twice**
+- [ ] **Step 4: Run the baseline twice**
 
 Run:
 
 ```powershell
+dart format test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart
 flutter test test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart --reporter expanded
 flutter test test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart --reporter expanded
 ```
 
-Expected: both runs pass and print uncached unchanged/changing p95 values.
-Record both outputs in the task notes; do not select a favorable run.
+Expected: both runs pass and print median and p95 for five trials of all four
+workloads. Record both complete outputs; do not select a favorable run.
 
-- [ ] **Step 3: Commit the baseline**
+- [ ] **Step 5: Commit the baseline**
 
 ```powershell
 git add test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart
@@ -492,78 +583,361 @@ git commit -m "perf: add bounded crosshair label layout cache"
 - Modify:
   `test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart`
 
-- [ ] **Step 1: Extend the benchmark with paired cached trials**
+- [ ] **Step 1: Add the cached hot path with symmetric cleanup**
 
-Import the cache, add `_measureCachedTrial`, and calculate the exact decision:
+Import the candidate cache and add the cached warm-up/trial helpers:
 
 ```dart
+import 'dart:math' as math;
+
 import 'package:braven_charts/src/rendering/modules/crosshair_axis_label_layout_cache.dart';
 
-final uncachedUnchanged = <int>[];
-final cachedUnchanged = <int>[];
-final uncachedChanging = <int>[];
-final cachedChanging = <int>[];
-for (var trial = 0; trial < _trialCount; trial++) {
-  uncachedUnchanged.add(_measureUncachedTrial(changing: false));
-  cachedUnchanged.add(_measureCachedTrial(changing: false));
-  uncachedChanging.add(_measureUncachedTrial(changing: true));
-  cachedChanging.add(_measureCachedTrial(changing: true));
+const _labelStyle = TextStyle(fontSize: 11, color: Color(0xFF202124));
+
+CrosshairAxisLabelLayoutRequest _requestFor(
+  String text, {
+  TextDirection direction = TextDirection.ltr,
+  Locale? locale = const Locale('en', 'ZA'),
+  TextScaler textScaler = TextScaler.noScaling,
+  double devicePixelRatio = 1,
+}) {
+  return CrosshairAxisLabelLayoutRequest(
+    text: text,
+    style: _labelStyle,
+    textDirection: direction,
+    locale: locale,
+    textScaler: textScaler,
+    devicePixelRatio: devicePixelRatio,
+  );
 }
 
-final unchangedBaseline = _decisionP95(uncachedUnchanged);
-final unchangedCandidate = _decisionP95(cachedUnchanged);
-final changingBaseline = _decisionP95(uncachedChanging);
-final changingCandidate = _decisionP95(cachedChanging);
-final savedMicros = unchangedBaseline - unchangedCandidate;
-final savedPercent = savedMicros / unchangedBaseline * 100;
-final changingRegression = changingCandidate - changingBaseline;
-final changingLimit = math.max(
-  changingBaseline * 0.10,
-  50,
-);
+void _layoutCachedFrame({
+  required _Scenario scenario,
+  required int frame,
+  required CrosshairAxisLabelLayoutCache cache,
+}) {
+  for (final text in _labelsForFrame(scenario, frame)) {
+    cache.layout(_requestFor(text));
+  }
+}
 
-expect(savedPercent, greaterThanOrEqualTo(20));
-expect(savedMicros, greaterThanOrEqualTo(100));
-expect(changingRegression, lessThanOrEqualTo(changingLimit));
-```
+void _warmCached(_Scenario scenario) {
+  final cache = CrosshairAxisLabelLayoutCache();
+  for (var frame = 0; frame < _warmupFrameCount; frame++) {
+    _layoutCachedFrame(scenario: scenario, frame: frame, cache: cache);
+  }
+  cache.dispose();
+}
 
-Add `dart:math` and this cached measurement path:
-
-```dart
-int _measureCachedTrial({required bool changing}) {
+_TrialResult _measureCachedTrial(_Scenario scenario) {
   final cache = CrosshairAxisLabelLayoutCache();
   final samples = <int>[];
   for (var frame = 0; frame < _frameCount; frame++) {
     final watch = Stopwatch()..start();
-    for (var label = 0; label < _labelsPerFrame; label++) {
-      final suffix = changing ? frame : 42;
-      final text = label == 0
-          ? '2026-07-${suffix.toString().padLeft(2, '0')}'
-          : '${(suffix * 1.25 + label).toStringAsFixed(2)} unit';
-      cache.layout(
-        CrosshairAxisLabelLayoutRequest(
-          text: text,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF202124)),
-          textDirection: TextDirection.ltr,
-          locale: const Locale('en', 'ZA'),
-          textScaler: TextScaler.noScaling,
-          devicePixelRatio: 1,
-        ),
-      );
+    _layoutCachedFrame(scenario: scenario, frame: frame, cache: cache);
+    watch.stop();
+    samples.add(watch.elapsedMicroseconds);
+  }
+  // Final cleanup is outside timing, matching uncached trial cleanup. LRU
+  // eviction/disposal caused by changing labels remains inside each sample.
+  cache.dispose();
+  samples.sort();
+  return (
+    medianMicros: samples[samples.length ~/ 2],
+    p95Micros: samples[(samples.length * 0.95).ceil() - 1],
+  );
+}
+```
+
+- [ ] **Step 2: Counterbalance every paired trial**
+
+Warm both paths with the same frame count and inputs before every pair. Alternate
+both warm-up and measurement order so cached runs are first on even trials and
+uncached runs are first on odd trials:
+
+```dart
+typedef _PairedTrials = ({
+  List<_TrialResult> uncached,
+  List<_TrialResult> cached,
+});
+
+_PairedTrials _measurePairedScenario(_Scenario scenario) {
+  final uncached = <_TrialResult>[];
+  final cached = <_TrialResult>[];
+  for (var trial = 0; trial < _trialCount; trial++) {
+    final cachedFirst = trial.isEven;
+    if (cachedFirst) {
+      _warmCached(scenario);
+      _warmUncached(scenario);
+      cached.add(_measureCachedTrial(scenario));
+      uncached.add(_measureUncachedTrial(scenario));
+    } else {
+      _warmUncached(scenario);
+      _warmCached(scenario);
+      uncached.add(_measureUncachedTrial(scenario));
+      cached.add(_measureCachedTrial(scenario));
     }
+  }
+  return (uncached: uncached, cached: cached);
+}
+
+String _formatPaired(String name, _PairedTrials paired) =>
+    '$name uncached=[${_formatTrials(paired.uncached)}] '
+    'cached=[${_formatTrials(paired.cached)}] '
+    'decisionP95='
+    '${_medianTrialP95(paired.uncached) / 1000}ms/'
+    '${_medianTrialP95(paired.cached) / 1000}ms';
+```
+
+- [ ] **Step 3: Add the environment-key diagnostic workload**
+
+Use identical text/style while changing exactly one environment key from the
+baseline at a time:
+
+```dart
+typedef _EnvironmentCase = ({
+  TextDirection direction,
+  Locale? locale,
+  TextScaler textScaler,
+  double devicePixelRatio,
+});
+
+const _environmentCases = <_EnvironmentCase>[
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.linear(1.5),
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.rtl,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('ar'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 1,
+  ),
+  (
+    direction: TextDirection.ltr,
+    locale: Locale('en', 'ZA'),
+    textScaler: TextScaler.noScaling,
+    devicePixelRatio: 2,
+  ),
+];
+
+TextPainter _uncachedEnvironmentPainter(_EnvironmentCase environment) =>
+    TextPainter(
+      text: const TextSpan(text: '42.00 unit', style: _labelStyle),
+      textDirection: environment.direction,
+      locale: environment.locale,
+      textScaler: environment.textScaler,
+    )..layout();
+
+CrosshairAxisLabelLayoutRequest _environmentRequest(
+  _EnvironmentCase environment,
+) => _requestFor(
+  '42.00 unit',
+  direction: environment.direction,
+  locale: environment.locale,
+  textScaler: environment.textScaler,
+  devicePixelRatio: environment.devicePixelRatio,
+);
+
+_TrialResult _measureUncachedEnvironmentTrial() {
+  final samples = <int>[];
+  final retainedPainters = <TextPainter>[];
+  for (var frame = 0; frame < _frameCount; frame++) {
+    final environment = _environmentCases[frame % _environmentCases.length];
+    final watch = Stopwatch()..start();
+    retainedPainters.add(_uncachedEnvironmentPainter(environment));
+    watch.stop();
+    samples.add(watch.elapsedMicroseconds);
+  }
+  for (final painter in retainedPainters) {
+    painter.dispose();
+  }
+  samples.sort();
+  return (
+    medianMicros: samples[samples.length ~/ 2],
+    p95Micros: samples[(samples.length * 0.95).ceil() - 1],
+  );
+}
+
+_TrialResult _measureCachedEnvironmentTrial() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  final samples = <int>[];
+  for (var frame = 0; frame < _frameCount; frame++) {
+    final environment = _environmentCases[frame % _environmentCases.length];
+    final watch = Stopwatch()..start();
+    cache.layout(_environmentRequest(environment));
     watch.stop();
     samples.add(watch.elapsedMicroseconds);
   }
   cache.dispose();
   samples.sort();
-  return samples[(samples.length * 0.95).ceil() - 1];
+  return (
+    medianMicros: samples[samples.length ~/ 2],
+    p95Micros: samples[(samples.length * 0.95).ceil() - 1],
+  );
 }
 ```
 
-Print the four decision values, absolute/percentage saving, and changing
-regression before assertions.
+Warm and pair the environment workload explicitly:
 
-- [ ] **Step 2: Run the decision benchmark twice**
+```dart
+void _warmUncachedEnvironment() {
+  final retainedPainters = <TextPainter>[];
+  for (var frame = 0; frame < _warmupFrameCount; frame++) {
+    final environment = _environmentCases[frame % _environmentCases.length];
+    retainedPainters.add(_uncachedEnvironmentPainter(environment));
+  }
+  for (final painter in retainedPainters) {
+    painter.dispose();
+  }
+}
+
+void _warmCachedEnvironment() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  for (var frame = 0; frame < _warmupFrameCount; frame++) {
+    final environment = _environmentCases[frame % _environmentCases.length];
+    cache.layout(_environmentRequest(environment));
+  }
+  cache.dispose();
+}
+
+_PairedTrials _measurePairedEnvironment() {
+  final uncached = <_TrialResult>[];
+  final cached = <_TrialResult>[];
+  for (var trial = 0; trial < _trialCount; trial++) {
+    final cachedFirst = trial.isEven;
+    if (cachedFirst) {
+      _warmCachedEnvironment();
+      _warmUncachedEnvironment();
+      cached.add(_measureCachedEnvironmentTrial());
+      uncached.add(_measureUncachedEnvironmentTrial());
+    } else {
+      _warmUncachedEnvironment();
+      _warmCachedEnvironment();
+      uncached.add(_measureUncachedEnvironmentTrial());
+      cached.add(_measureCachedEnvironmentTrial());
+    }
+  }
+  return (uncached: uncached, cached: cached);
+}
+```
+
+- [ ] **Step 4: Assert non-gating scenario behavior**
+
+Add deterministic diagnostics alongside timing:
+
+```dart
+void _verifyMultiAxisBehavior() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  final unchanged = _labelsForFrame(_Scenario.multiAxisUnchanged, 0);
+  expect(unchanged, hasLength(7));
+  expect(unchanged.toSet(), hasLength(7));
+
+  for (final text in unchanged) {
+    cache.layout(_requestFor(text));
+  }
+  for (final text in unchanged) {
+    cache.layout(_requestFor(text));
+  }
+  expect(cache.debugMissCount, 7);
+  expect(cache.debugHitCount, 7);
+
+  for (var frame = 0; frame < 5; frame++) {
+    for (final text in _labelsForFrame(_Scenario.multiAxisChanging, frame)) {
+      cache.layout(_requestFor(text));
+    }
+    expect(cache.debugEntryCount, lessThanOrEqualTo(16));
+  }
+  expect(cache.debugDisposedPainterCount, greaterThan(0));
+  cache.dispose();
+}
+
+void _verifyEnvironmentMisses() {
+  final cache = CrosshairAxisLabelLayoutCache();
+  for (final environment in _environmentCases) {
+    cache.layout(_environmentRequest(environment));
+  }
+  expect(cache.debugMissCount, _environmentCases.length);
+  expect(cache.debugHitCount, 0);
+  expect(cache.debugEntryCount, _environmentCases.length);
+
+  cache.layout(_environmentRequest(_environmentCases.first));
+  expect(cache.debugHitCount, 1);
+  cache.dispose();
+}
+```
+
+This proves the multi-axis workload is one X plus six distinct Y labels,
+changing labels trigger bounded LRU eviction, and scale, direction, locale,
+and DPR each produce a miss despite identical text/style.
+
+- [ ] **Step 5: Calculate and print the exact decision**
+
+In the decision test, measure all workloads, print every trial's median and
+p95, and apply thresholds only to the single-axis pair:
+
+```dart
+final unchanged = _measurePairedScenario(_Scenario.singleAxisUnchanged);
+final changing = _measurePairedScenario(_Scenario.singleAxisChanging);
+final multiAxisUnchanged = _measurePairedScenario(
+  _Scenario.multiAxisUnchanged,
+);
+final multiAxisChanging = _measurePairedScenario(_Scenario.multiAxisChanging);
+final environment = _measurePairedEnvironment();
+
+final unchangedBaseline = _medianTrialP95(unchanged.uncached);
+final unchangedCandidate = _medianTrialP95(unchanged.cached);
+final changingBaseline = _medianTrialP95(changing.uncached);
+final changingCandidate = _medianTrialP95(changing.cached);
+final savedMicros = unchangedBaseline - unchangedCandidate;
+final savedPercent = savedMicros / unchangedBaseline * 100;
+final changingRegression = changingCandidate - changingBaseline;
+final changingLimit = math.max(changingBaseline * 0.10, 50);
+
+// ignore: avoid_print
+print(_formatPaired('singleAxisUnchanged', unchanged));
+// ignore: avoid_print
+print(_formatPaired('singleAxisChanging', changing));
+// ignore: avoid_print
+print(_formatPaired('multiAxisUnchanged', multiAxisUnchanged));
+// ignore: avoid_print
+print(_formatPaired('multiAxisChanging', multiAxisChanging));
+// ignore: avoid_print
+print(_formatPaired('environmentChanging', environment));
+// ignore: avoid_print
+print(
+  'gate: saved=$savedMicros us ($savedPercent%); '
+  'changingRegression=$changingRegression us; '
+  'changingLimit=$changingLimit us',
+);
+
+_verifyMultiAxisBehavior();
+_verifyEnvironmentMisses();
+expect(savedPercent, greaterThanOrEqualTo(20));
+expect(savedMicros, greaterThanOrEqualTo(100));
+expect(changingRegression, lessThanOrEqualTo(changingLimit));
+```
+
+`_measurePairedEnvironment` must return `_PairedTrials`, so the same
+`_formatPaired` output records median and p95 for all five uncached and cached
+trials. The decision remains the median of five p95 values; no median value is
+substituted into a gate.
+
+- [ ] **Step 6: Run the decision benchmark twice**
 
 Run:
 
@@ -573,17 +947,19 @@ flutter test test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_tes
 flutter test test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart --reporter expanded
 ```
 
-Expected: the same ship/no-ship decision on both runs. Record both complete
-outputs. If decisions differ, increase trial/sample counts equally for both
-paths and repeat; do not weaken any threshold.
+Expected: the same ship/no-ship decision on both runs, with median/p95 output
+for single-axis unchanged/changing, multi-axis unchanged/changing, and
+environment-changing trials. Record both complete outputs. If decisions
+differ, increase trial/sample counts equally for both paths and repeat; do not
+weaken any threshold.
 
-- [ ] **Step 3: Choose exactly one route**
+- [ ] **Step 7: Choose exactly one route**
 
 If both runs pass every assertion, continue with Task 4.
 
 If either stable run fails an assertion, stop Tasks 4–6 and execute Task 7.
 
-- [ ] **Step 4: Commit the decision harness**
+- [ ] **Step 8: Commit the decision harness**
 
 ```powershell
 git add test/benchmarks/rendering/crosshair_axis_label_layout_benchmark_test.dart
@@ -599,7 +975,7 @@ git commit -m "test: gate crosshair label layout caching"
 - Modify:
   `test/unit/rendering/crosshair_renderer_x_axis_test.dart`
 
-- [ ] **Step 1: Update renderer tests to require cache inputs**
+- [ ] **Step 1: Add observable repeated-paint test support**
 
 In both test suites, create and dispose a cache in `setUp`/`tearDown`, define:
 
@@ -616,18 +992,109 @@ Pass `axisLabelLayoutCache: labelCache` and
 `axisLabelLayoutEnvironment: labelEnvironment` to every `renderer.paint(...)`
 call.
 
-Add a repeated-paint test that expects the second paint to increase
-`debugHitCount`, then change the effective label `TextStyle` and expect a miss.
-Keep the existing top, bottom, mirrored, multi-axis, range-boundary, and
-transposed assertions unchanged.
+Add an internal paint probe beside `PaintedIntersectionMarker`:
 
-Add a rotated-axis regression using otherwise identical `XAxisConfig` values
-with `tickLabelRotationDegrees` of `0` and `45`. Assert that crosshair label
-paragraph placement remains identical and the second paint can hit the layout
-cache, because tick-label rotation does not rotate the crosshair coordinate
-label.
+```dart
+typedef PaintedCrosshairAxisLabel = ({
+  String role,
+  String? axisId,
+  String text,
+  Offset textOffset,
+  RRect backgroundRect,
+  Color backgroundColor,
+  Color? borderColor,
+  Color? textColor,
+  Color? axisColor,
+});
+```
 
-- [ ] **Step 2: Run tests to verify the new required arguments fail**
+Add optional `List<PaintedCrosshairAxisLabel>? paintedAxisLabelSink` to
+`CrosshairRenderer.paint`. Clear it at the start of each paint and record the
+resolved text, final live offset/rectangle, and actual paint colors at every
+cached axis-label site. This is a test probe only, like
+`paintedMarkerSink`; it does not own layout or affect painting.
+
+In the tests, copy the sink after each paint:
+
+```dart
+List<PaintedCrosshairAxisLabel> snapshot(
+  List<PaintedCrosshairAxisLabel> sink,
+) => List<PaintedCrosshairAxisLabel>.of(sink);
+
+PaintedCrosshairAxisLabel labelFor(
+  List<PaintedCrosshairAxisLabel> labels,
+  String role, {
+  String? axisId,
+}) => labels.singleWhere(
+  (label) => label.role == role && label.axisId == axisId,
+);
+```
+
+- [ ] **Step 2: Add the complete cache-hit renderer matrix**
+
+Add these named repeated-paint tests. Every case must capture the first
+hit/miss counts and output, repaint with the stated change, assert the exact
+counter delta, and compare the new sink snapshot:
+
+1. `formatter and unit changes miss and paint new X text`
+   - Paint twice without a formatter and with unit `s`; the second paint adds
+     one X hit and preserves `text == '5 s'`.
+   - Replace only the unit with `ms`; assert one miss,
+     `text == '5 ms'`, and a changed `backgroundRect.width`.
+   - Add a formatter returning `Session 5`; assert another miss and that exact
+     text (the current formatter contract replaces numeric-plus-unit output).
+   - Replace only the formatter with one returning `T=5.0`; assert another miss
+     and `text == 'T=5.0'`.
+2. `cache hit keeps background border and axis colors live`
+   - Paint a constant X label with a blue axis, snapshot its blue-derived
+     background/border, then repaint the same label/layout with a red axis.
+   - Assert one hit, no miss, unchanged text metrics, red-derived
+     `backgroundColor`/`borderColor`, and `axisColor == red` in the sink.
+   - Repeat in tracking single-axis Y mode while changing only
+     `crosshairLabelStyle.backgroundColor` and `borderColor`; assert a hit and
+     both new colors in the sink.
+3. `text color change misses and paints the new paragraph color`
+   - Repaint identical text after changing only
+     `crosshairLabelStyle.textStyle.color` from black to green.
+   - Assert one miss rather than a hit and `textColor == green`; this proves
+     text color remains live through the `TextStyle` key instead of reusing a
+     stale colored paragraph.
+4. `zoom pan and resize reuse layout but recompute placement`
+   - Use a formatter that always returns `same`, paint twice at the initial
+     transform/plot rect, and assert the second paint hits.
+   - Repaint with zoomed data bounds and the cursor moved to the screen
+     position for the same formatted value; assert another hit and changed
+     `textOffset`.
+   - Repaint with panned bounds, then with a narrower `plotArea`; assert one hit
+     per paint and new/clamped `textOffset`/`backgroundRect` values each time.
+5. `synchronized tracking hit follows the live synchronized position`
+   - Supply a `CartesianTrackingSnapshot` with
+     `origin: CartesianTrackingOrigin.synchronized`, constant formatted X/Y,
+     and tracking mode with the tooltip disabled.
+   - Paint twice at the first synchronized cursor and assert X/Y hits.
+   - Paint the same snapshot text at a second synchronized cursor/plot X;
+     assert X/Y hits again and changed X and Y `textOffset` values rather than
+     retained pointer placement.
+6. `multi-axis hits remain in current axis strips`
+   - Use one X axis plus left `power` and right `heart-rate` axes whose
+     formatters return `100 W` and `80 bpm`.
+   - Paint twice; assert three hits on the second paint and three distinct sink
+     records (`x`, `y/power`, `y/heart-rate`).
+   - Change only plot bounds and axis-strip widths, repaint, assert three more
+     hits, unchanged texts, and updated/distinct Y offsets matching
+     `calculateYAxisCrosshairLabelX` for the new `MultiAxisInfo`.
+7. `tick-label rotation does not rotate cached crosshair text`
+   - Paint otherwise identical `XAxisConfig` values with
+     `tickLabelRotationDegrees` `0` then `45`.
+   - Assert the second paint hits and the crosshair label text offset/rectangle
+     is identical because tick rotation is not a crosshair paragraph input.
+
+Keep the existing top, bottom, mirrored, range-boundary, transposed, and
+multi-axis assertions. These new cases supplement them with repeated-paint
+hit/miss and live-output evidence; a one-shot `returnsNormally` assertion does
+not satisfy this matrix.
+
+- [ ] **Step 3: Run tests to verify the new required arguments fail**
 
 Run:
 
@@ -636,15 +1103,16 @@ flutter test test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/
 ```
 
 Expected: compilation fails because `CrosshairRenderer.paint` does not accept
-the two cache arguments.
+the cache/environment/probe arguments.
 
-- [ ] **Step 3: Add the renderer helper and required inputs**
+- [ ] **Step 4: Add the renderer helper and required inputs**
 
 Import the cache module and add required `paint` arguments:
 
 ```dart
 required CrosshairAxisLabelLayoutCache axisLabelLayoutCache,
 required CrosshairAxisLabelLayoutEnvironment axisLabelLayoutEnvironment,
+List<PaintedCrosshairAxisLabel>? paintedAxisLabelSink,
 ```
 
 Add this renderer helper:
@@ -690,7 +1158,12 @@ axis-label `TextPainter(...)..layout()` sites:
 Do not route tracking tooltip rows, trend headers, value-summary content,
 annotations, or ordinary axis ticks through this cache.
 
-- [ ] **Step 4: Run focused renderer tests**
+At each site, append the `PaintedCrosshairAxisLabel` record only after final
+placement and live colors are resolved. Use stable roles `x`, `range-upper`,
+`range-lower`, `transposed-x`, and `y`; put the series ID for range labels or
+Y-axis ID for Y labels in `axisId`.
+
+- [ ] **Step 5: Run focused renderer tests**
 
 Run:
 
@@ -699,9 +1172,10 @@ dart format lib/src/rendering/modules/crosshair_renderer.dart test/unit/renderin
 flutter test test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
 ```
 
-Expected: all renderer tests pass; repeated equivalent paints record hits.
+Expected: all renderer tests pass. Every matrix test observes the specified
+hit/miss delta and changed live text, color, or placement.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
 git add lib/src/rendering/modules/crosshair_renderer.dart test/unit/rendering/modules/crosshair_renderer_test.dart test/unit/rendering/crosshair_renderer_x_axis_test.dart
@@ -722,16 +1196,111 @@ Pump a Cartesian chart inside `MediaQuery`, `Directionality`, and
 read the `ChartRenderBox` debug values:
 
 ```dart
+Future<void> pumpChart({
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+  required Locale locale,
+  required double devicePixelRatio,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: textScaler,
+            devicePixelRatio: devicePixelRatio,
+          ),
+          child: Localizations.override(
+            context: context,
+            locale: locale,
+            child: Directionality(
+              textDirection: textDirection,
+              child: const SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  showLegend: false,
+                  series: [
+                    LineChartSeries(
+                      id: 'signal',
+                      points: [
+                        ChartDataPoint(x: 0, y: 10),
+                        ChartDataPoint(x: 10, y: 20),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+await pumpChart(
+  textScaler: const TextScaler.linear(1.5),
+  textDirection: TextDirection.rtl,
+  locale: const Locale('ar'),
+  devicePixelRatio: 2,
+);
+var renderBox = tester.renderObject<ChartRenderBox>(_chartRenderFinder());
+final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+await mouse.addPointer(
+  location: tester.getCenter(_chartRenderFinder()),
+);
+await tester.pump();
+
 expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, greaterThan(0));
 expect(renderBox.debugCrosshairTextScaler.scale(10), 15);
 expect(renderBox.debugCrosshairTextDirection, TextDirection.rtl);
 expect(renderBox.debugCrosshairLocale, const Locale('ar'));
 expect(renderBox.debugCrosshairDevicePixelRatio, 2);
+final missesBeforeEnvironmentChange =
+    renderBox.debugCrosshairAxisLabelCacheMissCount;
 ```
 
-Re-pump with scale `1.0`, LTR, `Locale('en', 'ZA')`, and DPR `1.0`. Expect the
-environment getters to update and the retained-entry count to be zero before
-the next pointer paint repopulates it.
+Remove the pointer before changing inherited values so the repaint cannot
+immediately rebuild entries:
+
+```dart
+await mouse.removePointer();
+await tester.pump();
+
+await pumpChart(
+  textScaler: TextScaler.noScaling,
+  textDirection: TextDirection.ltr,
+  locale: const Locale('en', 'ZA'),
+  devicePixelRatio: 1,
+);
+renderBox = tester.renderObject<ChartRenderBox>(_chartRenderFinder());
+
+expect(renderBox.debugCrosshairTextScaler, TextScaler.noScaling);
+expect(renderBox.debugCrosshairTextDirection, TextDirection.ltr);
+expect(renderBox.debugCrosshairLocale, const Locale('en', 'ZA'));
+expect(renderBox.debugCrosshairDevicePixelRatio, 1);
+expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, 0);
+
+final reenteredMouse = await tester.createGesture(
+  kind: PointerDeviceKind.mouse,
+);
+await reenteredMouse.addPointer(
+  location: tester.getCenter(_chartRenderFinder()),
+);
+await tester.pump();
+expect(renderBox.debugCrosshairAxisLabelCacheEntryCount, greaterThan(0));
+expect(
+  renderBox.debugCrosshairAxisLabelCacheMissCount,
+  greaterThan(missesBeforeEnvironmentChange),
+);
+await reenteredMouse.removePointer();
+```
+
+The stable clearing assertion is made only while no cursor is active. The
+subsequent pointer re-entry separately proves layouts are rebuilt under the new
+environment; do not expect zero entries after an active-cursor repump.
 
 - [ ] **Step 2: Run the widget test to verify failure**
 
@@ -825,9 +1394,23 @@ axisLabelLayoutEnvironment: CrosshairAxisLabelLayoutEnvironment(
 ),
 ```
 
-Expose `@visibleForTesting` read-only debug getters for cache entry/hit/miss
-counts and the four environment values. Dispose the cache once in
-`ChartRenderBox.dispose()`.
+Expose these exact `@visibleForTesting` read-only debug getters and dispose the
+cache once in `ChartRenderBox.dispose()`:
+
+```dart
+int get debugCrosshairAxisLabelCacheEntryCount =>
+    _crosshairAxisLabelLayoutCache.debugEntryCount;
+int get debugCrosshairAxisLabelCacheHitCount =>
+    _crosshairAxisLabelLayoutCache.debugHitCount;
+int get debugCrosshairAxisLabelCacheMissCount =>
+    _crosshairAxisLabelLayoutCache.debugMissCount;
+int get debugCrosshairAxisLabelCacheDisposedPainterCount =>
+    _crosshairAxisLabelLayoutCache.debugDisposedPainterCount;
+TextScaler get debugCrosshairTextScaler => _textScaler;
+TextDirection get debugCrosshairTextDirection => _textDirection;
+Locale? get debugCrosshairLocale => _locale;
+double get debugCrosshairDevicePixelRatio => _devicePixelRatio;
+```
 
 Replace the four stale cache-comment blocks near the render-box tracking state
 with one current ownership comment on `_crosshairAxisLabelLayoutCache`.
@@ -885,9 +1468,12 @@ Append a “Measured outcome” section to the design spec containing:
 
 - both baseline runs from Task 1;
 - both paired decision runs from Task 3;
-- final uncached/cached unchanged p95;
+- every trial's median and p95 plus final uncached/cached unchanged decision
+  p95;
 - absolute and percentage saving;
 - uncached/cached changing p95 and regression;
+- non-gating multi-axis and environment-key median/p95 values and their
+  distinct-label/miss/capacity assertions;
 - focused and proportional test counts; and
 - analyzer result.
 

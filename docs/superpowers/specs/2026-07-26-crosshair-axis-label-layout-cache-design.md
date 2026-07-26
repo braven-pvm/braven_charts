@@ -1,7 +1,7 @@
 # Crosshair Axis-Label Layout Cache
 
 **Register:** `BC-0019`
-**Status:** Approved architecture; written specification awaiting review
+**Status:** Reviewed and approved for measurement-gated implementation
 **Lane:** `perf/crosshair-label-cache`
 
 ## Goal
@@ -151,20 +151,31 @@ Add a focused rendering benchmark with warm-up and multiple p95 trials. It
 measures the label-layout portion used by real crosshair rendering, not a
 synthetic string map.
 
-The benchmark covers:
+The approved gate is driven by a single-axis workload with exactly one
+formatted X label and one formatted Y label per frame:
 
-1. repeated frames with unchanged X and Y labels;
-2. frames with changing X and Y labels, which expose cache lookup and eviction
-   overhead;
-3. one X and one Y axis;
-4. one X and several independently formatted Y axes; and
-5. environment-key changes such as text scale or direction.
+1. repeated frames with both labels unchanged drive the benefit threshold; and
+2. frames with both labels changing drive the regression guard and include LRU
+   eviction/disposal in candidate timing.
+
+Non-gating diagnostic workloads cover one X plus several independently
+formatted Y labels and otherwise-identical labels with text scale, direction,
+locale, and DPR changed one key at a time. They report timing but primarily
+prove distinct label content, compatibility misses, and bounded capacity. They
+do not replace or weaken the single-axis thresholds.
 
 The baseline and candidate run as five interleaved paired trials in the same
-process after common warm-up. Every trial uses the same strings, styles,
-constraints, and sample count. Each trial records median and p95 milliseconds
-per simulated frame. The decision value is the median of the five trial p95
-values, calculated identically for the uncached and cached paths.
+process. Each pair warms both paths with the same strings, styles, constraints,
+environment, frame count, and sample count. Cached-first and uncached-first
+order alternates by trial to counter shared font/paragraph-cache bias. Every
+trial records median and p95 milliseconds per simulated frame. The decision
+value is the median of the five trial p95 values, calculated identically for
+the uncached and cached paths.
+
+Uncached painters are retained until their trial completes and disposed after
+timing. Final candidate-cache disposal is also outside timing. Candidate LRU
+eviction during changing-label frames remains inside timing because it is real
+production overhead.
 
 The changing-label decision p95 must not regress by more than the greater of
 10 percent or 0.05 ms. A cache that passes the unchanged-label gate but fails
@@ -224,5 +235,6 @@ This lane does not:
    and the proportional package test suite.
 8. Update `BC-0019` with evidence, accepted deferrals, and residual risk.
 
-No production implementation begins until this written specification is
-reviewed and approved.
+This written specification is reviewed and approved. Tasks 1–3 may proceed;
+production integration remains contingent on the unchanged-label benefit gate
+and changing-label regression guard above.
