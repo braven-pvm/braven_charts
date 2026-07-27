@@ -60,6 +60,33 @@ void main() {
       expect(mark, isA<RadialMark<Fruit>>());
     });
 
+    test('DonutMark carries a concentric config in equality', () {
+      const withConfig = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        concentric: ConcentricDonutConfig(ringGap: 12),
+      );
+      const without = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+      );
+      expect(withConfig == without, isFalse);
+      expect(withConfig.hashCode == without.hashCode, isFalse);
+      expect(withConfig.concentric, const ConcentricDonutConfig(ringGap: 12));
+      expect(without.concentric, isNull);
+      expect(
+        withConfig,
+        const DonutMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          ring: fruitBasket,
+          concentric: ConcentricDonutConfig(ringGap: 12),
+        ),
+      );
+    });
+
     test('PolarMark holds a polar style', () {
       const mark = PolarMark<Fruit>(
         category: fruitName,

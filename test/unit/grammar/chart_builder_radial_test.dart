@@ -96,6 +96,41 @@ void main() {
     });
   });
 
+  group('geomDonut carries a concentric composition', () {
+    test('geomDonut appends a DonutMark with its concentric config', () {
+      final spec = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            concentric: const ConcentricDonutConfig(
+              ringGap: 12,
+              order: ConcentricRingOrder.innerToOuter,
+            ),
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              concentric: ConcentricDonutConfig(
+                ringGap: 12,
+                order: ConcentricRingOrder.innerToOuter,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
   group('geomPolar equals the hand-written spec', () {
     test('geomPolar appends a PolarMark with its channels and style', () {
       final spec = BravenChart.of(fruits)

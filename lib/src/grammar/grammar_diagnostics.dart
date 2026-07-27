@@ -98,6 +98,10 @@ enum GrammarDiagnosticCode {
   /// A polar column geom supplied only one of the two interval bounds.
   incompletePolarInterval,
 
+  /// A donut geom set both `concentric` and the `center` shorthand, which name
+  /// the same shared center slot.
+  conflictingConcentricCenter,
+
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
   axisOptionOnRadialSpec,
@@ -370,6 +374,19 @@ final class GrammarSpecException implements Exception {
         'The polar mark "$markId" set only one interval bound. A polar '
         'interval spans an absolute lower and upper value, so supply both '
         'intervalLow and intervalHigh (or neither).',
+      );
+
+  /// A donut geom set both `concentric` and the `center` shorthand.
+  ///
+  /// [markId] names the geomDonut mark that carries both.
+  factory GrammarSpecException.conflictingConcentricCenter(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.conflictingConcentricCenter,
+        'The donut mark "$markId" set both concentric and center, but a '
+        'ConcentricDonutConfig already owns the shared center through its '
+        'centerContent, so one of the two would be discarded silently. Drop '
+        'center, and put the summary in concentric: '
+        'ConcentricDonutConfig(centerContent: ...).',
       );
 
   /// A Cartesian axis/grid option was set on a radial spec.

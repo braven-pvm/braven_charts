@@ -988,6 +988,13 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds[markIndex]);
   }
 
+  // A ConcentricDonutConfig owns the shared center through its centerContent,
+  // and `center` is the shorthand for that same slot: honoring one would have
+  // to discard the other silently, so the ambiguity is refused by name.
+  if (mark is DonutMark<T> && mark.concentric != null && mark.center != null) {
+    throw GrammarSpecException.conflictingConcentricCenter(markId);
+  }
+
   // The polar composition contract that is decidable from the spec's SHAPE.
   if (allPolar) {
     _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
@@ -1041,8 +1048,16 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   } else if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
   } else if (mark is DonutMark<T>) {
+    // Center precedence: an explicit ConcentricDonutConfig is authoritative,
+    // including its centerContent; `center` is the shorthand honored only when
+    // no config was supplied (setting both is refused above). Keeping the two
+    // sources in one local is what makes every donut path agree.
+    final center = mark.concentric?.centerContent ?? mark.center;
     if (mark.ring == null) {
-      series.add(_lowerDonut<T>(mark, markId, spec.data));
+      series.add(_lowerDonut<T>(mark, markId, spec.data, center));
+      // A ring-less donut has no composition to configure, but a config that
+      // was authored anyway still round-trips rather than vanishing.
+      concentric = mark.concentric;
     } else {
       final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
       if (rings.length == 1) {
@@ -1053,15 +1068,17 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // silently hidden.
         series.add(
           rings.single.copyWith(
-            centerContent: mark.center ?? DonutCenterContent.hidden,
+            centerContent: center ?? DonutCenterContent.hidden,
           ),
         );
-        concentric = const ConcentricDonutConfig();
+        concentric = mark.concentric ?? const ConcentricDonutConfig();
       } else {
         series.addAll(rings);
-        concentric = mark.center == null
-            ? const ConcentricDonutConfig()
-            : ConcentricDonutConfig(centerContent: mark.center!);
+        concentric =
+            mark.concentric ??
+            (mark.center == null
+                ? const ConcentricDonutConfig()
+                : ConcentricDonutConfig(centerContent: mark.center!));
       }
     }
   } else {
@@ -1196,8 +1213,15 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 
-DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
-    DonutChartSeries.fromMap(
+/// Builds the single (ring-less) donut. [center] is the center resolved by the
+/// caller's precedence rule (`concentric.centerContent` over `mark.center`),
+/// so this function never reads `mark.center` itself.
+DonutChartSeries _lowerDonut<T>(
+  DonutMark<T> mark,
+  String id,
+  List<T> data,
+  DonutCenterContent? center,
+) => DonutChartSeries.fromMap(
       id: id,
       name: mark.name,
       color: mark.color,
@@ -1210,7 +1234,7 @@ DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
       sliceGroupingConfig: mark.sliceGroupingConfig,
       donutStyle: mark.style ?? const DonutChartStyle(),
       selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
-      centerContent: mark.center ?? DonutCenterContent.hidden,
+      centerContent: center ?? DonutCenterContent.hidden,
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 

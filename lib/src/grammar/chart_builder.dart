@@ -14,6 +14,7 @@ import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/concentric_donut_config.dart' show ConcentricDonutConfig;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
@@ -479,6 +480,11 @@ final class BravenChart<T> {
   /// (one per distinct ring value, first-seen order); without it, a single
   /// donut. [value] is the angle-share; [radius] is an optional variable
   /// radius. Rich styling is deferred to [style]/[center]/[dataLabels].
+  ///
+  /// [concentric] configures the whole ring composition (ring gap, radial
+  /// order, ring weights, legend mode, pane radii) and owns the shared center
+  /// through its `centerContent`; [center] is the shorthand for that same slot
+  /// and may only be used when [concentric] is omitted.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
@@ -491,6 +497,7 @@ final class BravenChart<T> {
     DonutChartStyle? style,
     RadialSelectionStyle? selectionStyle,
     DonutCenterContent? center,
+    ConcentricDonutConfig? concentric,
     PieDataLabelConfig? dataLabels,
     RadialSliceRadiusConfig? sliceRadiusConfig,
     RadialSliceGroupingConfig? sliceGroupingConfig,
@@ -507,6 +514,7 @@ final class BravenChart<T> {
       style: style,
       selectionStyle: selectionStyle,
       center: center,
+      concentric: concentric,
       dataLabels: dataLabels,
       sliceRadiusConfig: sliceRadiusConfig,
       sliceGroupingConfig: sliceGroupingConfig,

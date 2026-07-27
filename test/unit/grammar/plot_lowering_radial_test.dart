@@ -43,6 +43,18 @@ const fruits = <Fruit>[
   Fruit(name: 'Plum', count: 10, mass: 2, basket: 'B'),
 ];
 
+/// A ConcentricDonutConfig whose every field differs from the default, so a
+/// passthrough that quietly drops one cannot masquerade as success.
+const customConcentric = ConcentricDonutConfig(
+  innerRadiusFactor: 0.4,
+  outerRadiusFactor: 0.9,
+  ringGap: 12,
+  order: ConcentricRingOrder.innerToOuter,
+  ringWeights: <String, double>{'fruit-A': 2},
+  legendMode: ConcentricDonutLegendMode.flat,
+  centerContent: DonutCenterContent(label: 'Fleet'),
+);
+
 Matcher throwsGrammarCode(GrammarDiagnosticCode code) =>
     throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
 
@@ -108,6 +120,18 @@ void main() {
       expect(interval.message, contains('polar'));
       expect(interval.message, contains('intervalLow'));
       expect(interval.message, contains('intervalHigh'));
+
+      final conflict = GrammarSpecException.conflictingConcentricCenter(
+        'rings',
+      );
+      expect(
+        conflict.code,
+        GrammarDiagnosticCode.conflictingConcentricCenter,
+      );
+      expect(conflict.toString(), contains('conflictingConcentricCenter'));
+      expect(conflict.message, contains('rings'));
+      expect(conflict.message, contains('center'));
+      expect(conflict.message, contains('concentric'));
 
       final dup = GrammarSpecException.duplicateRadialCategory('Apple');
       expect(dup.code, GrammarDiagnosticCode.duplicateRadialCategory);
@@ -501,6 +525,138 @@ void main() {
       for (final ring in lowered.series.cast<DonutChartSeries>()) {
         expect(ring.centerContent, DonutCenterContent.hidden);
       }
+      expect(
+        lowered.concentricDonutConfig,
+        const ConcentricDonutConfig(
+          centerContent: DonutCenterContent(label: 'Total'),
+        ),
+      );
+    });
+
+    test('a concentric config lowers carrying every one of its fields', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            concentric: customConcentric,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(2));
+      expect(lowered.concentricDonutConfig, customConcentric);
+      // The config's own centerContent is the authoritative shared center.
+      expect(
+        lowered.concentricDonutConfig!.centerContent,
+        const DonutCenterContent(label: 'Fleet'),
+      );
+      for (final ring in lowered.series.cast<DonutChartSeries>()) {
+        expect(ring.centerContent, DonutCenterContent.hidden);
+      }
+    });
+
+    test('a single-value ring keeps the concentric config and its center', () {
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            concentric: customConcentric,
+          ),
+        ],
+      )).lower();
+
+      // The collapsed ring must carry the config's center on itself — the
+      // render path only reads ConcentricDonutConfig.centerContent when more
+      // than one donut series is present — and the config still round-trips.
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.centerContent, const DonutCenterContent(label: 'Fleet'));
+      expect(lowered.concentricDonutConfig, customConcentric);
+    });
+
+    test('a ring-less donut honors the concentric center and config', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            id: 'fruit',
+            concentric: customConcentric,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.centerContent, const DonutCenterContent(label: 'Fleet'));
+      expect(lowered.concentricDonutConfig, customConcentric);
+    });
+
+    test('concentric plus center raises conflictingConcentricCenter', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'rings',
+              center: DonutCenterContent(label: 'Total'),
+              concentric: customConcentric,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.conflictingConcentricCenter),
+      );
+    });
+
+    test('concentric plus center is refused before the empty-data guard', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'rings',
+              center: DonutCenterContent(label: 'Total'),
+              concentric: customConcentric,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.conflictingConcentricCenter),
+      );
+    });
+
+    test('an unset concentric keeps the center shorthand behavior', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            center: DonutCenterContent(label: 'Total'),
+          ),
+        ],
+      )).lower();
+
       expect(
         lowered.concentricDonutConfig,
         const ConcentricDonutConfig(

@@ -17,6 +17,7 @@ import '../models/scatter_marker_style.dart'
         ScatterOpacityEncoding,
         ScatterSizeEncoding;
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import '../models/concentric_donut_config.dart' show ConcentricDonutConfig;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/pie_chart_config.dart'
@@ -965,6 +966,7 @@ final class DonutMark<T> extends RadialMark<T> {
     this.style,
     this.selectionStyle,
     this.center,
+    this.concentric,
     this.dataLabels,
     this.sliceRadiusConfig,
     this.sliceGroupingConfig,
@@ -983,9 +985,23 @@ final class DonutMark<T> extends RadialMark<T> {
   /// `const RadialSelectionStyle()`.
   final RadialSelectionStyle? selectionStyle;
 
-  /// Center summary. For a single donut this is the series' center; for a
-  /// concentric composition it is the shared `ConcentricDonutConfig.centerContent`.
+  /// Center summary shorthand, honored ONLY when [concentric] is null. For a
+  /// single donut this is the series' center; for a concentric composition it
+  /// is the shared `ConcentricDonutConfig.centerContent`.
+  ///
+  /// Setting both [center] and [concentric] raises
+  /// `GrammarDiagnosticCode.conflictingConcentricCenter`, because the two would
+  /// name the same slot and one would have to be discarded silently.
   final DonutCenterContent? center;
+
+  /// The full concentric composition: ring gap, radial order, ring weights,
+  /// legend mode, pane radii and the shared center.
+  ///
+  /// When non-null it is authoritative — including its `centerContent`, which
+  /// supersedes the [center] shorthand. Null keeps the [center]-derived
+  /// behavior: a `const ConcentricDonutConfig()` (optionally carrying [center])
+  /// for a ring composition, and no config at all for a ring-less donut.
+  final ConcentricDonutConfig? concentric;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
@@ -1013,6 +1029,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.style == style &&
           other.selectionStyle == selectionStyle &&
           other.center == center &&
+          other.concentric == concentric &&
           other.dataLabels == dataLabels &&
           other.sliceRadiusConfig == sliceRadiusConfig &&
           other.sliceGroupingConfig == sliceGroupingConfig;
@@ -1030,6 +1047,7 @@ final class DonutMark<T> extends RadialMark<T> {
     style,
     selectionStyle,
     center,
+    concentric,
     dataLabels,
     sliceRadiusConfig,
     sliceGroupingConfig,
