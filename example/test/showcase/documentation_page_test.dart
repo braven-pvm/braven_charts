@@ -26,14 +26,12 @@ void main() {
       find.byKey(const ValueKey('docs-build-first-chart')),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('docs-choose-family')), findsOneWidget);
+    expect(find.byKey(const ValueKey('docs-browse-guides')), findsOneWidget);
     expect(find.byKey(const ValueKey('docs-browse-api')), findsOneWidget);
     expect(find.text('Explore by what you need to build'), findsOneWidget);
-    expect(find.text('Two ways to build the same chart'), findsOneWidget);
-    expect(
-      find.text('${publicDocsChartFamilies.length} families'),
-      findsOneWidget,
-    );
+    expect(find.text('v$publicDocsPackageVersion package'), findsOneWidget);
+    expect(find.text('$publicDocsDartConstraint Dart'), findsOneWidget);
+    expect(find.text('$publicDocsFlutterConstraint Flutter'), findsOneWidget);
     expect(
       tester
           .getSize(find.byKey(const ValueKey('docs-feature-chart-families')))
@@ -45,10 +43,47 @@ void main() {
     await tester.pump();
     expect(opened, ['chart-types']);
     opened.clear();
+  });
 
-    await tester.tap(find.byKey(const ValueKey('docs-choose-family')));
+  testWidgets('guide search filters, reports, and clears results', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(home: DocumentationPage(onOpenPage: (_) {})),
+    );
     await tester.pump();
-    expect(opened, ['chart-types']);
+    final search = find.byKey(const ValueKey('docs-guide-search'));
+    await _scrollToDocumentationWidget(tester, search);
+
+    await tester.enterText(search, 'linked brushing');
+    await tester.pump();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('docs-guide-search-status')))
+          .data,
+      '1 guide shown',
+    );
+
+    await tester.enterText(search, 'no-such-guide');
+    await tester.pump();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('docs-guide-search-status')))
+          .data,
+      '0 guides shown',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('docs-guide-search-clear')));
+    await tester.pump();
+    expect(
+      find.text('${publicDocsGuides.length} guides shown'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('quick start uses the shared code view and copies either form', (
@@ -77,10 +112,10 @@ void main() {
       MaterialApp(home: DocumentationPage(onOpenPage: (_) {})),
     );
     await tester.pump();
-    await tester.ensureVisible(
+    await _scrollToDocumentationWidget(
+      tester,
       find.byKey(const ValueKey('docs-snippet-viewer')),
     );
-    await tester.pumpAndSettle();
 
     expect(find.byType(ChartCodeBlock), findsOneWidget);
     expect(
@@ -188,4 +223,20 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+}
+
+Future<void> _scrollToDocumentationWidget(
+  WidgetTester tester,
+  Finder target,
+) async {
+  for (var attempt = 0; attempt < 30 && target.evaluate().isEmpty; attempt++) {
+    await tester.drag(
+      find.byKey(const ValueKey('documentation-home')),
+      const Offset(0, -240),
+    );
+    await tester.pump();
+  }
+  expect(target, findsOneWidget);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
 }

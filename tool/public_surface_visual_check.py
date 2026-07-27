@@ -2,9 +2,9 @@
 """Capture and validate Braven Charts' pre-release public surfaces.
 
 The input is the same release artifact deployed to GitHub Pages: the Flutter
-showcase at its root and generated dartdoc under ``api/``. The README preview
-is rendered from the checked-in README after ``tool/public_docs.dart --check``
-has verified all generated blocks.
+showcase at its root, generated guides under ``guides/``, and generated dartdoc
+under ``api/``. The README preview is rendered from the checked-in README after
+``tool/public_docs.dart --check`` has verified all generated blocks.
 
 Requirements:
     python -m pip install -r tool/requirements-public-surface-visual.txt
@@ -49,6 +49,8 @@ VIEWPORTS = {
 SURFACES = {
     "readme": "/preview/readme.html",
     "documentation": "/braven_charts/?page=docs",
+    "guide-index": "/braven_charts/guides/",
+    "guide-detail": "/braven_charts/guides/chart-grammar/",
     "api": "/braven_charts/api/",
 }
 DEFAULT_BASELINE_DIR = (
@@ -430,6 +432,18 @@ def _wait_for_surface(
             )
         )
         time.sleep(4)
+    elif surface.startswith("guide-"):
+        wait.until(
+            lambda current: current.execute_script(
+                "return document.readyState === 'complete' && "
+                "Boolean(document.querySelector('#main-content'))"
+            )
+        )
+        wait.until(
+            lambda current: current.execute_script(
+                "return document.fonts ? document.fonts.status === 'loaded' : true"
+            )
+        )
     else:
         wait.until(
             lambda current: "Dart API docs" in current.title
@@ -608,11 +622,62 @@ if (sidebar && content && sidebar.right > content.left + 1) {
 return {docsNav, title, content, sidebar, issues};
 """
 
+GUIDE_GEOMETRY_SCRIPT = """
+function rect(selector) {
+  const node = document.querySelector(selector);
+  if (!node) return null;
+  const value = node.getBoundingClientRect();
+  if (value.width === 0 || value.height === 0) return null;
+  return {left: value.left, right: value.right, top: value.top, bottom: value.bottom};
+}
+const main = rect('#main-content');
+const header = rect('.site-header');
+const search = document.querySelector('#guide-search');
+const searchLabel = document.querySelector('label[for="guide-search"]');
+const liveRegion = document.querySelector('#search-status[aria-live="polite"]');
+const article = rect('.guide-content');
+const toc = rect('.table-of-contents');
+const sourceLink = document.querySelector('.source-link a[href]');
+const issues = [];
+if (!main) issues.push('missing guide main content');
+if (!header) issues.push('missing guide site header');
+if (header && main && header.bottom > main.top + 1) {
+  issues.push('guide header overlaps main content');
+}
+if (document.body.classList.contains('guide-index')) {
+  if (!search) issues.push('missing labelled guide search input');
+  if (!searchLabel) issues.push('missing guide search label');
+  if (!liveRegion) issues.push('missing polite guide result status');
+  if (!document.querySelector('[data-guide-card]')) {
+    issues.push('missing guide index entries');
+  }
+  if (search) {
+    const originalScrollX = window.scrollX;
+    search.focus();
+    if (document.activeElement !== search) issues.push('guide search is not focusable');
+    window.scrollTo(originalScrollX, window.scrollY);
+  }
+}
+if (document.body.classList.contains('guide-detail')) {
+  if (!article) issues.push('missing guide article');
+  if (!toc) issues.push('missing guide table of contents');
+  if (!sourceLink) issues.push('missing guide source link');
+  if (toc && article && toc.left < article.right && toc.right > article.left &&
+      toc.top < article.bottom && toc.bottom > article.top &&
+      window.innerWidth >= 980) {
+    issues.push('guide table of contents overlaps article');
+  }
+}
+return {main, header, search: Boolean(search), article, toc, issues};
+"""
+
 
 def _geometry(driver: webdriver.Chrome, surface: str) -> dict[str, Any]:
     result = {"document": driver.execute_script(GENERIC_GEOMETRY_SCRIPT)}
     if surface == "readme":
         result["readme"] = driver.execute_script(README_GEOMETRY_SCRIPT)
+    elif surface.startswith("guide-"):
+        result["guide"] = driver.execute_script(GUIDE_GEOMETRY_SCRIPT)
     elif surface == "api":
         result["api"] = driver.execute_script(API_GEOMETRY_SCRIPT)
     return result
@@ -644,6 +709,8 @@ def _issues_for_geometry(surface: str, geometry: dict[str, Any]) -> list[str]:
         issues.append(f"{surface} has horizontally clipped content: {labels}")
     if surface == "readme":
         issues.extend(geometry["readme"]["issues"])
+    elif surface.startswith("guide-"):
+        issues.extend(geometry["guide"]["issues"])
     elif surface == "api":
         issues.extend(geometry["api"]["issues"])
     return issues
@@ -885,9 +952,15 @@ def main() -> int:
     args = _parse_args()
     site_dir = args.site_dir.resolve()
     api_index = site_dir / "api" / "index.html"
-    if not (site_dir / "index.html").is_file() or not api_index.is_file():
+    guides_index = site_dir / "guides" / "index.html"
+    if (
+        not (site_dir / "index.html").is_file()
+        or not api_index.is_file()
+        or not guides_index.is_file()
+    ):
         raise SystemExit(
-            f"{site_dir} must contain the built showcase and api/index.html"
+            f"{site_dir} must contain the built showcase, guides/index.html, "
+            "and api/index.html"
         )
     if not args.skip_public_docs_check:
         _run_public_docs_check()

@@ -10,8 +10,10 @@
     "showcaseBaseUrl",
     "repositoryBaseUrl",
     "apiBaseUrl",
+    "guidesBaseUrl",
     "features",
     "chartFamilies",
+    "hostedGuides",
     "guides",
     "snippets",
     "gallery"
@@ -35,6 +37,10 @@
       "type": "string",
       "format": "uri"
     },
+    "guidesBaseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
     "features": {
       "type": "array",
       "minItems": 6,
@@ -45,10 +51,17 @@
     },
     "chartFamilies": {
       "type": "array",
-      "minItems": 11,
-      "maxItems": 11,
+      "minItems": 12,
+      "maxItems": 12,
       "items": {
         "$ref": "#/$defs/chartFamily"
+      }
+    },
+    "hostedGuides": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/hostedGuide"
       }
     },
     "guides": {
@@ -143,7 +156,7 @@
         "summary",
         "bestFor",
         "page",
-        "guide",
+        "guideId",
         "apiSymbols",
         "pairAsset",
         "primaryExample"
@@ -157,7 +170,13 @@
           "minLength": 1
         },
         "group": {
-          "enum": ["Cartesian", "Financial", "Partition radial", "Polar"]
+          "enum": [
+            "Cartesian",
+            "Financial",
+            "Partition radial",
+            "Polar",
+            "Indicator radial"
+          ]
         },
         "summary": {
           "type": "string",
@@ -170,9 +189,8 @@
         "page": {
           "$ref": "#/$defs/id"
         },
-        "guide": {
-          "type": "string",
-          "minLength": 1
+        "guideId": {
+          "$ref": "#/$defs/id"
         },
         "apiSymbols": {
           "type": "array",
@@ -198,6 +216,42 @@
         },
         "secondaryExample": {
           "$ref": "#/$defs/example"
+        }
+      }
+    },
+    "hostedGuide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "group", "summary", "sourcePath", "path"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "group": {
+          "enum": [
+            "Get started",
+            "Chart families",
+            "Interaction and display",
+            "Data, authoring, and live updates",
+            "Workbench, artifacts, and export",
+            "API reference"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourcePath": {
+          "type": "string",
+          "pattern": "^(doc|docs/guides)/.+\\.md$"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[a-z0-9/-]*[a-z0-9])?/$"
         }
       }
     },
@@ -229,9 +283,8 @@
         "page": {
           "$ref": "#/$defs/id"
         },
-        "path": {
-          "type": "string",
-          "minLength": 1
+        "guideId": {
+          "$ref": "#/$defs/id"
         },
         "apiPath": {
           "type": "string"
@@ -245,7 +298,7 @@
           "required": ["page"]
         },
         {
-          "required": ["path"]
+          "required": ["guideId"]
         },
         {
           "required": ["apiPath"]
