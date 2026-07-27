@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'representative generated Dart formats and analyzes',
+    'representative generated Dart parses and analyzes',
     () async {
       final series = const LineChartSeries(
         id: 'power',
@@ -240,7 +240,7 @@ void main() {
   );
 
   test(
-    'generated stacked Polar Column Dart formats and analyzes',
+    'generated stacked Polar Column Dart parses and analyzes',
     () async {
       final series = <PolarColumnChartSeries>[
         PolarColumnChartSeries.fromMap(
@@ -519,7 +519,7 @@ void main() {
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test(
-    'generated bar-style Dart (slice-3b emitter blocks) formats and analyzes',
+    'generated bar-style Dart (slice-3b emitter blocks) parses and analyzes',
     () async {
       // Series A exercises barStyle.pattern, barStyle.motion, all 10
       // previously-dropped BarLabelStyle fields (incl. nested callout), and
@@ -676,7 +676,7 @@ void main() {
   );
 
   test(
-    'generated rich-TextStyle annotation Dart (slice-3f) formats and analyzes',
+    'generated rich-TextStyle annotation Dart (slice-3f) parses and analyzes',
     () async {
       // Exercises the full TextStyle field set now emitted for annotation label
       // styles (Fix A): shadows, fontFamilyFallback, textBaseline,

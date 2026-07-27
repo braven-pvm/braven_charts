@@ -1009,9 +1009,19 @@ final class DonutMark<T> extends RadialMark<T> {
   /// `ringWeights` is keyed by the lowered ring SERIES id, which this mark
   /// names `'<markId>-<ringKey>'` — NOT by the bare ring value. A mark ided
   /// `'seasons'` over a `'Winter'` ring is weighted as
-  /// `ringWeights: {'seasons-Winter': 2}`; a key that names no ring raises
-  /// `GrammarDiagnosticCode.invalidConcentricComposition`, which lists the
-  /// real ids.
+  /// `ringWeights: {'seasons-Winter': 2}`.
+  ///
+  /// A key that names no ring raises
+  /// `GrammarDiagnosticCode.invalidConcentricComposition` listing the real ids
+  /// — but ONLY once the rows yield more than one ring. The per-series half of
+  /// the contract is delegated to the same authority the render pipeline runs
+  /// (`ConcentricDonutLayoutCalculator.validateSeries`), and that pipeline
+  /// stops composing rings below two donut series: it nulls the config and
+  /// lays a plain donut out. Refusing a single-ring spec here would reject a
+  /// chart that renders, so over one-ring data a misdirected key is inert
+  /// rather than reported. The config-only fields — pane radii, ring gap,
+  /// weight magnitudes — are validated unconditionally, above the `emptyData`
+  /// guard.
   final ConcentricDonutConfig? concentric;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.

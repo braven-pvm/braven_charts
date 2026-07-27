@@ -219,9 +219,13 @@ PlotSpec<Ride>(
 ```
 
 `Mark<T>` is a **sealed** hierarchy, so a `switch` that misses a variant does
-not compile — every dispatch site is checked when a variant is added. The
-geometry marks are Cartesian; the last four lower to annotations rather than a
-series:
+not compile — every dispatch site is checked when a variant is added. The table
+below is the **Cartesian** half of that hierarchy; the sealed `RadialMark<T>`
+subtree — `PieMark<T>`, `DonutMark<T>` and `PolarMark<T>` — lowers to the radial
+series families and is covered under [Radial geometries](#radial-geometries). A
+spec holds one half or the other, never both (`mixedCoordinateSystems`). Within
+the Cartesian half the first five lower to a series and the last four to
+annotations:
 
 | Mark | Lowers to |
 | --- | --- |
@@ -451,17 +455,55 @@ configures none explicitly**.
 ### Validation order
 
 `lower()` is total and fail-fast, and the order is fixed so a spec with
-several problems always reports the same one first:
+several problems always reports the same one first. Every **data-independent**
+check runs *above* the `emptyData` guard, so an authoring error still surfaces
+against a momentarily-empty dataset — which is exactly what lets `BravenPlot`
+swallow `emptyData` alone and render an empty state (see *Empty data is a
+state* below).
 
-1. empty `marks` → `emptyMarks`
-2. empty `data` → `emptyData`
+Shared prologue:
+
+1. a faceted spec handed to `lower()` → `facetedSpecNotLowerable`
+2. empty `marks` → `emptyMarks`
 3. mark ids (duplicates) → `duplicateMarkId`
-4. axis ids (duplicates) → `duplicateAxisId`
-5. transposition → `unsupportedTransposition`
-6. each mark, in spec order → `unknownAxisId`, `unknownTrendSource`,
-   `invalidTrendWindow`, `missingChannelEncoding`, `unsupportedChannelScale`,
-   `invalidCandlestickRow`
-7. unbound axes → `unboundAxis`
+4. `.polarConfig(...)` on a spec holding no radial mark →
+   `polarConfigOnNonPolarSpec`
+
+A radial spec then branches (below). A **Cartesian** spec continues:
+
+5. axis ids (duplicates) → `duplicateAxisId`
+6. a time/log x axis that also declares category slots → `conflictingAxisMode`
+7. transposition → `unsupportedTransposition`
+8. each mark, in spec order → `unknownAxisId`, `unknownTrendSource`,
+   `invalidTrendWindow`, `missingChannelEncoding`, `orphanChannelEncoding`,
+   `unsupportedChannelScale`
+9. unbound axes → `unboundAxis`
+10. empty `data` → `emptyData`
+11. materialization, per row → `invalidCandlestickRow`, `nonPositiveLogValue`
+
+A **radial** spec continues instead:
+
+5. several radial marks that are not all `geomPolar` → `multipleRadialGeoms`
+6. any non-radial mark alongside them → `mixedCoordinateSystems`
+7. `transposed` / `xAxis` / `yAxes` / `grid` → `axisOptionOnRadialSpec`
+8. `.polarConfig(...)` on a pie/donut spec → `polarConfigOnNonPolarSpec`
+9. `geomDonut` setting both `concentric` and `center` →
+   `conflictingConcentricCenter`
+10. `concentric:` with no `ring:` → `concentricConfigOnRinglessDonut`; then the
+    config-only half of the concentric contract (pane radii, ring gap, ring
+    weight magnitudes) → `invalidConcentricComposition`
+11. the shape-decidable half of the polar composition contract, in this fixed
+    order: clashing mark units → `invalidPolarComposition`; a grouped/stacked
+    mode with fewer than two `geomPolar` marks → `invalidPolarComposition`;
+    exactly one of `intervalLow`/`intervalHigh` → `incompletePolarInterval`;
+    clashing `rose` presets → `invalidPolarComposition`
+12. empty `data` → `emptyData`
+13. materialization → `emptyRadialCategories`, `duplicateRadialCategory`; then
+    the row-dependent half of the polar contract → `invalidPolarComposition`,
+    and of the concentric contract → `invalidConcentricComposition`
+
+`facetedRadialUnsupported` is raised earlier still, by `BravenFacetPlot`: a
+radial spec cannot be faceted at all.
 
 Every diagnostic carries a machine-readable `GrammarDiagnosticCode` alongside
 its sentence, so a facade or a tool can react without string matching.

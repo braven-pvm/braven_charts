@@ -690,7 +690,7 @@ void main() {
     });
 
     testWidgets(
-      'generated Source from a spec-built chart formats and analyzes',
+      'generated Source from a spec-built chart parses and analyzes',
       (tester) async {
         final controller = BravenChartController();
         addTearDown(controller.dispose);
