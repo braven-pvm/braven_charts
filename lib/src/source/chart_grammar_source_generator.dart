@@ -35,7 +35,7 @@
 /// | a layered/grouped/stacked polar composition | emitted as ONE geomPolar per series over a shared category field |
 /// | a customised PolarChartConfig | emitted as .polarConfig(...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
-/// | a non-default ConcentricDonutConfig | blocked by the round-trip proof — the grammar carries only the composition's shared center |
+/// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
@@ -75,6 +75,7 @@ import '../models/candlestick_chart_series.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
@@ -985,12 +986,21 @@ class _GrammarChainEmitter {
     // the multi-ring composition carries it on the shared config (no-op = the
     // config's visible default, `mark.center == null ? const
     // ConcentricDonutConfig() : ...`). See `_lowerRadial`'s concentric branch.
+    final captured = configuration.concentricDonutConfig!;
     final center = donuts.length == 1
         ? _markCenter(donuts.single.centerContent, DonutCenterContent.hidden)
-        : _markCenter(
-            configuration.concentricDonutConfig!.centerContent,
-            const DonutCenterContent(),
-          );
+        : _markCenter(captured.centerContent, const DonutCenterContent());
+    // What lowering REBUILDS from `center` alone — the shape every concentric
+    // chart emitted before `concentric:` existed. When it already reproduces the
+    // captured composition the mark keeps carrying just the center, so those
+    // charts emit exactly the text they emitted before; only a composition the
+    // center cannot express (a ring gap, order, weights, radii, legend mode, or
+    // a center with runtime styling `_markCenter` drops) carries the whole
+    // config — which is precisely the set that used to be REFUSED.
+    final fromCenter = donuts.length == 1 || center == null
+        ? const ConcentricDonutConfig()
+        : ConcentricDonutConfig(centerContent: center);
+    final carriesConfig = fromCenter != captured;
     return _RadialPlan(
       kind: _RadialKind.concentric,
       verb: 'geomDonut',
@@ -999,7 +1009,10 @@ class _GrammarChainEmitter {
       value: value,
       radius: radius,
       ring: ring,
-      center: center,
+      // The config owns the center when it rides the mark: lowering reads
+      // `concentric.centerContent` and REFUSES a mark that sets both, so the
+      // plan's `center` (what `geomDonut` emits as `center:`) drops out too.
+      center: carriesConfig ? null : center,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
       // deliberately left null here. The mark carries ONE unit / style /
@@ -1016,7 +1029,8 @@ class _GrammarChainEmitter {
         ring: _string(ring),
         style: donuts.first.donutStyle,
         selectionStyle: donuts.first.selectionStyle,
-        center: center,
+        center: carriesConfig ? null : center,
+        concentric: carriesConfig ? captured : null,
         dataLabels: donuts.first.dataLabels,
         sliceRadiusConfig: donuts.first.sliceRadiusConfig,
         sliceGroupingConfig: donuts.first.sliceGroupingConfig,
@@ -1288,9 +1302,11 @@ class _GrammarChainEmitter {
   /// two comparisons have different strengths, and saying so is the honest
   /// framing:
   ///
-  /// - `ConcentricDonutConfig` is RECONSTRUCTED by lowering from the donut
-  ///   mark's `center`, so comparing it genuinely proves what the mark carries.
-  ///   A customised ring gap / order / weights / radii is a real, named refusal.
+  /// - `ConcentricDonutConfig` is either RECONSTRUCTED by lowering from the
+  ///   donut mark's `center` (when the center alone expresses the captured
+  ///   composition) or carried verbatim on `DonutMark.concentric` (when it does
+  ///   not). The first case genuinely proves what the mark carries; the second
+  ///   is the same passthrough tripwire as the polar config below.
   /// - `PolarChartConfig` rides `PlotSpec.polar` verbatim, so the re-lowered
   ///   plot hands the SAME object back. That comparison is a regression tripwire
   ///   on the lowering — before this slice lowering substituted
@@ -1348,10 +1364,11 @@ class _GrammarChainEmitter {
       return (
         subject: 'the concentric-donut composition',
         detail:
-            'The grammar carries only a concentric donut\'s shared center, so a '
-            'customised ConcentricDonutConfig (ring gap, weights, order, radius '
-            'factors or legend mode) is not reproduced. Author the chart through '
-            'the grammar to express it as a chain.',
+            'A concentric chain sets the ring gap, order, weights, radii, legend '
+            'mode and shared center with geomDonut(concentric: ...), so the '
+            're-lowered plot must carry the captured ConcentricDonutConfig '
+            'exactly. This one does not — the captured chart pairs the config '
+            'with a radial family that composes no rings.',
       );
     }
     // The lowering tripwire described above: it fires only if lowering stops
@@ -1456,11 +1473,11 @@ class _GrammarChainEmitter {
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
     }
-    // concentricDonutConfig and polarChartConfig are NO LONGER listed here:
-    // the radial marks carry the common radial shape (a concentric composition's
-    // shared center; a default polar pane), and the round-trip proof
-    // (_firstRadialMismatch) refuses a customised one with a named reason. Only
-    // radialBarChartConfig stays gated — radial-bar has no grammar mark.
+    // concentricDonutConfig and polarChartConfig are NO LONGER listed here: the
+    // grammar carries both (`geomDonut(concentric:)` and `.polarConfig(...)`),
+    // and the round-trip proof (_firstRadialMismatch) refuses anything they do
+    // not reproduce with a named reason. Only radialBarChartConfig stays gated —
+    // radial-bar has no grammar mark.
     if (configuration.radialBarChartConfig != null) {
       lost.add('radialBarChartConfig');
     }
@@ -2448,6 +2465,14 @@ class _GrammarChainEmitter {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
           }
           if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+          // `concentric:` and `center:` are mutually exclusive by lowering's
+          // precedence rule, and the planner only carries a config the center
+          // could not express — so a concentric chart whose composition IS the
+          // default still emits neither, exactly as before.
+          if (mark.concentric case final concentric?
+              when concentric != const ConcentricDonutConfig()) {
+            _config.emitConcentricDonutConfig(writer, 'concentric', concentric);
+          }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
           }

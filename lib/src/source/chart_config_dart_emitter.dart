@@ -246,6 +246,16 @@ class ChartConfigDartEmitter {
     PolarChartConfig config,
   ) => _emitPolarChartConfigArgument(writer, argument, config);
 
+  /// Writes `<argument>: ConcentricDonutConfig(...)` — the literal the grammar
+  /// chain hands to `geomDonut(concentric: ...)`, rendered by the same code the
+  /// config form's `concentricDonutConfig:` uses. Unconditional: the caller
+  /// decides when the config is non-default and worth emitting.
+  void emitConcentricDonutConfig(
+    DartSourceWriter writer,
+    String argument,
+    ConcentricDonutConfig config,
+  ) => _emitConcentricDonutConfigArgument(writer, argument, config);
+
   /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
   /// radial geometry verbs (`geomPie`/`geomDonut`/`geomPolar`) use too. Writes
   /// nothing for the default style (unless `includeDefaultValues`).
@@ -289,7 +299,11 @@ class ChartConfigDartEmitter {
       _emitSeriesList(body);
       final concentricDonutConfig = configuration.concentricDonutConfig;
       if (concentricDonutConfig != null) {
-        _emitConcentricDonutConfig(body, concentricDonutConfig);
+        _emitConcentricDonutConfigArgument(
+          body,
+          'concentricDonutConfig',
+          concentricDonutConfig,
+        );
       }
       if (configuration.polarChartConfig case final polarConfig?) {
         _emitPolarChartConfigArgument(body, 'polarChartConfig', polarConfig);
@@ -3102,11 +3116,19 @@ class ChartConfigDartEmitter {
     _emitAdvancedRadial(writer, series, seriesIndex);
   }
 
-  void _emitConcentricDonutConfig(
+  /// Writes `<argument>: ConcentricDonutConfig(...)`.
+  ///
+  /// Shared between the config form (`concentricDonutConfig:` on
+  /// `BravenChartPlus`) and the grammar form (`geomDonut(concentric: ...)`,
+  /// through [emitConcentricDonutConfig]) so the two cannot disagree about how a
+  /// `ConcentricDonutConfig` is rendered. Unconditional: the caller decides when
+  /// the config is worth emitting.
+  void _emitConcentricDonutConfigArgument(
     DartSourceWriter writer,
+    String argument,
     ConcentricDonutConfig config,
   ) {
-    writer.writeLine('concentricDonutConfig: ConcentricDonutConfig(');
+    writer.writeLine('$argument: ConcentricDonutConfig(');
     writer.indented(() {
       _numberIf(writer, 'innerRadiusFactor', config.innerRadiusFactor, 0.32);
       _numberIf(writer, 'outerRadiusFactor', config.outerRadiusFactor, 1);

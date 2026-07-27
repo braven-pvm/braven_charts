@@ -2283,6 +2283,61 @@ void main() {
       expect('intervalLow: null,'.allMatches(generated.source).length, 1);
       expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
     });
+
+    testWidgets('shape 28: a CUSTOMISED ConcentricDonutConfig emits '
+        'concentric: and round-trips', (tester) async {
+      // Before this slice the composition config was reconstructed from the
+      // mark's `center` alone, so a customised ring gap / order / weights /
+      // radii was honestly REFUSED. `geomDonut(concentric:)` now carries the
+      // whole config, and the emitter reverses it through the config emitter's
+      // own `ConcentricDonutConfig` renderer.
+      const custom = ConcentricDonutConfig(
+        innerRadiusFactor: 0.2,
+        ringGap: 12,
+        order: ConcentricRingOrder.innerToOuter,
+        // A ring weight is keyed by the SERIES id, which the concentric
+        // lowering names `<markId>-<ringKey>`.
+        ringWeights: <String, double>{'seasons-Winter': 2},
+        legendMode: ConcentricDonutLegendMode.flat,
+        centerContent: DonutCenterContent(label: 'Harvest'),
+      );
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_custom_config',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'concentric: ConcentricDonutConfig(',
+          'innerRadiusFactor: 0.2',
+          'ringGap: 12',
+          'order: ConcentricRingOrder.innerToOuter',
+          "'seasons-Winter': 2",
+          'legendMode: ConcentricDonutLegendMode.flat',
+          "label: 'Harvest'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              concentric: custom,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              concentric: custom,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The config owns the center, so the shorthand must NOT also be emitted:
+      // lowering refuses a mark that sets both.
+      expect(generated.source, isNot(contains('center: DonutCenterContent(')));
+    });
   });
 
   // =========================================================================
@@ -2793,14 +2848,24 @@ void main() {
       expect(generated.source, isNot(contains('Cartesian-only in V1')));
     });
 
-    testWidgets('a customised ConcentricDonutConfig is refused with a named '
-        'reason, not the stale copy', (tester) async {
-      // The grammar carries only a concentric donut's shared center, so a
-      // custom ringGap cannot round-trip. The proof must refuse it with an
-      // accurate reason, NOT emit a chain that silently drops the config.
-      final snapshot = await snapshotOf(
+    testWidgets('a customised ConcentricDonutConfig EMITS, and the reason it '
+        'used to be refused is gone', (tester) async {
+      // This row of the matrix flipped: the grammar used to carry only a
+      // concentric donut's shared center, so a custom ringGap could not
+      // round-trip and was honestly refused. `geomDonut(concentric: ...)` now
+      // carries the whole composition, so the same CONFIG-FORM chart emits a
+      // chain — and the round trip below proves the emitted chain rebuilds the
+      // captured chart rather than silently dropping the config.
+      final generated = await expectRoundTrip(
         tester,
-        (controller) => BravenChartPlus(
+        name: 'concentric_config_form_custom',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'concentric: ConcentricDonutConfig(',
+          'ringGap: 12',
+        ],
+        original: (controller) => BravenChartPlus(
           bravenChartController: controller,
           concentricDonutConfig: const ConcentricDonutConfig(ringGap: 12),
           series: <ChartSeries>[
@@ -2816,17 +2881,18 @@ void main() {
             ),
           ],
         ),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              concentric: const ConcentricDonutConfig(ringGap: 12),
+            )
+            .build(bravenChartController: controller),
       );
-      final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('concentric-donut composition'),
-          contains('ConcentricDonutConfig'),
-        ),
-      );
-      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+      expect(generated.isComplete, isTrue);
+      expect(generated.source, isNot(contains('Cartesian-only')));
     });
 
     testWidgets('polar series whose category domains differ are refused by '
