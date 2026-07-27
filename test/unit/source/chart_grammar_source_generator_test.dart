@@ -677,7 +677,7 @@ final List<PolarPairRow> polarPairRows = <PolarPairRow>[
 // These are copied from `example/lib/showcase/pages/polar_column_page.dart`
 // (`_buildSeriesList` and `_buildPolarConfig`): the data maps, the per-
 // presentation pane/axis/composition knobs and the per-presentation styling
-// each of the seven authored presentations applies. The showcase is what the
+// each of the eight authored presentations applies. The showcase is what the
 // workbench Grammar pane actually renders, so a chart built from these values
 // emitting a chain IS the claim "every polar Grammar pane emits".
 // ---------------------------------------------------------------------------
@@ -706,6 +706,21 @@ const showcaseRoseValues = <String, num>{
   'Oct': 74,
   'Nov': 49,
   'Dec': 61,
+};
+
+/// The `partial` presentation's lifecycle stages (`_partialValues`).
+///
+/// This is the only presentation that moves the PANE off its defaults — a 240°
+/// sweep from 150° with an annular baseline — so it is the only one whose
+/// acceptance depends on `PolarPaneConfig.startAngleDegrees`/`sweepAngleDegrees`
+/// surviving the reversal.
+const showcasePartialValues = <String, num>{
+  'Discover': 84,
+  'Evaluate': 62,
+  'Trial': 73,
+  'Adopt': 91,
+  'Expand': 66,
+  'Renew': 79,
 };
 
 const showcaseLayeredObservedValues = <String, num>{
@@ -846,6 +861,15 @@ const showcaseSunsetPalette = <Color>[
   Color(0xFF5A189A),
 ];
 
+/// The showcase's `_PolarPalette.earth` swatch.
+const showcaseEarthPalette = <Color>[
+  Color(0xFF386641),
+  Color(0xFF6A994E),
+  Color(0xFFA7C957),
+  Color(0xFFBC6C25),
+  Color(0xFFDDA15E),
+];
+
 /// `_categoryColors` for `_PolarPalette.theme`: the base theme's own series
 /// colors, at least eight of them.
 List<Color> showcaseThemePalette(ChartTheme theme, int categoryCount) =>
@@ -913,9 +937,15 @@ PolarChartConfig showcasePolarConfig({
   required PolarColumnCompositionMode compositionMode,
   PolarRadialScaleMode scaleMode = PolarRadialScaleMode.linear,
   List<PolarThreshold> thresholds = const <PolarThreshold>[],
+  // Seven of the eight presentations leave the pane's angular span alone;
+  // `partial` is the one that authors it, so it rides parameters defaulted to
+  // the showcase's own resting values rather than a second forked helper.
+  double startAngleDegrees = -90,
+  double sweepAngleDegrees = 360,
 }) => PolarChartConfig(
   pane: PolarPaneConfig(
-    startAngleDegrees: -90,
+    startAngleDegrees: startAngleDegrees,
+    sweepAngleDegrees: sweepAngleDegrees,
     innerRadiusFactor: innerRadiusFactor,
     outerRadiusFactor: outerRadiusFactor,
   ),
@@ -1052,7 +1082,8 @@ ChartDocumentSnapshot patchedSnapshot(
   );
 }
 
-/// Asserts one showcase chart reaches the Grammar pane as a real chain.
+/// Asserts one showcase chart reaches the Grammar pane as a real, COMPILING
+/// chain.
 ///
 /// The acceptance question for this slice is not "does some polar chart emit"
 /// but "does the chart the showcase page actually mounts emit", so this mounts
@@ -1061,6 +1092,14 @@ ChartDocumentSnapshot patchedSnapshot(
 /// generator proves FIDELITY internally — it re-lowers the chain it is about to
 /// write and refuses anything that would render a different chart — so an
 /// emitted chain already means a faithful one.
+///
+/// That internal proof runs on the reconstructed spec OBJECT, though, so on its
+/// own it says nothing about the TEXT the emitter then writes: a chain that
+/// names a parameter the builder does not have, or drops a closing paren, would
+/// still pass every assertion above and hand the user source that does not
+/// build. So this runs the same `dart format` + `dart analyze` gate
+/// [expectRoundTrip] does. What it does NOT do is [expectRoundTrip]'s rebuild
+/// step — see the group's own header for why.
 Future<ChartGeneratedSource> expectShowcaseEmits(
   WidgetTester tester, {
   required String presentation,
@@ -1091,8 +1130,24 @@ Future<ChartGeneratedSource> expectShowcaseEmits(
       reason: 'missing "$fragment" in:\n${generated.source}',
     );
   }
+  // Real subprocesses, so the same `runAsync` escape hatch `expectRoundTrip`
+  // documents applies here.
+  await tester.runAsync(
+    () => expectGeneratedSourceCompiles(
+      generated.source,
+      fixtureName: 'grammar_showcase_${fixtureSlug(presentation)}',
+    ),
+  );
   return generated;
 }
+
+/// [text] reduced to a filesystem-safe scratch-file stem.
+///
+/// Presentation names are prose ("concentric donut", "a 240 degree sweep"), and
+/// [expectGeneratedSourceCompiles] turns its `fixtureName` into a real path
+/// under `.dart_tool/`.
+String fixtureSlug(String text) =>
+    text.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_');
 
 /// Whether a chain was actually emitted.
 ///
@@ -3211,10 +3266,29 @@ void main() {
   // config, at that presentation's authored knob values — so a regression that
   // only shows up on a real showcase chart fails here.
   //
-  // Emission is the whole assertion because the generator refuses anything it
-  // cannot reproduce: it re-lowers the chain it is about to write and compares
-  // the result to the hydrated document, so "a chain was emitted" already
-  // carries "this chain rebuilds this chart".
+  // Emission plus COMPILATION is the assertion. The generator refuses anything
+  // it cannot reproduce — it re-lowers the chain it is about to write and
+  // compares the result to the hydrated document — so "a chain was emitted"
+  // already carries "this chain rebuilds this chart". `expectShowcaseEmits`
+  // then runs the emitted TEXT through `dart format` + `dart analyze`, because
+  // that internal proof inspects the reconstructed spec object and never reads
+  // a character of what the emitter writes.
+  //
+  // What this group deliberately does NOT do is `expectRoundTrip`'s rebuild.
+  // A Flutter test cannot execute generated Dart — `dart analyze` runs over a
+  // scratch file and never loads it — so "rebuilt" always means a SECOND,
+  // hand-transcribed chain in this file. That transcription is worth writing
+  // once per SHAPE, and it already is: shapes 20-28 above hand-rebuild a
+  // styled polar, a multi-series polar, a customised `PolarChartConfig`, every
+  // config field, per-category column colors and targets, intervals, the rose
+  // preset, two series with independent advanced fields, and a customised
+  // `ConcentricDonutConfig` — the complete mechanism set these presentations
+  // are assembled from. Re-transcribing it per PRESENTATION would add ~9 more
+  // copies of chains whose only new content is the showcase's literal knob
+  // values, and those values are what the whole-literal assertions below pin
+  // directly. So the compile gate is the floor here, and the per-case
+  // `literalArguments` blocks — not a ninth transcription — are what stop an
+  // emitted literal from drifting.
   // =========================================================================
 
   group('showcase acceptance: every polar presentation emits', () {
@@ -3323,6 +3397,91 @@ void main() {
             ),
           ],
         ),
+      );
+    });
+
+    testWidgets('partial: a 240 degree sweep from 150 degrees over an open '
+        'center', (tester) async {
+      // The eighth presentation. Every other one leaves the pane's angular
+      // span at the class defaults, so this is the ONLY acceptance case in
+      // which a reversal that rebuilt the pane from its defaults — a full 360
+      // starting at -90 — would draw a visibly different chart while still
+      // reproducing every series. The pane literals below are therefore the
+      // load-bearing part of this test, not decoration.
+      final colors = showcaseColumnColors(
+        showcasePartialValues,
+        showcaseEarthPalette,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'partial',
+        fragments: <String>[
+          '.geomPolar(',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'pane: PolarPaneConfig(',
+          'startAngleDegrees: 150.0,',
+          'sweepAngleDegrees: 240.0,',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.9,',
+          'innerPadding: 0.14,',
+          'outerPadding: 0.08,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            startAngleDegrees: 150,
+            sweepAngleDegrees: 240,
+            innerRadiusFactor: 0.28,
+            outerRadiusFactor: 0.9,
+            innerPadding: 0.14,
+            outerPadding: 0.08,
+            categoryLabelColor: const Color(0xFF7C2D12),
+            radialLabelColor: const Color(0xFF9A3412),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-column',
+              name: 'Category volume',
+              values: showcasePartialValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 8,
+                opacity: 0.86,
+                borderColor: const Color(0xFF7C2D12),
+                valueLabelColor: const Color(0xFF431407),
+                animationMode: PolarColumnAnimationMode.fade,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.28,
+                  endLightnessShift: -0.08,
+                ),
+                shadow: const PolarColumnShadowStyle(
+                  color: Color(0xFF9A3412),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                  opacity: 0.18,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+      // Asserted WHOLE: a fragment list can only notice the pane fields it
+      // happens to name, and the whole point of this presentation is the pane.
+      // `clockwise` and `clipMarks` are the showcase's own resting values, so
+      // they are correctly elided.
+      expect(
+        literalArguments(generated.source, 'pane: PolarPaneConfig('),
+        <String>[
+          'startAngleDegrees: 150.0,',
+          'sweepAngleDegrees: 240.0,',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.9,',
+        ],
       );
     });
 
@@ -3613,7 +3772,7 @@ void main() {
         showcaseUncertaintyValues,
         showcaseOceanPalette,
       );
-      await expectShowcaseEmits(
+      final generated = await expectShowcaseEmits(
         tester,
         presentation: 'intervals',
         fragments: <String>[
@@ -3625,6 +3784,12 @@ void main() {
           'intervalStyle: PolarColumnIntervalStyle(',
           'color: Color(0xFF0F172A),',
           'width: 2.0,',
+          // The plot-level config: the fragment list above named only
+          // per-SERIES text, so the whole `.polarConfig(...)` verb could be
+          // dropped from the chain and this case would still have passed.
+          // (The round-trip proof cannot see it either — it re-lowers the
+          // captured `PolarChartConfig` OBJECT, not the emitted literal.)
+          '.polarConfig(',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -3676,6 +3841,37 @@ void main() {
           ],
         ),
       );
+      // The plot-level config asserted WHOLE. Before this, `intervals` named
+      // only per-series text, so deleting the entire `.polarConfig(...)` verb
+      // from `_emitPolarChartBody` left this acceptance case green while the
+      // emitted chain rebuilt a DEFAULT pane, default paddings and default
+      // label styling — a visibly different chart. Every line below is a knob
+      // the showcase authors away from its class default; the ones it leaves
+      // alone (`outerRadiusFactor`, `outerPadding`, the visible-label caps,
+      // the radial `labelOffset`, the layered composition) are correctly
+      // elided, and this list fails if any of that flips.
+      expect(literalArguments(generated.source, 'PolarChartConfig('), <String>[
+        'pane: PolarPaneConfig(',
+        'innerRadiusFactor: 0.12,',
+        '),',
+        'angularAxis: PolarCategoryAxisConfig(',
+        'innerPadding: 0.16,',
+        'labelOffset: 4.0,',
+        'labelStyle: PolarLabelStyle(',
+        'color: Color(0xFF334155),',
+        'fontSize: 12.0,',
+        'fontWeight: FontWeight.w500,',
+        '),',
+        '),',
+        'radialAxis: PolarNumericAxisConfig(',
+        'scaleMode: PolarRadialScaleMode.linear,',
+        'labelStyle: PolarLabelStyle(',
+        'color: Color(0xFF475569),',
+        'fontSize: 10.0,',
+        'fontWeight: FontWeight.w500,',
+        '),',
+        '),',
+      ]);
     });
 
     testWidgets('a concentric donut at the showcase\'s non-default ring '
