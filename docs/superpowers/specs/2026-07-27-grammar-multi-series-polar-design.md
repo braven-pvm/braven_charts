@@ -19,7 +19,7 @@ Item 1a (PR #124) taught the emitter to recognise radial families and carry per-
 ## Owner decisions (settled at brainstorm)
 
 - **Representation:** *multiple `geomPolar` marks per spec* (relax the one-radial-geom rule for the **polar family only** — pie/donut stay single; donut-multi is already concentric via the `ring` channel). Each series is its own mark with independent style/color/data; the plot-level `PolarChartConfig` lives on the spec. This is the only representation that expresses per-series-distinct styles (e.g. layered's "Capacity" at reduced opacity with labels off) and reverses cleanly from the config's `List<PolarColumnChartSeries>`.
-- **Coverage:** *full 7/7 polar coverage now* — carry all six advanced per-series fields so **standard / rose / layered / grouped / stacked / references / intervals** all emit, plus non-default `ConcentricDonutConfig`.
+- **Coverage:** *full 8/8 polar coverage now* — carry all six advanced per-series fields so **standard / rose / partial / layered / grouped / stacked / references / intervals** all emit, plus non-default `ConcentricDonutConfig`.
 
 ## Grounded target inventory (what must emit)
 
@@ -29,6 +29,7 @@ Item 1a (PR #124) taught the emitter to recognise radial families and carry per-
 |---|---|---|---|
 | standard | 1 | `columnColors` | `PolarChartConfig` (pane/axes) |
 | rose | 1 | `columnColors`, `.rose` constructor (`preset: rose`) | area-correct radial axis |
+| partial | 1 | `columnColors` | non-default **pane**: `startAngleDegrees: 150`, `sweepAngleDegrees: 240`, `innerRadiusFactor: 0.28` |
 | layered | 2 | per-series `polarStyle` (opacity 0.32, labels off) | `composition: layered` |
 | grouped | 3 | per-series color | `composition: grouped`, `groupInnerPadding` |
 | stacked | 3 | per-series color | `composition: stacked` |
@@ -101,13 +102,13 @@ Every new diagnostic gets a named code, message, and a test asserting it fires.
 ## Decomposition (vertical slices — each ends green; full suite + `analyze lib` + drift gates)
 
 - **Slice A — Multi-geom polar structural.** N `PolarMark` in one spec; `_lowerRadial` polar loop; spec-level `PolarChartConfig` passthrough + `.polarConfig` verb; `multipleRadialGeoms` repurpose + `polarConfigOnNonPolarSpec`; emitter reverses N `geomPolar` + `.polarConfig`. **Acceptance:** layered / grouped / stacked + custom-config polar emit + round-trip.
-- **Slice B — Per-series advanced fields.** `columnColor`, `target`/`targetMarkerStyle`, `intervalLow`/`intervalHigh`/`intervalStyle`, `rose` preset; `incompletePolarInterval`. **Acceptance:** standard (columnColors) / references / intervals / rose emit → **all 7 presentations**.
+- **Slice B — Per-series advanced fields.** `columnColor`, `target`/`targetMarkerStyle`, `intervalLow`/`intervalHigh`/`intervalStyle`, `rose` preset; `incompletePolarInterval`. **Acceptance:** standard (columnColors) / references / intervals / rose emit → **all 8 presentations** (`partial` is `standard`'s channel set over a non-default pane, so Slice A's spec-level `PolarChartConfig` passthrough is what carries it).
 - **Slice C — Non-default `ConcentricDonutConfig` passthrough.** `DonutMark.concentric` + precedence + `conflictingConcentricCenter`; emitter reverses `concentric:`; proof compares the full config. **Acceptance:** a non-default concentric donut emits + round-trips.
 - **Slice D — Showcase + docs verification.** Confirm every polar + concentric workbench Grammar pane emits a real chain; update the emitter file-header matrix and any `doc/chart_grammar.md` radial copy.
 
 ## Testing
 
-- **Round-trip ("emitted == faithful"):** each of the 7 polar presentations + a non-default concentric donut, re-lowered through the extended `_firstRadialMismatch`, reproduces the captured config (series list + `PolarChartConfig` + `ConcentricDonutConfig`) exactly. Fixtures use non-default values so a no-op pass cannot masquerade as success.
+- **Round-trip ("emitted == faithful"):** each of the 8 polar presentations + a non-default concentric donut, re-lowered through the extended `_firstRadialMismatch`, reproduces the captured config (series list + `PolarChartConfig` + `ConcentricDonutConfig`) exactly. Fixtures use non-default values so a no-op pass cannot masquerade as success.
 - **Diagnostics:** multiple non-polar radial → `multipleRadialGeoms`; `.polarConfig()` without polar mark → `polarConfigOnNonPolarSpec`; `concentric`+`center` → `conflictingConcentricCenter`; one interval bound → `incompletePolarInterval`.
 - **No regression:** Cartesian + existing pie/donut/concentric/single-polar emission byte-identical; existing goldens unchanged; all four drift gates green; `PlotSpec` equality unaffected for non-radial specs.
 - **Showcase:** every polar + concentric Grammar pane renders a faithful chain (workbench tests + manual).

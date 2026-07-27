@@ -690,10 +690,11 @@ config the pipeline already understood (details under *V2.0 verbs* above):
   `geomPolar`, plus the spec-level `.polarConfig(...)`. Multi-series polar
   compositions and customised `PolarChartConfig` / `ConcentricDonutConfig`
   round-trip, so every Polar Column Workbench Grammar pane emits a real chain
-  instead of a diagnostic — all seven showcase presentations (standard, rose,
-  layered, grouped, stacked, references, intervals). A concentric composition
-  emits when its ring series ids follow the `'<markId>-<ring>'` pattern the
-  ring channel itself produces; ids that do not are still refused by name.
+  instead of a diagnostic — all eight showcase presentations (standard, rose,
+  partial, layered, grouped, stacked, references, intervals). A concentric
+  composition emits when its ring series ids follow the `'<markId>-<ring>'`
+  pattern the ring channel itself produces; ids that do not are still refused
+  by name.
 
 ## Not in V1 (still deferred)
 

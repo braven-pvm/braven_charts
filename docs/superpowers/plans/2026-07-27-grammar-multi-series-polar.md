@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the workbench Grammar Source pane emit a faithful `BravenChart.of(rows)….build()` chain for every Polar Column presentation (standard/rose/layered/grouped/stacked/references/intervals) and for non-default `ConcentricDonutConfig` donuts.
+**Goal:** Make the workbench Grammar Source pane emit a faithful `BravenChart.of(rows)….build()` chain for every Polar Column presentation (standard/rose/partial/layered/grouped/stacked/references/intervals) and for non-default `ConcentricDonutConfig` donuts.
 
 **Architecture:** Multiple `geomPolar` marks per spec (the one-radial-geom rule relaxes for the polar family only); plot-level `PolarChartConfig` lives on `PlotSpec` and is set with `.polarConfig(...)`; per-series polar data (`columnColor`/`target`/`intervals`) becomes row-channels on `PolarMark`, and per-series/plot config objects ride the mark/spec. The source emitter reverses N `PolarColumnChartSeries` → N `geomPolar` marks + `.polarConfig(...)`, proving fidelity by re-lowering (the existing `_firstRadialMismatch` already does full-config equality; the fix is that lowering now *carries* the config so the re-lowered plot matches).
 
@@ -470,7 +470,7 @@ Keep the config-form caller (`:265`) calling it with `argument: 'polarChartConfi
 
 ## Slice B — Per-series advanced fields (columnColor / target / intervals / rose)
 
-Flips standard/rose/references/intervals to emitted → all 7 presentations.
+Flips standard/rose/references/intervals to emitted → all 8 presentations (`partial` rides Slice A's spec-level `PolarChartConfig` passthrough: it is `standard`'s channel set over a 240° pane).
 
 ### Task B1: `PolarMark` advanced fields + `geomPolar` params + `incompletePolarInterval`
 
@@ -712,7 +712,7 @@ test('donut ring mark with a concentric config lowers carrying it', () {
 
 **Interfaces:** none produced; this is the Theme-1 acceptance gate for polar/concentric.
 
-- [ ] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted) and the re-lowered chain reproduces the config (the generator already proves this internally; asserting non-null is the observable). Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
+- [ ] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, partial, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted) and the re-lowered chain reproduces the config (the generator already proves this internally; asserting non-null is the observable). Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
 
 - [ ] **Step 2: Run — expect PASS** (Slices A–C should already make them emit; any red here is a real gap to fix in the relevant slice's emitter/lowering, not by loosening the test).
 
