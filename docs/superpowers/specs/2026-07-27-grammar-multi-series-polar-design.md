@@ -7,7 +7,9 @@
 
 ## Goal
 
-Make the workbench **Grammar Source** pane emit a faithful `BravenChart.of(rows)….build()` chain for **every** Polar Column chart — including the multi-series compositions (layered / grouped / stacked) with per-series-distinct styling, the advanced per-series presentations (references / intervals / rose), and any customised plot-level `PolarChartConfig` — and for **non-default `ConcentricDonutConfig`** donut charts. This closes the last "not emitted" radial panes left after item 1a.
+Make the workbench **Grammar Source** pane emit a faithful `BravenChart.of(rows)….build()` chain for **every** Polar Column chart — including the multi-series compositions (layered / grouped / stacked) with per-series-distinct styling, the advanced per-series presentations (references / intervals / rose), and any customised plot-level `PolarChartConfig` — and for **non-default `ConcentricDonutConfig`** donut charts.
+
+> **Delivered scope, corrected 2026-07-27 after verification against the real pages.** The polar half of that goal is met in full: all eight `PolarColumnPage` presentations emit, verified against the page's own construction. The concentric half is met as a **config passthrough** — a non-default `ConcentricDonutConfig` emits when the composition is authored the way the grammar's own lowering produces one — but **not** as a showcase claim: `ConcentricDonutPage` and `DonutChartsPage` still do **not** emit. See *Known gap* below. The original sentence "closes the last 'not emitted' radial panes" was wrong and has been removed.
 
 Item 1a (PR #124) taught the emitter to recognise radial families and carry per-series *style* + a handful of config objects, but it deliberately deferred polar because of two **structural** blockers. This slice removes both.
 
@@ -20,6 +22,25 @@ Item 1a (PR #124) taught the emitter to recognise radial families and carry per-
 
 - **Representation:** *multiple `geomPolar` marks per spec* (relax the one-radial-geom rule for the **polar family only** — pie/donut stay single; donut-multi is already concentric via the `ring` channel). Each series is its own mark with independent style/color/data; the plot-level `PolarChartConfig` lives on the spec. This is the only representation that expresses per-series-distinct styles (e.g. layered's "Capacity" at reduced opacity with labels off) and reverses cleanly from the config's `List<PolarColumnChartSeries>`.
 - **Coverage:** *full 8/8 polar coverage now* — carry all six advanced per-series fields so **standard / rose / partial / layered / grouped / stacked / references / intervals** all emit, plus non-default `ConcentricDonutConfig`.
+
+## Known gap (verified 2026-07-27) — the two donut showcase pages do not emit
+
+Established by mounting the real pages and running the generator on the live chart documents, then isolating each cause with mutate-one-thing-at-a-time probes:
+
+| Page | Emits? | Complete? | Why |
+|---|---|---|---|
+| `PolarColumnPage`, all 8 presentations | **yes** | yes | the delivered scope above |
+| `PieChartsPage` | yes | **no** | honest known-limitation warning only: radial label formatter callbacks have no literal |
+| `ConcentricDonutPage` | **no** | no | blockers 1 + 2 + 3 below, each independent |
+| `DonutChartsPage` | **no** | no | blocker 2 (it is a single-ring donut, so 1 and 3 do not arise) |
+
+The three blockers:
+
+1. **Ring ids.** The page names its ring series from its own `_ringDescriptors` (`current`, `previous`, …), not the `'<markId>-<ring>'` contract the `ring:` channel reproduces.
+2. **Per-slice colours.** Both pages pass `sliceColors` (`donut_charts_page.dart:487`); `DonutMark`/`PieMark` have **no** per-point colour channel — only `PolarMark` does, via `columnColor`.
+3. **Per-ring data labels.** The concentric page's `hierarchy` label layout gives each ring a **different** `PieDataLabelConfig`, and one `DonutMark` carries **one** `dataLabels` for every ring it splits into.
+
+Fixing any one leaves the page blocked on the others. Blocker 2 is the substantive one and is **owner-scoped, out of this slice**: it means adding a per-point colour channel to `PieMark`/`DonutMark`, a grammar-surface addition, not an emitter repair. Each blocker is mounted and its refusal pinned in `group('KNOWN GAP: the donut showcase pages do not emit')` in `test/unit/source/chart_grammar_source_generator_test.dart`, so closing one turns that group red and points back here.
 
 ## Grounded target inventory (what must emit)
 
@@ -104,14 +125,15 @@ Every new diagnostic gets a named code, message, and a test asserting it fires.
 - **Slice A — Multi-geom polar structural.** N `PolarMark` in one spec; `_lowerRadial` polar loop; spec-level `PolarChartConfig` passthrough + `.polarConfig` verb; `multipleRadialGeoms` repurpose + `polarConfigOnNonPolarSpec`; emitter reverses N `geomPolar` + `.polarConfig`. **Acceptance:** layered / grouped / stacked + custom-config polar emit + round-trip.
 - **Slice B — Per-series advanced fields.** `columnColor`, `target`/`targetMarkerStyle`, `intervalLow`/`intervalHigh`/`intervalStyle`, `rose` preset; `incompletePolarInterval`. **Acceptance:** standard (columnColors) / references / intervals / rose emit → **all 8 presentations** (`partial` is `standard`'s channel set over a non-default pane, so Slice A's spec-level `PolarChartConfig` passthrough is what carries it).
 - **Slice C — Non-default `ConcentricDonutConfig` passthrough.** `DonutMark.concentric` + precedence + `conflictingConcentricCenter`; emitter reverses `concentric:`; proof compares the full config. **Acceptance:** a non-default concentric donut emits + round-trips.
-- **Slice D — Showcase + docs verification.** Confirm every polar + concentric workbench Grammar pane emits a real chain; update the emitter file-header matrix and any `doc/chart_grammar.md` radial copy.
+- **Slice D — Showcase + docs verification.** Confirm every **polar** workbench Grammar pane emits a real chain (all eight presentations, against the page's own construction) plus a non-default `ConcentricDonutConfig` authored through the grammar; record the donut-page *Known gap* above rather than implying it away; update the emitter file-header matrix and any `doc/chart_grammar.md` radial copy.
 
 ## Testing
 
 - **Round-trip ("emitted == faithful"):** each of the 8 polar presentations + a non-default concentric donut, re-lowered through the extended `_firstRadialMismatch`, reproduces the captured **series list** exactly. Fixtures use non-default values so a no-op pass cannot masquerade as success. Because the config comparisons are passthrough tripwires rather than proofs (see *Invariants*), every emitted `PolarChartConfig` / `ConcentricDonutConfig` field additionally gets an **assertion on the emitted text**; those, plus the drift gate, are what actually pin the literals.
 - **Diagnostics:** multiple non-polar radial → `multipleRadialGeoms`; `.polarConfig()` without polar mark → `polarConfigOnNonPolarSpec`; `concentric`+`center` → `conflictingConcentricCenter`; one interval bound → `incompletePolarInterval`.
 - **No regression:** Cartesian + existing pie/donut/concentric/single-polar emission byte-identical; existing goldens unchanged; all four drift gates green; `PlotSpec` equality unaffected for non-radial specs.
-- **Showcase:** every polar + concentric Grammar pane renders a faithful chain (workbench tests + manual).
+- **Showcase:** every **polar** Grammar pane renders a faithful chain — all eight presentations mounted from `polar_column_page.dart`'s own construction — plus a non-default `ConcentricDonutConfig` authored through the grammar. The donut pages are covered by *refusal* tests instead, one per blocker in the *Known gap* above, so the gap stays visible and closing it goes red rather than unnoticed.
+- **Sync guard:** the acceptance fixtures are a hand transcription of the showcase page, so `group('showcase transcription sync guard')` parses `polar_column_page.dart` and asserts the `_PolarPresentation` value list (length, names, order) against the acceptance cases, every `<String, num>` value map (contents **and** key order — the palette cycles over it), and every transcribed `_PolarPalette` swatch. Without it the gate keeps passing about a page that has moved on.
 
 ## Files
 
@@ -126,6 +148,7 @@ Every new diagnostic gets a named code, message, and a test asserting it fires.
 
 ## Out of scope (future)
 
+- **A per-point colour channel on `PieMark` / `DonutMark`** — blocker 2 of the *Known gap* above, and the single change that would unblock `DonutChartsPage`. Owner-scoped grammar-surface work.
 - Radial faceting (`facetedRadialUnsupported` stays a guard).
 - New radial mark families (radial-bar / gauge) — roadmap 1b.
 - Cartesian advanced-field completeness (bar/scatter) — roadmap 1d.

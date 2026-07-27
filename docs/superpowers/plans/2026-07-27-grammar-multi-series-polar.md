@@ -4,6 +4,8 @@
 
 **Goal:** Make the workbench Grammar Source pane emit a faithful `BravenChart.of(rows)….build()` chain for every Polar Column presentation (standard/rose/partial/layered/grouped/stacked/references/intervals) and for non-default `ConcentricDonutConfig` donuts.
 
+> **Delivered scope, corrected 2026-07-27 after verifying against the real showcase pages.** Polar: **met in full**, all eight presentations, checked against `polar_column_page.dart`'s own construction. Concentric: met as a **config passthrough** (a non-default `ConcentricDonutConfig` authored the way the grammar's own lowering produces one), **not** as a showcase claim — `ConcentricDonutPage` and `DonutChartsPage` do **not** emit, on three independent blockers. See *Known gap* in the design spec, and `group('KNOWN GAP: the donut showcase pages do not emit')` in `test/unit/source/chart_grammar_source_generator_test.dart`, which pins each one.
+
 **Architecture:** Multiple `geomPolar` marks per spec (the one-radial-geom rule relaxes for the polar family only); plot-level `PolarChartConfig` lives on `PlotSpec` and is set with `.polarConfig(...)`; per-series polar data (`columnColor`/`target`/`intervals`) becomes row-channels on `PolarMark`, and per-series/plot config objects ride the mark/spec. The source emitter reverses N `PolarColumnChartSeries` → N `geomPolar` marks + `.polarConfig(...)`. Fidelity of the reversed **series** is proven by re-lowering; fidelity of the emitted **config literals** is not (the proof spec carries the captured config instance verbatim, so lowering hands the same instance back and `_firstRadialMismatch` compares it to itself — a regression tripwire on lowering, which is what it caught before this slice). The literals rest on the config emitter's shared renderer seams, the `source_emitter_drift` gate, and per-field assertions on the emitted text.
 
 **Tech Stack:** Dart ≥3.9, Flutter; `flutter test`; `flutter analyze lib` (never root — vendored `packages/fleather` pollutes root analyze).
@@ -708,22 +710,28 @@ test('donut ring mark with a concentric config lowers carrying it', () {
 
 ## Slice D — Showcase + docs verification
 
-### Task D1: Every polar + concentric Grammar pane emits; retire stale copy
+### Task D1: Every POLAR Grammar pane emits, plus a grammar-authored non-default `ConcentricDonutConfig`; retire stale copy
 
 **Files:**
 - Modify: `lib/src/source/chart_grammar_source_generator.dart:34-36` (file-header matrix)
 - Modify: `doc/chart_grammar.md` (radial section — move polar/concentric out of any "not emitted / deferred" note)
 - Test: `test/unit/source/chart_grammar_source_generator_test.dart` (a showcase-representative test per presentation)
 
-**Interfaces:** none produced; this is the Theme-1 acceptance gate for polar/concentric.
+**Interfaces:** none produced; this is the Theme-1 acceptance gate for polar, plus the concentric config passthrough.
 
-- [ ] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, partial, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted). The generator's internal proof covers the re-lowered SERIES, so non-null already carries that; it does NOT cover the emitted config literals, so each case must also assert the emitted TEXT of the config fields it exercises. Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
+**Scope, stated exactly (corrected 2026-07-27):** the gate covers the eight **polar** presentations against the real page, and a non-default `ConcentricDonutConfig` **authored through the grammar** — it does *not* cover `ConcentricDonutPage` or `DonutChartsPage`, which do not emit. Those are recorded as a *Known gap* (ring ids / per-slice colours / per-ring data labels) with a refusal test per blocker, not fixed here; blocker 2 (a per-point colour channel on `PieMark`/`DonutMark`) is owner-scoped.
 
-- [ ] **Step 2: Run — expect PASS** (Slices A–C should already make them emit; any red here is a real gap to fix in the relevant slice's emitter/lowering, not by loosening the test).
+- [x] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, partial, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted). The generator's internal proof covers the re-lowered SERIES, so non-null already carries that; it does NOT cover the emitted config literals, so each case must also assert the emitted TEXT of the config fields it exercises. Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
 
-- [ ] **Step 3: Update the file-header matrix** (`:34-36`) to state pie/donut/concentric/polar (incl. multi-series + customised configs) all emit; remove the "customised PolarChartConfig / non-default ConcentricDonutConfig blocked" row.
+- [x] **Step 2: Run — expect PASS** (Slices A–C should already make them emit; any red here is a real gap to fix in the relevant slice's emitter/lowering, not by loosening the test).
 
-- [ ] **Step 4: Update `doc/chart_grammar.md`** — move the polar/concentric lines out of any "Not emitted / deferred" section; note multi-series polar + config passthrough are supported (keep the Beta framing).
+- [x] **Step 3: Update the file-header matrix** (`:34-36`) to state pie/donut/concentric/polar (incl. multi-series + customised configs) all emit; remove the "customised PolarChartConfig / non-default ConcentricDonutConfig blocked" row.
+
+- [x] **Step 4: Update `doc/chart_grammar.md`** — move the polar/concentric lines out of any "Not emitted / deferred" section; note multi-series polar + config passthrough are supported (keep the Beta framing).
+
+- [x] **Step 4a (added 2026-07-27): make the gate's wording match what it proves, and record the donut *Known gap*.** The concentric acceptance case is a *grammar-authored* config, not `ConcentricDonutPage`, and the group name said otherwise. Retitle the group, the concentric case and the `doc/chart_grammar.md` / spec / plan copy to "every **polar** pane emits, plus a non-default `ConcentricDonutConfig`", and add a `KNOWN GAP` group that mounts each of the three donut-page blockers (ring ids, per-slice colours, per-ring data labels) and pins its refusal. Blockers 2 and 3 carry their own CONTROL, showing the same chart emits once that one thing is removed; blocker 1's control is the acceptance case immediately above it, which mounts the same two-ring composition under `'<markId>-<ring>'` ids and emits.
+
+- [x] **Step 4b (added 2026-07-27): sync guard for the hand-transcribed fixtures.** The acceptance cases mount constants copied out of `polar_column_page.dart` by hand, and nothing noticed the page changing. Add `group('showcase transcription sync guard')`, which parses the page's own source and asserts: the `_PolarPresentation` value list (length, names, order) equals the presentations the gate covers; every one of those names appears as an acceptance case's `presentation:` label; every `static const _…Values = <String, num>{…}` map is transcribed with the same contents **and key order** (the palette cycles over it); and every transcribed `_PolarPalette` swatch matches. Verified by mutation: adding a ninth presentation, editing a number, reordering keys, tweaking a swatch colour, adding an untranscribed map and renaming an acceptance case's label each turn the guard red, naming the drift.
 
 - [ ] **Step 5: Full suite + drift gates + `flutter analyze lib` + `flutter analyze example/lib`.**
 
@@ -742,5 +750,5 @@ test('donut ring mark with a concentric config lowers carrying it', () {
 - [ ] `flutter analyze lib` and `flutter analyze example/lib` — "No issues found!".
 - [ ] Cartesian + existing pie/donut/concentric/single-polar emission byte-identical (the existing emitter tests in `chart_grammar_source_generator_test.dart` unchanged/green).
 - [ ] `chart_builder.dart` NUL sentinel intact (1 NUL, 0 CRLF, no BOM).
-- [ ] Run the showcase locally (`flutter run -d chrome` in `example/`) and confirm the Polar + Concentric workbench Grammar panes render real chains — for owner browser verification.
+- [ ] Run the showcase locally (`flutter run -d chrome` in `example/`) and confirm all eight **Polar Column** workbench Grammar panes render real chains — for owner browser verification. The **Concentric Donut** and **Donut Charts** panes will still show a diagnostic; that is the recorded *Known gap*, not a regression. (`Pie Charts` renders a chain with a known-limitation warning for its label formatter callbacks.)
 - [ ] Rebase onto latest `origin/master`; re-run the suite.

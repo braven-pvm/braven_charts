@@ -61,6 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PlotSpec`, marks/channels, and `braven_charts_fluent.dart`) remain Beta /
   experimental and may change before a stable release. Pin a version if you
   depend on them.
+- Known limitation, so the concentric-donut passthrough above is not read wider
+  than it is: a pie or donut series carrying **per-slice colours**
+  (`sliceColors`) is still refused by the Grammar source emitter, because
+  `PieMark` and `DonutMark` have no per-point colour channel — only `PolarMark`
+  does, through `columnColor`. A concentric composition whose rings carry
+  *different* `dataLabels` is refused for the same class of reason: one
+  `DonutMark` holds one `dataLabels` for every ring it splits into. Both are
+  named diagnostics, never a silently different chart. Full detail, including
+  which showcase pages this leaves blocked, is under *Known gap* in
+  `doc/chart_grammar.md`.
 
 ## 0.14.0 - 2026-07-27
 

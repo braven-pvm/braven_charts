@@ -28,6 +28,7 @@
 /// chain that would render a different chart is worse than no chain at all.
 library;
 
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -676,12 +677,23 @@ final List<PolarPairRow> polarPairRows = <PolarPairRow>[
 // ---------------------------------------------------------------------------
 // SHOWCASE POLAR fixtures — the ACCEPTANCE GATE for this slice.
 //
-// These are copied from `example/lib/showcase/pages/polar_column_page.dart`
-// (`_buildSeriesList` and `_buildPolarConfig`): the data maps, the per-
+// These are a HAND TRANSCRIPTION of
+// `example/lib/showcase/pages/polar_column_page.dart` (`_buildSeriesList` and
+// `_buildPolarConfig`): the data maps, the palette swatches, the per-
 // presentation pane/axis/composition knobs and the per-presentation styling
 // each of the eight authored presentations applies. The showcase is what the
 // workbench Grammar pane actually renders, so a chart built from these values
-// emitting a chain IS the claim "every polar Grammar pane emits".
+// emitting a chain IS the claim "every polar Grammar pane emits" — but ONLY
+// for as long as the transcription still says what the page says.
+//
+// A hand copy has exactly one failure mode: the page is edited and nothing
+// here notices, so the gate keeps passing about a chart the showcase no longer
+// mounts. `group('showcase transcription sync guard')` closes that by parsing
+// the page's own source and comparing it to the constants below — the presentation
+// enum, every `<String, num>` value map (contents AND key order, which the
+// palette cycling depends on) and every transcribed swatch. Add a presentation,
+// rename one, or nudge a number on the page and that guard goes red naming the
+// drift; it is what keeps the sentence above true rather than merely historic.
 // ---------------------------------------------------------------------------
 
 const showcaseStandardValues = <String, num>{
@@ -975,6 +987,202 @@ PolarChartConfig showcasePolarConfig({
   composition: PolarColumnCompositionConfig(mode: compositionMode),
   thresholds: thresholds,
 );
+
+// ---------------------------------------------------------------------------
+// SYNC GUARD readers — how the transcription above is held to the page.
+//
+// The guard cannot import the page: `_PolarPresentation` and every `_…Values`
+// map are library-private to `polar_column_page.dart`, and the example is a
+// separate package this one does not depend on. So it reads the page as TEXT
+// and parses the few declarations the transcription copies. That is a narrow
+// contract — these readers know the page's declaration syntax, not its
+// meaning — and each one fails loudly, naming the declaration it could not
+// find, rather than quietly returning nothing (an empty result compared
+// against an empty expectation is how a guard dies silently).
+// ---------------------------------------------------------------------------
+
+/// The path the guard reads the polar showcase page from.
+///
+/// `flutter test` runs with the package root as its working directory — the
+/// same fact `expectGeneratedSourceCompiles` relies on when it drops a scratch
+/// file next to `pubspec.yaml` so `package:braven_charts` resolves.
+const showcasePolarPagePath =
+    'example/lib/showcase/pages/polar_column_page.dart';
+
+/// This file, which the guard reads to check every presentation is covered.
+const grammarGeneratorTestPath =
+    'test/unit/source/chart_grammar_source_generator_test.dart';
+
+/// Reads [path] relative to the package root, failing with a directed message
+/// when it is not there.
+String readRepoFile(String path) {
+  final file = File(path);
+  expect(
+    file.existsSync(),
+    isTrue,
+    reason:
+        'the showcase sync guard cannot find "$path" (working directory '
+        '"${Directory.current.path}"). If the file MOVED, move this path with '
+        'it — deleting the guard instead re-opens the drift it exists to stop.',
+  );
+  return file.readAsStringSync();
+}
+
+/// [source] with the INTERIOR of every quoted literal blanked to spaces,
+/// preserving both length and line structure.
+///
+/// The enum-value list ends at the first `;` after the header — but only if a
+/// scan can tell code from prose. `_PolarPresentation.references` describes
+/// itself as *'Amber ticks mark category targets; the dashed ring marks shared
+/// capacity'*, and a naive `indexOf(';')` stops THERE, truncating the enum to
+/// seven values and reporting `intervals` as deleted. (Observed: this guard's
+/// first run failed exactly that way.) A guard that cries drift over its own
+/// parser is worse than none, so the quotes are handled.
+String blankStringLiterals(String source) {
+  final out = source.split('');
+  var index = 0;
+  while (index < source.length) {
+    final quote = source[index];
+    if (quote != "'" && quote != '"') {
+      index++;
+      continue;
+    }
+    var cursor = index + 1;
+    while (cursor < source.length && source[cursor] != quote) {
+      final escaped = source[cursor] == r'\';
+      out[cursor] = source[cursor] == '\n' ? '\n' : ' ';
+      cursor++;
+      if (escaped && cursor < source.length) {
+        out[cursor] = source[cursor] == '\n' ? '\n' : ' ';
+        cursor++;
+      }
+    }
+    index = cursor + 1;
+  }
+  return out.join();
+}
+
+/// The value names of `enum [enumName]` in [source], in declaration order.
+///
+/// Every value sits at exactly two spaces of indent, so a value's own arguments
+/// (four spaces or more) cannot be mistaken for another value. The scan runs
+/// over the body from the header only — never the whole file — so an apostrophe
+/// in some unrelated comment cannot confuse [blankStringLiterals].
+List<String> enumValueNames(String source, String enumName) {
+  final header = 'enum $enumName {';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final body = blankStringLiterals(source.substring(start + header.length));
+  final end = body.indexOf(';');
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final names = <String>[
+    for (final match in RegExp(
+      r'^  ([a-z][A-Za-z0-9_]*)\s*\(',
+      multiLine: true,
+    ).allMatches(body.substring(0, end)))
+      match.group(1)!,
+  ];
+  expect(names, isNotEmpty, reason: 'parsed no values out of "$header"');
+  return names;
+}
+
+/// The names of every `static const _…Values = <String, num>{…}` map the
+/// showcase page declares.
+///
+/// This is the half of the guard that notices an ADDED map — a new
+/// presentation's data landing on the page with no transcription and no
+/// acceptance case.
+Set<String> showcaseNumMapNames(String source) => <String>{
+  for (final match in RegExp(
+    r'static const (_[A-Za-z0-9_]*Values) = <String, num>\{',
+  ).allMatches(source))
+    match.group(1)!,
+};
+
+/// The `static const [name] = <String, num>{…}` map in [source], in the page's
+/// own key order (which is what the palette cycles over, so it is load-bearing).
+Map<String, num> showcaseNumMap(String source, String name) {
+  final header = 'static const $name = <String, num>{';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final end = source.indexOf('};', start);
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final entries = <String, num>{
+    for (final match in RegExp(
+      r"'([^']*)'\s*:\s*(-?\d+(?:\.\d+)?)",
+    ).allMatches(source.substring(start + header.length, end)))
+      match.group(1)!: num.parse(match.group(2)!),
+  };
+  expect(entries, isNotEmpty, reason: 'parsed no entries out of "$header"');
+  return entries;
+}
+
+/// The `const [Color(0x…), …]` swatch `_categoryColors` returns for
+/// `_PolarPalette.[name]`.
+List<Color> showcasePaletteSwatch(String source, String name) {
+  final header = '_PolarPalette.$name => const [';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final end = source.indexOf('],', start);
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final colors = <Color>[
+    for (final match in RegExp(
+      r'Color\(0x([0-9A-Fa-f]{8})\)',
+    ).allMatches(source.substring(start + header.length, end)))
+      Color(int.parse(match.group(1)!, radix: 16)),
+  ];
+  expect(colors, isNotEmpty, reason: 'parsed no colors out of "$header"');
+  return colors;
+}
+
+/// The eight `_PolarPresentation` values, in the page's declaration order, that
+/// the acceptance gate below covers one `testWidgets` each.
+///
+/// This list is the join between the page and the gate: the guard asserts the
+/// page's enum equals it, and that each name appears as an acceptance case's
+/// `presentation:` label. A ninth presentation therefore cannot be added
+/// without either extending this list AND writing its case, or going red.
+const showcasePolarPresentations = <String>[
+  'standard',
+  'rose',
+  'partial',
+  'layered',
+  'grouped',
+  'stacked',
+  'references',
+  'intervals',
+];
+
+/// Every `<String, num>` map the page declares, against its transcription here.
+const showcaseTranscribedValueMaps = <String, Map<String, num>>{
+  '_standardValues': showcaseStandardValues,
+  '_roseValues': showcaseRoseValues,
+  '_partialValues': showcasePartialValues,
+  '_layeredObservedValues': showcaseLayeredObservedValues,
+  '_layeredCapacityValues': showcaseLayeredCapacityValues,
+  '_groupedNorthValues': showcaseGroupedNorthValues,
+  '_groupedSouthValues': showcaseGroupedSouthValues,
+  '_groupedWestValues': showcaseGroupedWestValues,
+  '_stackedNewValues': showcaseStackedNewValues,
+  '_stackedExpansionValues': showcaseStackedExpansionValues,
+  '_stackedChurnValues': showcaseStackedChurnValues,
+  '_referenceActualValues': showcaseReferenceActualValues,
+  '_referenceTargetValues': showcaseReferenceTargetValues,
+  '_uncertaintyValues': showcaseUncertaintyValues,
+  '_uncertaintyLowerValues': showcaseUncertaintyLowerValues,
+  '_uncertaintyUpperValues': showcaseUncertaintyUpperValues,
+};
+
+/// The three `_PolarPalette` swatches the acceptance cases author through.
+///
+/// `theme` is generated from the live `ChartTheme` (transcribed as
+/// [showcaseThemePalette], not a literal) and `monochrome` is not reached by
+/// any authored presentation, so neither has a literal to compare.
+const showcaseTranscribedPalettes = <String, List<Color>>{
+  'ocean': showcaseOceanPalette,
+  'sunset': showcaseSunsetPalette,
+  'earth': showcaseEarthPalette,
+};
 
 // ===========================================================================
 // Harness
@@ -3269,15 +3477,145 @@ void main() {
   });
 
   // =========================================================================
-  // ACCEPTANCE GATE — every polar + concentric workbench Grammar pane emits.
+  // SYNC GUARD — the acceptance gate's fixtures are a HAND TRANSCRIPTION.
+  //
+  // Everything the gate below claims is a claim about the SHOWCASE, and it is
+  // made through constants copied out of `polar_column_page.dart` by hand.
+  // Nothing in the gate itself would notice the page changing underneath it:
+  // add a ninth presentation, rename `references`, or edit a data map, and
+  // eight green tests keep asserting about a page that no longer exists. This
+  // group is the only thing standing between "the gate is true" and "the gate
+  // was true once" — so it reads the page's own source and compares.
+  //
+  // It is a TEXT parse, not an import: the page's declarations are all
+  // library-private and the example is a separate package. That buys less than
+  // an import would (it knows the page's syntax, not its behaviour), and it is
+  // sufficient for the one job here — noticing that a copied constant stopped
+  // matching its original.
+  // =========================================================================
+
+  group('showcase transcription sync guard', () {
+    test('the page declares exactly the eight presentations the acceptance '
+        'gate covers, in order', () {
+      expect(
+        enumValueNames(
+          readRepoFile(showcasePolarPagePath),
+          '_PolarPresentation',
+        ),
+        showcasePolarPresentations,
+        reason:
+            'the showcase page\'s `_PolarPresentation` no longer matches the '
+            'presentations the acceptance gate below covers. A value was '
+            'ADDED, REMOVED, RENAMED or REORDERED. The gate claims EVERY polar '
+            'presentation emits, so restore the parity: add (or delete) the '
+            'matching `testWidgets` case in "showcase acceptance", update '
+            '`showcasePolarPresentations`, and transcribe its authored values '
+            'into the fixtures above. Do NOT edit this expectation on its own '
+            '— that is exactly the silent drift this test exists to catch.',
+      );
+    });
+
+    test('every presentation has an acceptance case', () {
+      final tests = readRepoFile(grammarGeneratorTestPath);
+      for (final presentation in showcasePolarPresentations) {
+        // Asserted on the BOOLEAN, not with `contains` on the file: a failed
+        // string matcher prints the whole haystack, and the haystack here is
+        // this file.
+        expect(
+          tests.contains("presentation: '$presentation',"),
+          isTrue,
+          reason:
+              'no acceptance case passes `presentation: \'$presentation\'`, so '
+              'the gate does not actually cover it. Naming a presentation in '
+              '`showcasePolarPresentations` is not the same as testing it.',
+        );
+      }
+    });
+
+    test('every value map the page declares is transcribed, contents and key '
+        'order', () {
+      final page = readRepoFile(showcasePolarPagePath);
+      expect(
+        showcaseNumMapNames(page),
+        showcaseTranscribedValueMaps.keys.toSet(),
+        reason:
+            'the showcase page gained or lost a `<String, num>` value map. An '
+            'ADDED one is data no acceptance case mounts; a REMOVED one leaves '
+            'a fixture above describing a chart the page no longer builds.',
+      );
+      for (final entry in showcaseTranscribedValueMaps.entries) {
+        final authored = showcaseNumMap(page, entry.key);
+        expect(
+          authored,
+          entry.value,
+          reason:
+              '`${entry.key}` on the showcase page no longer matches its '
+              'transcription above, so the acceptance gate mounts different '
+              'numbers than the page does.',
+        );
+        // Key ORDER as well as contents: `showcaseColumnColors` cycles the
+        // palette over the map's key order, so a reordering repaints every
+        // column while leaving the map "equal".
+        expect(
+          authored.keys,
+          orderedEquals(entry.value.keys),
+          reason:
+              '`${entry.key}` still holds the same entries but in a different '
+              'ORDER, which re-assigns every per-category column color.',
+        );
+      }
+    });
+
+    test('every palette swatch the acceptance cases author through is the '
+        'page\'s own', () {
+      final page = readRepoFile(showcasePolarPagePath);
+      expect(
+        enumValueNames(page, '_PolarPalette'),
+        <String>['theme', 'ocean', 'sunset', 'earth', 'monochrome'],
+        reason:
+            'the showcase page\'s `_PolarPalette` changed. `theme` is generated '
+            'from the live ChartTheme and `monochrome` is unreached by the '
+            'authored presentations, but a rename or removal of any of these '
+            'still invalidates the swatch transcriptions below.',
+      );
+      for (final entry in showcaseTranscribedPalettes.entries) {
+        expect(
+          showcasePaletteSwatch(page, entry.key),
+          entry.value,
+          reason:
+              'the `_PolarPalette.${entry.key}` swatch on the showcase page no '
+              'longer matches its transcription above, so the acceptance cases '
+              'color their columns differently than the page does.',
+        );
+      }
+    });
+  });
+
+  // =========================================================================
+  // ACCEPTANCE GATE — every POLAR workbench Grammar pane emits, plus a
+  // non-default `ConcentricDonutConfig` authored through the grammar.
+  //
+  // Read that title literally, because it is narrower than "every radial pane
+  // emits" and deliberately so:
+  //
+  //   * POLAR is proven against the real page. All eight `_PolarPresentation`
+  //     values are mounted below from `polar_column_page.dart`'s own
+  //     construction, and all eight emit.
+  //   * The CONCENTRIC case is NOT the showcase page. It is a non-default
+  //     `ConcentricDonutConfig` authored the way the grammar's own concentric
+  //     lowering produces one, which is a claim about the CONFIG PASSTHROUGH,
+  //     not about `concentric_donut_page.dart`. That page does not emit — see
+  //     the KNOWN GAP group below, which pins each blocker.
   //
   // The unit tests above each isolate ONE mechanism (a config field, a channel,
   // a composition). This group asks the question the slice exists to answer:
   // does the chart the showcase page ACTUALLY MOUNTS reach the Grammar pane as
-  // a real chain? Each case is `polar_column_page.dart`'s own construction —
-  // `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
+  // a real chain? Each polar case is `polar_column_page.dart`'s own construction
+  // — `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
   // config, at that presentation's authored knob values — so a regression that
-  // only shows up on a real showcase chart fails here.
+  // only shows up on a real showcase chart fails here. Those values are a hand
+  // transcription, and `group('showcase transcription sync guard')` above is
+  // what keeps them honest.
   //
   // Emission plus COMPILATION plus the per-case literal assertions is the
   // assertion set, and each covers a different thing. The generator re-lowers
@@ -3310,7 +3648,8 @@ void main() {
   // emitted literal from drifting.
   // =========================================================================
 
-  group('showcase acceptance: every polar presentation emits', () {
+  group('showcase acceptance: every polar presentation emits, plus a '
+      'non-default ConcentricDonutConfig', () {
     testWidgets('standard: per-category column colors over eight categories', (
       tester,
     ) async {
@@ -3893,20 +4232,28 @@ void main() {
       ]);
     });
 
-    testWidgets('a concentric donut at the showcase\'s non-default ring '
-        'geometry emits', (tester) async {
-      // `concentric_donut_page.dart` mounts its rings with a customised
-      // `ConcentricDonutConfig` — radii, a ring gap, an order, a legend mode,
-      // per-ring weights and a center. Every one of those was refused before
-      // `geomDonut(concentric:)` carried the whole config, because lowering
-      // rebuilt the composition from the center alone.
+    testWidgets('a non-default ConcentricDonutConfig authored through the '
+        'grammar emits — NOT the ConcentricDonutPage', (tester) async {
+      // SCOPE, stated exactly, because the name of the group around this test
+      // would otherwise over-claim it.
       //
-      // The ring SERIES ids follow the `<markId>-<ring>` pattern the grammar's
-      // own concentric lowering produces, which is what lets the composition be
-      // reversed to a single ring-channel mark.
+      // What this proves: a customised `ConcentricDonutConfig` — radii, a ring
+      // gap, an order, a legend mode, per-ring weights and a center — survives
+      // to `geomDonut(concentric:)`. Every one of those was refused before the
+      // mark carried the whole config, because lowering rebuilt the
+      // composition from the center alone. That is the CONFIG PASSTHROUGH.
+      //
+      // What it does NOT prove: that `concentric_donut_page.dart` emits. It
+      // does not. The chart below is authored the way the grammar's own
+      // concentric lowering emits one — ring series ids following the
+      // `<markId>-<ring>` pattern, no per-slice colours, one `dataLabels` for
+      // the whole composition — and the showcase page does none of those three
+      // things. The KNOWN GAP group after this one mounts each blocker and
+      // pins its refusal, so the difference stays visible instead of being
+      // implied by this test's neighbours.
       await expectShowcaseEmits(
         tester,
-        presentation: 'concentric donut',
+        presentation: 'grammar-authored concentric config',
         fragments: <String>[
           '.geomDonut(',
           'ring: (row) => row.ring,',
@@ -3954,6 +4301,212 @@ void main() {
           ],
         ),
       );
+    });
+  });
+
+  // =========================================================================
+  // KNOWN GAP — the two DONUT showcase pages do not emit.
+  //
+  // The acceptance gate above is about POLAR. `concentric_donut_page.dart` and
+  // `donut_charts_page.dart` are the radial workbench pages it does NOT cover,
+  // and both are blocked today. Recording that in a comment alone would decay,
+  // so each blocker below is mounted and its refusal pinned. Every test here
+  // asserts a REFUSAL: closing the gap turns them red, and the fix is to move
+  // the case into the acceptance gate and update the wording in
+  // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
+  // test.
+  //
+  // The three blockers, each independent (fixing one leaves the page blocked
+  // on the other two):
+  //
+  //   1. RING IDS. `concentric_donut_page.dart` names its ring series from its
+  //      own descriptors (`current`, `previous`, …), not the `<markId>-<ring>`
+  //      pattern the ring channel reproduces.
+  //   2. PER-SLICE COLOURS. Both pages pass `sliceColors`
+  //      (`donut_charts_page.dart:487`), and `PieMark`/`DonutMark` have no
+  //      per-point colour channel — only `PolarMark` does, via `columnColor`.
+  //   3. PER-RING DATA LABELS. The concentric page's `hierarchy` label layout
+  //      gives the outer and inner rings DIFFERENT `PieDataLabelConfig`s, and
+  //      one `DonutMark` carries one `dataLabels` for every ring.
+  //
+  // Closing (2) means a per-point colour channel on `PieMark`/`DonutMark`,
+  // which is an owner-scoped feature, not a repair to this file.
+  // =========================================================================
+
+  group('KNOWN GAP: the donut showcase pages do not emit', () {
+    testWidgets('blocker 1: ring ids that are not "<markId>-<ring>" are '
+        'refused — ConcentricDonutPage names its rings itself', (tester) async {
+      // `concentric_donut_page.dart` builds one series per `_ringDescriptor`,
+      // ids and all (`current`, `previous`, `forecast`, …). The ring channel
+      // reproduces each ring's series id by joining the mark id to the ring
+      // key, so ids that do not follow that shape cannot be reversed.
+      //
+      // The CONTROL for this one is the acceptance case immediately above:
+      // the same two-ring composition, the same non-default config, ids
+      // following `'<markId>-<ring>'` — and it emits. Only the ids differ.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(
+              innerRadiusFactor: 0.28,
+              outerRadiusFactor: 0.94,
+              ringGap: 6,
+            ),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'current',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+              ),
+              DonutChartSeries.fromMap(
+                id: 'previous',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(generated.isComplete, isFalse);
+      expect(
+        blockedReason(generated),
+        contains(
+          'the donut series ids do not follow the concentric ring pattern',
+        ),
+      );
+    });
+
+    testWidgets('blocker 2: per-slice colours are refused — both donut pages '
+        'pass sliceColors and no pie/donut mark carries them', (tester) async {
+      // The one blocker BOTH pages share, and the reason `DonutChartsPage` is
+      // blocked on its own (it is a single-ring donut, so blockers 1 and 3
+      // never arise there). `PolarMark.columnColor` is the per-point colour
+      // channel; `PieMark`/`DonutMark` have no equivalent, so a per-point
+      // `PointStyle.color` diverges on re-lowering and is honestly refused.
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, Color> sliceColors,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut-audience',
+                name: 'Audience',
+                unit: 'USD',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+                sliceColors: sliceColors,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final refused = await generateFor(const <String, Color>{
+        'Apple': Color(0xFF2563EB),
+        'Pear': Color(0xFF0D9488),
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "donut-audience" exactly'),
+          contains('a per-point style beyond a colour override'),
+        ),
+      );
+
+      // CONTROL: the SAME donut without `sliceColors` emits, so the refusal is
+      // attributable to the missing channel and to nothing else about the page.
+      final emitted = await generateFor(const <String, Color>{});
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('.geomDonut('));
+    });
+
+    testWidgets('blocker 3: rings with DIFFERENT dataLabels are refused — one '
+        'DonutMark carries one label config', (tester) async {
+      // `concentric_donut_page.dart`'s `hierarchy` label layout gives the
+      // outer ring `outside`/`categoryAndPercentage` and every inner ring
+      // `inside`/`category` (`_buildDataLabels`). The ring channel splits ONE
+      // mark into N series, so all N get the mark's single `dataLabels`, and
+      // the ring that disagrees is named.
+      Future<ChartGeneratedSource> generateFor({
+        required PieDataLabelConfig outer,
+        required PieDataLabelConfig inner,
+      }) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'revenue-Current period',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+                dataLabels: outer,
+              ),
+              DonutChartSeries.fromMap(
+                id: 'revenue-Previous period',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+                dataLabels: inner,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      const hierarchyOuter = PieDataLabelConfig(
+        position: PieDataLabelPosition.outside,
+        content: PieDataLabelContent.categoryAndPercentage,
+      );
+      const hierarchyInner = PieDataLabelConfig(
+        position: PieDataLabelPosition.inside,
+        content: PieDataLabelContent.category,
+      );
+
+      final refused = await generateFor(
+        outer: hierarchyOuter,
+        inner: hierarchyInner,
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(
+        blockedReason(refused),
+        contains('does not reproduce series "revenue-Previous period" exactly'),
+      );
+
+      // CONTROL: the same two rings sharing ONE label config emit, so the
+      // refusal is about the rings DISAGREEING, not about `dataLabels` itself.
+      final emitted = await generateFor(
+        outer: hierarchyOuter,
+        inner: hierarchyOuter,
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('ring: (row) => row.ring,'));
     });
   });
 
