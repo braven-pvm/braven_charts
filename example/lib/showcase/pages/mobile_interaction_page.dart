@@ -21,6 +21,8 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
   bool _enablePanInertia = true;
   double _panInertiaDeceleration = 6;
   double? _trackedDay;
+  String _accessibilityActionStatus =
+      'Ready. Use the buttons or a screen reader action menu.';
 
   late final List<ChartDataPoint> _primary = _signal(phase: 0);
   late final List<ChartDataPoint> _comparison = _signal(phase: 0.8);
@@ -64,6 +66,18 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
         : snapPoints.first.x;
     if (!mounted || trackedDay == _trackedDay) return;
     setState(() => _trackedDay = trackedDay);
+  }
+
+  void _runAccessibilityAction({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  }) {
+    final changed = action();
+    if (!mounted) return;
+    setState(() {
+      _accessibilityActionStatus = changed ? successMessage : unchangedMessage;
+    });
   }
 
   @override
@@ -197,7 +211,11 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _ViewportControls(controller: _controller),
+                  _AccessibleActionControls(
+                    controller: _controller,
+                    status: _accessibilityActionStatus,
+                    onAction: _runAccessibilityAction,
+                  ),
                 ],
               ),
             ),
@@ -436,65 +454,276 @@ class _InstructionCard extends StatelessWidget {
   }
 }
 
-class _ViewportControls extends StatelessWidget {
-  const _ViewportControls({required this.controller});
+class _AccessibleActionControls extends StatelessWidget {
+  const _AccessibleActionControls({
+    required this.controller,
+    required this.status,
+    required this.onAction,
+  });
 
   final BravenChartController controller;
+  final String status;
+  final void Function({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  })
+  onAction;
+
+  void _run({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  }) {
+    onAction(
+      successMessage: successMessage,
+      unchangedMessage: unchangedMessage,
+      action: action,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final zoomOut = OutlinedButton.icon(
-          onPressed: () => controller.zoomViewport(0.8),
-          icon: const Icon(Icons.zoom_out),
-          label: const Text('Zoom out'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        final fitData = FilledButton.tonalIcon(
-          onPressed: controller.fitData,
-          icon: const Icon(Icons.fit_screen_outlined),
-          label: const Text('Fit data'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        final zoomIn = OutlinedButton.icon(
-          onPressed: () => controller.zoomViewport(1.25),
-          icon: const Icon(Icons.zoom_in),
-          label: const Text('Zoom in'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        if (constraints.maxWidth < 430) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: zoomOut),
-                  const SizedBox(width: 8),
-                  Expanded(child: zoomIn),
-                ],
-              ),
-              const SizedBox(height: 8),
-              fitData,
-            ],
-          );
-        }
-        return Row(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: zoomOut),
-            const SizedBox(width: 8),
-            Expanded(child: fitData),
-            const SizedBox(width: 8),
-            Expanded(child: zoomIn),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.accessibility_new, color: colors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Accessible chart actions',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'These controls use the same controller commands exposed as TalkBack and VoiceOver custom actions.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ActionGroup(
+              title: 'Viewport',
+              children: [
+                _ActionButton(
+                  key: const ValueKey('mobile-action-zoom-out'),
+                  icon: Icons.zoom_out,
+                  label: 'Zoom out',
+                  onPressed: () => _run(
+                    successMessage: 'Zoomed out.',
+                    unchangedMessage: 'Zoom out is unavailable.',
+                    action: () => controller.zoomViewport(0.8),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-zoom-in'),
+                  icon: Icons.zoom_in,
+                  label: 'Zoom in',
+                  onPressed: () => _run(
+                    successMessage: 'Zoomed in.',
+                    unchangedMessage: 'Zoom in is unavailable.',
+                    action: () => controller.zoomViewport(1.25),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-pan-left'),
+                  icon: Icons.arrow_back,
+                  label: 'Pan left',
+                  onPressed: () => _run(
+                    successMessage: 'Panned left.',
+                    unchangedMessage: 'Pan left reached the data boundary.',
+                    action: () => controller.panViewport(
+                      horizontalPixels: -48,
+                      verticalPixels: 0,
+                    ),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-pan-right'),
+                  icon: Icons.arrow_forward,
+                  label: 'Pan right',
+                  onPressed: () => _run(
+                    successMessage: 'Panned right.',
+                    unchangedMessage: 'Pan right reached the data boundary.',
+                    action: () => controller.panViewport(
+                      horizontalPixels: 48,
+                      verticalPixels: 0,
+                    ),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-fit-data'),
+                  icon: Icons.fit_screen_outlined,
+                  label: 'Fit data',
+                  emphasized: true,
+                  onPressed: () => _run(
+                    successMessage: 'Showing all chart data.',
+                    unchangedMessage: 'Fit data is unavailable.',
+                    action: controller.fitData,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ActionGroup(
+              title: 'Selection',
+              children: [
+                _ActionButton(
+                  key: const ValueKey('mobile-action-select-all'),
+                  icon: Icons.select_all,
+                  label: 'Select all',
+                  onPressed: () => _run(
+                    successMessage: 'Selected all bounded chart data.',
+                    unchangedMessage: 'Select all is unavailable.',
+                    action: controller.selectAllData,
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-clear-selection'),
+                  icon: Icons.deselect,
+                  label: 'Clear selection',
+                  onPressed: () => _run(
+                    successMessage: 'Cleared chart selection.',
+                    unchangedMessage: 'There is no selection to clear.',
+                    action: controller.clearAllSelection,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Semantics(
+              key: const ValueKey('mobile-accessibility-action-status'),
+              liveRegion: true,
+              label: status,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.record_voice_over_outlined,
+                        size: 20,
+                        color: colors.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          status,
+                          key: const ValueKey(
+                            'mobile-accessibility-status-text',
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onPrimaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'On managed live charts, Return to live is added only while the viewport is exploring history.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionGroup extends StatelessWidget {
+  const _ActionGroup({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: children),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.emphasized = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = const ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
+    if (emphasized) {
+      return FilledButton.tonalIcon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+        style: style,
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: style,
     );
   }
 }

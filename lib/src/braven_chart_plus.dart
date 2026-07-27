@@ -1301,6 +1301,26 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   static const int _maximumAnimatedBarPointCount = 10000;
   static const double _minimumTouchInertiaVelocity = 180;
   static const Duration _maximumTouchInertiaDuration = Duration(seconds: 2);
+  static const CustomSemanticsAction _zoomInSemanticsAction =
+      CustomSemanticsAction(label: 'Zoom in');
+  static const CustomSemanticsAction _zoomOutSemanticsAction =
+      CustomSemanticsAction(label: 'Zoom out');
+  static const CustomSemanticsAction _panLeftSemanticsAction =
+      CustomSemanticsAction(label: 'Pan left');
+  static const CustomSemanticsAction _panRightSemanticsAction =
+      CustomSemanticsAction(label: 'Pan right');
+  static const CustomSemanticsAction _panUpSemanticsAction =
+      CustomSemanticsAction(label: 'Pan up');
+  static const CustomSemanticsAction _panDownSemanticsAction =
+      CustomSemanticsAction(label: 'Pan down');
+  static const CustomSemanticsAction _fitDataSemanticsAction =
+      CustomSemanticsAction(label: 'Fit all data');
+  static const CustomSemanticsAction _returnToLiveSemanticsAction =
+      CustomSemanticsAction(label: 'Return to live data');
+  static const CustomSemanticsAction _selectAllDataSemanticsAction =
+      CustomSemanticsAction(label: 'Select all chart data');
+  static const CustomSemanticsAction _clearSelectionSemanticsAction =
+      CustomSemanticsAction(label: 'Clear chart selection');
 
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
@@ -1346,6 +1366,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   bool _controllerPointStateSyncScheduled = false;
   static const int _scatterKeyboardPointLimit = 200;
   static const int _keyboardSelectAllPointLimit = 2000;
+  final ValueNotifier<String?> _accessibilityViewportStatus = ValueNotifier(
+    null,
+  );
+  final ValueNotifier<String?> _accessibilitySelectionStatus = ValueNotifier(
+    null,
+  );
+  Timer? _accessibilityViewportAnnouncementTimer;
 
   ChartLayoutKind _layoutKind = ChartLayoutKind.cartesian;
   double _textScaleFactor = 1;
@@ -1705,7 +1732,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onInvertSelection: _invertSelection,
       onZoomToSelection: _zoomToSelection,
       onZoomViewport: _zoomViewportFromController,
+      onPanViewport: _panViewportFromController,
       onFitData: _fitDataFromController,
+      onSelectAllData: _selectAllDataFromController,
+      onClearAllSelection: _clearAllSelectionFromController,
+      onReturnToLive: _returnToLiveFromController,
       onSetSelectionBrush: _setSelectionBrush,
       onSetSelectionBrushBox: _setSelectionBrushBox,
       onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
@@ -1877,7 +1908,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onInvertSelection: _invertSelection,
         onZoomToSelection: _zoomToSelection,
         onZoomViewport: _zoomViewportFromController,
+        onPanViewport: _panViewportFromController,
         onFitData: _fitDataFromController,
+        onSelectAllData: _selectAllDataFromController,
+        onClearAllSelection: _clearAllSelectionFromController,
+        onReturnToLive: _returnToLiveFromController,
         onSetSelectionBrush: _setSelectionBrush,
         onSetSelectionBrushBox: _setSelectionBrushBox,
         onSetSelectionBrushVisibility: _setSelectionBrushVisibility,
@@ -2060,6 +2095,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _streamingResumeTimer?.cancel();
     _interactionViewportSettleTimer?.cancel();
     _liveDocumentRevisionTimer?.cancel();
+    _accessibilityViewportAnnouncementTimer?.cancel();
+    _accessibilityViewportStatus.dispose();
+    _accessibilitySelectionStatus.dispose();
     _cancelContextLongPress();
     _activeContextMenuSession?.dismiss();
     BrowserContextMenuLease.release();
@@ -8620,6 +8658,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     return true;
   }
 
+  bool _panViewportFromController(
+    double horizontalPixels,
+    double verticalPixels,
+  ) {
+    if (_layoutKind != ChartLayoutKind.cartesian) return false;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox?.transform == null) return false;
+    _captureStateRevision++;
+    _pauseStreamingForViewportInteraction();
+    renderBox!.panChart(horizontalPixels, verticalPixels);
+    _scheduleStreamingResumeIfNeeded();
+    return true;
+  }
+
   bool _fitDataFromController() {
     if (_layoutKind != ChartLayoutKind.cartesian) return false;
     final renderBox =
@@ -8628,6 +8681,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _captureStateRevision++;
     renderBox!.resetView();
     _scheduleStreamingResumeIfNeeded();
+    return true;
+  }
+
+  bool _returnToLiveFromController() {
+    if (_layoutKind != ChartLayoutKind.cartesian ||
+        !_managesStreamingViewport ||
+        (_isStreaming &&
+            widget.streamingController?.viewportMode ==
+                ViewportMode.followLatest)) {
+      return false;
+    }
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox?.transform == null) return false;
+    _captureStateRevision++;
+    _returnToLiveViewport(renderBox!);
     return true;
   }
 
@@ -8738,6 +8807,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _focusedPointRefs.clear();
     _refreshLinkedPointRendering();
     _syncControllerPointState();
+  }
+
+  bool get _hasDurableSelection =>
+      _selectedSeriesIds.isNotEmpty ||
+      _selectedPointRefs.isNotEmpty ||
+      (_selectionIntentExpression?.clauses.isNotEmpty ?? false) ||
+      _selectionBrushState != null;
+
+  bool _clearAllSelectionFromController() {
+    if (!_hasDurableSelection) return false;
+    _clearAllSeriesSelection();
+    _clearPointSelection();
+    return true;
   }
 
   void _clearPointSelection() {
@@ -9124,13 +9206,34 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     final keyboard =
         widget.interactionConfig?.keyboard ?? const KeyboardConfig();
-    final interaction = widget.interactionConfig ?? const InteractionConfig();
-    if (!keyboard.enabled ||
-        !interaction.enabled ||
-        !interaction.enableSelection) {
-      return false;
-    }
+    if (!keyboard.enabled) return false;
+    return _selectAllDataFromController();
+  }
 
+  bool _canSelectAllData() {
+    final interaction = _layoutKind == ChartLayoutKind.cartesian
+        ? widget.interactionConfig ?? const InteractionConfig()
+        : _effectiveRadialInteractionConfig();
+    if (!interaction.enabled || !interaction.enableSelection) return false;
+    if (interaction.selection.scope == ChartSelectionScope.wholeSeries) {
+      return _effectiveDataSeries.isNotEmpty;
+    }
+    var pointCount = 0;
+    for (final series in _effectiveDataSeries) {
+      pointCount += series.points.where((point) => point.isValid).length;
+    }
+    final limit =
+        _effectiveDataSeries.every((series) => series is ScatterChartSeries)
+        ? _scatterKeyboardPointLimit
+        : _keyboardSelectAllPointLimit;
+    return pointCount > 0 && pointCount <= limit;
+  }
+
+  bool _selectAllDataFromController() {
+    if (!_canSelectAllData()) return false;
+    final interaction = _layoutKind == ChartLayoutKind.cartesian
+        ? widget.interactionConfig ?? const InteractionConfig()
+        : _effectiveRadialInteractionConfig();
     if (interaction.selection.scope == ChartSelectionScope.wholeSeries) {
       _clearPointSelection();
       _applySeriesSelectionOperationForIds(
@@ -10587,6 +10690,188 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
+  void _setAccessibilityViewportStatus(String status) {
+    if (!mounted) return;
+    _accessibilityViewportStatus.value = status;
+  }
+
+  void _setAccessibilitySelectionStatus(String status) {
+    if (!mounted) return;
+    _accessibilitySelectionStatus.value = status;
+  }
+
+  String _visibleViewportDescription() {
+    final transform =
+        (_renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?)
+            ?.transform;
+    if (transform == null) return '';
+    return ' Visible X ${transform.dataXMin.toStringAsFixed(2)} to '
+        '${transform.dataXMax.toStringAsFixed(2)}, Y '
+        '${transform.dataYMin.toStringAsFixed(2)} to '
+        '${transform.dataYMax.toStringAsFixed(2)}.';
+  }
+
+  void _performAccessibilityZoom({
+    required double factor,
+    required String result,
+  }) {
+    if (!_zoomViewportFromController(factor)) return;
+    _accessibilityViewportAnnouncementTimer?.cancel();
+    _accessibilityViewportAnnouncementTimer = Timer(
+      const Duration(milliseconds: 275),
+      () {
+        if (!mounted) return;
+        _setAccessibilityViewportStatus(
+          '$result.${_visibleViewportDescription()}',
+        );
+      },
+    );
+  }
+
+  void _performAccessibilityPan({
+    required double horizontalPixels,
+    required double verticalPixels,
+    required String result,
+  }) {
+    if (!_panViewportFromController(horizontalPixels, verticalPixels)) return;
+    _setAccessibilityViewportStatus('$result.${_visibleViewportDescription()}');
+  }
+
+  void _performAccessibilityFitData() {
+    if (!_fitDataFromController()) return;
+    _setAccessibilityViewportStatus(
+      'Showing all data.${_visibleViewportDescription()}',
+    );
+  }
+
+  void _performAccessibilityReturnToLive() {
+    if (!_returnToLiveFromController()) return;
+    _setAccessibilityViewportStatus(
+      'Following live data.${_visibleViewportDescription()}',
+    );
+  }
+
+  void _performAccessibilitySelectAll() {
+    if (!_selectAllDataFromController()) return;
+    final seriesCount = _selectedSeriesIds.length;
+    final pointCount = _selectedPointRefs.length;
+    _setAccessibilitySelectionStatus(
+      seriesCount > 0
+          ? 'Selected $seriesCount series.'
+          : 'Selected $pointCount '
+                '${pointCount == 1 ? 'data point' : 'data points'}.',
+    );
+  }
+
+  void _performAccessibilityClearSelection() {
+    if (!_clearAllSelectionFromController()) return;
+    _setAccessibilitySelectionStatus('Selection cleared.');
+  }
+
+  bool get _canReturnToLive =>
+      _managesStreamingViewport &&
+      (!_isStreaming ||
+          widget.streamingController?.viewportMode == ViewportMode.explore);
+
+  Widget _buildAccessibilityCommandSemantics({
+    required Widget child,
+    required InteractionConfig? interaction,
+  }) {
+    final effectiveInteraction = interaction ?? const InteractionConfig();
+    if (!effectiveInteraction.enabled) return child;
+
+    Widget result = child;
+    final selectionActions = <CustomSemanticsAction, VoidCallback>{
+      if (_canSelectAllData())
+        _selectAllDataSemanticsAction: _performAccessibilitySelectAll,
+      if (_hasDurableSelection)
+        _clearSelectionSemanticsAction: _performAccessibilityClearSelection,
+    };
+    if (selectionActions.isNotEmpty) {
+      result = ValueListenableBuilder<String?>(
+        valueListenable: _accessibilitySelectionStatus,
+        child: result,
+        builder: (context, status, child) => Semantics(
+          container: true,
+          focusable: true,
+          liveRegion: status != null,
+          label: 'Chart selection actions',
+          value: status,
+          hint:
+              'Use accessibility actions to select bounded chart data or clear the current selection.',
+          customSemanticsActions: selectionActions,
+          child: child,
+        ),
+      );
+    }
+
+    final viewportActions = <CustomSemanticsAction, VoidCallback>{};
+    if (_layoutKind == ChartLayoutKind.cartesian) {
+      final zoomFraction = effectiveInteraction.keyboardZoomPercent / 100;
+      final panStep = effectiveInteraction.keyboard.panStep;
+      if (effectiveInteraction.enableZoom) {
+        viewportActions[_zoomInSemanticsAction] = () =>
+            _performAccessibilityZoom(
+              factor: 1 + zoomFraction,
+              result: 'Zoomed in',
+            );
+        viewportActions[_zoomOutSemanticsAction] = () =>
+            _performAccessibilityZoom(
+              factor: math.max(0.05, 1 - zoomFraction),
+              result: 'Zoomed out',
+            );
+      }
+      if (effectiveInteraction.enablePan) {
+        viewportActions[_panLeftSemanticsAction] = () =>
+            _performAccessibilityPan(
+              horizontalPixels: -panStep,
+              verticalPixels: 0,
+              result: 'Panned left',
+            );
+        viewportActions[_panRightSemanticsAction] = () =>
+            _performAccessibilityPan(
+              horizontalPixels: panStep,
+              verticalPixels: 0,
+              result: 'Panned right',
+            );
+        viewportActions[_panUpSemanticsAction] = () => _performAccessibilityPan(
+          horizontalPixels: 0,
+          verticalPixels: -panStep,
+          result: 'Panned up',
+        );
+        viewportActions[_panDownSemanticsAction] = () =>
+            _performAccessibilityPan(
+              horizontalPixels: 0,
+              verticalPixels: panStep,
+              result: 'Panned down',
+            );
+      }
+      viewportActions[_fitDataSemanticsAction] = _performAccessibilityFitData;
+      if (_canReturnToLive) {
+        viewportActions[_returnToLiveSemanticsAction] =
+            _performAccessibilityReturnToLive;
+      }
+    }
+    if (viewportActions.isNotEmpty) {
+      result = ValueListenableBuilder<String?>(
+        valueListenable: _accessibilityViewportStatus,
+        child: result,
+        builder: (context, status, child) => Semantics(
+          container: true,
+          focusable: true,
+          liveRegion: status != null,
+          label: 'Chart viewport actions',
+          value: status,
+          hint:
+              'Use accessibility actions to zoom, pan, fit all data, or return to live data.',
+          customSemanticsActions: viewportActions,
+          child: child,
+        ),
+      );
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     final workbenchActionScope = widget.chartActionButtonBuilder == null
@@ -11233,7 +11518,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           )
         : focusChart;
 
-    final chartContent = _buildViewportContent(renderedChart);
+    final chartContent = _buildViewportContent(
+      _buildAccessibilityCommandSemantics(
+        child: renderedChart,
+        interaction: effectiveInteractionConfig,
+      ),
+    );
 
     // Add title, subtitle, and legend
     if (widget.title != null || widget.subtitle != null || widget.showLegend) {
