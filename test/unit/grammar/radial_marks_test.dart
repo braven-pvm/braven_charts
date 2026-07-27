@@ -153,5 +153,33 @@ void main() {
         ),
       );
     });
+
+    // `preset` is the one PolarMark field that changes what the series MEANS
+    // (linear-radius columns vs an equal-angle rose), so a debug print that
+    // omits it renders two marks with different geometry identically. Two
+    // marks differing ONLY in preset must therefore describe themselves
+    // differently.
+    test('PolarMark.toString names its preset', () {
+      const standard = PolarMark<Fruit>(
+        id: 'wind',
+        name: 'Wind',
+        category: fruitName,
+        value: fruitCount,
+      );
+      const rose = PolarMark<Fruit>(
+        id: 'wind',
+        name: 'Wind',
+        category: fruitName,
+        value: fruitCount,
+        preset: PolarColumnPreset.rose,
+      );
+
+      expect(
+        standard.toString(),
+        'PolarMark(id: wind, name: Wind, preset: standard)',
+      );
+      expect(rose.toString(), 'PolarMark(id: wind, name: Wind, preset: rose)');
+      expect(standard.toString() == rose.toString(), isFalse);
+    });
   });
 }

@@ -170,6 +170,51 @@ void main() {
       expect(dup.toString(), contains('duplicateRadialCategory'));
       expect(dup.message, contains('Apple'));
     });
+
+    // The `multipleRadialGeoms` message carries the ONLY statement of the
+    // relaxed rule an author sees at the moment they hit the diagnostic: "at
+    // most one radial geom" is now false for polar columns, and the message
+    // must say which geom is the exception rather than sending the author off
+    // to split a composition the grammar in fact accepts. Both halves are
+    // pinned together so the sentence cannot survive as a lie: the message
+    // must name `geomPolar` as the exception, AND the very composition it
+    // points at must lower.
+    test('multipleRadialGeoms names geomPolar as the one exception', () {
+      final many = GrammarSpecException.multipleRadialGeoms(['a', 'b']);
+
+      expect(many.code, GrammarDiagnosticCode.multipleRadialGeoms);
+      expect(many.message, contains('at most one radial geom'));
+      expect(many.message, contains('exception'));
+      expect(many.message, contains('geomPolar'));
+      // The exception is stated as a SHARING permission, not as a second
+      // "split them" instruction.
+      expect(many.message, contains('share a plot'));
+
+      // The escape hatch the sentence promises is real: several geomPolar
+      // marks lower instead of raising the diagnostic whose message names
+      // them.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+          PolarMark<Fruit>(id: 'b', category: fruitName, value: fruitMass),
+        ],
+      )).lower();
+      expect(lowered.series, hasLength(2));
+
+      // ...and it is genuinely an EXCEPTION, not a general relaxation: two
+      // radial geoms that are not both polar still raise the diagnostic.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PieMark<Fruit>(id: 'b', category: fruitName, value: fruitMass),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.multipleRadialGeoms),
+      );
+    });
   });
 
   group('pie channel to series mapping', () {
