@@ -20,6 +20,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
@@ -1055,11 +1056,15 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       id: id,
       name: mark.name,
       color: mark.color,
+      unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
+      sliceRadiusConfig: mark.sliceRadiusConfig,
+      sliceGroupingConfig: mark.sliceGroupingConfig,
       pieStyle: mark.style ?? const PieChartStyle(),
+      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 
@@ -1068,11 +1073,15 @@ DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
       id: id,
       name: mark.name,
       color: mark.color,
+      unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
+      sliceRadiusConfig: mark.sliceRadiusConfig,
+      sliceGroupingConfig: mark.sliceGroupingConfig,
       donutStyle: mark.style ?? const DonutChartStyle(),
+      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
       centerContent: mark.center ?? DonutCenterContent.hidden,
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
@@ -1100,11 +1109,15 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
       DonutChartSeries.fromMap(
         id: '$markId-$key',
         name: key,
+        unit: mark.unit,
         values: _radialValues(buckets[key]!, mark.category, mark.value),
         radiusValues: mark.radius == null
             ? const <String, num>{}
             : _radiusValues(buckets[key]!, mark.category, mark.radius!),
+        sliceRadiusConfig: mark.sliceRadiusConfig,
+        sliceGroupingConfig: mark.sliceGroupingConfig,
         donutStyle: mark.style ?? const DonutChartStyle(),
+        selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
         centerContent: DonutCenterContent.hidden,
         dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
       ),
@@ -1119,8 +1132,10 @@ PolarColumnChartSeries _lowerPolar<T>(
   id: id,
   name: mark.name,
   color: mark.color,
+  unit: mark.unit,
   values: _radialValues(data, mark.category, mark.value),
   polarStyle: mark.style ?? const PolarColumnStyle(),
+  selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
 );
 
 void _requireScale(

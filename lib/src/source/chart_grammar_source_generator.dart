@@ -747,14 +747,23 @@ class _GrammarChainEmitter {
         id: series.id,
         name: series.name,
         color: series.color,
+        unit: series.unit,
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
-        // Carry the series' slice styling and data labels onto the mark so the
-        // round-trip proof reproduces a styled pie (the lowering maps
-        // PieMark.style → PieChartSeries.pieStyle, .dataLabels → .dataLabels).
+        // Carry the series' unit, slice styling, selection, data labels and the
+        // slice-radius / grouping configs onto the mark so the round-trip proof
+        // reproduces the whole pie (the lowering maps PieMark.style →
+        // PieChartSeries.pieStyle, .selectionStyle → .selectionStyle,
+        // .dataLabels → .dataLabels, .sliceRadiusConfig / .sliceGroupingConfig →
+        // the series' own). A slice-radius formatter is a live callback: the
+        // config objects round-trip by identity, but its emission is an honest
+        // placeholder.
         style: series.pieStyle,
+        selectionStyle: series.selectionStyle,
         dataLabels: series.dataLabels,
+        sliceRadiusConfig: series.sliceRadiusConfig,
+        sliceGroupingConfig: series.sliceGroupingConfig,
       ),
     );
   }
@@ -778,15 +787,21 @@ class _GrammarChainEmitter {
         id: series.id,
         name: series.name,
         color: series.color,
+        unit: series.unit,
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
-        // As for pie: carry the donut styling and data labels so a styled donut
-        // round-trips (DonutMark.style → DonutChartSeries.donutStyle,
-        // .dataLabels → .dataLabels; the center is already carried above).
+        // As for pie: carry the donut unit, styling, selection, data labels and
+        // slice-radius / grouping configs so the whole donut round-trips
+        // (DonutMark.style → DonutChartSeries.donutStyle, .selectionStyle →
+        // .selectionStyle, .dataLabels → .dataLabels, the two slice configs →
+        // the series' own; the center is already carried above).
         style: series.donutStyle,
+        selectionStyle: series.selectionStyle,
         center: center,
         dataLabels: series.dataLabels,
+        sliceRadiusConfig: series.sliceRadiusConfig,
+        sliceGroupingConfig: series.sliceGroupingConfig,
       ),
     );
   }
@@ -850,20 +865,24 @@ class _GrammarChainEmitter {
       center: center,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
-      // deliberately left null here. The mark carries ONE style/dataLabels
-      // applied to EVERY ring (that is how `_lowerConcentricRings` lowers), so
-      // the first ring's styling is used; rings whose styling differs are
-      // caught by the round-trip proof (each lowered ring must match), never
-      // silently flattened.
+      // deliberately left null here. The mark carries ONE unit / style /
+      // selection / dataLabels / slice-config set applied to EVERY ring (that is
+      // how `_lowerConcentricRings` lowers), so the first ring's config is used;
+      // rings whose config differs are caught by the round-trip proof (each
+      // lowered ring must match), never silently flattened.
       mark: DonutMark<_SourceRow>(
         id: markId,
+        unit: donuts.first.unit,
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
         ring: _string(ring),
         style: donuts.first.donutStyle,
+        selectionStyle: donuts.first.selectionStyle,
         center: center,
         dataLabels: donuts.first.dataLabels,
+        sliceRadiusConfig: donuts.first.sliceRadiusConfig,
+        sliceGroupingConfig: donuts.first.sliceGroupingConfig,
       ),
     );
   }
@@ -883,11 +902,15 @@ class _GrammarChainEmitter {
         id: series.id,
         name: series.name,
         color: series.color,
+        unit: series.unit,
         category: _string(category),
         value: _number(value),
-        // Carry the column styling so a styled polar column round-trips
-        // (PolarMark.style → PolarColumnChartSeries.polarStyle).
+        // Carry the column unit, styling and selection so a styled polar column
+        // round-trips (PolarMark.style → PolarColumnChartSeries.polarStyle,
+        // .selectionStyle → .selectionStyle, .unit → .unit). A polar preset,
+        // target or interval option is NOT carried and stays an honest refusal.
         style: series.polarStyle,
+        selectionStyle: series.selectionStyle,
       ),
     );
   }
@@ -1041,15 +1064,18 @@ class _GrammarChainEmitter {
   }
 
   /// Explains why a captured radial series is not reproduced by the lowered one.
+  ///
+  /// The radial marks now carry the unit, selection style, data labels, series
+  /// style, and (pie/donut) the slice-radius and grouping configs, so those all
+  /// round-trip. What remains un-carried is metadata and — on a polar column —
+  /// a non-standard preset, per-category targets or intervals; a series that
+  /// sets one of those is what reaches here.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
-    if (expected.unit != lowered.unit) {
-      return "It carries a unit ('${expected.unit}'), which the radial marks do "
-          'not carry.';
-    }
-    return 'It carries a selection, grouping, slice-radius or (polar) '
-        'preset/target/interval option the radial marks do not carry — only '
-        'the category, value, optional radius, concentric ring, donut center, '
-        'series style and data labels round-trip.';
+    return 'It carries a series option the radial marks do not carry — the '
+        'category, value, optional radius, concentric ring, donut center, '
+        'unit, series style, selection style, data labels, and (pie/donut) the '
+        'slice-radius and grouping configs round-trip, but series metadata and '
+        'a polar preset / per-category target / interval option do not.';
   }
 
   // =========================================================================
@@ -1953,19 +1979,34 @@ class _GrammarChainEmitter {
       }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);
-      // Style / center / data labels, in the geom verbs' signature order. The
-      // style and data-label literals are written by the SHARED config emitter
-      // (the same rendering the config form uses for `pieStyle:` / `donutStyle:`
-      // / `polarStyle:` / `dataLabels:`), so the two forms cannot disagree; each
-      // seam writes nothing for a family-default value, keeping a default-styled
-      // radial chain byte-identical.
+      // `unit` is a shared RadialMark field carried by every family; the config
+      // form writes the same `unit:` string on the series.
+      _optionalString(writer, 'unit', mark.unit);
+      // Style / selection / center / data labels / slice configs, in the geom
+      // verbs' signature order. Every nested-config literal is written by the
+      // SHARED config emitter (the same rendering the config form uses for
+      // `pieStyle:` / `donutStyle:` / `polarStyle:` / `selectionStyle:` /
+      // `dataLabels:` / `sliceRadiusConfig:` / `sliceGroupingConfig:`), so the
+      // two forms cannot disagree; each seam writes nothing for a
+      // family-default value, keeping a default-styled radial chain
+      // byte-identical. A slice-radius `formatter` is a live callback: the seam
+      // emits an honest placeholder comment and records the omission warning.
       switch (mark) {
         case PieMark<_SourceRow>():
           if (mark.style != null) {
             _config.emitRadialStyle(writer, 'style', 'PieChartStyle', mark.style!);
           }
+          if (mark.selectionStyle != null) {
+            _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
+          }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
+          }
+          if (mark.sliceRadiusConfig != null) {
+            _config.emitSliceRadiusConfig(writer, mark.sliceRadiusConfig!, 0);
+          }
+          if (mark.sliceGroupingConfig != null) {
+            _config.emitSliceGroupingConfig(writer, mark.sliceGroupingConfig!);
           }
         case DonutMark<_SourceRow>():
           if (mark.style != null) {
@@ -1978,13 +2019,25 @@ class _GrammarChainEmitter {
               sweepAngleDegrees: mark.style!.sweepAngleDegrees,
             );
           }
+          if (mark.selectionStyle != null) {
+            _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
+          }
           if (plan.center != null) _emitDonutCenter(writer, plan.center!);
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
           }
+          if (mark.sliceRadiusConfig != null) {
+            _config.emitSliceRadiusConfig(writer, mark.sliceRadiusConfig!, 0);
+          }
+          if (mark.sliceGroupingConfig != null) {
+            _config.emitSliceGroupingConfig(writer, mark.sliceGroupingConfig!);
+          }
         case PolarMark<_SourceRow>():
           if (mark.style != null) {
             _config.emitPolarColumnStyle(writer, 'style', mark.style!);
+          }
+          if (mark.selectionStyle != null) {
+            _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
           }
       }
       _absorbConfigWarnings();

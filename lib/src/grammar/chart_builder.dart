@@ -18,8 +18,11 @@ import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
-import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
+import '../models/pie_chart_config.dart'
+    show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
 import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
+import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -438,8 +441,12 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     PieChartStyle? style,
+    RadialSelectionStyle? selectionStyle,
     PieDataLabelConfig? dataLabels,
+    RadialSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
     PieMark<T>(
       id: _idFor(id),
@@ -448,8 +455,12 @@ final class BravenChart<T> {
       radius: radius,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
       dataLabels: dataLabels,
+      sliceRadiusConfig: sliceRadiusConfig,
+      sliceGroupingConfig: sliceGroupingConfig,
     ),
   );
 
@@ -465,9 +476,13 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     DonutChartStyle? style,
+    RadialSelectionStyle? selectionStyle,
     DonutCenterContent? center,
     PieDataLabelConfig? dataLabels,
+    RadialSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
     DonutMark<T>(
       id: _idFor(id),
@@ -477,9 +492,13 @@ final class BravenChart<T> {
       ring: ring,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
       center: center,
       dataLabels: dataLabels,
+      sliceRadiusConfig: sliceRadiusConfig,
+      sliceGroupingConfig: sliceGroupingConfig,
     ),
   );
 
@@ -492,7 +511,9 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     PolarColumnStyle? style,
+    RadialSelectionStyle? selectionStyle,
   }) => _append(
     PolarMark<T>(
       id: _idFor(id),
@@ -500,7 +521,9 @@ final class BravenChart<T> {
       value: value,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
     ),
   );
 

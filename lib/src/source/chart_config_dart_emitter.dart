@@ -216,6 +216,30 @@ class ChartConfigDartEmitter {
     PolarColumnStyle style,
   ) => _emitPolarColumnStyleArgument(writer, argument, style);
 
+  /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
+  /// radial geometry verbs (`geomPie`/`geomDonut`/`geomPolar`) use too. Writes
+  /// nothing for the default style (unless `includeDefaultValues`).
+  void emitRadialSelectionStyle(
+    DartSourceWriter writer,
+    RadialSelectionStyle style,
+  ) => _emitRadialSelectionStyle(writer, style);
+
+  /// Writes `sliceRadiusConfig: PieSliceRadiusConfig(...)`, the argument name
+  /// the radial category geometry verbs (`geomPie`/`geomDonut`) use too. The
+  /// optional formatter callback is emitted as a placeholder with a warning.
+  void emitSliceRadiusConfig(
+    DartSourceWriter writer,
+    RadialSliceRadiusConfig config,
+    int seriesIndex,
+  ) => _emitSliceRadiusConfig(writer, config, seriesIndex);
+
+  /// Writes `sliceGroupingConfig: RadialSliceGroupingConfig(...)`, the argument
+  /// name the radial category geometry verbs (`geomPie`/`geomDonut`) use too.
+  void emitSliceGroupingConfig(
+    DartSourceWriter writer,
+    RadialSliceGroupingConfig config,
+  ) => _emitSliceGroupingConfig(writer, config);
+
   ChartGeneratedSource generate() {
     _captureKnownLimitations();
     final body = DartSourceWriter();
@@ -3667,49 +3691,74 @@ class ChartConfigDartEmitter {
   ) {
     final radius = series.sliceRadiusConfig;
     if (radius != null) {
-      writer.writeLine('sliceRadiusConfig: PieSliceRadiusConfig(');
-      writer.indented(() {
-        _numberIf(writer, 'minimumFactor', radius.minimumFactor, 0.35);
-        _enumIf(
-          writer,
-          'scale',
-          'PieSliceRadiusScale',
-          radius.scale.name,
-          defaultName: 'area',
-        );
-        _optionalString(writer, 'label', radius.label);
-        _optionalString(writer, 'unit', radius.unit);
-        if (radius.formatter != null) {
-          writer.writeLine(
-            '// formatter: (value) => ..., // Supply application formatting.',
-          );
-          _warn(
-            code: ChartSourceWarningCodes.runtimeValueOmitted,
-            message:
-                'A radial radius formatter callback was omitted. Provide it from your application.',
-            path: '\$.series[$seriesIndex].style.sliceRadiusConfig.formatter',
-          );
-        }
-      });
-      writer.writeLine('),');
+      _emitSliceRadiusConfig(writer, radius, seriesIndex);
     }
     final grouping = series.sliceGroupingConfig;
     if (grouping != null) {
-      writer.writeLine('sliceGroupingConfig: RadialSliceGroupingConfig(');
-      writer.indented(() {
-        _numberIf(writer, 'minimumShare', grouping.minimumShare, 0.05);
-        _numberIf(writer, 'minimumSourceCount', grouping.minimumSourceCount, 2);
-        _optionalString(writer, 'label', grouping.label);
-        _optionalColor(writer, 'color', grouping.color);
-        if (grouping.radiusAggregation != null) {
-          writer.namedArgument(
-            'radiusAggregation',
-            'RadialSliceRadiusAggregation.${grouping.radiusAggregation!.name}',
-          );
-        }
-      });
-      writer.writeLine('),');
+      _emitSliceGroupingConfig(writer, grouping);
     }
+  }
+
+  /// Writes `sliceRadiusConfig: PieSliceRadiusConfig(...)` for [radius].
+  ///
+  /// Shared between the config form (`sliceRadiusConfig:` on the series) and the
+  /// grammar form (`sliceRadiusConfig:` on `geomPie`/`geomDonut`, through
+  /// [emitSliceRadiusConfig]) so the two cannot disagree. The optional
+  /// `formatter` is a live callback, not a literal, so it is emitted as a
+  /// placeholder comment with a runtime-value-omitted warning.
+  void _emitSliceRadiusConfig(
+    DartSourceWriter writer,
+    RadialSliceRadiusConfig radius,
+    int seriesIndex,
+  ) {
+    writer.writeLine('sliceRadiusConfig: PieSliceRadiusConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumFactor', radius.minimumFactor, 0.35);
+      _enumIf(
+        writer,
+        'scale',
+        'PieSliceRadiusScale',
+        radius.scale.name,
+        defaultName: 'area',
+      );
+      _optionalString(writer, 'label', radius.label);
+      _optionalString(writer, 'unit', radius.unit);
+      if (radius.formatter != null) {
+        writer.writeLine(
+          '// formatter: (value) => ..., // Supply application formatting.',
+        );
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'A radial radius formatter callback was omitted. Provide it from your application.',
+          path: '\$.series[$seriesIndex].style.sliceRadiusConfig.formatter',
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `sliceGroupingConfig: RadialSliceGroupingConfig(...)` for
+  /// [grouping]. Shared between the config and grammar forms (through
+  /// [emitSliceGroupingConfig]).
+  void _emitSliceGroupingConfig(
+    DartSourceWriter writer,
+    RadialSliceGroupingConfig grouping,
+  ) {
+    writer.writeLine('sliceGroupingConfig: RadialSliceGroupingConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumShare', grouping.minimumShare, 0.05);
+      _numberIf(writer, 'minimumSourceCount', grouping.minimumSourceCount, 2);
+      _optionalString(writer, 'label', grouping.label);
+      _optionalColor(writer, 'color', grouping.color);
+      if (grouping.radiusAggregation != null) {
+        writer.namedArgument(
+          'radiusAggregation',
+          'RadialSliceRadiusAggregation.${grouping.radiusAggregation!.name}',
+        );
+      }
+    });
+    writer.writeLine('),');
   }
 
   void _emitXAxis(DartSourceWriter writer, XAxisConfig axis) {
