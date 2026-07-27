@@ -169,6 +169,70 @@ void main() {
           .height,
       greaterThanOrEqualTo(48),
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-action-select-all')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final selectAllButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-action-select-all')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    selectAllButton.onPressed!();
+    await tester.pump();
+    expect(find.text('Selected all bounded chart data.'), findsOneWidget);
+
+    final clearSelectionButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-action-clear-selection')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    clearSelectionButton.onPressed!();
+    await tester.pump();
+    expect(find.text('Cleared chart selection.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Mobile Interaction actions reflow at 200% text scaling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: Size(390, 844),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: MobileInteractionPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-action-select-all')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Accessible chart actions'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-action-fit-data')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('mobile-action-select-all')))
+          .height,
+      greaterThanOrEqualTo(48),
+    );
     expect(tester.takeException(), isNull);
   });
 
