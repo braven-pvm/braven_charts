@@ -31,11 +31,14 @@
 ///
 /// | case | outcome |
 /// |------|---------|
-/// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar |
+/// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar, carrying the series style, unit, selection and slice configs |
 /// | a layered/grouped/stacked polar composition | emitted as ONE geomPolar per series over a shared category field |
 /// | a customised PolarChartConfig | emitted as .polarConfig(...) |
-/// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
+/// | a polar series carrying per-category column colors, targets or intervals, or the rose preset | emitted as geomPolar row-channels + `rose: true` |
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
+/// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
+/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
+/// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
@@ -865,9 +868,10 @@ class _GrammarChainEmitter {
       return _planDonut(donuts.single);
     }
     block(
-      'Grammar chain not emitted: a radial chain expresses exactly one radial '
-      'geometry and cannot mix radial families or combine a radial series with '
-      'a Cartesian one: '
+      'Grammar chain not emitted: a radial chain expresses ONE radial family — '
+      'several geomPolar marks, or exactly one geomPie / geomDonut — and '
+      'cannot mix radial families or combine a radial series with a Cartesian '
+      'one: '
       '${series.map((item) => '${item.id} (${item.runtimeType})').join(', ')}.',
       path: r'$.series',
     );

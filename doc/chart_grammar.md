@@ -338,6 +338,54 @@ DataPointLabelConfig? dataPointLabels, // → *ChartSeries.dataPointLabels
 BarLabelStyle? labelStyle,           // → BarChartSeries.labelStyle
 ```
 
+#### Radial geometries
+
+Pie, donut, concentric donut and polar column are grammar geometries, not a
+config-only corner. A radial spec holds radial marks *only* — mixing one with a
+Cartesian mark is `mixedCoordinateSystems`, and Cartesian options (`transposed`
+/ `xAxis` / `yAxes` / `grid`) on a radial spec are `axisOptionOnRadialSpec`:
+
+```dart
+BravenChart<T> geomPie({required category, required value, ...});
+
+// `ring:` turns a donut into a CONCENTRIC composition — one series per ring
+// key, each ring computing its shares against its own total. `concentric:`
+// carries the whole ConcentricDonutConfig (radii, ring gap, order, weights,
+// legend mode and the center); `center:` is the shorthand for the center
+// alone, and a mark that sets both is refused by name
+// (`conflictingConcentricCenter`).
+BravenChart<T> geomDonut({
+  required category, required value,
+  FieldAccessor<T, Object?>? ring,
+  DonutCenterContent? center,
+  ConcentricDonutConfig? concentric,
+  ...
+});
+
+// Polar is the ONE radial family that may appear several times in a spec: a
+// layered / grouped / stacked composition is N series over one category
+// domain, so it is N marks. `rose: true` selects the area-correct preset, and
+// the four per-category channels are nullable — a category with no target
+// draws no marker, which a synthesised 0 would not preserve.
+BravenChart<T> geomPolar({
+  required category, required value,
+  bool rose = false,
+  FieldAccessor<T, Color?>? columnColor,
+  FieldAccessor<T, num?>? target,
+  PolarColumnTargetMarkerStyle? targetMarkerStyle,
+  FieldAccessor<T, num?>? intervalLow,
+  FieldAccessor<T, num?>? intervalHigh,
+  PolarColumnIntervalStyle? intervalStyle,
+  ...
+});
+
+// The plot-level polar configuration — pane, angular/radial axes, the
+// composition mode and thresholds — is ONE object shared by the N marks, so it
+// lives on the spec. Setting it without a polar mark is
+// `polarConfigOnNonPolarSpec`.
+BravenChart<T> polarConfig(PolarChartConfig config);
+```
+
 ### Rendering: `BravenPlot`
 
 ```dart
@@ -590,7 +638,10 @@ runtime-only bindings.
 
 | Case | Outcome |
 | --- | --- |
-| A non-Cartesian family (Pie, Donut, Concentric, Polar, Range Area) | **Blocked**, naming each series and its family: the grammar layer is Cartesian-only in V1 (line, area, bar, scatter, candlestick). |
+| A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. |
+| A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
+| A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **Blocked**: the ring channel names each ring's series from its ring key, so ids that do not follow that pattern cannot be reproduced. |
+| Polar series whose category domains differ | **Blocked**, naming the series that disagree: N `geomPolar` marks read ONE row list, so every polar series needs one value at every category of the shared domain, in the same order. |
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
 | A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
 | Mixed bar orientations | **Blocked**: `.transposed()` is a whole-chart operation, so a transposed chain may contain horizontal bar marks only. |
@@ -634,13 +685,25 @@ config the pipeline already understood (details under *V2.0 verbs* above):
   and `.legend(...)` are carried on `PlotSpec` and forwarded by `BravenPlot`.
 - **Per-mark data-point markers and inline labels.** `showDataPointMarkers`
   and `dataPointLabels` on `geomLine`/`geomArea`, and `labelStyle` on `geomBar`.
+- **Radial geometries.** `geomPie`, `geomDonut` (with the `ring:` channel for a
+  concentric composition and `concentric:` for its configuration) and
+  `geomPolar`, plus the spec-level `.polarConfig(...)`. Multi-series polar
+  compositions and customised `PolarChartConfig` / `ConcentricDonutConfig`
+  round-trip, so every Polar Column Workbench Grammar pane emits a real chain
+  instead of a diagnostic — all seven showcase presentations (standard, rose,
+  layered, grouped, stacked, references, intervals). A concentric composition
+  emits when its ring series ids follow the `'<markId>-<ring>'` pattern the
+  ring channel itself produces; ids that do not are still refused by name.
 
 ## Not in V1 (still deferred)
 
 Deferred deliberately, so the V1 mark list stays closed:
 
-- **Radial and polar marks.** Pie, Donut, Concentric Donut and Polar Column
-  have no grammar geometry; author them with their config APIs.
+- **The radial families with no geometry.** Radial bar, gauge and range area
+  have no `geom*` verb; author them with their config APIs. (Pie, Donut,
+  Concentric Donut and Polar Column ARE grammar geometries as of V2.0 — see
+  *Radial geometries* above.) Faceting a radial spec is refused by name
+  (`facetedRadialUnsupported`).
 - **Faceting / small multiples.** These lower to *multiple* widgets plus a
   `ChartInteractionGroupController`, which is a different shape from
   "one spec, one chart".

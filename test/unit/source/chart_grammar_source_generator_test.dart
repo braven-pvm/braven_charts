@@ -26,6 +26,8 @@
 /// chain that would render a different chart is worse than no chain at all.
 library;
 
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -669,6 +671,279 @@ final List<PolarPairRow> polarPairRows = <PolarPairRow>[
     ),
 ];
 
+// ---------------------------------------------------------------------------
+// SHOWCASE POLAR fixtures — the ACCEPTANCE GATE for this slice.
+//
+// These are copied from `example/lib/showcase/pages/polar_column_page.dart`
+// (`_buildSeriesList` and `_buildPolarConfig`): the data maps, the per-
+// presentation pane/axis/composition knobs and the per-presentation styling
+// each of the seven authored presentations applies. The showcase is what the
+// workbench Grammar pane actually renders, so a chart built from these values
+// emitting a chain IS the claim "every polar Grammar pane emits".
+// ---------------------------------------------------------------------------
+
+const showcaseStandardValues = <String, num>{
+  'Search': 86,
+  'Social': 58,
+  'Partners': 72,
+  'Email': 44,
+  'Events': 65,
+  'Direct': 92,
+  'Referral': 54,
+  'Other': 36,
+};
+
+const showcaseRoseValues = <String, num>{
+  'Jan': 42,
+  'Feb': 58,
+  'Mar': 76,
+  'Apr': 63,
+  'May': 88,
+  'Jun': 54,
+  'Jul': 97,
+  'Aug': 82,
+  'Sep': 69,
+  'Oct': 74,
+  'Nov': 49,
+  'Dec': 61,
+};
+
+const showcaseLayeredObservedValues = <String, num>{
+  'Search': 72,
+  'Social': 48,
+  'Partners': 68,
+  'Email': 39,
+  'Events': 61,
+  'Direct': 83,
+};
+
+const showcaseLayeredCapacityValues = <String, num>{
+  'Search': 92,
+  'Social': 70,
+  'Partners': 84,
+  'Email': 62,
+  'Events': 78,
+  'Direct': 96,
+};
+
+const showcaseGroupedNorthValues = <String, num>{
+  'Search': 78,
+  'Social': 46,
+  'Partners': 64,
+  'Email': 52,
+  'Events': 70,
+  'Direct': 58,
+};
+
+const showcaseGroupedSouthValues = <String, num>{
+  'Search': 62,
+  'Social': 69,
+  'Partners': 51,
+  'Email': 73,
+  'Events': 55,
+  'Direct': 82,
+};
+
+const showcaseGroupedWestValues = <String, num>{
+  'Search': 54,
+  'Social': 57,
+  'Partners': 76,
+  'Email': 61,
+  'Events': 84,
+  'Direct': 67,
+};
+
+const showcaseStackedNewValues = <String, num>{
+  'Search': 34,
+  'Social': 26,
+  'Partners': 31,
+  'Email': 19,
+  'Events': 28,
+  'Direct': 37,
+};
+
+const showcaseStackedExpansionValues = <String, num>{
+  'Search': 16,
+  'Social': 12,
+  'Partners': 18,
+  'Email': 11,
+  'Events': 15,
+  'Direct': 20,
+};
+
+/// The stacked composition's third series is NEGATIVE at every category, which
+/// is what makes it worth its own acceptance case: a reversal that synthesised
+/// a zero, or clamped, would move every column.
+const showcaseStackedChurnValues = <String, num>{
+  'Search': -13,
+  'Social': -21,
+  'Partners': -12,
+  'Email': -17,
+  'Events': -10,
+  'Direct': -15,
+};
+
+const showcaseReferenceActualValues = <String, num>{
+  'Search': 74,
+  'Social': 56,
+  'Partners': 83,
+  'Email': 48,
+  'Events': 69,
+  'Direct': 91,
+};
+
+const showcaseReferenceTargetValues = <String, num>{
+  'Search': 78,
+  'Social': 62,
+  'Partners': 80,
+  'Email': 55,
+  'Events': 72,
+  'Direct': 88,
+};
+
+const showcaseUncertaintyValues = <String, num>{
+  'Search': 72,
+  'Social': 58,
+  'Partners': 81,
+  'Email': 46,
+  'Events': 67,
+  'Direct': 88,
+};
+
+const showcaseUncertaintyLowerValues = <String, num>{
+  'Search': 63,
+  'Social': 49,
+  'Partners': 70,
+  'Email': 38,
+  'Events': 57,
+  'Direct': 76,
+};
+
+const showcaseUncertaintyUpperValues = <String, num>{
+  'Search': 84,
+  'Social': 69,
+  'Partners': 94,
+  'Email': 56,
+  'Events': 79,
+  'Direct': 103,
+};
+
+/// The showcase's `_PolarPalette.ocean` swatch.
+const showcaseOceanPalette = <Color>[
+  Color(0xFF2563EB),
+  Color(0xFF0D9488),
+  Color(0xFF06B6D4),
+  Color(0xFF7C3AED),
+  Color(0xFF64748B),
+];
+
+/// The showcase's `_PolarPalette.sunset` swatch.
+const showcaseSunsetPalette = <Color>[
+  Color(0xFFE63946),
+  Color(0xFFF77F00),
+  Color(0xFFFCBF49),
+  Color(0xFF9D4EDD),
+  Color(0xFF5A189A),
+];
+
+/// `_categoryColors` for `_PolarPalette.theme`: the base theme's own series
+/// colors, at least eight of them.
+List<Color> showcaseThemePalette(ChartTheme theme, int categoryCount) =>
+    List<Color>.generate(
+      math.max(8, categoryCount),
+      theme.seriesTheme.colorAt,
+    );
+
+/// The showcase's per-category color map: the palette cycled over the value
+/// map's key order (`_buildSeriesList`).
+Map<String, Color> showcaseColumnColors(
+  Map<String, num> values,
+  List<Color> palette,
+) => <String, Color>{
+  for (final (index, category) in values.keys.indexed)
+    category: palette[index % palette.length],
+};
+
+/// `_buildSeriesList`'s shared `PolarColumnStyle`, with the knobs each
+/// presentation varies as parameters and the rest at the showcase's authored
+/// values.
+PolarColumnStyle showcasePolarStyle({
+  required double cornerRadius,
+  required double opacity,
+  required Color borderColor,
+  required PolarColumnAnimationMode animationMode,
+  PolarColumnCornerRadiusMode cornerRadiusMode =
+      PolarColumnCornerRadiusMode.outerEnd,
+  Color? valueLabelColor,
+  PolarColumnGradientStyle? gradient,
+  PolarColumnShadowStyle shadow = const PolarColumnShadowStyle(),
+}) => PolarColumnStyle(
+  cornerRadius: cornerRadius,
+  cornerRadiusMode: cornerRadiusMode,
+  opacity: opacity,
+  borderColor: borderColor,
+  borderWidth: 0.75,
+  maximumVisibleDataLabels: 24,
+  dataLabelRadialPosition: 0.56,
+  dataLabelStyle: PolarLabelStyle(
+    color: valueLabelColor,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+  ),
+  gradient: gradient,
+  shadow: shadow,
+  animationMode: animationMode,
+);
+
+/// `_buildSeriesList`'s shared `RadialSelectionStyle` at the showcase defaults.
+const showcasePolarSelection = RadialSelectionStyle(
+  liftScale: 1.08,
+  liftOffset: 6,
+  backdropBlur: 1.25,
+);
+
+/// `_buildPolarConfig`, with the knobs each presentation varies as parameters.
+PolarChartConfig showcasePolarConfig({
+  required double innerRadiusFactor,
+  required double outerRadiusFactor,
+  required double innerPadding,
+  required double outerPadding,
+  required Color categoryLabelColor,
+  required Color radialLabelColor,
+  required PolarColumnCompositionMode compositionMode,
+  PolarRadialScaleMode scaleMode = PolarRadialScaleMode.linear,
+  List<PolarThreshold> thresholds = const <PolarThreshold>[],
+}) => PolarChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: -90,
+    innerRadiusFactor: innerRadiusFactor,
+    outerRadiusFactor: outerRadiusFactor,
+  ),
+  angularAxis: PolarCategoryAxisConfig(
+    innerPadding: innerPadding,
+    outerPadding: outerPadding,
+    maximumVisibleLabels: 24,
+    maximumVisibleGridLines: 72,
+    labelOffset: 4,
+    labelStyle: PolarLabelStyle(
+      color: categoryLabelColor,
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    ),
+  ),
+  radialAxis: PolarNumericAxisConfig(
+    scaleMode: scaleMode,
+    labelOffset: 4,
+    labelStyle: PolarLabelStyle(
+      color: radialLabelColor,
+      fontSize: 10,
+      fontWeight: FontWeight.w500,
+    ),
+  ),
+  composition: PolarColumnCompositionConfig(mode: compositionMode),
+  thresholds: thresholds,
+);
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -775,6 +1050,48 @@ ChartDocumentSnapshot patchedSnapshot(
     document: ChartDocument.fromJson(json),
     viewState: snapshot.viewState,
   );
+}
+
+/// Asserts one showcase chart reaches the Grammar pane as a real chain.
+///
+/// The acceptance question for this slice is not "does some polar chart emit"
+/// but "does the chart the showcase page actually mounts emit", so this mounts
+/// the chart and asserts on the generator's own verdict: a chain was written,
+/// nothing was blocked, and [ChartGeneratedSource.isComplete] is true. The
+/// generator proves FIDELITY internally — it re-lowers the chain it is about to
+/// write and refuses anything that would render a different chart — so an
+/// emitted chain already means a faithful one.
+Future<ChartGeneratedSource> expectShowcaseEmits(
+  WidgetTester tester, {
+  required String presentation,
+  required Widget Function(BravenChartController) chart,
+  Iterable<String> fragments = const <String>[],
+}) async {
+  final snapshot = await snapshotOf(tester, chart);
+  final generated = generateGrammar(snapshot);
+  expect(
+    emittedChain(generated),
+    isTrue,
+    reason:
+        'the "$presentation" showcase presentation must emit a grammar chain, '
+        'but it was blocked with: ${blockedReason(generated)}',
+  );
+  expect(
+    generated.warnings,
+    isEmpty,
+    reason:
+        'the "$presentation" showcase presentation must emit a CLEAN chain:\n'
+        '${generated.warnings.map((w) => w.message).join('\n')}',
+  );
+  expect(generated.isComplete, isTrue);
+  for (final fragment in fragments) {
+    expect(
+      generated.source,
+      contains(fragment),
+      reason: 'missing "$fragment" in:\n${generated.source}',
+    );
+  }
+  return generated;
 }
 
 /// Whether a chain was actually emitted.
@@ -2880,6 +3197,548 @@ void main() {
             .build(bravenChartController: controller),
       );
       expect(generated.isComplete, isTrue);
+    });
+  });
+
+  // =========================================================================
+  // ACCEPTANCE GATE — every polar + concentric workbench Grammar pane emits.
+  //
+  // The unit tests above each isolate ONE mechanism (a config field, a channel,
+  // a composition). This group asks the question the slice exists to answer:
+  // does the chart the showcase page ACTUALLY MOUNTS reach the Grammar pane as
+  // a real chain? Each case is `polar_column_page.dart`'s own construction —
+  // `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
+  // config, at that presentation's authored knob values — so a regression that
+  // only shows up on a real showcase chart fails here.
+  //
+  // Emission is the whole assertion because the generator refuses anything it
+  // cannot reproduce: it re-lowers the chain it is about to write and compares
+  // the result to the hydrated document, so "a chain was emitted" already
+  // carries "this chain rebuilds this chart".
+  // =========================================================================
+
+  group('showcase acceptance: every polar presentation emits', () {
+    testWidgets('standard: per-category column colors over eight categories', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseStandardValues,
+        showcaseOceanPalette,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'standard',
+        fragments: <String>[
+          '.geomPolar(',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'outerRadiusFactor: 0.84,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0,
+            outerRadiusFactor: 0.84,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1E293B),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-column',
+              name: 'Category volume',
+              values: showcaseStandardValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 4,
+                opacity: 0.97,
+                borderColor: const Color(0xFF1E3A5F),
+                animationMode: PolarColumnAnimationMode.grow,
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+    });
+
+    testWidgets('rose: the area-correct preset with a gradient and a shadow', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseRoseValues,
+        showcaseSunsetPalette,
+      );
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'rose',
+        fragments: <String>[
+          '.geomPolar(',
+          'rose: true,',
+          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          'gradient: PolarColumnGradientStyle(',
+          'shadow: PolarColumnShadowStyle(',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.08,
+            outerRadiusFactor: 0.86,
+            innerPadding: 0.08,
+            outerPadding: 0,
+            categoryLabelColor: const Color(0xFFF8FAFC),
+            radialLabelColor: const Color(0xFFFDE68A),
+            scaleMode: PolarRadialScaleMode.areaCorrect,
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.rose(
+              id: 'showcase-polar-column',
+              name: 'Monthly volume',
+              values: showcaseRoseValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 6,
+                opacity: 0.98,
+                borderColor: const Color(0xFFF59E0B),
+                valueLabelColor: const Color(0xFFFFF7ED),
+                animationMode: PolarColumnAnimationMode.sweep,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.24,
+                  endLightnessShift: -0.18,
+                ),
+                shadow: const PolarColumnShadowStyle(
+                  color: Color(0xFF000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 5),
+                  opacity: 0.38,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+    });
+
+    testWidgets('layered: two series whose per-series styles DIFFER', (
+      tester,
+    ) async {
+      // The reference layer is the same style at a third of the opacity with
+      // its data labels off — the case that forced one mark PER SERIES rather
+      // than one mark with N value channels.
+      final style = showcasePolarStyle(
+        cornerRadius: 5,
+        opacity: 0.92,
+        borderColor: const Color(0xFF1E40AF),
+        animationMode: PolarColumnAnimationMode.grow,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'layered',
+        fragments: <String>[
+          '.geomPolar(',
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          'opacity: 0.32,',
+          'showDataLabels: false,',
+          // `layered` IS the composition default, so the mode itself is
+          // correctly elided; the pane/axis knobs are what prove the plot
+          // config reached the chain.
+          '.polarConfig(',
+          'innerPadding: 0.16,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.86,
+            innerPadding: 0.16,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1E3A8A),
+            radialLabelColor: const Color(0xFF1D4ED8),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-capacity',
+              name: 'Capacity',
+              values: showcaseLayeredCapacityValues,
+              color: showcaseOceanPalette[1],
+              unit: 'orders',
+              polarStyle: style.copyWith(
+                opacity: math.min(0.92, 0.32),
+                showDataLabels: false,
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-observed',
+              name: 'Observed',
+              values: showcaseLayeredObservedValues,
+              color: showcaseOceanPalette.first,
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('grouped: three series and a grouped composition', (
+      tester,
+    ) async {
+      final style = showcasePolarStyle(
+        cornerRadius: 4,
+        opacity: 0.92,
+        borderColor: const Color(0xFF7C2D12),
+        animationMode: PolarColumnAnimationMode.grow,
+        gradient: const PolarColumnGradientStyle(
+          startLightnessShift: 0.18,
+          endLightnessShift: -0.16,
+        ),
+        shadow: const PolarColumnShadowStyle(
+          color: Color(0xFF92400E),
+          blurRadius: 7,
+          offset: Offset(0, 2),
+          opacity: 0.16,
+        ),
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'grouped',
+        fragments: <String>[
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          'value: (row) => row.value3,',
+          'mode: PolarColumnCompositionMode.grouped,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.1,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF78350F),
+            radialLabelColor: const Color(0xFF92400E),
+            compositionMode: PolarColumnCompositionMode.grouped,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-north',
+              name: 'North',
+              values: showcaseGroupedNorthValues,
+              color: showcaseSunsetPalette[0],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-south',
+              name: 'South',
+              values: showcaseGroupedSouthValues,
+              color: showcaseSunsetPalette[1],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-west',
+              name: 'West',
+              values: showcaseGroupedWestValues,
+              color: showcaseSunsetPalette[2],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 3);
+    });
+
+    testWidgets('stacked: three series, one of them negative at every '
+        'category', (tester) async {
+      final style = showcasePolarStyle(
+        cornerRadius: 4,
+        cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
+        opacity: 0.97,
+        borderColor: const Color(0xFF7DD3FC),
+        valueLabelColor: const Color(0xFFF8FAFC),
+        animationMode: PolarColumnAnimationMode.sweep,
+        gradient: const PolarColumnGradientStyle(
+          startLightnessShift: 0.2,
+          endLightnessShift: -0.2,
+        ),
+        shadow: const PolarColumnShadowStyle(
+          color: Color(0xFF000000),
+          blurRadius: 10,
+          offset: Offset(0, 4),
+          opacity: 0.42,
+        ),
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'stacked',
+        fragments: <String>[
+          'mode: PolarColumnCompositionMode.stacked,',
+          'cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,',
+          // The third series' own value field, negative and unclamped.
+          'value3: -13.0,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.14,
+            outerRadiusFactor: 0.9,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFFE0F2FE),
+            radialLabelColor: const Color(0xFFBAE6FD),
+            compositionMode: PolarColumnCompositionMode.stacked,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-new',
+              name: 'New accounts',
+              values: showcaseStackedNewValues,
+              color: showcaseOceanPalette[0],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-expansion',
+              name: 'Expansion',
+              values: showcaseStackedExpansionValues,
+              color: showcaseOceanPalette[1],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-churn',
+              name: 'Churn',
+              values: showcaseStackedChurnValues,
+              color: showcaseOceanPalette[2],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 3);
+    });
+
+    testWidgets('references: targets, a target marker style and a threshold', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseReferenceActualValues,
+        showcaseThemePalette(
+          ChartTheme.colorblindFriendly,
+          showcaseReferenceActualValues.length,
+        ),
+      );
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'references',
+        fragments: <String>[
+          'target: (row) => row.target,',
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'lengthFactor: 0.68,',
+          'thresholds: [',
+          "label: 'Capacity',",
+          'dashPattern: <double>[7.0, 4.0],',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.14,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1F2937),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+            thresholds: const <PolarThreshold>[
+              PolarThreshold(
+                value: 80,
+                label: 'Capacity',
+                color: Color(0xFFDC2626),
+                width: 2,
+                dashPattern: <double>[7, 4],
+              ),
+            ],
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-actual-targets',
+              name: 'Actual versus plan',
+              values: showcaseReferenceActualValues,
+              targets: showcaseReferenceTargetValues,
+              columnColors: colors,
+              unit: 'orders',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 5,
+                opacity: 0.9,
+                borderColor: const Color(0xFF334155),
+                animationMode: PolarColumnAnimationMode.grow,
+              ),
+              selectionStyle: showcasePolarSelection,
+              targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+                color: Color(0xFFF59E0B),
+                width: 3,
+                lengthFactor: 0.68,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+
+    testWidgets('intervals: both interval bounds and an interval style', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseUncertaintyValues,
+        showcaseOceanPalette,
+      );
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'intervals',
+        fragments: <String>[
+          'intervalLow: (row) => row.intervalLow,',
+          'intervalHigh: (row) => row.intervalHigh,',
+          // The showcase's authored interval knobs are the class defaults
+          // apart from the color and the width, so those two are what prove
+          // the style reached the chain.
+          'intervalStyle: PolarColumnIntervalStyle(',
+          'color: Color(0xFF0F172A),',
+          'width: 2.0,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.16,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF334155),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-forecast-intervals',
+              name: 'Forecast',
+              values: showcaseUncertaintyValues,
+              intervals: <String, PolarColumnInterval>{
+                for (final category in showcaseUncertaintyValues.keys)
+                  if (showcaseUncertaintyLowerValues[category] case final lower?)
+                    if (showcaseUncertaintyUpperValues[category]
+                        case final upper?)
+                      category: PolarColumnInterval(
+                        lower: lower.toDouble(),
+                        upper: upper.toDouble(),
+                      ),
+              },
+              columnColors: colors,
+              unit: 'orders',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 5,
+                opacity: 0.78,
+                borderColor: const Color(0xFF1E3A8A),
+                animationMode: PolarColumnAnimationMode.fade,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.22,
+                  endLightnessShift: -0.14,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+              intervalStyle: const PolarColumnIntervalStyle(
+                color: Color(0xFF0F172A),
+                width: 2,
+                capLengthFactor: 0.62,
+                bandLengthFactor: 0.58,
+                opacity: 0.92,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+
+    testWidgets('a concentric donut at the showcase\'s non-default ring '
+        'geometry emits', (tester) async {
+      // `concentric_donut_page.dart` mounts its rings with a customised
+      // `ConcentricDonutConfig` — radii, a ring gap, an order, a legend mode,
+      // per-ring weights and a center. Every one of those was refused before
+      // `geomDonut(concentric:)` carried the whole config, because lowering
+      // rebuilt the composition from the center alone.
+      //
+      // The ring SERIES ids follow the `<markId>-<ring>` pattern the grammar's
+      // own concentric lowering produces, which is what lets the composition be
+      // reversed to a single ring-channel mark.
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'concentric donut',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'concentric: ConcentricDonutConfig(',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.94,',
+          'ringGap: 6.0,',
+          // `outerToInner` and `groupedByRing` are the class defaults the
+          // showcase leaves alone, so they are correctly elided.
+          "'revenue-Current period': 1.25,",
+          "label: 'Revenue mix',",
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(
+            innerRadiusFactor: 0.28,
+            outerRadiusFactor: 0.94,
+            ringGap: 6,
+            order: ConcentricRingOrder.outerToInner,
+            legendMode: ConcentricDonutLegendMode.groupedByRing,
+            ringWeights: <String, double>{'revenue-Current period': 1.25},
+            centerContent: DonutCenterContent(label: 'Revenue mix'),
+          ),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'revenue-Current period',
+              name: 'Current period',
+              unit: 'USD',
+              values: const <String, num>{
+                'Subscriptions': 48,
+                'Services': 27,
+                'Hardware': 25,
+              },
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Previous period',
+              name: 'Previous period',
+              unit: 'USD',
+              values: const <String, num>{
+                'Subscriptions': 41,
+                'Services': 33,
+                'Hardware': 26,
+              },
+            ),
+          ],
+        ),
+      );
     });
   });
 
