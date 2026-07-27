@@ -6,9 +6,9 @@
 
 Braven Charts is a native Flutter charting system for interactive, production-grade data visualization.
 
-Render eleven chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
+Render twelve chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
 
-[![Eleven chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
+[![Twelve chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
 **[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
 

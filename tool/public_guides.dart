@@ -601,9 +601,10 @@ String _indexHtml({
   const empty = document.querySelector('#empty-results');
   const apply = () => {
     const query = input.value.trim().toLowerCase();
+    const terms = query.split(/\\s+/).filter(Boolean);
     let visible = 0;
     cards.forEach((card) => {
-      const match = !query || card.dataset.search.includes(query);
+      const match = terms.every((term) => card.dataset.search.includes(term));
       card.hidden = !match;
       if (match) visible += 1;
     });

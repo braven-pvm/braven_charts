@@ -129,7 +129,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Ten chart guides, grouped by visual grammar'),
+        find.text('Twelve chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -147,6 +147,14 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('chart-type-card-range-area-charts')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-radial-bar')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-gauge')),
         findsOneWidget,
       );
 

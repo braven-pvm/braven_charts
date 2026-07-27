@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -34,6 +35,7 @@ from PIL import Image, ImageChops, ImageEnhance, ImageStat
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 
@@ -49,11 +51,14 @@ VIEWPORTS = {
 SHORT_DESKTOP_GUIDE_VIEWPORT = (1440, 800)
 SURFACES = {
     "readme": "/preview/readme.html",
+    "gallery": "/braven_charts/?page=gallery",
+    "chart-types": "/braven_charts/?page=chart-types",
     "documentation": "/braven_charts/?page=docs",
     "guide-index": "/braven_charts/guides/",
     "guide-detail": "/braven_charts/guides/chart-grammar/",
     "api": "/braven_charts/api/",
 }
+FLUTTER_SURFACES = {"gallery", "chart-types", "documentation"}
 DEFAULT_BASELINE_DIR = (
     REPOSITORY_ROOT / ".github" / "visual-baselines" / "public-surfaces"
 )
@@ -98,6 +103,18 @@ class PublicSurfaceHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return
+
+
+class PublicSurfaceServer(ThreadingHTTPServer):
+    """Ignore browser disconnects while still surfacing real server errors."""
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        if isinstance(
+            sys.exc_info()[1],
+            (ConnectionAbortedError, ConnectionResetError),
+        ):
+            return
+        super().handle_error(request, client_address)
 
 
 def _run_public_docs_check() -> None:
@@ -425,7 +442,7 @@ def _wait_for_surface(
                 "[...document.images].every((image) => image.complete)"
             )
         )
-    elif surface == "documentation":
+    elif surface in FLUTTER_SURFACES:
         wait.until(lambda current: current.title == "Braven Charts Showcase")
         wait.until(
             lambda current: current.execute_script(
@@ -765,6 +782,69 @@ def _issues_for_geometry(surface: str, geometry: dict[str, Any]) -> list[str]:
     return issues
 
 
+def _validate_api_search(
+    driver: webdriver.Chrome,
+    base_url: str,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    expected_path = "braven_charts/GaugeChartSeries-class.html"
+    result: dict[str, Any] = {
+        "query": "GaugeChartSeries",
+        "expectedPath": expected_path,
+        "resolvedPath": None,
+        "indexLoaded": False,
+        "issues": [],
+    }
+    try:
+        search = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: next(
+                (
+                    element
+                    for element in current.find_elements(
+                        By.CSS_SELECTOR,
+                        "#search-box, #search-sidebar",
+                    )
+                    if element.is_displayed() and element.is_enabled()
+                ),
+                False,
+            )
+        )
+        search.clear()
+        search.send_keys(result["query"])
+        suggestion = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: next(
+                (
+                    element
+                    for element in current.find_elements(
+                        By.CSS_SELECTOR,
+                        f'.tt-suggestion[data-href="{expected_path}"]',
+                    )
+                    if element.is_displayed()
+                ),
+                False,
+            )
+        )
+        result["resolvedPath"] = suggestion.get_attribute("data-href")
+        suggestion.click()
+        WebDriverWait(driver, timeout_seconds).until(
+            lambda current: expected_path in current.current_url
+        )
+        driver.get(f"{base_url}/braven_charts/api/index.json")
+        body = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: current.find_element(By.TAG_NAME, "body")
+        )
+        result["indexLoaded"] = "GaugeChartSeries" in body.text
+        if not result["indexLoaded"]:
+            result["issues"].append(
+                "dartdoc index.json does not contain GaugeChartSeries"
+            )
+    except TimeoutException:
+        result["issues"].append(
+            "dartdoc search did not resolve GaugeChartSeries to its class page"
+        )
+    return result
+
+
 def _capture(
     base_url: str, output_dir: Path, timeout_seconds: float
 ) -> tuple[list[dict], list[str]]:
@@ -783,6 +863,14 @@ def _capture(
                     issues = _issues_for_geometry(surface, geometry)
                     screenshot = output_dir / f"{surface}-{viewport_name}.png"
                     screenshot.write_bytes(driver.get_screenshot_as_png())
+                    if surface == "api" and viewport_name == "desktop":
+                        api_search = _validate_api_search(
+                            driver,
+                            base_url,
+                            timeout_seconds,
+                        )
+                        geometry["apiSearch"] = api_search
+                        issues.extend(api_search["issues"])
                     captures.append(
                         {
                             "surface": surface,
@@ -1072,7 +1160,7 @@ def main() -> int:
         site=site_dir,
     )
     handler = partial(PublicSurfaceHandler, roots=roots)
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server = PublicSurfaceServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base_url = f"http://127.0.0.1:{server.server_port}"
