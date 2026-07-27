@@ -86,9 +86,14 @@ enum GrammarDiagnosticCode {
   /// A spec declared more than one radial geom outside the polar family.
   multipleRadialGeoms,
 
-  /// `.polarConfig(...)` was set on a spec whose radial mark is not a polar
-  /// column geom.
+  /// `.polarConfig(...)` was set on a spec whose marks are not polar column
+  /// geoms.
   polarConfigOnNonPolarSpec,
+
+  /// Several polar column geoms cannot share one polar coordinate system —
+  /// clashing units, diverging categories, or a grouped/stacked composition
+  /// with fewer than two series.
+  invalidPolarComposition,
 
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
@@ -328,13 +333,28 @@ final class GrammarSpecException implements Exception {
     'one exception: several geomPolar marks may share a plot.)',
   );
 
-  /// `.polarConfig(...)` was set on a non-polar radial spec.
+  /// `.polarConfig(...)` was set on a spec that holds no polar column geom.
+  ///
+  /// [markId] names the first mark that is not a `geomPolar` — which may be a
+  /// Cartesian mark, because `.polarConfig(...)` is a plot-level verb every
+  /// chain exposes.
   factory GrammarSpecException.polarConfigOnNonPolarSpec(String markId) =>
       GrammarSpecException(
         GrammarDiagnosticCode.polarConfigOnNonPolarSpec,
-        'A PolarChartConfig was set, but the radial mark "$markId" is not a '
-        'polar-column geom. Remove .polarConfig(...), or author the chart with '
-        'geomPolar(...).',
+        'A PolarChartConfig was set, but the mark "$markId" is not a '
+        'polar-column geom, so the configuration would be silently discarded. '
+        'Remove .polarConfig(...), or author the chart with geomPolar(...).',
+      );
+
+  /// Several polar column geoms cannot share one polar coordinate system.
+  ///
+  /// [detail] states the specific clash — the diverging units, categories or
+  /// series count — and names the mark that carries it.
+  factory GrammarSpecException.invalidPolarComposition(String detail) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.invalidPolarComposition,
+        'The polar columns in this plot share one angular axis and one radial '
+        'axis, so every geomPolar mark must agree about them. $detail',
       );
 
   /// A Cartesian axis/grid option was set on a radial spec.

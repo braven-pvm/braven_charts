@@ -549,6 +549,14 @@ void main() {
       ),
     );
 
+    // Non-default in pane and radial axis but NOT in composition, so a single
+    // polar mark may legally carry it (grouped/stacked need two series) while a
+    // lowering that dropped it still cannot pass by accident.
+    const customPolarPane = PolarChartConfig(
+      pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+      radialAxis: PolarNumericAxisConfig(tickCount: 7),
+    );
+
     test('two polar marks lower to two PolarColumnChartSeries with the config',
         () {
       final lowered = (const PlotSpec<Fruit>(
@@ -591,11 +599,12 @@ void main() {
         marks: <Mark<Fruit>>[
           PolarMark<Fruit>(category: fruitName, value: fruitCount),
         ],
-        polar: groupedPolar,
+        polar: customPolarPane,
       )).lower();
 
       expect(lowered.series, hasLength(1));
-      expect(lowered.polarChartConfig, groupedPolar);
+      expect(lowered.polarChartConfig, customPolarPane);
+      expect(lowered.polarChartConfig, isNot(const PolarChartConfig()));
     });
 
     test('every polar mark is checked for a visible category', () {
@@ -698,6 +707,223 @@ void main() {
         )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.multipleRadialGeoms),
       );
+    });
+
+    // REGRESSION: `.polarConfig(...)` is a PLOT-level verb available on every
+    // chain, so the most likely way to misplace it is on a Cartesian one. The
+    // placement guard used to live inside the radial branch, which a Cartesian
+    // spec never enters — the config was silently dropped instead of named.
+    test('polarConfig on a Cartesian spec raises polarConfigOnNonPolarSpec', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            LineMark<Fruit>(id: 'power', x: sampleX, y: sampleY),
+          ],
+          polar: PolarChartConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+      );
+    });
+
+    test('the Cartesian polarConfig diagnostic names the offending mark', () {
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            BarMark<Fruit>(id: 'bars', x: sampleX, y: sampleY),
+          ],
+          polar: PolarChartConfig(),
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.polarConfigOnNonPolarSpec);
+      expect(thrown.message, contains('bars'));
+      expect(thrown.message, contains('geomPolar'));
+    });
+
+    test('the Cartesian polarConfig guard beats the empty-data guard', () {
+      // Data-INDEPENDENT placement errors surface even against empty rows, so
+      // BravenPlot only ever swallows an otherwise well-formed empty spec.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            LineMark<Fruit>(id: 'power', x: sampleX, y: sampleY),
+          ],
+          polar: PolarChartConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+      );
+    });
+
+    test('a Cartesian spec without polarConfig still lowers', () {
+      // The positive control: the hoisted guard must not fire on the ordinary
+      // Cartesian path.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          LineMark<Fruit>(id: 'power', x: sampleX, y: sampleY),
+        ],
+      )).lower();
+      expect(lowered.series, hasLength(1));
+      expect(lowered.polarChartConfig, isNull);
+    });
+  });
+
+  // A polar composition is N series over ONE shared angular axis and ONE shared
+  // radial axis. `PolarColumnComposition.validate` is the contract, enforced at
+  // widget mount and at artifact hydration; lowering must reach the same verdict
+  // FIRST and by name, or an author's chain lowers clean and then blows up in
+  // the render pipeline with a raw ArgumentError.
+  group('polar composition diagnostics', () {
+    test('polar marks with different units raise invalidPolarComposition', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'watts',
+              category: fruitName,
+              value: fruitCount,
+              unit: 'W',
+            ),
+            PolarMark<Fruit>(
+              id: 'beats',
+              category: fruitName,
+              value: fruitMass,
+              unit: 'bpm',
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('the unit diagnostic fires before the empty-data guard', () {
+      // `PolarMark.unit` is a mark field, so a unit clash is decidable from the
+      // spec's SHAPE. It must not hide behind an empty dataset and only surface
+      // once real rows arrive.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'watts',
+              category: fruitName,
+              value: fruitCount,
+              unit: 'W',
+            ),
+            PolarMark<Fruit>(
+              id: 'beats',
+              category: fruitName,
+              value: fruitMass,
+              unit: 'bpm',
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.invalidPolarComposition);
+      expect(thrown.message, contains('beats'));
+      expect(thrown.message, contains('bpm'));
+    });
+
+    test('polar marks sharing a unit lower cleanly', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'a',
+            category: fruitName,
+            value: fruitCount,
+            unit: 'W',
+          ),
+          PolarMark<Fruit>(
+            id: 'b',
+            category: fruitName,
+            value: fruitMass,
+            unit: 'W',
+          ),
+        ],
+      )).lower();
+      expect(lowered.series, hasLength(2));
+    });
+
+    test('a grouped composition with one polar mark raises '
+        'invalidPolarComposition', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(
+            composition: PolarColumnCompositionConfig(
+              mode: PolarColumnCompositionMode.grouped,
+            ),
+          ),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('a stacked composition with one polar mark raises '
+        'invalidPolarComposition even against empty data', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(
+            composition: PolarColumnCompositionConfig(
+              mode: PolarColumnCompositionMode.stacked,
+            ),
+          ),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('polar marks whose categories diverge raise invalidPolarComposition',
+        () {
+      // Two marks over ONE row list may still read DIFFERENT categories, which
+      // no polar chart can draw: the two series would need two angular axes.
+      expect(
+        () => (PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            const PolarMark<Fruit>(
+              id: 'a',
+              category: fruitName,
+              value: fruitCount,
+            ),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: (row) => 'x${row.name}',
+              value: fruitMass,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('the composition diagnostic names its code and the offending mark',
+        () {
+      final invalid = GrammarSpecException.invalidPolarComposition(
+        'The mark "b" reads in "bpm".',
+      );
+      expect(invalid.code, GrammarDiagnosticCode.invalidPolarComposition);
+      expect(invalid.toString(), contains('invalidPolarComposition'));
+      expect(invalid.message, contains('bpm'));
     });
   });
 

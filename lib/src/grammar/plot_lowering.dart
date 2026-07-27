@@ -3,6 +3,7 @@
 
 import 'package:flutter/painting.dart' show Color;
 
+import '../layout/polar_column_composition.dart';
 import '../models/axis_scale_type.dart';
 import '../models/bar_chart_style.dart' show BarOrientation;
 import '../models/candlestick_chart_series.dart';
@@ -194,11 +195,19 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// first. All DATA-INDEPENDENT structural checks run before the emptyData
 /// guard, so an authoring error surfaces even against a momentarily-empty
 /// dataset (which is what lets `BravenPlot` swallow ONLY emptyData): empty
-/// marks, mark ids, axis ids, transposition, then each mark's structural
-/// checks in spec order (axis binding, scatter channel/encoding pairing,
-/// trend source), then unbound axes. Only then comes empty data, followed by
-/// the DATA-DEPENDENT materialization — the per-row candlestick validation
-/// that cannot run on an empty dataset.
+/// marks, mark ids, misplaced `.polarConfig(...)`, axis ids, transposition,
+/// then each mark's structural checks in spec order (axis binding, scatter
+/// channel/encoding pairing, trend source), then unbound axes. Only then comes
+/// empty data, followed by the DATA-DEPENDENT materialization — the per-row
+/// candlestick validation that cannot run on an empty dataset.
+///
+/// The radial branch follows the same rule: coordinate-system and radial-family
+/// checks, Cartesian-option checks, the `.polarConfig(...)` placement check and
+/// the SHAPE half of the polar composition contract (clashing mark units, a
+/// grouped/stacked composition with fewer than two polar marks) all run above
+/// the emptyData guard; the row-dependent half — visible categories, and the
+/// `PolarColumnComposition.validate` pass over the lowered series — runs below
+/// it.
 extension PlotSpecLowering<T> on PlotSpec<T> {
   /// Lowers this spec onto ordinary chart config objects.
   LoweredPlot lower() => _lower<T>(this);
@@ -209,6 +218,18 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final markIds = _resolveMarkIds(spec.marks);
+  // Data-INDEPENDENT placement check, hoisted ABOVE the radial dispatch because
+  // `.polarConfig(...)` is a PLOT-level verb every chain exposes, so the most
+  // likely way to misplace it is on a Cartesian chain — which never enters
+  // `_lowerRadial`. Leaving the guard there dropped the config silently, which
+  // is exactly the outcome the module's contract forbids. A spec holding a
+  // `PolarMark` is radial by definition, so this fires only when the spec has no
+  // polar geom at all; the radial branch keeps its own guard for the mixed
+  // radial families (a pie or donut spec), where `mixedCoordinateSystems` and
+  // `multipleRadialGeoms` must be reported first.
+  if (spec.polar != null && !spec.isRadial) {
+    throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds.first);
+  }
   if (spec.isRadial) return _lowerRadial<T>(spec, markIds);
   final axes = _resolveAxes(spec.yAxes);
   final axesById = <String, YAxisConfig>{
@@ -904,8 +925,12 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
 /// The whole dataset maps to one radial series (or, for a ring channel, one
 /// per ring). Exactly one radial geom is the rule for pie/donut; the polar
 /// family relaxes it — N [PolarMark]s lower to N `PolarColumnChartSeries`
-/// sharing the spec-level [PlotSpec.polar] composition. Validation order is
-/// deterministic and matches the Cartesian contract: every data-INDEPENDENT
+/// sharing the spec-level [PlotSpec.polar] composition — which they must be
+/// ABLE to share: the composition contract
+/// ([PolarColumnComposition.validate], the same one the render pipeline and the
+/// artifact hydrator enforce) is checked here so a chain fails with a named
+/// diagnostic instead of a raw `ArgumentError` at widget mount. Validation order
+/// is deterministic and matches the Cartesian contract: every data-INDEPENDENT
 /// structural check runs before the emptyData guard, so BravenPlot swallows
 /// ONLY an otherwise well-formed empty spec.
 LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
@@ -958,8 +983,14 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
 
   // A plot-level PolarChartConfig only has meaning over polar columns; on a
   // pie/donut spec it would be silently discarded, so it is refused by name.
+  // (The Cartesian case is caught earlier, in `_lower`.)
   if (spec.polar != null && !allPolar) {
     throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds[markIndex]);
+  }
+
+  // The polar composition contract that is decidable from the spec's SHAPE.
+  if (allPolar) {
+    _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
   }
 
   // Data-dependent checks live below the emptyData guard.
@@ -982,16 +1013,31 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   PolarChartConfig? polar;
 
   if (allPolar) {
-    for (final index in radialIndices) {
-      series.add(
+    final columns = <PolarColumnChartSeries>[
+      for (final index in radialIndices)
         _lowerPolar<T>(
           spec.marks[index] as PolarMark<T>,
           markIds[index],
           spec.data,
         ),
+    ];
+    series.addAll(columns);
+    polar = spec.polar ?? const PolarChartConfig();
+    // The DATA-DEPENDENT half of the composition contract (diverging category
+    // domains, and — once the advanced per-series fields land — presets and
+    // intervals). Delegating to the same validator the render pipeline and the
+    // artifact hydrator run is what keeps the grammar from drifting away from
+    // the contract it lowers onto: without it a chain lowers clean and then
+    // throws a raw ArgumentError at widget mount.
+    try {
+      PolarColumnComposition.validate(columns, config: polar);
+    } on ArgumentError catch (error) {
+      throw GrammarSpecException.invalidPolarComposition(
+        error.invalidValue == null
+            ? '${error.message}.'
+            : '${error.message} ("${error.invalidValue}").',
       );
     }
-    polar = spec.polar ?? const PolarChartConfig();
   } else if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
   } else if (mark is DonutMark<T>) {
@@ -1037,6 +1083,57 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     polarChartConfig: polar,
   );
 }
+
+/// The DATA-INDEPENDENT half of the polar composition contract.
+///
+/// [PolarColumnComposition.validate] is the authority, but it needs the lowered
+/// series — which need rows. The two facts below are decidable from the spec's
+/// SHAPE alone (a mark's `unit`, and how many polar marks the plot holds against
+/// the composition mode `.polarConfig(...)` selects), so they are checked here,
+/// ABOVE the emptyData guard, exactly like every other structural check. That is
+/// what stops a unit clash from hiding behind a momentarily-empty dataset and
+/// only surfacing — as a raw `ArgumentError` from the render pipeline — once
+/// real rows arrive.
+void _validatePolarMarkComposition<T>(
+  PlotSpec<T> spec,
+  List<int> radialIndices,
+  List<String> markIds,
+) {
+  final firstIndex = radialIndices.first;
+  final firstUnit = _normalizedPolarUnit(
+    (spec.marks[firstIndex] as PolarMark<T>).unit,
+  );
+  for (final index in radialIndices.skip(1)) {
+    final unit = _normalizedPolarUnit((spec.marks[index] as PolarMark<T>).unit);
+    if (unit != firstUnit) {
+      throw GrammarSpecException.invalidPolarComposition(
+        'The mark "${markIds[index]}" reads in ${_polarUnitLabel(unit)} while '
+        '"${markIds[firstIndex]}" reads in ${_polarUnitLabel(firstUnit)}; one '
+        'shared radial axis cannot measure both. Give every geomPolar the same '
+        'unit, or split them into separate charts.',
+      );
+    }
+  }
+
+  final mode = spec.polar?.composition.mode;
+  if ((mode == PolarColumnCompositionMode.grouped ||
+          mode == PolarColumnCompositionMode.stacked) &&
+      radialIndices.length < 2) {
+    throw GrammarSpecException.invalidPolarComposition(
+      '.polarConfig(...) selects ${mode!.name} composition, which divides every '
+      'category between at least two series, but this plot has '
+      '${radialIndices.length} geomPolar mark. Add another geomPolar, or drop '
+      'the composition mode to leave the columns layered.',
+    );
+  }
+}
+
+/// Units compare the way [PolarColumnComposition] compares them: trimmed, with
+/// "no unit" and an all-whitespace unit treated as the same thing.
+String _normalizedPolarUnit(String? unit) => (unit ?? '').trim();
+
+String _polarUnitLabel(String normalized) =>
+    normalized.isEmpty ? 'no unit' : '"$normalized"';
 
 /// Builds an insertion-ordered category→value map, failing loud on a repeated
 /// category rather than collapsing it.

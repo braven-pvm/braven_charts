@@ -118,9 +118,13 @@ class PlotSpec<T> {
 
   /// Optional plot-level polar configuration, shared across every polar mark.
   ///
-  /// Null lowers to `const PolarChartConfig()`. Non-null is honored only when
-  /// the spec's radial marks are all [PolarMark]s; setting it on any other
-  /// spec raises `GrammarDiagnosticCode.polarConfigOnNonPolarSpec`.
+  /// Honored only when every radial mark is a [PolarMark]; such a spec lowers
+  /// null to `const PolarChartConfig()`. Setting it on ANY other spec —
+  /// Cartesian, pie, donut, or a mixed radial family — raises
+  /// `GrammarDiagnosticCode.polarConfigOnNonPolarSpec` rather than dropping it,
+  /// so a misplaced `.polarConfig(...)` is never silently discarded. (A spec
+  /// with no polar mark carries no polar configuration at all once lowered:
+  /// `LoweredPlot.polarChartConfig` stays null.)
   final PolarChartConfig? polar;
 
   /// A copy of this spec with [facet] cleared and everything else identical.

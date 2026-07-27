@@ -836,6 +836,34 @@ void main() {
 
       expect(spec.polar, same(polar));
     });
+
+    // REGRESSION: `.polarConfig(...)` is offered by every chain, so a Cartesian
+    // one is where it is most likely to be misplaced. Lowering must name it, not
+    // drop it.
+    test('.polarConfig on a Cartesian chain is refused, not dropped', () {
+      const polar = PolarChartConfig(
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.grouped,
+        ),
+      );
+      final chart = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(id: 'power')
+          .polarConfig(polar);
+
+      expect(chart.toSpec().polar, same(polar));
+      expect(
+        chart.toSpec().lower,
+        throwsA(
+          isA<GrammarSpecException>().having(
+            (error) => error.code,
+            'code',
+            GrammarDiagnosticCode.polarConfigOnNonPolarSpec,
+          ),
+        ),
+      );
+    });
   });
 
   group('build', () {
