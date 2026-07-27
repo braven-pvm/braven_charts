@@ -750,6 +750,11 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        // Carry the series' slice styling and data labels onto the mark so the
+        // round-trip proof reproduces a styled pie (the lowering maps
+        // PieMark.style → PieChartSeries.pieStyle, .dataLabels → .dataLabels).
+        style: series.pieStyle,
+        dataLabels: series.dataLabels,
       ),
     );
   }
@@ -776,7 +781,12 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        // As for pie: carry the donut styling and data labels so a styled donut
+        // round-trips (DonutMark.style → DonutChartSeries.donutStyle,
+        // .dataLabels → .dataLabels; the center is already carried above).
+        style: series.donutStyle,
         center: center,
+        dataLabels: series.dataLabels,
       ),
     );
   }
@@ -840,14 +850,20 @@ class _GrammarChainEmitter {
       center: center,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
-      // deliberately left null here.
+      // deliberately left null here. The mark carries ONE style/dataLabels
+      // applied to EVERY ring (that is how `_lowerConcentricRings` lowers), so
+      // the first ring's styling is used; rings whose styling differs are
+      // caught by the round-trip proof (each lowered ring must match), never
+      // silently flattened.
       mark: DonutMark<_SourceRow>(
         id: markId,
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
         ring: _string(ring),
+        style: donuts.first.donutStyle,
         center: center,
+        dataLabels: donuts.first.dataLabels,
       ),
     );
   }
@@ -869,6 +885,9 @@ class _GrammarChainEmitter {
         color: series.color,
         category: _string(category),
         value: _number(value),
+        // Carry the column styling so a styled polar column round-trips
+        // (PolarMark.style → PolarColumnChartSeries.polarStyle).
+        style: series.polarStyle,
       ),
     );
   }
@@ -1027,9 +1046,10 @@ class _GrammarChainEmitter {
       return "It carries a unit ('${expected.unit}'), which the radial marks do "
           'not carry.';
     }
-    return 'It carries a series style, data-label, selection or grouping option '
-        'the radial marks do not carry — only the category, value, optional '
-        'radius, concentric ring and donut center round-trip.';
+    return 'It carries a selection, grouping, slice-radius or (polar) '
+        'preset/target/interval option the radial marks do not carry — only '
+        'the category, value, optional radius, concentric ring, donut center, '
+        'series style and data labels round-trip.';
   }
 
   // =========================================================================
@@ -1933,7 +1953,41 @@ class _GrammarChainEmitter {
       }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);
-      if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+      // Style / center / data labels, in the geom verbs' signature order. The
+      // style and data-label literals are written by the SHARED config emitter
+      // (the same rendering the config form uses for `pieStyle:` / `donutStyle:`
+      // / `polarStyle:` / `dataLabels:`), so the two forms cannot disagree; each
+      // seam writes nothing for a family-default value, keeping a default-styled
+      // radial chain byte-identical.
+      switch (mark) {
+        case PieMark<_SourceRow>():
+          if (mark.style != null) {
+            _config.emitRadialStyle(writer, 'style', 'PieChartStyle', mark.style!);
+          }
+          if (mark.dataLabels != null) {
+            _config.emitRadialLabels(writer, mark.dataLabels!, 0);
+          }
+        case DonutMark<_SourceRow>():
+          if (mark.style != null) {
+            _config.emitRadialStyle(
+              writer,
+              'style',
+              'DonutChartStyle',
+              mark.style!,
+              innerRadiusFactor: mark.style!.innerRadiusFactor,
+              sweepAngleDegrees: mark.style!.sweepAngleDegrees,
+            );
+          }
+          if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+          if (mark.dataLabels != null) {
+            _config.emitRadialLabels(writer, mark.dataLabels!, 0);
+          }
+        case PolarMark<_SourceRow>():
+          if (mark.style != null) {
+            _config.emitPolarColumnStyle(writer, 'style', mark.style!);
+          }
+      }
+      _absorbConfigWarnings();
     });
     writer.writeLine(')');
   }

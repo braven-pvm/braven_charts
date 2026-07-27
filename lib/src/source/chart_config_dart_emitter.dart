@@ -176,6 +176,46 @@ class ChartConfigDartEmitter {
   void emitBarLabelStyle(DartSourceWriter writer, BarLabelStyle style) =>
       _emitBarLabelStyle(writer, style, 0);
 
+  /// Writes `<argument>: PieChartStyle(...)` / `<argument>: DonutChartStyle(...)`
+  /// — the field body the radial geometry verbs (`geomPie`/`geomDonut`) hand to
+  /// their `style:` argument, the same nested-config rendering the config form's
+  /// `pieStyle:` / `donutStyle:` uses. Writes NOTHING when the style is the
+  /// family default (unless `includeDefaultValues`), so the caller can pass it
+  /// unconditionally. For a donut, pass its geometry through [innerRadiusFactor]
+  /// and [sweepAngleDegrees].
+  void emitRadialStyle(
+    DartSourceWriter writer,
+    String argument,
+    String constructor,
+    PieChartStyle style, {
+    double? innerRadiusFactor,
+    double? sweepAngleDegrees,
+  }) => _emitRadialStyle(
+    writer,
+    argument,
+    constructor,
+    style,
+    innerRadiusFactor: innerRadiusFactor,
+    sweepAngleDegrees: sweepAngleDegrees,
+  );
+
+  /// Writes `dataLabels: PieDataLabelConfig(...)`, the argument name the radial
+  /// geometry verbs use too. Writes nothing for the default config.
+  void emitRadialLabels(
+    DartSourceWriter writer,
+    PieDataLabelConfig labels,
+    int seriesIndex,
+  ) => _emitRadialLabels(writer, labels, seriesIndex);
+
+  /// Writes `<argument>: PolarColumnStyle(...)`, the field body the polar
+  /// geometry verb (`geomPolar`) hands to its `style:` argument. Writes nothing
+  /// for a default style (unless `includeDefaultValues`).
+  void emitPolarColumnStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnStyle style,
+  ) => _emitPolarColumnStyleArgument(writer, argument, style);
+
   ChartGeneratedSource generate() {
     _captureKnownLimitations();
     final body = DartSourceWriter();
@@ -2578,89 +2618,7 @@ class ChartConfigDartEmitter {
       series.preset.name,
       defaultName: 'standard',
     );
-    final style = series.polarStyle;
-    if (options.includeDefaultValues || style != const PolarColumnStyle()) {
-      writer.writeLine('polarStyle: PolarColumnStyle(');
-      writer.indented(() {
-        _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
-        _enumIf(
-          writer,
-          'cornerRadiusMode',
-          'PolarColumnCornerRadiusMode',
-          style.cornerRadiusMode.name,
-          defaultName: 'outerEnd',
-        );
-        _numberIf(writer, 'opacity', style.opacity, 1);
-        _optionalColor(writer, 'borderColor', style.borderColor);
-        _numberIf(writer, 'borderWidth', style.borderWidth, 1);
-        _valueIf(
-          writer,
-          'showDataLabels',
-          style.showDataLabels,
-          defaultValue: true,
-        );
-        _numberIf(
-          writer,
-          'maximumVisibleDataLabels',
-          style.maximumVisibleDataLabels,
-          24,
-        );
-        _numberIf(
-          writer,
-          'dataLabelRadialPosition',
-          style.dataLabelRadialPosition,
-          0.5,
-        );
-        if (options.includeDefaultValues ||
-            style.dataLabelStyle != const PolarLabelStyle()) {
-          _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
-        }
-        if (style.gradient case final gradient?) {
-          writer.writeLine('gradient: PolarColumnGradientStyle(');
-          writer.indented(() {
-            _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
-            _optionalColor(writer, 'startColor', gradient.startColor);
-            _optionalColor(writer, 'endColor', gradient.endColor);
-            _numberIf(
-              writer,
-              'startLightnessShift',
-              gradient.startLightnessShift,
-              0.16,
-            );
-            _numberIf(
-              writer,
-              'endLightnessShift',
-              gradient.endLightnessShift,
-              -0.12,
-            );
-          });
-          writer.writeLine('),');
-        }
-        if (options.includeDefaultValues ||
-            style.shadow != const PolarColumnShadowStyle()) {
-          final shadow = style.shadow;
-          writer.writeLine('shadow: PolarColumnShadowStyle(');
-          writer.indented(() {
-            _optionalColor(writer, 'color', shadow.color);
-            _numberIf(writer, 'blurRadius', shadow.blurRadius, 0);
-            _numberIf(writer, 'spreadRadius', shadow.spreadRadius, 0);
-            if (options.includeDefaultValues || shadow.offset != Offset.zero) {
-              writer.namedArgument('offset', _offsetLiteral(shadow.offset));
-            }
-            _numberIf(writer, 'opacity', shadow.opacity, 0.28);
-          });
-          writer.writeLine('),');
-        }
-        _enumIf(
-          writer,
-          'animationMode',
-          'PolarColumnAnimationMode',
-          style.animationMode.name,
-          defaultName: 'none',
-        );
-      });
-      writer.writeLine('),');
-    }
+    _emitPolarColumnStyleArgument(writer, 'polarStyle', series.polarStyle);
     _emitRadialSelectionStyle(writer, series.selectionStyle);
     _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
     if (series.targetValues.isNotEmpty &&
@@ -2707,6 +2665,102 @@ class ChartConfigDartEmitter {
       });
       writer.writeLine('),');
     }
+  }
+
+  /// Writes `<argument>: PolarColumnStyle(...)` — the polar mark appearance —
+  /// or nothing when [style] is the default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`polarStyle:` on the series) and the
+  /// grammar form (`style:` on `geomPolar`, through [emitPolarColumnStyle]) so
+  /// the two cannot disagree about how a `PolarColumnStyle` is rendered.
+  void _emitPolarColumnStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnStyle style,
+  ) {
+    if (!options.includeDefaultValues && style == const PolarColumnStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
+      _enumIf(
+        writer,
+        'cornerRadiusMode',
+        'PolarColumnCornerRadiusMode',
+        style.cornerRadiusMode.name,
+        defaultName: 'outerEnd',
+      );
+      _numberIf(writer, 'opacity', style.opacity, 1);
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _numberIf(writer, 'borderWidth', style.borderWidth, 1);
+      _valueIf(
+        writer,
+        'showDataLabels',
+        style.showDataLabels,
+        defaultValue: true,
+      );
+      _numberIf(
+        writer,
+        'maximumVisibleDataLabels',
+        style.maximumVisibleDataLabels,
+        24,
+      );
+      _numberIf(
+        writer,
+        'dataLabelRadialPosition',
+        style.dataLabelRadialPosition,
+        0.5,
+      );
+      if (options.includeDefaultValues ||
+          style.dataLabelStyle != const PolarLabelStyle()) {
+        _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
+      }
+      if (style.gradient case final gradient?) {
+        writer.writeLine('gradient: PolarColumnGradientStyle(');
+        writer.indented(() {
+          _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+          _optionalColor(writer, 'startColor', gradient.startColor);
+          _optionalColor(writer, 'endColor', gradient.endColor);
+          _numberIf(
+            writer,
+            'startLightnessShift',
+            gradient.startLightnessShift,
+            0.16,
+          );
+          _numberIf(
+            writer,
+            'endLightnessShift',
+            gradient.endLightnessShift,
+            -0.12,
+          );
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          style.shadow != const PolarColumnShadowStyle()) {
+        final shadow = style.shadow;
+        writer.writeLine('shadow: PolarColumnShadowStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'color', shadow.color);
+          _numberIf(writer, 'blurRadius', shadow.blurRadius, 0);
+          _numberIf(writer, 'spreadRadius', shadow.spreadRadius, 0);
+          if (options.includeDefaultValues || shadow.offset != Offset.zero) {
+            writer.namedArgument('offset', _offsetLiteral(shadow.offset));
+          }
+          _numberIf(writer, 'opacity', shadow.opacity, 0.28);
+        });
+        writer.writeLine('),');
+      }
+      _enumIf(
+        writer,
+        'animationMode',
+        'PolarColumnAnimationMode',
+        style.animationMode.name,
+        defaultName: 'none',
+      );
+    });
+    writer.writeLine('),');
   }
 
   void _emitRadialBarOptions(
