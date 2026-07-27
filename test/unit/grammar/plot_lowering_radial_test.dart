@@ -1133,6 +1133,67 @@ void main() {
       );
     });
 
+    test('polar marks with different presets raise invalidPolarComposition',
+        () {
+      // `PolarMark.preset` is what the builder's `rose:` flag sets, so
+      // `.geomPolar(rose: true).geomPolar()` became expressible the moment the
+      // advanced per-series fields landed. A rose series divides the circle
+      // into equal angles and encodes value as AREA; a standard series encodes
+      // it as radius. One pane cannot draw both, so the composition contract
+      // refuses the pair — and lowering must reach that verdict by name rather
+      // than let a chain lower clean and throw a raw ArgumentError at mount.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: fruitName,
+              value: fruitMass,
+              preset: PolarColumnPreset.rose,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.invalidPolarComposition);
+      expect(thrown.message, contains('preset'));
+      expect(thrown.message, contains('b'));
+    });
+
+    test('polar marks sharing the rose preset lower cleanly', () {
+      // The other half of the pair: the diagnostic must fire on DIVERGENCE, not
+      // on the mere presence of a non-default preset.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'a',
+            category: fruitName,
+            value: fruitCount,
+            preset: PolarColumnPreset.rose,
+          ),
+          PolarMark<Fruit>(
+            id: 'b',
+            category: fruitName,
+            value: fruitMass,
+            preset: PolarColumnPreset.rose,
+          ),
+        ],
+      )).lower();
+      expect(lowered.series, hasLength(2));
+      expect(
+        lowered.series
+            .cast<PolarColumnChartSeries>()
+            .every((series) => series.preset == PolarColumnPreset.rose),
+        isTrue,
+      );
+    });
+
     test('the composition diagnostic names its code and the offending mark',
         () {
       final invalid = GrammarSpecException.invalidPolarComposition(

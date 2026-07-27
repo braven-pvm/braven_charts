@@ -591,6 +591,84 @@ final List<PolarAdvancedRow> polarRoseRows = <PolarAdvancedRow>[
     ),
 ];
 
+// ---------------------------------------------------------------------------
+// MULTI-SERIES ADVANCED POLAR fixtures. The advanced per-category channels are
+// allocated INTERLEAVED with each series' value field, so a second series that
+// carries the same channel gets its OWN `columnColor2` / `target2` slot right
+// after its own `value2`. With one series every index is 0 and nothing
+// interleaves; these fixtures are what make the allocation observable.
+//
+// Every map below picks a DIFFERENT subset of the four categories from its
+// series-1 counterpart, so a reversal that read the wrong series' list, or
+// compacted the nulls, lands a value on the wrong category and fails.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED two-series advanced-polar row, field for field in the order
+/// the generator allocates them.
+class PolarPairRow {
+  const PolarPairRow({
+    required this.category,
+    required this.value,
+    required this.value2,
+    this.columnColor,
+    this.target,
+    this.columnColor2,
+    this.target2,
+    this.intervalLow,
+    this.intervalHigh,
+  });
+
+  final String category;
+  final double value;
+  final Color? columnColor;
+  final double? target;
+  final double value2;
+  final Color? columnColor2;
+  final double? target2;
+  final double? intervalLow;
+  final double? intervalHigh;
+}
+
+/// Series 2's column colors: 'Pear' and 'Fig', DISJOINT from series 1's
+/// 'Apple'/'Plum'.
+const polarForecastColumnColors = <String, Color>{
+  'Pear': Color(0xFFB91C1C),
+  'Fig': Color(0xFF0EA5E9),
+};
+
+/// Series 2's targets, absent for 'Apple' — series 1's are absent for 'Fig', so
+/// the two null positions cannot be confused.
+const polarForecastTargets = <String, num?>{
+  'Apple': null,
+  'Pear': 55,
+  'Plum': 45,
+  'Fig': 35,
+};
+
+/// Series 2's intervals, absent for 'Plum'.
+const polarForecastIntervals = <String, PolarColumnInterval>{
+  'Apple': PolarColumnInterval(lower: 54, upper: 66),
+  'Pear': PolarColumnInterval(lower: 44, upper: 56),
+  'Fig': PolarColumnInterval(lower: 26, upper: 34),
+};
+
+/// The two-series advanced rows: series 1's value + column color + target, then
+/// series 2's value + column color + target + both interval bounds.
+final List<PolarPairRow> polarPairRows = <PolarPairRow>[
+  for (final row in harvest)
+    PolarPairRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+      target: polarTargets[row.fruit]?.toDouble(),
+      value2: polarCapacity[row.fruit]!.toDouble(),
+      columnColor2: polarForecastColumnColors[row.fruit],
+      target2: polarForecastTargets[row.fruit]?.toDouble(),
+      intervalLow: polarForecastIntervals[row.fruit]?.lower,
+      intervalHigh: polarForecastIntervals[row.fruit]?.upper,
+    ),
+];
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -711,6 +789,31 @@ bool emittedChain(ChartGeneratedSource generated) =>
 String? blockedReason(ChartGeneratedSource generated) {
   if (emittedChain(generated)) return null;
   return generated.warnings.isEmpty ? '' : generated.warnings.first.message;
+}
+
+/// Every argument line INSIDE the literal that opens with [opening] in [source],
+/// trimmed and in emitted order.
+///
+/// A `contains('width: 3.0,')` per field can only notice the fields the list
+/// happens to name — a field DROPPED from the renderer is invisible to a
+/// fragment list that never mentioned it, which is exactly how an emitted-text
+/// seam rots. Returning the literal's complete argument list makes the
+/// expectation the whole block, so a dropped field, an extra field, a wrong
+/// value and a reordering all fail.
+///
+/// The literal is delimited by indentation: its closing `),` sits at the same
+/// column as the opening token, so a nested literal's deeper `),` cannot end it.
+List<String> literalArguments(String source, String opening) {
+  final start = source.indexOf(opening);
+  expect(start, isNonNegative, reason: 'missing "$opening" in:\n$source');
+  final indent = start - (source.lastIndexOf('\n', start) + 1);
+  final bodyStart = source.indexOf('\n', start) + 1;
+  final end = source.indexOf('\n${' ' * indent}),', start);
+  expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
+  return <String>[
+    for (final line in source.substring(bodyStart, end).split('\n'))
+      if (line.trim().isNotEmpty) line.trim(),
+  ];
 }
 
 void main() {
@@ -1930,6 +2033,26 @@ void main() {
       // than a compacted one.
       expect('target: null,'.allMatches(generated.source).length, 1);
       expect('columnColor: null,'.allMatches(generated.source).length, 2);
+      // The round-trip proof is OBJECT-level: it hands the captured
+      // `PolarColumnTargetMarkerStyle` to the proof spec and lowering hands the
+      // same instance back, so it cannot see the emitted text at all. The
+      // drift gate only asks whether the emitter file knows each field's NAME,
+      // and every name here appears in a dozen other renderers. So this literal
+      // — asserted whole, not field by field — is the only thing standing
+      // between a dropped `width:` and an emitted chain that silently draws
+      // 2.5-wide default markers instead of the captured 3.0.
+      expect(
+        literalArguments(
+          generated.source,
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+        ),
+        <String>[
+          'color: Color(0xFF0F172A),',
+          'width: 3.0,',
+          'lengthFactor: 0.8,',
+          'opacity: 0.9,',
+        ],
+      );
     });
 
     testWidgets('shape 25: a polar carrying per-category INTERVALS emits both '
@@ -1976,6 +2099,23 @@ void main() {
       );
       expect('intervalLow: null,'.allMatches(generated.source).length, 1);
       expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
+      // The same unguarded seam as shape 24's target marker: asserted whole so
+      // a field dropped from `_emitPolarIntervalStyleArgument` cannot hide
+      // behind a fragment list that never named it.
+      expect(
+        literalArguments(
+          generated.source,
+          'intervalStyle: PolarColumnIntervalStyle(',
+        ),
+        <String>[
+          'display: PolarColumnIntervalDisplay.band,',
+          'color: Color(0xFF334155),',
+          'width: 2.0,',
+          'capLengthFactor: 0.5,',
+          'bandLengthFactor: 0.7,',
+          'opacity: 0.8,',
+        ],
+      );
     });
 
     testWidgets('shape 26: a ROSE polar emits rose: true and round-trips', (
@@ -2011,6 +2151,137 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+    });
+
+    testWidgets('shape 27: TWO polar series each carrying their OWN advanced '
+        'channels interleave their fields and round-trip', (tester) async {
+      // Shapes 24-26 are all SINGLE-series, so `seriesIndex` is always 0 there
+      // and nothing interleaves: `columnColors[seriesIndex]` and
+      // `columnColors[0]` are the same expression, and hoisting every advanced
+      // `_addField` into a second pass after all the value fields would not
+      // move a single slot. This is the shape that can tell those apart.
+      //
+      // Both series carry column colors AND targets — over DIFFERENT category
+      // subsets — and the second also carries intervals, so the reversal must
+      // allocate `columnColor2`/`target2` for the second series and bind each
+      // geom to its own fields.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_pair_advanced',
+        fragments: <String>[
+          'final Color? columnColor;',
+          'final double? target;',
+          'final double value2;',
+          'final Color? columnColor2;',
+          'final double? target2;',
+          'final double? intervalLow;',
+          'final double? intervalHigh;',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+              targets: polarTargets,
+              targetMarkerStyle: styledTargetMarker,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'forecast',
+              name: 'Forecast',
+              values: polarCapacity,
+              columnColors: polarForecastColumnColors,
+              targets: polarForecastTargets,
+              intervals: polarForecastIntervals,
+              intervalStyle: styledIntervalStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarPairRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              columnColor: (row) => row.columnColor,
+              target: (row) => row.target,
+              targetMarkerStyle: styledTargetMarker,
+            )
+            .geomPolar(
+              id: 'forecast',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Forecast',
+              columnColor: (row) => row.columnColor2,
+              target: (row) => row.target2,
+              intervalLow: (row) => row.intervalLow,
+              intervalHigh: (row) => row.intervalHigh,
+              intervalStyle: styledIntervalStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+
+      // The row class's field ORDER is the interleaving, observable: series 1's
+      // advanced fields sit BETWEEN the two value fields. A second pass that
+      // allocated every advanced field after both values would emit the same
+      // set of names in a different order and pass a `contains` per name.
+      var cursor = 0;
+      for (final declaration in <String>[
+        'final String category;',
+        'final double value;',
+        'final Color? columnColor;',
+        'final double? target;',
+        'final double value2;',
+        'final Color? columnColor2;',
+        'final double? target2;',
+        'final double? intervalLow;',
+        'final double? intervalHigh;',
+      ]) {
+        final at = generated.source.indexOf(declaration, cursor);
+        expect(
+          at,
+          isNonNegative,
+          reason:
+              'expected "$declaration" after offset $cursor in:\n'
+              '${generated.source}',
+        );
+        cursor = at + declaration.length;
+      }
+
+      // And each geom reads ITS OWN slots. Split on the verb so an accessor
+      // cannot satisfy the assertion from the other mark's argument list.
+      final geoms = generated.source.split('.geomPolar(');
+      expect(geoms, hasLength(3));
+      expect(geoms[1], contains("id: 'observed',"));
+      expect(geoms[1], contains('value: (row) => row.value,'));
+      expect(geoms[1], contains('columnColor: (row) => row.columnColor,'));
+      expect(geoms[1], contains('target: (row) => row.target,'));
+      expect(geoms[1], contains('targetMarkerStyle: '));
+      expect(geoms[1], isNot(contains('intervalLow')));
+      expect(geoms[1], isNot(contains('intervalStyle')));
+      expect(geoms[2], contains("id: 'forecast',"));
+      expect(geoms[2], contains('value: (row) => row.value2,'));
+      expect(geoms[2], contains('columnColor: (row) => row.columnColor2,'));
+      expect(geoms[2], contains('target: (row) => row.target2,'));
+      expect(geoms[2], contains('intervalLow: (row) => row.intervalLow,'));
+      expect(geoms[2], contains('intervalHigh: (row) => row.intervalHigh,'));
+      // The second series left its target marker at the default, so the shared
+      // renderer must write nothing for it — proof the two marks' styles are
+      // read per series and not hoisted off the first.
+      expect(geoms[2], isNot(contains('targetMarkerStyle')));
+
+      // The two series' nulls land on DIFFERENT categories ('Fig' has no
+      // target on series 1, 'Apple' has none on series 2; 'Plum' has no
+      // interval), so a reversal that read one series' parallel array for both
+      // would misplace them. Four rows × the emitted `target:`/`target2:` slots.
+      expect('target: null,'.allMatches(generated.source).length, 1);
+      expect('target2: null,'.allMatches(generated.source).length, 1);
+      expect('columnColor: null,'.allMatches(generated.source).length, 2);
+      expect('columnColor2: null,'.allMatches(generated.source).length, 2);
+      expect('intervalLow: null,'.allMatches(generated.source).length, 1);
+      expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
     });
   });
 
