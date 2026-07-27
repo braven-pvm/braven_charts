@@ -100,8 +100,16 @@ class BravenPlot<T> extends StatelessWidget {
       showLegend: spec.showLegend ?? true,
       concentricDonutConfig:
           lowered?.concentricDonutConfig ?? const ConcentricDonutConfig(),
+      // `PlotSpec.polar` is a SPEC field, so it belongs with the chart-level
+      // options above: it must reach the chart on the emptyData path too, where
+      // `lowered` is null. It cannot leak onto a chart that should not have it —
+      // `polarConfigOnNonPolarSpec` refuses a non-polar spec that carries one,
+      // and that guard runs ABOVE the emptyData guard — so a Cartesian spec
+      // still falls through to the const default, exactly as before.
+      // (`ConcentricDonutConfig` has no spec-level twin: it lives on the donut
+      // MARK, so there is nothing to read off the spec here.)
       polarChartConfig:
-          lowered?.polarChartConfig ?? const PolarChartConfig(),
+          lowered?.polarChartConfig ?? spec.polar ?? const PolarChartConfig(),
       emptyStateConfig: emptyStateConfig,
       bravenChartController: bravenChartController,
       interactionGroupController: interactionGroupController,

@@ -209,8 +209,9 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// The radial branch follows the same rule: coordinate-system and radial-family
 /// checks, Cartesian-option checks, the `.polarConfig(...)` placement check and
 /// the SHAPE half of the polar composition contract (clashing mark units, a
-/// grouped/stacked composition with fewer than two polar marks) all run above
-/// the emptyData guard; the row-dependent half — visible categories, and the
+/// grouped/stacked composition with fewer than two polar marks, a
+/// half-specified interval, clashing mark presets) all run above the emptyData
+/// guard; the row-dependent half — visible categories, and the
 /// `PolarColumnComposition.validate` pass over the lowered series — runs below
 /// it.
 extension PlotSpecLowering<T> on PlotSpec<T> {
@@ -1174,13 +1175,19 @@ void _guardConcentric(
 /// The DATA-INDEPENDENT half of the polar composition contract.
 ///
 /// [PolarColumnComposition.validate] is the authority, but it needs the lowered
-/// series — which need rows. The two facts below are decidable from the spec's
-/// SHAPE alone (a mark's `unit`, and how many polar marks the plot holds against
-/// the composition mode `.polarConfig(...)` selects), so they are checked here,
-/// ABOVE the emptyData guard, exactly like every other structural check. That is
-/// what stops a unit clash from hiding behind a momentarily-empty dataset and
+/// series — which need rows. The four facts below are decidable from the spec's
+/// SHAPE alone — a mark's `unit`, how many polar marks the plot holds against
+/// the composition mode `.polarConfig(...)` selects, whether a mark set exactly
+/// one interval bound, and a mark's `preset` — so they are checked here, ABOVE
+/// the emptyData guard, exactly like every other structural check. That is what
+/// stops an authoring mistake from hiding behind a momentarily-empty dataset and
 /// only surfacing — as a raw `ArgumentError` from the render pipeline — once
 /// real rows arrive.
+///
+/// Order within this function is deliberate and matches the order the checks
+/// occupied when they were spread across lowering: unit, then composition mode,
+/// then intervals, then preset. Reshuffling would change which diagnostic a spec
+/// with several mistakes reports first.
 void _validatePolarMarkComposition<T>(
   PlotSpec<T> spec,
   List<int> radialIndices,
@@ -1213,7 +1220,51 @@ void _validatePolarMarkComposition<T>(
       'the composition mode to leave the columns layered.',
     );
   }
+
+  // An interval needs BOTH endpoints. Which of the two accessors is null is a
+  // property of the mark, not of any row, so the half-specified channel is
+  // refused here rather than during materialization — a bound alone cannot be
+  // drawn no matter what rows arrive. Checked over every polar mark in spec
+  // order, which is the order `_lowerPolar` would have reached them in.
+  for (final index in radialIndices) {
+    final mark = spec.marks[index] as PolarMark<T>;
+    if ((mark.intervalLow == null) != (mark.intervalHigh == null)) {
+      throw GrammarSpecException.incompletePolarInterval(markIds[index]);
+    }
+  }
+
+  // A rose series divides the circle into equal angles and encodes value as
+  // AREA; a standard series encodes it as radius. One pane cannot draw both.
+  // `PolarColumnComposition.validate` is the authority and still re-checks the
+  // lowered series below, but it needs rows to have series at all — so the
+  // rule is restated here, over the marks' own `preset` fields, in the
+  // authority's exact words. `test/unit/grammar/plot_lowering_radial_test.dart`
+  // pins this message to the one the authority renders, so the restatement
+  // cannot drift into a second sentence for the same mistake.
+  //
+  // Compared as "is it rose", not by raw enum identity, because that is the
+  // only distinction `_lowerPolar` makes when it picks a constructor: should
+  // the enum ever gain a third member that still lowers to `standard`, this
+  // check stays LAX (the authority below catches any real clash a moment
+  // later) instead of refusing a pair that would have lowered compatibly.
+  final firstIsRose = _isRosePolar<T>(spec.marks[firstIndex]);
+  for (final index in radialIndices.skip(1)) {
+    if (_isRosePolar<T>(spec.marks[index]) != firstIsRose) {
+      throw GrammarSpecException.invalidPolarComposition(
+        'Multiple Polar Column series must use the same preset '
+        '("${markIds[index]}").',
+      );
+    }
+  }
 }
+
+/// Whether [mark] lowers to the Rose constructor.
+///
+/// This is the ONLY distinction `_lowerPolar` draws from `PolarMark.preset`, so
+/// comparing marks through it — rather than by raw enum identity — is what keeps
+/// the shape check in step with what the marks actually lower to.
+bool _isRosePolar<T>(Mark<T> mark) =>
+    (mark as PolarMark<T>).preset == PolarColumnPreset.rose;
 
 /// Units compare the way [PolarColumnComposition] compares them: trimmed, with
 /// "no unit" and an all-whitespace unit treated as the same thing.
@@ -1346,17 +1397,18 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
   ];
 }
 
+/// Materializes one polar mark.
+///
+/// Every DATA-INDEPENDENT check this needed — notably the half-specified
+/// interval, which is decidable from the accessors' nullity alone — lives in
+/// [_validatePolarMarkComposition], above the emptyData guard. So the
+/// `intervalHigh!` below is safe: a mark that reached here has both bounds or
+/// neither.
 PolarColumnChartSeries _lowerPolar<T>(
   PolarMark<T> mark,
   String id,
   List<T> data,
 ) {
-  // An interval needs both endpoints. One bound alone cannot be drawn, so the
-  // half-specified channel is refused by name rather than silently dropped.
-  if ((mark.intervalLow == null) != (mark.intervalHigh == null)) {
-    throw GrammarSpecException.incompletePolarInterval(id);
-  }
-
   // `_radialValues` iterates `data` in order and rejects duplicate categories,
   // so the per-category maps built below share its key order — which is what
   // `PolarColumnChartSeries._fromMap` aligns `targetValues` and the interval
@@ -1389,7 +1441,7 @@ PolarColumnChartSeries _lowerPolar<T>(
     }
   }
 
-  final build = mark.preset == PolarColumnPreset.rose
+  final build = _isRosePolar<T>(mark)
       ? PolarColumnChartSeries.rose
       : PolarColumnChartSeries.fromMap;
   return build(

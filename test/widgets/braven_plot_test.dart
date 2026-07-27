@@ -442,6 +442,71 @@ void main() {
       expect(find.text('No rides yet'), findsOneWidget);
     });
 
+    testWidgets('a spec-level PolarChartConfig survives the empty-data path', (
+      tester,
+    ) async {
+      // `PlotSpec.polar` is a spec FIELD, so it is data-independent exactly
+      // like grid/title/subtitle/showLegend — and BravenPlot's own comment says
+      // chart-level options must reach the chart even when `lowered` is null.
+      // Reading it off `lowered` alone dropped it on the one path where
+      // `lowered` is always null, so the empty state (and the very next build,
+      // if it hot-swapped) lost the author's pane and radial-axis settings.
+      const polar = PolarChartConfig(
+        pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+        radialAxis: PolarNumericAxisConfig(tickCount: 7),
+      );
+      await tester.pumpWidget(
+        host(
+          const BravenPlot<Row>(
+            PlotSpec<Row>(
+              data: <Row>[],
+              marks: <Mark<Row>>[
+                PolarMark<Row>(id: 'load', category: rowZone, value: rowPower),
+              ],
+              polar: polar,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ChartEmptyStateView), findsOneWidget);
+      final delivered = tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .polarChartConfig;
+      // The field read first, because PolarChartConfig has no toString: a whole
+      // -object mismatch otherwise reports "Instance of 'PolarChartConfig'"
+      // against itself.
+      expect(delivered.pane.startAngleDegrees, -45);
+      expect(delivered.radialAxis.tickCount, 7);
+      expect(delivered, polar);
+    });
+
+    testWidgets('a Cartesian spec still hands the chart the default polar '
+        'config', (tester) async {
+      // The other half: `PlotSpec.polar` on a non-polar spec is refused above
+      // the empty-data guard, so carrying it can never leak a config onto a
+      // Cartesian chart — this pins that the fallback stays the const default.
+      await tester.pumpWidget(
+        host(
+          const BravenPlot<Row>(
+            PlotSpec<Row>(
+              data: <Row>[],
+              marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<BravenChartPlus>(find.byType(BravenChartPlus))
+            .polarChartConfig,
+        const PolarChartConfig(),
+      );
+    });
+
     testWidgets('an authoring error still surfaces with no rows', (
       tester,
     ) async {

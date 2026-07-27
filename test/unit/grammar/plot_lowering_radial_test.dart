@@ -5,6 +5,7 @@
 library;
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/layout/polar_column_composition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1068,6 +1069,102 @@ void main() {
         throwsGrammarCode(GrammarDiagnosticCode.incompletePolarInterval),
       );
     });
+
+    test('a half-specified LOWER bound fires before the empty-data guard', () {
+      // Which of the two interval accessors is null is decidable from the
+      // spec's SHAPE — no row is read to know it. BravenPlot swallows exactly
+      // emptyData, so a spec that reports emptyData reads as WELL FORMED; a
+      // half-specified interval must therefore never hide behind a momentarily
+      // empty dataset and only surface once real rows arrive.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'fruit',
+              category: fruitName,
+              value: fruitCount,
+              intervalLow: fruitLow,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.incompletePolarInterval);
+      expect(thrown.message, contains('fruit'));
+    });
+
+    test('a half-specified UPPER bound fires before the empty-data guard', () {
+      // The mirror of the pair: the guard is the `!=` between the two
+      // accessors' nullity, so BOTH halves must outrank the empty-data guard.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'fruit',
+              category: fruitName,
+              value: fruitCount,
+              intervalHigh: fruitHigh,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.incompletePolarInterval);
+      expect(thrown.message, contains('fruit'));
+    });
+
+    test('the interval diagnostic names the SECOND mark of a polar pair', () {
+      // The shape check runs over EVERY polar mark, not just the first, and it
+      // must keep naming the offender.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: fruitName,
+              value: fruitMass,
+              intervalHigh: fruitHigh,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.incompletePolarInterval);
+      expect(thrown.message, contains('b'));
+    });
+
+    test('a complete interval still lowers against empty data to emptyData', () {
+      // The positive control for the hoisted guard: a WELL-FORMED interval must
+      // still reach the empty-data guard, or BravenPlot loses its empty state.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'fruit',
+              category: fruitName,
+              value: fruitCount,
+              intervalLow: fruitLow,
+              intervalHigh: fruitHigh,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
+    });
   });
 
   group('multi-series polar', () {
@@ -1477,6 +1574,137 @@ void main() {
       expect(thrown!.code, GrammarDiagnosticCode.invalidPolarComposition);
       expect(thrown.message, contains('preset'));
       expect(thrown.message, contains('b'));
+    });
+
+    test('the preset diagnostic fires before the empty-data guard', () {
+      // `PolarMark.preset` is a mark FIELD, so the clash is decidable from the
+      // spec's SHAPE. It must outrank the empty-data guard for the same reason
+      // the unit clash does: BravenPlot swallows emptyData, so a spec that
+      // reports emptyData reads as well formed.
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: fruitName,
+              value: fruitMass,
+              preset: PolarColumnPreset.rose,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(thrown!.code, GrammarDiagnosticCode.invalidPolarComposition);
+      expect(thrown.message, contains('preset'));
+      expect(thrown.message, contains('b'));
+    });
+
+    test('the preset diagnostic reads identically with and without rows', () {
+      // One authoring error, one wording. Hoisting the check above the
+      // empty-data guard must not fork the message into a "shape" variant and
+      // a "materialized" variant that drift apart.
+      String messageFor(List<Fruit> data) {
+        try {
+          (PlotSpec<Fruit>(
+            data: data,
+            marks: const <Mark<Fruit>>[
+              PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+              PolarMark<Fruit>(
+                id: 'b',
+                category: fruitName,
+                value: fruitMass,
+                preset: PolarColumnPreset.rose,
+              ),
+            ],
+          )).lower();
+        } on GrammarSpecException catch (error) {
+          return error.message;
+        }
+        return 'did not throw';
+      }
+
+      expect(messageFor(<Fruit>[]), messageFor(fruits));
+      expect(messageFor(<Fruit>[]), isNot('did not throw'));
+    });
+
+    test('the hoisted preset message matches the composition authority', () {
+      // The shape check RESTATES a rule owned by `PolarColumnComposition`
+      // (which cannot run without lowered series, and so cannot run above the
+      // empty-data guard). This pins the restatement to the authority so the
+      // two cannot drift into two different sentences for one mistake.
+      final rose = PolarColumnChartSeries.rose(
+        id: 'b',
+        values: const {'Apple': 30},
+      );
+      final standard = PolarColumnChartSeries.fromMap(
+        id: 'a',
+        values: const {'Apple': 30},
+      );
+      String? authorityDetail;
+      try {
+        PolarColumnComposition.validate(<PolarColumnChartSeries>[
+          standard,
+          rose,
+        ]);
+      } on ArgumentError catch (error) {
+        authorityDetail = error.invalidValue == null
+            ? '${error.message}.'
+            : '${error.message} ("${error.invalidValue}").';
+      }
+      expect(authorityDetail, isNotNull);
+
+      GrammarSpecException? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: fruitName,
+              value: fruitMass,
+              preset: PolarColumnPreset.rose,
+            ),
+          ],
+        )).lower();
+      } on GrammarSpecException catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isNotNull);
+      expect(
+        thrown!.message,
+        GrammarSpecException.invalidPolarComposition(authorityDetail!).message,
+      );
+    });
+
+    test('polar marks sharing a preset still reach the empty-data guard', () {
+      // The positive control for the hoisted preset check: agreement must not
+      // be mistaken for a clash, or BravenPlot loses its empty state.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'a',
+              category: fruitName,
+              value: fruitCount,
+              preset: PolarColumnPreset.rose,
+            ),
+            PolarMark<Fruit>(
+              id: 'b',
+              category: fruitName,
+              value: fruitMass,
+              preset: PolarColumnPreset.rose,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
     });
 
     test('polar marks sharing the rose preset lower cleanly', () {
