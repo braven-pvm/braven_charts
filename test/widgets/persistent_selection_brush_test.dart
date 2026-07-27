@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1474,6 +1474,295 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.selectionBrushState?.visible, isTrue);
     });
+
+    testWidgets(
+      'a point inside a box brush replaces an outside tap-pinned popup',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(_popupLifecycleBarHost(controller));
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final origin = tester.getTopLeft(finder);
+        Offset markerCenter(int pointIndex) {
+          final hit = renderBox.dataHitForPointIndex('channels', pointIndex)!;
+          return origin + renderBox.plotToWidget(hit.semanticBounds.center);
+        }
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: markerCenter(0));
+        await mouse.moveTo(markerCenter(0));
+        await tester.pump(const Duration(milliseconds: 60));
+        await mouse.down(markerCenter(0));
+        await mouse.up();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(renderBox.debugTappedTooltipMarker?.markerIndex, 0);
+        expect(renderBox.debugTooltipTargetMarker?.markerIndex, 0);
+        expect(renderBox.debugTooltipOpacity, 1);
+        expect(
+          renderBox.selectionBrushWidgetRect!.contains(
+            renderBox.plotToWidget(
+              renderBox
+                  .dataHitForPointIndex('channels', 0)!
+                  .semanticBounds
+                  .center,
+            ),
+          ),
+          isFalse,
+        );
+
+        await mouse.moveTo(markerCenter(1));
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(
+          renderBox.coordinator.hoveredMarker?.markerIndex,
+          1,
+          reason:
+              'The interior of a persistent brush must remain hover-active.',
+        );
+        await mouse.down(markerCenter(1));
+        await mouse.up();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(
+          renderBox.debugTappedTooltipMarker?.markerIndex,
+          1,
+          reason:
+              'A click without brush movement must activate the underlying '
+              'datum instead of leaving the outside popup pinned.',
+        );
+        expect(renderBox.debugTooltipTargetMarker?.markerIndex, 1);
+        expect(renderBox.debugTooltipOpacity, 1);
+      },
+    );
+
+    testWidgets('moving a box brush dismisses its stale tap-pinned popup', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_popupLifecycleBarHost(controller));
+      await tester.pumpAndSettle();
+
+      final finder = _chartRenderFinder();
+      final renderBox = tester.renderObject<ChartRenderBox>(finder);
+      final origin = tester.getTopLeft(finder);
+      final outsideHit = renderBox.dataHitForPointIndex('channels', 0)!;
+      final outsideCenter =
+          origin + renderBox.plotToWidget(outsideHit.semanticBounds.center);
+      final brushCenter = origin + renderBox.selectionBrushWidgetRect!.center;
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: outsideCenter);
+      await mouse.moveTo(outsideCenter);
+      await tester.pump(const Duration(milliseconds: 60));
+      await mouse.down(outsideCenter);
+      await mouse.up();
+      await tester.pumpAndSettle();
+      expect(renderBox.debugTappedTooltipMarker?.markerIndex, 0);
+
+      await mouse.moveTo(brushCenter);
+      await mouse.down(brushCenter);
+      await mouse.moveTo(brushCenter - const Offset(24, 0));
+      await tester.pump();
+      expect(
+        renderBox.debugTappedTooltipMarker?.markerIndex,
+        isNull,
+        reason:
+            'The first real brush movement must dismiss stale popup ownership.',
+      );
+      await mouse.up();
+      await tester.pumpAndSettle();
+      expect(renderBox.debugTappedTooltipMarker, isNull);
+    });
+
+    testWidgets('controller brush updates dismiss stale tap-pinned popups', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_popupLifecycleBarHost(controller));
+      await tester.pumpAndSettle();
+
+      final finder = _chartRenderFinder();
+      final renderBox = tester.renderObject<ChartRenderBox>(finder);
+      final origin = tester.getTopLeft(finder);
+      final outsideHit = renderBox.dataHitForPointIndex('channels', 0)!;
+      final outsideCenter =
+          origin + renderBox.plotToWidget(outsideHit.semanticBounds.center);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: outsideCenter);
+      await mouse.moveTo(outsideCenter);
+      await tester.pump(const Duration(milliseconds: 60));
+      await mouse.down(outsideCenter);
+      await mouse.up();
+      await tester.pumpAndSettle();
+      expect(renderBox.debugTappedTooltipMarker?.markerIndex, 0);
+
+      expect(
+        controller.setSelectionBrushBox(
+          minimumX: 1.25,
+          maximumX: 3.5,
+          minimumY: 0,
+          maximumY: 110,
+          referenceSeriesId: 'channels',
+        ),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(renderBox.debugTappedTooltipMarker, isNull);
+    });
+
+    testWidgets(
+      'empty chart space and Escape dismiss popups without hiding the brush',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(_popupLifecycleBarHost(controller));
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final origin = tester.getTopLeft(finder);
+        final insideHit = renderBox.dataHitForPointIndex('channels', 1)!;
+        final markerCenter =
+            origin + renderBox.plotToWidget(insideHit.semanticBounds.center);
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: markerCenter);
+
+        Future<void> activateMarker() async {
+          await mouse.moveTo(markerCenter);
+          await tester.pump(const Duration(milliseconds: 60));
+          await mouse.down(markerCenter);
+          await mouse.up();
+          await tester.pump(const Duration(milliseconds: 200));
+          expect(renderBox.debugTappedTooltipMarker?.markerIndex, 1);
+        }
+
+        await activateMarker();
+        final plot = renderBox.debugPlotArea;
+        final emptyChartPosition = origin + Offset(plot.left + 8, plot.top + 8);
+        await mouse.moveTo(emptyChartPosition);
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(renderBox.coordinator.hoveredMarker, isNull);
+        await mouse.down(emptyChartPosition);
+        await mouse.up();
+        await tester.pumpAndSettle();
+
+        expect(renderBox.debugTappedTooltipMarker, isNull);
+        expect(renderBox.selectionBrushWidgetRect, isNotNull);
+        expect(controller.selectionBrushState?.visible, isTrue);
+
+        await activateMarker();
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(renderBox.debugTappedTooltipMarker, isNull);
+        expect(renderBox.selectionBrushWidgetRect, isNotNull);
+        expect(controller.selectionBrushState?.visible, isTrue);
+      },
+    );
+
+    testWidgets(
+      'tapping outside the chart dismisses a popup without hiding the brush',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(_popupLifecycleBarHost(controller));
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final origin = tester.getTopLeft(finder);
+        final hit = renderBox.dataHitForPointIndex('channels', 1)!;
+        final markerCenter =
+            origin + renderBox.plotToWidget(hit.semanticBounds.center);
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: markerCenter);
+        await mouse.moveTo(markerCenter);
+        await tester.pump(const Duration(milliseconds: 60));
+        await mouse.down(markerCenter);
+        await mouse.up();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(renderBox.debugTappedTooltipMarker?.markerIndex, 1);
+
+        await tester.tapAt(const Offset(760, 560));
+        await tester.pumpAndSettle();
+
+        expect(renderBox.debugTappedTooltipMarker, isNull);
+        expect(renderBox.selectionBrushWidgetRect, isNotNull);
+        expect(controller.selectionBrushState?.visible, isTrue);
+      },
+    );
+
+    testWidgets('X and Y interval brush bodies keep point popups active', (
+      tester,
+    ) async {
+      final controllers = <BravenChartController>[];
+      addTearDown(() {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+
+      for (final mode in const [
+        ChartSelectionAcquisitionMode.xInterval,
+        ChartSelectionAcquisitionMode.yInterval,
+      ]) {
+        final controller = BravenChartController();
+        controllers.add(controller);
+        await tester.pumpWidget(
+          _popupLifecycleBarHost(controller, acquisitionMode: mode),
+        );
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final origin = tester.getTopLeft(finder);
+        Offset markerCenter(int pointIndex) {
+          final hit = renderBox.dataHitForPointIndex('channels', pointIndex)!;
+          final plotPosition = mode == ChartSelectionAcquisitionMode.yInterval
+              ? hit.plotPosition
+              : hit.semanticBounds.center;
+          return origin + renderBox.plotToWidget(plotPosition);
+        }
+
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: markerCenter(0));
+        await mouse.moveTo(markerCenter(0));
+        await tester.pump(const Duration(milliseconds: 60));
+        await mouse.down(markerCenter(0));
+        await mouse.up();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(renderBox.debugTappedTooltipMarker?.markerIndex, 0);
+
+        await mouse.moveTo(markerCenter(1));
+        await tester.pump(const Duration(milliseconds: 60));
+        await mouse.down(markerCenter(1));
+        await mouse.up();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(
+          renderBox.debugTappedTooltipMarker?.markerIndex,
+          1,
+          reason: '${mode.name} must not suppress an in-brush point popup.',
+        );
+        expect(renderBox.debugTooltipTargetMarker?.markerIndex, 1);
+        expect(renderBox.debugTooltipOpacity, 1);
+        await mouse.removePointer();
+      }
+    });
   });
 }
 
@@ -1613,6 +1902,71 @@ Widget _horizontalBarBoxHost(BravenChartController controller) => MaterialApp(
                 maximumY: 80,
                 referenceSeriesId: 'volume',
               ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+
+Widget _popupLifecycleBarHost(
+  BravenChartController controller, {
+  ChartSelectionAcquisitionMode acquisitionMode =
+      ChartSelectionAcquisitionMode.rectangle,
+}) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 640,
+      height: 420,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        showLegend: false,
+        series: const [
+          BarChartSeries(
+            id: 'channels',
+            barWidthPercent: 0.7,
+            points: [
+              ChartDataPoint(x: 0, y: 62),
+              ChartDataPoint(x: 1, y: 78),
+              ChartDataPoint(x: 2, y: 92),
+              ChartDataPoint(x: 3, y: 84),
+            ],
+          ),
+        ],
+        interactionConfig: InteractionConfig(
+          tooltip: const TooltipConfig(
+            triggerMode: TooltipTriggerMode.both,
+            showDelay: Duration.zero,
+            hideDelay: Duration.zero,
+          ),
+          selection: ChartSelectionConfig(
+            acquisitionMode: acquisitionMode,
+            scope: ChartSelectionScope.markOrWholeSeries,
+            useModifierKeys: false,
+            brush: ChartSelectionBrushConfig(
+              enabled: true,
+              initialVisible: true,
+              initialRange:
+                  acquisitionMode == ChartSelectionAcquisitionMode.xInterval
+                  ? const ChartSelectionBrushRange(minimum: 0.5, maximum: 3.5)
+                  : acquisitionMode == ChartSelectionAcquisitionMode.yInterval
+                  ? const ChartSelectionBrushRange(
+                      minimum: 70,
+                      maximum: 110,
+                      referenceSeriesId: 'channels',
+                    )
+                  : null,
+              initialBox:
+                  acquisitionMode == ChartSelectionAcquisitionMode.rectangle
+                  ? const ChartSelectionBrushBox(
+                      minimumX: 0.5,
+                      maximumX: 3.5,
+                      minimumY: 0,
+                      maximumY: 110,
+                      referenceSeriesId: 'channels',
+                    )
+                  : null,
             ),
           ),
         ),
