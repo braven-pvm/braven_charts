@@ -171,6 +171,57 @@ final List<GrammarRow> scatterRows = <GrammarRow>[
 ];
 
 // ===========================================================================
+// RADIAL fixtures — the author's row type, its accessors, and the synthesised
+// radial row the generator emits (category/value[/ring]).
+// ===========================================================================
+
+class Harvest {
+  const Harvest({required this.fruit, required this.count, this.season = ''});
+
+  final String fruit;
+  final double count;
+  final String season;
+}
+
+Object harvestFruit(Harvest row) => row.fruit;
+double harvestCount(Harvest row) => row.count;
+Object harvestSeason(Harvest row) => row.season;
+
+const harvest = <Harvest>[
+  Harvest(fruit: 'Apple', count: 42, season: 'Winter'),
+  Harvest(fruit: 'Pear', count: 31, season: 'Winter'),
+  Harvest(fruit: 'Plum', count: 17, season: 'Summer'),
+  Harvest(fruit: 'Fig', count: 10, season: 'Summer'),
+];
+
+/// The SYNTHESISED radial row: the generator names the string category field
+/// `category`, the number value field `value`, and — for a concentric donut —
+/// the string ring field `ring`.
+class RadialGrammarRow {
+  const RadialGrammarRow({
+    required this.category,
+    required this.value,
+    this.ring = '',
+  });
+
+  final String category;
+  final double value;
+  final String ring;
+}
+
+final List<RadialGrammarRow> radialGrammarRows = <RadialGrammarRow>[
+  for (final row in harvest)
+    RadialGrammarRow(category: row.fruit, value: row.count),
+];
+
+/// The concentric rows are concatenated in first-seen ring order (Winter, then
+/// Summer), each carrying its ring key.
+final List<RadialGrammarRow> concentricGrammarRows = <RadialGrammarRow>[
+  for (final row in harvest)
+    RadialGrammarRow(category: row.fruit, value: row.count, ring: row.season),
+];
+
+// ===========================================================================
 // Harness
 // ===========================================================================
 
@@ -1004,23 +1055,181 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 12: a pie emits geomPie and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'pie',
+        fragments: <String>[
+          'final String category;',
+          'final double value;',
+          '.geomPie(',
+          'category: (row) => row.category',
+          'value: (row) => row.value',
+          "name: 'Harvest'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPie(category: harvestFruit, value: harvestCount, name: 'Harvest')
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPie(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 13: a donut round-trips with its center preserved', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'donut',
+        fragments: <String>[
+          '.geomDonut(',
+          'center: DonutCenterContent(',
+          "label: 'Total'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomDonut(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 14: a concentric donut emits geomDonut(ring:) and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'concentric_donut',
+        fragments: <String>[
+          'final String ring;',
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          "id: 'seasons'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 15: a single-distinct-ring donut is captured as a plain '
+        'donut', (tester) async {
+      // Every row shares one ring value, so the forward path COLLAPSES to a
+      // single DonutChartSeries. The render source only stamps a
+      // concentricDonutConfig when MORE THAN ONE donut series is present
+      // (braven_chart_plus.dart: `whereType<DonutChartSeries>().length > 1`),
+      // so a captured single-ring chart carries a NULL config — indistinguishable
+      // from a plain donut — and faithfully emits a plain geomDonut (no ring:)
+      // that round-trips. The concentricDonutConfig discriminator is
+      // authoritative, but the render rule means it is never non-null with one
+      // donut.
+      const oneSeason = <Harvest>[
+        Harvest(fruit: 'Apple', count: 42, season: 'All year'),
+        Harvest(fruit: 'Pear', count: 31, season: 'All year'),
+      ];
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_single_ring',
+        fragments: <String>['.geomDonut('],
+        original: (controller) => BravenChart.of(oneSeason)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) =>
+            BravenChart.of(radialGrammarRows.take(2).toList())
+                .geomDonut(
+                  id: 'seasons-All year',
+                  category: (row) => row.category,
+                  value: (row) => row.value,
+                  name: 'All year',
+                )
+                .build(bravenChartController: controller),
+      );
+      expect(generated.source, isNot(contains('ring:')));
+    });
+
+    testWidgets('shape 16: a default-config polar column round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_column',
+        fragments: <String>[
+          '.geomPolar(',
+          'category: (row) => row.category',
+          'value: (row) => row.value',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPolar(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
   });
 
   group('fidelity matrix diagnostics', () {
-    testWidgets('a non-Cartesian family is named, and no chain is emitted', (
-      tester,
-    ) async {
+    testWidgets('a family with no grammar mark (radial-bar) is named, and no '
+        'chain is emitted', (tester) async {
+      // Radial-bar and gauge have neither a RadialMark subtype nor a geom* verb,
+      // so they stay refused — but with an ACCURATE reason naming the missing
+      // geometry, NOT the stale "Cartesian-only in V1" copy (pie/donut/polar now
+      // emit).
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
           series: <ChartSeries>[
-            PieChartSeries(
-              id: 'split',
-              points: const <ChartDataPoint>[
-                ChartDataPoint(x: 0, y: 3, label: 'A'),
-                ChartDataPoint(x: 1, y: 5, label: 'B'),
-              ],
+            RadialBarChartSeries.fromMap(
+              id: 'rings',
+              values: const <String, num>{'A': 3, 'B': 5},
             ),
           ],
         ),
@@ -1031,12 +1240,79 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(
-          contains('Cartesian-only in V1'),
-          contains('PieChartSeries'),
-          contains('split'),
+          contains('radial-bar, gauge or range-area'),
+          contains('RadialBarChartSeries'),
+          contains('rings'),
         ),
       );
-      expect(generated.source, contains('Cartesian-only in V1'));
+      expect(blockedReason(generated), isNot(contains('Cartesian-only in V1')));
+      expect(generated.source, isNot(contains('Cartesian-only in V1')));
+    });
+
+    testWidgets('a customised ConcentricDonutConfig is refused with a named '
+        'reason, not the stale copy', (tester) async {
+      // The grammar carries only a concentric donut's shared center, so a
+      // custom ringGap cannot round-trip. The proof must refuse it with an
+      // accurate reason, NOT emit a chain that silently drops the config.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(ringGap: 12),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('concentric-donut composition'),
+          contains('ConcentricDonutConfig'),
+        ),
+      );
+      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+    });
+
+    testWidgets('a customised PolarChartConfig is refused with a named reason', (
+      tester,
+    ) async {
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: const PolarChartConfig(
+            pane: PolarPaneConfig(startAngleDegrees: 45),
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'polar',
+              values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('polar chart configuration'),
+          contains('PolarChartConfig'),
+        ),
+      );
+      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
     });
 
     testWidgets('misaligned x domains name the offending series', (

@@ -31,7 +31,9 @@
 ///
 /// | case | outcome |
 /// |------|---------|
-/// | a non-Cartesian family (pie, donut, concentric, polar, range area) | blocked — V1 marks are Cartesian only |
+/// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar |
+/// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
+/// | a customised PolarChartConfig or non-default ConcentricDonutConfig | blocked by the round-trip proof — the grammar carries only the common radial shape |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
@@ -72,8 +74,12 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_series.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -236,6 +242,46 @@ class _GeometryPlan {
   final Map<String, _Field> accessors;
 }
 
+/// Which radial geometry a captured chart reverses to.
+enum _RadialKind { pie, donut, concentric, polar }
+
+/// The plan for a RADIAL chain: the single radial mark the round-trip proof
+/// lowers, the synthesised rows, and the fields whose accessors the emitter
+/// writes. A radial spec carries exactly one geometry, so — unlike the
+/// Cartesian [_GeometryPlan] list — this is a single object.
+class _RadialPlan {
+  _RadialPlan({
+    required this.kind,
+    required this.mark,
+    required this.rows,
+    required this.verb,
+    required this.category,
+    required this.value,
+    this.radius,
+    this.ring,
+    this.center,
+  });
+
+  final _RadialKind kind;
+  final RadialMark<_SourceRow> mark;
+  final List<_SourceRow> rows;
+
+  /// The chain verb: `geomPie` / `geomDonut` / `geomPolar`.
+  final String verb;
+
+  final _Field category;
+  final _Field value;
+
+  /// Optional variable-radius field (a second metric on each slice/column).
+  final _Field? radius;
+
+  /// Concentric-ring grouping field, present only for a `geomDonut(ring:)`.
+  final _Field? ring;
+
+  /// The donut center summary to emit, or null when there is none.
+  final DonutCenterContent? center;
+}
+
 // ===========================================================================
 // Emitter
 // ===========================================================================
@@ -353,15 +399,16 @@ class _GrammarChainEmitter {
     // ---- 1. family gate -------------------------------------------------
     final unsupportedFamilies = <String>[];
     for (final item in series) {
-      if (!_isCartesianFamily(item)) {
+      if (!_isEmittableFamily(item)) {
         unsupportedFamilies.add('${item.id} (${item.runtimeType})');
       }
     }
     if (unsupportedFamilies.isNotEmpty) {
       block(
-        'Grammar chain not emitted: the grammar layer is Cartesian-only in V1 '
-        '(line, area, bar, scatter and candlestick marks). These series have '
-        'no V1 mark: ${unsupportedFamilies.join(', ')}.',
+        'Grammar chain not emitted: the grammar layer has geometries for line, '
+        'area, bar, scatter, candlestick, pie, donut and polar-column series, '
+        'but not for these — a radial-bar, gauge or range-area family has no '
+        'mark to reverse it: ${unsupportedFamilies.join(', ')}.',
         path: r'$.series[*].type',
       );
       return null;
@@ -378,6 +425,14 @@ class _GrammarChainEmitter {
         path: r'$.layout',
       );
       return null;
+    }
+
+    // ---- 2b. radial families take the dedicated radial path -------------
+    // A radial spec has its own coordinate system: exactly one radial geom, no
+    // Cartesian axis/grid/transpose option. It cannot share the per-series
+    // shared-x reversal the Cartesian arms below use, so it branches here.
+    if (series.any(_isRadialFamily)) {
+      return _tryEmitRadialChain(series, block);
     }
 
     // ---- 3. transposition ------------------------------------------------
@@ -559,17 +614,451 @@ class _GrammarChainEmitter {
   }
 
   // =========================================================================
+  // Radial reversal
+  // =========================================================================
+
+  /// Reverses a RADIAL chart (pie / donut / concentric-donut / polar-column)
+  /// into a `geomPie` / `geomDonut(ring:)` / `geomPolar` chain, proving fidelity
+  /// against the real radial lowering before emitting anything — exactly as the
+  /// Cartesian path does, but over the radial branch of `spec.lower()`.
+  String? _tryEmitRadialChain(
+    List<ChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    _usedNames.add(options.rowsVariableName);
+    final plan = _planRadial(series, block);
+    if (plan == null) return null;
+
+    // The radial proof spec MUST null the Cartesian axis/grid options and stay
+    // untransposed, or radial lowering throws `axisOptionOnRadialSpec`.
+    final spec = PlotSpec<_SourceRow>(
+      data: plan.rows,
+      marks: <Mark<_SourceRow>>[plan.mark],
+      transposed: false,
+      theme: configuration.theme,
+      interaction: configuration.interaction,
+      xAxis: null,
+      yAxes: const <YAxisConfig>[],
+      grid: null,
+      title: configuration.title,
+      subtitle: configuration.subtitle,
+      showLegend: configuration.showLegend,
+    );
+    final LoweredPlot lowered;
+    try {
+      lowered = spec.lower();
+    } on GrammarSpecException catch (error) {
+      block(
+        'Grammar chain not emitted: the reconstructed radial specification was '
+        'rejected by the grammar layer — ${error.message}',
+        path: r'$.series',
+      );
+      return null;
+    }
+    final mismatch = _firstRadialMismatch(lowered);
+    if (mismatch != null) {
+      block(
+        'Grammar chain not emitted: the reconstructed chain does not reproduce '
+        '${mismatch.subject} exactly, so writing it would hand back a '
+        'different chart. ${mismatch.detail}',
+        path: r'$.series',
+      );
+      return null;
+    }
+
+    _captureKnownLimitations();
+    return _emitRadialBody(plan);
+  }
+
+  /// Classifies [series] into one radial kind and builds its plan, or blocks
+  /// and returns null when the shape is not one radial geometry.
+  _RadialPlan? _planRadial(
+    List<ChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    if (series.every((item) => item is PieChartSeries)) {
+      if (series.length != 1) {
+        block(
+          'Grammar chain not emitted: a pie chain expresses exactly one pie '
+          'geometry, so ${series.length} pie series cannot be reversed to a '
+          'single geomPie.',
+          path: r'$.series',
+        );
+        return null;
+      }
+      return _planPie(series.single as PieChartSeries);
+    }
+    if (series.every((item) => item is PolarColumnChartSeries)) {
+      if (series.length != 1) {
+        block(
+          'Grammar chain not emitted: geomPolar lowers to a single '
+          'PolarColumnChartSeries, so a layered/grouped/stacked composition of '
+          '${series.length} polar series cannot be reversed to one geomPolar.',
+          path: r'$.series',
+        );
+        return null;
+      }
+      return _planPolar(series.single as PolarColumnChartSeries);
+    }
+    if (series.every((item) => item is DonutChartSeries)) {
+      final donuts = series.cast<DonutChartSeries>();
+      // `concentricDonutConfig != null` is the AUTHORITATIVE discriminator: the
+      // forward path sets it ONLY inside `DonutMark.ring != null` lowering, so
+      // its presence — not the series count — means a concentric composition
+      // (the single-distinct-ring collapse carries a non-null config too).
+      if (configuration.concentricDonutConfig != null) {
+        return _planConcentric(donuts, block);
+      }
+      if (donuts.length != 1) {
+        block(
+          'Grammar chain not emitted: ${donuts.length} donut series without a '
+          'ConcentricDonutConfig is not a shape the grammar produces — a '
+          'concentric composition always carries that config.',
+          path: r'$.series',
+        );
+        return null;
+      }
+      return _planDonut(donuts.single);
+    }
+    block(
+      'Grammar chain not emitted: a radial chain expresses exactly one radial '
+      'geometry and cannot mix radial families or combine a radial series with '
+      'a Cartesian one: '
+      '${series.map((item) => '${item.id} (${item.runtimeType})').join(', ')}.',
+      path: r'$.series',
+    );
+    return null;
+  }
+
+  _RadialPlan _planPie(PieChartSeries series) {
+    final category = _addField('category', _FieldKind.string);
+    final value = _addField('value', _FieldKind.number);
+    final radius = _radialRadiusField([series]);
+    final rows = _synthesiseRadialRows(series.points.length);
+    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    return _RadialPlan(
+      kind: _RadialKind.pie,
+      verb: 'geomPie',
+      rows: rows,
+      category: category,
+      value: value,
+      radius: radius,
+      mark: PieMark<_SourceRow>(
+        id: series.id,
+        name: series.name,
+        color: series.color,
+        category: _string(category),
+        value: _number(value),
+        radius: radius == null ? null : _number(radius),
+      ),
+    );
+  }
+
+  _RadialPlan _planDonut(DonutChartSeries series) {
+    final category = _addField('category', _FieldKind.string);
+    final value = _addField('value', _FieldKind.number);
+    final radius = _radialRadiusField([series]);
+    final rows = _synthesiseRadialRows(series.points.length);
+    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    final center = _markCenter(series.centerContent, DonutCenterContent.hidden);
+    return _RadialPlan(
+      kind: _RadialKind.donut,
+      verb: 'geomDonut',
+      rows: rows,
+      category: category,
+      value: value,
+      radius: radius,
+      center: center,
+      mark: DonutMark<_SourceRow>(
+        id: series.id,
+        name: series.name,
+        color: series.color,
+        category: _string(category),
+        value: _number(value),
+        radius: radius == null ? null : _number(radius),
+        center: center,
+      ),
+    );
+  }
+
+  _RadialPlan? _planConcentric(
+    List<DonutChartSeries> donuts,
+    void Function(String message, {String? path}) block,
+  ) {
+    // The forward path ids each ring `'<markId>-<ringKey>'` and names it
+    // `<ringKey>`. Recover that shared markId so the re-lowered ring ids
+    // reproduce the captured ones; if the ids do not follow that pattern the
+    // chart was not authored as a concentric composition and cannot round-trip.
+    final markId = _concentricMarkId(donuts);
+    if (markId == null) {
+      block(
+        'Grammar chain not emitted: the donut series ids do not follow the '
+        "concentric ring pattern '<markId>-<ring>', so the composition cannot "
+        'be reversed to a geomDonut(ring:) chain.',
+        path: r'$.series',
+      );
+      return null;
+    }
+    final ring = _addField('ring', _FieldKind.string);
+    final category = _addField('category', _FieldKind.string);
+    final value = _addField('value', _FieldKind.number);
+    final radius = _radialRadiusField(donuts);
+    final totalRows = donuts.fold<int>(0, (sum, d) => sum + d.points.length);
+    final rows = _synthesiseRadialRows(totalRows);
+    var index = 0;
+    for (final donut in donuts) {
+      final key = donut.name ?? '';
+      for (final point in donut.points) {
+        rows[index].strings[ring.slot] = key;
+        rows[index].strings[category.slot] = point.label ?? '';
+        rows[index].numbers[value.slot] = point.y;
+        if (radius != null) {
+          rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+        }
+        index += 1;
+      }
+    }
+    // Single-ring collapse carries the center on the lone series (no-op =
+    // hidden, `rings.single.copyWith(centerContent: mark.center ?? hidden)`);
+    // the multi-ring composition carries it on the shared config (no-op = the
+    // config's visible default, `mark.center == null ? const
+    // ConcentricDonutConfig() : ...`). See `_lowerRadial`'s concentric branch.
+    final center = donuts.length == 1
+        ? _markCenter(donuts.single.centerContent, DonutCenterContent.hidden)
+        : _markCenter(
+            configuration.concentricDonutConfig!.centerContent,
+            const DonutCenterContent(),
+          );
+    return _RadialPlan(
+      kind: _RadialKind.concentric,
+      verb: 'geomDonut',
+      rows: rows,
+      category: category,
+      value: value,
+      radius: radius,
+      ring: ring,
+      center: center,
+      // A concentric ring donut lowers per ring with no per-mark name/color —
+      // the ring key supplies each series' name — so those inherited fields are
+      // deliberately left null here.
+      mark: DonutMark<_SourceRow>(
+        id: markId,
+        category: _string(category),
+        value: _number(value),
+        radius: radius == null ? null : _number(radius),
+        ring: _string(ring),
+        center: center,
+      ),
+    );
+  }
+
+  _RadialPlan _planPolar(PolarColumnChartSeries series) {
+    final category = _addField('category', _FieldKind.string);
+    final value = _addField('value', _FieldKind.number);
+    final rows = _synthesiseRadialRows(series.points.length);
+    _fillRadialRows(rows, series.points, category, value, null, ring: null);
+    return _RadialPlan(
+      kind: _RadialKind.polar,
+      verb: 'geomPolar',
+      rows: rows,
+      category: category,
+      value: value,
+      mark: PolarMark<_SourceRow>(
+        id: series.id,
+        name: series.name,
+        color: series.color,
+        category: _string(category),
+        value: _number(value),
+      ),
+    );
+  }
+
+  /// A radius field when ANY point across [seriesList] carries a slice/column
+  /// size (the second-metric variable radius), or null otherwise.
+  _Field? _radialRadiusField(List<ChartSeries> seriesList) {
+    final hasRadius = seriesList.any(
+      (series) => series.points.any((point) => point.pointStyle?.size != null),
+    );
+    return hasRadius ? _addField('radius', _FieldKind.number) : null;
+  }
+
+  /// Fills one row per point with the reversed radial channels.
+  void _fillRadialRows(
+    List<_SourceRow> rows,
+    List<ChartDataPoint> points,
+    _Field category,
+    _Field value,
+    _Field? radius, {
+    required _Field? ring,
+  }) {
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      rows[index].strings[category.slot] = point.label ?? '';
+      rows[index].numbers[value.slot] = point.y;
+      if (radius != null) {
+        rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+      }
+    }
+  }
+
+  List<_SourceRow> _synthesiseRadialRows(int rowCount) => <_SourceRow>[
+    for (var index = 0; index < rowCount; index++)
+      _SourceRow(
+        List<double>.filled(_numberSlots, 0),
+        List<String>.filled(_stringSlots, ''),
+        List<DateTime?>.filled(_stampSlots, null),
+      ),
+  ];
+
+  /// The shared markId of a concentric composition, recovered from the
+  /// `'<markId>-<ringKey>'` id pattern the forward lowering writes, or null when
+  /// the ids do not match it.
+  String? _concentricMarkId(List<DonutChartSeries> donuts) {
+    final first = donuts.first;
+    final firstKey = first.name ?? '';
+    if (firstKey.isEmpty) return null;
+    final suffix = '-$firstKey';
+    if (!first.id.endsWith(suffix) || first.id.length == suffix.length) {
+      return null;
+    }
+    final candidate = first.id.substring(0, first.id.length - suffix.length);
+    for (final donut in donuts) {
+      final key = donut.name ?? '';
+      if (key.isEmpty || donut.id != '$candidate-$key') return null;
+    }
+    return candidate;
+  }
+
+  /// The center to carry on the mark, or null when the captured center is the
+  /// [noOp] value the lowering restores when a mark carries no center — so
+  /// `geomDonut` emits no `center:` for it. The two donut shapes have DIFFERENT
+  /// no-op centers: a plain/collapsed donut restores `DonutCenterContent.hidden`
+  /// (`mark.center ?? hidden`), while a concentric composition restores the
+  /// config's default `const DonutCenterContent()` (visible). The reconstruction
+  /// drops the runtime-only label/value styles and formatter, so a center that
+  /// sets one is refused by the round-trip proof rather than emitted as a center
+  /// that silently drops it.
+  DonutCenterContent? _markCenter(
+    DonutCenterContent captured,
+    DonutCenterContent noOp,
+  ) {
+    if (captured == noOp) return null;
+    return DonutCenterContent(
+      isVisible: captured.isVisible,
+      label: captured.label,
+      valueMode: captured.valueMode,
+      customValue: captured.customValue,
+    );
+  }
+
+  /// The first part of a radial lowered plot that does not match the captured
+  /// chart, or null when everything matches.
+  ///
+  /// Unlike [_firstMismatch], a radial `LoweredPlot` legitimately nulls the X
+  /// axis, Y axes and grid (radial has no Cartesian coordinate space), so those
+  /// are NOT compared. It DOES compare the two radial chart-level configs, which
+  /// is what turns a customised `PolarChartConfig`/`ConcentricDonutConfig` into
+  /// an honest, named refusal.
+  ({String subject, String detail})? _firstRadialMismatch(LoweredPlot lowered) {
+    if (lowered.series.length != configuration.series.length) {
+      return (subject: 'the series list', detail: _genericLossDetail);
+    }
+    for (var index = 0; index < lowered.series.length; index++) {
+      final expected = configuration.series[index];
+      if (lowered.series[index] != expected) {
+        return (
+          subject: 'series "${expected.id}"',
+          detail: _radialSeriesLossDetail(expected, lowered.series[index]),
+        );
+      }
+    }
+    if (configuration.annotations.isNotEmpty) {
+      return (
+        subject: 'the annotation list',
+        detail:
+            'A radial chain carries no annotations, so a captured annotation '
+            'cannot be reproduced.',
+      );
+    }
+    if (lowered.theme != configuration.theme) {
+      return (subject: 'the theme', detail: _genericLossDetail);
+    }
+    if (lowered.interaction != configuration.interaction) {
+      return (
+        subject: 'the interaction configuration',
+        detail: _genericLossDetail,
+      );
+    }
+    if (lowered.title != configuration.title) {
+      return (subject: 'the title', detail: _genericLossDetail);
+    }
+    if (lowered.subtitle != configuration.subtitle) {
+      return (subject: 'the subtitle', detail: _genericLossDetail);
+    }
+    if (lowered.showLegend != configuration.showLegend) {
+      return (subject: 'the legend visibility', detail: _genericLossDetail);
+    }
+    if (lowered.concentricDonutConfig != configuration.concentricDonutConfig) {
+      return (
+        subject: 'the concentric-donut composition',
+        detail:
+            'The grammar carries only a concentric donut\'s shared center, so a '
+            'customised ConcentricDonutConfig (ring gap, weights, order, radius '
+            'factors or legend mode) is not reproduced. Author the chart through '
+            'the grammar to express it as a chain.',
+      );
+    }
+    if (lowered.polarChartConfig != configuration.polarChartConfig) {
+      return (
+        subject: 'the polar chart configuration',
+        detail:
+            'geomPolar lowers to the default PolarChartConfig, so a customised '
+            'pane, angular/radial axis, composition or threshold is not '
+            'reproduced. Author the chart through the grammar to express it as a '
+            'chain.',
+      );
+    }
+    return null;
+  }
+
+  /// Explains why a captured radial series is not reproduced by the lowered one.
+  String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
+    if (expected.unit != lowered.unit) {
+      return "It carries a unit ('${expected.unit}'), which the radial marks do "
+          'not carry.';
+    }
+    return 'It carries a series style, data-label, selection or grouping option '
+        'the radial marks do not carry — only the category, value, optional '
+        'radius, concentric ring and donut center round-trip.';
+  }
+
+  // =========================================================================
   // Gates
   // =========================================================================
 
-  bool _isCartesianFamily(ChartSeries series) => switch (series) {
+  /// Whether a grammar geometry exists that reverses [series]. Widens the old
+  /// Cartesian-only gate to the radial families the grammar now lowers (pie,
+  /// donut, polar-column). Radial-bar, gauge and range-area stay refused — they
+  /// have no `geom*` verb and no `Mark` subtype.
+  bool _isEmittableFamily(ChartSeries series) => switch (series) {
     CandlestickChartSeries() => true,
     LineChartSeries() => true,
     ScatterChartSeries() => true,
     AreaChartSeries() => true,
     BarChartSeries() => true,
+    PieChartSeries() => true,
+    DonutChartSeries() => true,
+    PolarColumnChartSeries() => true,
     _ => false,
   };
+
+  /// Whether [series] lowers through the RADIAL branch of `spec.lower()` and so
+  /// must be reversed by the dedicated radial path rather than the Cartesian
+  /// per-series shared-x reversal.
+  bool _isRadialFamily(ChartSeries series) =>
+      series is PieChartSeries ||
+      series is DonutChartSeries ||
+      series is PolarColumnChartSeries;
 
   /// Chart-level options `BravenPlot` leaves at their `BravenChartPlus`
   /// defaults, and which a chain therefore cannot carry.
@@ -609,10 +1098,11 @@ class _GrammarChainEmitter {
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
     }
-    if (configuration.concentricDonutConfig != null) {
-      lost.add('concentricDonutConfig');
-    }
-    if (configuration.polarChartConfig != null) lost.add('polarChartConfig');
+    // concentricDonutConfig and polarChartConfig are NO LONGER listed here:
+    // the radial marks carry the common radial shape (a concentric composition's
+    // shared center; a default polar pane), and the round-trip proof
+    // (_firstRadialMismatch) refuses a customised one with a named reason. Only
+    // radialBarChartConfig stays gated — radial-bar has no grammar mark.
     if (configuration.radialBarChartConfig != null) {
       lost.add('radialBarChartConfig');
     }
@@ -1402,6 +1892,72 @@ class _GrammarChainEmitter {
     return writer.toString();
   }
 
+  /// Emits the row class, row list and the RADIAL chain (one `geom*` verb, no
+  /// `.x()` / `.yAxis()` / `.grid()` / `.transposed()` — radial lowering rejects
+  /// those).
+  String _emitRadialBody(_RadialPlan plan) {
+    final writer = DartSourceWriter();
+    _emitRowClass(writer);
+    writer.writeLine();
+    _emitRows(writer, plan.rows);
+    writer.writeLine();
+    writer.writeLine(
+      'final ${options.variableName} = BravenChart.of('
+      '${options.rowsVariableName})',
+    );
+    writer.indented(() {
+      writer.indented(() {
+        _emitRadialGeometry(writer, plan);
+        _emitTheme(writer);
+        _emitInteraction(writer);
+        _emitTitle(writer);
+        _emitLegend(writer);
+        writer.writeLine('.build();');
+      });
+    });
+    return writer.toString();
+  }
+
+  void _emitRadialGeometry(DartSourceWriter writer, _RadialPlan plan) {
+    final mark = plan.mark;
+    writer.writeLine('.${plan.verb}(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(mark.id!));
+      writer.namedArgument('category', plan.category.accessor());
+      writer.namedArgument('value', plan.value.accessor());
+      if (plan.radius != null) {
+        writer.namedArgument('radius', plan.radius!.accessor());
+      }
+      if (plan.ring != null) {
+        writer.namedArgument('ring', plan.ring!.accessor());
+      }
+      _optionalString(writer, 'name', mark.name);
+      _optionalColor(writer, 'color', mark.color);
+      if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+    });
+    writer.writeLine(')');
+  }
+
+  /// Emits `center: DonutCenterContent(...)` with the portable text fields only.
+  /// A center that carried a label/value style or a formatter would already have
+  /// been refused by the round-trip proof (`_radialCenter` drops them), so only
+  /// the reproducible fields reach here.
+  void _emitDonutCenter(DartSourceWriter writer, DonutCenterContent center) {
+    writer.writeLine('center: DonutCenterContent(');
+    writer.indented(() {
+      if (!center.isVisible) writer.namedArgument('isVisible', 'false');
+      _optionalString(writer, 'label', center.label);
+      if (center.valueMode != DonutCenterValueMode.total) {
+        writer.namedArgument(
+          'valueMode',
+          'DonutCenterValueMode.${center.valueMode.name}',
+        );
+      }
+      _optionalString(writer, 'customValue', center.customValue);
+    });
+    writer.writeLine('),');
+  }
+
   void _emitRowClass(DartSourceWriter writer) {
     final className = options.rowClassName;
     writer.writeLine(
@@ -1596,8 +2152,9 @@ class _GrammarChainEmitter {
         'unreachable: a reference mark reached _emitGeometry',
       ),
       RadialMark<_SourceRow>() => throw StateError(
-        'unreachable: a radial mark reached the grammar source generator; '
-        'radial series are rejected by the family gate before planning',
+        'unreachable: a radial mark reached _emitGeometry; radial charts are '
+        'emitted through the dedicated radial chain (_emitRadialGeometry), never '
+        'the Cartesian geometry switch',
       ),
     };
     writer.writeLine('.$verb(');

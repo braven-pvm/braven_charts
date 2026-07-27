@@ -30,11 +30,14 @@ import 'channel.dart';
 /// variant does not compile, so every dispatch site — the lowering, the
 /// facade, a future emitter — is checked when a variant is added.
 ///
-/// ## V1 scope
+/// ## Geometry families
 ///
-/// Marks are Cartesian only: [LineMark], [AreaMark], [BarMark], [ScatterMark],
-/// [CandlestickMark] and [TrendMark]. Radial and polar geometries, faceting,
-/// log/time scale objects and string-column data adapters are deliberately V2.
+/// Cartesian geometries — [LineMark], [AreaMark], [BarMark], [ScatterMark],
+/// [CandlestickMark] and [TrendMark] — plus the radial [RadialMark] family
+/// ([PieMark], [DonutMark], [PolarMark]). A spec is either Cartesian or radial:
+/// a [RadialMark] lowers through the radial branch of `spec.lower()`, may share
+/// the spec with no other mark, and honors no Cartesian axis/grid option.
+/// Faceting, log/time scale objects and string-column data adapters remain V2.
 ///
 /// ## Marks have no `copyWith`
 ///
