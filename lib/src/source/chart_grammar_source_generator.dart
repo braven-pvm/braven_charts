@@ -992,10 +992,15 @@ class _GrammarChainEmitter {
   ///
   /// The first series fixes the category domain and its order. Every polar
   /// series in a rendered chart shares that domain — `PolarColumnComposition
-  /// .validate` enforces it at mount AND at hydration — so this is a
-  /// defence-in-depth check rather than a shape a live chart reaches: N marks
-  /// read ONE row list, so a series missing a category would re-lower with a
-  /// synthesised zero for it, which is a different chart.
+  /// .validate` enforces it at mount, at hydration AND now at grammar lowering,
+  /// and `ChartGrammarSourceGenerator.generate` hydrates before this runs. So
+  /// the misalignment guard below is UNREACHABLE through the public entry point
+  /// and is deliberately kept as defence in depth for a future caller that
+  /// builds a `HydratedChartConfiguration` directly: the rows are sized from the
+  /// FIRST series' domain, so a longer or differently-labelled second series
+  /// would index past the end of the row list (a `RangeError`) or re-lower with
+  /// a synthesised zero, which is a different chart. Blocking by name beats
+  /// both.
   _PolarChartPlan? _planPolarChart(
     List<PolarColumnChartSeries> series,
     void Function(String message, {String? path}) block,
@@ -1061,10 +1066,12 @@ class _GrammarChainEmitter {
             ),
           ),
       ],
-      // Non-null for every polar chart the extractor produces (it writes the
-      // config whenever a polar series is present); the fallback keeps a
-      // hand-assembled document without one on the default config rather than
-      // crashing.
+      // Always non-null here: hydration REFUSES a document that carries polar
+      // series without a polar configuration (`_validatePolarComposition`), and
+      // `generate` returns that failure before this planner runs. The fallback
+      // is the same defence in depth as the domain guard above — a direct
+      // caller must get the default config, not a null that the round-trip
+      // proof would then report as a lost PolarChartConfig.
       config: configuration.polarChartConfig ?? const PolarChartConfig(),
     );
   }
@@ -1164,9 +1171,27 @@ class _GrammarChainEmitter {
   ///
   /// Unlike [_firstMismatch], a radial `LoweredPlot` legitimately nulls the X
   /// axis, Y axes and grid (radial has no Cartesian coordinate space), so those
-  /// are NOT compared. It DOES compare the two radial chart-level configs, which
-  /// is what turns a customised `PolarChartConfig`/`ConcentricDonutConfig` into
-  /// an honest, named refusal.
+  /// are NOT compared. It DOES compare both radial chart-level configs — but the
+  /// two comparisons have different strengths, and saying so is the honest
+  /// framing:
+  ///
+  /// - `ConcentricDonutConfig` is RECONSTRUCTED by lowering from the donut
+  ///   mark's `center`, so comparing it genuinely proves what the mark carries.
+  ///   A customised ring gap / order / weights / radii is a real, named refusal.
+  /// - `PolarChartConfig` rides `PlotSpec.polar` verbatim, so the re-lowered
+  ///   plot hands the SAME object back. That comparison is a regression tripwire
+  ///   on the lowering — before this slice lowering substituted
+  ///   `const PolarChartConfig()` and the check fired for every customised
+  ///   config — not a proof about the emitted `.polarConfig(...)` LITERAL. The
+  ///   literal's fidelity rests on it being written by the config emitter's own
+  ///   shared renderer (so the two forms cannot disagree), on
+  ///   `test/meta/source_emitter_drift_test.dart`, and on the per-field
+  ///   assertions in the emitter tests.
+  ///
+  /// The same distinction applies to every field the proof spec carries verbatim
+  /// (theme, interaction, title, subtitle, legend): a passthrough comparison
+  /// guards against lowering silently dropping it, which is worth having, and is
+  /// not the same thing as proving the emitted text.
   ({String subject, String detail})? _firstRadialMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
@@ -1216,6 +1241,9 @@ class _GrammarChainEmitter {
             'the grammar to express it as a chain.',
       );
     }
+    // The lowering tripwire described above: it fires only if lowering stops
+    // carrying `PlotSpec.polar` through to `LoweredPlot.polarChartConfig`, which
+    // is precisely what it did before `.polarConfig(...)` existed.
     if (lowered.polarChartConfig != configuration.polarChartConfig) {
       return (
         subject: 'the polar chart configuration',

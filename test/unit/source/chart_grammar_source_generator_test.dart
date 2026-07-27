@@ -378,6 +378,114 @@ const customPolarPaneConfig = PolarChartConfig(
   radialAxis: PolarNumericAxisConfig(tickCount: 7),
 );
 
+/// An EXHAUSTIVE plot-level polar configuration: every field of every nested
+/// config differs from its class default, and every value is distinct, so the
+/// per-field assertions over the emitted `.polarConfig(...)` literal cannot pass
+/// by coincidence.
+///
+/// The round-trip proof compares the config object the proof spec CARRIES, which
+/// is the captured instance itself — so it can only prove that lowering keeps
+/// hold of it, never that the emitted TEXT reproduces it. This fixture is what
+/// covers the text.
+const exhaustivePolarConfig = PolarChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: -45,
+    sweepAngleDegrees: 300,
+    clockwise: false,
+    innerRadiusFactor: 0.15,
+    outerRadiusFactor: 0.8,
+    clipMarks: false,
+  ),
+  angularAxis: PolarCategoryAxisConfig(
+    innerPadding: 0.2,
+    outerPadding: 0.08,
+    showLabels: false,
+    showGridLines: false,
+    maximumVisibleLabels: 12,
+    maximumVisibleGridLines: 36,
+    labelOffset: 6,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF102030),
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  radialAxis: PolarNumericAxisConfig(
+    minimum: 5,
+    maximum: 80,
+    scaleMode: PolarRadialScaleMode.areaCorrect,
+    tickCount: 7,
+    showLabels: false,
+    showGridLines: false,
+    labelPosition: PolarRadialLabelPosition.end,
+    labelAngleOffsetDegrees: 12,
+    labelOffset: 9,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF405060),
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  composition: PolarColumnCompositionConfig(
+    mode: PolarColumnCompositionMode.grouped,
+    groupInnerPadding: 0.2,
+  ),
+  thresholds: <PolarThreshold>[
+    PolarThreshold(
+      value: 55,
+      label: 'Target',
+      color: Color(0xFF708090),
+      width: 2.5,
+      dashPattern: <double>[3, 2],
+    ),
+  ],
+);
+
+/// Every value [exhaustivePolarConfig] sets, as the fragment the emitted
+/// `.polarConfig(...)` literal must contain for it.
+const exhaustivePolarConfigFragments = <String>[
+  'pane: PolarPaneConfig(',
+  'startAngleDegrees: -45.0,',
+  'sweepAngleDegrees: 300.0,',
+  'clockwise: false,',
+  'innerRadiusFactor: 0.15,',
+  'outerRadiusFactor: 0.8,',
+  'clipMarks: false,',
+  'angularAxis: PolarCategoryAxisConfig(',
+  'innerPadding: 0.2,',
+  'outerPadding: 0.08,',
+  'showLabels: false,',
+  'showGridLines: false,',
+  'maximumVisibleLabels: 12,',
+  'maximumVisibleGridLines: 36,',
+  'labelOffset: 6.0,',
+  'labelStyle: PolarLabelStyle(',
+  'color: Color(0xFF102030),',
+  'fontSize: 11.0,',
+  'fontWeight: FontWeight.w600,',
+  'radialAxis: PolarNumericAxisConfig(',
+  'minimum: 5.0,',
+  'maximum: 80.0,',
+  'scaleMode: PolarRadialScaleMode.areaCorrect,',
+  'tickCount: 7,',
+  'labelPosition: PolarRadialLabelPosition.end,',
+  'labelAngleOffsetDegrees: 12.0,',
+  'labelOffset: 9.0,',
+  'color: Color(0xFF405060),',
+  'fontSize: 13.0,',
+  'fontWeight: FontWeight.w700,',
+  'composition: PolarColumnCompositionConfig(',
+  'mode: PolarColumnCompositionMode.grouped,',
+  'groupInnerPadding: 0.2,',
+  'thresholds: [',
+  'PolarThreshold(',
+  'value: 55.0,',
+  "label: 'Target',",
+  'color: Color(0xFF708090),',
+  'width: 2.5,',
+  'dashPattern: <double>[3.0, 2.0],',
+];
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -1602,6 +1710,68 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 23: EVERY PolarChartConfig field reaches the emitted '
+        '.polarConfig literal', (tester) async {
+      // The round-trip proof threads the CAPTURED PolarChartConfig onto the
+      // proof spec and lowering hands the same instance back, so that comparison
+      // can only prove lowering kept hold of the object — never that the emitted
+      // TEXT reproduces it. `_emitPolarChartConfigArgument` is the only thing
+      // between the config and the generated Dart, and
+      // `test/meta/source_emitter_drift_test.dart` catches a NEW field by name;
+      // this catches the other half — a field emitted against the wrong default,
+      // or dropped outright.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_exhaustive_config',
+        fragments: <String>['.polarConfig(', ...exhaustivePolarConfigFragments],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: exhaustivePolarConfig,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              name: 'Capacity',
+              values: polarCapacity,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarGrammarRows)
+            .geomPolar(
+              id: 'capacity',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Capacity',
+            )
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Observed',
+            )
+            .polarConfig(exhaustivePolarConfig)
+            .build(bravenChartController: controller),
+      );
+      expect(generated.source, contains('.polarConfig(\n'));
+      // Three fragments are shared by the angular and radial axes, so a plain
+      // `contains` would still pass if ONE of the pair were dropped. Count them.
+      for (final (fragment, count) in <(String, int)>[
+        ('showLabels: false,', 2),
+        ('showGridLines: false,', 2),
+        ('labelStyle: PolarLabelStyle(', 2),
+      ]) {
+        expect(
+          fragment.allMatches(generated.source).length,
+          count,
+          reason: 'expected $count × "$fragment" in:\n${generated.source}',
+        );
+      }
+    });
   });
 
   // =========================================================================
@@ -2148,14 +2318,19 @@ void main() {
       expect(blockedReason(generated), isNot(contains('Cartesian-only')));
     });
 
-    testWidgets('polar series whose category domains differ never emit a '
-        'chain', (tester) async {
+    testWidgets('polar series whose category domains differ are refused by '
+        'HYDRATION, before the emitter runs', (tester) async {
       // N geomPolar marks share ONE row list, so every polar series must have a
       // value at every category of the shared domain, in the same order — which
       // is exactly the contract `PolarColumnComposition.validate` already
-      // enforces at mount AND at hydration. A document that breaks it is not a
-      // chart this package renders, so it is refused BEFORE the emitter, and no
-      // chain (least of all a chain padding the gaps with zeros) is produced.
+      // enforces at mount, at hydration AND (since the composition diagnostics
+      // landed) at grammar lowering. `ChartGrammarSourceGenerator.generate`
+      // hydrates first and returns that failure, so this shape never reaches the
+      // planner: the assertions below deliberately pin the HYDRATOR's diagnostic
+      // (its code, its path and its wording), not the planner's, which reads
+      // '"<id>" sets the domain; these series do not match it'. The planner's
+      // own `misaligned` guard is unreachable defence in depth and is documented
+      // as such at `_planPolarChart`; nothing here claims to cover it.
       final plain = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -2184,9 +2359,15 @@ void main() {
       });
       final result = ChartGrammarSourceGenerator.generate(snapshot);
       expect(result, isA<ChartArtifactFailure<ChartGeneratedSource>>());
+      final error = (result as ChartArtifactFailure<ChartGeneratedSource>).error;
+      expect(error.code, ChartArtifactDiagnosticCodes.invalidArtifact);
+      expect(error.path, r'$.document.configuration.polarChart');
       expect(
-        (result as ChartArtifactFailure<ChartGeneratedSource>).error.message,
-        contains('same categories in the same order'),
+        error.message,
+        allOf(
+          contains('Invalid Polar Column composition'),
+          contains('same categories in the same order'),
+        ),
       );
     });
 
