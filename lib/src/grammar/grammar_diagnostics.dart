@@ -90,9 +90,11 @@ enum GrammarDiagnosticCode {
   /// geoms.
   polarConfigOnNonPolarSpec,
 
-  /// Several polar column geoms cannot share one polar coordinate system —
-  /// clashing units, diverging categories, or a grouped/stacked composition
-  /// with fewer than two series.
+  /// One polar pane's contract was broken — either by the `.polarConfig(...)`
+  /// itself (pane geometry, radial-axis bounds, the grouped sub-band padding,
+  /// threshold finiteness or dash-pair parity, the stacked zero baseline) or by
+  /// the geomPolar marks sharing it (clashing units or presets, diverging
+  /// categories, a grouped/stacked composition with fewer than two series).
   invalidPolarComposition,
 
   /// A polar column geom supplied only one of the two interval bounds.
@@ -362,15 +364,30 @@ final class GrammarSpecException implements Exception {
         'Remove .polarConfig(...), or author the chart with geomPolar(...).',
       );
 
-  /// Several polar column geoms cannot share one polar coordinate system.
+  /// One polar pane's contract was broken — by its `.polarConfig(...)`, or by
+  /// the geomPolar marks that share it.
   ///
-  /// [detail] states the specific clash — the diverging units, categories or
-  /// series count — and names the mark that carries it.
+  /// This one code deliberately carries BOTH halves of that contract, because
+  /// both describe the same pane and an author fixes them in the same place:
+  ///
+  ///  * the CONFIG's own rules, delegated to `PolarChartConfig.validate()` —
+  ///    pane geometry, radial-axis bounds, the grouped sub-band padding, each
+  ///    threshold's finiteness and dash-pair parity, and the stacked zero
+  ///    baseline; and
+  ///  * the MARKS' agreement with each other and with that config — diverging
+  ///    units, categories or presets, and a grouped or stacked composition
+  ///    mode with fewer than two geomPolar marks.
+  ///
+  /// [detail] states the specific failure. Config failures are rendered from
+  /// the authority's own `ArgumentError` and lead with the field that failed;
+  /// mark failures name the mark that carries the clash.
   factory GrammarSpecException.invalidPolarComposition(String detail) =>
       GrammarSpecException(
         GrammarDiagnosticCode.invalidPolarComposition,
-        'The polar columns in this plot share one angular axis and one radial '
-        'axis, so every geomPolar mark must agree about them. $detail',
+        'The polar columns in this plot share one pane: one angular axis, one '
+        'radial axis and one .polarConfig(...). So the configuration must be '
+        'valid on its own terms and every geomPolar mark must agree with it. '
+        '$detail',
       );
 
   /// A polar column geom supplied only one of the two interval bounds.

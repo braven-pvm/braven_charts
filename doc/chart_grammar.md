@@ -493,10 +493,14 @@ A **radial** spec continues instead:
     config-only half of the concentric contract (pane radii, ring gap, ring
     weight magnitudes) → `invalidConcentricComposition`
 11. the shape-decidable half of the polar composition contract, in this fixed
-    order: clashing mark units → `invalidPolarComposition`; a grouped/stacked
-    mode with fewer than two `geomPolar` marks → `invalidPolarComposition`;
-    exactly one of `intervalLow`/`intervalHigh` → `incompletePolarInterval`;
-    clashing `rose` presets → `invalidPolarComposition`
+    order: the config-only half — everything `PolarChartConfig.validate()`
+    enforces, i.e. pane geometry, radial-axis bounds, the grouped sub-band
+    padding, per-threshold finiteness and dash-pair parity, and the stacked
+    zero baseline → `invalidPolarComposition`; clashing mark units →
+    `invalidPolarComposition`; a grouped/stacked mode with fewer than two
+    `geomPolar` marks → `invalidPolarComposition`; exactly one of
+    `intervalLow`/`intervalHigh` → `incompletePolarInterval`; clashing `rose`
+    presets → `invalidPolarComposition`
 12. empty `data` → `emptyData`
 13. materialization → `emptyRadialCategories`, `duplicateRadialCategory`; then
     the row-dependent half of the polar contract → `invalidPolarComposition`,
