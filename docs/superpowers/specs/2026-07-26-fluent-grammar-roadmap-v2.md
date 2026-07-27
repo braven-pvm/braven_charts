@@ -26,10 +26,10 @@ The v1 roadmap's three themes are **feature-complete and merged**:
 | Candlestick | `CandlestickChartSeries` | ✅ `CandlestickMark` | ✅ | — |
 | Bar | `BarChartSeries` | ✅ `BarMark` | ⚠️ partial | mark carries no `barStyle`/waterfall/lollipop/bullet/diverging/error-bar/range/track fields → round-trip proof refuses those configs (`chart_grammar_source_generator.dart:844`) |
 | Scatter | `ScatterChartSeries` | ✅ `ScatterMark` | ⚠️ partial | mark drops `jitter`/`renderMode`/`cluster`/`bin`/`density`/`interactionStyle` → refused (`:849`) |
-| Pie | `PieChartSeries` | ✅ `PieMark` | ❌ **not emitted** | mark + lowering exist and round-trip; **emitter refuses radial** |
-| Donut | `DonutChartSeries` | ✅ `DonutMark` | ❌ **not emitted** | same |
-| Concentric Donut | N × `DonutChartSeries` + `ConcentricDonutConfig` | ✅ `DonutMark(ring:)` | ❌ **not emitted** | same |
-| Polar Column | `PolarColumnChartSeries` | ✅ `PolarMark` | ❌ **not emitted** | same |
+| Pie | `PieChartSeries` | ✅ `PieMark` | ✅ (1a) | `PieChartsPage` emits; a live label-formatter callback is an honest placeholder. A chart using `sliceColors` refuses → **1a″** |
+| Donut | `DonutChartSeries` | ✅ `DonutMark` | ⚠️ partial (1a) | grammar-authored donuts emit; `DonutChartsPage` refuses because it sets `sliceColors` and the mark has no per-slice colour channel → **1a″** |
+| Concentric Donut | N × `DonutChartSeries` + `ConcentricDonutConfig` | ✅ `DonutMark(ring:, concentric:)` | ⚠️ partial (1a, 1a′) | non-default `ConcentricDonutConfig` round-trips (1a′); `ConcentricDonutPage` refuses on per-slice colour + per-ring labels + ring-id contract → **1a″** |
+| Polar Column | `PolarColumnChartSeries` | ✅ `PolarMark` | ✅ (1a′) | **all 8 showcase presentations emit + round-trip**, verified against the real page; multi-series + `PolarChartConfig` + advanced per-series fields all carried |
 | Radial Bar | `RadialBarChartSeries` (#113) | ❌ **NONE** | ❌ | no mark at all |
 | Range Area | `RangeAreaChartSeries` | ❌ **NONE** | ❌ | no mark at all |
 | Gauge | `GaugeChartSeries` (#117) | ❌ **NONE** | ❌ | no mark at all |
@@ -51,8 +51,18 @@ Radial chart-level configs are also independently gated as "unsupported chart op
 ### 1a — Radial emitter recognition (no new grammar) — ✅ DELIVERED (PR #124)
 Pie/Donut/Concentric/Polar already have marks (`PieMark`/`DonutMark`/`PolarMark`) that lower correctly via `spec.lower()`; they were refused only by the **emitter**. Taught the emitter about radial: widened `_isCartesianFamily`→`_isEmittableFamily`, added `_planRadial` arms + `geomPie`/`geomDonut(ring:)`/`geomPolar` emission, extended the round-trip proof (`_firstRadialMismatch`) to rebuild a radial `PlotSpec` and re-lower it, moved `concentricDonutConfig`/`polarChartConfig` out of `_unsupportedChartOptions` into the radial path, and **deleted the stale "Cartesian-only V1" copy in all four places**. Grew (owner-approved) past emitter-only into a **bounded grammar carry** — series styling (`pieStyle`/`donutStyle`/`polarStyle`/`dataLabels`/`center`) plus `unit`/`selectionStyle`/`sliceRadiusConfig`/`sliceGroupingConfig` now ride the marks — so the *rich, styled* showcase radial charts emit + round-trip exactly (marks carry the config; fidelity never relaxed; no new drift-gate surface). Acceptance met for **Pie / Donut / Concentric**. **Polar carved out → item 1a′** below. Drift gates 57/57, Cartesian emission byte-identical, full suite 3901/0.
 
-### 1a′ — Multi-series radial + `PolarChartConfig` passthrough (the polar follow-up)
-The showcase **Polar Column** chart is a 9+-series layered composition with a customised `PolarChartConfig`, so it legitimately still refuses under 1a for two structural reasons: (1) the grammar admits **one radial geom per spec** (`multipleRadialGeoms` diagnostic) — a multi-series polar/donut composition can't be expressed as a single `geomPolar`; and (2) `_lowerPolar` **discards** the chart-level `PolarChartConfig` (`polar = const PolarChartConfig()` unconditionally), so even a single-series polar with a customised config can't round-trip. Closing both needs genuine new grammar capability, not an emitter tweak: a **multi-radial-geom spec** (or a layer/series channel on the radial mark) plus **radial chart-config passthrough** (carry `PolarChartConfig`/non-default `ConcentricDonutConfig` on the mark or spec, threaded through lowering, mirroring the 1a series-config carry). Its own spec → plan → build cycle. Acceptance: the Polar showcase Grammar pane emits a faithful, round-tripping chain (no "not emitted"), and a customised-`PolarChartConfig` single-series polar round-trips exactly. **This is the last "not emitted" radial pane after 1a.**
+### 1a′ — Multi-series polar + radial config passthrough — ✅ DELIVERED
+Spec `2026-07-27-grammar-multi-series-polar-design.md`, plan `2026-07-27-grammar-multi-series-polar.md`. Two structural blockers closed: (1) the grammar admitted **one radial geom per spec**, so a layered/grouped/stacked polar composition could not be expressed — `multipleRadialGeoms` is now repurposed to fire only for multiple **non-polar** radial marks, and `_lowerRadial` loops N `PolarMark`s into N `PolarColumnChartSeries`; (2) `_lowerPolar` **discarded** the chart-level `PolarChartConfig` — it now rides `PlotSpec.polar`, set by the new `.polarConfig(...)` verb, and is validated above the empty-data guard as `invalidPolarComposition`. Owner chose **full coverage**, so `PolarMark` also carries `columnColor`/`target`/`targetMarkerStyle`/`intervalLow`/`intervalHigh`/`intervalStyle`/`preset`, and `DonutMark` carries `concentric` (non-default `ConcentricDonutConfig`, with a `center` precedence rule). New diagnostics: `polarConfigOnNonPolarSpec`, `conflictingConcentricCenter`, `incompletePolarInterval`, `invalidPolarComposition`, `invalidConcentricComposition`.
+
+**Acceptance, verified against the real showcase pages** (agents mounted each page and ran the generator on the live chart document, not on hand-built stand-ins): **`PolarColumnPage` emits all EIGHT presentations** — standard, rose, **partial**, layered, grouped, stacked, references, intervals — each `isComplete: true`; `PieChartsPage` emits. Marks hold functions/config objects only, so **no new drift-gate surface**. Cartesian + pie/donut/concentric/single-polar emission byte-identical.
+
+### 1a″ — Per-slice colour + per-ring labels on Pie/Donut marks (the last radial gap)
+**Discovered while verifying 1a′ against the real pages, and it predates 1a′.** `ConcentricDonutPage` and `DonutChartsPage` still show "not emitted", for three named blockers proven by mutate-one-thing-at-a-time probes:
+1. **No per-slice colour channel on `PieMark`/`DonutMark`.** The pages pass `sliceColors`, which `DonutChartSeries.fromMap` turns into a per-point `PointStyle(color:)`; the round-trip proof compares points deeply, so any pie/donut chart with `sliceColors` is unreversible. Only `PolarMark` got a colour channel (`columnColor`) in 1a′. **The fix is the same shape as that one** — add `sliceColor: FieldAccessor<T, Color?>?` to both marks, thread it through lowering + emitter + proof.
+2. **One `dataLabels` for every ring.** `ConcentricDonutPage`'s `hierarchy` layout gives the outer ring `outside/categoryAndPercentage` and inner rings `inside/category`, but `DonutMark` carries a single `dataLabels` that lowering stamps onto every ring (and the emitter reverses from `donuts.first`). Needs per-ring labels — a map keyed by ring, or a label accessor.
+3. **Ring ids must follow `<markId>-<ringKey>`.** This is a hard requirement of the forward lowering (`_lowerConcentricRings` ids each ring `'$markId-$key'`), not a reversal heuristic, and the reversal is its exact inverse. Either the showcase page adopts the contract or the grammar gains another way to carry ring identity — an owner-facing choice, since changing page ids touches saved artifacts/goldens.
+
+Acceptance: `ConcentricDonutPage` and `DonutChartsPage` Grammar panes emit faithful, round-tripping chains. **Sequenced before 1b** — it is the same well-understood shape as the 1a′ colour channel and closes the last two radial "not emitted" panes, whereas 1b opens new families.
 
 ### 1b — New geometry marks (mark → lowering → emitter → parity, one family per slice)
 Families with no mark at all, each a full vertical slice like the v1 radial/channels work:
@@ -68,6 +78,10 @@ Close the "partial emission" gaps so the round-trip proof stops refusing configu
 
 ### Theme-1 acceptance gate
 Every showcase workbench page (all 15) shows a **faithful, round-tripping** grammar chain in its Grammar pane — no "not emitted" comment anywhere. This is the measurable "universal coverage" bar.
+
+**How to measure it honestly (lesson banked from 1a′):** assert against the **real showcase page** — mount it, read the live `BravenChartPlus` document off the workbench, and run the generator on that — never against a hand-built stand-in. 1a′'s first acceptance pass used transcribed fixtures and reported "every polar + concentric pane emits" while the real `ConcentricDonutPage` was still refusing; a sleuth caught it by mounting the page. Hand-transcribed fixtures also need a sync guard (a test that fails when the page's presentation enum changes), or they drift silently.
+
+**Progress:** ✅ Cartesian · ✅ Pie · ✅ Polar Column (8/8 presentations) · ⚠️ Donut + Concentric Donut (→ 1a″) · ❌ Radial Bar, Range Area, Gauge (→ 1b) · ⚠️ Bar/Scatter advanced configs (→ 1c/1d).
 
 ## Theme 2 — Grammar Depth (deferred v1 backlog, sequenced after coverage)
 
@@ -97,6 +111,6 @@ Each is a v1 slice's explicit "Out of scope (future)":
 
 ## Ordering summary
 
-1. **Theme 1 first, in order 1a → 1a′ → 1b → 1c → 1d**, with the workbench parity gate as the running acceptance test. 1a shipped (PR #124, pie/donut/concentric); 1a′ (multi-series radial + `PolarChartConfig` passthrough) closes the last radial pane; then the new-mark and advanced-field slices.
+1. **Theme 1 first, in order 1a → 1a′ → 1a″ → 1b → 1c → 1d**, with the workbench parity gate as the running acceptance test. 1a shipped (PR #124, pie/donut/concentric); 1a′ shipped (multi-series polar + radial config passthrough — polar verified 8/8 against the real page); 1a″ closes the last two radial panes (pie/donut per-slice colour + per-ring labels); then the new-mark and advanced-field slices.
 2. **Theme 2** after coverage, most-requested first (opacity channels, area fill-by-value).
 3. **Theme 3** docs — sequenced after (or interleaved per-family if the owner later prefers).
