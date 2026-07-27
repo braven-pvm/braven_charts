@@ -9,9 +9,12 @@ const _generatedCatalogPath =
     'example/lib/showcase/generated/public_docs_catalog.g.dart';
 const _runtimeCatalogPath =
     'example/lib/showcase/widgets/chart_type_catalog.dart';
+const _galleryPagePath = 'example/lib/showcase/pages/gallery_page.dart';
+const _mediaCapturePath = 'tool/capture_pubdev_static_media_test.dart';
 const _showcaseAppPath = 'example/lib/showcase/showcase_app.dart';
 const _pubspecPath = 'pubspec.yaml';
 const _heroMediaPath = 'doc/screenshots/chart_type_strip.png';
+const _chartFamilyTopicPath = 'doc/topics/chart_families.md';
 
 const _generatedSections = <String>[
   'FEATURES',
@@ -197,6 +200,7 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   if (families.length != 12) {
     errors.add('chartFamilies must contain exactly 12 built-in families.');
   }
+  _validateFamilyCountCopy(root, families, errors);
   if (gallery.length < 12 || gallery.length > 18) {
     errors.add('gallery must contain between 12 and 18 curated entries.');
   }
@@ -223,6 +227,7 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     height: 280,
     errors: errors,
   );
+  _validateHeroCaptureFamilies(root, families, errors);
 
   _validateUniqueIds('features', features, errors);
   _validateUniqueIds('chartFamilies', families, errors);
@@ -557,6 +562,90 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   return errors;
 }
 
+void _validateFamilyCountCopy(
+  Directory root,
+  List<Map<String, dynamic>> families,
+  List<String> errors,
+) {
+  final count = families.length;
+  final countWord = switch (count) {
+    10 => 'ten',
+    11 => 'eleven',
+    12 => 'twelve',
+    _ => '$count',
+  };
+  final countTitle = '${countWord[0].toUpperCase()}${countWord.substring(1)}';
+  final checks = <String, List<String>>{
+    _readmePath: [
+      'Render $countWord chart families',
+      '[![$countTitle chart families rendered by Braven Charts]',
+    ],
+    _chartFamilyTopicPath: [
+      'Braven Charts ships $countWord native Flutter chart families',
+    ],
+    _galleryPagePath: [
+      "title: '$countTitle chart guides, grouped by visual grammar'",
+      'count: $count,',
+    ],
+  };
+
+  for (final entry in checks.entries) {
+    final file = root.file(entry.key);
+    if (!file.existsSync()) {
+      errors.add('Missing ${entry.key}.');
+      continue;
+    }
+    final source = file.readAsStringSync();
+    for (final expected in entry.value) {
+      if (!source.contains(expected)) {
+        errors.add(
+          '${entry.key} must describe all $count chart families using '
+          '"$expected".',
+        );
+      }
+    }
+  }
+}
+
+void _validateHeroCaptureFamilies(
+  Directory root,
+  List<Map<String, dynamic>> families,
+  List<String> errors,
+) {
+  final captureFile = root.file(_mediaCapturePath);
+  if (!captureFile.existsSync()) {
+    errors.add('Missing $_mediaCapturePath.');
+    return;
+  }
+  final source = captureFile.readAsStringSync();
+  final start = source.indexOf('List<_ChartTypeAsset> _chartTypeAssets()');
+  final end = source.indexOf(
+    '_ChartTypeAsset _radialBarSignedAsset()',
+    start < 0 ? 0 : start,
+  );
+  if (start < 0 || end < 0) {
+    errors.add(
+      'Unable to inspect chart-type hero captures in $_mediaCapturePath.',
+    );
+    return;
+  }
+  final captureSource = source.substring(start, end);
+  final captured = RegExp(
+    r"fileName:\s*'(chart_type_[^']+\.png)'",
+  ).allMatches(captureSource).map((match) => match.group(1)!).toSet();
+  final expected = <String>{
+    for (final family in families)
+      if (family['primaryExample'] case final Map<String, dynamic> primary)
+        if (primary['asset'] case final String asset) asset.split('/').last,
+  };
+  if (!const SetEquality<String>().equals(captured, expected)) {
+    errors.add(
+      'Chart-type hero capture assets must match the public family catalog. '
+      'catalog=${_sorted(expected)} capture=${_sorted(captured)}',
+    );
+  }
+}
+
 Set<String> _showcaseRouteSlugs(
   Directory root,
   Set<String> runtimeSlugs,
@@ -652,6 +741,12 @@ List<String> _validateApiDocumentation(
     }
     if (!head.contains("document.createElement('nav')")) {
       errors.add('index.html is missing the Braven documentation navigation.');
+    }
+    final guidesBaseUrl = catalog['guidesBaseUrl'];
+    if (guidesBaseUrl is String && !head.contains(guidesBaseUrl)) {
+      errors.add(
+        'index.html documentation navigation is missing the hosted Guides link.',
+      );
     }
   }
 

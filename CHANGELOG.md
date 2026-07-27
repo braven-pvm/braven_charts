@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- First-class Gauge and Solid Gauge charts with needle and solid modes,
+  operational zones, targets, reference markers, configurable polar panes,
+  center content, tracking, selection, semantics, artifacts, generated source,
+  fluent modifiers, AI metadata, and dedicated showcase surfaces.
+- First-class Radial Bar charts with independent progress tracks, signed
+  domains, thresholds, labels, selection, tracking, artifacts, generated
+  source, fluent modifiers, AI metadata, and dedicated showcase surfaces.
+- Native logarithmic and calendar-time Cartesian axes, including log-space
+  transforms, zoom and pan, decade ticks and grid lines, calendar-aware ticks
+  and labels, artifacts, generated source, Grammar verbs, diagnostics, and
+  deterministic visual coverage.
+- Native rectangle selection expressions with exact portable geometry and
+  package-wide selection integration.
+- Explicit accessible chart actions for keyboard and assistive-technology
+  users.
+- Searchable, statically hosted public guides under `/guides/`, with stable
+  deep links, generated navigation, responsive tables of contents, source and
+  runnable-example links, and release-artifact validation.
+- Configurable short-tap activation for mobile chart interaction, independent
+  of long-press tracking.
 - Opt-in crosshair focus bands with independently configurable translucent
   fill, width, center-line color, width, dash pattern, and stroke cap. Bands
   remain plot-clipped and paint-only across standard and synchronized tracking.
@@ -24,10 +44,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Radial Grammar charts now emit generated Dart source for Pie, Donut,
+  Concentric Donut, Polar Column, and Radial Bar configurations instead of
+  falling back to configuration-only output.
+- Public package and showcase surfaces now describe all twelve chart families,
+  link the hosted guides and generated API reference consistently, and enforce
+  responsive visual regression checks across phone, tablet, desktop, and dark
+  README rendering.
 - Refined Range Area interaction feedback so transient interval and whole-band
   hover, keyboard focus, durable point selection, and selected-band emphasis
   remain visually distinct in nested and overlapping compositions across
   light, dark, and high-contrast themes.
+
+### Fixed
+
+- Long guide tables of contents remain independently keyboard-scrollable on
+  short desktop viewports without constraining the article.
+- Persistent X, Y, and box-brush popups now preserve independent ownership and
+  dismissal across pointer, keyboard, controller, and outside-chart paths;
+  first-frame tooltip motion is scheduled reliably with reduced-motion support.
+- Persistent brush manipulation, host-page scrolling, and viewport pinch
+  gestures no longer compete on touch surfaces, with a dedicated multi-axis
+  Y-brush review composition in the showcase.
 
 ## 0.13.5 - 2026-07-24
 

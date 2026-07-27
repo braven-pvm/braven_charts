@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -428,8 +429,18 @@ void main() {
     final outputDirectory = Directory(_outputDirectory)
       ..createSync(recursive: true);
     final captures = <_ChartTypeCapture>[];
+    final assets = _chartTypeAssets();
+    final catalog =
+        jsonDecode(File('doc/public_catalog.json').readAsStringSync())
+            as Map<String, dynamic>;
+    expect(
+      assets,
+      hasLength((catalog['chartFamilies'] as List<dynamic>).length),
+      reason:
+          'The package hero must contain every cataloged chart family exactly once.',
+    );
 
-    for (final asset in _chartTypeAssets()) {
+    for (final asset in assets) {
       captures.add(
         await _captureChartType(
           tester,
@@ -1061,6 +1072,7 @@ Future<_ChartTypeCapture> _captureChartType(
             concentricDonutConfig: asset.concentricDonutConfig,
             polarChartConfig: asset.polarChartConfig,
             radialBarChartConfig: asset.radialBarChartConfig,
+            gaugeChartConfig: asset.gaugeChartConfig,
           ),
         ),
       ),
@@ -1083,12 +1095,14 @@ Future<_ChartTypeCapture> _captureChartType(
   expect(preview.widthPixels, 960);
   expect(preview.heightPixels, 540);
   final bytes = preview.bytes!;
-  final output = File(
-    '${outputDirectory.path}${Platform.pathSeparator}${asset.fileName}',
-  );
-  await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
-  // ignore: avoid_print
-  print('Wrote ${output.path} (960x540)');
+  if (asset.persistCapture) {
+    final output = File(
+      '${outputDirectory.path}${Platform.pathSeparator}${asset.fileName}',
+    );
+    await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
+    // ignore: avoid_print
+    print('Wrote ${output.path} (960x540)');
+  }
 
   await tester.pumpWidget(const SizedBox.shrink());
   controller.dispose();
@@ -1388,6 +1402,8 @@ class _ChartTypeAsset {
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
     this.radialBarChartConfig = const RadialBarChartConfig(),
+    this.gaugeChartConfig = const GaugeChartConfig(),
+    this.persistCapture = true,
   });
 
   final String label;
@@ -1400,6 +1416,8 @@ class _ChartTypeAsset {
   final ConcentricDonutConfig concentricDonutConfig;
   final PolarChartConfig polarChartConfig;
   final RadialBarChartConfig radialBarChartConfig;
+  final GaugeChartConfig gaugeChartConfig;
+  final bool persistCapture;
 }
 
 class _ChartTypeCapture {
@@ -1482,6 +1500,9 @@ List<_ChartTypeAsset> _chartTypeAssets() {
   );
   final radialBarTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFF8FAFF),
+  );
+  final gaugeTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFF8FBFA),
   );
 
   return [
@@ -2089,6 +2110,58 @@ List<_ChartTypeAsset> _chartTypeAssets() {
             trackOpacity: 0.1,
             showDataLabels: true,
           ),
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
+      label: 'Gauge',
+      fileName: 'chart_type_gauge.png',
+      theme: gaugeTheme,
+      headerColor: const Color(0xFFE4F5EF),
+      headerTextColor: const Color(0xFF065F46),
+      persistCapture: false,
+      grid: const GridConfig(horizontal: false, vertical: false),
+      gaugeChartConfig: const GaugeChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: -135,
+          sweepAngleDegrees: 270,
+          innerRadiusFactor: 0.58,
+          outerRadiusFactor: 0.86,
+        ),
+        showTickLabels: false,
+        tickCount: 5,
+        center: GaugeCenterConfig(showMetric: false, showStatus: false),
+      ),
+      series: [
+        GaugeChartSeries.solid(
+          id: 'gauge',
+          metric: 'Capacity',
+          value: 72,
+          minimum: 0,
+          maximum: 100,
+          unit: '%',
+          zones: const [
+            GaugeZone(
+              from: 0,
+              to: 60,
+              status: 'Healthy',
+              color: Color(0xFF16A34A),
+            ),
+            GaugeZone(
+              from: 60,
+              to: 85,
+              status: 'Elevated',
+              color: Color(0xFFF59E0B),
+            ),
+            GaugeZone(
+              from: 85,
+              to: 100,
+              status: 'Critical',
+              color: Color(0xFFDC2626),
+            ),
+          ],
+          target: const GaugeTarget(value: 75, label: 'Target'),
+          style: const SolidGaugeStyle(cornerRadius: 8),
         ),
       ],
     ),

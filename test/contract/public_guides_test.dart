@@ -21,6 +21,13 @@ void main() {
     final manifest = jsonDecode(_read(fixture, 'build/guides/index.json'));
     expect(index, contains('Search guides'));
     expect(index, contains('data-search='));
+    expect(
+      index,
+      contains(
+        'const match = terms.every((term) => '
+        'card.dataset.search.includes(term));',
+      ),
+    );
     expect(first, contains('id="same-heading"'));
     expect(first, contains('id="same-heading-2"'));
     expect(

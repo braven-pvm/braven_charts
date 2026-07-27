@@ -129,6 +129,32 @@ class PublicSurfaceVisualCheckTest(unittest.TestCase):
                 html,
             )
 
+    def test_primary_showcase_catalog_surfaces_are_visually_gated(self) -> None:
+        self.assertEqual(
+            visual.FLUTTER_SURFACES,
+            {"gallery", "chart-types", "documentation"},
+        )
+        for surface in visual.FLUTTER_SURFACES:
+            self.assertIn(surface, visual.SURFACES)
+
+    def test_server_suppresses_browser_disconnect_noise(self) -> None:
+        server = object.__new__(visual.PublicSurfaceServer)
+
+        with (
+            patch.object(
+                visual.sys,
+                "exc_info",
+                return_value=(ConnectionResetError, ConnectionResetError(), None),
+            ),
+            patch.object(
+                visual.ThreadingHTTPServer,
+                "handle_error",
+            ) as inherited,
+        ):
+            server.handle_error(object(), ("127.0.0.1", 1))
+
+        inherited.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
