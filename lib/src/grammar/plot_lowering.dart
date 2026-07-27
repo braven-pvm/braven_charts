@@ -900,29 +900,41 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
   );
 }
 
-/// Lowers a RADIAL spec: exactly one radial geom, no Cartesian marks, no
-/// Cartesian axis/grid option. The whole dataset maps to one radial series
-/// (or, for a ring channel, one per ring). Validation order is deterministic
-/// and matches the Cartesian contract: every data-INDEPENDENT structural check
-/// runs before the emptyData guard, so BravenPlot swallows ONLY an otherwise
-/// well-formed empty spec.
+/// Lowers a RADIAL spec: no Cartesian marks, no Cartesian axis/grid option.
+/// The whole dataset maps to one radial series (or, for a ring channel, one
+/// per ring). Exactly one radial geom is the rule for pie/donut; the polar
+/// family relaxes it — N [PolarMark]s lower to N `PolarColumnChartSeries`
+/// sharing the spec-level [PlotSpec.polar] composition. Validation order is
+/// deterministic and matches the Cartesian contract: every data-INDEPENDENT
+/// structural check runs before the emptyData guard, so BravenPlot swallows
+/// ONLY an otherwise well-formed empty spec.
 LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   final radialIndices = <int>[
     for (var index = 0; index < spec.marks.length; index++)
       if (spec.marks[index] is RadialMark<T>) index,
   ];
-  if (radialIndices.length > 1) {
+  // Multiple radial marks are legal ONLY when every one is a polar column:
+  // polar composition (layered/grouped/stacked) genuinely spans series, while
+  // two pies or a pie plus a donut have no shared coordinate meaning.
+  final allPolar = radialIndices.every(
+    (index) => spec.marks[index] is PolarMark<T>,
+  );
+  if (radialIndices.length > 1 && !allPolar) {
     throw GrammarSpecException.multipleRadialGeoms(<String>[
       for (final index in radialIndices) markIds[index],
     ]);
   }
-  final markIndex = radialIndices.single;
-  if (spec.marks.length > 1) {
+  final markIndex = radialIndices.first;
+  // Any non-radial mark in the spec mixes coordinate systems. Counting rather
+  // than comparing against `1` keeps the multi-polar spec legal while a polar
+  // plus a line (or reference) mark still fails exactly as before.
+  if (spec.marks.length > radialIndices.length) {
+    final radialSet = radialIndices.toSet();
     throw GrammarSpecException.mixedCoordinateSystems(
       markIds[markIndex],
       <String>[
         for (var index = 0; index < spec.marks.length; index++)
-          if (index != markIndex) markIds[index],
+          if (!radialSet.contains(index)) markIds[index],
       ],
     );
   }
@@ -944,21 +956,43 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     throw GrammarSpecException.axisOptionOnRadialSpec('grid');
   }
 
+  // A plot-level PolarChartConfig only has meaning over polar columns; on a
+  // pie/donut spec it would be silently discarded, so it is refused by name.
+  if (spec.polar != null && !allPolar) {
+    throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds[markIndex]);
+  }
+
   // Data-dependent checks live below the emptyData guard.
   if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
 
-  final hasVisibleCategory = spec.data.any(
-    (row) => mark.category(row).toString().trim().isNotEmpty,
-  );
-  if (!hasVisibleCategory) {
-    throw GrammarSpecException.emptyRadialCategories(markId);
+  // Every radial mark is checked, not just the first: a multi-polar spec whose
+  // second mark labels nothing would otherwise draw an unlabelled band.
+  for (final index in radialIndices) {
+    final radialMark = spec.marks[index] as RadialMark<T>;
+    final hasVisibleCategory = spec.data.any(
+      (row) => radialMark.category(row).toString().trim().isNotEmpty,
+    );
+    if (!hasVisibleCategory) {
+      throw GrammarSpecException.emptyRadialCategories(markIds[index]);
+    }
   }
 
   final series = <ChartSeries>[];
   ConcentricDonutConfig? concentric;
   PolarChartConfig? polar;
 
-  if (mark is PieMark<T>) {
+  if (allPolar) {
+    for (final index in radialIndices) {
+      series.add(
+        _lowerPolar<T>(
+          spec.marks[index] as PolarMark<T>,
+          markIds[index],
+          spec.data,
+        ),
+      );
+    }
+    polar = spec.polar ?? const PolarChartConfig();
+  } else if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
   } else if (mark is DonutMark<T>) {
     if (mark.ring == null) {
@@ -984,9 +1018,6 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
             : ConcentricDonutConfig(centerContent: mark.center!);
       }
     }
-  } else if (mark is PolarMark<T>) {
-    series.add(_lowerPolar<T>(mark, markId, spec.data));
-    polar = const PolarChartConfig();
   } else {
     throw StateError('Unhandled radial mark: $mark');
   }

@@ -88,6 +88,12 @@ void main() {
       expect(facet.code, GrammarDiagnosticCode.facetedRadialUnsupported);
       expect(facet.message, contains('pie'));
 
+      final misplaced = GrammarSpecException.polarConfigOnNonPolarSpec('pie');
+      expect(misplaced.code, GrammarDiagnosticCode.polarConfigOnNonPolarSpec);
+      expect(misplaced.toString(), contains('polarConfigOnNonPolarSpec'));
+      expect(misplaced.message, contains('pie'));
+      expect(misplaced.message, contains('geomPolar'));
+
       final dup = GrammarSpecException.duplicateRadialCategory('Apple');
       expect(dup.code, GrammarDiagnosticCode.duplicateRadialCategory);
       expect(dup.toString(), contains('duplicateRadialCategory'));
@@ -529,6 +535,168 @@ void main() {
           name: 'Fruit',
           values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
         ),
+      );
+    });
+  });
+
+  group('multi-series polar', () {
+    // A non-default composition, so a lowering that dropped the config (or
+    // substituted `const PolarChartConfig()`) cannot pass by accident.
+    const groupedPolar = PolarChartConfig(
+      composition: PolarColumnCompositionConfig(
+        mode: PolarColumnCompositionMode.grouped,
+        groupInnerPadding: 0.2,
+      ),
+    );
+
+    test('two polar marks lower to two PolarColumnChartSeries with the config',
+        () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'cap',
+            name: 'Capacity',
+            category: fruitName,
+            value: fruitCount,
+          ),
+          PolarMark<Fruit>(
+            id: 'obs',
+            name: 'Observed',
+            category: fruitName,
+            value: fruitMass,
+          ),
+        ],
+        polar: groupedPolar,
+      )).lower();
+
+      expect(lowered.series, hasLength(2));
+      expect(lowered.series.every((s) => s is PolarColumnChartSeries), isTrue);
+      expect(lowered.series.map((s) => s.id), ['cap', 'obs']);
+      final cap = lowered.series.first as PolarColumnChartSeries;
+      final obs = lowered.series.last as PolarColumnChartSeries;
+      expect(cap.name, 'Capacity');
+      expect(cap.categories, ['Apple', 'Pear', 'Plum']);
+      expect(cap.points.map((p) => p.y), [30, 20, 10]);
+      expect(obs.name, 'Observed');
+      expect(obs.points.map((p) => p.y), [5, 3, 2]);
+      expect(lowered.polarChartConfig, groupedPolar);
+      expect(lowered.polarChartConfig, isNot(const PolarChartConfig()));
+      expect(lowered.concentricDonutConfig, isNull);
+    });
+
+    test('a single polar mark still carries the spec-level config', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(category: fruitName, value: fruitCount),
+        ],
+        polar: groupedPolar,
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(lowered.polarChartConfig, groupedPolar);
+    });
+
+    test('every polar mark is checked for a visible category', () {
+      // The SECOND mark has no visible category. A guard that only inspected
+      // the first mark would let it through silently.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(id: 'b', category: fruitBlank, value: fruitMass),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyRadialCategories),
+      );
+    });
+
+    test('two polar marks plus a line still raise mixedCoordinateSystems', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'a', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(id: 'b', category: fruitName, value: fruitMass),
+            LineMark<Fruit>(x: sampleX, y: sampleY),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.mixedCoordinateSystems),
+      );
+    });
+
+    test('a pie and a donut mark still raise multipleRadialGeoms', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'p', category: fruitName, value: fruitCount),
+            DonutMark<Fruit>(id: 'd', category: fruitName, value: fruitMass),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.multipleRadialGeoms),
+      );
+    });
+
+    test('polarConfig on a pie spec raises polarConfigOnNonPolarSpec', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'pie', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+      );
+    });
+
+    test('polarConfig on a concentric donut raises polarConfigOnNonPolarSpec',
+        () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'rings',
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+            ),
+          ],
+          polar: groupedPolar,
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+      );
+    });
+
+    test('the misplaced-polarConfig guard beats the empty-data guard', () {
+      // A structural placement error must fire even against empty data, so
+      // BravenPlot only ever swallows an otherwise well-formed empty spec.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'pie', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+      );
+    });
+
+    test('a pie and a polar mark raise multipleRadialGeoms', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'p', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(id: 'q', category: fruitName, value: fruitMass),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.multipleRadialGeoms),
       );
     });
   });

@@ -83,8 +83,12 @@ enum GrammarDiagnosticCode {
   /// A radial geom was combined with a Cartesian (or reference) mark.
   mixedCoordinateSystems,
 
-  /// A spec declared more than one radial geom.
+  /// A spec declared more than one radial geom outside the polar family.
   multipleRadialGeoms,
+
+  /// `.polarConfig(...)` was set on a spec whose radial mark is not a polar
+  /// column geom.
+  polarConfigOnNonPolarSpec,
 
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
@@ -314,14 +318,24 @@ final class GrammarSpecException implements Exception {
     'charts.',
   );
 
-  /// A spec declared more than one radial geom.
+  /// A spec declared more than one radial geom outside the polar family.
   factory GrammarSpecException.multipleRadialGeoms(
     Iterable<String> radialMarkIds,
   ) => GrammarSpecException(
     GrammarDiagnosticCode.multipleRadialGeoms,
     'A plot may contain at most one radial geom, but ${_list(radialMarkIds)} '
-    'are all radial. Split them into separate charts.',
+    'are all radial. Split them into separate charts. (Polar columns are the '
+    'one exception: several geomPolar marks may share a plot.)',
   );
+
+  /// `.polarConfig(...)` was set on a non-polar radial spec.
+  factory GrammarSpecException.polarConfigOnNonPolarSpec(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.polarConfigOnNonPolarSpec,
+        'A PolarChartConfig was set, but the radial mark "$markId" is not a '
+        'polar-column geom. Remove .polarConfig(...), or author the chart with '
+        'geomPolar(...).',
+      );
 
   /// A Cartesian axis/grid option was set on a radial spec.
   factory GrammarSpecException.axisOptionOnRadialSpec(String option) =>
