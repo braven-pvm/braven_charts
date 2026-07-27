@@ -133,6 +133,37 @@ void main() {
       expect(conflict.message, contains('center'));
       expect(conflict.message, contains('concentric'));
 
+      final ringless = GrammarSpecException.concentricConfigOnRinglessDonut(
+        'plain',
+      );
+      expect(
+        ringless.code,
+        GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+      );
+      expect(
+        ringless.toString(),
+        contains('concentricConfigOnRinglessDonut'),
+      );
+      expect(ringless.message, contains('plain'));
+      expect(ringless.message, contains('ring:'));
+      expect(ringless.message, contains('center:'));
+
+      final composition = GrammarSpecException.invalidConcentricComposition(
+        'Ring gap must be finite and non-negative.',
+        ringIds: <String>['fruit-A', 'fruit-B'],
+      );
+      expect(
+        composition.code,
+        GrammarDiagnosticCode.invalidConcentricComposition,
+      );
+      expect(
+        composition.toString(),
+        contains('invalidConcentricComposition'),
+      );
+      expect(composition.message, contains('Ring gap'));
+      expect(composition.message, contains('fruit-A'));
+      expect(composition.message, contains(r"'<markId>-<ringKey>'"));
+
       final dup = GrammarSpecException.duplicateRadialCategory('Apple');
       expect(dup.code, GrammarDiagnosticCode.duplicateRadialCategory);
       expect(dup.toString(), contains('duplicateRadialCategory'));
@@ -586,7 +617,51 @@ void main() {
       expect(lowered.concentricDonutConfig, customConcentric);
     });
 
-    test('a ring-less donut honors the concentric center and config', () {
+    test('a ring-less donut refuses concentric by name', () {
+      // A ring-less donut composes no rings, so every field of the config
+      // except `centerContent` is inert AND the capture path drops the config
+      // entirely (`braven_chart_plus` only stamps it for >1 donut series). A
+      // silent carry would hand the workbench a chain it cannot reproduce, so
+      // the misplacement is named — exactly like polarConfigOnNonPolarSpec.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              concentric: customConcentric,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(
+          GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+        ),
+      );
+    });
+
+    test('a ring-less concentric config is refused before the empty-data guard',
+        () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              concentric: customConcentric,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(
+          GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+        ),
+      );
+    });
+
+    test('a ring-less donut with no concentric keeps its center hidden', () {
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
@@ -594,15 +669,98 @@ void main() {
             category: fruitName,
             value: fruitCount,
             id: 'fruit',
-            concentric: customConcentric,
           ),
         ],
       )).lower();
 
       expect(lowered.series, hasLength(1));
-      final series = lowered.series.single as DonutChartSeries;
-      expect(series.centerContent, const DonutCenterContent(label: 'Fleet'));
-      expect(lowered.concentricDonutConfig, customConcentric);
+      expect(
+        (lowered.series.single as DonutChartSeries).centerContent,
+        DonutCenterContent.hidden,
+      );
+      expect(lowered.concentricDonutConfig, isNull);
+    });
+
+    test('an invalid concentric config is refused above the empty-data guard',
+        () {
+      // Inverted radii are decidable from the CONFIG alone, so they must not
+      // hide behind an empty (or single-ring) dataset and resurface as a raw
+      // ArgumentError from ConcentricDonutLayoutCalculator at widget mount.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                innerRadiusFactor: 0.9,
+                outerRadiusFactor: 0.5,
+              ),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+      );
+    });
+
+    test('an invalid concentric config cannot hide behind single-ring data',
+        () {
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: oneBasket,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(ringGap: -4),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+      );
+    });
+
+    test('a ring weight keyed by the ring value rather than the series id is '
+        'refused by name', () {
+      // The rings are ided `<markId>-<ringKey>`, so the natural-looking key
+      // 'A' names no series. The render pipeline throws a raw ArgumentError
+      // for exactly this; lowering must name it first.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'A': 2},
+              ),
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(
+        failure.code,
+        GrammarDiagnosticCode.invalidConcentricComposition,
+      );
+      expect(failure.message, contains('"A"'));
+      expect(failure.message, contains('fruit-A'));
     });
 
     test('concentric plus center raises conflictingConcentricCenter', () {

@@ -844,6 +844,12 @@ class _GrammarChainEmitter {
       // forward path sets it ONLY inside `DonutMark.ring != null` lowering, so
       // its presence — not the series count — means a concentric composition
       // (the single-distinct-ring collapse carries a non-null config too).
+      // That stays true because `geomDonut(concentric:)` REFUSES a ring-less
+      // donut by name (`concentricConfigOnRinglessDonut`) rather than carrying
+      // a config the composition-less family would never use. The document
+      // path agrees: hydration rejects a config paired with fewer than two
+      // donut series, so `_planConcentric` only ever sees a real composition
+      // through the public entry point.
       if (configuration.concentricDonutConfig != null) {
         return _planConcentric(donuts, block);
       }

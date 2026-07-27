@@ -3,6 +3,7 @@
 
 import 'package:flutter/painting.dart' show Color;
 
+import '../layout/concentric_donut_layout.dart';
 import '../layout/polar_column_composition.dart';
 import '../models/axis_scale_type.dart';
 import '../models/bar_chart_style.dart' show BarOrientation;
@@ -94,7 +95,11 @@ class LoweredPlot {
   final bool? showLegend;
 
   /// The concentric-donut composition config, when the lowered chart is a
-  /// concentric donut. Null for every other family.
+  /// concentric donut. Null for every other family — INCLUDING a ring-less
+  /// donut, which refuses `DonutMark.concentric` by name rather than carrying
+  /// a config it composes nothing for. `ChartGrammarSourceGenerator` relies on
+  /// that: it treats a non-null config as the authoritative "this is a
+  /// concentric composition" discriminator.
   final ConcentricDonutConfig? concentricDonutConfig;
 
   /// The polar pane/axis config, when the lowered chart is a polar column.
@@ -929,10 +934,12 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
 /// ABLE to share: the composition contract
 /// ([PolarColumnComposition.validate], the same one the render pipeline and the
 /// artifact hydrator enforce) is checked here so a chain fails with a named
-/// diagnostic instead of a raw `ArgumentError` at widget mount. Validation order
-/// is deterministic and matches the Cartesian contract: every data-INDEPENDENT
-/// structural check runs before the emptyData guard, so BravenPlot swallows
-/// ONLY an otherwise well-formed empty spec.
+/// diagnostic instead of a raw `ArgumentError` at widget mount. The concentric
+/// donut family is held to the same rule against
+/// [ConcentricDonutLayoutCalculator]. Validation order is deterministic and
+/// matches the Cartesian contract: every data-INDEPENDENT structural check runs
+/// before the emptyData guard, so BravenPlot swallows ONLY an otherwise
+/// well-formed empty spec.
 LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   final radialIndices = <int>[
     for (var index = 0; index < spec.marks.length; index++)
@@ -995,6 +1002,28 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     throw GrammarSpecException.conflictingConcentricCenter(markId);
   }
 
+  if (mark is DonutMark<T> && mark.concentric != null) {
+    // Without a ring channel there is no composition for the config to
+    // describe: the ring gap, order, weights, radii and legend mode are all
+    // inert, the render path never reads it (`braven_chart_plus` stamps
+    // `concentricDonutConfig` only for MORE THAN ONE donut series), and the
+    // capture path drops it — so a chain that set it would come back from the
+    // source generator without it. Refused by name, as `.polarConfig(...)` on
+    // a non-polar spec is.
+    if (mark.ring == null) {
+      throw GrammarSpecException.concentricConfigOnRinglessDonut(markId);
+    }
+    // The DATA-INDEPENDENT half of the concentric contract: pane radii, ring
+    // gap, ring-weight magnitudes and the shared center are decidable from the
+    // config alone, so they are checked ABOVE the emptyData guard — a chain
+    // must not lower clean over an empty (or momentarily single-ring) dataset
+    // and then throw a raw ArgumentError out of the layout calculator once the
+    // real rows arrive.
+    _guardConcentric(
+      () => ConcentricDonutLayoutCalculator.validateConfig(mark.concentric!),
+    );
+  }
+
   // The polar composition contract that is decidable from the spec's SHAPE.
   if (allPolar) {
     _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
@@ -1054,10 +1083,12 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     // sources in one local is what makes every donut path agree.
     final center = mark.concentric?.centerContent ?? mark.center;
     if (mark.ring == null) {
+      // `concentric` on a ring-less donut is refused above, so `center` here is
+      // exactly the mark's own shorthand and no config is produced: the
+      // family's `LoweredPlot.concentricDonutConfig` stays null, which is what
+      // lets the source emitter keep treating a non-null config as the
+      // authoritative "this is a concentric composition" discriminator.
       series.add(_lowerDonut<T>(mark, markId, spec.data, center));
-      // A ring-less donut has no composition to configure, but a config that
-      // was authored anyway still round-trips rather than vanishing.
-      concentric = mark.concentric;
     } else {
       final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
       if (rings.length == 1) {
@@ -1079,6 +1110,21 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
             (mark.center == null
                 ? const ConcentricDonutConfig()
                 : ConcentricDonutConfig(centerContent: mark.center!));
+        // The DATA-DEPENDENT half of the concentric contract, delegated to the
+        // same validator the render pipeline runs. It is scoped to a real
+        // composition (>1 ring) because that is exactly the shape the render
+        // pipeline validates: below two donut series the widget nulls the
+        // config and lays a plain donut out, so refusing here would reject a
+        // chart that renders. A ring weight naming no ring — the natural
+        // mistake, because the rings are ided `<markId>-<ringKey>` — is caught
+        // here instead of as a raw ArgumentError at widget mount.
+        _guardConcentric(
+          () => ConcentricDonutLayoutCalculator.validateSeries(
+            rings,
+            concentric!,
+          ),
+          ringIds: <String>[for (final ring in rings) ring.id],
+        );
       }
     }
   } else {
@@ -1099,6 +1145,30 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     concentricDonutConfig: concentric,
     polarChartConfig: polar,
   );
+}
+
+/// Runs one concentric-donut contract check and renames its failure.
+///
+/// [ConcentricDonutLayoutCalculator] is the authority — the same validator the
+/// render pipeline runs before it allocates ring bands — so the grammar
+/// delegates to it and translates the raw `ArgumentError` into a named
+/// diagnostic, rather than restating (and eventually contradicting) its rules.
+/// [ringIds] is supplied for the series half, where naming the real ring ids is
+/// what makes a misdirected `ringWeights` key actionable.
+void _guardConcentric(
+  void Function() check, {
+  Iterable<String> ringIds = const <String>[],
+}) {
+  try {
+    check();
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidConcentricComposition(
+      error.invalidValue == null
+          ? '${error.message}.'
+          : '${error.message} ("${error.invalidValue}").',
+      ringIds: ringIds,
+    );
+  }
 }
 
 /// The DATA-INDEPENDENT half of the polar composition contract.

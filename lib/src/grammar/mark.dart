@@ -1000,7 +1000,18 @@ final class DonutMark<T> extends RadialMark<T> {
   /// When non-null it is authoritative — including its `centerContent`, which
   /// supersedes the [center] shorthand. Null keeps the [center]-derived
   /// behavior: a `const ConcentricDonutConfig()` (optionally carrying [center])
-  /// for a ring composition, and no config at all for a ring-less donut.
+  /// for a ring composition.
+  ///
+  /// Requires [ring]: without it the mark composes no rings, so every field but
+  /// the center would be discarded silently — that raises
+  /// `GrammarDiagnosticCode.concentricConfigOnRinglessDonut`.
+  ///
+  /// `ringWeights` is keyed by the lowered ring SERIES id, which this mark
+  /// names `'<markId>-<ringKey>'` — NOT by the bare ring value. A mark ided
+  /// `'seasons'` over a `'Winter'` ring is weighted as
+  /// `ringWeights: {'seasons-Winter': 2}`; a key that names no ring raises
+  /// `GrammarDiagnosticCode.invalidConcentricComposition`, which lists the
+  /// real ids.
   final ConcentricDonutConfig? concentric;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.

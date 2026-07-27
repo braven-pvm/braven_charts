@@ -1590,7 +1590,7 @@ void main() {
 
     testWidgets('shape 14: a concentric donut emits geomDonut(ring:) and '
         'round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_donut',
         fragments: <String>[
@@ -1616,6 +1616,14 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // The BYTE-IDENTICAL half of the concentric passthrough: a DEFAULT
+      // composition must still write neither argument, exactly as it did before
+      // `concentric:` existed. `expectRoundTrip` cannot see this — it only
+      // proves the emitted text analyzes and that a HAND-WRITTEN equivalent
+      // rebuilds the same document — so a spurious `concentric:` would sail
+      // through every other assertion in this file.
+      expect(generated.source, isNot(contains('concentric:')));
+      expect(generated.source, isNot(contains('center: DonutCenterContent(')));
     });
 
     testWidgets('shape 15: a single-distinct-ring donut is captured as a plain '
@@ -1656,6 +1664,50 @@ void main() {
                 .build(bravenChartController: controller),
       );
       expect(generated.source, isNot(contains('ring:')));
+    });
+
+    testWidgets('shape 15b: a single-distinct-ring donut drops a NON-DEFAULT '
+        'concentric config with it', (tester) async {
+      // Whether `concentric:` survives depends on the DATA: two ring values
+      // stamp a concentricDonutConfig into the captured document (shape 28
+      // emits it), one ring value does not, because the render source only
+      // stamps it for MORE THAN ONE donut series. The emitted chain is still
+      // document-faithful — it rebuilds the captured chart exactly, which the
+      // round trip below proves — but it is NOT the chain the author wrote, so
+      // the drop is pinned here rather than left accidental.
+      const oneSeason = <Harvest>[
+        Harvest(fruit: 'Apple', count: 42, season: 'All year'),
+        Harvest(fruit: 'Pear', count: 31, season: 'All year'),
+      ];
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_single_ring_custom',
+        fragments: <String>['.geomDonut('],
+        original: (controller) => BravenChart.of(oneSeason)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              concentric: const ConcentricDonutConfig(ringGap: 12),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) =>
+            BravenChart.of(radialGrammarRows.take(2).toList())
+                .geomDonut(
+                  id: 'seasons-All year',
+                  category: (row) => row.category,
+                  value: (row) => row.value,
+                  name: 'All year',
+                  center: const DonutCenterContent(),
+                )
+                .build(bravenChartController: controller),
+      );
+      expect(generated.source, isNot(contains('ring:')));
+      expect(generated.source, isNot(contains('concentric:')));
+      // What DOES survive: the collapsed ring carries the config's center on
+      // itself, so the center summary is reproduced.
+      expect(generated.source, contains('center: DonutCenterContent('));
     });
 
     testWidgets('shape 16: a default-config polar column round-trips', (
@@ -1763,7 +1815,7 @@ void main() {
 
     testWidgets('shape 19: a STYLED concentric donut emits style + '
         'dataLabels and round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_styled',
         fragments: <String>[
@@ -1794,6 +1846,9 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // Per-RING styling is not a COMPOSITION: the config stays default, so it
+      // must not be written (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('shape 20: a STYLED polar column emits style and round-trips', (
@@ -2291,8 +2346,15 @@ void main() {
       // radii was honestly REFUSED. `geomDonut(concentric:)` now carries the
       // whole config, and the emitter reverses it through the config emitter's
       // own `ConcentricDonutConfig` renderer.
+      // EVERY field differs from its default, so a passthrough that quietly
+      // drops one cannot masquerade as success. `_firstRadialMismatch` cannot
+      // catch that for this family — the planner hands the captured config to
+      // `DonutMark.concentric` and lowering hands the same object back, so the
+      // comparison is tautological — which puts the whole guarantee on the
+      // emitted literal asserted below.
       const custom = ConcentricDonutConfig(
         innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.85,
         ringGap: 12,
         order: ConcentricRingOrder.innerToOuter,
         // A ring weight is keyed by the SERIES id, which the concentric
@@ -2309,6 +2371,7 @@ void main() {
           'ring: (row) => row.ring',
           'concentric: ConcentricDonutConfig(',
           'innerRadiusFactor: 0.2',
+          'outerRadiusFactor: 0.85',
           'ringGap: 12',
           'order: ConcentricRingOrder.innerToOuter',
           "'seasons-Winter': 2",
@@ -2423,7 +2486,7 @@ void main() {
 
     testWidgets('a fromMap concentric composition with a donutStyle emits and '
         'round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_fromMap_styled',
         fragments: <String>[
@@ -2459,6 +2522,9 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // An explicit `const ConcentricDonutConfig()` is the DEFAULT composition,
+      // so the passthrough must write nothing (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('a fromMap polar column with a polarStyle emits and '
@@ -2767,6 +2833,9 @@ void main() {
             .build(bravenChartController: controller),
       );
       expect(generated.isComplete, isTrue);
+      // Per-RING series options are not a COMPOSITION: the config stays
+      // default, so it must not be written (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('a polar column with unit + selectionStyle + polarStyle emits '

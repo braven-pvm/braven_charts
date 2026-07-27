@@ -102,6 +102,15 @@ enum GrammarDiagnosticCode {
   /// the same shared center slot.
   conflictingConcentricCenter,
 
+  /// A `ConcentricDonutConfig` was set on a donut geom that declares no `ring`
+  /// channel, so it composes no rings for the config to describe.
+  concentricConfigOnRinglessDonut,
+
+  /// A concentric donut's `ConcentricDonutConfig` cannot lay its rings out —
+  /// inverted or out-of-range pane radii, a negative ring gap, a non-positive
+  /// or misdirected ring weight, or an unrenderable shared center.
+  invalidConcentricComposition,
+
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
   axisOptionOnRadialSpec,
@@ -388,6 +397,40 @@ final class GrammarSpecException implements Exception {
         'center, and put the summary in concentric: '
         'ConcentricDonutConfig(centerContent: ...).',
       );
+
+  /// A `ConcentricDonutConfig` was set on a donut geom with no `ring` channel.
+  ///
+  /// [markId] names the geomDonut mark that carries the misplaced config.
+  factory GrammarSpecException.concentricConfigOnRinglessDonut(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+        'The donut mark "$markId" set concentric but declares no ring channel, '
+        'so it composes no rings for the configuration to describe: the ring '
+        'gap, order, weights, radii and legend mode would all be discarded '
+        'silently. Add ring: to compose a concentric donut, or use '
+        'center: for a single donut\'s summary.',
+      );
+
+  /// A concentric donut composition cannot lay its rings out.
+  ///
+  /// [detail] states the specific clash — the offending radii, ring gap, ring
+  /// weight or center — in the layout calculator's own words, so the grammar
+  /// and the render pipeline cannot describe the same contract differently.
+  /// [ringIds] names the composition's lowered ring series when they are known,
+  /// because `ringWeights` is keyed by those ids and the ring VALUE an author
+  /// writes is not one of them.
+  factory GrammarSpecException.invalidConcentricComposition(
+    String detail, {
+    Iterable<String> ringIds = const <String>[],
+  }) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidConcentricComposition,
+    'The rings of this concentric donut share one pane, so its '
+    'ConcentricDonutConfig must describe a layout every ring fits into. '
+    '$detail'
+    '${ringIds.isEmpty ? '' : " This composition's rings are "
+              '${_list(ringIds)} — geomDonut(ring:) ids each ring '
+              "'<markId>-<ringKey>', and ringWeights is keyed by that id."}',
+  );
 
   /// A Cartesian axis/grid option was set on a radial spec.
   factory GrammarSpecException.axisOptionOnRadialSpec(String option) =>

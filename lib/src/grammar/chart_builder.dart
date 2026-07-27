@@ -484,7 +484,11 @@ final class BravenChart<T> {
   /// [concentric] configures the whole ring composition (ring gap, radial
   /// order, ring weights, legend mode, pane radii) and owns the shared center
   /// through its `centerContent`; [center] is the shorthand for that same slot
-  /// and may only be used when [concentric] is omitted.
+  /// and may only be used when [concentric] is omitted. [concentric] requires
+  /// [ring] — a ring-less donut composes nothing for it to describe — and its
+  /// `ringWeights` is keyed by the lowered ring SERIES id `'<markId>-<ringKey>'`
+  /// (a mark ided `'seasons'` weights its `'Winter'` ring as
+  /// `{'seasons-Winter': 2}`), not by the bare ring value.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,

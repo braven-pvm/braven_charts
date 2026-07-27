@@ -77,6 +77,28 @@ class ConcentricDonutLayout {
 class ConcentricDonutLayoutCalculator {
   const ConcentricDonutLayoutCalculator._();
 
+  /// Validates the half of [config] that is decidable WITHOUT the ring series:
+  /// the pane radii, the ring gap, every ring weight's magnitude and the shared
+  /// center's label / custom value.
+  ///
+  /// Exposed so callers upstream of layout — grammar lowering, artifact
+  /// hydration — can reject an unrenderable composition in their own vocabulary
+  /// instead of letting it surface as a raw `ArgumentError` at widget mount.
+  /// Reusing the calculator's own rules is what stops the two from disagreeing.
+  static void validateConfig(ConcentricDonutConfig config) =>
+      _validateConfig(config);
+
+  /// Validates [series] against [config]: unique ring ids, ring-weight keys
+  /// that name a real ring, and one shared sweep and direction across rings.
+  ///
+  /// The companion to [validateConfig] for the data-DEPENDENT half. Meaningful
+  /// only for a composition the render pipeline actually lays out — that is,
+  /// two or more rings.
+  static void validateSeries(
+    List<DonutChartSeries> series,
+    ConcentricDonutConfig config,
+  ) => _validateSeries(series, config);
+
   /// Validates [series] and [config], then allocates their radial bands.
   static ConcentricDonutLayout calculate({
     required List<DonutChartSeries> series,
