@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Multi-series Chart Grammar polar columns. A plot may now carry several
+  `geomPolar` marks sharing one angular and one radial axis, covering layered,
+  grouped, and stacked compositions, and `PolarMark` gained the advanced
+  channels `columnColor`, `target`, `targetMarkerStyle`, `intervalLow`,
+  `intervalHigh`, `intervalStyle`, and `preset` (including the area-correct
+  rose presentation).
+- Plot-level polar configuration through `PlotSpec.polar` and the
+  `BravenChart.polarConfig()` verb, forwarding a `PolarChartConfig` to every
+  polar mark in the plot. A misplaced `.polarConfig(...)` is diagnosed rather
+  than silently discarded.
+- Complete concentric-donut configuration passthrough through
+  `DonutMark.concentric`, carrying ring gap, radial order, ring weights,
+  legend mode, pane radii, and the shared center into the Grammar, with the
+  ring-series keying rules stated on the API.
+- Six Grammar diagnostics for the compositions the new surface makes
+  expressible: `polarConfigOnNonPolarSpec`, `invalidPolarComposition`,
+  `incompletePolarInterval`, `conflictingConcentricCenter`,
+  `concentricConfigOnRinglessDonut`, and `invalidConcentricComposition`.
+
+### Changed
+
+- Generated Dart source now reverses multi-series polar compositions, the
+  polar advanced channels and presets, `.polarConfig(...)`, and non-default
+  `ConcentricDonutConfig` ring geometry into Grammar chains instead of
+  refusing them. Cartesian, pie, donut, single-series polar, and
+  default-geometry concentric output is unchanged.
+
+### Breaking Changes
+
+- `GrammarDiagnosticCode` gained six enum values (listed under Added). This is
+  potentially source-breaking: an exhaustive `switch` over
+  `GrammarDiagnosticCode` with no default or wildcard case will stop compiling
+  until the new codes are handled. Runtime behavior of existing code is
+  unaffected.
+
+### Notes
+
+- The Grammar of Graphics and fluent authoring APIs (`BravenChart`,
+  `PlotSpec`, marks/channels, and `braven_charts_fluent.dart`) remain Beta /
+  experimental and may change before a stable release. Pin a version if you
+  depend on them.
+
 ## 0.14.0 - 2026-07-27
 
 ### Added
