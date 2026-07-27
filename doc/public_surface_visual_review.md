@@ -1,10 +1,12 @@
 # Public surface visual review
 
-The public-surface gate checks the three pre-release documentation surfaces
+The public-surface gate checks the five pre-release documentation surfaces
 that share release content:
 
 - the current `README.md`, including generated catalog blocks;
-- the showcase Documentation route; and
+- the showcase Documentation route;
+- the generated searchable guide index;
+- a representative generated long-form guide; and
 - the generated dartdoc API home.
 
 It captures each surface at 390 px, 768 px, and 1440 px widths. README media is
@@ -26,6 +28,7 @@ Build the same artifact used by GitHub Pages:
 cd example
 flutter build web --release --base-href /braven_charts/
 cd ..
+dart run tool/public_guides.dart --output=example/build/web/guides
 dart pub global activate dartdoc
 dart pub global run dartdoc --validate-links --output example/build/web/api
 ```
@@ -50,7 +53,9 @@ enhanced images under `build/public-surface-visual/diffs/`.
 
 1. Open `report.json` and require an empty `failures` array.
 2. Review all light captures and the three dark README captures. Check text
-   wrapping, card density, equal media cells, navigation, and content offsets.
+   wrapping, card density, equal media cells, navigation, content offsets,
+   guide search, long-form typography, tables, code blocks, and the guide
+   table of contents.
 3. Treat a changed screenshot as intentional only when the corresponding
    source or generated catalog change explains it. Attach the CI artifact to
    the PR review when visual intent is not obvious from code.
