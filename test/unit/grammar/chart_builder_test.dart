@@ -822,6 +822,19 @@ void main() {
       expect(spec.title, isNull);
       expect(spec.subtitle, isNull);
       expect(spec.showLegend, isNull);
+      expect(spec.polar, isNull);
+    });
+
+    test('.polarConfig sets PlotSpec.polar', () {
+      const polar = PolarChartConfig(
+        pane: PolarPaneConfig(startAngleDegrees: -45),
+      );
+      final spec = BravenChart.of(rows)
+          .geomPolar(category: sampleZone, value: samplePower)
+          .polarConfig(polar)
+          .toSpec();
+
+      expect(spec.polar, same(polar));
     });
   });
 

@@ -20,6 +20,7 @@ import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
+import '../models/polar_chart_config.dart' show PolarChartConfig;
 import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
@@ -106,6 +107,7 @@ final class BravenChart<T> {
     String? subtitle,
     bool? showLegend,
     FacetSpec<T>? facet,
+    PolarChartConfig? polar,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -124,7 +126,8 @@ final class BravenChart<T> {
        _title = title,
        _subtitle = subtitle,
        _showLegend = showLegend,
-       _facet = facet;
+       _facet = facet,
+       _polar = polar;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -159,6 +162,7 @@ final class BravenChart<T> {
   final String? _subtitle;
   final bool? _showLegend;
   final FacetSpec<T>? _facet;
+  final PolarChartConfig? _polar;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -179,6 +183,7 @@ final class BravenChart<T> {
     String? subtitle,
     bool? showLegend,
     FacetSpec<T>? facet,
+    PolarChartConfig? polar,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -199,6 +204,7 @@ final class BravenChart<T> {
     subtitle: subtitle ?? _subtitle,
     showLegend: showLegend ?? _showLegend,
     facet: facet ?? _facet,
+    polar: polar ?? _polar,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -694,6 +700,14 @@ final class BravenChart<T> {
   /// Sets the chart's grid configuration, forwarded to the chart unchanged.
   BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
 
+  /// Sets the plot-level polar configuration shared by every polar mark.
+  ///
+  /// This is where the pane geometry, angular/radial axes, multi-series
+  /// composition and pane-wide thresholds live — one config for the whole
+  /// plot, however many `geomPolar` marks the chain appends. Setting it on a
+  /// chain whose radial geometry is not polar is rejected at lowering.
+  BravenChart<T> polarConfig(PolarChartConfig config) => _copy(polar: config);
+
   /// Sets the chart [title], and optionally a [subtitle] beneath it.
   BravenChart<T> title(String title, {String? subtitle}) =>
       _copy(title: title, subtitle: subtitle);
@@ -739,6 +753,7 @@ final class BravenChart<T> {
       subtitle: _subtitle,
       showLegend: _showLegend,
       facet: _facet,
+      polar: _polar,
     );
   }
 

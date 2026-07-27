@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import '../models/chart_theme.dart' show ChartTheme;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
+import '../models/polar_chart_config.dart' show PolarChartConfig;
 import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
 import 'facet_spec.dart';
@@ -51,6 +52,7 @@ class PlotSpec<T> {
     this.subtitle,
     this.showLegend,
     this.facet,
+    this.polar,
   });
 
   /// Rows every mark's accessors read from.
@@ -114,6 +116,13 @@ class PlotSpec<T> {
   /// `PlotSpec.lower()` / `BravenChart.build()` reject it.
   final FacetSpec<T>? facet;
 
+  /// Optional plot-level polar configuration, shared across every polar mark.
+  ///
+  /// Null lowers to `const PolarChartConfig()`. Non-null is honored only when
+  /// the spec's radial marks are all [PolarMark]s; setting it on any other
+  /// spec raises `GrammarDiagnosticCode.polarConfigOnNonPolarSpec`.
+  final PolarChartConfig? polar;
+
   /// A copy of this spec with [facet] cleared and everything else identical.
   ///
   /// `BravenFacetPlot` lowers each panel from a facet-cleared copy, so the
@@ -130,6 +139,7 @@ class PlotSpec<T> {
     title: title,
     subtitle: subtitle,
     showLegend: showLegend,
+    polar: polar,
   );
 
   /// Whether any mark is a radial geometry.
@@ -153,7 +163,8 @@ class PlotSpec<T> {
           other.title == title &&
           other.subtitle == subtitle &&
           other.showLegend == showLegend &&
-          other.facet == facet;
+          other.facet == facet &&
+          other.polar == polar;
 
   @override
   int get hashCode => Object.hash(
@@ -169,6 +180,7 @@ class PlotSpec<T> {
     subtitle,
     showLegend,
     facet,
+    polar,
   );
 
   @override
