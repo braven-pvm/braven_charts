@@ -23,6 +23,16 @@ void main() {
     expect(index, contains('data-search='));
     expect(first, contains('id="same-heading"'));
     expect(first, contains('id="same-heading-2"'));
+    expect(
+      first,
+      contains(
+        'class="table-of-contents" aria-labelledby="toc-title" tabindex="0"',
+      ),
+    );
+    expect(first, contains('max-height: calc(100vh - 112px);'));
+    expect(first, contains('overflow-y: auto;'));
+    expect(first, contains('max-height: none;'));
+    expect(first, contains('overflow-y: visible;'));
     expect(first, contains('https://docs.example/guides/second/#target'));
     expect(
       first,

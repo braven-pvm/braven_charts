@@ -46,6 +46,7 @@ VIEWPORTS = {
     "tablet": (768, 1024),
     "desktop": (1440, 1000),
 }
+SHORT_DESKTOP_GUIDE_VIEWPORT = (1440, 800)
 SURFACES = {
     "readme": "/preview/readme.html",
     "documentation": "/braven_charts/?page=docs",
@@ -636,12 +637,17 @@ const search = document.querySelector('#guide-search');
 const searchLabel = document.querySelector('label[for="guide-search"]');
 const liveRegion = document.querySelector('#search-status[aria-live="polite"]');
 const article = rect('.guide-content');
+const tocNode = document.querySelector('.table-of-contents');
 const toc = rect('.table-of-contents');
+const tocStyle = tocNode ? getComputedStyle(tocNode) : null;
+const tocScrollable = tocNode
+  ? tocNode.scrollHeight > tocNode.clientHeight + 1
+  : false;
 const sourceLink = document.querySelector('.source-link a[href]');
 const issues = [];
 if (!main) issues.push('missing guide main content');
 if (!header) issues.push('missing guide site header');
-if (header && main && header.bottom > main.top + 1) {
+if (header && main && window.scrollY < 2 && header.bottom > main.top + 1) {
   issues.push('guide header overlaps main content');
 }
 if (document.body.classList.contains('guide-index')) {
@@ -667,8 +673,51 @@ if (document.body.classList.contains('guide-detail')) {
       window.innerWidth >= 980) {
     issues.push('guide table of contents overlaps article');
   }
+  if (tocNode && window.innerWidth > 860) {
+    if (tocNode.tabIndex < 0) {
+      issues.push('desktop guide table of contents is not keyboard-focusable');
+    }
+    if (toc && toc.top <= 90 && toc.bottom > window.innerHeight - 16) {
+      issues.push('sticky guide table of contents extends below the viewport');
+    }
+    if (tocScrollable) {
+      if (!tocStyle || !['auto', 'scroll'].includes(tocStyle.overflowY)) {
+        issues.push('long desktop guide table of contents is not scrollable');
+      }
+      const originalScrollTop = tocNode.scrollTop;
+      tocNode.focus({preventScroll: true});
+      if (document.activeElement !== tocNode) {
+        issues.push('desktop guide table of contents cannot receive focus');
+      }
+      tocNode.scrollTop = tocNode.scrollHeight;
+      if (tocNode.scrollTop <= originalScrollTop) {
+        issues.push('desktop guide table of contents cannot be scrolled');
+      }
+      tocNode.scrollTop = originalScrollTop;
+      tocNode.blur();
+    }
+  }
+  if (tocNode && window.innerWidth <= 860) {
+    if (tocStyle && tocStyle.overflowY !== 'visible') {
+      issues.push('responsive guide table of contents creates a nested scroll');
+    }
+    if (tocNode.scrollHeight > tocNode.clientHeight + 1) {
+      issues.push('responsive guide table of contents clips its links');
+    }
+  }
 }
-return {main, header, search: Boolean(search), article, toc, issues};
+return {
+  main,
+  header,
+  search: Boolean(search),
+  article,
+  toc,
+  tocClientHeight: tocNode ? tocNode.clientHeight : null,
+  tocScrollHeight: tocNode ? tocNode.scrollHeight : null,
+  tocOverflowY: tocStyle ? tocStyle.overflowY : null,
+  tocTabIndex: tocNode ? tocNode.tabIndex : null,
+  issues
+};
 """
 
 
@@ -780,6 +829,52 @@ def _capture(
                 failures.append(
                     f"readme-dark/{viewport_name}: timed out loading {dark_url}"
                 )
+
+        width, height = SHORT_DESKTOP_GUIDE_VIEWPORT
+        surface = "guide-detail"
+        viewport_name = "desktop-short"
+        _set_viewport(driver, width, height)
+        url = f"{base_url}{SURFACES[surface]}"
+        try:
+            driver.get(url)
+            _wait_for_surface(driver, surface, timeout_seconds)
+            geometry = _geometry(driver, surface)
+            driver.execute_script(
+                """
+                document.documentElement.style.scrollBehavior = 'auto';
+                const layout = document.querySelector('.guide-layout');
+                if (layout) window.scrollTo(0, layout.offsetTop);
+                """
+            )
+            geometry["guide"] = driver.execute_script(GUIDE_GEOMETRY_SCRIPT)
+            issues = _issues_for_geometry(surface, geometry)
+            driver.execute_script(
+                """
+                const toc = document.querySelector('.table-of-contents');
+                if (toc) toc.scrollTop = toc.scrollHeight;
+                """
+            )
+            screenshot = output_dir / f"{surface}-{viewport_name}.png"
+            screenshot.write_bytes(driver.get_screenshot_as_png())
+            captures.append(
+                {
+                    "surface": surface,
+                    "viewport": viewport_name,
+                    "width": width,
+                    "height": height,
+                    "url": url,
+                    "screenshot": screenshot.name,
+                    "geometry": geometry,
+                    "issues": issues,
+                }
+            )
+            failures.extend(
+                f"{surface}/{viewport_name}: {issue}" for issue in issues
+            )
+        except TimeoutException:
+            failures.append(
+                f"{surface}/{viewport_name}: timed out loading {url}"
+            )
     finally:
         driver.quit()
     return captures, failures

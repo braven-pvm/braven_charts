@@ -649,7 +649,7 @@ String _guideHtml({
   final tocHtml = toc.isEmpty
       ? ''
       : '''
-<nav class="table-of-contents" aria-labelledby="toc-title">
+<nav class="table-of-contents" aria-labelledby="toc-title" tabindex="0">
   <p id="toc-title" class="toc-title">On this page</p>
   <ol>
     ${toc.map((heading) => '<li class="toc-level-${heading.level}"><a href="#${heading.id}">${_escape(heading.title)}</a></li>').join()}
@@ -773,7 +773,8 @@ body {
 }
 a { color: #075fb7; text-underline-offset: 3px; }
 a:hover { color: #034988; }
-a:focus-visible, button:focus-visible, input:focus-visible {
+a:focus-visible, button:focus-visible, input:focus-visible,
+.table-of-contents:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
@@ -892,9 +893,14 @@ button, .action-link {
 .table-of-contents {
   position: sticky;
   top: 88px;
+  max-height: calc(100vh - 112px);
   margin-top: 48px;
   padding-right: 16px;
+  overflow-y: auto;
   border-right: 1px solid var(--border);
+  scrollbar-color: var(--border) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 .toc-title { margin: 0 0 12px; font-weight: 800; }
 .table-of-contents ol { margin: 0; padding: 0; list-style: none; }
@@ -947,7 +953,17 @@ button, .action-link {
   .page-shell { width: min(100% - 32px, 760px); padding-top: 40px; }
   .guide-layout { grid-template-columns: 1fr; gap: 16px; }
   .guide-content { order: 1; }
-  .table-of-contents { order: 2; position: static; margin-top: 32px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; }
+  .table-of-contents {
+    order: 2;
+    position: static;
+    max-height: none;
+    margin-top: 32px;
+    padding: 16px;
+    overflow-y: visible;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    scrollbar-gutter: auto;
+  }
 }
 @media (max-width: 600px) {
   body { font-size: 17px; }
