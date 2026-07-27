@@ -688,12 +688,32 @@ final List<PolarPairRow> polarPairRows = <PolarPairRow>[
 //
 // A hand copy has exactly one failure mode: the page is edited and nothing
 // here notices, so the gate keeps passing about a chart the showcase no longer
-// mounts. `group('showcase transcription sync guard')` closes that by parsing
-// the page's own source and comparing it to the constants below — the presentation
-// enum, every `<String, num>` value map (contents AND key order, which the
-// palette cycling depends on) and every transcribed swatch. Add a presentation,
-// rename one, or nudge a number on the page and that guard goes red naming the
-// drift; it is what keeps the sentence above true rather than merely historic.
+// mounts. Two things close that, and it is worth being exact about which does
+// what because they cover different halves of the copy:
+//
+//   * `group('showcase transcription sync guard')` parses the page's own
+//     source and compares it to the constants below — the presentation enum,
+//     every `<String, num>` value map (contents AND key order, which the
+//     palette cycling depends on) and every transcribed swatch.
+//   * [expectShowcaseKnobsMatchPage], which every polar acceptance case runs
+//     before it asserts anything about emission, resolves that presentation's
+//     KNOBS out of the page's two presentation methods and compares them to
+//     the `PolarChartConfig` and `PolarColumnStyle` the case actually mounted.
+//     That is the half the data guard never covered: pane geometry, the
+//     angular span, axis paddings and label styling, composition, column
+//     styling, gradient and shadow, the selection style, and the threshold,
+//     target-marker and interval styling.
+//
+// Add a presentation, rename one, nudge a number in a data map or move a knob
+// on the page, and one of the two goes red naming the drift; together they are
+// what keeps the sentence above true rather than merely historic.
+//
+// What is still a bare hand copy, stated so the gate is not read as wider than
+// it is: WHICH value map feeds which series and which channel (swap the page's
+// `_values` and `_comparisonValues` and both guards stay green), the series
+// ids, names and units, the per-series `copyWith` on `layered`'s reference
+// layer, and the palette a presentation SELECTS (the swatches are held to the
+// page, the per-presentation `_palette =` choice is not).
 // ---------------------------------------------------------------------------
 
 const showcaseStandardValues = <String, num>{
@@ -1135,6 +1155,621 @@ List<Color> showcasePaletteSwatch(String source, String name) {
   return colors;
 }
 
+// ---------------------------------------------------------------------------
+// KNOB SYNC readers — how the acceptance cases' per-presentation LITERALS are
+// held to the page.
+//
+// The readers above cover the page's DATA: its `<String, num>` maps and its
+// palette swatches. They say nothing about the other half of what each
+// acceptance case copies out of the page — the pane radii, the angular span,
+// the axis paddings and label styling, the composition mode, the column
+// styling, the selection style and (for two presentations) the threshold,
+// target-marker and interval styling. Those are not declarations; they are
+// plain field assignments spread across `_applyAuthoredPresentationStyle` and
+// `_applyPresentation`, and a guard that stopped at the data let every one of
+// them drift silently. (Verified, not assumed: with only the data guard in
+// place, changing the page's `_outerRadius` for `standard` from 0.84 to 0.5
+// left the whole suite green while the `standard` acceptance case went on
+// mounting 0.84.)
+//
+// So these readers reconstruct, from the page's own source, the value a knob
+// RESOLVES to for one presentation — field initialisers first, then each
+// method's pre-switch statements, then that presentation's own case, in the
+// order the page itself applies them. [expectShowcaseKnobsMatchPage] then
+// compares the resolved values against the objects the acceptance case
+// actually MOUNTED. There is deliberately no second transcription table in
+// between: page source is compared to live config, so there is no third thing
+// for the two to drift apart from.
+//
+// The contract is narrow and worth stating: these readers know the page's
+// ASSIGNMENT SYNTAX, not its meaning. A knob the page computes instead of
+// assigning a literal cannot be followed, and every reader fails loudly naming
+// the knob it could not resolve rather than returning nothing.
+// ---------------------------------------------------------------------------
+
+/// The interior of the `{…}` block whose opening brace is at [openIndex].
+///
+/// Brace-matched over [blankStringLiterals] so a brace inside a string literal
+/// cannot close the block early.
+String blockBody(String source, int openIndex) {
+  final scan = blankStringLiterals(source);
+  var depth = 0;
+  for (var index = openIndex; index < scan.length; index++) {
+    if (scan[index] == '{') depth++;
+    if (scan[index] == '}') {
+      depth--;
+      if (depth == 0) return source.substring(openIndex + 1, index);
+    }
+  }
+  fail('unterminated block at offset $openIndex of the showcase page');
+}
+
+/// The body of the method whose declaration begins with [header].
+///
+/// The body opens at the first `) {` after the header rather than the first
+/// `{`: `_applyPresentation` takes a named parameter, so its first brace opens
+/// the PARAMETER group and a naive scan would return the parameter list.
+String pageMethodBody(String source, String header) {
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final open = source.indexOf(') {', start);
+  expect(open, isNonNegative, reason: 'no body for "$header"');
+  return blockBody(source, open + 2);
+}
+
+/// The statements [body] runs for [presentation], or its statements BEFORE the
+/// `switch (presentation)` when [presentation] is null.
+///
+/// Both presentation methods are a shared prelude followed by one case per
+/// presentation, and the prelude is load-bearing: five of the eight
+/// presentations never assign `_valueLabelColor`, so its resolved value IS the
+/// prelude's `null`.
+String presentationSection(String body, String? presentation) {
+  const header = 'switch (presentation) {';
+  final switchStart = body.indexOf(header);
+  expect(
+    switchStart,
+    isNonNegative,
+    reason: 'no "$header" in a showcase presentation method',
+  );
+  if (presentation == null) return body.substring(0, switchStart);
+  final cases = blockBody(body, switchStart + header.length - 1);
+  final marker = 'case _PolarPresentation.$presentation:';
+  final start = cases.indexOf(marker);
+  expect(start, isNonNegative, reason: 'no "$marker" in the showcase page');
+  final next = cases.indexOf('case _PolarPresentation.', start + marker.length);
+  return cases.substring(start + marker.length, next < 0 ? cases.length : next);
+}
+
+/// Every `_field = <expression>;` statement in [section], later assignments
+/// winning, with each expression whitespace-collapsed and `const ` stripped.
+///
+/// `=(?!=)` keeps a comparison (`presentation == _PolarPresentation.stacked`)
+/// from being read as an assignment to its left operand.
+Map<String, String> pageAssignments(String section) => <String, String>{
+  for (final match in RegExp(
+    r'(_[A-Za-z0-9_]+)\s*=(?!=)\s*([^;]*);',
+  ).allMatches(blankStringLiterals(section)))
+    match.group(1)!: normalisedExpression(match.group(2)!),
+};
+
+/// Every `<Type> _field = <expression>;` FIELD declaration in [source].
+///
+/// Anchored at exactly two spaces of indent, which is where a class member
+/// sits and a statement inside a method body never does. These are the resting
+/// values for the knobs neither presentation method assigns — the selection
+/// style is entirely field initialisers.
+Map<String, String> pageFieldInitialisers(String source) => <String, String>{
+  for (final match in RegExp(
+    r'^  [A-Za-z][^\n=;]*?\b(_[A-Za-z0-9_]+) = ([^;]*);',
+    multiLine: true,
+  ).allMatches(blankStringLiterals(source)))
+    match.group(1)!: normalisedExpression(match.group(2)!),
+};
+
+/// [expression] on one line, with a leading `const ` removed.
+String normalisedExpression(String expression) {
+  final collapsed = expression.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return collapsed.startsWith('const ')
+      ? collapsed.substring('const '.length)
+      : collapsed;
+}
+
+/// Every knob [presentation] resolves to, in the order the page applies them.
+///
+/// `_applyPresentation` calls `_applyAuthoredPresentationStyle` first and then
+/// runs its own switch, so its assignments win — which is why the merge order
+/// below is not alphabetical or arbitrary but the page's own execution order.
+Map<String, String> showcaseAuthoredKnobs(String source, String presentation) {
+  final styling = pageMethodBody(
+    source,
+    'void _applyAuthoredPresentationStyle(',
+  );
+  final applying = pageMethodBody(source, 'void _applyPresentation(');
+  return <String, String>{
+    ...pageFieldInitialisers(source),
+    ...pageAssignments(presentationSection(styling, null)),
+    ...pageAssignments(presentationSection(styling, presentation)),
+    ...pageAssignments(presentationSection(applying, null)),
+    ...pageAssignments(presentationSection(applying, presentation)),
+  };
+}
+
+/// The resolved expression for [knob], failing when the page never assigns it.
+String pageKnob(Map<String, String> knobs, String knob) {
+  final value = knobs[knob];
+  expect(
+    value,
+    isNotNull,
+    reason:
+        'the showcase page no longer assigns `$knob` anywhere the knob guard '
+        'can follow — a field initialiser or one of the two presentation '
+        'methods. If the knob was RENAMED, rename it here; if the page now '
+        'COMPUTES it, the guard cannot follow it and the acceptance case that '
+        'transcribes it needs another way to stay honest. Deleting the check '
+        're-opens the drift it exists to stop.',
+  );
+  return value!;
+}
+
+/// [knob] as a double.
+double pageDouble(Map<String, String> knobs, String knob) {
+  final value = double.tryParse(pageKnob(knobs, knob));
+  expect(
+    value,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer a numeric literal '
+        '("${pageKnob(knobs, knob)}"), so the knob guard cannot compare it.',
+  );
+  return value!;
+}
+
+/// [knob] as an int.
+int pageInt(Map<String, String> knobs, String knob) {
+  final value = int.tryParse(pageKnob(knobs, knob));
+  expect(
+    value,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer an integer literal '
+        '("${pageKnob(knobs, knob)}"), so the knob guard cannot compare it.',
+  );
+  return value!;
+}
+
+/// [knob] as a bool.
+bool pageBool(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  expect(
+    value,
+    anyOf(equals('true'), equals('false')),
+    reason:
+        '`$knob` on the showcase page is no longer a boolean literal, so the '
+        'knob guard cannot compare it.',
+  );
+  return value == 'true';
+}
+
+/// [knob] as a bool, additionally resolving the page's
+/// `presentation == _PolarPresentation.x` form against [presentation].
+///
+/// The three reference-geometry flags are switched on in the shared prelude by
+/// comparing the presentation rather than by a literal, and each is then
+/// re-asserted as `true` in the case that owns it. Reading only the literal
+/// form would leave the guard unable to resolve them for the other six.
+bool pagePresentationFlag(
+  Map<String, String> knobs,
+  String knob,
+  String presentation,
+) {
+  final value = pageKnob(knobs, knob);
+  if (value == 'true' || value == 'false') return value == 'true';
+  final match = RegExp(
+    r'^presentation == _PolarPresentation\.([A-Za-z0-9_]+)$',
+  ).firstMatch(value);
+  expect(
+    match,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is neither a boolean literal nor a '
+        'comparison against one presentation ("$value"), so the knob guard '
+        'cannot resolve whether this presentation authors it.',
+  );
+  return match!.group(1) == presentation;
+}
+
+/// [knob] as a `Color`, or null where the page leaves it unset.
+Color? pageColor(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  if (value == 'null') return null;
+  final match = RegExp(r'^Color\(0x([0-9A-Fa-f]{8})\)$').firstMatch(value);
+  expect(
+    match,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer a `Color(0x…)` literal '
+        '("$value"), so the knob guard cannot compare it.',
+  );
+  return Color(int.parse(match!.group(1)!, radix: 16));
+}
+
+/// [knob] as a `Color` the page authors EXPLICITLY.
+///
+/// The page reads several colours through a `_effective…` getter that falls
+/// back to the live theme. Those getters are outside what this guard can
+/// resolve, so a knob that went null would silently compare a transcribed
+/// literal against a theme colour; this refuses instead.
+Color pageAuthoredColor(Map<String, String> knobs, String knob) {
+  final value = pageColor(knobs, knob);
+  expect(
+    value,
+    isNotNull,
+    reason:
+        'the showcase page no longer authors `$knob` for this presentation, so '
+        'the chart now takes that colour from the live theme. The acceptance '
+        'case still mounts a literal, which is drift the moment the theme '
+        'moves.',
+  );
+  return value!;
+}
+
+/// [knob] as a qualified enum-ish token, e.g. `FontWeight.w500`.
+///
+/// Compared against the mounted value's `toString()`, which is that same text
+/// for both Dart enums and `FontWeight`.
+String pageToken(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  expect(
+    value,
+    matches(r'^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z0-9_]+$'),
+    reason:
+        '`$knob` on the showcase page is no longer a `Type.value` token '
+        '("$value"), so the knob guard cannot compare it.',
+  );
+  return value;
+}
+
+/// The dash pattern `_PolarLinePattern.[name]` carries on the page.
+List<double> pageLinePattern(String source, String name) {
+  final header = '$name(';
+  final enumStart = source.indexOf('enum _PolarLinePattern {');
+  expect(
+    enumStart,
+    isNonNegative,
+    reason: 'no `_PolarLinePattern` on the page',
+  );
+  final start = source.indexOf(header, enumStart);
+  expect(start, isNonNegative, reason: 'no `_PolarLinePattern.$name` value');
+  final open = source.indexOf('<double>[', start);
+  final close = source.indexOf(']', open);
+  expect(
+    open,
+    isNonNegative,
+    reason: 'no pattern on `_PolarLinePattern.$name`',
+  );
+  return <double>[
+    for (final match in RegExp(
+      r'-?\d+(?:\.\d+)?',
+    ).allMatches(source.substring(open + '<double>['.length, close)))
+      double.parse(match.group(0)!),
+  ];
+}
+
+/// Why a knob mismatch matters, said once.
+String knobReason(String presentation, String knob) =>
+    'the "$presentation" acceptance case mounts a different `$knob` than the '
+    'showcase page authors for that presentation, so the gate is proving '
+    'emission for a chart the page does not build. Re-transcribe the case from '
+    'the page (or fix the page, if the case is the correct one) — do not relax '
+    'this comparison.';
+
+/// Asserts the chart just mounted for [presentation] carries the knob values
+/// `polar_column_page.dart` itself authors for it.
+///
+/// This is the half of the sync guard that covers the acceptance cases'
+/// LITERALS. It reads the page's source, resolves that presentation's knobs,
+/// and compares them to the live `PolarChartConfig` and `PolarColumnStyle` in
+/// the widget tree — so the only way to pass is for the case's hand copy to
+/// still say what the page says.
+void expectShowcaseKnobsMatchPage(WidgetTester tester, String presentation) {
+  final page = readRepoFile(showcasePolarPagePath);
+  final knobs = showcaseAuthoredKnobs(page, presentation);
+  final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+  final config = chart.polarChartConfig;
+  final seriesList = chart.series ?? const <ChartSeries>[];
+  expect(
+    seriesList,
+    isNotEmpty,
+    reason: 'the "$presentation" acceptance case mounted no series',
+  );
+  // The page builds ONE `PolarColumnStyle` and one `RadialSelectionStyle` and
+  // hands the same instance to every series it returns, with a single
+  // exception: `layered`'s reference layer takes a `copyWith`. That copy is the
+  // FIRST series there, so the LAST series carries the shared style in all
+  // eight presentations.
+  final series = seriesList.last as PolarColumnChartSeries;
+  final style = series.polarStyle;
+  final selection = series.selectionStyle;
+
+  for (final (knob, mounted) in <(String, double)>[
+    ('_startAngle', config.pane.startAngleDegrees),
+    ('_sweepAngle', config.pane.sweepAngleDegrees),
+    ('_innerRadius', config.pane.innerRadiusFactor),
+    ('_outerRadius', config.pane.outerRadiusFactor),
+    ('_innerPadding', config.angularAxis.innerPadding),
+    ('_outerPadding', config.angularAxis.outerPadding),
+    ('_categoryLabelOffset', config.angularAxis.labelOffset),
+    ('_categoryLabelSize', config.angularAxis.labelStyle.fontSize ?? -1),
+    ('_radialLabelOffset', config.radialAxis.labelOffset),
+    ('_radialLabelAngleOffset', config.radialAxis.labelAngleOffsetDegrees),
+    ('_radialLabelSize', config.radialAxis.labelStyle.fontSize ?? -1),
+    ('_groupInnerPadding', config.composition.groupInnerPadding),
+    ('_cornerRadius', style.cornerRadius),
+    ('_opacity', style.opacity),
+    ('_columnBorderWidth', style.borderWidth),
+    ('_valueLabelRadialPosition', style.dataLabelRadialPosition),
+    ('_valueLabelSize', style.dataLabelStyle.fontSize ?? -1),
+    ('_selectionScale', selection.liftScale),
+    ('_selectionOffset', selection.liftOffset),
+    ('_selectionBackdropBlur', selection.backdropBlur),
+  ]) {
+    expect(
+      mounted,
+      pageDouble(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, int)>[
+    ('_maximumAngularLabels', config.angularAxis.maximumVisibleLabels),
+    ('_maximumAngularGridLines', config.angularAxis.maximumVisibleGridLines),
+    ('_tickCount', config.radialAxis.tickCount),
+    ('_maximumDataLabels', style.maximumVisibleDataLabels),
+  ]) {
+    expect(
+      mounted,
+      pageInt(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, bool)>[
+    ('_clockwise', config.pane.clockwise),
+    ('_showAngularLabels', config.angularAxis.showLabels),
+    ('_showAngularGrid', config.angularAxis.showGridLines),
+    ('_showRadialLabels', config.radialAxis.showLabels),
+    ('_showRadialGrid', config.radialAxis.showGridLines),
+    ('_showValues', style.showDataLabels),
+  ]) {
+    expect(
+      mounted,
+      pageBool(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, Object)>[
+    ('_scaleMode', config.radialAxis.scaleMode as Object),
+    ('_radialLabelPosition', config.radialAxis.labelPosition),
+    ('_compositionMode', config.composition.mode),
+    ('_animationMode', style.animationMode),
+    ('_selectionEffect', selection.effect),
+    (
+      '_categoryLabelWeight',
+      config.angularAxis.labelStyle.fontWeight as Object,
+    ),
+    ('_radialLabelWeight', config.radialAxis.labelStyle.fontWeight as Object),
+    ('_valueLabelWeight', style.dataLabelStyle.fontWeight as Object),
+  ]) {
+    expect(
+      mounted.toString(),
+      pageToken(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, Color?)>[
+    ('_categoryLabelColor', config.angularAxis.labelStyle.color),
+    ('_radialLabelColor', config.radialAxis.labelStyle.color),
+    ('_valueLabelColor', style.dataLabelStyle.color),
+  ]) {
+    expect(
+      mounted,
+      pageColor(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+  expect(
+    style.borderColor,
+    pageAuthoredColor(knobs, '_columnBorderColor'),
+    reason: knobReason(presentation, '_columnBorderColor'),
+  );
+
+  // `_cornerRadiusMode` is the one knob the page COMPUTES rather than assigns
+  // per case, so the guard pins the RULE and derives the expected mode from it
+  // — otherwise a rewritten rule would silently stop being what the eight
+  // acceptance cases assume.
+  expect(
+    pageKnob(knobs, '_cornerRadiusMode'),
+    'presentation == _PolarPresentation.stacked '
+    '? PolarColumnCornerRadiusMode.stackExterior '
+    ': PolarColumnCornerRadiusMode.outerEnd',
+    reason:
+        'the showcase page no longer derives `_cornerRadiusMode` from the '
+        'stacked presentation alone, so the acceptance cases\' transcribed '
+        'corner-radius modes are no longer what the page builds.',
+  );
+  expect(
+    style.cornerRadiusMode,
+    presentation == 'stacked'
+        ? PolarColumnCornerRadiusMode.stackExterior
+        : PolarColumnCornerRadiusMode.outerEnd,
+    reason: knobReason(presentation, '_cornerRadiusMode'),
+  );
+
+  final showGradient = pageBool(knobs, '_showGradient');
+  expect(
+    style.gradient != null,
+    showGradient,
+    reason: knobReason(presentation, '_showGradient'),
+  );
+  if (style.gradient case final gradient?) {
+    expect(
+      gradient.startColor,
+      pageColor(knobs, '_gradientStartColor'),
+      reason: knobReason(presentation, '_gradientStartColor'),
+    );
+    expect(
+      gradient.endColor,
+      pageColor(knobs, '_gradientEndColor'),
+      reason: knobReason(presentation, '_gradientEndColor'),
+    );
+    expect(
+      gradient.startLightnessShift,
+      pageDouble(knobs, '_gradientStartLightness'),
+      reason: knobReason(presentation, '_gradientStartLightness'),
+    );
+    expect(
+      gradient.endLightnessShift,
+      pageDouble(knobs, '_gradientEndLightness'),
+      reason: knobReason(presentation, '_gradientEndLightness'),
+    );
+  }
+
+  final showShadow = pageBool(knobs, '_showColumnShadow');
+  expect(
+    style.shadow != const PolarColumnShadowStyle(),
+    showShadow,
+    reason: knobReason(presentation, '_showColumnShadow'),
+  );
+  if (showShadow) {
+    expect(
+      style.shadow.color,
+      pageColor(knobs, '_columnShadowColor'),
+      reason: knobReason(presentation, '_columnShadowColor'),
+    );
+    expect(
+      style.shadow.blurRadius,
+      pageDouble(knobs, '_columnShadowBlur'),
+      reason: knobReason(presentation, '_columnShadowBlur'),
+    );
+    expect(
+      style.shadow.spreadRadius,
+      pageDouble(knobs, '_columnShadowSpread'),
+      reason: knobReason(presentation, '_columnShadowSpread'),
+    );
+    expect(
+      style.shadow.offset,
+      Offset(
+        pageDouble(knobs, '_columnShadowOffsetX'),
+        pageDouble(knobs, '_columnShadowOffsetY'),
+      ),
+      reason: knobReason(presentation, '_columnShadowOffsetY'),
+    );
+    expect(
+      style.shadow.opacity,
+      pageDouble(knobs, '_columnShadowOpacity'),
+      reason: knobReason(presentation, '_columnShadowOpacity'),
+    );
+  }
+
+  // The two presentations that author reference geometry. Their marker and
+  // threshold literals are transcribed exactly like the rest, so they are held
+  // to the page exactly like the rest.
+  if (pagePresentationFlag(knobs, '_showThreshold', presentation)) {
+    expect(
+      config.thresholds.length,
+      1,
+      reason: knobReason(presentation, '_showThreshold'),
+    );
+    final threshold = config.thresholds.single;
+    expect(
+      threshold.value,
+      pageDouble(knobs, '_thresholdValue'),
+      reason: knobReason(presentation, '_thresholdValue'),
+    );
+    expect(
+      threshold.width,
+      pageDouble(knobs, '_thresholdWidth'),
+      reason: knobReason(presentation, '_thresholdWidth'),
+    );
+    expect(
+      threshold.color,
+      pageAuthoredColor(knobs, '_thresholdColor'),
+      reason: knobReason(presentation, '_thresholdColor'),
+    );
+    expect(
+      threshold.dashPattern,
+      pageLinePattern(
+        page,
+        pageToken(knobs, '_thresholdPattern').split('.').last,
+      ),
+      reason: knobReason(presentation, '_thresholdPattern'),
+    );
+  } else {
+    expect(
+      config.thresholds,
+      isEmpty,
+      reason: knobReason(presentation, '_showThreshold'),
+    );
+  }
+  if (pagePresentationFlag(knobs, '_showTargets', presentation)) {
+    expect(
+      series.targetMarkerStyle.color,
+      pageAuthoredColor(knobs, '_targetColor'),
+      reason: knobReason(presentation, '_targetColor'),
+    );
+    expect(
+      series.targetMarkerStyle.width,
+      pageDouble(knobs, '_targetMarkerWidth'),
+      reason: knobReason(presentation, '_targetMarkerWidth'),
+    );
+    expect(
+      series.targetMarkerStyle.lengthFactor,
+      pageDouble(knobs, '_targetMarkerLength'),
+      reason: knobReason(presentation, '_targetMarkerLength'),
+    );
+    expect(
+      series.targetMarkerStyle.opacity,
+      pageDouble(knobs, '_targetOpacity'),
+      reason: knobReason(presentation, '_targetOpacity'),
+    );
+  }
+  if (pagePresentationFlag(knobs, '_showIntervals', presentation)) {
+    expect(
+      series.intervalStyle.display.toString(),
+      pageToken(knobs, '_intervalDisplay'),
+      reason: knobReason(presentation, '_intervalDisplay'),
+    );
+    expect(
+      series.intervalStyle.color,
+      pageAuthoredColor(knobs, '_intervalColor'),
+      reason: knobReason(presentation, '_intervalColor'),
+    );
+    expect(
+      series.intervalStyle.width,
+      pageDouble(knobs, '_intervalWidth'),
+      reason: knobReason(presentation, '_intervalWidth'),
+    );
+    expect(
+      series.intervalStyle.capLengthFactor,
+      pageDouble(knobs, '_intervalCapLength'),
+      reason: knobReason(presentation, '_intervalCapLength'),
+    );
+    expect(
+      series.intervalStyle.bandLengthFactor,
+      pageDouble(knobs, '_intervalBandLength'),
+      reason: knobReason(presentation, '_intervalBandLength'),
+    );
+    expect(
+      series.intervalStyle.opacity,
+      pageDouble(knobs, '_intervalOpacity'),
+      reason: knobReason(presentation, '_intervalOpacity'),
+    );
+  }
+}
+
 /// The eight `_PolarPresentation` values, in the page's declaration order, that
 /// the acceptance gate below covers one `testWidgets` each.
 ///
@@ -1300,6 +1935,14 @@ ChartDocumentSnapshot patchedSnapshot(
 /// the chart and asserts on the generator's own verdict: a chain was written,
 /// nothing was blocked, and [ChartGeneratedSource.isComplete] is true.
 ///
+/// The "the showcase page actually mounts" half of that question is not free —
+/// every caller's config and style literals are a hand copy of
+/// `polar_column_page.dart`. So for the eight polar presentations this first
+/// runs [expectShowcaseKnobsMatchPage], which resolves that presentation's
+/// knobs out of the page's own source and compares them to the widget in the
+/// tree. Without it a case could emit a flawless chain for a chart the page
+/// stopped building, which is the one thing this gate must not do.
+///
 /// The generator's internal proof carries part of the fidelity question and it
 /// is worth being exact about which part. It re-lowers the chain it is about to
 /// write, so the PLAN and the re-lowered SERIES are proven: a channel the mark
@@ -1328,6 +1971,14 @@ Future<ChartGeneratedSource> expectShowcaseEmits(
   Iterable<String> fragments = const <String>[],
 }) async {
   final snapshot = await snapshotOf(tester, chart);
+  // Before anything is asserted about the EMISSION, assert the thing that was
+  // mounted is the thing the showcase mounts. Every polar case's config and
+  // style literals are a hand copy of `polar_column_page.dart`, and an
+  // acceptance gate that emits beautifully for a chart the page stopped
+  // building proves nothing at all.
+  if (showcasePolarPresentations.contains(presentation)) {
+    expectShowcaseKnobsMatchPage(tester, presentation);
+  }
   final generated = generateGrammar(snapshot);
   expect(
     emittedChain(generated),
@@ -3477,15 +4128,23 @@ void main() {
   });
 
   // =========================================================================
-  // SYNC GUARD — the acceptance gate's fixtures are a HAND TRANSCRIPTION.
+  // SYNC GUARD (DECLARATIONS) — the acceptance gate's fixtures are a HAND
+  // TRANSCRIPTION.
   //
   // Everything the gate below claims is a claim about the SHOWCASE, and it is
   // made through constants copied out of `polar_column_page.dart` by hand.
   // Nothing in the gate itself would notice the page changing underneath it:
   // add a ninth presentation, rename `references`, or edit a data map, and
-  // eight green tests keep asserting about a page that no longer exists. This
-  // group is the only thing standing between "the gate is true" and "the gate
-  // was true once" — so it reads the page's own source and compares.
+  // eight green tests keep asserting about a page that no longer exists.
+  //
+  // This group covers the page's DECLARATIONS — its presentation enum, its
+  // `<String, num>` maps and its palette swatches. It does NOT cover the
+  // per-presentation knob values, which are not declarations but assignments
+  // inside two switch statements; those are held to the page by
+  // [expectShowcaseKnobsMatchPage], which runs inside every acceptance case
+  // below. Read the two together: neither alone makes the gate honest, and an
+  // earlier revision of this group claimed the whole job while enforcing only
+  // this half.
   //
   // It is a TEXT parse, not an import: the page's declarations are all
   // library-private and the example is a separate package. That buys less than
@@ -3613,9 +4272,19 @@ void main() {
   // a real chain? Each polar case is `polar_column_page.dart`'s own construction
   // — `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
   // config, at that presentation's authored knob values — so a regression that
-  // only shows up on a real showcase chart fails here. Those values are a hand
-  // transcription, and `group('showcase transcription sync guard')` above is
-  // what keeps them honest.
+  // only shows up on a real showcase chart fails here.
+  //
+  // Those values are a hand transcription, kept honest by two guards with
+  // different reach. `group('showcase transcription sync guard')` above holds
+  // the page's DECLARATIONS — the presentation enum, the data maps, the
+  // palette swatches. [expectShowcaseKnobsMatchPage], which each case below
+  // runs before it looks at any emitted text, holds the KNOBS: it resolves the
+  // presentation's pane, axis, composition, column-style, selection, threshold,
+  // target-marker and interval values out of the page's own two presentation
+  // methods and compares them to the objects the case just mounted. What
+  // remains a bare hand copy is listed at the fixtures above — chiefly which
+  // data map feeds which series and channel, and the series ids, names and
+  // units.
   //
   // Emission plus COMPILATION plus the per-case literal assertions is the
   // assertion set, and each covers a different thing. The generator re-lowers
