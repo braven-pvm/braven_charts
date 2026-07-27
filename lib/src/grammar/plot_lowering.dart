@@ -1066,15 +1066,19 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     // artifact hydrator run is what keeps the grammar from drifting away from
     // the contract it lowers onto: without it a chain lowers clean and then
     // throws a raw ArgumentError at widget mount.
-    try {
-      PolarColumnComposition.validate(columns, config: polar);
-    } on ArgumentError catch (error) {
-      throw GrammarSpecException.invalidPolarComposition(
-        error.invalidValue == null
-            ? '${error.message}.'
-            : '${error.message} ("${error.invalidValue}").',
-      );
-    }
+    //
+    // The "stacked composition cannot carry intervals" rule stays HERE, below
+    // the emptyData guard, and that is deliberate — do not hoist it into
+    // [_validatePolarMarkComposition] alongside the config and preset checks.
+    // `PolarColumnChartSeries.hasIntervals` is a property of the LOWERED series,
+    // not of the mark: a mark may declare both interval accessors and still
+    // produce ZERO intervals, because `_lowerPolar` only records a category's
+    // interval when BOTH bounds come back non-null for that row. So a stacked
+    // spec whose interval accessors return null for every row composes cleanly
+    // and must lower, and only the materialized series can tell us which case we
+    // are in. What IS decidable from the mark — that exactly one of the two
+    // bounds was supplied — is already hoisted, as `incompletePolarInterval`.
+    _guardPolar(() => PolarColumnComposition.validate(columns, config: polar));
   } else if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
   } else if (mark is DonutMark<T>) {
@@ -1172,27 +1176,61 @@ void _guardConcentric(
   }
 }
 
+/// Runs one polar contract check and renames its failure.
+///
+/// The twin of [_guardConcentric], for the polar half. [PolarChartConfig] (for
+/// the config's own rules) and [PolarColumnComposition] (for the lowered
+/// series') are the authorities — the same validators `BravenChartPlus` runs
+/// before it lays a polar pane out, and the artifact hydrator runs on load — so
+/// the grammar delegates to them and translates the raw `ArgumentError` into a
+/// named diagnostic, rather than restating (and eventually contradicting) their
+/// rules.
+void _guardPolar(void Function() check) {
+  try {
+    check();
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidPolarComposition(
+      error.invalidValue == null
+          ? '${error.message}.'
+          : '${error.message} ("${error.invalidValue}").',
+    );
+  }
+}
+
 /// The DATA-INDEPENDENT half of the polar composition contract.
 ///
 /// [PolarColumnComposition.validate] is the authority, but it needs the lowered
-/// series — which need rows. The four facts below are decidable from the spec's
-/// SHAPE alone — a mark's `unit`, how many polar marks the plot holds against
-/// the composition mode `.polarConfig(...)` selects, whether a mark set exactly
-/// one interval bound, and a mark's `preset` — so they are checked here, ABOVE
-/// the emptyData guard, exactly like every other structural check. That is what
-/// stops an authoring mistake from hiding behind a momentarily-empty dataset and
-/// only surfacing — as a raw `ArgumentError` from the render pipeline — once
-/// real rows arrive.
+/// series — which need rows. The facts below are decidable from the spec's
+/// SHAPE alone — the `.polarConfig(...)` object's own self-consistency, a mark's
+/// `unit`, how many polar marks the plot holds against the composition mode the
+/// config selects, whether a mark set exactly one interval bound, and a mark's
+/// `preset` — so they are checked here, ABOVE the emptyData guard, exactly like
+/// every other structural check. That is what stops an authoring mistake from
+/// hiding behind a momentarily-empty dataset and only surfacing — as a raw
+/// `ArgumentError` from the render pipeline — once real rows arrive.
 ///
 /// Order within this function is deliberate and matches the order the checks
-/// occupied when they were spread across lowering: unit, then composition mode,
-/// then intervals, then preset. Reshuffling would change which diagnostic a spec
-/// with several mistakes reports first.
+/// occupied when they were spread across lowering: config, then unit, then
+/// composition mode, then intervals, then preset. Reshuffling would change which
+/// diagnostic a spec with several mistakes reports first.
 void _validatePolarMarkComposition<T>(
   PlotSpec<T> spec,
   List<int> radialIndices,
   List<String> markIds,
 ) {
+  // The config is the pane every mark is measured in, so its own contract is
+  // settled before the marks are compared against each other. Every rule
+  // `PolarChartConfig.validate()` enforces — pane geometry, radial-axis bounds,
+  // the grouped sub-band padding, per-threshold finiteness and dash-pair parity,
+  // and the stacked zero-baseline — reads the config and nothing else, so it
+  // belongs above the emptyData guard for the same reason the concentric
+  // config check does: `BravenChartPlus` runs this very validator at mount, and
+  // a chain must not lower clean over an empty dataset only to throw a raw
+  // ArgumentError there once the real rows arrive.
+  if (spec.polar case final config?) {
+    _guardPolar(config.validate);
+  }
+
   final firstIndex = radialIndices.first;
   final firstUnit = _normalizedPolarUnit(
     (spec.marks[firstIndex] as PolarMark<T>).unit,

@@ -1736,6 +1736,147 @@ void main() {
       );
     });
 
+    // `.polarConfig(...)` is a plot-level verb, and every rule
+    // `PolarChartConfig.validate()` enforces — pane geometry, radial-axis
+    // bounds, the grouped sub-band padding, each threshold's finiteness and
+    // dash-pair parity, and the stacked zero-baseline — is decidable from the
+    // CONFIG alone, with no rows in sight. The widget runs that same validator
+    // at mount, so without a hoist a chain lowers CLEAN over an empty dataset
+    // and then throws a raw ArgumentError once real rows arrive: exactly the
+    // failure the concentric half was hoisted to prevent.
+    test('an invalid polar pane radius is refused above the empty-data guard',
+        () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(pane: PolarPaneConfig(innerRadiusFactor: 2)),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('a threshold with an odd dash pattern is refused above the empty-data '
+        'guard', () {
+      // A dash pattern is painted-gap PAIRS, so an odd length cannot be drawn
+      // whatever the data says.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(
+            thresholds: <PolarThreshold>[
+              PolarThreshold(value: 20, dashPattern: <double>[6, 4, 2]),
+            ],
+          ),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('an out-of-range groupInnerPadding is refused above the empty-data '
+        'guard', () {
+      // The mode stays layered, so the "grouped needs two series" check cannot
+      // be what fires: this pins the CONFIG's own contract.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(
+            composition: PolarColumnCompositionConfig(groupInnerPadding: 1.5),
+          ),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+      );
+    });
+
+    test('the hoisted config diagnostic is a named grammar failure, not a raw '
+        "ArgumentError, and reads in the authority's own words", () {
+      // The grammar delegates to `PolarChartConfig.validate()` — the same
+      // validator BravenChartPlus runs at mount — and only RENAMES its failure,
+      // so the two cannot describe one mistake in two different sentences.
+      const invalidConfig = PolarChartConfig(
+        pane: PolarPaneConfig(innerRadiusFactor: 2),
+      );
+      String? authorityDetail;
+      try {
+        invalidConfig.validate();
+      } on ArgumentError catch (error) {
+        authorityDetail = error.invalidValue == null
+            ? '${error.message}.'
+            : '${error.message} ("${error.invalidValue}").';
+      }
+      expect(authorityDetail, isNotNull);
+
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: invalidConfig,
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      expect(thrown, isNot(isA<ArgumentError>()));
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.invalidPolarComposition);
+      expect(
+        failure.message,
+        GrammarSpecException.invalidPolarComposition(authorityDetail!).message,
+      );
+    });
+
+    test('a valid polar config still lowers and is carried through', () {
+      // The positive control for the hoisted config check: a well-formed
+      // config must not be mistaken for a malformed one.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+        ],
+        polar: PolarChartConfig(
+          pane: PolarPaneConfig(innerRadiusFactor: 0.2),
+          composition: PolarColumnCompositionConfig(groupInnerPadding: 0.25),
+          thresholds: <PolarThreshold>[
+            PolarThreshold(value: 20, dashPattern: <double>[6, 4]),
+          ],
+        ),
+      )).lower();
+      expect(lowered.series, hasLength(1));
+      expect(lowered.polarChartConfig, isNotNull);
+      expect(lowered.polarChartConfig!.pane.innerRadiusFactor, 0.2);
+      expect(lowered.polarChartConfig!.composition.groupInnerPadding, 0.25);
+      expect(lowered.polarChartConfig!.thresholds, hasLength(1));
+    });
+
+    test('a valid polar config still reaches the empty-data guard', () {
+      // The other half of the positive control: the hoist must not swallow
+      // BravenPlot's empty state for a config that is perfectly well formed.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+          ],
+          polar: PolarChartConfig(
+            pane: PolarPaneConfig(innerRadiusFactor: 0.2),
+            thresholds: <PolarThreshold>[PolarThreshold(value: 20)],
+          ),
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
+    });
+
     test('the composition diagnostic names its code and the offending mark',
         () {
       final invalid = GrammarSpecException.invalidPolarComposition(
