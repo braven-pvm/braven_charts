@@ -209,6 +209,102 @@ void main() {
   });
 
   testWidgets(
+    'disabled short-touch activation leaves selection and callbacks inert',
+    (tester) async {
+      final scrollController = ScrollController();
+      final chartController = BravenChartController();
+      var tapCount = 0;
+      addTearDown(scrollController.dispose);
+      addTearDown(chartController.dispose);
+      await tester.pumpWidget(
+        _TouchHarness(
+          scrollController: scrollController,
+          chartController: chartController,
+          touch: const TouchInteractionConfig(
+            tapBehavior: TouchTapBehavior.disabled,
+          ),
+          onDataPointTap: (_, _) => tapCount++,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.renderObject<ChartRenderBox>(
+        _chartRenderFinder(),
+      );
+      final point = renderBox.localToGlobal(
+        renderBox.plotToWidget(renderBox.transform!.dataToPlot(2, 3)),
+      );
+      final touch = await tester.createGesture(
+        pointer: 31,
+        kind: PointerDeviceKind.touch,
+      );
+      await touch.down(point);
+      await tester.pump();
+      await touch.up();
+      await tester.pumpAndSettle();
+
+      expect(chartController.selectedPointRefs, isEmpty);
+      expect(tapCount, 0);
+
+      expect(chartController.selectAllData(), isTrue);
+      await tester.pump();
+      final selected = chartController.selectedPointRefs;
+      expect(selected, isNotEmpty);
+
+      final emptyPosition = renderBox.localToGlobal(
+        renderBox.plotToWidget(const Offset(8, 8)),
+      );
+      final backgroundTouch = await tester.createGesture(
+        pointer: 32,
+        kind: PointerDeviceKind.touch,
+      );
+      await backgroundTouch.down(emptyPosition);
+      await tester.pump();
+      await backgroundTouch.up();
+      await tester.pumpAndSettle();
+
+      expect(chartController.selectedPointRefs, selected);
+      expect(scrollController.offset, 0);
+    },
+  );
+
+  testWidgets('disabled touch taps do not change mouse selection', (
+    tester,
+  ) async {
+    final scrollController = ScrollController();
+    final chartController = BravenChartController();
+    addTearDown(scrollController.dispose);
+    addTearDown(chartController.dispose);
+    await tester.pumpWidget(
+      _TouchHarness(
+        scrollController: scrollController,
+        chartController: chartController,
+        touch: const TouchInteractionConfig(
+          tapBehavior: TouchTapBehavior.disabled,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(_chartRenderFinder());
+    final point = renderBox.localToGlobal(
+      renderBox.plotToWidget(renderBox.transform!.dataToPlot(2, 3)),
+    );
+    final mouse = await tester.createGesture(
+      pointer: 33,
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.down(point);
+    await tester.pump();
+    await mouse.up();
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'mobile-signal', pointIndex: 2),
+    });
+  });
+
+  testWidgets(
     'long press scrubs the shared tracking cursor and clears on lift',
     (tester) async {
       final scrollController = ScrollController();
@@ -218,7 +314,10 @@ void main() {
       await tester.pumpWidget(
         _TouchHarness(
           scrollController: scrollController,
-          touch: const TouchInteractionConfig(enableHapticFeedback: false),
+          touch: const TouchInteractionConfig(
+            tapBehavior: TouchTapBehavior.disabled,
+            enableHapticFeedback: false,
+          ),
           gesture: const GestureConfig(
             longPressTimeout: Duration(milliseconds: 100),
           ),
@@ -311,6 +410,7 @@ class _TouchHarness extends StatelessWidget {
     this.gesture = const GestureConfig(),
     this.onCrosshairChanged,
     this.onDataPointLongPress,
+    this.onDataPointTap,
   });
 
   final ScrollController scrollController;
@@ -319,6 +419,7 @@ class _TouchHarness extends StatelessWidget {
   final GestureConfig gesture;
   final CrosshairChangeCallback? onCrosshairChanged;
   final DataPointLongPressCallback? onDataPointLongPress;
+  final DataPointCallback? onDataPointTap;
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +442,7 @@ class _TouchHarness extends StatelessWidget {
                   ),
                   onCrosshairChanged: onCrosshairChanged,
                   onDataPointLongPress: onDataPointLongPress,
+                  onDataPointTap: onDataPointTap,
                 ),
                 series: const [
                   LineChartSeries(

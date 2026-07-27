@@ -10917,6 +10917,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         touchInteraction.enabled &&
         touchInteraction.enableLongPressTracking &&
         !widget.contextMenuConfig.enableLongPress;
+    final touchTapEnabled =
+        (effectiveInteractionConfig?.enabled ?? true) &&
+        touchInteraction.tapBehavior != TouchTapBehavior.disabled;
     _touchViewportRecognizer
       ..enabled =
           !isNonCartesian &&
@@ -11051,10 +11054,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               GestureRecognizerFactoryWithHandlers<
                                 PriorityTapGestureRecognizer
                               >(() => _tapRecognizer, (recognizer) {}),
-                          TapGestureRecognizer:
-                              GestureRecognizerFactoryWithHandlers<
-                                TapGestureRecognizer
-                              >(() => _touchTapRecognizer, (recognizer) {}),
+                          if (touchTapEnabled)
+                            TapGestureRecognizer:
+                                GestureRecognizerFactoryWithHandlers<
+                                  TapGestureRecognizer
+                                >(() => _touchTapRecognizer, (recognizer) {}),
                           if (touchTrackingEnabled)
                             LongPressGestureRecognizer:
                                 GestureRecognizerFactoryWithHandlers<

@@ -138,6 +138,7 @@ lowers to the same `BravenChartPlus` renderer as direct configuration.
 
 Continue with a runnable example:
 
+- [Mobile touch interaction](https://braven-pvm.github.io/braven_charts/?page=mobile-interaction) — Keep Browse surfaces scroll-first, move inspection to long press, or opt back into short-tap selection.
 - [Multi-axis charts and normalization](https://braven-pvm.github.io/braven_charts/?page=multi-axis)
 - [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Try the opt-in persistent X/Y brush, including initial bounds, styling, drag/resize, controller commands, and touch coexistence.
 - [Live data and buffering](https://braven-pvm.github.io/braven_charts/?page=live-stream)
@@ -160,6 +161,7 @@ developer task.
 ### Interaction and display
 
 - [Tracking and value display](https://braven-pvm.github.io/braven_charts/guides/tracking-and-value-display/) — Compose crosshairs, tooltips, markers, and persistent value summaries.
+- [Mobile interaction](https://braven-pvm.github.io/braven_charts/guides/mobile-interaction/) — Keep scrolling natural, inspect with a hold, and opt into short-tap selection only where it fits.
 - [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, linked data, and persistent X/Y brushes.
 - [Zoom, pan, and navigators](https://braven-pvm.github.io/braven_charts/guides/zoom-pan-and-navigators/) — Control viewports directly or through a reusable full-domain navigator.
 - [Annotations](https://braven-pvm.github.io/braven_charts/?page=annotations) — Add and edit point, range, threshold, text, trend, and pin overlays.

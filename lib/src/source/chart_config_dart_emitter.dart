@@ -5752,6 +5752,13 @@ class ChartConfigDartEmitter {
         config.profile.name,
         defaultName: TouchInteractionProfile.browse.name,
       );
+      _enumIf(
+        writer,
+        'tapBehavior',
+        'TouchTapBehavior',
+        config.tapBehavior.name,
+        defaultName: TouchTapBehavior.inspectAndSelect.name,
+      );
       _valueIf(
         writer,
         'enablePinchZoom',
