@@ -47,6 +47,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   double _seriesHoverStrokeScale = 1.75;
   double _seriesSelectionStrokeScale = 1.5;
   bool _showTrackingInformationPanel = true;
+  bool _multiAxisLineData = false;
   double _barDimmedOpacity = 0.42;
   double _barSelectionOpacity = 0.14;
   double _barSelectionBorderWidth = 2.5;
@@ -108,6 +109,7 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     super.initState();
     final preset = widget.initialPreset ?? Uri.base.queryParameters['preset'];
     _popupLifecyclePreset = preset == 'popup-lifecycle';
+    final startMultiAxisYBrushReview = preset == 'multi-axis-y-brush';
     final requested = Uri.base.queryParameters['family'];
     if (_popupLifecyclePreset) {
       _family = _SelectionFamily.bar;
@@ -125,6 +127,13 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       _chartOptionsController
         ..showCrosshair = false
         ..showDataPointPopup = true;
+    } else if (startMultiAxisYBrushReview) {
+      _family = _SelectionFamily.line;
+      _acquisitionMode = ChartSelectionAcquisitionMode.yInterval;
+      _selectionScope = ChartSelectionScope.mark;
+      _multiAxisLineData = true;
+      _persistentBrushEnabled = true;
+      _persistentBrushVisible = true;
     } else {
       _family = _SelectionFamily.values.firstWhere(
         (family) => family.name == requested,
@@ -165,7 +174,23 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       _family = family;
       _acquisitionMode = family.defaultAcquisitionMode;
       _selectionScope = family.defaultSelectionScope;
+      if (family != _SelectionFamily.line) {
+        _multiAxisLineData = false;
+      }
     });
+  }
+
+  void _loadMultiAxisYBrushReview() {
+    _clearSelection();
+    setState(() {
+      _family = _SelectionFamily.line;
+      _acquisitionMode = ChartSelectionAcquisitionMode.yInterval;
+      _selectionScope = ChartSelectionScope.mark;
+      _multiAxisLineData = true;
+      _persistentBrushEnabled = true;
+      _persistentBrushVisible = true;
+    });
+    _scheduleBrushApply();
   }
 
   void _selectAcquisitionMode(ChartSelectionAcquisitionMode mode) {
@@ -202,9 +227,15 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   }) {
     final usesX =
         xAxis ?? _acquisitionMode == ChartSelectionAcquisitionMode.xInterval;
+    final series = _seriesForFamily(options);
+    final domainSeries = usesX
+        ? series
+        : series.isEmpty
+        ? const <ChartSeries>[]
+        : <ChartSeries>[series.first];
     final values = <double>[
-      for (final series in _seriesForFamily(options))
-        for (final point in series.points)
+      for (final item in domainSeries)
+        for (final point in item.points)
           if (usesX) point.x else point.y,
     ].where((value) => value.isFinite).toList(growable: false);
     if (values.isEmpty) return (minimum: 0, maximum: 1);
@@ -511,6 +542,27 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
           values: _SelectionFamily.values,
           labelBuilder: (family) => family.label,
           onChanged: _selectFamily,
+        ),
+        if (_family == _SelectionFamily.line)
+          BoolOption(
+            key: const ValueKey('selection-lab-multi-axis-data'),
+            label: 'Multi-axis line data',
+            subtitle:
+                'Power uses the left axis; heart rate uses the right axis',
+            value: _multiAxisLineData,
+            onChanged: (value) {
+              _clearSelection();
+              setState(() => _multiAxisLineData = value);
+              _scheduleBrushApply();
+            },
+          ),
+        ActionButton(
+          key: const ValueKey('selection-lab-load-multi-axis-y-brush'),
+          label: 'Load multi-axis Y-brush review',
+          icon: Icons.fact_check_outlined,
+          description:
+              'Selects Line, Y range, multi-axis data, and a visible persistent brush.',
+          onPressed: _loadMultiAxisYBrushReview,
         ),
         InfoBox(message: _family.testPurpose),
       ],
@@ -1258,8 +1310,11 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     final chartCard = ChartCard(
       key: const ValueKey('selection-card'),
       title: _family.exampleTitle,
-      subtitle:
-          '${_family.exampleSubtitle} · ${_acquisitionMode.shortLabel} · ${_selectionScopeLabel(_selectionScope)}',
+      subtitle: _multiAxisLineData && _family == _SelectionFamily.line
+          ? 'Power + heart rate on independent Y axes · '
+                '${_acquisitionMode.shortLabel} · '
+                '${_selectionScopeLabel(_selectionScope)}'
+          : '${_family.exampleSubtitle} · ${_acquisitionMode.shortLabel} · ${_selectionScopeLabel(_selectionScope)}',
       padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1619,6 +1674,9 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
         synchronizeSelection: true,
       ),
       series: _seriesForFamily(options),
+      normalizationMode: _multiAxisLineData && _family == _SelectionFamily.line
+          ? NormalizationMode.perSeries
+          : NormalizationMode.none,
       annotations: _showProjectionAnnotations && !radial
           ? _selectionAnnotations(options)
           : const [],
@@ -1755,7 +1813,8 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
 
   List<ChartSeries> _seriesForFamily(ChartOptions options) => switch (_family) {
     _SelectionFamily.line => [
-      for (final series in _lineSeries)
+      for (final series
+          in _multiAxisLineData ? _multiAxisLineSeries : _lineSeries)
         switch (series) {
           LineChartSeries line => line.copyWith(
             showDataPointMarkers: options.showDataMarkers,
@@ -2357,6 +2416,63 @@ final _lineSeries = <ChartSeries>[
     interpolation: LineInterpolation.monotone,
     strokeWidth: 2.5,
     showDataPointMarkers: true,
+  ),
+];
+
+final _multiAxisLineSeries = <ChartSeries>[
+  LineChartSeries(
+    id: 'power',
+    name: 'Power',
+    unit: 'W',
+    points: const [
+      ChartDataPoint(x: 0, y: 146, pointKey: 'mon'),
+      ChartDataPoint(x: 1, y: 171, pointKey: 'tue'),
+      ChartDataPoint(x: 2, y: 196, pointKey: 'wed'),
+      ChartDataPoint(x: 3, y: 184, pointKey: 'thu'),
+      ChartDataPoint(x: 4, y: 224, pointKey: 'fri'),
+      ChartDataPoint(x: 5, y: 238, pointKey: 'sat'),
+      ChartDataPoint(x: 6, y: 218, pointKey: 'sun'),
+    ],
+    color: const Color(0xFFEA580C),
+    interpolation: LineInterpolation.monotone,
+    strokeWidth: 2.5,
+    showDataPointMarkers: true,
+    yAxisConfig: YAxisConfig(
+      position: YAxisPosition.left,
+      label: 'Power',
+      unit: 'W',
+      color: const Color(0xFFEA580C),
+      min: 130,
+      max: 250,
+      showAxisLine: true,
+    ),
+  ),
+  LineChartSeries(
+    id: 'heart-rate',
+    name: 'Heart rate',
+    unit: 'bpm',
+    points: const [
+      ChartDataPoint(x: 0, y: 108, pointKey: 'mon'),
+      ChartDataPoint(x: 1, y: 119, pointKey: 'tue'),
+      ChartDataPoint(x: 2, y: 131, pointKey: 'wed'),
+      ChartDataPoint(x: 3, y: 126, pointKey: 'thu'),
+      ChartDataPoint(x: 4, y: 149, pointKey: 'fri'),
+      ChartDataPoint(x: 5, y: 164, pointKey: 'sat'),
+      ChartDataPoint(x: 6, y: 156, pointKey: 'sun'),
+    ],
+    color: const Color(0xFF2563EB),
+    interpolation: LineInterpolation.monotone,
+    strokeWidth: 2.5,
+    showDataPointMarkers: true,
+    yAxisConfig: YAxisConfig(
+      position: YAxisPosition.right,
+      label: 'Heart rate',
+      unit: 'bpm',
+      color: const Color(0xFF2563EB),
+      min: 100,
+      max: 170,
+      showAxisLine: true,
+    ),
   ),
 ];
 

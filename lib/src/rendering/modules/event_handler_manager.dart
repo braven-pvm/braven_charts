@@ -681,8 +681,17 @@ class EventHandlerManager {
       return;
     }
 
+    final visiblePersistentBrush =
+        interaction.enableSelection &&
+        interaction.selection.brush.enabled &&
+        (_delegate.selectionBrushState?.visible ?? false);
+    final persistentBrushManipulating =
+        _delegate.coordinator.currentMode ==
+        InteractionMode.selectionBrushManipulating;
     final selectionOwnsPrimaryTouchDrag =
-        interaction.enableSelection && interaction.selection.ownsPrimaryDrag();
+        interaction.enableSelection &&
+        interaction.selection.ownsPrimaryDrag() &&
+        (!visiblePersistentBrush || persistentBrushManipulating);
     final isBrowseTouch =
         isDirectTouch &&
         interaction.touch.enabled &&
@@ -964,18 +973,13 @@ class EventHandlerManager {
   }
 
   bool _beginSelectionBrushInteraction(Offset position) {
+    if (!hitTestSelectionBrushInteraction(position)) return false;
+
     final selection =
         _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
-    final state = _delegate.selectionBrushState;
-    final rect = _delegate.selectionBrushWidgetRect;
-    if (!selection.brush.enabled ||
-        state == null ||
-        !state.visible ||
-        rect == null) {
-      return false;
-    }
-    final kind = _selectionBrushHitKind(position, rect, selection);
-    if (kind == null) return false;
+    final state = _delegate.selectionBrushState!;
+    final rect = _delegate.selectionBrushWidgetRect!;
+    final kind = _selectionBrushHitKind(position, rect, selection)!;
 
     _cancelDeferredEmptyAreaClick();
     _selectionBrushDragKind = kind;
@@ -992,6 +996,26 @@ class EventHandlerManager {
     );
     _delegate.markNeedsPaint();
     return true;
+  }
+
+  /// Whether [position] starts a move or resize on the persistent brush.
+  ///
+  /// The widget-level touch recognizer uses this before the pointer moves so a
+  /// brush manipulation can defeat an ancestor [Scrollable] in the gesture
+  /// arena. Ordinary touches outside the brush remain available to page
+  /// scrolling.
+  bool hitTestSelectionBrushInteraction(Offset position) {
+    final selection =
+        _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+    final state = _delegate.selectionBrushState;
+    final rect = _delegate.selectionBrushWidgetRect;
+    if (!selection.brush.enabled ||
+        state == null ||
+        !state.visible ||
+        rect == null) {
+      return false;
+    }
+    return _selectionBrushHitKind(position, rect, selection) != null;
   }
 
   _SelectionBrushDragKind? _selectionBrushHitKind(

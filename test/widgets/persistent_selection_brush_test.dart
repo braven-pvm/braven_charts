@@ -350,6 +350,83 @@ void main() {
     );
 
     testWidgets(
+      'touch-resizing a Y brush owns the drag over a vertical page scroll',
+      (tester) async {
+        final controller = BravenChartController();
+        final scrollController = ScrollController();
+        addTearDown(controller.dispose);
+        addTearDown(scrollController.dispose);
+        await tester.pumpWidget(
+          _scrollingYBrushHost(
+            controller: controller,
+            scrollController: scrollController,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final finder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(finder);
+        final rect = renderBox.selectionBrushWidgetRect!;
+        final initial = controller.selectionBrushState!.range;
+        final resize = await tester.createGesture(
+          pointer: 303,
+          kind: PointerDeviceKind.touch,
+        );
+        final resizeStart = renderBox.localToGlobal(rect.bottomCenter);
+        await resize.down(resizeStart);
+        for (final dy in const [12.0, 24.0, 40.0, 64.0]) {
+          await resize.moveTo(resizeStart - Offset(0, dy));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await resize.up();
+        await tester.pumpAndSettle();
+
+        expect(
+          scrollController.offset,
+          0,
+          reason:
+              'A touch that starts on a persistent-brush handle must belong '
+              'to the chart instead of scrolling the surrounding page.',
+        );
+        expect(
+          controller.selectionBrushState!.range.minimum,
+          greaterThan(initial.minimum),
+        );
+        final rangeAfterResize = controller.selectionBrushState!.range;
+
+        final pageDrag = await tester.createGesture(
+          pointer: 304,
+          kind: PointerDeviceKind.touch,
+        );
+        final pageDragStart = renderBox.localToGlobal(
+          Offset(rect.center.dx, rect.top - 48),
+        );
+        await pageDrag.down(pageDragStart);
+        for (final dy in const [12.0, 24.0, 40.0, 64.0]) {
+          await pageDrag.moveTo(pageDragStart - Offset(0, dy));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await pageDrag.up();
+        await tester.pumpAndSettle();
+
+        expect(
+          scrollController.offset,
+          greaterThan(0),
+          reason:
+              'A touch outside the persistent brush must remain available '
+              'to the surrounding page scroll.',
+        );
+        expect(
+          controller.selectionBrushState!.range,
+          rangeAfterResize,
+          reason:
+              'Scrolling outside a visible persistent brush must not create '
+              'or replace the retained selection.',
+        );
+      },
+    );
+
+    testWidgets(
       'two-finger touch takes over from a brush and restores partial movement',
       (tester) async {
         final controller = BravenChartController();
@@ -411,6 +488,71 @@ void main() {
         await second.up();
         await tester.pump();
         expect(controller.selectionBrushState!.range, initialRange);
+        expect(renderBox.debugIsSuppressingTouchSequence, isFalse);
+      },
+    );
+
+    testWidgets(
+      'two-finger pinch outside a visible brush transforms only the viewport',
+      (tester) async {
+        final controller = BravenChartController();
+        final scrollController = ScrollController();
+        addTearDown(controller.dispose);
+        addTearDown(scrollController.dispose);
+        await tester.pumpWidget(
+          _scrollingYBrushHost(
+            controller: controller,
+            scrollController: scrollController,
+            enableZoom: true,
+            enablePan: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        var renderBox = tester.renderObject<ChartRenderBox>(
+          _chartRenderFinder(),
+        );
+        final brushRange = controller.selectionBrushState!.range;
+        final initialSpan =
+            renderBox.transform!.dataXMax - renderBox.transform!.dataXMin;
+        final brushRect = renderBox.selectionBrushWidgetRect!;
+        final pinchCenter = renderBox.localToGlobal(
+          Offset(brushRect.center.dx, brushRect.top - 48),
+        );
+        final first = await tester.createGesture(
+          pointer: 313,
+          kind: PointerDeviceKind.touch,
+        );
+        final second = await tester.createGesture(
+          pointer: 314,
+          kind: PointerDeviceKind.touch,
+        );
+
+        await first.down(pinchCenter - const Offset(18, 0));
+        await tester.pump(const Duration(milliseconds: 4));
+        await second.down(pinchCenter + const Offset(18, 0));
+        await tester.pump();
+        await first.moveTo(pinchCenter - const Offset(90, 0));
+        await second.moveTo(pinchCenter + const Offset(90, 0));
+        await tester.pump();
+
+        renderBox = tester.renderObject<ChartRenderBox>(_chartRenderFinder());
+        expect(
+          renderBox.transform!.dataXMax - renderBox.transform!.dataXMin,
+          lessThan(initialSpan),
+        );
+        expect(
+          controller.selectionBrushState!.range,
+          brushRange,
+          reason:
+              'Viewport pinch outside a visible brush must not move, resize, '
+              'or replace the retained selection.',
+        );
+        expect(scrollController.offset, 0);
+
+        await first.up();
+        await second.up();
+        await tester.pump();
         expect(renderBox.debugIsSuppressingTouchSequence, isFalse);
       },
     );
@@ -1824,6 +1966,63 @@ Widget _host({
             onSelectionResultChanged: onSelectionResultChanged,
           ),
         ),
+      ),
+    ),
+  ),
+);
+
+Widget _scrollingYBrushHost({
+  required BravenChartController controller,
+  required ScrollController scrollController,
+  bool enableZoom = false,
+  bool enablePan = false,
+}) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      controller: scrollController,
+      child: Column(
+        children: [
+          const SizedBox(height: 80),
+          SizedBox(
+            width: 640,
+            height: 420,
+            child: BravenChartPlus(
+              bravenChartController: controller,
+              showLegend: false,
+              series: const [
+                LineChartSeries(
+                  id: 'signal',
+                  points: [
+                    ChartDataPoint(x: 0, y: 20),
+                    ChartDataPoint(x: 2, y: 30),
+                    ChartDataPoint(x: 4, y: 40),
+                    ChartDataPoint(x: 6, y: 50),
+                    ChartDataPoint(x: 8, y: 60),
+                    ChartDataPoint(x: 10, y: 70),
+                  ],
+                ),
+              ],
+              interactionConfig: InteractionConfig(
+                enableZoom: enableZoom,
+                enablePan: enablePan,
+                selection: const ChartSelectionConfig(
+                  acquisitionMode: ChartSelectionAcquisitionMode.yInterval,
+                  useModifierKeys: false,
+                  brush: ChartSelectionBrushConfig(
+                    enabled: true,
+                    initialVisible: true,
+                    initialRange: ChartSelectionBrushRange(
+                      minimum: 30,
+                      maximum: 50,
+                      referenceSeriesId: 'signal',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 800),
+        ],
       ),
     ),
   ),

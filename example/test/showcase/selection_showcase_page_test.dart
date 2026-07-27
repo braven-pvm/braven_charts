@@ -742,6 +742,87 @@ void main() {
   );
 
   testWidgets(
+    'multi-axis Y-brush review preset maps through the first series and supports lifecycle commands',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SelectionShowcasePage(initialPreset: 'multi-axis-y-brush'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-line')),
+      );
+      expect(chart.normalizationMode, NormalizationMode.perSeries);
+      expect(
+        chart.interactionConfig?.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.yInterval,
+      );
+      expect(chart.interactionConfig?.selection.brush.enabled, isTrue);
+      expect(
+        chart
+            .interactionConfig
+            ?.selection
+            .brush
+            .initialRange
+            ?.referenceSeriesId,
+        'power',
+      );
+      expect(
+        chart.interactionConfig?.selection.brush.initialRange?.minimum,
+        closeTo(166.24, 0.001),
+      );
+      expect(
+        chart.interactionConfig?.selection.brush.initialRange?.maximum,
+        closeTo(208.56, 0.001),
+      );
+
+      final lineSeries = chart.series.whereType<LineChartSeries>().toList();
+      expect(lineSeries, hasLength(2));
+      expect(lineSeries.first.yAxisConfig?.position, YAxisPosition.left);
+      expect(lineSeries.last.yAxisConfig?.position, YAxisPosition.right);
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('selection-workbench')),
+      );
+      final controller = workbench.chartController!;
+      expect(controller.selectionBrushState?.visible, isTrue);
+      expect(controller.selectedPointRefs, isNotEmpty);
+
+      inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-visible'),
+      ).onChanged(false);
+      await tester.pumpAndSettle();
+      expect(controller.selectionBrushState?.visible, isFalse);
+      expect(controller.selectedPointRefs, isNotEmpty);
+
+      inspectorEntry<BoolOption>(
+        tester,
+        const ValueKey('selection-lab-brush-visible'),
+      ).onChanged(true);
+      await tester.pumpAndSettle();
+      expect(controller.selectionBrushState?.visible, isTrue);
+
+      inspectorEntry<ActionButton>(
+        tester,
+        const ValueKey('selection-lab-brush-clear'),
+      ).onPressed();
+      await tester.pumpAndSettle();
+      expect(controller.selectionBrushState, isNull);
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'box mode exposes two-axis persistence and visual grid controls',
     (tester) async {
       await pumpSelectionLab(tester);

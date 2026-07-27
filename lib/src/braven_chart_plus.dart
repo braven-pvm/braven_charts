@@ -1642,7 +1642,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onUpdate: _handleTouchViewportUpdate,
       onEnd: _handleTouchViewportEnd,
       supportedDevices: const <PointerDeviceKind>{PointerDeviceKind.touch},
-    );
+    )..shouldClaimPrimaryPointer = _shouldClaimPrimaryTouchForSelectionBrush;
 
     _touchTapRecognizer = TapGestureRecognizer(
       supportedDevices: const <PointerDeviceKind>{PointerDeviceKind.touch},
@@ -9029,6 +9029,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
+  bool _shouldClaimPrimaryTouchForSelectionBrush(PointerDownEvent event) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null || !renderBox.attached) return false;
+    return renderBox.hitTestSelectionBrushInteraction(
+      renderBox.globalToLocal(event.position),
+    );
+  }
+
   void _handleContextLongPressPointerMove(PointerMoveEvent event) {
     if (event.pointer != _contextLongPressPointer) return;
     final start = _contextLongPressStart;
@@ -10922,6 +10931,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         (effectiveInteractionConfig?.enableSelection ?? true) &&
         (effectiveInteractionConfig?.selection ?? const ChartSelectionConfig())
             .ownsPrimaryDrag();
+    final touchBrushManipulationEnabled =
+        !isNonCartesian &&
+        (effectiveInteractionConfig?.enabled ?? true) &&
+        (effectiveInteractionConfig?.enableSelection ?? true) &&
+        (effectiveInteractionConfig?.selection.brush.enabled ?? false);
     final touchTrackingEnabled =
         !isNonCartesian &&
         (effectiveInteractionConfig?.enabled ?? true) &&
@@ -10936,7 +10950,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           !isNonCartesian &&
           (effectiveInteractionConfig?.enabled ?? true) &&
           touchInteraction.enabled &&
-          (touchPanEnabled || touchZoomEnabled)
+          (touchPanEnabled || touchZoomEnabled || touchBrushManipulationEnabled)
       ..minimumPointerCount =
           touchInteraction.profile == TouchInteractionProfile.explore &&
               touchPanEnabled &&
