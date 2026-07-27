@@ -216,6 +216,17 @@ class ChartConfigDartEmitter {
     PolarColumnStyle style,
   ) => _emitPolarColumnStyleArgument(writer, argument, style);
 
+  /// Writes the `PolarChartConfig(...)` literal the grammar chain hands to
+  /// `.polarConfig(...)` — a BARE expression when [argument] is null, or
+  /// `<argument>: PolarChartConfig(...)` otherwise, which is the same rendering
+  /// the config form's `polarChartConfig:` uses. Unconditional: the caller
+  /// decides when the config is non-default and worth emitting.
+  void emitPolarChartConfig(
+    DartSourceWriter writer,
+    String? argument,
+    PolarChartConfig config,
+  ) => _emitPolarChartConfigArgument(writer, argument, config);
+
   /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
   /// radial geometry verbs (`geomPie`/`geomDonut`/`geomPolar`) use too. Writes
   /// nothing for the default style (unless `includeDefaultValues`).
@@ -262,7 +273,7 @@ class ChartConfigDartEmitter {
         _emitConcentricDonutConfig(body, concentricDonutConfig);
       }
       if (configuration.polarChartConfig case final polarConfig?) {
-        _emitPolarChartConfig(body, polarConfig);
+        _emitPolarChartConfigArgument(body, 'polarChartConfig', polarConfig);
       }
       if (configuration.radialBarChartConfig case final radialBarConfig?) {
         _emitRadialBarChartConfig(body, radialBarConfig);
@@ -3075,8 +3086,22 @@ class ChartConfigDartEmitter {
     writer.writeLine('),');
   }
 
-  void _emitPolarChartConfig(DartSourceWriter writer, PolarChartConfig config) {
-    writer.writeLine('polarChartConfig: PolarChartConfig(');
+  /// Writes `<argument>: PolarChartConfig(...)`, or a BARE `PolarChartConfig(`
+  /// literal when [argument] is null.
+  ///
+  /// Shared between the config form (`polarChartConfig:` on `BravenChartPlus`)
+  /// and the grammar form (`.polarConfig(<expr>)`, through
+  /// [emitPolarChartConfig]) so the two cannot disagree about how a
+  /// `PolarChartConfig` is rendered. Unconditional: the caller decides when the
+  /// config is worth emitting.
+  void _emitPolarChartConfigArgument(
+    DartSourceWriter writer,
+    String? argument,
+    PolarChartConfig config,
+  ) {
+    writer.writeLine(
+      argument == null ? 'PolarChartConfig(' : '$argument: PolarChartConfig(',
+    );
     writer.indented(() {
       final pane = config.pane;
       if (options.includeDefaultValues || pane != const PolarPaneConfig()) {

@@ -313,6 +313,71 @@ final List<RadialRadiusRow> radiusGrammarRows = <RadialRadiusRow>[
     ),
 ];
 
+// ---------------------------------------------------------------------------
+// MULTI-SERIES POLAR fixtures. A layered/grouped/stacked polar composition is
+// N `PolarColumnChartSeries` over ONE category domain plus a plot-level
+// `PolarChartConfig`; the chain reverses it to N `geomPolar` marks reading one
+// shared category field and one value field each (`value`, `value2`, …) plus
+// `.polarConfig(...)`.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED multi-series polar row: the shared string `category` field
+/// and one number field per polar series, named the way the generator's
+/// de-duplication names them.
+class PolarGrammarRow {
+  const PolarGrammarRow({
+    required this.category,
+    required this.value,
+    this.value2 = 0,
+  });
+
+  final String category;
+  final double value;
+  final double value2;
+}
+
+const polarCapacity = <String, num>{
+  'Apple': 60,
+  'Pear': 50,
+  'Plum': 40,
+  'Fig': 30,
+};
+
+const polarObserved = <String, num>{
+  'Apple': 42,
+  'Pear': 31,
+  'Plum': 17,
+  'Fig': 10,
+};
+
+final List<PolarGrammarRow> polarGrammarRows = <PolarGrammarRow>[
+  for (final row in harvest)
+    PolarGrammarRow(
+      category: row.fruit,
+      value: polarCapacity[row.fruit]!.toDouble(),
+      value2: polarObserved[row.fruit]!.toDouble(),
+    ),
+];
+
+/// A NON-DEFAULT plot-level polar configuration. Every value differs from the
+/// class default, so a chain that dropped the config could not pass the
+/// round-trip proof by accident.
+const groupedPolarConfig = PolarChartConfig(
+  pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+  composition: PolarColumnCompositionConfig(
+    mode: PolarColumnCompositionMode.grouped,
+    groupInnerPadding: 0.2,
+  ),
+);
+
+/// A non-default plot-level polar configuration that leaves the COMPOSITION
+/// alone, so a single-series polar chart can carry it (grouped and stacked
+/// compositions require at least two series).
+const customPolarPaneConfig = PolarChartConfig(
+  pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+  radialAxis: PolarNumericAxisConfig(tickCount: 7),
+);
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -1446,6 +1511,97 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 21: a MULTI-SERIES polar emits one geomPolar per '
+        'series plus .polarConfig and round-trips', (tester) async {
+      // The polar family is the one radial family that may carry several geoms
+      // in a plot: a layered/grouped/stacked composition is N series over ONE
+      // category domain. Each series becomes its own geomPolar reading its own
+      // value field; the plot-level PolarChartConfig becomes .polarConfig(...).
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_multi_series',
+        fragments: <String>[
+          '.geomPolar(',
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'composition: PolarColumnCompositionConfig(',
+          'mode: PolarColumnCompositionMode.grouped',
+          'groupInnerPadding: 0.2',
+          'startAngleDegrees: -45',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: groupedPolarConfig,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              name: 'Capacity',
+              values: polarCapacity,
+              polarStyle: styledPolarStyle,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarGrammarRows)
+            .geomPolar(
+              id: 'capacity',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Capacity',
+              style: styledPolarStyle,
+            )
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Observed',
+            )
+            .polarConfig(groupedPolarConfig)
+            .build(bravenChartController: controller),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('shape 22: a SINGLE polar with a customised PolarChartConfig '
+        'emits .polarConfig and round-trips', (tester) async {
+      // Before the spec carried the config this was an honest refusal: lowering
+      // always produced `const PolarChartConfig()`, so the proof could not
+      // reproduce a customised pane/composition. `.polarConfig(...)` closes it.
+      await expectRoundTrip(
+        tester,
+        name: 'polar_single_config',
+        fragments: <String>[
+          '.geomPolar(',
+          '.polarConfig(',
+          'startAngleDegrees: -45',
+          'tickCount: 7',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPolar(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+            )
+            .polarConfig(customPolarPaneConfig)
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .polarConfig(customPolarPaneConfig)
+            .build(bravenChartController: controller),
+      );
+    });
   });
 
   // =========================================================================
@@ -1992,34 +2148,73 @@ void main() {
       expect(blockedReason(generated), isNot(contains('Cartesian-only')));
     });
 
-    testWidgets('a customised PolarChartConfig is refused with a named reason', (
-      tester,
-    ) async {
+    testWidgets('polar series whose category domains differ never emit a '
+        'chain', (tester) async {
+      // N geomPolar marks share ONE row list, so every polar series must have a
+      // value at every category of the shared domain, in the same order — which
+      // is exactly the contract `PolarColumnComposition.validate` already
+      // enforces at mount AND at hydration. A document that breaks it is not a
+      // chart this package renders, so it is refused BEFORE the emitter, and no
+      // chain (least of all a chain padding the gaps with zeros) is produced.
+      final plain = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              values: const <String, num>{'A': 3, 'B': 5},
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              values: const <String, num>{'A': 4, 'B': 8},
+            ),
+          ],
+        ),
+      );
+      // The mounted chart is a legal composition; break the SECOND series'
+      // second category in the document so the domains no longer align.
+      final snapshot = patchedSnapshot(plain, (json) {
+        final series = json['series']! as List<Object?>;
+        final data =
+            (series[1]! as Map<String, Object?>)['data']!
+                as Map<String, Object?>;
+        final points = data['points']! as List<Object?>;
+        (points[1]! as Map<String, Object?>)['label'] = 'C';
+      });
+      final result = ChartGrammarSourceGenerator.generate(snapshot);
+      expect(result, isA<ChartArtifactFailure<ChartGeneratedSource>>());
+      expect(
+        (result as ChartArtifactFailure<ChartGeneratedSource>).error.message,
+        contains('same categories in the same order'),
+      );
+    });
+
+    testWidgets('a multi-series polar composition emits when the domains do '
+        'align', (tester) async {
+      // The positive control for the test above: the SAME two series, unpatched,
+      // reverse to two geomPolar marks over one shared category field.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
-          polarChartConfig: const PolarChartConfig(
-            pane: PolarPaneConfig(startAngleDegrees: 45),
-          ),
           series: <ChartSeries>[
             PolarColumnChartSeries.fromMap(
-              id: 'polar',
-              values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+              id: 'capacity',
+              values: const <String, num>{'A': 3, 'B': 5},
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              values: const <String, num>{'A': 4, 'B': 8},
             ),
           ],
         ),
       );
       final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('polar chart configuration'),
-          contains('PolarChartConfig'),
-        ),
-      );
-      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+      expect(emittedChain(generated), isTrue);
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+      // A DEFAULT plot config stays implicit — the chain emits no .polarConfig.
+      expect(generated.source, isNot(contains('.polarConfig(')));
     });
 
     testWidgets('misaligned x domains name the offending series', (
