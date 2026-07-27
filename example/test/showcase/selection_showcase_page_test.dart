@@ -104,6 +104,80 @@ void main() {
   );
 
   testWidgets(
+    'popup lifecycle preset mounts a persistent bar brush and can cold-reset',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SelectionShowcasePage(initialPreset: 'popup-lifecycle'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Popup lifecycle diagnostic: outside-to-inside ownership and the cold first fade',
+        ),
+        findsOneWidget,
+      );
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('selection-chart-bar-0')),
+      );
+      expect(chart.interactionConfig?.tooltip.enabled, isTrue);
+      expect(
+        chart.interactionConfig?.selection.acquisitionMode,
+        ChartSelectionAcquisitionMode.rectangle,
+      );
+      expect(
+        chart.interactionConfig?.selection.scope,
+        ChartSelectionScope.mark,
+      );
+      expect(chart.interactionConfig?.selection.brush.enabled, isTrue);
+      expect(chart.interactionConfig?.selection.brush.initialBox, isNotNull);
+
+      await tester.tap(
+        find.byKey(const ValueKey('selection-popup-lifecycle-replay')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('selection-chart-bar-1')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('popup lifecycle preset remains reachable on a phone viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SelectionShowcasePage(initialPreset: 'popup-lifecycle'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('selection-compact-scroll')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('selection-chart-bar-0')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'each family mounts its intended selection acquisition contract',
     (tester) async {
       await pumpSelectionLab(tester);

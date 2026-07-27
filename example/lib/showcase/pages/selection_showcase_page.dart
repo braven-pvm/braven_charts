@@ -10,7 +10,11 @@ import '../widgets/standard_options.dart';
 
 /// Focused, cross-family verification surface for durable chart selection.
 class SelectionShowcasePage extends StatefulWidget {
-  const SelectionShowcasePage({super.key});
+  const SelectionShowcasePage({super.key, this.initialPreset});
+
+  /// Test-only/direct-route preset. The hosted route reads `preset` from the
+  /// query string when this is omitted.
+  final String? initialPreset;
 
   @override
   State<SelectionShowcasePage> createState() => _SelectionShowcasePageState();
@@ -94,20 +98,47 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   double _selectionZoomPadding = 0.08;
   bool _showProjectionAnnotations = false;
   bool _showLinkedPeer = false;
+  bool _popupLifecyclePreset = false;
+  int _popupLifecycleRevision = 0;
   ChartArtifact? _createdSelectionArtifact;
   HydratedChartConfiguration? _createdSelectionChart;
 
   @override
   void initState() {
     super.initState();
+    final preset = widget.initialPreset ?? Uri.base.queryParameters['preset'];
+    _popupLifecyclePreset = preset == 'popup-lifecycle';
     final requested = Uri.base.queryParameters['family'];
-    _family = _SelectionFamily.values.firstWhere(
-      (family) => family.name == requested,
-      orElse: () => _SelectionFamily.line,
-    );
-    _acquisitionMode = _family.defaultAcquisitionMode;
-    _selectionScope = _family.defaultSelectionScope;
+    if (_popupLifecyclePreset) {
+      _family = _SelectionFamily.bar;
+      _acquisitionMode = ChartSelectionAcquisitionMode.rectangle;
+      _selectionScope = ChartSelectionScope.mark;
+      _persistentBrushEnabled = true;
+      _persistentBrushVisible = true;
+      _useModifierKeys = false;
+      _clearOnBackgroundTap = false;
+      _brushStartFraction = 0.18;
+      _brushEndFraction = 0.78;
+      _brushYStartFraction = 0.08;
+      _brushYEndFraction = 0.92;
+      _brushGridDirection = ChartSelectionBrushGridDirection.both;
+      _chartOptionsController
+        ..showCrosshair = false
+        ..showDataPointPopup = true;
+    } else {
+      _family = _SelectionFamily.values.firstWhere(
+        (family) => family.name == requested,
+        orElse: () => _SelectionFamily.line,
+      );
+      _acquisitionMode = _family.defaultAcquisitionMode;
+      _selectionScope = _family.defaultSelectionScope;
+    }
     _chartOptionsController.addListener(_handleChartOptionsChanged);
+  }
+
+  void _replayFirstPopupCase() {
+    _clearSelection();
+    setState(() => _popupLifecycleRevision++);
   }
 
   void _handleChartOptionsChanged() {
@@ -437,9 +468,17 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   Widget build(BuildContext context) {
     return ChartPageLayout(
       title: 'Selection lab',
-      subtitle:
-          'Compare durable point, series, group, range, and radial selection across every chart family',
+      subtitle: _popupLifecyclePreset
+          ? 'Popup lifecycle diagnostic: outside-to-inside ownership and the cold first fade'
+          : 'Compare durable point, series, group, range, and radial selection across every chart family',
       actions: [
+        if (_popupLifecyclePreset)
+          OutlinedButton.icon(
+            key: const ValueKey('selection-popup-lifecycle-replay'),
+            onPressed: _replayFirstPopupCase,
+            icon: const Icon(Icons.replay_outlined, size: 18),
+            label: const Text('Reset popup lifecycle'),
+          ),
         OutlinedButton.icon(
           key: const ValueKey('selection-lab-open-created-chart'),
           onPressed: _createdSelectionChart == null
@@ -1562,7 +1601,13 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
     final radial = _family.isRadial;
     final options = _chartOptionsController.options;
     return BravenChartPlus(
-      key: key ?? ValueKey('selection-chart-${_family.name}'),
+      key:
+          key ??
+          ValueKey(
+            _popupLifecyclePreset
+                ? 'selection-chart-${_family.name}-$_popupLifecycleRevision'
+                : 'selection-chart-${_family.name}',
+          ),
       transitionKey: _family,
       bravenChartController: controller,
       interactionGroupController: _showLinkedPeer

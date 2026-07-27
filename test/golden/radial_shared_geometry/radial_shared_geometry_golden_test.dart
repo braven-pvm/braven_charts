@@ -406,11 +406,16 @@ const _liftSelection = RadialSelectionStyle(
   backdropBlur: 1.5,
 );
 
+const _selectionGoldenInteraction = InteractionConfig(
+  tooltip: TooltipConfig(enabled: false),
+);
+
 Widget _selectedPieChart(ChartTheme theme, BravenChartController controller) =>
     BravenChartPlus(
       bravenChartController: controller,
       theme: theme,
       showLegend: false,
+      interactionConfig: _selectionGoldenInteraction,
       series: [
         PieChartSeries.fromMap(
           id: 'pie',
@@ -436,6 +441,7 @@ Widget _selectedDonutChart(
   bravenChartController: controller,
   theme: theme,
   showLegend: false,
+  interactionConfig: _selectionGoldenInteraction,
   series: [
     DonutChartSeries.fromMap(
       id: 'donut',
@@ -462,6 +468,7 @@ Widget _selectedConcentricChart(
   bravenChartController: controller,
   theme: theme,
   showLegend: false,
+  interactionConfig: _selectionGoldenInteraction,
   concentricDonutConfig: const ConcentricDonutConfig(
     innerRadiusFactor: 0.24,
     ringGap: 7,
@@ -495,6 +502,7 @@ Widget _selectedPolarChart(
   bravenChartController: controller,
   theme: theme,
   showLegend: false,
+  interactionConfig: _selectionGoldenInteraction,
   polarChartConfig: const PolarChartConfig(
     pane: PolarPaneConfig(
       startAngleDegrees: 40,

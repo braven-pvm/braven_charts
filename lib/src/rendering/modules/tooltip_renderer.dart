@@ -336,6 +336,13 @@ class TooltipRenderer {
       borderRadius: style.borderRadius,
     );
 
+    // Scale the complete popup around its data-point attachment. The arrow
+    // therefore stays pinned while the card performs its brief flick motion.
+    canvas.save();
+    canvas.translate(tooltipAnchor.dx, tooltipAnchor.dy);
+    canvas.scale(animator.scale, animator.scale);
+    canvas.translate(-tooltipAnchor.dx, -tooltipAnchor.dy);
+
     // Draw shadow if configured (with opacity)
     if (style.shadowBlurRadius > 0) {
       final shadowPath = tooltipPath.shift(const Offset(0, 2));
@@ -390,6 +397,7 @@ class TooltipRenderer {
       canvas,
       Offset(tooltipX + padding, tooltipY + padding),
     );
+    canvas.restore();
   }
 
   /// Resolves an explicit tooltip style before the chart-theme fallback.

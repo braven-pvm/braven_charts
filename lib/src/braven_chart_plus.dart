@@ -2064,6 +2064,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
+  bool _dismissTapPinnedTooltip() {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    return renderBox?.dismissTapPinnedTooltip() ?? false;
+  }
+
   @override
   void dispose() {
     _incomingDataAnimationController
@@ -9089,6 +9095,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       if (renderBox == null) return;
 
+      final dismissedTapTooltip =
+          event.logicalKey == LogicalKeyboardKey.escape &&
+          renderBox.dismissTapPinnedTooltip();
+
       // Escape cancels an in-progress acquisition before family-specific
       // keyboard handlers can interpret it as a request to clear committed
       // point selection.
@@ -9105,6 +9115,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (_handleScatterPointKey(event.logicalKey)) return;
       if (_handleBarPointKey(event.logicalKey)) return;
       if (_handlePathPointKey(event.logicalKey)) return;
+      if (dismissedTapTooltip) return;
 
       // Cancel range annotation creation mode
       if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -10959,7 +10970,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       selectedTooltipPoint = _selectedPointRefs.firstOrNull;
     }
 
-    final focusChart = Focus(
+    final focusChartContent = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
@@ -11129,6 +11140,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                                   true) &&
                               _focusNode.hasFocus &&
                               (_selectionBrushState?.visible ?? false),
+                          disableAnimations: _disableAnimations,
                           textScaleFactor: _textScaleFactor,
                           textDirection: _textDirection,
                           onCursorChange: _handleCursorChange,
@@ -11327,6 +11339,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           );
         },
       ),
+    );
+    final focusChart = TapRegion(
+      onTapOutside: (_) => _dismissTapPinnedTooltip(),
+      child: focusChartContent,
     );
 
     final hasOnlyBars =
@@ -11915,6 +11931,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.interactionConfig,
     this.selectionBrushState,
     this.selectionBrushKeyboardFocused = false,
+    this.disableAnimations = false,
     this.textScaleFactor = 1,
     this.textDirection = TextDirection.ltr,
     this.onCursorChange,
@@ -11966,6 +11983,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final InteractionConfig? interactionConfig;
   final ChartSelectionBrushState? selectionBrushState;
   final bool selectionBrushKeyboardFocused;
+  final bool disableAnimations;
   final double textScaleFactor;
   final TextDirection textDirection;
   final void Function(MouseCursor cursor)? onCursorChange;
@@ -12003,6 +12021,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         interactionConfig: interactionConfig,
         selectionBrushState: selectionBrushState,
         selectionBrushKeyboardFocused: selectionBrushKeyboardFocused,
+        disableAnimations: disableAnimations,
         axislessInsets: axislessPlotInsets,
         textScaleFactor: textScaleFactor,
         textDirection: textDirection,
@@ -12057,6 +12076,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setInteractionConfig(interactionConfig)
       ..setSelectionBrushState(selectionBrushState)
       ..setSelectionBrushKeyboardFocused(selectionBrushKeyboardFocused)
+      ..setDisableAnimations(disableAnimations)
       ..setTextScaleFactor(textScaleFactor)
       ..setTextDirection(textDirection)
       ..setGridConfig(gridConfig)
