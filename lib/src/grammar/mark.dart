@@ -20,8 +20,10 @@ import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/pie_chart_config.dart'
-    show PieChartStyle, PieDataLabelConfig;
+    show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
 import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
+import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import 'channel.dart';
 
 /// One geometry (or one derived statistic) in a [PlotSpec].
@@ -30,11 +32,14 @@ import 'channel.dart';
 /// variant does not compile, so every dispatch site — the lowering, the
 /// facade, a future emitter — is checked when a variant is added.
 ///
-/// ## V1 scope
+/// ## Geometry families
 ///
-/// Marks are Cartesian only: [LineMark], [AreaMark], [BarMark], [ScatterMark],
-/// [CandlestickMark] and [TrendMark]. Radial and polar geometries, faceting,
-/// log/time scale objects and string-column data adapters are deliberately V2.
+/// Cartesian geometries — [LineMark], [AreaMark], [BarMark], [ScatterMark],
+/// [CandlestickMark] and [TrendMark] — plus the radial [RadialMark] family
+/// ([PieMark], [DonutMark], [PolarMark]). A spec is either Cartesian or radial:
+/// a [RadialMark] lowers through the radial branch of `spec.lower()`, may share
+/// the spec with no other mark, and honors no Cartesian axis/grid option.
+/// Faceting, log/time scale objects and string-column data adapters remain V2.
 ///
 /// ## Marks have no `copyWith`
 ///
@@ -847,6 +852,7 @@ sealed class RadialMark<T> extends Mark<T> {
     super.id,
     super.name,
     super.color,
+    this.unit,
   });
 
   /// Slice/column identity accessor. Stringified into the category label.
@@ -854,6 +860,10 @@ sealed class RadialMark<T> extends Mark<T> {
 
   /// Magnitude accessor: angle-share for pie/donut, radius for polar.
   final FieldAccessor<T, num> value;
+
+  /// Measure unit carried by every radial series (`ChartSeries.unit`). Null
+  /// lowers to a series with no unit. Shared by pie/donut/concentric/polar.
+  final String? unit;
 }
 
 /// A pie: each row is a slice, [RadialMark.value] is the angle-share.
@@ -865,9 +875,13 @@ final class PieMark<T> extends RadialMark<T> {
     super.id,
     super.name,
     super.color,
+    super.unit,
     this.radius,
     this.style,
+    this.selectionStyle,
     this.dataLabels,
+    this.sliceRadiusConfig,
+    this.sliceGroupingConfig,
   });
 
   /// Optional second metric → variable slice radius (Nightingale). Null keeps
@@ -877,8 +891,20 @@ final class PieMark<T> extends RadialMark<T> {
   /// Slice geometry/appearance. Null lowers to `const PieChartStyle()`.
   final PieChartStyle? style;
 
+  /// Durable slice-selection presentation. Null lowers to
+  /// `const RadialSelectionStyle()`.
+  final RadialSelectionStyle? selectionStyle;
+
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
+
+  /// Variable slice-radius encoding for the [radius] second metric. Null keeps
+  /// a fixed radius. Its optional `formatter` callback is not reproducible as a
+  /// literal and is dropped by the source emitter with an honest placeholder.
+  final RadialSliceRadiusConfig? sliceRadiusConfig;
+
+  /// Deterministic small-slice grouping projection. Null keeps every slice.
+  final RadialSliceGroupingConfig? sliceGroupingConfig;
 
   @override
   bool operator ==(Object other) =>
@@ -890,8 +916,12 @@ final class PieMark<T> extends RadialMark<T> {
           other.id == id &&
           other.name == name &&
           other.color == color &&
+          other.unit == unit &&
           other.style == style &&
-          other.dataLabels == dataLabels;
+          other.selectionStyle == selectionStyle &&
+          other.dataLabels == dataLabels &&
+          other.sliceRadiusConfig == sliceRadiusConfig &&
+          other.sliceGroupingConfig == sliceGroupingConfig;
 
   @override
   int get hashCode => Object.hash(
@@ -901,8 +931,12 @@ final class PieMark<T> extends RadialMark<T> {
     id,
     name,
     color,
+    unit,
     style,
+    selectionStyle,
     dataLabels,
+    sliceRadiusConfig,
+    sliceGroupingConfig,
   );
 
   @override
@@ -920,11 +954,15 @@ final class DonutMark<T> extends RadialMark<T> {
     super.id,
     super.name,
     super.color,
+    super.unit,
     this.radius,
     this.ring,
     this.style,
+    this.selectionStyle,
     this.center,
     this.dataLabels,
+    this.sliceRadiusConfig,
+    this.sliceGroupingConfig,
   });
 
   /// Optional second metric → variable slice radius. Null keeps a fixed radius.
@@ -936,12 +974,24 @@ final class DonutMark<T> extends RadialMark<T> {
   /// Donut geometry/appearance. Null lowers to `const DonutChartStyle()`.
   final DonutChartStyle? style;
 
+  /// Durable slice-selection presentation. Null lowers to
+  /// `const RadialSelectionStyle()`.
+  final RadialSelectionStyle? selectionStyle;
+
   /// Center summary. For a single donut this is the series' center; for a
   /// concentric composition it is the shared `ConcentricDonutConfig.centerContent`.
   final DonutCenterContent? center;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
+
+  /// Variable slice-radius encoding for the [radius] second metric. Null keeps
+  /// a fixed radius. Its optional `formatter` callback is not reproducible as a
+  /// literal and is dropped by the source emitter with an honest placeholder.
+  final RadialSliceRadiusConfig? sliceRadiusConfig;
+
+  /// Deterministic small-slice grouping projection. Null keeps every slice.
+  final RadialSliceGroupingConfig? sliceGroupingConfig;
 
   @override
   bool operator ==(Object other) =>
@@ -954,9 +1004,13 @@ final class DonutMark<T> extends RadialMark<T> {
           other.id == id &&
           other.name == name &&
           other.color == color &&
+          other.unit == unit &&
           other.style == style &&
+          other.selectionStyle == selectionStyle &&
           other.center == center &&
-          other.dataLabels == dataLabels;
+          other.dataLabels == dataLabels &&
+          other.sliceRadiusConfig == sliceRadiusConfig &&
+          other.sliceGroupingConfig == sliceGroupingConfig;
 
   @override
   int get hashCode => Object.hash(
@@ -967,9 +1021,13 @@ final class DonutMark<T> extends RadialMark<T> {
     id,
     name,
     color,
+    unit,
     style,
+    selectionStyle,
     center,
     dataLabels,
+    sliceRadiusConfig,
+    sliceGroupingConfig,
   );
 
   @override
@@ -986,11 +1044,17 @@ final class PolarMark<T> extends RadialMark<T> {
     super.id,
     super.name,
     super.color,
+    super.unit,
     this.style,
+    this.selectionStyle,
   });
 
   /// Column geometry/appearance. Null lowers to `const PolarColumnStyle()`.
   final PolarColumnStyle? style;
+
+  /// Durable column-selection presentation. Null lowers to
+  /// `const RadialSelectionStyle()`.
+  final RadialSelectionStyle? selectionStyle;
 
   @override
   bool operator ==(Object other) =>
@@ -1001,11 +1065,13 @@ final class PolarMark<T> extends RadialMark<T> {
           other.id == id &&
           other.name == name &&
           other.color == color &&
-          other.style == style;
+          other.unit == unit &&
+          other.style == style &&
+          other.selectionStyle == selectionStyle;
 
   @override
   int get hashCode =>
-      Object.hash(category, value, id, name, color, style);
+      Object.hash(category, value, id, name, color, unit, style, selectionStyle);
 
   @override
   String toString() => 'PolarMark(id: $id, name: $name)';

@@ -171,6 +171,149 @@ final List<GrammarRow> scatterRows = <GrammarRow>[
 ];
 
 // ===========================================================================
+// RADIAL fixtures — the author's row type, its accessors, and the synthesised
+// radial row the generator emits (category/value[/ring]).
+// ===========================================================================
+
+class Harvest {
+  const Harvest({required this.fruit, required this.count, this.season = ''});
+
+  final String fruit;
+  final double count;
+  final String season;
+}
+
+Object harvestFruit(Harvest row) => row.fruit;
+double harvestCount(Harvest row) => row.count;
+Object harvestSeason(Harvest row) => row.season;
+
+const harvest = <Harvest>[
+  Harvest(fruit: 'Apple', count: 42, season: 'Winter'),
+  Harvest(fruit: 'Pear', count: 31, season: 'Winter'),
+  Harvest(fruit: 'Plum', count: 17, season: 'Summer'),
+  Harvest(fruit: 'Fig', count: 10, season: 'Summer'),
+];
+
+/// The SYNTHESISED radial row: the generator names the string category field
+/// `category`, the number value field `value`, and — for a concentric donut —
+/// the string ring field `ring`.
+class RadialGrammarRow {
+  const RadialGrammarRow({
+    required this.category,
+    required this.value,
+    this.ring = '',
+  });
+
+  final String category;
+  final double value;
+  final String ring;
+}
+
+final List<RadialGrammarRow> radialGrammarRows = <RadialGrammarRow>[
+  for (final row in harvest)
+    RadialGrammarRow(category: row.fruit, value: row.count),
+];
+
+/// The concentric rows are concatenated in first-seen ring order (Winter, then
+/// Summer), each carrying its ring key.
+final List<RadialGrammarRow> concentricGrammarRows = <RadialGrammarRow>[
+  for (final row in harvest)
+    RadialGrammarRow(category: row.fruit, value: row.count, ring: row.season),
+];
+
+// ---------------------------------------------------------------------------
+// STYLED radial fixtures. These are the series-level styling every showcase
+// radial chart carries (pieStyle / donutStyle / polarStyle + dataLabels); the
+// mark carries them through to the geom* verb's `style:` / `dataLabels:` args.
+// Each value is validly constructible INSIDE its series (pie radiusFactor in
+// (0, 1]; donut innerRadiusFactor in (0, 1)).
+// ---------------------------------------------------------------------------
+
+const styledPieStyle = PieChartStyle(
+  startAngleDegrees: 30,
+  clockwise: false,
+  radiusFactor: 0.8,
+  sliceGap: 4,
+  borderWidth: 2,
+);
+
+const styledPieLabels = PieDataLabelConfig(
+  position: PieDataLabelPosition.inside,
+  minimumShare: 0.05,
+  padding: 10,
+);
+
+const styledDonutStyle = DonutChartStyle(
+  innerRadiusFactor: 0.4,
+  sliceGap: 3,
+  borderWidth: 2,
+);
+
+const styledPolarStyle = PolarColumnStyle(
+  cornerRadius: 6,
+  opacity: 0.9,
+  borderWidth: 2,
+);
+
+// ---------------------------------------------------------------------------
+// SERIES-CONFIG radial fixtures. Beyond the style/dataLabels the marks already
+// carried, the real showcase charts set reproducible SERIES config — a unit, a
+// durable-selection style, small-slice grouping and (pie/donut) a variable
+// slice-radius encoding. The marks now carry these too, so a chart that sets
+// them EMITS instead of being refused by the round-trip proof.
+// ---------------------------------------------------------------------------
+
+const showcaseSelection = RadialSelectionStyle(
+  effect: RadialSelectionEffect.lift,
+  liftScale: 1.12,
+  liftOffset: 8,
+  backdropBlur: 1.5,
+);
+
+const showcaseGrouping = RadialSliceGroupingConfig(
+  minimumShare: 0.08,
+  label: 'Other',
+);
+
+/// A slice-radius encoding with NO formatter — every field is a Dart literal,
+/// so it emits a complete `sliceRadiusConfig:` argument.
+const showcaseRadius = PieSliceRadiusConfig(
+  minimumFactor: 0.4,
+  scale: PieSliceRadiusScale.linear,
+  label: 'Area',
+  unit: 'km2',
+);
+
+/// A radius-bearing synthesised radial row: category / value / radius.
+class RadialRadiusRow {
+  const RadialRadiusRow({
+    required this.category,
+    required this.value,
+    required this.radius,
+  });
+
+  final String category;
+  final double value;
+  final double radius;
+}
+
+const _harvestRadii = <String, num>{
+  'Apple': 12,
+  'Pear': 9,
+  'Plum': 6,
+  'Fig': 3,
+};
+
+final List<RadialRadiusRow> radiusGrammarRows = <RadialRadiusRow>[
+  for (final row in harvest)
+    RadialRadiusRow(
+      category: row.fruit,
+      value: row.count,
+      radius: _harvestRadii[row.fruit]!.toDouble(),
+    ),
+];
+
+// ===========================================================================
 // Harness
 // ===========================================================================
 
@@ -1004,23 +1147,796 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 12: a pie emits geomPie and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'pie',
+        fragments: <String>[
+          'final String category;',
+          'final double value;',
+          '.geomPie(',
+          'category: (row) => row.category',
+          'value: (row) => row.value',
+          "name: 'Harvest'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPie(category: harvestFruit, value: harvestCount, name: 'Harvest')
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPie(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 13: a donut round-trips with its center preserved', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'donut',
+        fragments: <String>[
+          '.geomDonut(',
+          'center: DonutCenterContent(',
+          "label: 'Total'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomDonut(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 14: a concentric donut emits geomDonut(ring:) and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'concentric_donut',
+        fragments: <String>[
+          'final String ring;',
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          "id: 'seasons'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 15: a single-distinct-ring donut is captured as a plain '
+        'donut', (tester) async {
+      // Every row shares one ring value, so the forward path COLLAPSES to a
+      // single DonutChartSeries. The render source only stamps a
+      // concentricDonutConfig when MORE THAN ONE donut series is present
+      // (braven_chart_plus.dart: `whereType<DonutChartSeries>().length > 1`),
+      // so a captured single-ring chart carries a NULL config — indistinguishable
+      // from a plain donut — and faithfully emits a plain geomDonut (no ring:)
+      // that round-trips. The concentricDonutConfig discriminator is
+      // authoritative, but the render rule means it is never non-null with one
+      // donut.
+      const oneSeason = <Harvest>[
+        Harvest(fruit: 'Apple', count: 42, season: 'All year'),
+        Harvest(fruit: 'Pear', count: 31, season: 'All year'),
+      ];
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_single_ring',
+        fragments: <String>['.geomDonut('],
+        original: (controller) => BravenChart.of(oneSeason)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) =>
+            BravenChart.of(radialGrammarRows.take(2).toList())
+                .geomDonut(
+                  id: 'seasons-All year',
+                  category: (row) => row.category,
+                  value: (row) => row.value,
+                  name: 'All year',
+                )
+                .build(bravenChartController: controller),
+      );
+      expect(generated.source, isNot(contains('ring:')));
+    });
+
+    testWidgets('shape 16: a default-config polar column round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_column',
+        fragments: <String>[
+          '.geomPolar(',
+          'category: (row) => row.category',
+          'value: (row) => row.value',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPolar(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 17: a STYLED pie emits style + dataLabels and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'pie_styled',
+        fragments: <String>[
+          '.geomPie(',
+          'style: PieChartStyle(',
+          'startAngleDegrees: 30',
+          'clockwise: false',
+          'sliceGap: 4',
+          'dataLabels: PieDataLabelConfig(',
+          'position: PieDataLabelPosition.inside',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPie(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+              style: styledPieStyle,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPie(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledPieStyle,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 18: a STYLED donut emits style + center + dataLabels '
+        'and round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'donut_styled',
+        fragments: <String>[
+          '.geomDonut(',
+          'style: DonutChartStyle(',
+          'innerRadiusFactor: 0.4',
+          'sliceGap: 3',
+          'center: DonutCenterContent(',
+          "label: 'Total'",
+          'dataLabels: PieDataLabelConfig(',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+              style: styledDonutStyle,
+              center: const DonutCenterContent(label: 'Total'),
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomDonut(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledDonutStyle,
+              center: const DonutCenterContent(label: 'Total'),
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 19: a STYLED concentric donut emits style + '
+        'dataLabels and round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'concentric_styled',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'style: DonutChartStyle(',
+          'innerRadiusFactor: 0.4',
+          'dataLabels: PieDataLabelConfig(',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              style: styledDonutStyle,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              style: styledDonutStyle,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 20: a STYLED polar column emits style and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_styled',
+        fragments: <String>[
+          '.geomPolar(',
+          'style: PolarColumnStyle(',
+          'cornerRadius: 6',
+          'opacity: 0.9',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPolar(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+              style: styledPolarStyle,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledPolarStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+  });
+
+  // =========================================================================
+  // SHOWCASE-REPRESENTATIVE: every showcase radial chart is built the way the
+  // showcase pages build them — `<Family>ChartSeries.fromMap(..., <family>Style:
+  // <Family>ChartStyle(...))` inside a `BravenChartPlus`. Before the styling was
+  // carried onto the marks these were REFUSED by the round-trip proof; they must
+  // now emit a real chain whose `style:`/`dataLabels:` reproduce the series.
+  // =========================================================================
+  group('showcase-representative styled radial charts emit', () {
+    testWidgets('a fromMap pie with a pieStyle + dataLabels emits and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'pie_fromMap_styled',
+        fragments: <String>['.geomPie(', 'style: PieChartStyle('],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PieChartSeries.fromMap(
+              id: 'harvest',
+              name: 'Harvest',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              pieStyle: styledPieStyle,
+              dataLabels: styledPieLabels,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPie(
+              id: 'harvest',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledPieStyle,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('a fromMap donut with a donutStyle emits and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'donut_fromMap_styled',
+        fragments: <String>['.geomDonut(', 'style: DonutChartStyle('],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'harvest',
+              name: 'Harvest',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              donutStyle: styledDonutStyle,
+              centerContent: const DonutCenterContent(label: 'Total'),
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomDonut(
+              id: 'harvest',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledDonutStyle,
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('a fromMap concentric composition with a donutStyle emits and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'concentric_fromMap_styled',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'style: DonutChartStyle(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              donutStyle: styledDonutStyle,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+              donutStyle: styledDonutStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              style: styledDonutStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('a fromMap polar column with a polarStyle emits and '
+        'round-trips', (tester) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_fromMap_styled',
+        fragments: <String>['.geomPolar(', 'style: PolarColumnStyle('],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'harvest',
+              name: 'Harvest',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              polarStyle: styledPolarStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'harvest',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+              style: styledPolarStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+  });
+
+  // =========================================================================
+  // The real showcase radial charts set MORE reproducible series config than
+  // style/dataLabels: a unit, a durable-selection style, small-slice grouping
+  // and a variable slice-radius encoding. The marks now carry these, so the
+  // showcase-representative pie/donut/concentric/polar charts EMIT + round-trip
+  // instead of being refused. See pie_charts_page.dart / donut_charts_page.dart
+  // / concentric_donut_page.dart / polar_column_page.dart.
+  // =========================================================================
+  group('showcase-representative radial series config emits', () {
+    testWidgets('a pie with unit + selectionStyle + sliceGroupingConfig + '
+        'pieStyle emits and round-trips', (tester) async {
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'pie_series_config',
+        fragments: <String>[
+          '.geomPie(',
+          "unit: 'USD'",
+          'selectionStyle: RadialSelectionStyle(',
+          'sliceGroupingConfig: RadialSliceGroupingConfig(',
+          'style: PieChartStyle(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PieChartSeries.fromMap(
+              id: 'pie-showcase',
+              name: 'Revenue',
+              unit: 'USD',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              pieStyle: styledPieStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+              dataLabels: styledPieLabels,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPie(
+              id: 'pie-showcase',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Revenue',
+              unit: 'USD',
+              style: styledPieStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+              dataLabels: styledPieLabels,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a pie with a variable sliceRadiusConfig (no formatter) emits '
+        'and round-trips', (tester) async {
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'pie_slice_radius',
+        fragments: <String>[
+          '.geomPie(',
+          'radius: (row) => row.radius',
+          'sliceRadiusConfig: PieSliceRadiusConfig(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PieChartSeries.fromMap(
+              id: 'pie-radius',
+              name: 'Revenue',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              radiusValues: _harvestRadii,
+              sliceRadiusConfig: showcaseRadius,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radiusGrammarRows)
+            .geomPie(
+              id: 'pie-radius',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              radius: (row) => row.radius,
+              name: 'Revenue',
+              sliceRadiusConfig: showcaseRadius,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a pie sliceRadiusConfig FORMATTER stays an honest refusal '
+        '(placeholder + omitted warning), the chart still emits', (
+      tester,
+    ) async {
+      // A formatter is a live callback, not a literal. The source-only document
+      // path (`extractSourceDocument`) represents it as a placeholder, and — via
+      // the SAME seam the config form uses — the grammar emitter writes a
+      // placeholder comment with a runtime-value-omitted warning. The chain
+      // still EMITS (the config objects round-trip by identity), it is just not
+      // byte-complete: the formatter is the one field that cannot be a literal.
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 600,
+                height: 400,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  series: <ChartSeries>[
+                    PieChartSeries.fromMap(
+                      id: 'pie-fmt',
+                      name: 'Revenue',
+                      values: const <String, num>{
+                        'Apple': 42,
+                        'Pear': 31,
+                        'Plum': 17,
+                        'Fig': 10,
+                      },
+                      radiusValues: _harvestRadii,
+                      sliceRadiusConfig: PieSliceRadiusConfig(
+                        minimumFactor: 0.4,
+                        label: 'Area',
+                        formatter: (value) => '${value}u',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // The source-only path describes the runtime formatter with a placeholder,
+      // where the portable `extractDocument` path fails closed without a
+      // descriptor — proving the formatter never travels as a literal.
+      final result = controller.extractSourceDocument();
+      expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+      final snapshot =
+          (result as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
+
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isTrue);
+      expect(
+        generated.source,
+        contains('sliceRadiusConfig: PieSliceRadiusConfig('),
+      );
+      expect(generated.source, contains('// formatter:'));
+      expect(generated.isComplete, isFalse);
+      expect(
+        generated.warnings.map((w) => w.message).join('\n'),
+        contains('formatter'),
+      );
+      // The honest refusal is at the FIELD level, not a whole-chart block.
+      expect(blockedReason(generated), isNull);
+    });
+
+    testWidgets('a donut with unit + selectionStyle + sliceGroupingConfig + '
+        'donutStyle + center emits and round-trips', (tester) async {
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'donut_series_config',
+        fragments: <String>[
+          '.geomDonut(',
+          "unit: 'USD'",
+          'selectionStyle: RadialSelectionStyle(',
+          'sliceGroupingConfig: RadialSliceGroupingConfig(',
+          'style: DonutChartStyle(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-showcase',
+              name: 'Revenue',
+              unit: 'USD',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              donutStyle: styledDonutStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+              centerContent: const DonutCenterContent(label: 'Total'),
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomDonut(
+              id: 'donut-showcase',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Revenue',
+              unit: 'USD',
+              style: styledDonutStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+              center: const DonutCenterContent(label: 'Total'),
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a concentric composition with unit + selectionStyle + '
+        'sliceGroupingConfig + donutStyle emits and round-trips', (
+      tester,
+    ) async {
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_series_config',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          "unit: 'USD'",
+          'selectionStyle: RadialSelectionStyle(',
+          'sliceGroupingConfig: RadialSliceGroupingConfig(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              unit: 'USD',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              donutStyle: styledDonutStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              unit: 'USD',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+              donutStyle: styledDonutStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              unit: 'USD',
+              style: styledDonutStyle,
+              selectionStyle: showcaseSelection,
+              sliceGroupingConfig: showcaseGrouping,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a polar column with unit + selectionStyle + polarStyle emits '
+        'and round-trips', (tester) async {
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_series_config',
+        fragments: <String>[
+          '.geomPolar(',
+          "unit: 'orders'",
+          'selectionStyle: RadialSelectionStyle(',
+          'style: PolarColumnStyle(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'polar-showcase',
+              name: 'Orders',
+              unit: 'orders',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              polarStyle: styledPolarStyle,
+              selectionStyle: showcaseSelection,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'polar-showcase',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Orders',
+              unit: 'orders',
+              style: styledPolarStyle,
+              selectionStyle: showcaseSelection,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
   });
 
   group('fidelity matrix diagnostics', () {
-    testWidgets('a non-Cartesian family is named, and no chain is emitted', (
-      tester,
-    ) async {
+    testWidgets('a family with no grammar mark (radial-bar) is named, and no '
+        'chain is emitted', (tester) async {
+      // Radial-bar and gauge have neither a RadialMark subtype nor a geom* verb,
+      // so they stay refused — but with an ACCURATE reason naming the missing
+      // geometry, NOT the stale "Cartesian-only in V1" copy (pie/donut/polar now
+      // emit).
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
           series: <ChartSeries>[
-            PieChartSeries(
-              id: 'split',
-              points: const <ChartDataPoint>[
-                ChartDataPoint(x: 0, y: 3, label: 'A'),
-                ChartDataPoint(x: 1, y: 5, label: 'B'),
-              ],
+            RadialBarChartSeries.fromMap(
+              id: 'rings',
+              values: const <String, num>{'A': 3, 'B': 5},
             ),
           ],
         ),
@@ -1031,12 +1947,79 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(
-          contains('Cartesian-only in V1'),
-          contains('PieChartSeries'),
-          contains('split'),
+          contains('radial-bar, gauge or range-area'),
+          contains('RadialBarChartSeries'),
+          contains('rings'),
         ),
       );
-      expect(generated.source, contains('Cartesian-only in V1'));
+      expect(blockedReason(generated), isNot(contains('Cartesian-only in V1')));
+      expect(generated.source, isNot(contains('Cartesian-only in V1')));
+    });
+
+    testWidgets('a customised ConcentricDonutConfig is refused with a named '
+        'reason, not the stale copy', (tester) async {
+      // The grammar carries only a concentric donut's shared center, so a
+      // custom ringGap cannot round-trip. The proof must refuse it with an
+      // accurate reason, NOT emit a chain that silently drops the config.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(ringGap: 12),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('concentric-donut composition'),
+          contains('ConcentricDonutConfig'),
+        ),
+      );
+      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+    });
+
+    testWidgets('a customised PolarChartConfig is refused with a named reason', (
+      tester,
+    ) async {
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: const PolarChartConfig(
+            pane: PolarPaneConfig(startAngleDegrees: 45),
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'polar',
+              values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('polar chart configuration'),
+          contains('PolarChartConfig'),
+        ),
+      );
+      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
     });
 
     testWidgets('misaligned x domains name the offending series', (

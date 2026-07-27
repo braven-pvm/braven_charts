@@ -162,15 +162,15 @@ void main() {
     await tester.pumpWidget(
       host(
         workbenchController: workbench,
+        // Radial-bar has no grammar geometry (pie/donut/polar now DO emit), so
+        // it is the family that still shows the "not emitted" diagnostic — with
+        // an accurate reason, not the stale "Cartesian-only V1" copy.
         chartBuilder: (context, controller) => BravenChartPlus(
           bravenChartController: controller,
           series: <ChartSeries>[
-            PieChartSeries(
+            RadialBarChartSeries.fromMap(
               id: 'split',
-              points: const <ChartDataPoint>[
-                ChartDataPoint(x: 0, y: 3, label: 'A'),
-                ChartDataPoint(x: 1, y: 5, label: 'B'),
-              ],
+              values: const <String, num>{'A': 3, 'B': 5},
             ),
           ],
         ),
@@ -183,8 +183,9 @@ void main() {
 
     final source = workbench.generatedSource!.source;
     expect(source, isNot(contains('= BravenChart.of(')));
-    expect(source, contains('Cartesian-only in V1'));
-    expect(source, contains('PieChartSeries'));
+    expect(source, isNot(contains('Cartesian-only in V1')));
+    expect(source, contains('radial-bar, gauge or range-area'));
+    expect(source, contains('RadialBarChartSeries'));
     expect(
       workbench.generatedSource!.completeness,
       ChartGeneratedSourceCompleteness.portableWithPlaceholders,
