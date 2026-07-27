@@ -1152,6 +1152,22 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   );
 }
 
+/// One authority `ArgumentError` rendered as a diagnostic detail sentence.
+///
+/// Leads with the error's `name` — the FIELD that failed, e.g.
+/// "pane.innerRadiusFactor" — because the named diagnostic REPLACES the raw
+/// error rather than accompanying it. A `PolarChartConfig` range-checks eight
+/// fields and a `ConcentricDonutConfig` three, so "Value must be in [0, 1)" on
+/// its own would make the grammar's diagnostic strictly less actionable than
+/// the error it hides. An `ArgumentError` raised without a name still renders
+/// (the authority's sentence alone), so this cannot regress into "null: ".
+String _authorityDetail(ArgumentError error) {
+  final field = error.name == null ? '' : '${error.name}: ';
+  return error.invalidValue == null
+      ? '$field${error.message}.'
+      : '$field${error.message} ("${error.invalidValue}").';
+}
+
 /// Runs one concentric-donut contract check and renames its failure.
 ///
 /// [ConcentricDonutLayoutCalculator] is the authority — the same validator the
@@ -1168,9 +1184,7 @@ void _guardConcentric(
     check();
   } on ArgumentError catch (error) {
     throw GrammarSpecException.invalidConcentricComposition(
-      error.invalidValue == null
-          ? '${error.message}.'
-          : '${error.message} ("${error.invalidValue}").',
+      _authorityDetail(error),
       ringIds: ringIds,
     );
   }
@@ -1189,11 +1203,7 @@ void _guardPolar(void Function() check) {
   try {
     check();
   } on ArgumentError catch (error) {
-    throw GrammarSpecException.invalidPolarComposition(
-      error.invalidValue == null
-          ? '${error.message}.'
-          : '${error.message} ("${error.invalidValue}").',
-    );
+    throw GrammarSpecException.invalidPolarComposition(_authorityDetail(error));
   }
 }
 

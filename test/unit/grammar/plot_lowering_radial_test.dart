@@ -1842,22 +1842,38 @@ void main() {
     });
 
     test('the hoisted config diagnostic is a named grammar failure, not a raw '
-        "ArgumentError, and reads in the authority's own words", () {
+        "ArgumentError, and reads in the authority's own words — including "
+        'the field that failed', () {
       // The grammar delegates to `PolarChartConfig.validate()` — the same
       // validator BravenChartPlus runs at mount — and only RENAMES its failure,
       // so the two cannot describe one mistake in two different sentences.
+      //
+      // The renaming must not LOSE anything either. The raw ArgumentError this
+      // replaces carries a `name` — the offending field — and a
+      // PolarChartConfig range-checks eight of them, so "Value must be in
+      // [0, 1)" on its own is strictly less actionable than the error the
+      // diagnostic hides.
       const invalidConfig = PolarChartConfig(
         pane: PolarPaneConfig(innerRadiusFactor: 2),
       );
+      String? authorityName;
       String? authorityDetail;
       try {
         invalidConfig.validate();
       } on ArgumentError catch (error) {
+        authorityName = error.name;
         authorityDetail = error.invalidValue == null
-            ? '${error.message}.'
-            : '${error.message} ("${error.invalidValue}").';
+            ? '${error.name}: ${error.message}.'
+            : '${error.name}: ${error.message} ("${error.invalidValue}").';
       }
       expect(authorityDetail, isNotNull);
+      expect(
+        authorityName,
+        'pane.innerRadiusFactor',
+        reason:
+            'the authority stopped naming the failing field, so the detail '
+            'below can no longer carry it either',
+      );
 
       Object? thrown;
       try {
@@ -1878,6 +1894,49 @@ void main() {
       expect(
         failure.message,
         GrammarSpecException.invalidPolarComposition(authorityDetail!).message,
+      );
+      // Asserted separately from the parity comparison above, which would pass
+      // just as happily if both sides dropped the field name together.
+      expect(
+        failure.message,
+        contains('pane.innerRadiusFactor'),
+        reason:
+            'the diagnostic must say WHICH field the config got wrong; the raw '
+            'ArgumentError it replaces does',
+      );
+    });
+
+    test('the hoisted concentric diagnostic names its failing field too', () {
+      // The concentric guard is the twin of the polar one and renames the same
+      // shape of authority failure, so it carries the same obligation: a ring
+      // gap and two radii are all range-checked, and the diagnostic that
+      // replaces the raw error must not be the one that stops saying which.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'rings',
+              concentric: ConcentricDonutConfig(innerRadiusFactor: 2),
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.invalidConcentricComposition);
+      expect(
+        failure.message,
+        contains('innerRadiusFactor'),
+        reason:
+            'the diagnostic must say WHICH field the concentric config got '
+            'wrong; the raw ArgumentError it replaces does',
       );
     });
 
