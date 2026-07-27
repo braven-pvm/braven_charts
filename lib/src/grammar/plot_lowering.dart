@@ -1256,15 +1256,64 @@ PolarColumnChartSeries _lowerPolar<T>(
   PolarMark<T> mark,
   String id,
   List<T> data,
-) => PolarColumnChartSeries.fromMap(
-  id: id,
-  name: mark.name,
-  color: mark.color,
-  unit: mark.unit,
-  values: _radialValues(data, mark.category, mark.value),
-  polarStyle: mark.style ?? const PolarColumnStyle(),
-  selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
-);
+) {
+  // An interval needs both endpoints. One bound alone cannot be drawn, so the
+  // half-specified channel is refused by name rather than silently dropped.
+  if ((mark.intervalLow == null) != (mark.intervalHigh == null)) {
+    throw GrammarSpecException.incompletePolarInterval(id);
+  }
+
+  // `_radialValues` iterates `data` in order and rejects duplicate categories,
+  // so the per-category maps built below share its key order — which is what
+  // `PolarColumnChartSeries._fromMap` aligns `targetValues` and the interval
+  // bound lists to.
+  final values = _radialValues(data, mark.category, mark.value);
+  final columnColors = <String, Color>{};
+  final targets = <String, num?>{};
+  final intervals = <String, PolarColumnInterval>{};
+  for (final row in data) {
+    final category = mark.category(row).toString();
+    if (mark.columnColor != null) {
+      final color = mark.columnColor!(row);
+      // A null color leaves the category on the series color, exactly as an
+      // unset accessor does for every row.
+      if (color != null) columnColors[category] = color;
+    }
+    if (mark.target != null) {
+      // Null is meaningful: the category keeps its point but loses its marker.
+      targets[category] = mark.target!(row);
+    }
+    if (mark.intervalLow != null) {
+      final lower = mark.intervalLow!(row);
+      final upper = mark.intervalHigh!(row);
+      if (lower != null && upper != null) {
+        intervals[category] = PolarColumnInterval(
+          lower: lower.toDouble(),
+          upper: upper.toDouble(),
+        );
+      }
+    }
+  }
+
+  final build = mark.preset == PolarColumnPreset.rose
+      ? PolarColumnChartSeries.rose
+      : PolarColumnChartSeries.fromMap;
+  return build(
+    id: id,
+    name: mark.name,
+    color: mark.color,
+    unit: mark.unit,
+    values: values,
+    columnColors: columnColors,
+    polarStyle: mark.style ?? const PolarColumnStyle(),
+    selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
+    targets: targets,
+    targetMarkerStyle:
+        mark.targetMarkerStyle ?? const PolarColumnTargetMarkerStyle(),
+    intervals: intervals,
+    intervalStyle: mark.intervalStyle ?? const PolarColumnIntervalStyle(),
+  );
+}
 
 void _requireScale(
   String markId,

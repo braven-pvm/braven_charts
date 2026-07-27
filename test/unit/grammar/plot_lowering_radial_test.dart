@@ -29,6 +29,14 @@ Object fruitBlank(Fruit row) => '';
 double sampleX(Fruit row) => row.count;
 double sampleY(Fruit row) => row.mass;
 
+// Advanced polar per-series channels. Top-level so the marks stay const.
+num? fruitTarget(Fruit row) => row.mass;
+num? fruitLow(Fruit row) => row.count - 5;
+num? fruitHigh(Fruit row) => row.count + 5;
+num? fruitSparseTarget(Fruit row) => row.basket == 'A' ? row.mass : null;
+Color? fruitColumnColor(Fruit row) =>
+    row.basket == 'A' ? const Color(0xFF112233) : null;
+
 const fruits = <Fruit>[
   Fruit(name: 'Apple', count: 30, mass: 5, basket: 'A'),
   Fruit(name: 'Pear', count: 20, mass: 3, basket: 'A'),
@@ -542,6 +550,208 @@ void main() {
           name: 'Fruit',
           values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
         ),
+      );
+    });
+  });
+
+  group('polar advanced per-series channels', () {
+    test('a target accessor and the rose preset lower to a rose series with '
+        'category-ordered targetValues', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            target: fruitTarget,
+            preset: PolarColumnPreset.rose,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.preset, PolarColumnPreset.rose);
+      expect(series.targetValues, [5.0, 3.0, 2.0]);
+    });
+
+    test('an unset target accessor leaves targetValues empty', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.preset, PolarColumnPreset.standard);
+      expect(series.targetValues, isEmpty);
+      expect(series.intervalLowerValues, isEmpty);
+      expect(series.intervalUpperValues, isEmpty);
+    });
+
+    test('a target accessor that returns null keeps the category null', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            target: fruitSparseTarget,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.targetValues, [5.0, 3.0, null]);
+    });
+
+    test('a columnColor accessor lowers to per-point PointStyle colors', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            columnColor: fruitColumnColor,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF112233),
+        const Color(0xFF112233),
+        null,
+      ]);
+    });
+
+    test('both interval accessors lower to aligned interval bounds', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            intervalLow: fruitLow,
+            intervalHigh: fruitHigh,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.intervalLowerValues, [25.0, 15.0, 5.0]);
+      expect(series.intervalUpperValues, [35.0, 25.0, 15.0]);
+    });
+
+    test('target and interval styles ride the mark onto the series', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            target: fruitTarget,
+            targetMarkerStyle: PolarColumnTargetMarkerStyle(width: 3),
+            intervalLow: fruitLow,
+            intervalHigh: fruitHigh,
+            intervalStyle: PolarColumnIntervalStyle(width: 4),
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PolarColumnChartSeries;
+      expect(series.targetMarkerStyle.width, 3);
+      expect(series.intervalStyle.width, 4);
+    });
+
+    test('an advanced polar mark equals the hand-built rose series', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            name: 'Fruit',
+            category: fruitName,
+            value: fruitCount,
+            columnColor: fruitColumnColor,
+            target: fruitTarget,
+            targetMarkerStyle: PolarColumnTargetMarkerStyle(width: 3),
+            intervalLow: fruitLow,
+            intervalHigh: fruitHigh,
+            intervalStyle: PolarColumnIntervalStyle(width: 4),
+            preset: PolarColumnPreset.rose,
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single,
+        PolarColumnChartSeries.rose(
+          id: 'fruit',
+          name: 'Fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+          columnColors: const {
+            'Apple': Color(0xFF112233),
+            'Pear': Color(0xFF112233),
+          },
+          targets: const {'Apple': 5.0, 'Pear': 3.0, 'Plum': 2.0},
+          targetMarkerStyle: const PolarColumnTargetMarkerStyle(width: 3),
+          intervals: const {
+            'Apple': PolarColumnInterval(lower: 25, upper: 35),
+            'Pear': PolarColumnInterval(lower: 15, upper: 25),
+            'Plum': PolarColumnInterval(lower: 5, upper: 15),
+          },
+          intervalStyle: const PolarColumnIntervalStyle(width: 4),
+        ),
+      );
+    });
+
+    test('setting only the lower interval bound throws '
+        'incompletePolarInterval', () {
+      const spec = PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            intervalLow: fruitLow,
+          ),
+        ],
+      );
+
+      expect(
+        spec.lower,
+        throwsGrammarCode(GrammarDiagnosticCode.incompletePolarInterval),
+      );
+    });
+
+    test('setting only the upper interval bound throws '
+        'incompletePolarInterval', () {
+      const spec = PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PolarMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            intervalHigh: fruitHigh,
+          ),
+        ],
+      );
+
+      expect(
+        spec.lower,
+        throwsGrammarCode(GrammarDiagnosticCode.incompletePolarInterval),
       );
     });
   });
