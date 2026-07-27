@@ -486,6 +486,111 @@ const exhaustivePolarConfigFragments = <String>[
   'dashPattern: <double>[3.0, 2.0],',
 ];
 
+// ---------------------------------------------------------------------------
+// ADVANCED PER-SERIES POLAR fixtures. The `standard`, `rose`, `references` and
+// `intervals` showcase presentations carry per-CATEGORY data beyond the value:
+// a column color, an absolute target, and an interval's two bounds. Each of
+// those becomes its own synthesised row field, so the reversed chain reads
+// them exactly the way it reads the value.
+//
+// Every one of the three is NULLABLE per category on purpose. A category
+// without a target must stay null: a synthesised 0 is a real value on the
+// radial scale and would draw a marker at the origin instead of drawing none.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED advanced-polar row: the shared category, this series' value,
+/// and the nullable per-category channels the generator adds only for a series
+/// that carries them.
+class PolarAdvancedRow {
+  const PolarAdvancedRow({
+    required this.category,
+    required this.value,
+    this.columnColor,
+    this.target,
+    this.intervalLow,
+    this.intervalHigh,
+  });
+
+  final String category;
+  final double value;
+  final Color? columnColor;
+  final double? target;
+  final double? intervalLow;
+  final double? intervalHigh;
+}
+
+/// Per-category column colors for TWO of the four categories, so the reversal
+/// must keep the other two on the series color rather than inventing one.
+const polarColumnColors = <String, Color>{
+  'Apple': Color(0xFF16A34A),
+  'Plum': Color(0xFF7C3AED),
+};
+
+/// Targets for three of the four categories; 'Fig' stays null.
+const polarTargets = <String, num?>{
+  'Apple': 50,
+  'Pear': 36,
+  'Plum': 20,
+  'Fig': null,
+};
+
+/// Intervals for three of the four categories; 'Fig' has none.
+const polarIntervals = <String, PolarColumnInterval>{
+  'Apple': PolarColumnInterval(lower: 38, upper: 46),
+  'Pear': PolarColumnInterval(lower: 27, upper: 34),
+  'Plum': PolarColumnInterval(lower: 14, upper: 20),
+};
+
+/// Every field differs from the class default, so a dropped style cannot pass.
+const styledTargetMarker = PolarColumnTargetMarkerStyle(
+  color: Color(0xFF0F172A),
+  width: 3,
+  lengthFactor: 0.8,
+  opacity: 0.9,
+);
+
+/// Every field differs from the class default.
+const styledIntervalStyle = PolarColumnIntervalStyle(
+  display: PolarColumnIntervalDisplay.band,
+  color: Color(0xFF334155),
+  width: 2,
+  capLengthFactor: 0.5,
+  bandLengthFactor: 0.7,
+  opacity: 0.8,
+);
+
+/// The `references` presentation's rows: value + column color + target.
+final List<PolarAdvancedRow> polarReferenceRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+      target: polarTargets[row.fruit]?.toDouble(),
+    ),
+];
+
+/// The `intervals` presentation's rows: value + both interval bounds.
+final List<PolarAdvancedRow> polarIntervalRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      intervalLow: polarIntervals[row.fruit]?.lower,
+      intervalHigh: polarIntervals[row.fruit]?.upper,
+    ),
+];
+
+/// The `rose` presentation's rows: value + column color.
+final List<PolarAdvancedRow> polarRoseRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+    ),
+];
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -1771,6 +1876,141 @@ void main() {
           reason: 'expected $count × "$fragment" in:\n${generated.source}',
         );
       }
+    });
+
+    testWidgets('shape 24: a polar carrying per-category COLUMN COLORS and '
+        'TARGETS emits both channels and round-trips', (tester) async {
+      // The `references` presentation. Two of the four categories carry a
+      // column color and three of the four carry a target, so the synthesised
+      // fields must be NULLABLE: a category left at null keeps the series color
+      // / draws no marker, while a synthesised 0 would be a real radius.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_targets',
+        fragments: <String>[
+          '.geomPolar(',
+          'final Color? columnColor;',
+          'final double? target;',
+          'columnColor: (row) => row.columnColor,',
+          'target: (row) => row.target,',
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'color: Color(0xFF0F172A),',
+          'lengthFactor: 0.8,',
+          'columnColor: Color(0xFF16A34A),',
+          'columnColor: null,',
+          'target: null,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+              targets: polarTargets,
+              targetMarkerStyle: styledTargetMarker,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarReferenceRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              columnColor: (row) => row.columnColor,
+              target: (row) => row.target,
+              targetMarkerStyle: styledTargetMarker,
+            )
+            .build(bravenChartController: controller),
+      );
+      // Exactly one target is absent, and it is the LAST category — proof the
+      // reversal reproduces `_fromMap`'s category-ordered target list rather
+      // than a compacted one.
+      expect('target: null,'.allMatches(generated.source).length, 1);
+      expect('columnColor: null,'.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('shape 25: a polar carrying per-category INTERVALS emits both '
+        'bounds and round-trips', (tester) async {
+      // The `intervals` presentation. Both bounds ride their own nullable
+      // field; 'Fig' has neither, so the pair stays null for that row.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_intervals',
+        fragments: <String>[
+          '.geomPolar(',
+          'final double? intervalLow;',
+          'final double? intervalHigh;',
+          'intervalLow: (row) => row.intervalLow,',
+          'intervalHigh: (row) => row.intervalHigh,',
+          'intervalStyle: PolarColumnIntervalStyle(',
+          'display: PolarColumnIntervalDisplay.band,',
+          'capLengthFactor: 0.5,',
+          'bandLengthFactor: 0.7,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              intervals: polarIntervals,
+              intervalStyle: styledIntervalStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarIntervalRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              intervalLow: (row) => row.intervalLow,
+              intervalHigh: (row) => row.intervalHigh,
+              intervalStyle: styledIntervalStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect('intervalLow: null,'.allMatches(generated.source).length, 1);
+      expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
+    });
+
+    testWidgets('shape 26: a ROSE polar emits rose: true and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_rose',
+        fragments: <String>[
+          '.geomPolar(',
+          'rose: true,',
+          'columnColor: (row) => row.columnColor,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.rose(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarRoseRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              rose: true,
+              columnColor: (row) => row.columnColor,
+            )
+            .build(bravenChartController: controller),
+      );
     });
   });
 

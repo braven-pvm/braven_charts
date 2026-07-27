@@ -204,14 +204,29 @@ abstract final class ChartGrammarSourceGenerator {
 /// data reachable positionally, so the spec the proof lowers is built from the
 /// identical values without the generator having to compile its own output.
 class _SourceRow {
-  const _SourceRow(this.numbers, this.strings, this.stamps);
+  const _SourceRow(
+    this.numbers,
+    this.strings,
+    this.stamps,
+    this.optionalNumbers,
+    this.colors,
+  );
 
   final List<double> numbers;
   final List<String> strings;
   final List<DateTime?> stamps;
+
+  /// Slots for channels whose ABSENCE is meaningful — a polar category with no
+  /// target or no interval. A synthesised 0 there is a real value on the radial
+  /// scale and would draw a marker the captured chart does not have, so these
+  /// carry null instead.
+  final List<double?> optionalNumbers;
+
+  /// Slots for per-row colour overrides (a polar column's `columnColors`).
+  final List<Color?> colors;
 }
 
-enum _FieldKind { number, string, timestamp }
+enum _FieldKind { number, string, timestamp, optionalNumber, color }
 
 /// One synthesised field: its emitted name, its Dart type and its slot.
 class _Field {
@@ -225,6 +240,8 @@ class _Field {
     _FieldKind.number => 'double',
     _FieldKind.string => 'String',
     _FieldKind.timestamp => 'DateTime',
+    _FieldKind.optionalNumber => 'double?',
+    _FieldKind.color => 'Color?',
   };
 
   /// The closure the chain passes for this field.
@@ -293,9 +310,27 @@ class _RadialPlan {
 /// field its `value:` accessor reads. The category field is shared by every
 /// series and lives on the [_PolarChartPlan].
 class _PolarSeriesPlan {
-  _PolarSeriesPlan({required this.value, required this.mark});
+  _PolarSeriesPlan({
+    required this.value,
+    required this.mark,
+    this.columnColor,
+    this.target,
+    this.intervalLow,
+    this.intervalHigh,
+  });
 
   final _Field value;
+
+  /// Per-category column colour, present only when the series carries one.
+  final _Field? columnColor;
+
+  /// Per-category absolute target, present only when the series carries any.
+  final _Field? target;
+
+  /// The two interval bounds, both present or both absent.
+  final _Field? intervalLow;
+  final _Field? intervalHigh;
+
   final PolarMark<_SourceRow> mark;
 }
 
@@ -351,6 +386,8 @@ class _GrammarChainEmitter {
   var _numberSlots = 0;
   var _stringSlots = 0;
   var _stampSlots = 0;
+  var _optionalNumberSlots = 0;
+  var _colorSlots = 0;
 
   late final bool _omitData =
       snapshot.document.pointCount > options.maxInlinePoints;
@@ -1024,21 +1061,74 @@ class _GrammarChainEmitter {
     }
 
     // EVERY field must be allocated before the rows are synthesised: a row is
-    // sized from the slot counts at the moment it is built.
+    // sized from the slot counts at the moment it is built. The advanced
+    // per-series channels are allocated INTERLEAVED with their series' value so
+    // a series that carries none leaves the field order exactly as it was.
     final category = _addField('category', _FieldKind.string);
-    final values = <_Field>[
-      for (var index = 0; index < series.length; index++)
-        _addField('value', _FieldKind.number),
-    ];
+    final values = <_Field>[];
+    final columnColors = <_Field?>[];
+    final targets = <_Field?>[];
+    final intervalLows = <_Field?>[];
+    final intervalHighs = <_Field?>[];
+    for (final item in series) {
+      values.add(_addField('value', _FieldKind.number));
+      // A per-point colour is `columnColors` reversed: `_fromMap` writes it as
+      // `PointStyle.color(...)`, and lowering writes it back the same way, so a
+      // point whose style carries anything ELSE is caught by the proof.
+      columnColors.add(
+        item.points.any((point) => point.pointStyle?.color != null)
+            ? _addField('columnColor', _FieldKind.color)
+            : null,
+      );
+      targets.add(
+        item.targetValues.isEmpty
+            ? null
+            : _addField('target', _FieldKind.optionalNumber),
+      );
+      // The two bound lists are supplied together or not at all (the series
+      // validates it), so one flag decides both fields.
+      final hasIntervals = item.intervalLowerValues.isNotEmpty;
+      intervalLows.add(
+        hasIntervals
+            ? _addField('intervalLow', _FieldKind.optionalNumber)
+            : null,
+      );
+      intervalHighs.add(
+        hasIntervals
+            ? _addField('intervalHigh', _FieldKind.optionalNumber)
+            : null,
+      );
+    }
     final rows = _synthesiseRadialRows(categories.length);
     for (var index = 0; index < categories.length; index++) {
       rows[index].strings[category.slot] = categories[index];
     }
     for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
-      final points = series[seriesIndex].points;
+      final item = series[seriesIndex];
+      final points = item.points;
       final value = values[seriesIndex];
+      final columnColor = columnColors[seriesIndex];
+      final target = targets[seriesIndex];
+      final low = intervalLows[seriesIndex];
+      final high = intervalHighs[seriesIndex];
       for (var index = 0; index < points.length; index++) {
         rows[index].numbers[value.slot] = points[index].y;
+        if (columnColor != null) {
+          rows[index].colors[columnColor.slot] =
+              points[index].pointStyle?.color;
+        }
+        // These three lists are PARALLEL ARRAYS indexed by category — the same
+        // alignment `PolarColumnChartSeries._fromMap` builds them with — so the
+        // row at a category index carries that category's entry, null included.
+        if (target != null) {
+          rows[index].optionalNumbers[target.slot] = item.targetValues[index];
+        }
+        if (low != null && high != null) {
+          rows[index].optionalNumbers[low.slot] =
+              item.intervalLowerValues[index];
+          rows[index].optionalNumbers[high.slot] =
+              item.intervalUpperValues[index];
+        }
       }
     }
 
@@ -1049,6 +1139,10 @@ class _GrammarChainEmitter {
         for (var index = 0; index < series.length; index++)
           _PolarSeriesPlan(
             value: values[index],
+            columnColor: columnColors[index],
+            target: targets[index],
+            intervalLow: intervalLows[index],
+            intervalHigh: intervalHighs[index],
             mark: PolarMark<_SourceRow>(
               id: series[index].id,
               name: series[index].name,
@@ -1059,10 +1153,27 @@ class _GrammarChainEmitter {
               // Carry the column unit, styling and selection so a styled polar
               // column round-trips (PolarMark.style →
               // PolarColumnChartSeries.polarStyle, .selectionStyle →
-              // .selectionStyle, .unit → .unit). A polar preset, target or
-              // interval option is NOT carried and stays an honest refusal.
+              // .selectionStyle, .unit → .unit), plus the advanced per-category
+              // channels and their two styles and the preset — which is what
+              // turned the references / intervals / rose presentations from an
+              // honest refusal into an emitted chain.
               style: series[index].polarStyle,
               selectionStyle: series[index].selectionStyle,
+              columnColor: columnColors[index] == null
+                  ? null
+                  : _color(columnColors[index]!),
+              target: targets[index] == null
+                  ? null
+                  : _nullableNumber(targets[index]!),
+              targetMarkerStyle: series[index].targetMarkerStyle,
+              intervalLow: intervalLows[index] == null
+                  ? null
+                  : _nullableNumber(intervalLows[index]!),
+              intervalHigh: intervalHighs[index] == null
+                  ? null
+                  : _nullableNumber(intervalHighs[index]!),
+              intervalStyle: series[index].intervalStyle,
+              preset: series[index].preset,
             ),
           ),
       ],
@@ -1122,6 +1233,8 @@ class _GrammarChainEmitter {
         List<double>.filled(_numberSlots, 0),
         List<String>.filled(_stringSlots, ''),
         List<DateTime?>.filled(_stampSlots, null),
+        List<double?>.filled(_optionalNumberSlots, null),
+        List<Color?>.filled(_colorSlots, null),
       ),
   ];
 
@@ -1260,16 +1373,21 @@ class _GrammarChainEmitter {
   /// Explains why a captured radial series is not reproduced by the lowered one.
   ///
   /// The radial marks now carry the unit, selection style, data labels, series
-  /// style, and (pie/donut) the slice-radius and grouping configs, so those all
-  /// round-trip. What remains un-carried is metadata and — on a polar column —
-  /// a non-standard preset, per-category targets or intervals; a series that
-  /// sets one of those is what reaches here.
+  /// style, (pie/donut) the slice-radius and grouping configs and (polar) the
+  /// preset, per-category column colours, targets and intervals with their two
+  /// styles, so those all round-trip. What remains un-carried is series
+  /// metadata, a per-point style that is not a plain colour override, and a
+  /// polar interval list whose every entry is null (which reverses to "no
+  /// intervals" rather than to a list of nulls); a series that sets one of
+  /// those is what reaches here.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
     return 'It carries a series option the radial marks do not carry — the '
         'category, value, optional radius, concentric ring, donut center, '
-        'unit, series style, selection style, data labels, and (pie/donut) the '
-        'slice-radius and grouping configs round-trip, but series metadata and '
-        'a polar preset / per-category target / interval option do not.';
+        'unit, series style, selection style, data labels, (pie/donut) the '
+        'slice-radius and grouping configs and (polar) the preset, per-category '
+        'column colours, targets and intervals round-trip, but series metadata, '
+        'a per-point style beyond a colour override, and an all-null polar '
+        'interval list do not.';
   }
 
   // =========================================================================
@@ -1742,6 +1860,8 @@ class _GrammarChainEmitter {
       _FieldKind.number => _numberSlots++,
       _FieldKind.string => _stringSlots++,
       _FieldKind.timestamp => _stampSlots++,
+      _FieldKind.optionalNumber => _optionalNumberSlots++,
+      _FieldKind.color => _colorSlots++,
     };
     final field = _Field(name, kind, slot);
     _fields.add(field);
@@ -1803,6 +1923,12 @@ class _GrammarChainEmitter {
 
   DateTime Function(_SourceRow) _stamp(_Field field) =>
       (row) => row.stamps[field.slot]!;
+
+  num? Function(_SourceRow) _nullableNumber(_Field field) =>
+      (row) => row.optionalNumbers[field.slot];
+
+  Color? Function(_SourceRow) _color(_Field field) =>
+      (row) => row.colors[field.slot];
 
   _GeometryPlan _planGeometry(ChartSeries series, _Field xField) {
     final base = _identifier(_baseNameFor(series));
@@ -2061,7 +2187,15 @@ class _GrammarChainEmitter {
       final numbers = List<double>.filled(_numberSlots, 0);
       final strings = List<String>.filled(_stringSlots, '');
       final stamps = List<DateTime?>.filled(_stampSlots, null);
-      rows.add(_SourceRow(numbers, strings, stamps));
+      rows.add(
+        _SourceRow(
+          numbers,
+          strings,
+          stamps,
+          List<double?>.filled(_optionalNumberSlots, null),
+          List<Color?>.filled(_colorSlots, null),
+        ),
+      );
     }
     // Slot 0 always holds the shared x.
     for (var index = 0; index < rowCount; index++) {
@@ -2217,6 +2351,38 @@ class _GrammarChainEmitter {
       }
       if (mark.selectionStyle != null) {
         _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
+      }
+      // The advanced per-category channels, in the `geomPolar` signature's own
+      // order. Each accessor field exists only when the captured series carried
+      // that channel, and each style literal is written by the SHARED config
+      // emitter (the same rendering the config form's `targetMarkerStyle:` /
+      // `intervalStyle:` uses), which writes nothing for a default style.
+      if (mark.preset == PolarColumnPreset.rose) {
+        writer.namedArgument('rose', 'true');
+      }
+      if (plan.columnColor != null) {
+        writer.namedArgument('columnColor', plan.columnColor!.accessor());
+      }
+      if (plan.target != null) {
+        writer.namedArgument('target', plan.target!.accessor());
+      }
+      if (mark.targetMarkerStyle != null) {
+        _config.emitPolarTargetMarkerStyle(
+          writer,
+          'targetMarkerStyle',
+          mark.targetMarkerStyle!,
+        );
+      }
+      if (plan.intervalLow != null && plan.intervalHigh != null) {
+        writer.namedArgument('intervalLow', plan.intervalLow!.accessor());
+        writer.namedArgument('intervalHigh', plan.intervalHigh!.accessor());
+      }
+      if (mark.intervalStyle != null) {
+        _config.emitPolarIntervalStyle(
+          writer,
+          'intervalStyle',
+          mark.intervalStyle!,
+        );
       }
       _absorbConfigWarnings();
     });
@@ -2390,6 +2556,16 @@ class _GrammarChainEmitter {
       row.strings[field.slot],
     ),
     _FieldKind.timestamp => _timestampLiteral(row.stamps[field.slot], field),
+    // `null` is the WHOLE point of these two kinds: it is how a category with
+    // no target, no interval and no colour override is written.
+    _FieldKind.optionalNumber => switch (row.optionalNumbers[field.slot]) {
+      final value? => DartSourceWriter.numberLiteral(value),
+      _ => 'null',
+    },
+    _FieldKind.color => switch (row.colors[field.slot]) {
+      final value? => DartSourceWriter.colorLiteral(value),
+      _ => 'null',
+    },
   };
 
   /// Writes a `DateTime.parse(...)` literal for a timestamp slot.

@@ -216,6 +216,25 @@ class ChartConfigDartEmitter {
     PolarColumnStyle style,
   ) => _emitPolarColumnStyleArgument(writer, argument, style);
 
+  /// Writes `<argument>: PolarColumnTargetMarkerStyle(...)`, the field body the
+  /// polar geometry verb (`geomPolar`) hands to its `targetMarkerStyle:`
+  /// argument. Writes nothing for a default style (unless
+  /// `includeDefaultValues`).
+  void emitPolarTargetMarkerStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnTargetMarkerStyle style,
+  ) => _emitPolarTargetMarkerStyleArgument(writer, argument, style);
+
+  /// Writes `<argument>: PolarColumnIntervalStyle(...)`, the field body the
+  /// polar geometry verb (`geomPolar`) hands to its `intervalStyle:` argument.
+  /// Writes nothing for a default style (unless `includeDefaultValues`).
+  void emitPolarIntervalStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnIntervalStyle style,
+  ) => _emitPolarIntervalStyleArgument(writer, argument, style);
+
   /// Writes the `PolarChartConfig(...)` literal the grammar chain hands to
   /// `.polarConfig(...)` — a BARE expression when [argument] is null, or
   /// `<argument>: PolarChartConfig(...)` otherwise, which is the same rendering
@@ -2656,18 +2675,12 @@ class ChartConfigDartEmitter {
     _emitPolarColumnStyleArgument(writer, 'polarStyle', series.polarStyle);
     _emitRadialSelectionStyle(writer, series.selectionStyle);
     _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
-    if (series.targetValues.isNotEmpty &&
-        (options.includeDefaultValues ||
-            series.targetMarkerStyle != const PolarColumnTargetMarkerStyle())) {
-      final target = series.targetMarkerStyle;
-      writer.writeLine('targetMarkerStyle: PolarColumnTargetMarkerStyle(');
-      writer.indented(() {
-        _optionalColor(writer, 'color', target.color);
-        _numberIf(writer, 'width', target.width, 2.5);
-        _numberIf(writer, 'lengthFactor', target.lengthFactor, 0.72);
-        _numberIf(writer, 'opacity', target.opacity, 1);
-      });
-      writer.writeLine('),');
+    if (series.targetValues.isNotEmpty) {
+      _emitPolarTargetMarkerStyleArgument(
+        writer,
+        'targetMarkerStyle',
+        series.targetMarkerStyle,
+      );
     }
     _optionalNullableNumberList(
       writer,
@@ -2679,27 +2692,75 @@ class ChartConfigDartEmitter {
       'intervalUpperValues',
       series.intervalUpperValues,
     );
-    if (series.hasIntervals &&
-        (options.includeDefaultValues ||
-            series.intervalStyle != const PolarColumnIntervalStyle())) {
-      final interval = series.intervalStyle;
-      writer.writeLine('intervalStyle: PolarColumnIntervalStyle(');
-      writer.indented(() {
-        _enumIf(
-          writer,
-          'display',
-          'PolarColumnIntervalDisplay',
-          interval.display.name,
-          defaultName: 'whisker',
-        );
-        _optionalColor(writer, 'color', interval.color);
-        _numberIf(writer, 'width', interval.width, 1.5);
-        _numberIf(writer, 'capLengthFactor', interval.capLengthFactor, 0.62);
-        _numberIf(writer, 'bandLengthFactor', interval.bandLengthFactor, 0.58);
-        _numberIf(writer, 'opacity', interval.opacity, 0.92);
-      });
-      writer.writeLine('),');
+    if (series.hasIntervals) {
+      _emitPolarIntervalStyleArgument(
+        writer,
+        'intervalStyle',
+        series.intervalStyle,
+      );
     }
+  }
+
+  /// Writes `<argument>: PolarColumnTargetMarkerStyle(...)` — the appearance of
+  /// a polar column's per-category target markers — or nothing when [style] is
+  /// the default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`targetMarkerStyle:` on the series) and the
+  /// grammar form (`targetMarkerStyle:` on `geomPolar`, through
+  /// [emitPolarTargetMarkerStyle]) so the two cannot disagree about how a
+  /// `PolarColumnTargetMarkerStyle` is rendered.
+  void _emitPolarTargetMarkerStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnTargetMarkerStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const PolarColumnTargetMarkerStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnTargetMarkerStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'width', style.width, 2.5);
+      _numberIf(writer, 'lengthFactor', style.lengthFactor, 0.72);
+      _numberIf(writer, 'opacity', style.opacity, 1);
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `<argument>: PolarColumnIntervalStyle(...)` — the appearance of a
+  /// polar column's per-category intervals — or nothing when [style] is the
+  /// default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`intervalStyle:` on the series) and the
+  /// grammar form (`intervalStyle:` on `geomPolar`, through
+  /// [emitPolarIntervalStyle]) so the two cannot disagree about how a
+  /// `PolarColumnIntervalStyle` is rendered.
+  void _emitPolarIntervalStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnIntervalStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const PolarColumnIntervalStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnIntervalStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'display',
+        'PolarColumnIntervalDisplay',
+        style.display.name,
+        defaultName: 'whisker',
+      );
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'width', style.width, 1.5);
+      _numberIf(writer, 'capLengthFactor', style.capLengthFactor, 0.62);
+      _numberIf(writer, 'bandLengthFactor', style.bandLengthFactor, 0.58);
+      _numberIf(writer, 'opacity', style.opacity, 0.92);
+    });
+    writer.writeLine('),');
   }
 
   /// Writes `<argument>: PolarColumnStyle(...)` — the polar mark appearance —
