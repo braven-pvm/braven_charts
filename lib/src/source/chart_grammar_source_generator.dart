@@ -38,6 +38,8 @@
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
 /// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
+/// | a pie or donut carrying per-slice colors (`sliceColors`) | blocked, naming the series — `PolarMark` has a per-point color channel (`columnColor`), `PieMark`/`DonutMark` do not |
+/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
 /// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |

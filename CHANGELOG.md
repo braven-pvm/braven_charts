@@ -19,7 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plot-level polar configuration through `PlotSpec.polar` and the
   `BravenChart.polarConfig()` verb, forwarding a `PolarChartConfig` to every
   polar mark in the plot. A misplaced `.polarConfig(...)` is diagnosed rather
-  than silently discarded.
+  than silently discarded. Like `grid`, `title`, `subtitle` and the legend
+  toggle, the config is a SPEC-level option, so `BravenPlot` also forwards it
+  on the empty-data path: a polar chain built over an empty dataset renders
+  its empty state inside the authored pane rather than a default one. Cartesian
+  charts are unaffected — a non-polar spec carrying a config is refused by
+  `polarConfigOnNonPolarSpec`, which runs above the empty-data guard, so it
+  still falls through to the const default.
 - Complete concentric-donut configuration passthrough through
   `DonutMark.concentric` and `BravenChart.geomDonut(concentric: ...)`, carrying
   ring gap, radial order, ring weights, legend mode, pane radii, and the shared
