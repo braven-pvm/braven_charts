@@ -1736,6 +1736,7 @@ void main() {
             interaction: const InteractionConfig(
               touch: TouchInteractionConfig(
                 profile: TouchInteractionProfile.explore,
+                tapBehavior: TouchTapBehavior.disabled,
                 enablePinchZoom: false,
                 enablePanInertia: true,
                 panInertiaDeceleration: 4.5,
@@ -1752,6 +1753,10 @@ void main() {
       expect(
         generated.source,
         contains('profile: TouchInteractionProfile.explore'),
+      );
+      expect(
+        generated.source,
+        contains('tapBehavior: TouchTapBehavior.disabled'),
       );
       expect(generated.source, contains('enablePinchZoom: false'));
       expect(generated.source, contains('enablePanInertia: true'));

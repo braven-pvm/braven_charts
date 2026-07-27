@@ -737,7 +737,17 @@ class EventHandlerManager {
     } else if (event is PointerMoveEvent) {
       _handlePointerMove(event, localPosition);
     } else if (event is PointerUpEvent) {
-      _handlePointerUp(event, localPosition);
+      final allowTapActivation =
+          !isDirectTouch ||
+          interaction.touch.tapBehavior != TouchTapBehavior.disabled;
+      if (!allowTapActivation) {
+        _clearDeferredTapActivation();
+      }
+      _handlePointerUp(
+        event,
+        localPosition,
+        allowTapActivation: allowTapActivation,
+      );
     } else if (event is PointerCancelEvent) {
       _handlePointerCancel();
     } else if (event is PointerHoverEvent) {
@@ -1748,11 +1758,34 @@ class EventHandlerManager {
     _potentialSelectEvent = null;
   }
 
+  void _clearDeferredTapActivation() {
+    _cancelDeferredEmptyAreaClick();
+    _potentialDragPointAnnotation = null;
+    _potentialDragStartPosition = null;
+    _potentialDragRangeAnnotation = null;
+    _potentialDragRangeStartPosition = null;
+    _potentialDragRangeStartBounds = null;
+    _potentialDragTextAnnotation = null;
+    _potentialDragTextStartPosition = null;
+    _potentialDragThresholdAnnotation = null;
+    _potentialDragThresholdStartPosition = null;
+    _potentialDragPinAnnotation = null;
+    _potentialDragPinStartPosition = null;
+    _potentialDragValueSummary = null;
+    _potentialDragValueSummaryStart = null;
+    _potentialDragLegendAnnotation = null;
+    _potentialDragLegendStartPosition = null;
+  }
+
   // ==========================================================================
   // Pointer Up Handler
   // ==========================================================================
 
-  void _handlePointerUp(PointerUpEvent event, Offset position) {
+  void _handlePointerUp(
+    PointerUpEvent event,
+    Offset position, {
+    bool allowTapActivation = true,
+  }) {
     final coordinator = _delegate.coordinator;
     coordinator.setPressedMarker(null);
 
@@ -1833,7 +1866,7 @@ class EventHandlerManager {
     _completePan();
 
     // Handle tap on marker for tap-triggered tooltips
-    if (!valueSummaryHandled) {
+    if (!valueSummaryHandled && allowTapActivation) {
       _handleTapForTooltip();
     }
 

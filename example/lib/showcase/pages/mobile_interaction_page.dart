@@ -16,6 +16,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
   TouchInteractionProfile _profile = TouchInteractionProfile.browse;
   Map<String, double>? _visibleBounds;
   int _viewportUpdates = 0;
+  TouchTapBehavior _tapBehavior = TouchTapBehavior.disabled;
   bool _enableTrackingScrub = true;
   bool _enableHaptics = true;
   bool _enablePanInertia = true;
@@ -49,7 +50,12 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
 
   void _setProfile(TouchInteractionProfile profile) {
     if (_profile == profile) return;
-    setState(() => _profile = profile);
+    setState(() {
+      _profile = profile;
+      _tapBehavior = profile == TouchInteractionProfile.browse
+          ? TouchTapBehavior.disabled
+          : TouchTapBehavior.inspectAndSelect;
+    });
   }
 
   void _onViewportChanged(Map<String, double> bounds) {
@@ -90,6 +96,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
     return ColoredBox(
       color: colors.surface,
       child: ListView(
+        key: const ValueKey('mobile-interaction-scroll'),
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 80),
         children: [
           Text(
@@ -114,16 +121,24 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                 ? 'Browse: the page keeps one finger'
                 : 'Explore: the chart keeps one finger',
             message: isBrowse
-                ? 'Drag with one finger to scroll this page. Use two fingers together to pan and pinch the chart.'
+                ? 'Drag with one finger to scroll this page. Hold to inspect, or use two fingers together to pan and pinch the chart.'
                 : 'Drag the chart with one finger to pan. Pinch with two fingers to zoom. Scroll the page outside the chart.',
           ),
           const SizedBox(height: 12),
           _TrackingControls(
+            shortTapEnabled: _tapBehavior == TouchTapBehavior.inspectAndSelect,
             enabled: _enableTrackingScrub,
             hapticsEnabled: _enableHaptics,
             inertiaEnabled: _enablePanInertia,
             inertiaDeceleration: _panInertiaDeceleration,
             trackedDay: _trackedDay,
+            onShortTapChanged: (value) {
+              setState(() {
+                _tapBehavior = value
+                    ? TouchTapBehavior.inspectAndSelect
+                    : TouchTapBehavior.disabled;
+              });
+            },
             onEnabledChanged: (value) {
               setState(() {
                 _enableTrackingScrub = value;
@@ -170,6 +185,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                       interactionConfig: InteractionConfig(
                         touch: TouchInteractionConfig(
                           profile: _profile,
+                          tapBehavior: _tapBehavior,
                           enablePanInertia: _enablePanInertia,
                           panInertiaDeceleration: _panInertiaDeceleration,
                           enableLongPressTracking: _enableTrackingScrub,
@@ -235,7 +251,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
             ),
           ),
           const SizedBox(height: 20),
-          _ContractSummary(profile: _profile),
+          _ContractSummary(profile: _profile, tapBehavior: _tapBehavior),
         ],
       ),
     );
@@ -244,22 +260,26 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
 
 class _TrackingControls extends StatelessWidget {
   const _TrackingControls({
+    required this.shortTapEnabled,
     required this.enabled,
     required this.hapticsEnabled,
     required this.inertiaEnabled,
     required this.inertiaDeceleration,
     required this.trackedDay,
+    required this.onShortTapChanged,
     required this.onEnabledChanged,
     required this.onHapticsChanged,
     required this.onInertiaChanged,
     required this.onInertiaDecelerationChanged,
   });
 
+  final bool shortTapEnabled;
   final bool enabled;
   final bool hapticsEnabled;
   final bool inertiaEnabled;
   final double inertiaDeceleration;
   final double? trackedDay;
+  final ValueChanged<bool> onShortTapChanged;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<bool> onHapticsChanged;
   final ValueChanged<bool> onInertiaChanged;
@@ -275,6 +295,17 @@ class _TrackingControls extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
         child: Column(
           children: [
+            SwitchListTile.adaptive(
+              key: const ValueKey('mobile-short-tap-activation-switch'),
+              title: const Text('Short tap selects'),
+              subtitle: const Text(
+                'Turn off for scroll-first browsing; hold to inspect instead.',
+              ),
+              secondary: const Icon(Icons.ads_click_outlined),
+              value: shortTapEnabled,
+              onChanged: onShortTapChanged,
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
             SwitchListTile.adaptive(
               title: const Text('Long-press tracking'),
               subtitle: const Text(
@@ -868,9 +899,10 @@ class _ViewportBadge extends StatelessWidget {
 }
 
 class _ContractSummary extends StatelessWidget {
-  const _ContractSummary({required this.profile});
+  const _ContractSummary({required this.profile, required this.tapBehavior});
 
   final TouchInteractionProfile profile;
+  final TouchTapBehavior tapBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -895,7 +927,12 @@ class _ContractSummary extends StatelessWidget {
             ),
             const _ContractRow(gesture: 'Two-finger drag', result: 'Pan chart'),
             const _ContractRow(gesture: 'Pinch', result: 'Zoom at fingers'),
-            const _ContractRow(gesture: 'Tap point', result: 'Inspect/select'),
+            _ContractRow(
+              gesture: 'Tap point',
+              result: tapBehavior == TouchTapBehavior.inspectAndSelect
+                  ? 'Inspect/select'
+                  : 'No chart action',
+            ),
             const _ContractRow(
               gesture: 'Hold + drag',
               result: 'Scrub tracking',

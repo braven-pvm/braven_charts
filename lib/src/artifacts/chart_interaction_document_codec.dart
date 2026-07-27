@@ -431,6 +431,7 @@ GestureConfig _decodeGesture(Map<String, Object?> map) => GestureConfig(
 Map<String, Object?> _encodeTouch(TouchInteractionConfig value) => {
   'enabled': value.enabled,
   'profile': value.profile.name,
+  'tapBehavior': value.tapBehavior.name,
   'enablePinchZoom': value.enablePinchZoom,
   'enablePan': value.enablePan,
   'enablePanInertia': value.enablePanInertia,
@@ -444,6 +445,9 @@ TouchInteractionConfig _decodeTouch(Map<String, Object?> map) =>
     TouchInteractionConfig(
       enabled: _bool(map, 'enabled'),
       profile: _enum(map, 'profile', TouchInteractionProfile.values),
+      tapBehavior: map['tapBehavior'] == null
+          ? TouchTapBehavior.inspectAndSelect
+          : _enum(map, 'tapBehavior', TouchTapBehavior.values),
       enablePinchZoom: _bool(map, 'enablePinchZoom'),
       enablePan: _bool(map, 'enablePan'),
       enablePanInertia: map['enablePanInertia'] == null

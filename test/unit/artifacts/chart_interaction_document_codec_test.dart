@@ -67,6 +67,7 @@ void main() {
         touch: TouchInteractionConfig(
           enabled: false,
           profile: TouchInteractionProfile.explore,
+          tapBehavior: TouchTapBehavior.disabled,
           enablePinchZoom: false,
           enablePan: false,
           enablePanInertia: true,
@@ -156,6 +157,34 @@ void main() {
 
       expect(decoded, source);
       expect(document.requiredBindings, isEmpty);
+    });
+
+    test('defaults older touch documents to short-tap activation', () {
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          const InteractionConfig(
+            touch: TouchInteractionConfig(
+              tapBehavior: TouchTapBehavior.disabled,
+            ),
+          ),
+        ),
+      );
+      final configuration = Map<String, Object?>.from(
+        document.configuration.toJson() as Map,
+      );
+      final touch = Map<String, Object?>.from(configuration['touch']! as Map)
+        ..remove('tapBehavior');
+      configuration['touch'] = touch;
+
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument(
+            configuration: JsonValue.fromJson(configuration) as JsonObjectValue,
+          ),
+        ),
+      );
+
+      expect(decoded.touch.tapBehavior, TouchTapBehavior.inspectAndSelect);
     });
 
     test('defaults older crosshair documents to no guide band', () {
