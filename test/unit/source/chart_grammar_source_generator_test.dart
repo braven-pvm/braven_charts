@@ -10,7 +10,9 @@
 ///
 /// So every supported shape runs three assertions:
 ///
-/// 1. the generated Dart formats and analyzes (`expectGeneratedSourceCompiles`),
+/// 1. the generated Dart parses and analyzes (`expectGeneratedSourceCompiles`
+///    — `dart format --output=none` is a syntax gate, not a "already
+///    formatted" assertion; see that helper's own doc),
 /// 2. the generated Dart contains the synthesised row type and the chain verbs
 ///    the shape calls for, and
 /// 3. the equivalent chain, written out in this file over a synthesised row
@@ -1088,18 +1090,29 @@ ChartDocumentSnapshot patchedSnapshot(
 /// The acceptance question for this slice is not "does some polar chart emit"
 /// but "does the chart the showcase page actually mounts emit", so this mounts
 /// the chart and asserts on the generator's own verdict: a chain was written,
-/// nothing was blocked, and [ChartGeneratedSource.isComplete] is true. The
-/// generator proves FIDELITY internally — it re-lowers the chain it is about to
-/// write and refuses anything that would render a different chart — so an
-/// emitted chain already means a faithful one.
+/// nothing was blocked, and [ChartGeneratedSource.isComplete] is true.
 ///
-/// That internal proof runs on the reconstructed spec OBJECT, though, so on its
-/// own it says nothing about the TEXT the emitter then writes: a chain that
-/// names a parameter the builder does not have, or drops a closing paren, would
-/// still pass every assertion above and hand the user source that does not
-/// build. So this runs the same `dart format` + `dart analyze` gate
-/// [expectRoundTrip] does. What it does NOT do is [expectRoundTrip]'s rebuild
-/// step — see the group's own header for why.
+/// The generator's internal proof carries part of the fidelity question and it
+/// is worth being exact about which part. It re-lowers the chain it is about to
+/// write, so the PLAN and the re-lowered SERIES are proven: a channel the mark
+/// fails to carry diverges and is refused. It does NOT prove the emitted CONFIG
+/// LITERALS — `PlotSpec.polar` and `DonutMark.concentric` are handed to the
+/// proof spec as the captured instances and lowering hands them back unchanged,
+/// so that comparison is an instance against itself. Nor does the proof read a
+/// character of the emitter's OUTPUT at all: a chain that names a parameter the
+/// builder does not have, or drops a closing paren, would still pass it.
+///
+/// So this harness supplies the two things the proof does not. [fragments] are
+/// the per-field assertions on the emitted TEXT — the only check that the
+/// config literals say what the chart says — and every caller is expected to
+/// pass the fields its presentation exercises. Then the emitted source goes
+/// through the same `dart format` + `dart analyze` gate [expectRoundTrip] uses.
+/// (The third guard on the literals lives outside this file: they are rendered
+/// by the config emitter's own shared seams, and `test/meta/source_emitter_drift_test.dart`
+/// fails on any field neither source form renders.)
+///
+/// What this does NOT do is [expectRoundTrip]'s rebuild step — see the group's
+/// own header for why.
 Future<ChartGeneratedSource> expectShowcaseEmits(
   WidgetTester tester, {
   required String presentation,
@@ -3266,13 +3279,19 @@ void main() {
   // config, at that presentation's authored knob values — so a regression that
   // only shows up on a real showcase chart fails here.
   //
-  // Emission plus COMPILATION is the assertion. The generator refuses anything
-  // it cannot reproduce — it re-lowers the chain it is about to write and
-  // compares the result to the hydrated document — so "a chain was emitted"
-  // already carries "this chain rebuilds this chart". `expectShowcaseEmits`
-  // then runs the emitted TEXT through `dart format` + `dart analyze`, because
-  // that internal proof inspects the reconstructed spec object and never reads
-  // a character of what the emitter writes.
+  // Emission plus COMPILATION plus the per-case literal assertions is the
+  // assertion set, and each covers a different thing. The generator re-lowers
+  // the chain it is about to write and compares the result to the hydrated
+  // document, so "a chain was emitted" carries "this chain's SERIES rebuild
+  // this chart" — but NOT "this chain's config literals are right": the
+  // captured `PolarChartConfig` / `ConcentricDonutConfig` ride the proof spec
+  // verbatim and lowering hands the same instances back, so that comparison is
+  // an instance against itself. `expectShowcaseEmits` therefore runs the
+  // emitted TEXT through `dart format` + `dart analyze` (the proof inspects the
+  // reconstructed spec object and never reads a character of what the emitter
+  // writes), and every case below pins the config fields it exercises with
+  // whole-literal `fragments` — which is what would actually fail if the
+  // `.polarConfig(...)` emission regressed.
   //
   // What this group deliberately does NOT do is `expectRoundTrip`'s rebuild.
   // A Flutter test cannot execute generated Dart — `dart analyze` runs over a

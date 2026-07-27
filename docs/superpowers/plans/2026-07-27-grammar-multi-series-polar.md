@@ -4,7 +4,7 @@
 
 **Goal:** Make the workbench Grammar Source pane emit a faithful `BravenChart.of(rows)….build()` chain for every Polar Column presentation (standard/rose/partial/layered/grouped/stacked/references/intervals) and for non-default `ConcentricDonutConfig` donuts.
 
-**Architecture:** Multiple `geomPolar` marks per spec (the one-radial-geom rule relaxes for the polar family only); plot-level `PolarChartConfig` lives on `PlotSpec` and is set with `.polarConfig(...)`; per-series polar data (`columnColor`/`target`/`intervals`) becomes row-channels on `PolarMark`, and per-series/plot config objects ride the mark/spec. The source emitter reverses N `PolarColumnChartSeries` → N `geomPolar` marks + `.polarConfig(...)`, proving fidelity by re-lowering (the existing `_firstRadialMismatch` already does full-config equality; the fix is that lowering now *carries* the config so the re-lowered plot matches).
+**Architecture:** Multiple `geomPolar` marks per spec (the one-radial-geom rule relaxes for the polar family only); plot-level `PolarChartConfig` lives on `PlotSpec` and is set with `.polarConfig(...)`; per-series polar data (`columnColor`/`target`/`intervals`) becomes row-channels on `PolarMark`, and per-series/plot config objects ride the mark/spec. The source emitter reverses N `PolarColumnChartSeries` → N `geomPolar` marks + `.polarConfig(...)`. Fidelity of the reversed **series** is proven by re-lowering; fidelity of the emitted **config literals** is not (the proof spec carries the captured config instance verbatim, so lowering hands the same instance back and `_firstRadialMismatch` compares it to itself — a regression tripwire on lowering, which is what it caught before this slice). The literals rest on the config emitter's shared renderer seams, the `source_emitter_drift` gate, and per-field assertions on the emitted text.
 
 **Tech Stack:** Dart ≥3.9, Flutter; `flutter test`; `flutter analyze lib` (never root — vendored `packages/fleather` pollutes root analyze).
 
@@ -345,7 +345,12 @@ if (series.isNotEmpty && series.every((s) => s is PolarColumnChartSeries)) {
     title: configuration.title,
     subtitle: configuration.subtitle,
     showLegend: configuration.showLegend,
-    polar: polarPlan.config,     // <-- the proof re-lowers WITH the config
+    // The proof re-lowers WITH the config. Note the boundary: this hands the
+    // CAPTURED instance to lowering, which hands the same instance back, so
+    // the config comparison in `_firstRadialMismatch` is a tripwire on
+    // lowering (it fired for every customised config before this slice), not
+    // a proof about the emitted `.polarConfig(...)` literal.
+    polar: polarPlan.config,
   );
   final LoweredPlot lowered;
   try { lowered = spec.lower(); }
@@ -613,7 +618,7 @@ test('polar with targets, targetMarkerStyle and columnColors round-trips', () {
   - `low`/`high`: from `series.intervalLowerValues`/`intervalUpperValues` similarly.
   - Set `mark.preset = series.preset`, `mark.targetMarkerStyle = series.targetMarkerStyle`, `mark.intervalStyle = series.intervalStyle`, `mark.columnColor/target/intervalLow/intervalHigh` accessors.
 
-  Because the proof re-lowers, any misalignment refuses rather than emits wrong — so correctness is self-checked, but aim to reproduce `_fromMap`'s exact category-ordered lists (`polar_column_chart_series.dart:815-824`).
+  The proof genuinely covers the per-category DATA (`columnColor`/`target`/`low`/`high` are read back out of the synthesised rows by the re-lowering, so a misaligned list refuses rather than emits wrong) — but not the STYLE objects (`targetMarkerStyle`/`intervalStyle` ride the mark verbatim and re-lower to the same instance, so they are pinned by the emitted-text assertions and the drift gate instead). Aim to reproduce `_fromMap`'s exact category-ordered lists (`polar_column_chart_series.dart:815-824`).
 
 - [ ] **Step 4: Extend `_emitPolarGeometry`** to emit `rose: true` (when `preset == rose`), `columnColor`/`target`/`intervalLow`/`intervalHigh` accessors, and `targetMarkerStyle`/`intervalStyle` via the new seams (only when non-default). Add the seams in `chart_config_dart_emitter.dart` reusing `_emitBarTargetMarkerStyle`-style private renderers already present for polar at `:2650`/`:2673` (extract them into argument-taking helpers if they are inlined in `_emitPolarColumnSeries`).
 
@@ -712,7 +717,7 @@ test('donut ring mark with a concentric config lowers carrying it', () {
 
 **Interfaces:** none produced; this is the Theme-1 acceptance gate for polar/concentric.
 
-- [ ] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, partial, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted) and the re-lowered chain reproduces the config (the generator already proves this internally; asserting non-null is the observable). Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
+- [ ] **Step 1: Write the failing/asserting tests — one per presentation.** Build a `ChartConfiguration` matching each showcase presentation (standard, rose, partial, layered, grouped, stacked, references, intervals) from `example/lib/showcase/pages/polar_column_page.dart:695-895`, and a non-default concentric donut, and assert `generate().code != null` (emitted). The generator's internal proof covers the re-lowered SERIES, so non-null already carries that; it does NOT cover the emitted config literals, so each case must also assert the emitted TEXT of the config fields it exercises. Copy the exact per-series construction from the showcase (`targets`/`intervals`/`columnColors`/`.rose`/per-series `polarStyle`).
 
 - [ ] **Step 2: Run — expect PASS** (Slices A–C should already make them emit; any red here is a real gap to fix in the relevant slice's emitter/lowering, not by loosening the test).
 

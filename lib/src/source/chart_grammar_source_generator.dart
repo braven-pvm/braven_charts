@@ -49,16 +49,39 @@
 /// | a runtime interaction binding | emitted with a warning, exactly as the config form does |
 /// | data above `maxInlinePoints` | emitted with a placeholder row list and a warning, exactly as the config form does |
 ///
-/// ## The round-trip proof
+/// ## The round-trip proof, and exactly what it proves
 ///
 /// Before emitting anything, the generator BUILDS THE SPEC IT IS ABOUT TO
 /// WRITE — over an internal row type carrying the same synthesised values —
 /// lowers it with the real `PlotSpecLowering`, and compares the resulting
 /// `ChartSeries`, `ChartAnnotation`s, Y-axis configs AND the X axis, theme and
 /// interaction to the ones the document hydrated to. Anything that does not
-/// compare equal is refused. So "the generator emitted a chain" already means
-/// "this chain reproduces this chart", without the emitter having to enumerate
-/// every option a V1 mark happens not to carry.
+/// compare equal is refused.
+///
+/// What that buys is precise, and overstating it would be its own dishonesty.
+/// The proof covers the PLAN and the RE-LOWERED SERIES: every channel, every
+/// accessor, every value the emitter reconstructed is read back out of the
+/// synthesised rows by real lowering, so a mark that fails to carry something
+/// produces a divergent series and an honest refusal — without the emitter
+/// having to enumerate every option a V1 mark happens not to carry.
+///
+/// It does NOT cover the emitted CONFIG LITERALS. A config object the grammar
+/// carries verbatim — `PlotSpec.polar`, `DonutMark.concentric`, a mark's
+/// style/selection/label configs — is handed to the proof spec as the CAPTURED
+/// INSTANCE, and lowering hands that same instance straight back, so the
+/// comparison is an instance against itself. Those comparisons are regression
+/// TRIPWIRES on lowering (they fire if lowering ever stops carrying a config,
+/// which is precisely what it did before `.polarConfig(...)` existed), not
+/// proofs about the `.polarConfig(...)` / `geomDonut(concentric: ...)` TEXT.
+/// The literals are held to their own three guards instead: they are written
+/// by the config emitter's own shared renderers through public seams (so the
+/// CONFIG and GRAMMAR forms cannot disagree), `test/meta/source_emitter_drift_test.dart`
+/// fails on any field neither form renders, and the emitter tests assert the
+/// emitted text field by field.
+///
+/// So "the generator emitted a chain" means "this chain re-lowers to this
+/// chart's series"; "this chain's config literals are right" is what the
+/// shared renderer, the drift gate and the emitted-text assertions mean.
 library;
 
 import 'dart:ui' show Color;

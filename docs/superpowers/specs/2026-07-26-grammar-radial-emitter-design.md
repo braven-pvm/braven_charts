@@ -26,6 +26,8 @@ The emitter (`lib/src/source/chart_grammar_source_generator.dart`) reverses a co
 | **Chart-option gate** | `_unsupportedChartOptions` (`:583-620`) lists `concentricDonutConfig`/`polarChartConfig`/`radialBarChartConfig` as lost | Remove the concentric + polar lines (carried inside the mark now + verified by the proof); **leave `radialBarChartConfig` gated** |
 | **Stale copy** | 3 sites | Delete/rewrite: the emitter "Cartesian-only V1 … no V1 mark" message (`:361-366`), the file-header matrix (`:35`), and the `mark.dart:33-37` "Marks are Cartesian only … Radial … deliberately V2" docstring |
 
+> **Superseded on the config half (2026-07-27).** The "reproduce the captured config field-for-field" framing above held *while lowering defaulted the radial configs* — a captured customised `PolarChartConfig` genuinely diverged and was refused, which is what made this slice's honest-refusal behaviour real. Once the multi-series-polar slice made lowering **carry** `PlotSpec.polar` and `DonutMark.concentric`, the proof spec hands lowering the captured instance and gets the same instance back, so those two comparisons became passthrough tripwires rather than proofs. The per-series comparison is unchanged and still a real proof. See the *Invariants* section of `2026-07-27-grammar-multi-series-polar-design.md` for what covers the emitted config literals now.
+
 ## Concentric-donut detection (decided — reliable, non-heuristic)
 
 `configuration.concentricDonutConfig != null` is the authoritative discriminator: the forward path sets `LoweredPlot.concentricDonutConfig` non-null **only** inside `DonutMark.ring != null` lowering. So:
