@@ -3256,6 +3256,14 @@ class ChartRenderBox extends RenderBox {
     return _selectionBrushWidgetRectForState(state);
   }
 
+  /// Whether a widget-local pointer can manipulate the persistent brush.
+  ///
+  /// This is consumed by the widget-level touch recognizer so a brush body or
+  /// handle owns its one-finger gesture before an ancestor scrollable can
+  /// claim it.
+  bool hitTestSelectionBrushInteraction(Offset position) =>
+      _eventHandlerManager.hitTestSelectionBrushInteraction(position);
+
   Rect? _selectionBrushWidgetRectForState(
     ChartSelectionBrushState state, {
     bool clipToPlot = true,

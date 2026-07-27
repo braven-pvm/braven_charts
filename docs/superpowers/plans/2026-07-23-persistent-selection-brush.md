@@ -318,6 +318,11 @@ API before semantics copy is frozen.
 
 Run this checkpoint on a real phone or tablet before delivery:
 
+For the remaining Y-axis pass, open
+`/?page=selection&preset=multi-axis-y-brush`. The preset selects the Line
+family, independent Power/Heart-rate axes, Y range acquisition, and a visible
+persistent brush whose data-domain bounds are mapped through the Power series.
+
 1. open Selection Lab and choose Line plus X range;
 2. enable Persistent brush and confirm the configured initial bounds render;
 3. drag the body with one finger and resize both handles independently;
@@ -329,6 +334,9 @@ Run this checkpoint on a real phone or tablet before delivery:
 7. verify Hide preserves selection, Show restores the same bounds, and Clear
    removes both brush and selection;
 8. repeat once with 200% text scaling and a screen reader enabled.
+
+Record the physical device model, operating-system version, browser or native
+host and version, text scale, screen reader, and pass/fail result in BC-0004.
 
 ## Verification
 
