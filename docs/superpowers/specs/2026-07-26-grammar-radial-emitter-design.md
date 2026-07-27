@@ -26,7 +26,7 @@ The emitter (`lib/src/source/chart_grammar_source_generator.dart`) reverses a co
 | **Chart-option gate** | `_unsupportedChartOptions` (`:583-620`) lists `concentricDonutConfig`/`polarChartConfig`/`radialBarChartConfig` as lost | Remove the concentric + polar lines (carried inside the mark now + verified by the proof); **leave `radialBarChartConfig` gated** |
 | **Stale copy** | 3 sites | Delete/rewrite: the emitter "Cartesian-only V1 … no V1 mark" message (`:361-366`), the file-header matrix (`:35`), and the `mark.dart:33-37` "Marks are Cartesian only … Radial … deliberately V2" docstring |
 
-> **Superseded on the config half (2026-07-27).** The "reproduce the captured config field-for-field" framing above held *while lowering defaulted the radial configs* — a captured customised `PolarChartConfig` genuinely diverged and was refused, which is what made this slice's honest-refusal behaviour real. Once the multi-series-polar slice made lowering **carry** `PlotSpec.polar` and `DonutMark.concentric`, the proof spec hands lowering the captured instance and gets the same instance back, so those two comparisons became passthrough tripwires rather than proofs. The per-series comparison is unchanged and still a real proof. See the *Invariants* section of `2026-07-27-grammar-multi-series-polar-design.md` for what covers the emitted config literals now.
+> **Superseded on the config half (2026-07-27) — applies to this WHOLE document, above and below.** The "reproduce the captured config field-for-field" framing — in the table above, and restated under *Testing* and *Invariants* below — held *while lowering defaulted the radial configs*: a captured customised `PolarChartConfig` genuinely diverged and was refused, which is what made this slice's honest-refusal behaviour real. Once the multi-series-polar slice made lowering **carry** `PlotSpec.polar` and `DonutMark.concentric`, the proof spec hands lowering the captured instance and gets the same instance back, so those two comparisons became passthrough tripwires rather than proofs. The per-series comparison is unchanged and still a real proof. See the *Invariants* section of `2026-07-27-grammar-multi-series-polar-design.md` for what covers the emitted config literals now.
 
 ## Concentric-donut detection (decided — reliable, non-heuristic)
 
@@ -44,7 +44,7 @@ Any error in the ring reconstruction is caught by the extended round-trip proof 
 ## Testing
 
 - **Per family:** a captured Pie/Donut/Polar chart document emits a chain containing `geomPie`/`geomDonut`/`geomPolar` with the right category/value accessors; a concentric donut emits `geomDonut(ring:)` with the recovered ring keys.
-- **Round-trip ("emitted == faithful"):** the emitted chain, re-lowered, reproduces the captured config (series + `concentricDonutConfig` + `polarChartConfig`) exactly — asserted by the extended `_firstMismatch`.
+- **Round-trip ("emitted == faithful"):** the emitted chain, re-lowered, reproduces the captured config (series + `concentricDonutConfig` + `polarChartConfig`) exactly — asserted by the extended `_firstMismatch`. *(Superseded, per the note above: since lowering now carries both radial configs, only the **series** half of that is a real re-lowering comparison; the two config comparisons are instance-vs-itself tripwires, and the emitted config literals are covered by the shared renderer, the drift gate and emitted-text assertions.)*
 - **Honest refusal:** a chart with a non-default `ConcentricDonutConfig` (e.g. custom `ringGap`) or a non-default `PolarChartConfig` is refused with a **named** reason (not the stale copy); radial-bar + gauge still refused.
 - **No regression:** every existing golden unchanged; the Cartesian emission is byte-identical (the radial arms are additive; the family gate only widens); the workbench golden that captured a radial "not emitted" pane updates to the emitted chain.
 - **Showcase:** the Pie/Donut/Concentric/Polar workbench pages' Grammar panes now show a real chain (manual + the existing workbench tests).
@@ -58,7 +58,7 @@ Any error in the ring reconstruction is caught by the extended round-trip proof 
 ## Invariants
 
 - **Emitter-only:** no new `Mark`, no new config class, **no drift-gate change** (the 4 gates untouched).
-- **Parity ("emitted == faithful"):** enforced by the extended proof — customised radial configs fail loudly, never silently degrade.
+- **Parity ("emitted == faithful"):** enforced by the extended proof — customised radial configs fail loudly, never silently degrade. *(Superseded, per the note above: that held while lowering defaulted the radial configs and refused customised ones. Lowering now carries them, so the parity claim holds for the re-lowered **series**; the config literals are pinned by the shared renderer, the drift gate and emitted-text assertions instead.)*
 - **Existing render + Cartesian emission byte-identical:** the radial path is purely additive.
 
 ## Out of scope (future — Theme 1d/2)

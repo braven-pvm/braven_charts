@@ -59,20 +59,27 @@
 /// compare equal is refused.
 ///
 /// What that buys is precise, and overstating it would be its own dishonesty.
-/// The proof covers the PLAN and the RE-LOWERED SERIES: every channel, every
-/// accessor, every value the emitter reconstructed is read back out of the
-/// synthesised rows by real lowering, so a mark that fails to carry something
-/// produces a divergent series and an honest refusal — without the emitter
-/// having to enumerate every option a V1 mark happens not to carry.
+/// The proof covers the PLAN and the RE-LOWERED SERIES AND ANNOTATIONS: every
+/// channel, every accessor, every value the emitter reconstructed is read back
+/// out of the synthesised rows by real lowering, and every reference mark is
+/// turned back into a `ChartAnnotation`, so a mark that fails to carry
+/// something produces a divergent series or annotation and an honest refusal —
+/// without the emitter having to enumerate every option a V1 mark happens not
+/// to carry.
 ///
-/// It does NOT cover the emitted CONFIG LITERALS. A config object the grammar
-/// carries verbatim — `PlotSpec.polar`, `DonutMark.concentric`, a mark's
-/// style/selection/label configs — is handed to the proof spec as the CAPTURED
-/// INSTANCE, and lowering hands that same instance straight back, so the
-/// comparison is an instance against itself. Those comparisons are regression
-/// TRIPWIRES on lowering (they fire if lowering ever stops carrying a config,
-/// which is precisely what it did before `.polarConfig(...)` existed), not
-/// proofs about the `.polarConfig(...)` / `geomDonut(concentric: ...)` TEXT.
+/// It does NOT cover the emitted CONFIG LITERALS. Anything the grammar carries
+/// verbatim — the plot-level options a `PlotSpec` forwards (`xAxis`, `theme`,
+/// `interaction`, `grid`, `title`, `subtitle`, `showLegend`, and for radial
+/// `PlotSpec.polar`), `DonutMark.concentric`, a mark's style/selection/label
+/// configs — is handed to the proof spec as the CAPTURED INSTANCE, and lowering
+/// hands that same instance straight back, so the comparison is an instance
+/// against itself. Those comparisons are regression TRIPWIRES on lowering (they
+/// fire if lowering ever stops forwarding a value, which is precisely what it
+/// did for the polar config before `.polarConfig(...)` existed), not proofs
+/// about the `.xAxis(...)` / `.grid(...)` / `.title(...)` / `.polarConfig(...)`
+/// / `geomDonut(concentric: ...)` TEXT — deleting one of those emissions
+/// produces zero refusals, and only the emitted-text assertions in the emitter
+/// tests fail.
 /// The literals are held to their own three guards instead: they are written
 /// by the config emitter's own shared renderers through public seams (so the
 /// CONFIG and GRAMMAR forms cannot disagree), `test/meta/source_emitter_drift_test.dart`
@@ -80,8 +87,9 @@
 /// emitted text field by field.
 ///
 /// So "the generator emitted a chain" means "this chain re-lowers to this
-/// chart's series"; "this chain's config literals are right" is what the
-/// shared renderer, the drift gate and the emitted-text assertions mean.
+/// chart's series and annotations"; "this chain's config literals are right" is
+/// what the shared renderer, the drift gate and the emitted-text assertions
+/// mean.
 library;
 
 import 'dart:ui' show Color;
@@ -1574,6 +1582,46 @@ class _GrammarChainEmitter {
   /// identified cheaply from the round-trip comparison the emitter already
   /// runs, so the reader learns the boundary instead of only reading "does not
   /// reproduce exactly".
+  ///
+  /// The comparisons below have two DIFFERENT strengths, and — exactly as for
+  /// [_firstRadialMismatch] — saying which is which is the honest framing:
+  ///
+  /// - **Genuine re-lowering.** `series` and `annotations` are REBUILT by
+  ///   `spec.lower()` out of the reconstructed marks: each point is recomputed
+  ///   by running the emitter's own accessors over the synthesised rows, and
+  ///   each reference mark is turned back into a `ChartAnnotation`. Comparing
+  ///   those to the captured ones field-for-field (`operator ==` for series,
+  ///   [_sameAnnotation] for annotations, which spells the comparison out
+  ///   because `ChartAnnotation` declares no `operator ==`) genuinely proves
+  ///   the reconstruction: a channel, value or option a mark fails to carry
+  ///   diverges here and is refused. The one caveat inside that proof is that a
+  ///   config object a mark carries VERBATIM (a data-label or style config)
+  ///   travels into the rebuilt series as the captured instance, so that field
+  ///   is a passthrough sitting inside an otherwise genuine comparison.
+  /// - **Passthrough.** `xAxis`, `theme`, `interaction`, `grid`, `title`,
+  ///   `subtitle` and `showLegend` are handed to the proof spec AS the captured
+  ///   instances (see the spec built in `_tryEmitChain`) and `lowerPlotSpec`
+  ///   assigns them straight onto the `LoweredPlot`, so each of those
+  ///   comparisons is an instance against ITSELF. They are regression TRIPWIRES
+  ///   on lowering — they fire if lowering ever stops forwarding a field or
+  ///   substitutes a default — and prove nothing about the emitted
+  ///   `.xAxis(...)` / `.theme(...)` / `.grid(...)` / `.title(...)` /
+  ///   `.legend(...)` TEXT, which the proof never reads. (Verified by mutation:
+  ///   deleting the `.grid(...)` and `.title(...)` emission produces ZERO
+  ///   refusals here — only the emitter test that asserts the emitted text
+  ///   fails.) `yAxes` sits just off pure passthrough: `_resolveAxes` returns
+  ///   the declared instances unchanged and normalises only a blank `id` and an
+  ///   empty list (replaced by one synthesised left axis), so this comparison
+  ///   catches exactly those two normalisations and is instance-vs-itself
+  ///   otherwise.
+  ///
+  /// The emitted literals rest on the guards named in the library docstring
+  /// instead: the config emitter's shared renderers behind public seams,
+  /// `test/meta/source_emitter_drift_test.dart`, and per-field assertions on
+  /// the emitted text in the emitter tests — plus, on this Cartesian path,
+  /// `test/unit/source/chart_grammar_source_generator_test.dart`'s third
+  /// assertion, which hand-writes the equivalent chain and requires the
+  /// document it extracts to equal the captured one.
   ({String subject, String detail})? _firstMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
@@ -1600,6 +1648,9 @@ class _GrammarChainEmitter {
         );
       }
     }
+    // Near-passthrough (see the doc above): `_resolveAxes` returns the declared
+    // axis instances, so this catches the two normalisations it performs — an
+    // empty captured axis list, and an axis whose `id` lowering has to fill in.
     if (lowered.yAxes.length != configuration.axes.length) {
       return (subject: 'the Y-axis list', detail: _genericLossDetail);
     }
@@ -1611,12 +1662,12 @@ class _GrammarChainEmitter {
         );
       }
     }
-    // The X axis, theme and interaction are carried verbatim by lowering and
-    // re-emitted by the shared config emitter. Comparing them here closes the
-    // loop so the "emitted == faithful" guarantee genuinely covers every field
-    // a LoweredPlot carries — not only series, annotations and Y-axes. Each is
-    // guarded by a complete operator==, so a captured value the chain cannot
-    // reproduce is refused rather than silently diverging.
+    // The X axis, theme and interaction ride the proof spec verbatim and
+    // lowering hands the same instances back, so these three are the
+    // passthrough tripwires described above: they fire if lowering ever stops
+    // forwarding one of them, and say nothing about the emitted `.xAxis(...)` /
+    // `.theme(...)` text — that is the shared config emitter's, the drift
+    // gate's and the emitted-text assertions' job.
     if (lowered.xAxis != configuration.xAxis) {
       return (subject: 'the X axis', detail: _genericLossDetail);
     }
@@ -1629,10 +1680,10 @@ class _GrammarChainEmitter {
         detail: _genericLossDetail,
       );
     }
-    // Grid, title, subtitle and legend visibility are carried verbatim by
-    // lowering too, so — like the X axis, theme and interaction above — they are
-    // compared here to keep the "emitted == faithful" guarantee covering every
-    // field a LoweredPlot carries, rather than dropping any of them.
+    // Grid, title, subtitle and legend visibility ride the proof spec verbatim
+    // too, so — exactly like the X axis, theme and interaction above — these
+    // are the same instance-vs-itself tripwires on lowering, not proofs about
+    // the emitted `.grid(...)` / `.title(...)` / `.legend(...)` literals.
     if (lowered.grid != configuration.grid) {
       return (subject: 'the grid', detail: _genericLossDetail);
     }
