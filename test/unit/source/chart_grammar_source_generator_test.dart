@@ -4296,6 +4296,324 @@ void main() {
     });
   });
 
+  // =========================================================================
+  // THE RADIAL ROUND-TRIP PROOF — the guard that makes "emitted == faithful"
+  // true for pie, donut, concentric and polar.
+  //
+  // Every emitted radial chain rests on ONE claim: before writing anything the
+  // generator re-lowers the chain it is about to write and compares the
+  // re-lowered series to the captured ones, refusing by name anything they do
+  // not reproduce (`_firstRadialMismatch`). Nothing else stands between a
+  // series option no radial mark carries and a chain that silently drops it —
+  // the family gates let these shapes through, and the emitters happily write
+  // them. So DELETING that comparison must break something here.
+  //
+  // Each test is therefore a PAIR: a shape carrying an option the marks do not
+  // carry, which must be refused with no chain and a named reason, and a
+  // near-identical CONTROL differing only in that option, which must emit a
+  // clean chain. The control is what makes the refusal attributable to the
+  // option rather than to the family, and what stops the refusal assertions
+  // from being satisfiable by a generator that has simply stopped emitting.
+  //
+  // Both call sites are covered: `_tryEmitPolarChain` (the polar cases) and
+  // `_tryEmitRadialChain` (the concentric and pie cases).
+  // =========================================================================
+  group('the radial round-trip proof refuses what the marks do not carry', () {
+    testWidgets('a polar series carrying metadata is refused, naming the '
+        'series and the metadata; without it the same chart emits', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, dynamic>? metadata,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PolarColumnChartSeries.fromMap(
+                id: 'capacity',
+                values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+                metadata: metadata,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // `PolarMark` has no metadata channel, so the re-lowered series comes
+      // back without it. Emitting anyway would hand back a chart whose series
+      // has lost its metadata, with nothing said about it.
+      final refused = await generateFor(const <String, dynamic>{
+        'sport': 'cycling',
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('would hand back a different chart'),
+          contains('series metadata'),
+        ),
+      );
+
+      // CONTROL: the SAME chart with the metadata removed emits a clean chain,
+      // so the refusal above is attributable to the metadata — not to polar.
+      final emitted = await generateFor(null);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.isComplete, isTrue);
+      expect(emitted.source, contains('.geomPolar('));
+    });
+
+    testWidgets('a polar interval pair that is all-null is refused; the same '
+        'series with one real interval emits it as a row channel', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        List<double?> lower,
+        List<double?> upper,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PolarColumnChartSeries(
+                id: 'capacity',
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 3, label: 'A'),
+                  ChartDataPoint(x: 1, y: 5, label: 'B'),
+                  ChartDataPoint(x: 2, y: 8, label: 'C'),
+                ],
+                intervalLowerValues: lower,
+                intervalUpperValues: upper,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // A present-but-all-null pair is NOT the same series as no pair at all:
+      // `PolarMark.intervalLow/High` reverse an all-null column to EMPTY lists,
+      // so the re-lowered series differs from the captured one in a way no
+      // rendered pixel shows and no other check notices.
+      final refused = await generateFor(
+        const <double?>[null, null, null],
+        const <double?>[null, null, null],
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('all-null polar interval list'),
+        ),
+      );
+
+      // CONTROL: one real interval in the SAME lists emits, and the nulls ride
+      // the row channel — so an all-null pair is refused for being all-null,
+      // not for containing nulls.
+      final emitted = await generateFor(
+        const <double?>[2, null, null],
+        const <double?>[4, null, null],
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(
+        emitted.source,
+        contains('intervalLow: (row) => row.intervalLow,'),
+      );
+      expect(emitted.source, contains('intervalLow: 2.0,'));
+      expect('intervalLow: null,'.allMatches(emitted.source).length, 2);
+    });
+
+    testWidgets('a polar point whose pointStyle goes beyond a colour override '
+        'is refused; the colour-only override emits as a row channel', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(PointStyle style) async =>
+          generateGrammar(
+            await snapshotOf(
+              tester,
+              (controller) => BravenChartPlus(
+                bravenChartController: controller,
+                series: <ChartSeries>[
+                  PolarColumnChartSeries(
+                    id: 'capacity',
+                    points: <ChartDataPoint>[
+                      const ChartDataPoint(x: 0, y: 3, label: 'A'),
+                      ChartDataPoint(x: 1, y: 5, label: 'B', pointStyle: style),
+                      const ChartDataPoint(x: 2, y: 8, label: 'C'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+
+      // The ONLY per-point channel a polar mark carries is the column colour
+      // (`columnColor`), which lowering writes back as `PointStyle.color(...)`.
+      // A point that also sets `size` re-lowers to a colour-only style, so the
+      // size is gone — silently, because a polar column ignores it when it
+      // paints.
+      final refused = await generateFor(
+        const PointStyle(color: Color(0xFF16A34A), size: 4),
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('a per-point style beyond a colour override'),
+        ),
+      );
+
+      // CONTROL: drop the `size` and the very same point emits as a column
+      // colour, so the refusal is attributable to the extra override alone.
+      final emitted = await generateFor(
+        const PointStyle.color(Color(0xFF16A34A)),
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(
+        emitted.source,
+        contains('columnColor: (row) => row.columnColor,'),
+      );
+    });
+
+    testWidgets('a concentric composition whose ring centers disagree is '
+        'refused, naming the OFFENDING ring; matching rings emit', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        DonutCenterContent summerCenter,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'seasons-Winter',
+                name: 'Winter',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+              ),
+              DonutChartSeries.fromMap(
+                id: 'seasons-Summer',
+                name: 'Summer',
+                values: const <String, num>{'Plum': 17, 'Fig': 10},
+                centerContent: summerCenter,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // ONE `geomDonut(ring:)` mark lowers to EVERY ring, so the rings of an
+      // emittable composition all carry the same center. Here only the second
+      // ring carries one, which the mark cannot express: it would re-lower to
+      // two centre-less rings. Naming "seasons-Summer" — the second series —
+      // is the part that proves the check walks the whole ring list and
+      // reports the ring that actually diverges, not simply the first one.
+      final refused = await generateFor(
+        const DonutCenterContent(label: 'Summer'),
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "seasons-Summer" exactly'),
+          contains('would hand back a different chart'),
+        ),
+      );
+      expect(blockedReason(refused), isNot(contains('seasons-Winter')));
+
+      // CONTROL: give the second ring the same hidden center as the first and
+      // the composition emits, so the refusal is attributable to the ring whose
+      // center diverges — not to concentric donuts.
+      final emitted = await generateFor(DonutCenterContent.hidden);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.isComplete, isTrue);
+      expect(emitted.source, contains('.geomDonut('));
+      expect(emitted.source, contains('ring: (row) => row.ring'));
+    });
+
+    testWidgets('a pie series carrying metadata is refused too — the proof '
+        'guards the non-polar radial path as well', (tester) async {
+      // The polar cases above reach the proof through `_tryEmitPolarChain`;
+      // pie reaches it through `_tryEmitRadialChain`. Both call sites must
+      // refuse, or half the radial families keep an unguarded emitter.
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, dynamic>? metadata,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PieChartSeries.fromMap(
+                id: 'harvest',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+                metadata: metadata,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final refused = await generateFor(const <String, dynamic>{
+        'sport': 'cycling',
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPie(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "harvest" exactly'),
+          contains('series metadata'),
+        ),
+      );
+
+      // CONTROL: the same pie without metadata emits.
+      final emitted = await generateFor(null);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('.geomPie('));
+    });
+  });
+
   group('options', () {
     testWidgets('the row class and variable names are configurable', (
       tester,
