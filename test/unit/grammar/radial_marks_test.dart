@@ -22,6 +22,10 @@ Object fruitName(Fruit row) => row.name;
 double fruitCount(Fruit row) => row.count;
 double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
+Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
+num? fruitTarget(Fruit row) => row.mass;
+num? fruitLow(Fruit row) => row.mass - 1;
+num? fruitHigh(Fruit row) => row.mass + 1;
 
 void main() {
   group('radial marks are const and value-equal', () {
@@ -63,6 +67,64 @@ void main() {
         style: PolarColumnStyle(cornerRadius: 6),
       );
       expect(mark.style, const PolarColumnStyle(cornerRadius: 6));
+    });
+
+    test('PolarMark carries advanced fields in equality', () {
+      const a = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        preset: PolarColumnPreset.rose,
+        targetMarkerStyle: PolarColumnTargetMarkerStyle(width: 3),
+      );
+      const b = PolarMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(a == b, isFalse);
+      expect(a.preset, PolarColumnPreset.rose);
+      expect(b.preset, PolarColumnPreset.standard);
+      expect(b.targetMarkerStyle, isNull);
+    });
+
+    test('PolarMark distinguishes its per-row advanced channels', () {
+      const base = PolarMark<Fruit>(category: fruitName, value: fruitCount);
+      const withColumnColor = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        columnColor: fruitColumnColor,
+      );
+      const withTarget = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        target: fruitTarget,
+      );
+      const withInterval = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        intervalLow: fruitLow,
+        intervalHigh: fruitHigh,
+        intervalStyle: PolarColumnIntervalStyle(width: 2),
+      );
+
+      expect(base == withColumnColor, isFalse);
+      expect(base == withTarget, isFalse);
+      expect(base == withInterval, isFalse);
+      expect(withColumnColor.columnColor, same(fruitColumnColor));
+      expect(withTarget.target, same(fruitTarget));
+      expect(withInterval.intervalLow, same(fruitLow));
+      expect(withInterval.intervalHigh, same(fruitHigh));
+      expect(
+        withInterval.intervalStyle,
+        const PolarColumnIntervalStyle(width: 2),
+      );
+      expect(base.hashCode == withInterval.hashCode, isFalse);
+      expect(
+        withInterval,
+        const PolarMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          intervalLow: fruitLow,
+          intervalHigh: fruitHigh,
+          intervalStyle: PolarColumnIntervalStyle(width: 2),
+        ),
+      );
     });
   });
 }

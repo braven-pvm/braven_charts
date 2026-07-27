@@ -21,7 +21,12 @@ import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
 import '../models/polar_chart_config.dart' show PolarChartConfig;
-import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/polar_column_chart_series.dart'
+    show
+        PolarColumnIntervalStyle,
+        PolarColumnPreset,
+        PolarColumnStyle,
+        PolarColumnTargetMarkerStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import '../models/scatter_marker_style.dart'
@@ -511,6 +516,13 @@ final class BravenChart<T> {
   /// Appends a polar column: [category] is the angular position and [value] is
   /// the radius (magnitude) — values are NOT converted into pie shares. Rich
   /// styling (labels, gradients, shadows) is deferred to [style].
+  ///
+  /// [rose] switches the series to the equal-angle Rose/Nightingale
+  /// presentation. [columnColor] overrides the column color per row;
+  /// [target] adds an absolute benchmark marker per row (styled by
+  /// [targetMarkerStyle]); [intervalLow] and [intervalHigh] add an absolute
+  /// uncertainty interval per row (styled by [intervalStyle]) and must be
+  /// supplied together.
   BravenChart<T> geomPolar({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
@@ -520,6 +532,13 @@ final class BravenChart<T> {
     String? unit,
     PolarColumnStyle? style,
     RadialSelectionStyle? selectionStyle,
+    bool rose = false,
+    FieldAccessor<T, Color?>? columnColor,
+    FieldAccessor<T, num?>? target,
+    PolarColumnTargetMarkerStyle? targetMarkerStyle,
+    FieldAccessor<T, num?>? intervalLow,
+    FieldAccessor<T, num?>? intervalHigh,
+    PolarColumnIntervalStyle? intervalStyle,
   }) => _append(
     PolarMark<T>(
       id: _idFor(id),
@@ -530,6 +549,13 @@ final class BravenChart<T> {
       unit: unit,
       style: style,
       selectionStyle: selectionStyle,
+      columnColor: columnColor,
+      target: target,
+      targetMarkerStyle: targetMarkerStyle,
+      intervalLow: intervalLow,
+      intervalHigh: intervalHigh,
+      intervalStyle: intervalStyle,
+      preset: rose ? PolarColumnPreset.rose : PolarColumnPreset.standard,
     ),
   );
 

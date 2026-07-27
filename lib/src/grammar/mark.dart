@@ -21,7 +21,12 @@ import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
-import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/polar_column_chart_series.dart'
+    show
+        PolarColumnIntervalStyle,
+        PolarColumnPreset,
+        PolarColumnStyle,
+        PolarColumnTargetMarkerStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import 'channel.dart';
@@ -1047,6 +1052,13 @@ final class PolarMark<T> extends RadialMark<T> {
     super.unit,
     this.style,
     this.selectionStyle,
+    this.columnColor,
+    this.target,
+    this.targetMarkerStyle,
+    this.intervalLow,
+    this.intervalHigh,
+    this.intervalStyle,
+    this.preset = PolarColumnPreset.standard,
   });
 
   /// Column geometry/appearance. Null lowers to `const PolarColumnStyle()`.
@@ -1055,6 +1067,43 @@ final class PolarMark<T> extends RadialMark<T> {
   /// Durable column-selection presentation. Null lowers to
   /// `const RadialSelectionStyle()`.
   final RadialSelectionStyle? selectionStyle;
+
+  /// Per-row column color override, keyed by the row's category.
+  ///
+  /// Returning null for a row leaves that category on the series color, which
+  /// is what an unset accessor does for every row.
+  final FieldAccessor<T, Color?>? columnColor;
+
+  /// Per-row target (benchmark) value on the shared radial scale.
+  ///
+  /// Targets are absolute values, not deltas from [value]. Returning null for a
+  /// row leaves that category without a target marker.
+  final FieldAccessor<T, num?>? target;
+
+  /// Appearance of the target markers drawn for [target]. Null lowers to
+  /// `const PolarColumnTargetMarkerStyle()`.
+  final PolarColumnTargetMarkerStyle? targetMarkerStyle;
+
+  /// Per-row lower interval bound on the shared radial scale.
+  ///
+  /// Must be set together with [intervalHigh]; supplying only one bound raises
+  /// `GrammarDiagnosticCode.incompletePolarInterval` at lowering.
+  final FieldAccessor<T, num?>? intervalLow;
+
+  /// Per-row upper interval bound on the shared radial scale.
+  ///
+  /// Must be set together with [intervalLow]; supplying only one bound raises
+  /// `GrammarDiagnosticCode.incompletePolarInterval` at lowering.
+  final FieldAccessor<T, num?>? intervalHigh;
+
+  /// Appearance of the intervals drawn for [intervalLow]/[intervalHigh]. Null
+  /// lowers to `const PolarColumnIntervalStyle()`.
+  final PolarColumnIntervalStyle? intervalStyle;
+
+  /// Named interpretation of the series — linear-radius columns
+  /// ([PolarColumnPreset.standard]) or an equal-angle Rose/Nightingale
+  /// presentation ([PolarColumnPreset.rose]).
+  final PolarColumnPreset preset;
 
   @override
   bool operator ==(Object other) =>
@@ -1067,12 +1116,34 @@ final class PolarMark<T> extends RadialMark<T> {
           other.color == color &&
           other.unit == unit &&
           other.style == style &&
-          other.selectionStyle == selectionStyle;
+          other.selectionStyle == selectionStyle &&
+          other.columnColor == columnColor &&
+          other.target == target &&
+          other.targetMarkerStyle == targetMarkerStyle &&
+          other.intervalLow == intervalLow &&
+          other.intervalHigh == intervalHigh &&
+          other.intervalStyle == intervalStyle &&
+          other.preset == preset;
 
   @override
-  int get hashCode =>
-      Object.hash(category, value, id, name, color, unit, style, selectionStyle);
+  int get hashCode => Object.hash(
+    category,
+    value,
+    id,
+    name,
+    color,
+    unit,
+    style,
+    selectionStyle,
+    columnColor,
+    target,
+    targetMarkerStyle,
+    intervalLow,
+    intervalHigh,
+    intervalStyle,
+    preset,
+  );
 
   @override
-  String toString() => 'PolarMark(id: $id, name: $name)';
+  String toString() => 'PolarMark(id: $id, name: $name, preset: ${preset.name})';
 }

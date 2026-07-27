@@ -94,6 +94,13 @@ void main() {
       expect(misplaced.message, contains('pie'));
       expect(misplaced.message, contains('geomPolar'));
 
+      final interval = GrammarSpecException.incompletePolarInterval('polar');
+      expect(interval.code, GrammarDiagnosticCode.incompletePolarInterval);
+      expect(interval.toString(), contains('incompletePolarInterval'));
+      expect(interval.message, contains('polar'));
+      expect(interval.message, contains('intervalLow'));
+      expect(interval.message, contains('intervalHigh'));
+
       final dup = GrammarSpecException.duplicateRadialCategory('Apple');
       expect(dup.code, GrammarDiagnosticCode.duplicateRadialCategory);
       expect(dup.toString(), contains('duplicateRadialCategory'));

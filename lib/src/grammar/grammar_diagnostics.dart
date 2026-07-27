@@ -95,6 +95,9 @@ enum GrammarDiagnosticCode {
   /// with fewer than two series.
   invalidPolarComposition,
 
+  /// A polar column geom supplied only one of the two interval bounds.
+  incompletePolarInterval,
+
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
   axisOptionOnRadialSpec,
@@ -355,6 +358,18 @@ final class GrammarSpecException implements Exception {
         GrammarDiagnosticCode.invalidPolarComposition,
         'The polar columns in this plot share one angular axis and one radial '
         'axis, so every geomPolar mark must agree about them. $detail',
+      );
+
+  /// A polar column geom supplied only one of the two interval bounds.
+  ///
+  /// [markId] names the geomPolar mark that set exactly one of `intervalLow`
+  /// and `intervalHigh`.
+  factory GrammarSpecException.incompletePolarInterval(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.incompletePolarInterval,
+        'The polar mark "$markId" set only one interval bound. A polar '
+        'interval spans an absolute lower and upper value, so supply both '
+        'intervalLow and intervalHigh (or neither).',
       );
 
   /// A Cartesian axis/grid option was set on a radial spec.
