@@ -280,6 +280,33 @@ const showcaseGrouping = RadialSliceGroupingConfig(
   label: 'Other',
 );
 
+/// The donut-centre label / value styling the showcase page applies.
+///
+/// `donut_charts_page.dart` builds both from its resolved chart theme in every
+/// centre preset, so a centre the grammar can carry has to carry these two —
+/// they are the reason a rebuilt-from-four-fields centre diverged.
+const donutCentreLabelStyle = LabelStyle(
+  textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+  backgroundColor: Color(0x00000000),
+  borderColor: Color(0x00000000),
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: EdgeInsets.zero,
+);
+
+const donutCentreValueStyle = LabelStyle(
+  textStyle: TextStyle(
+    color: Color(0xFF0F172A),
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+  ),
+  backgroundColor: Color(0x00000000),
+  borderColor: Color(0x00000000),
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: EdgeInsets.zero,
+);
+
 /// A slice-radius encoding with NO formatter — every field is a Dart literal,
 /// so it emits a complete `sliceRadiusConfig:` argument.
 const showcaseRadius = PieSliceRadiusConfig(
@@ -1963,6 +1990,36 @@ Future<ChartDocumentSnapshot> snapshotOf(
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
   final result = controller.extractDocument();
+  expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+  return (result as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
+}
+
+/// [snapshotOf]'s sibling for charts that carry a LIVE callback.
+///
+/// `extractDocument` is the PORTABLE path and fails closed on a runtime
+/// formatter it has no descriptor for; `extractSourceDocument` is the path the
+/// workbench's Source pane actually calls, and represents the same callback
+/// with a stable placeholder descriptor. A chart whose centre or labels are
+/// formatted can therefore only be generated from the latter — which is what
+/// the Grammar pane does for it.
+Future<ChartDocumentSnapshot> sourceSnapshotOf(
+  WidgetTester tester,
+  Widget Function(BravenChartController controller) child,
+) async {
+  final controller = BravenChartController();
+  addTearDown(controller.dispose);
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(width: 600, height: 400, child: child(controller)),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  expect(tester.takeException(), isNull);
+  final result = controller.extractSourceDocument();
   expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
   return (result as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
 }
@@ -4269,6 +4326,147 @@ void main() {
       expect(plain.source, isNot(contains('Color(')));
     });
 
+    testWidgets('the showcase donut centre that used to be BLOCKER 4 now '
+        'emits and round-trips', (tester) async {
+      // CONVERTED from the pinned known-gap test
+      // "blocker 4: a STYLED donut centre is refused — _markCenter rebuilds the
+      // centre and drops its two styles and its formatter". That test asserted
+      // the REFUSAL of exactly this chart; this slice closes the gap, so the
+      // same chart is asserted to emit AND round-trip instead. The chart itself
+      // is unchanged from the pinned version — same id, name, unit, values and
+      // the very same styled centre — so the two are directly comparable.
+      const styled = DonutCenterContent(
+        label: 'Total',
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
+          backgroundColor: Color(0x00000000),
+          borderColor: Color(0x00000000),
+          borderWidth: 0,
+          borderRadius: 0,
+          padding: EdgeInsets.zero,
+        ),
+      );
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'donut_showcase_styled_centre',
+        fragments: <String>[
+          '.geomDonut(',
+          'center: DonutCenterContent(',
+          "label: 'Total'",
+          'labelStyle: LabelStyle(',
+          'fontSize: 10.0',
+          "unit: 'USD'",
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-audience',
+              name: 'Audience',
+              unit: 'USD',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              centerContent: styled,
+            ),
+          ],
+        ),
+        rebuilt: (controller) =>
+            BravenChart.of(radialGrammarRows.take(2).toList())
+                .geomDonut(
+                  id: 'donut-audience',
+                  category: (row) => row.category,
+                  value: (row) => row.value,
+                  name: 'Audience',
+                  unit: 'USD',
+                  center: styled,
+                )
+                .build(bravenChartController: controller),
+      );
+      // A style-only centre carries no live callback, so the chain stays
+      // COMPLETE: the placeholder is the formatter's cost alone, not the
+      // centre's.
+      expect(generated.isComplete, isTrue);
+      expect(generated.warnings, isEmpty);
+    });
+
+    testWidgets('a donut with a STYLED, FORMATTED centre emits with the '
+        'centre carried whole and an honest formatter placeholder', (
+      tester,
+    ) async {
+      // `DonutChartsPage` builds its centre with `labelStyle`, `valueStyle` and
+      // a live `valueFormatter` in EVERY knob state. The centre is carried onto
+      // the mark VERBATIM, so all three survive the round-trip proof, and the
+      // emitted `center:` is written by the config emitter's own centre
+      // renderer — the same one `concentric:` uses — so the two forms cannot
+      // disagree about a field. The formatter alone has no literal form and
+      // degrades to a named placeholder, which is why the chain is emitted but
+      // deliberately NOT complete.
+      final snapshot = await sourceSnapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-centre',
+              name: 'Audience',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              centerContent: DonutCenterContent(
+                label: 'Total',
+                valueMode: DonutCenterValueMode.total,
+                labelStyle: donutCentreLabelStyle,
+                valueStyle: donutCentreValueStyle,
+                valueFormatter: (value) => value.toStringAsFixed(1),
+              ),
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.source, contains('center: DonutCenterContent('));
+      expect(generated.source, contains("label: 'Total'"));
+      expect(generated.source, contains('labelStyle: LabelStyle('));
+      expect(generated.source, contains('valueStyle: LabelStyle('));
+      expect(generated.source, contains('// valueFormatter:'));
+      expect(generated.isComplete, isFalse);
+      expect(
+        generated.warnings.map((warning) => warning.code),
+        contains(ChartSourceWarningCodes.runtimeValueOmitted),
+      );
+    });
+
+    testWidgets('a DEFAULT donut centre still emits nothing at all', (
+      tester,
+    ) async {
+      // The byte-identity guard for the centre carry. A plain donut restores
+      // `DonutCenterContent.hidden`, so the mark must carry NO centre and the
+      // chain must be exactly the text it was before the centre was carried
+      // whole — no `center:` argument, no styles, no warning.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut-plain',
+                name: 'Audience',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isTrue);
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      expect(generated.source, isNot(contains('center:')));
+      expect(generated.source, isNot(contains('DonutCenterContent')));
+    });
+
     testWidgets('a pie sliceRadiusConfig FORMATTER stays an honest refusal '
         '(placeholder + omitted warning), the chart still emits', (
       tester,
@@ -5364,16 +5562,16 @@ void main() {
   //   3. PER-RING DATA LABELS. The concentric page's `hierarchy` label layout
   //      gives the outer and inner rings DIFFERENT `PieDataLabelConfig`s, and
   //      one `DonutMark` carries one `dataLabels` for every ring.
-  //   4. THE DONUT CENTRE. `_markCenter` rebuilds the centre from four fields
-  //      and drops `labelStyle` / `valueStyle` / `valueFormatter`, so a styled
-  //      or formatted centre diverges. `DonutChartsPage` styles and formats its
-  //      centre in every knob state, so it stays blocked on this ALONE now that
-  //      (2) is closed — which makes it the only remaining pinned coverage of
-  //      that page, and the reason it is MOUNTED below rather than recorded in
-  //      this comment. (The LIVE formatter is not the reachable shape: a
-  //      callback makes `extractDocument()` fail before the generator runs, so
-  //      the mounted blocker is the styled centre.) It is closed by the
-  //      donut-centre slice, not by this file.
+  //   4. THE DONUT CENTRE — **CLOSED**. `_markCenter` used to rebuild the
+  //      centre from four fields and drop `labelStyle` / `valueStyle` /
+  //      `valueFormatter`; it now carries the captured centre VERBATIM, and
+  //      `center:` is written by the config emitter's own centre renderer, so a
+  //      styled or formatted centre emits. Its pinned refusal test was
+  //      CONVERTED into a round-trip acceptance test (see below) rather than
+  //      deleted. With (2) and (4) both closed, `DonutChartsPage` emits — with
+  //      an honest `// valueFormatter:` placeholder and `isComplete == false`,
+  //      which `example/test/showcase/donut_charts_page_grammar_test.dart`
+  //      asserts on the MOUNTED page.
   // =========================================================================
 
   group('KNOWN GAP: the donut showcase pages do not emit', () {
@@ -5509,90 +5707,12 @@ void main() {
       expect(emitted.source, contains('ring: (row) => row.ring,'));
     });
 
-    testWidgets('blocker 4: a STYLED donut centre is refused — _markCenter '
-        'rebuilds the centre and drops its two styles and its formatter', (
-      tester,
-    ) async {
-      // This is the blocker `DonutChartsPage` hits ON ITS OWN now that the
-      // per-slice colour blocker is closed: it builds its centre with
-      // `labelStyle`, `valueStyle` and a live `valueFormatter`
-      // (`donut_charts_page.dart:566-581`). `_markCenter` rebuilds the centre
-      // from four fields only, and `DonutCenterContent.==` compares all seven,
-      // so a centre that sets any of the other three diverges.
-      //
-      // The LIVE formatter is not the reachable form of this blocker — a
-      // callback makes `extractDocument()` fail outright, before the generator
-      // ever runs — so the mounted shape here is the styled centre.
-      Future<ChartGeneratedSource> generateFor(
-        DonutCenterContent center,
-      ) async => generateGrammar(
-        await snapshotOf(
-          tester,
-          (controller) => BravenChartPlus(
-            bravenChartController: controller,
-            series: <ChartSeries>[
-              DonutChartSeries.fromMap(
-                id: 'donut-audience',
-                name: 'Audience',
-                unit: 'USD',
-                values: const <String, num>{'Apple': 42, 'Pear': 31},
-                centerContent: center,
-              ),
-            ],
-          ),
-        ),
-      );
-
-      const styled = DonutCenterContent(
-        label: 'Total',
-        labelStyle: LabelStyle(
-          textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
-          backgroundColor: Color(0x00000000),
-          borderColor: Color(0x00000000),
-          borderWidth: 0,
-          borderRadius: 0,
-          padding: EdgeInsets.zero,
-        ),
-      );
-
-      final refused = await generateFor(styled);
-      expect(emittedChain(refused), isFalse);
-      expect(refused.isComplete, isFalse);
-      expect(refused.source, isNot(contains('.geomDonut(')));
-      expect(
-        refused.warnings.single.code,
-        ChartGrammarSourceWarningCodes.unsupportedShape,
-      );
-      // The reason must NAME the centre. Nothing else about this chart is
-      // non-default — no per-point style, no metadata, no polar intervals — so
-      // a reason that sent the reader hunting for one of those would be a
-      // misdiagnosis, not merely a vague message.
-      expect(
-        blockedReason(refused),
-        allOf(
-          contains('does not reproduce series "donut-audience" exactly'),
-          contains('donut center'),
-          contains('labelStyle'),
-          contains('valueStyle'),
-          contains('valueFormatter'),
-        ),
-      );
-      expect(
-        blockedReason(refused),
-        isNot(contains('a per-point style beyond')),
-      );
-
-      // CONTROL: strip the style and the very same centre — same label, same
-      // value mode — emits, so the refusal is attributable to the runtime-only
-      // appearance alone and not to donut centres.
-      final emitted = await generateFor(
-        const DonutCenterContent(label: 'Total'),
-      );
-      expect(emittedChain(emitted), isTrue);
-      expect(emitted.warnings, isEmpty);
-      expect(emitted.source, contains('.geomDonut('));
-      expect(emitted.source, contains("label: 'Total'"));
-    });
+    // BLOCKER 4 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
+    // into "the showcase donut centre that used to be BLOCKER 4 now emits and
+    // round-trips" in the `showcase-representative radial series config emits`
+    // group — same chart, same id/name/unit/values and the same styled centre,
+    // now asserting emission and a full round trip instead of the refusal, plus
+    // the byte-identity control that a default centre emits no `center:` at all.
   });
 
   group('fidelity matrix diagnostics', () {
@@ -6756,6 +6876,48 @@ void main() {
       expect(
         generated.source,
         contains('final ride = BravenChart.of(rideRows)'),
+      );
+    });
+
+    testWidgets('includeDefaultValues spells the donut centre out in full, and '
+        'the default OFF state writes only what differs', (tester) async {
+      // The centre argument is now written by the config emitter's own renderer,
+      // so it honours `includeDefaultValues` the way every other config literal
+      // does — where the grammar's old private renderer ignored the flag and
+      // wrote the visibility/value-mode pair only when they differed. That is
+      // the intended consequence of sharing one renderer, so it is pinned
+      // rather than left to be rediscovered as a surprise, together with the
+      // OFF state that every other test in this file relies on.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-verbose',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              centerContent: const DonutCenterContent(label: 'Total'),
+            ),
+          ],
+        ),
+      );
+
+      final terse = generateGrammar(snapshot);
+      expect(terse.source, contains('center: DonutCenterContent('));
+      expect(terse.source, isNot(contains('isVisible:')));
+      expect(terse.source, isNot(contains('valueMode:')));
+
+      final verbose = generateGrammar(
+        snapshot,
+        options: const ChartGrammarSourceOptions(
+          variableName: 'grammarChart',
+          includeDefaultValues: true,
+        ),
+      );
+      expect(verbose.source, contains('isVisible: true,'));
+      expect(
+        verbose.source,
+        contains('valueMode: DonutCenterValueMode.total,'),
       );
     });
 

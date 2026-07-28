@@ -39,7 +39,8 @@
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
 /// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
 /// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
-/// | a donut center setting `labelStyle`, `valueStyle` or `valueFormatter` | blocked, naming the center — the center is rebuilt from its visibility, label, value mode and custom value, and the runtime-only trio is dropped |
+/// | a donut center setting `labelStyle` or `valueStyle` | emitted as `center: DonutCenterContent(...)` — the captured center rides the mark VERBATIM and is written by the config emitter's own center renderer, so both styles survive |
+/// | a donut center setting `valueFormatter` | emitted with a `// valueFormatter:` placeholder and a runtime-value-omitted warning, exactly as the config form does — the chain is real but not complete |
 /// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
 /// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
@@ -1079,9 +1080,10 @@ class _GrammarChainEmitter {
     // chart emitted before `concentric:` existed. When it already reproduces the
     // captured composition the mark keeps carrying just the center, so those
     // charts emit exactly the text they emitted before; only a composition the
-    // center cannot express (a ring gap, order, weights, radii, legend mode, or
-    // a center with runtime styling `_markCenter` drops) carries the whole
-    // config — which is precisely the set that used to be REFUSED.
+    // center cannot express (a ring gap, order, weights, radii or legend mode)
+    // carries the whole config — which is precisely the set that used to be
+    // REFUSED. The center itself is carried verbatim by `_markCenter`, so a
+    // styled or formatted center no longer forces the config onto the mark.
     final fromCenter = donuts.length == 1 || center == null
         ? const ConcentricDonutConfig()
         : ConcentricDonutConfig(centerContent: center);
@@ -1386,22 +1388,18 @@ class _GrammarChainEmitter {
   /// `geomDonut` emits no `center:` for it. The two donut shapes have DIFFERENT
   /// no-op centers: a plain/collapsed donut restores `DonutCenterContent.hidden`
   /// (`mark.center ?? hidden`), while a concentric composition restores the
-  /// config's default `const DonutCenterContent()` (visible). The reconstruction
-  /// drops the runtime-only label/value styles and formatter, so a center that
-  /// sets one is refused by the round-trip proof rather than emitted as a center
-  /// that silently drops it.
+  /// config's default `const DonutCenterContent()` (visible).
+  ///
+  /// The captured object is carried VERBATIM — `labelStyle`, `valueStyle` and
+  /// `valueFormatter` included — exactly as `dataLabels` and the slice configs
+  /// already are, so the round-trip proof compares like with like instead of
+  /// refusing every styled or formatted center. A `valueFormatter` is a live
+  /// callback with no literal form; it degrades to an honest placeholder at
+  /// EMISSION (with a `runtimeValueOmitted` warning), not by being dropped here.
   DonutCenterContent? _markCenter(
     DonutCenterContent captured,
     DonutCenterContent noOp,
-  ) {
-    if (captured == noOp) return null;
-    return DonutCenterContent(
-      isVisible: captured.isVisible,
-      label: captured.label,
-      valueMode: captured.valueMode,
-      customValue: captured.customValue,
-    );
-  }
+  ) => captured == noOp ? null : captured;
 
   /// The first part of a radial lowered plot that does not match the captured
   /// chart, or null when everything matches.
@@ -1542,34 +1540,17 @@ class _GrammarChainEmitter {
   /// Names the DONUT CENTER as the cause when it is, or null when the captured
   /// and rebuilt centers match.
   ///
-  /// [_markCenter] rebuilds a center from four of its seven fields, and
-  /// `DonutCenterContent.==` compares all seven, so there are exactly two ways
-  /// a center diverges and they have different remedies:
-  ///
-  ///  - the four carried fields survive and the runtime-only trio does not
-  ///    (`labelStyle`, `valueStyle`, `valueFormatter`);
-  ///  - the center is replaced wholesale, which is what a concentric
-  ///    composition does to a ring that carries a center of its own.
+  /// [_markCenter] now carries the captured center VERBATIM, so a center's own
+  /// fields — styles and formatter included — no longer diverge on their own.
+  /// The one remaining way a center differs is that it is replaced wholesale,
+  /// which is what a concentric composition does to a ring that carries a
+  /// center of its own: the mark holds ONE shared center and every ring
+  /// re-lowers hidden.
   String? _radialCenterLossDetail(ChartSeries expected, ChartSeries lowered) {
     if (expected is! DonutChartSeries || lowered is! DonutChartSeries) {
       return null;
     }
-    final captured = expected.centerContent;
-    final rebuilt = lowered.centerContent;
-    if (captured == rebuilt) return null;
-    final withoutRuntimeStyling = DonutCenterContent(
-      isVisible: captured.isVisible,
-      label: captured.label,
-      valueMode: captured.valueMode,
-      customValue: captured.customValue,
-    );
-    if (withoutRuntimeStyling == rebuilt) {
-      return 'Its donut center carries a runtime-only appearance the chain '
-          'does not carry. A center round-trips its visibility, label, value '
-          'mode and custom value; labelStyle, valueStyle and valueFormatter '
-          'are rebuilt away, so a center that sets one of those three is '
-          'refused rather than emitted as a center that silently drops it.';
-    }
+    if (expected.centerContent == lowered.centerContent) return null;
     return 'Its donut center is not the one the chain would rebuild. A '
         'concentric composition carries ONE shared donut center on '
         'geomDonut(concentric: ...) and re-lowers every ring with a hidden '
@@ -2708,7 +2689,13 @@ class _GrammarChainEmitter {
           if (mark.selectionStyle != null) {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
           }
-          if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+          // Written by the config emitter's OWN centre renderer — the one the
+          // config form's `centerContent:` and the concentric config both use —
+          // so `center:` carries the styles and the formatter placeholder
+          // instead of a four-field rebuild the proof would have to refuse.
+          if (plan.center != null) {
+            _config.emitDonutCenterContent(writer, 'center', plan.center!, 0);
+          }
           // `concentric:` and `center:` are mutually exclusive by lowering's
           // precedence rule, and the planner only carries a config the center
           // could not express — so a concentric chart whose composition IS the
@@ -2740,26 +2727,6 @@ class _GrammarChainEmitter {
       _absorbConfigWarnings();
     });
     writer.writeLine(')');
-  }
-
-  /// Emits `center: DonutCenterContent(...)` with the portable text fields only.
-  /// A center that carried a label/value style or a formatter would already have
-  /// been refused by the round-trip proof (`_radialCenter` drops them), so only
-  /// the reproducible fields reach here.
-  void _emitDonutCenter(DartSourceWriter writer, DonutCenterContent center) {
-    writer.writeLine('center: DonutCenterContent(');
-    writer.indented(() {
-      if (!center.isVisible) writer.namedArgument('isVisible', 'false');
-      _optionalString(writer, 'label', center.label);
-      if (center.valueMode != DonutCenterValueMode.total) {
-        writer.namedArgument(
-          'valueMode',
-          'DonutCenterValueMode.${center.valueMode.name}',
-        );
-      }
-      _optionalString(writer, 'customValue', center.customValue);
-    });
-    writer.writeLine('),');
   }
 
   void _emitRowClass(DartSourceWriter writer) {
