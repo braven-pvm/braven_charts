@@ -247,4 +247,18 @@ stacked tracks are
 deferred until their scale, table, selection, and composition semantics are
 specified rather than inferred from visual similarity.
 
-See the runnable showcase at `?page=radial-bar`.
+## Gallery and runnable showcase
+
+The public Gallery at `?page=gallery` includes three compact, independently
+runnable Radial Bar compositions:
+
+- Customer journey progress on an explicit 0-100 scale, with a target and
+  outside value callouts.
+- Signed growth drivers around a shared zero baseline in a partial pane.
+- A dense regional operating profile that exercises rotated starts and
+  collision-aware category callouts.
+
+Use these cards to compare the family with the other chart types. Open the
+dedicated `?page=radial-bar` showcase for the complete preset matrix,
+searchable property inspector, randomizer, Chart/Data/Split/Source Workbench,
+themes, legends, labels, gradients, selection, tooltips, and motion controls.

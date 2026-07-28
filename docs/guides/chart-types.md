@@ -42,7 +42,9 @@ Use Radial Bar when every ring is an independent absolute value on the same
 known scale. It is not a multi-ring Donut: values are not divided by a
 per-ring total. See the complete
 [Radial Bar guide](radial-bar-charts.md) and runnable `?page=radial-bar`
-showcase.
+showcase. The public `?page=gallery` route also includes progress, signed
+baseline, and dense-track Radial Bar compositions for side-by-side family
+comparison.
 
 Use Gauge when one current reading needs operational zones, status, target, or
 threshold context. It is not a one-slice Donut and not a one-category Radial
