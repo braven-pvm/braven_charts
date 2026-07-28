@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,46 @@ import '../models/gauge_chart_config.dart';
 import '../models/gauge_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../utils/dashed_path.dart';
+
+class _GaugeTextLayout {
+  const _GaugeTextLayout({
+    required this.index,
+    required this.painter,
+    required this.rect,
+  });
+
+  final int index;
+  final TextPainter painter;
+  final Rect rect;
+}
+
+class _GaugeReferencePaintEntry {
+  const _GaugeReferencePaintEntry({
+    required this.geometry,
+    required this.color,
+    required this.width,
+    required this.dashPattern,
+  });
+
+  final GaugeReferenceGeometry geometry;
+  final Color color;
+  final double width;
+  final List<double> dashPattern;
+}
+
+class _GaugeReferenceLabelLayout {
+  const _GaugeReferenceLabelLayout({
+    required this.painter,
+    required this.rect,
+    required this.style,
+  });
+
+  final TextPainter painter;
+  final Rect rect;
+  final GaugeReferenceStyle style;
+}
+
+enum _GaugeCenterLineKind { metric, value, target, status }
 
 /// Paints and resolves interaction for one needle or solid Gauge measurement.
 class GaugeSeriesElement implements DataHitElement {
@@ -58,12 +99,113 @@ class GaugeSeriesElement implements DataHitElement {
     }
 
     final paneConfig = config.pane;
+    final signedSweepAngle =
+        paneConfig.sweepAngleDegrees *
+        math.pi /
+        180 *
+        (paneConfig.clockwise ? 1 : -1);
+    final startAngle = paneConfig.startAngleDegrees * math.pi / 180;
+    double radialTextExtent(
+      String text,
+      TextStyle style,
+      double maxWidth,
+      double angle, {
+      double padding = 0,
+    }) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: textDirection,
+        textScaler: TextScaler.linear(textScaleFactor),
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: math.max(36, maxWidth));
+      final width = painter.width + padding * 2;
+      final height = painter.height + padding * 2;
+      return math.cos(angle).abs() * width / 2 +
+          math.sin(angle).abs() * height / 2;
+    }
+
+    final scaleTextStyle = theme.axisStyle.labelStyle.copyWith(
+      color: config.scale.labelStyle.color,
+      fontSize: config.scale.labelStyle.fontSize,
+      fontWeight: config.scale.labelStyle.fontWeight,
+    );
+    var maximumScaleLabelExtent = 0.0;
+    if (config.showTickLabels) {
+      for (var index = 0; index < config.tickCount; index++) {
+        final fraction = index / (config.tickCount - 1);
+        maximumScaleLabelExtent = math.max(
+          maximumScaleLabelExtent,
+          radialTextExtent(
+            MultiAxisValueFormatter.format(
+              value:
+                  series.minimum + (series.maximum - series.minimum) * fraction,
+              unit: series.unit,
+            ),
+            scaleTextStyle,
+            config.scale.labelMaxWidth,
+            startAngle + signedSweepAngle * fraction,
+          ),
+        );
+      }
+    }
+    final scaleLabelReserve = config.showTickLabels
+        ? (config.scale.tickLength ?? theme.axisStyle.tickLength) * 0.4 +
+              config.scale.labelOffset * textScaleFactor +
+              maximumScaleLabelExtent
+        : 0.0;
+    final hasReferenceLabels =
+        config.references.showLabels &&
+        ((series.target?.label?.isNotEmpty ?? false) ||
+            series.thresholds.any(
+              (threshold) => threshold.label?.isNotEmpty ?? false,
+            ));
+    final referenceTextStyle = theme.axisStyle.labelStyle.copyWith(
+      fontSize: config.references.labelStyle.fontSize,
+      fontWeight: config.references.labelStyle.fontWeight,
+    );
+    var maximumReferenceLabelExtent = 0.0;
+    if (hasReferenceLabels) {
+      final references = <(double, String)>[
+        if (series.target case final target?)
+          if (target.label case final label?)
+            if (label.isNotEmpty) (target.value, label),
+        for (final threshold in series.thresholds)
+          if (threshold.label case final label?)
+            if (label.isNotEmpty) (threshold.value, label),
+      ];
+      for (final (value, label) in references) {
+        final fraction =
+            (value - series.minimum) / (series.maximum - series.minimum);
+        maximumReferenceLabelExtent = math.max(
+          maximumReferenceLabelExtent,
+          radialTextExtent(
+            label,
+            referenceTextStyle,
+            config.references.labelMaxWidth,
+            startAngle + signedSweepAngle * fraction,
+            padding: config.references.showLabelPanel
+                ? config.references.panelPadding * textScaleFactor
+                : 0,
+          ),
+        );
+      }
+    }
+    final referenceLabelReserve = hasReferenceLabels
+        ? config.references.outerLineOffset +
+              config.references.labelOffset * textScaleFactor +
+              maximumReferenceLabelExtent
+        : 0.0;
+    final reservedLabelExtent = math.max(
+      config.showTickLabels ? 22.0 * textScaleFactor : 0.0,
+      math.max(scaleLabelReserve, referenceLabelReserve),
+    );
     final pane = RadialPaneGeometry.resolve(
       viewportBounds: Offset.zero & size,
       viewportInsets: EdgeInsets.all(14 * textScaleFactor),
-      reservedLabelInsets: config.showTickLabels
+      reservedLabelInsets: reservedLabelExtent > 0
           ? EdgeInsets.all(
-              math.min(22 * textScaleFactor, size.shortestSide * 0.1),
+              math.min(reservedLabelExtent, size.shortestSide * 0.24),
             )
           : EdgeInsets.zero,
       innerRadiusFactor: paneConfig.innerRadiusFactor,
@@ -84,6 +226,10 @@ class GaugeSeriesElement implements DataHitElement {
       target: series.target,
       thresholds: series.thresholds,
       tickCount: config.tickCount,
+      tickLength: config.scale.tickLength ?? theme.axisStyle.tickLength,
+      tickLabelOffset: config.scale.labelOffset * textScaleFactor,
+      referenceInnerOffset: config.references.innerLineOffset,
+      referenceOuterOffset: config.references.outerLineOffset,
     );
     return GaugeSeriesElement._(
       series: series,
@@ -191,7 +337,7 @@ class GaugeSeriesElement implements DataHitElement {
   void paint(Canvas canvas, Size size) {
     if (config.showAxis) _paintAxis(canvas);
     if (config.showZones) _paintZones(canvas);
-    if (config.showTicks) _paintTicks(canvas);
+    if (config.showTicks || config.showTickLabels) _paintTicks(canvas);
     _paintReferences(canvas);
     _paintIndicator(canvas);
     if (paintCenterContent) _paintCenterContent(canvas);
@@ -244,80 +390,62 @@ class GaugeSeriesElement implements DataHitElement {
   }
 
   void _paintTicks(Canvas canvas) {
+    final scale = config.scale;
     final tickPaint = Paint()
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = math.max(1, theme.axisStyle.lineWidth)
-      ..color = theme.axisStyle.lineColor;
+      ..strokeWidth = scale.tickWidth ?? theme.axisStyle.tickWidth
+      ..color = scale.tickColor ?? theme.axisStyle.tickColor;
+    final paintedTickPoints = <Offset>[];
     for (final tick in geometry.ticks) {
-      canvas.drawLine(tick.innerPoint, tick.outerPoint, tickPaint);
-      if (config.showTickLabels) {
-        _paintText(
-          canvas,
-          MultiAxisValueFormatter.format(value: tick.value, unit: series.unit),
-          tick.labelAnchor,
-          theme.axisStyle.labelStyle.copyWith(fontSize: 9),
-          center: true,
-          maxWidth: 72,
-        );
+      final coincidesWithPaintedTick = paintedTickPoints.any(
+        (point) => (tick.outerPoint - point).distance < 0.5,
+      );
+      if (config.showTicks && !coincidesWithPaintedTick) {
+        canvas.drawLine(tick.innerPoint, tick.outerPoint, tickPaint);
+        paintedTickPoints.add(tick.outerPoint);
+      }
+    }
+    if (config.showTickLabels) {
+      final referenceLabels = _resolvedReferenceLabels();
+      for (final label in _resolvedTickLabels(
+        blockers: referenceLabels.map((label) => label.rect),
+      )) {
+        label.painter.paint(canvas, label.rect.topLeft);
       }
     }
   }
 
   void _paintReferences(Canvas canvas) {
-    if (geometry.target case final target?) {
-      final source = series.target!;
-      final color = source.color ?? theme.focusBorderColor;
-      _paintReference(canvas, target, color: color, width: source.width);
+    for (final entry in _referenceEntries()) {
+      _paintReferenceLine(canvas, entry);
     }
-    for (final (index, threshold) in geometry.thresholds.indexed) {
-      final source = series.thresholds[index];
-      final color = source.color ?? theme.axisStyle.lineColor;
-      _paintReference(
-        canvas,
-        threshold,
-        color: color,
-        width: source.width,
-        dashPattern: source.dashPattern,
-      );
+    for (final label in _resolvedReferenceLabels()) {
+      if (label.style.showLabelPanel) {
+        _paintResolvedReferencePanel(canvas, label);
+      } else {
+        label.painter.paint(canvas, label.rect.topLeft);
+      }
     }
   }
 
-  void _paintReference(
-    Canvas canvas,
-    GaugeReferenceGeometry reference, {
-    required Color color,
-    required double width,
-    List<double> dashPattern = const <double>[],
-  }) {
+  void _paintReferenceLine(Canvas canvas, _GaugeReferencePaintEntry entry) {
+    final reference = entry.geometry;
     final source = Path()
       ..moveTo(reference.innerPoint.dx, reference.innerPoint.dy)
       ..lineTo(reference.outerPoint.dx, reference.outerPoint.dy);
     canvas.drawPath(
-      dashPattern.isEmpty ? source : createDashedPath(source, dashPattern),
+      entry.dashPattern.isEmpty
+          ? source
+          : createDashedPath(source, entry.dashPattern),
       Paint()
         ..isAntiAlias = true
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = width
-        ..color = color,
+        ..strokeWidth = entry.width
+        ..color = entry.color,
     );
-    if (reference.label case final label?) {
-      _paintText(
-        canvas,
-        label,
-        reference.outerPoint +
-            Offset.fromDirection(reference.angle, 8 * textScaleFactor),
-        theme.axisStyle.labelStyle.copyWith(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-        center: true,
-        maxWidth: 100,
-      );
-    }
   }
 
   void _paintIndicator(Canvas canvas) {
@@ -344,12 +472,16 @@ class GaugeSeriesElement implements DataHitElement {
       case SolidGaugeStyle():
         final solid = geometry.solid!;
         final style = series.indicatorStyle as SolidGaugeStyle;
+        final gradient = _solidGradient(style, color);
         canvas.drawPath(
           solid.progress.path,
           Paint()
             ..isAntiAlias = true
             ..style = PaintingStyle.fill
-            ..color = color.withValues(alpha: color.a * style.opacity),
+            ..color = gradient == null
+                ? color.withValues(alpha: color.a * style.opacity)
+                : Colors.white
+            ..shader = gradient,
         );
         if (style.borderWidth > 0) {
           canvas.drawPath(
@@ -376,10 +508,94 @@ class GaugeSeriesElement implements DataHitElement {
     }
   }
 
+  ui.Shader? _solidGradient(SolidGaugeStyle style, Color color) {
+    final gradient = style.gradient;
+    if (gradient == null || !gradient.enabled) return null;
+    var startColor = _gradientColor(
+      color,
+      gradient.startColor,
+      gradient.startLightnessShift,
+    );
+    var endColor = _gradientColor(
+      color,
+      gradient.endColor,
+      gradient.endLightnessShift,
+    );
+    startColor = startColor.withValues(alpha: startColor.a * style.opacity);
+    endColor = endColor.withValues(alpha: endColor.a * style.opacity);
+    final progress = geometry.solid!.progress;
+    return switch (gradient.type) {
+      GaugeGradientType.sweep => _sweepGradient(
+        progress.startAngle,
+        progress.sweepAngle,
+        startColor,
+        endColor,
+      ),
+      GaugeGradientType.radial => ui.Gradient.radial(
+        pane.center,
+        progress.outerRadius,
+        <Color>[startColor, endColor],
+        <double>[(progress.innerRadius / progress.outerRadius).clamp(0, 1), 1],
+      ),
+    };
+  }
+
+  ui.Shader _sweepGradient(
+    double rawStartAngle,
+    double rawSweepAngle,
+    Color startColor,
+    Color endColor,
+  ) {
+    var startAngle = rawStartAngle;
+    var endAngle = startAngle + rawSweepAngle;
+    if (endAngle < startAngle) {
+      final angle = startAngle;
+      startAngle = endAngle;
+      endAngle = angle;
+      final color = startColor;
+      startColor = endColor;
+      endColor = color;
+    }
+    while (startAngle < 0) {
+      startAngle += math.pi * 2;
+      endAngle += math.pi * 2;
+    }
+    // Entrance animation begins at an exact zero-length sweep. Flutter's
+    // native sweep shader requires a strictly increasing angular interval even
+    // though the arc itself paints no visible pixels at that frame.
+    if (endAngle - startAngle < 1e-9) {
+      endAngle = startAngle + 1e-9;
+    }
+    return ui.Gradient.sweep(
+      pane.center,
+      <Color>[startColor, endColor],
+      null,
+      TileMode.clamp,
+      startAngle,
+      endAngle,
+    );
+  }
+
+  Color _gradientColor(Color base, Color? fixed, double lightnessShift) =>
+      fixed ?? _shiftLightness(base, lightnessShift);
+
+  Color _shiftLightness(Color color, double amount) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   void _paintCenterContent(Canvas canvas) {
-    final lines = <(String, PolarLabelStyle, FontWeight)>[];
+    final lines =
+        <(String, PolarLabelStyle, FontWeight, _GaugeCenterLineKind)>[];
     if (config.center.showMetric) {
-      lines.add((series.metric, config.center.metricStyle, FontWeight.w600));
+      lines.add((
+        series.metric,
+        config.center.metricStyle,
+        FontWeight.w600,
+        _GaugeCenterLineKind.metric,
+      ));
     }
     if (config.center.showValue) {
       lines.add((
@@ -389,6 +605,7 @@ class GaugeSeriesElement implements DataHitElement {
         ),
         config.center.valueStyle,
         FontWeight.w800,
+        _GaugeCenterLineKind.value,
       ));
     }
     final target = series.target;
@@ -403,15 +620,22 @@ class GaugeSeriesElement implements DataHitElement {
             : '${target.label} $formatted',
         config.center.targetStyle,
         FontWeight.w600,
+        _GaugeCenterLineKind.target,
       ));
     }
     final status = series.status;
     if (config.center.showStatus && status != null) {
-      lines.add((status, config.center.statusStyle, FontWeight.w600));
+      lines.add((
+        status,
+        config.center.statusStyle,
+        FontWeight.w600,
+        _GaugeCenterLineKind.status,
+      ));
     }
     if (lines.isEmpty) return;
-    final painters = <TextPainter>[
-      for (final (text, style, fallbackWeight) in lines)
+    final availableDiameter = geometry.centerBounds.width;
+    List<TextPainter> buildPainters() => <TextPainter>[
+      for (final (text, style, fallbackWeight, _) in lines)
         TextPainter(
           text: TextSpan(
             text: text,
@@ -424,46 +648,307 @@ class GaugeSeriesElement implements DataHitElement {
           textDirection: textDirection,
           textScaler: TextScaler.linear(textScaleFactor),
           maxLines: 1,
-          ellipsis: '…',
-        )..layout(maxWidth: math.max(64, geometry.centerBounds.width)),
+        )..layout(),
     ];
-    final spacing = 3 * textScaleFactor;
-    final height =
+    var painters = buildPainters();
+    final configuredSpacing = config.center.lineSpacing * textScaleFactor;
+    double measuredTextHeight() =>
         painters.fold<double>(0, (sum, painter) => sum + painter.height) +
-        spacing * math.max(0, painters.length - 1);
-    var y = pane.center.dy - height / 2;
-    for (final painter in painters) {
-      painter.paint(canvas, Offset(pane.center.dx - painter.width / 2, y));
-      y += painter.height + spacing;
+        configuredSpacing * math.max(0, painters.length - 1);
+    final centerOffset =
+        Offset(config.center.horizontalOffset, config.center.verticalOffset) *
+        textScaleFactor;
+    double resolveContentScale() {
+      final radius = availableDiameter / 2;
+      if (radius <= 0 || centerOffset.distance >= radius) return 0;
+
+      bool fits(double scale) {
+        var y = -measuredTextHeight() / 2;
+        for (final painter in painters) {
+          final left = centerOffset.dx - painter.width * scale / 2;
+          final right = centerOffset.dx + painter.width * scale / 2;
+          final top = centerOffset.dy + y * scale;
+          final bottom = centerOffset.dy + (y + painter.height) * scale;
+          for (final point in <Offset>[
+            Offset(left, top),
+            Offset(right, top),
+            Offset(left, bottom),
+            Offset(right, bottom),
+          ]) {
+            if (point.distance > radius + 1e-6) return false;
+          }
+          y += painter.height + configuredSpacing;
+        }
+        return true;
+      }
+
+      var lower = 0.0;
+      var upper = 1.0;
+      for (var iteration = 0; iteration < 28; iteration += 1) {
+        final candidate = (lower + upper) / 2;
+        if (fits(candidate)) {
+          lower = candidate;
+        } else {
+          upper = candidate;
+        }
+      }
+      return lower;
     }
+
+    // A target rendered on the radial scale already has an external label.
+    // In a constrained center, remove that duplicate before shrinking the
+    // primary metric, value, or status content.
+    if (resolveContentScale() < 0.8 &&
+        config.references.showLabels &&
+        lines.any((line) => line.$4 == _GaugeCenterLineKind.target)) {
+      lines.removeWhere((line) => line.$4 == _GaugeCenterLineKind.target);
+      painters = buildPainters();
+    }
+    final height = measuredTextHeight();
+    final contentScale = resolveContentScale();
+    final center = pane.center + centerOffset;
+    canvas
+      ..save()
+      ..translate(center.dx, center.dy)
+      ..scale(contentScale);
+    var y = -height / 2;
+    for (final painter in painters) {
+      painter.paint(canvas, Offset(-painter.width / 2, y));
+      y += painter.height + configuredSpacing;
+    }
+    canvas.restore();
   }
 
-  void _paintText(
+  List<_GaugeReferencePaintEntry> _referenceEntries() => [
+    if (geometry.target case final target?)
+      _GaugeReferencePaintEntry(
+        geometry: target,
+        color: series.target!.color ?? theme.focusBorderColor,
+        width: series.target!.width,
+        dashPattern: const [],
+      ),
+    for (final (index, threshold) in geometry.thresholds.indexed)
+      _GaugeReferencePaintEntry(
+        geometry: threshold,
+        color: series.thresholds[index].color ?? theme.axisStyle.lineColor,
+        width: series.thresholds[index].width,
+        dashPattern: series.thresholds[index].dashPattern,
+      ),
+  ];
+
+  List<_GaugeReferenceLabelLayout> _resolvedReferenceLabels() {
+    final style = config.references;
+    if (!style.showLabels) return const [];
+    final candidates = <_GaugeReferenceLabelLayout>[];
+    for (final entry in _referenceEntries()) {
+      final label = entry.geometry.label;
+      if (label == null || label.isEmpty) continue;
+      final painter = _createTextPainter(
+        label,
+        theme.axisStyle.labelStyle.copyWith(
+          color: style.labelStyle.color ?? entry.color,
+          fontSize: style.labelStyle.fontSize,
+          fontWeight: style.labelStyle.fontWeight,
+        ),
+        maxWidth: style.labelMaxWidth,
+      );
+      final padding = style.showLabelPanel
+          ? style.panelPadding * textScaleFactor
+          : 0.0;
+      final labelSize = Size(
+        painter.width + padding * 2,
+        painter.height + padding * 2,
+      );
+      final boundaryAnchor =
+          entry.geometry.outerPoint +
+          Offset.fromDirection(
+            entry.geometry.angle,
+            style.labelOffset * textScaleFactor,
+          );
+      final center = _radialTextCenter(
+        boundaryAnchor,
+        entry.geometry.angle,
+        labelSize,
+      );
+      candidates.add(
+        _GaugeReferenceLabelLayout(
+          painter: painter,
+          rect: _clampTextRect(
+            Rect.fromCenter(
+              center: center,
+              width: labelSize.width,
+              height: labelSize.height,
+            ),
+          ),
+          style: style,
+        ),
+      );
+    }
+    final accepted = <_GaugeReferenceLabelLayout>[];
+    for (final candidate in candidates) {
+      if (accepted.any(
+        (label) => label.rect.inflate(2).overlaps(candidate.rect.inflate(2)),
+      )) {
+        continue;
+      }
+      accepted.add(candidate);
+    }
+    return accepted;
+  }
+
+  void _paintResolvedReferencePanel(
     Canvas canvas,
-    String text,
-    Offset anchor,
-    TextStyle style, {
-    bool center = false,
-    required double maxWidth,
-  }) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: textDirection,
-      textScaler: TextScaler.linear(textScaleFactor),
-      maxLines: 1,
-      ellipsis: '…',
-    )..layout(maxWidth: math.max(36, maxWidth));
-    final raw = center
-        ? anchor - Offset(painter.width / 2, painter.height / 2)
-        : anchor;
+    _GaugeReferenceLabelLayout label,
+  ) {
+    final style = label.style;
+    final rect = label.rect;
+    final painter = label.painter;
+    final rounded = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(style.panelBorderRadius * textScaleFactor),
+    );
+    final panelColor =
+        style.panelColor ??
+        theme.backgroundColor.withValues(
+          alpha: math.max(theme.backgroundColor.a, 0.94),
+        );
+    canvas.drawRRect(
+      rounded,
+      Paint()
+        ..isAntiAlias = true
+        ..style = PaintingStyle.fill
+        ..color = panelColor,
+    );
+    if (style.panelBorderWidth > 0) {
+      canvas.drawRRect(
+        rounded,
+        Paint()
+          ..isAntiAlias = true
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.panelBorderWidth
+          ..color = style.panelBorderColor ?? theme.axisStyle.lineColor,
+      );
+    }
     painter.paint(
       canvas,
       Offset(
-        raw.dx.clamp(0, math.max(0, size.width - painter.width)),
-        raw.dy.clamp(0, math.max(0, size.height - painter.height)),
+        rect.left + (rect.width - painter.width) / 2,
+        rect.top + (rect.height - painter.height) / 2,
       ),
     );
   }
+
+  List<_GaugeTextLayout> _resolvedTickLabels({
+    Iterable<Rect> blockers = const [],
+  }) {
+    final scale = config.scale;
+    final textStyle = theme.axisStyle.labelStyle.copyWith(
+      color: scale.labelStyle.color,
+      fontSize: scale.labelStyle.fontSize,
+      fontWeight: scale.labelStyle.fontWeight,
+    );
+    final candidates = <_GaugeTextLayout>[
+      for (final tick in geometry.ticks)
+        (() {
+          final painter = _createTextPainter(
+            MultiAxisValueFormatter.format(
+              value: tick.value,
+              unit: series.unit,
+            ),
+            textStyle,
+            maxWidth: scale.labelMaxWidth,
+          );
+          final center = _radialTextCenter(
+            tick.labelAnchor,
+            tick.angle,
+            painter.size,
+          );
+          return _GaugeTextLayout(
+            index: tick.index,
+            painter: painter,
+            rect: _clampTextRect(
+              Rect.fromCenter(
+                center: center,
+                width: painter.width,
+                height: painter.height,
+              ),
+            ),
+          );
+        })(),
+    ];
+    if (candidates.length < 2) return candidates;
+
+    // Endpoints communicate the scale domain most strongly. Resolve them
+    // before interior labels, then accept only non-overlapping candidates.
+    final priority = <int>[
+      0,
+      candidates.length - 1,
+      for (var index = 1; index < candidates.length - 1; index++) index,
+    ];
+    final accepted = <_GaugeTextLayout>[];
+    for (final index in priority) {
+      final candidate = candidates[index];
+      final collisionBounds = candidate.rect.inflate(2);
+      if (blockers.any(
+            (blocker) => blocker.inflate(2).overlaps(collisionBounds),
+          ) ||
+          accepted.any(
+            (label) => label.rect.inflate(2).overlaps(collisionBounds),
+          )) {
+        continue;
+      }
+      accepted.add(candidate);
+    }
+    accepted.sort((left, right) => left.index.compareTo(right.index));
+    return accepted;
+  }
+
+  TextPainter _createTextPainter(
+    String text,
+    TextStyle style, {
+    required double maxWidth,
+  }) => TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: textDirection,
+    textScaler: TextScaler.linear(textScaleFactor),
+    maxLines: 1,
+    ellipsis: '…',
+  )..layout(maxWidth: math.max(36, maxWidth));
+
+  Offset _radialTextCenter(Offset boundaryAnchor, double angle, Size textSize) {
+    final radialExtent =
+        math.cos(angle).abs() * textSize.width / 2 +
+        math.sin(angle).abs() * textSize.height / 2;
+    return boundaryAnchor + Offset.fromDirection(angle, radialExtent);
+  }
+
+  Rect _clampTextRect(Rect desired) => desired.shift(
+    Offset(
+      desired.left < 0
+          ? -desired.left
+          : desired.right > size.width
+          ? size.width - desired.right
+          : 0,
+      desired.top < 0
+          ? -desired.top
+          : desired.bottom > size.height
+          ? size.height - desired.bottom
+          : 0,
+    ),
+  );
+
+  @visibleForTesting
+  List<Rect> get resolvedTickLabelBounds {
+    final references = _resolvedReferenceLabels();
+    return _resolvedTickLabels(
+      blockers: references.map((label) => label.rect),
+    ).map((label) => label.rect).toList(growable: false);
+  }
+
+  @visibleForTesting
+  List<Rect> get resolvedReferenceLabelBounds => _resolvedReferenceLabels()
+      .map((label) => label.rect)
+      .toList(growable: false);
 
   ChartDataHit _dataHit() {
     final semanticBounds =

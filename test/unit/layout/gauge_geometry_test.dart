@@ -37,6 +37,10 @@ void main() {
       ]);
       expect(geometry.needle, isNotNull);
       expect(geometry.solid, isNull);
+      expect(
+        geometry.centerBounds.width,
+        closeTo((geometry.axis.innerRadius - 8) * 2, 1e-9),
+      );
       expect(geometry.needle!.tip.dx, greaterThan(pane.center.dx));
       expect(geometry.hitTest(geometry.needle!.tip), isTrue);
       expect(geometry.hitTest(pane.center), isTrue);
@@ -103,6 +107,38 @@ void main() {
       expect(geometry.target!.angle, closeTo(pane.angleAt(0.75), 1e-9));
     });
 
+    test('honors configured tick and reference callout reach', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.5,
+        outerRadiusFactor: 0.85,
+      );
+      final geometry = GaugeGeometryCalculator.calculate(
+        pane: pane,
+        minimum: 0,
+        maximum: 100,
+        value: 50,
+        style: const SolidGaugeStyle(),
+        target: const GaugeTarget(value: 50, label: 'Target'),
+        tickLength: 20,
+        tickLabelOffset: 16,
+        referenceInnerOffset: 9,
+        referenceOuterOffset: 13,
+      );
+
+      final tick = geometry.ticks.first;
+      expect((tick.outerPoint - tick.innerPoint).distance, closeTo(20, 1e-9));
+      expect((tick.labelAnchor - tick.outerPoint).distance, closeTo(16, 1e-9));
+      expect(
+        (geometry.target!.innerPoint - pane.center).distance,
+        closeTo(geometry.axis.innerRadius - 9, 1e-9),
+      );
+      expect(
+        (geometry.target!.outerPoint - pane.center).distance,
+        closeTo(geometry.axis.outerRadius + 13, 1e-9),
+      );
+    });
+
     test('keeps exact minimum and maximum geometry finite', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 180, 140),
@@ -142,6 +178,17 @@ void main() {
           maximum: 0,
           value: 0,
           style: const NeedleGaugeStyle(),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => GaugeGeometryCalculator.calculate(
+          pane: pane,
+          minimum: 0,
+          maximum: 100,
+          value: 50,
+          style: const NeedleGaugeStyle(),
+          tickLength: -1,
         ),
         throwsArgumentError,
       );

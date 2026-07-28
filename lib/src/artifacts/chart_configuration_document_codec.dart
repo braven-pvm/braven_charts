@@ -664,6 +664,36 @@ abstract final class ChartConfigurationDocumentCodec {
             'showTickLabels': config.showTickLabels,
             'showZones': config.showZones,
             'colorIndicatorByActiveZone': config.colorIndicatorByActiveZone,
+            'scale': {
+              if (config.scale.tickColor != null)
+                'tickColor': config.scale.tickColor!.toARGB32(),
+              if (config.scale.tickWidth != null)
+                'tickWidth': config.scale.tickWidth,
+              if (config.scale.tickLength != null)
+                'tickLength': config.scale.tickLength,
+              'labelStyle': _encodePolarLabelStyle(config.scale.labelStyle),
+              'labelOffset': config.scale.labelOffset,
+              'labelMaxWidth': config.scale.labelMaxWidth,
+            },
+            'references': {
+              'showLabels': config.references.showLabels,
+              'innerLineOffset': config.references.innerLineOffset,
+              'outerLineOffset': config.references.outerLineOffset,
+              'labelStyle': _encodePolarLabelStyle(
+                config.references.labelStyle,
+              ),
+              'labelOffset': config.references.labelOffset,
+              'labelMaxWidth': config.references.labelMaxWidth,
+              'showLabelPanel': config.references.showLabelPanel,
+              if (config.references.panelColor != null)
+                'panelColor': config.references.panelColor!.toARGB32(),
+              if (config.references.panelBorderColor != null)
+                'panelBorderColor': config.references.panelBorderColor!
+                    .toARGB32(),
+              'panelBorderWidth': config.references.panelBorderWidth,
+              'panelBorderRadius': config.references.panelBorderRadius,
+              'panelPadding': config.references.panelPadding,
+            },
             'center': {
               'showMetric': config.center.showMetric,
               'showValue': config.center.showValue,
@@ -673,6 +703,9 @@ abstract final class ChartConfigurationDocumentCodec {
               'valueStyle': _encodePolarLabelStyle(config.center.valueStyle),
               'targetStyle': _encodePolarLabelStyle(config.center.targetStyle),
               'statusStyle': _encodePolarLabelStyle(config.center.statusStyle),
+              'horizontalOffset': config.center.horizontalOffset,
+              'verticalOffset': config.center.verticalOffset,
+              'lineSpacing': config.center.lineSpacing,
             },
           }, path: path),
         }),
@@ -736,6 +769,11 @@ abstract final class ChartConfigurationDocumentCodec {
           'colorIndicatorByActiveZone',
           path,
         ),
+        scale: _decodeGaugeScaleStyle(map['scale'], '$path.scale'),
+        references: _decodeGaugeReferenceStyle(
+          map['references'],
+          '$path.references',
+        ),
         center: GaugeCenterConfig(
           showMetric: _requiredBool(center, 'showMetric', '$path.center'),
           showValue: _requiredBool(center, 'showValue', '$path.center'),
@@ -757,6 +795,12 @@ abstract final class ChartConfigurationDocumentCodec {
             center['statusStyle'],
             '$path.center.statusStyle',
           ),
+          horizontalOffset:
+              _optionalDouble(center, 'horizontalOffset', '$path.center') ?? 0,
+          verticalOffset:
+              _optionalDouble(center, 'verticalOffset', '$path.center') ?? 0,
+          lineSpacing:
+              _optionalDouble(center, 'lineSpacing', '$path.center') ?? 3,
         ),
       );
       config.validate();
@@ -767,6 +811,91 @@ abstract final class ChartConfigurationDocumentCodec {
       return _gaugeConfigurationFailure(error, path);
     }
   }
+}
+
+GaugeScaleStyle _decodeGaugeScaleStyle(Object? value, String path) {
+  if (value == null) return const GaugeScaleStyle();
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Gauge scale style must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final tickColor = map['tickColor'];
+  if (tickColor != null && tickColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional tick color must be an ARGB integer.',
+      '$path.tickColor',
+    );
+  }
+  return GaugeScaleStyle(
+    tickColor: tickColor == null ? null : Color(tickColor as int),
+    tickWidth: _optionalDouble(map, 'tickWidth', path),
+    tickLength: _optionalDouble(map, 'tickLength', path),
+    labelStyle: map['labelStyle'] == null
+        ? const PolarLabelStyle(fontSize: 9)
+        : _decodePolarLabelStyle(map['labelStyle'], '$path.labelStyle'),
+    labelOffset: _optionalDouble(map, 'labelOffset', path) ?? 10,
+    labelMaxWidth: _optionalDouble(map, 'labelMaxWidth', path) ?? 72,
+  );
+}
+
+GaugeReferenceStyle _decodeGaugeReferenceStyle(Object? value, String path) {
+  if (value == null) return const GaugeReferenceStyle();
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Gauge reference style must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final showLabels = map['showLabels'];
+  final showLabelPanel = map['showLabelPanel'];
+  final panelColor = map['panelColor'];
+  final panelBorderColor = map['panelBorderColor'];
+  if (showLabels != null && showLabels is! bool) {
+    throw _ConfigurationFormatException(
+      'Optional showLabels field must be a boolean.',
+      '$path.showLabels',
+    );
+  }
+  if (showLabelPanel != null && showLabelPanel is! bool) {
+    throw _ConfigurationFormatException(
+      'Optional showLabelPanel field must be a boolean.',
+      '$path.showLabelPanel',
+    );
+  }
+  if (panelColor != null && panelColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional panel color must be an ARGB integer.',
+      '$path.panelColor',
+    );
+  }
+  if (panelBorderColor != null && panelBorderColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional panel border color must be an ARGB integer.',
+      '$path.panelBorderColor',
+    );
+  }
+  return GaugeReferenceStyle(
+    showLabels: showLabels as bool? ?? true,
+    innerLineOffset: _optionalDouble(map, 'innerLineOffset', path) ?? 4,
+    outerLineOffset: _optionalDouble(map, 'outerLineOffset', path) ?? 6,
+    labelStyle: map['labelStyle'] == null
+        ? const PolarLabelStyle(fontSize: 10, fontWeight: FontWeight.w700)
+        : _decodePolarLabelStyle(map['labelStyle'], '$path.labelStyle'),
+    labelOffset: _optionalDouble(map, 'labelOffset', path) ?? 8,
+    labelMaxWidth: _optionalDouble(map, 'labelMaxWidth', path) ?? 100,
+    showLabelPanel: showLabelPanel as bool? ?? false,
+    panelColor: panelColor == null ? null : Color(panelColor as int),
+    panelBorderColor: panelBorderColor == null
+        ? null
+        : Color(panelBorderColor as int),
+    panelBorderWidth: _optionalDouble(map, 'panelBorderWidth', path) ?? 1,
+    panelBorderRadius: _optionalDouble(map, 'panelBorderRadius', path) ?? 4,
+    panelPadding: _optionalDouble(map, 'panelPadding', path) ?? 4,
+  );
 }
 
 List<PolarThreshold> _decodePolarThresholds(Object? value, String path) {

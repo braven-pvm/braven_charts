@@ -5,6 +5,7 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/widgets.dart' show Color;
 
 /// Generated fluent modifiers for [GaugeCenterConfig].
 extension GaugeCenterConfigFluent on GaugeCenterConfig {
@@ -67,6 +68,123 @@ extension GaugeCenterConfigFluent on GaugeCenterConfig {
   GaugeCenterConfig updateStatusStyle(
     PolarLabelStyle Function(PolarLabelStyle current) update,
   ) => copyWith(statusStyle: update(statusStyle));
+
+  /// Replaces [GaugeCenterConfig.horizontalOffset] with [value].
+  GaugeCenterConfig withHorizontalOffset(double value) =>
+      copyWith(horizontalOffset: value);
+
+  /// Replaces [GaugeCenterConfig.verticalOffset] with [value].
+  GaugeCenterConfig withVerticalOffset(double value) =>
+      copyWith(verticalOffset: value);
+
+  /// Replaces [GaugeCenterConfig.lineSpacing] with [value].
+  GaugeCenterConfig withLineSpacing(double value) =>
+      copyWith(lineSpacing: value);
+}
+
+/// Generated fluent modifiers for [GaugeScaleStyle].
+extension GaugeScaleStyleFluent on GaugeScaleStyle {
+  /// Replaces [GaugeScaleStyle.tickColor] with [value].
+  GaugeScaleStyle withTickColor(Color value) => copyWith(tickColor: value);
+
+  /// Clears [GaugeScaleStyle.tickColor] to `null`.
+  GaugeScaleStyle clearTickColor() => copyWith(clearTickColor: true);
+
+  /// Replaces [GaugeScaleStyle.tickWidth] with [value].
+  GaugeScaleStyle withTickWidth(double value) => copyWith(tickWidth: value);
+
+  /// Clears [GaugeScaleStyle.tickWidth] to `null`.
+  GaugeScaleStyle clearTickWidth() => copyWith(clearTickWidth: true);
+
+  /// Replaces [GaugeScaleStyle.tickLength] with [value].
+  GaugeScaleStyle withTickLength(double value) => copyWith(tickLength: value);
+
+  /// Clears [GaugeScaleStyle.tickLength] to `null`.
+  GaugeScaleStyle clearTickLength() => copyWith(clearTickLength: true);
+
+  /// Replaces [GaugeScaleStyle.labelStyle] with [value].
+  GaugeScaleStyle withLabelStyle(PolarLabelStyle value) =>
+      copyWith(labelStyle: value);
+
+  /// Rebuilds [GaugeScaleStyle.labelStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  GaugeScaleStyle updateLabelStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(labelStyle: update(labelStyle));
+
+  /// Replaces [GaugeScaleStyle.labelOffset] with [value].
+  GaugeScaleStyle withLabelOffset(double value) => copyWith(labelOffset: value);
+
+  /// Replaces [GaugeScaleStyle.labelMaxWidth] with [value].
+  GaugeScaleStyle withLabelMaxWidth(double value) =>
+      copyWith(labelMaxWidth: value);
+}
+
+/// Generated fluent modifiers for [GaugeReferenceStyle].
+extension GaugeReferenceStyleFluent on GaugeReferenceStyle {
+  /// Replaces [GaugeReferenceStyle.showLabels] with [value].
+  GaugeReferenceStyle withShowLabels(bool value) => copyWith(showLabels: value);
+
+  /// Replaces [GaugeReferenceStyle.innerLineOffset] with [value].
+  GaugeReferenceStyle withInnerLineOffset(double value) =>
+      copyWith(innerLineOffset: value);
+
+  /// Replaces [GaugeReferenceStyle.outerLineOffset] with [value].
+  GaugeReferenceStyle withOuterLineOffset(double value) =>
+      copyWith(outerLineOffset: value);
+
+  /// Replaces [GaugeReferenceStyle.labelStyle] with [value].
+  GaugeReferenceStyle withLabelStyle(PolarLabelStyle value) =>
+      copyWith(labelStyle: value);
+
+  /// Rebuilds [GaugeReferenceStyle.labelStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  GaugeReferenceStyle updateLabelStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(labelStyle: update(labelStyle));
+
+  /// Replaces [GaugeReferenceStyle.labelOffset] with [value].
+  GaugeReferenceStyle withLabelOffset(double value) =>
+      copyWith(labelOffset: value);
+
+  /// Replaces [GaugeReferenceStyle.labelMaxWidth] with [value].
+  GaugeReferenceStyle withLabelMaxWidth(double value) =>
+      copyWith(labelMaxWidth: value);
+
+  /// Replaces [GaugeReferenceStyle.showLabelPanel] with [value].
+  GaugeReferenceStyle withShowLabelPanel(bool value) =>
+      copyWith(showLabelPanel: value);
+
+  /// Replaces [GaugeReferenceStyle.panelColor] with [value].
+  GaugeReferenceStyle withPanelColor(Color value) =>
+      copyWith(panelColor: value);
+
+  /// Clears [GaugeReferenceStyle.panelColor] to `null`.
+  GaugeReferenceStyle clearPanelColor() => copyWith(clearPanelColor: true);
+
+  /// Replaces [GaugeReferenceStyle.panelBorderColor] with [value].
+  GaugeReferenceStyle withPanelBorderColor(Color value) =>
+      copyWith(panelBorderColor: value);
+
+  /// Clears [GaugeReferenceStyle.panelBorderColor] to `null`.
+  GaugeReferenceStyle clearPanelBorderColor() =>
+      copyWith(clearPanelBorderColor: true);
+
+  /// Replaces [GaugeReferenceStyle.panelBorderWidth] with [value].
+  GaugeReferenceStyle withPanelBorderWidth(double value) =>
+      copyWith(panelBorderWidth: value);
+
+  /// Replaces [GaugeReferenceStyle.panelBorderRadius] with [value].
+  GaugeReferenceStyle withPanelBorderRadius(double value) =>
+      copyWith(panelBorderRadius: value);
+
+  /// Replaces [GaugeReferenceStyle.panelPadding] with [value].
+  GaugeReferenceStyle withPanelPadding(double value) =>
+      copyWith(panelPadding: value);
 }
 
 /// Generated fluent modifiers for [GaugeChartConfig].
@@ -101,6 +219,29 @@ extension GaugeChartConfigFluent on GaugeChartConfig {
   /// Replaces [GaugeChartConfig.colorIndicatorByActiveZone] with [value].
   GaugeChartConfig withColorIndicatorByActiveZone(bool value) =>
       copyWith(colorIndicatorByActiveZone: value);
+
+  /// Replaces [GaugeChartConfig.scale] with [value].
+  GaugeChartConfig withScale(GaugeScaleStyle value) => copyWith(scale: value);
+
+  /// Rebuilds [GaugeChartConfig.scale] from its current value.
+  ///
+  /// `update` receives the current [GaugeScaleStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  GaugeChartConfig updateScale(
+    GaugeScaleStyle Function(GaugeScaleStyle current) update,
+  ) => copyWith(scale: update(scale));
+
+  /// Replaces [GaugeChartConfig.references] with [value].
+  GaugeChartConfig withReferences(GaugeReferenceStyle value) =>
+      copyWith(references: value);
+
+  /// Rebuilds [GaugeChartConfig.references] from its current value.
+  ///
+  /// `update` receives the current [GaugeReferenceStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  GaugeChartConfig updateReferences(
+    GaugeReferenceStyle Function(GaugeReferenceStyle current) update,
+  ) => copyWith(references: update(references));
 
   /// Replaces [GaugeChartConfig.center] with [value].
   GaugeChartConfig withCenter(GaugeCenterConfig value) =>

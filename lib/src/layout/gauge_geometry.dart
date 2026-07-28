@@ -35,6 +35,11 @@ class GaugeTickGeometry {
   final double angle;
   final Offset innerPoint;
   final Offset outerPoint;
+
+  /// Boundary point after the configured label gap.
+  ///
+  /// Rendering offsets the measured text bounds beyond this point so a
+  /// zero-pixel gap touches the tick endpoint without centering text on it.
   final Offset labelAnchor;
 }
 
@@ -146,6 +151,10 @@ abstract final class GaugeGeometryCalculator {
     GaugeTarget? target,
     List<GaugeThreshold> thresholds = const [],
     int tickCount = 6,
+    double tickLength = 10,
+    double tickLabelOffset = 10,
+    double referenceInnerOffset = 4,
+    double referenceOuterOffset = 6,
   }) {
     _validateInput(
       minimum: minimum,
@@ -156,6 +165,10 @@ abstract final class GaugeGeometryCalculator {
       target: target,
       thresholds: thresholds,
       tickCount: tickCount,
+      tickLength: tickLength,
+      tickLabelOffset: tickLabelOffset,
+      referenceInnerOffset: referenceInnerOffset,
+      referenceOuterOffset: referenceOuterOffset,
     );
 
     final domain = maximum - minimum;
@@ -203,10 +216,15 @@ abstract final class GaugeGeometryCalculator {
           tickCount: tickCount,
           minimum: minimum,
           domain: domain,
+          tickLength: tickLength,
+          labelOffset: tickLabelOffset,
         ),
     ];
-    final markerInnerRadius = math.max(0.0, axisInnerRadius - 4);
-    final markerOuterRadius = axisOuterRadius + 6;
+    final markerInnerRadius = math.max(
+      0.0,
+      axisInnerRadius - referenceInnerOffset,
+    );
+    final markerOuterRadius = axisOuterRadius + referenceOuterOffset;
     final targetGeometry = target == null
         ? null
         : _reference(
@@ -292,7 +310,7 @@ abstract final class GaugeGeometryCalculator {
       tooltipAnchor: tooltipAnchor,
       centerBounds: Rect.fromCircle(
         center: pane.center,
-        radius: math.max(0.0, pane.innerRadius - 8),
+        radius: math.max(0.0, axisInnerRadius - 8),
       ),
       needle: needle,
       solid: solid,
@@ -306,20 +324,26 @@ GaugeTickGeometry _tick({
   required int tickCount,
   required double minimum,
   required double domain,
+  required double tickLength,
+  required double labelOffset,
 }) {
   final fraction = index / (tickCount - 1);
   final angle = pane.angleAt(fraction);
+  final innerReach = tickLength * 0.6;
+  final outerReach = tickLength - innerReach;
+  final innerPoint =
+      pane.center +
+      Offset.fromDirection(angle, math.max(0, pane.outerRadius - innerReach));
+  final outerPoint =
+      pane.center + Offset.fromDirection(angle, pane.outerRadius + outerReach);
   return GaugeTickGeometry(
     index: index,
     value: minimum + domain * fraction,
     fraction: fraction,
     angle: angle,
-    innerPoint:
-        pane.center +
-        Offset.fromDirection(angle, math.max(0, pane.outerRadius - 6)),
-    outerPoint: pane.center + Offset.fromDirection(angle, pane.outerRadius + 4),
-    labelAnchor:
-        pane.center + Offset.fromDirection(angle, pane.outerRadius + 14),
+    innerPoint: innerPoint,
+    outerPoint: outerPoint,
+    labelAnchor: outerPoint + Offset.fromDirection(angle, labelOffset),
   );
 }
 
@@ -398,6 +422,10 @@ void _validateInput({
   required GaugeTarget? target,
   required List<GaugeThreshold> thresholds,
   required int tickCount,
+  required double tickLength,
+  required double tickLabelOffset,
+  required double referenceInnerOffset,
+  required double referenceOuterOffset,
 }) {
   if (!minimum.isFinite || !maximum.isFinite || minimum >= maximum) {
     throw ArgumentError.value(
@@ -420,6 +448,10 @@ void _validateInput({
       'Tick count must be between 2 and 12',
     );
   }
+  _requireNonNegative(tickLength, 'tickLength');
+  _requireNonNegative(tickLabelOffset, 'tickLabelOffset');
+  _requireNonNegative(referenceInnerOffset, 'referenceInnerOffset');
+  _requireNonNegative(referenceOuterOffset, 'referenceOuterOffset');
   style.validate();
   GaugeZone? previous;
   for (final (index, zone) in zones.indexed) {
@@ -443,6 +475,16 @@ void _validateInput({
       minimum: minimum,
       maximum: maximum,
       argumentName: 'thresholds[$index]',
+    );
+  }
+}
+
+void _requireNonNegative(double value, String argumentName) {
+  if (!value.isFinite || value < 0) {
+    throw ArgumentError.value(
+      value,
+      argumentName,
+      'Value must be finite and non-negative',
     );
   }
 }

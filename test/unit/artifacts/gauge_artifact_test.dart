@@ -66,6 +66,11 @@ void main() {
           borderColor: Color(0xFF112233),
           borderWidth: 1.5,
           opacity: 0.9,
+          gradient: GaugeGradientStyle(
+            type: GaugeGradientType.radial,
+            startColor: Color(0xFF22D3EE),
+            endColor: Color(0xFF4F46E5),
+          ),
         ),
       ),
     ];
@@ -90,6 +95,31 @@ void main() {
       showTickLabels: false,
       showZones: false,
       colorIndicatorByActiveZone: false,
+      scale: GaugeScaleStyle(
+        tickColor: Color(0xFF224466),
+        tickWidth: 2.5,
+        tickLength: 18,
+        labelStyle: PolarLabelStyle(
+          color: Color(0xFF112233),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        labelOffset: 14,
+        labelMaxWidth: 96,
+      ),
+      references: GaugeReferenceStyle(
+        innerLineOffset: 8,
+        outerLineOffset: 12,
+        labelStyle: PolarLabelStyle(color: Color(0xFF334455), fontSize: 11),
+        labelOffset: 15,
+        labelMaxWidth: 120,
+        showLabelPanel: true,
+        panelColor: Color(0xFFF8FAFC),
+        panelBorderColor: Color(0xFFCBD5E1),
+        panelBorderWidth: 1.5,
+        panelBorderRadius: 7,
+        panelPadding: 6,
+      ),
       center: GaugeCenterConfig(
         showMetric: false,
         showTarget: true,
@@ -98,6 +128,9 @@ void main() {
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
+        horizontalOffset: 5,
+        verticalOffset: -7,
+        lineSpacing: 6,
       ),
     );
     final encodedConfig = _success(

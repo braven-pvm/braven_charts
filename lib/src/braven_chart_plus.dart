@@ -11623,11 +11623,25 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               growable: false,
             )
           : const <RadialBarChartSeries>[];
+      final gaugeSeries = isGauge
+          ? _effectiveRenderSeries.whereType<GaugeChartSeries>().toList(
+              growable: false,
+            )
+          : const <GaugeChartSeries>[];
       if (widget.showLegend &&
-          (radialSeries.isNotEmpty || radialBarSeries.isNotEmpty)) {
+          (radialSeries.isNotEmpty ||
+              radialBarSeries.isNotEmpty ||
+              gaugeSeries.isNotEmpty)) {
         final theme = chartTheme;
         final Widget legend;
-        if (radialBarSeries.isNotEmpty) {
+        if (gaugeSeries.isNotEmpty) {
+          legend = GaugeLegend(
+            key: const ValueKey('gauge-legend'),
+            series: gaugeSeries.single,
+            config: widget.gaugeChartConfig,
+            chartTheme: theme,
+          );
+        } else if (radialBarSeries.isNotEmpty) {
           final series = radialBarSeries.single;
           legend = RadialBarLegend(
             key: const ValueKey('radial-bar-legend'),

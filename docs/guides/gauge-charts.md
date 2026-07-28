@@ -64,6 +64,27 @@ GaugeChartSeries.solid(
 This makes precise non-zero domains portable without converting the source
 value to a percentage.
 
+### Portable solid-arc gradients
+
+Solid Gauge arcs can use a sweep or radial gradient without introducing a
+runtime-only painter:
+
+```dart
+style: const SolidGaugeStyle(
+  cornerRadius: 12,
+  gradient: GaugeGradientStyle(
+    type: GaugeGradientType.sweep,
+    startColor: Color(0xFF22D3EE),
+    endColor: Color(0xFF4F46E5),
+  ),
+),
+```
+
+Omit `startColor` and `endColor` to derive both stops from the active indicator
+colour. `startLightnessShift` and `endLightnessShift` control that derivation.
+The gradient is validated, serialized in chart artifacts, hydrated, and
+included in generated Dart source.
+
 ## Pane, ticks, and center content
 
 `GaugeChartConfig` controls the shared radial pane and direct-display layers:
@@ -83,20 +104,67 @@ const GaugeChartConfig(
   showTickLabels: true,
   showZones: true,
   colorIndicatorByActiveZone: true,
+  scale: GaugeScaleStyle(
+    tickColor: Color(0xFF64748B),
+    tickWidth: 2,
+    tickLength: 14,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF334155),
+      fontSize: 11,
+    ),
+    labelOffset: 12,
+  ),
+  references: GaugeReferenceStyle(
+    innerLineOffset: 6,
+    outerLineOffset: 10,
+    labelStyle: PolarLabelStyle(fontSize: 11),
+    labelOffset: 12,
+    showLabelPanel: true,
+  ),
   center: GaugeCenterConfig(
     showMetric: true,
     showValue: true,
     showTarget: true,
     showStatus: true,
+    verticalOffset: 4,
+    lineSpacing: 5,
   ),
 )
 ```
+
+`GaugeScaleStyle` independently controls tick colour, width and length plus
+numeric-label colour, size, weight, radial offset, and maximum width. Null tick
+and text colours inherit the active axis theme. `labelOffset` is the
+edge-to-edge gap between the tick endpoint and the nearest label edge, so
+`0` keeps the two touching without drawing the text over the tick or arc.
+
+`GaugeReferenceStyle` controls the shared target/threshold callout reach and
+outside-label typography, offset, width, and optional panel. The target and
+threshold still own their individual stroke colour, width, and dash pattern;
+a null reference-label colour inherits the corresponding reference colour.
+Its `labelOffset` uses the same edge-to-edge contract from the callout endpoint
+to the nearest label or panel edge.
+
+Center content supports independent typography for metric, value, target, and
+status plus horizontal/vertical offsets and line spacing.
 
 For runtime-only center content, pass `gaugeCenterBuilder`. The builder receives
 an immutable `GaugeCenterContext` with the metric, source value, formatted
 value, domain, target, active status, and available center bounds. Runtime
 widgets are intentionally not serialized; portable artifacts retain
 `GaugeCenterConfig`.
+
+## Legend
+
+Set `showLegend: true` to display the native radial legend. A Gauge legend is
+informational: it reports the metric, formatted value, and active status but
+does not pretend that the single current reading is selectable.
+
+The shared `ChartTheme.legendStyle` controls position, orientation, marker
+shape and size, text size, opacity, background, border, and corner radius.
+Because the Gauge contains exactly one measurement, both horizontal and
+vertical orientations remain compact while the position still determines
+which side of the pane owns the legend.
 
 ## Targets and thresholds
 
@@ -130,12 +198,33 @@ Stable-ID value changes interpolate from the previous reading. Switching
 between authored Gauge presentations starts a fresh chart instead of morphing
 unrelated geometry.
 
-## Workbench and mobile review
+The showcase also exposes scale ticks and labels, reference callouts and
+panels, center offsets, popup trigger and position, cursor following, delay,
+surface, text, border, shadow, spacing, and font controls. Motion controls cover
+entrance, data/theme revision, and interaction durations and curves.
+
+## Workbench, Gallery, and mobile review
 
 The native Workbench table contains Metric, Value, Minimum, Maximum, Progress,
 Target, and Status. Chart, Data, Split, and Source modes use the same portable
 document.
 
-See the runnable desktop showcase at `?page=gauge-charts`. The mobile showcase
-contains four phone-sized Needle, Solid, partial-sweep, and dense-reference
-examples.
+See the runnable desktop showcase at `?page=gauge-charts`. Its authored
+examples cover Needle, Solid, Gradient, Zones, Target, Legend, Popup, partial
+sweeps, accessibility, and dense references. They use distinct 150–360 degree
+panes and varied start angles to demonstrate compact, semicircular, broad, and
+complete-dial compositions. The Playground stays last and randomizes portable
+data, geometry, colours, gradients, labels, references, legend, popup, theme,
+and motion while leaving every generated property editable in Options.
+
+The main Gallery includes operational Needle, gradient Solid, and
+high-contrast partial-sweep compositions. The mobile showcase contains four
+phone-sized Needle, Solid, partial-sweep, and dense-reference examples.
+
+## V1 boundaries
+
+- A Gauge chart contains exactly one `GaugeChartSeries`.
+- The measurement is an absolute source value inside an explicit domain.
+- Durable selection is intentionally absent: the current reading is state,
+  not a selected record.
+- Runtime builders remain host-owned and are not serialized.

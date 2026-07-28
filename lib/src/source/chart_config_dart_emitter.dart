@@ -3111,6 +3111,36 @@ class ChartConfigDartEmitter {
               _optionalColor(writer, 'borderColor', style.borderColor);
               _numberIf(writer, 'borderWidth', style.borderWidth, 0);
               _numberIf(writer, 'opacity', style.opacity, 1);
+              if (style.gradient case final gradient?) {
+                writer.writeLine('gradient: GaugeGradientStyle(');
+                writer.indented(() {
+                  if (options.includeDefaultValues || !gradient.enabled) {
+                    writer.namedArgument('enabled', '${gradient.enabled}');
+                  }
+                  _enumIf(
+                    writer,
+                    'type',
+                    'GaugeGradientType',
+                    gradient.type.name,
+                    defaultName: GaugeGradientType.sweep.name,
+                  );
+                  _optionalColor(writer, 'startColor', gradient.startColor);
+                  _optionalColor(writer, 'endColor', gradient.endColor);
+                  _numberIf(
+                    writer,
+                    'startLightnessShift',
+                    gradient.startLightnessShift,
+                    0.18,
+                  );
+                  _numberIf(
+                    writer,
+                    'endLightnessShift',
+                    gradient.endLightnessShift,
+                    -0.12,
+                  );
+                });
+                writer.writeLine('),');
+              }
             });
             writer.writeLine('),');
           }
@@ -3589,6 +3619,91 @@ class ChartConfigDartEmitter {
         defaultValue: true,
       );
       if (options.includeDefaultValues ||
+          config.scale != const GaugeScaleStyle()) {
+        writer.writeLine('scale: GaugeScaleStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'tickColor', config.scale.tickColor);
+          _optionalNumber(writer, 'tickWidth', config.scale.tickWidth);
+          _optionalNumber(writer, 'tickLength', config.scale.tickLength);
+          if (options.includeDefaultValues ||
+              config.scale.labelStyle != const PolarLabelStyle(fontSize: 9)) {
+            _emitPolarLabelStyle(writer, 'labelStyle', config.scale.labelStyle);
+          }
+          _numberIf(writer, 'labelOffset', config.scale.labelOffset, 10);
+          _numberIf(writer, 'labelMaxWidth', config.scale.labelMaxWidth, 72);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.references != const GaugeReferenceStyle()) {
+        writer.writeLine('references: GaugeReferenceStyle(');
+        writer.indented(() {
+          _valueIf(
+            writer,
+            'showLabels',
+            config.references.showLabels,
+            defaultValue: true,
+          );
+          _numberIf(
+            writer,
+            'innerLineOffset',
+            config.references.innerLineOffset,
+            4,
+          );
+          _numberIf(
+            writer,
+            'outerLineOffset',
+            config.references.outerLineOffset,
+            6,
+          );
+          if (options.includeDefaultValues ||
+              config.references.labelStyle !=
+                  const PolarLabelStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  )) {
+            _emitPolarLabelStyle(
+              writer,
+              'labelStyle',
+              config.references.labelStyle,
+            );
+          }
+          _numberIf(writer, 'labelOffset', config.references.labelOffset, 8);
+          _numberIf(
+            writer,
+            'labelMaxWidth',
+            config.references.labelMaxWidth,
+            100,
+          );
+          _valueIf(
+            writer,
+            'showLabelPanel',
+            config.references.showLabelPanel,
+            defaultValue: false,
+          );
+          _optionalColor(writer, 'panelColor', config.references.panelColor);
+          _optionalColor(
+            writer,
+            'panelBorderColor',
+            config.references.panelBorderColor,
+          );
+          _numberIf(
+            writer,
+            'panelBorderWidth',
+            config.references.panelBorderWidth,
+            1,
+          );
+          _numberIf(
+            writer,
+            'panelBorderRadius',
+            config.references.panelBorderRadius,
+            4,
+          );
+          _numberIf(writer, 'panelPadding', config.references.panelPadding, 4);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
           config.center != const GaugeCenterConfig()) {
         writer.writeLine('center: GaugeCenterConfig(');
         writer.indented(() {
@@ -3648,6 +3763,14 @@ class ChartConfigDartEmitter {
               config.center.statusStyle,
             );
           }
+          _numberIf(
+            writer,
+            'horizontalOffset',
+            config.center.horizontalOffset,
+            0,
+          );
+          _numberIf(writer, 'verticalOffset', config.center.verticalOffset, 0);
+          _numberIf(writer, 'lineSpacing', config.center.lineSpacing, 3);
         });
         writer.writeLine('),');
       }

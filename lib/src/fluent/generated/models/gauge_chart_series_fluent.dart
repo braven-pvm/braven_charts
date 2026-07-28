@@ -71,6 +71,35 @@ extension GaugeThresholdFluent on GaugeThreshold {
       copyWith(dashPattern: value);
 }
 
+/// Generated fluent modifiers for [GaugeGradientStyle].
+extension GaugeGradientStyleFluent on GaugeGradientStyle {
+  /// Replaces [GaugeGradientStyle.enabled] with [value].
+  GaugeGradientStyle withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [GaugeGradientStyle.type] with [value].
+  GaugeGradientStyle withType(GaugeGradientType value) => copyWith(type: value);
+
+  /// Replaces [GaugeGradientStyle.startColor] with [value].
+  GaugeGradientStyle withStartColor(Color value) => copyWith(startColor: value);
+
+  /// Clears [GaugeGradientStyle.startColor] to `null`.
+  GaugeGradientStyle clearStartColor() => copyWith(clearStartColor: true);
+
+  /// Replaces [GaugeGradientStyle.endColor] with [value].
+  GaugeGradientStyle withEndColor(Color value) => copyWith(endColor: value);
+
+  /// Clears [GaugeGradientStyle.endColor] to `null`.
+  GaugeGradientStyle clearEndColor() => copyWith(clearEndColor: true);
+
+  /// Replaces [GaugeGradientStyle.startLightnessShift] with [value].
+  GaugeGradientStyle withStartLightnessShift(double value) =>
+      copyWith(startLightnessShift: value);
+
+  /// Replaces [GaugeGradientStyle.endLightnessShift] with [value].
+  GaugeGradientStyle withEndLightnessShift(double value) =>
+      copyWith(endLightnessShift: value);
+}
+
 /// Generated fluent modifiers for [NeedleGaugeStyle].
 extension NeedleGaugeStyleFluent on NeedleGaugeStyle {
   /// Replaces [NeedleGaugeStyle.needleLengthFactor] with [value].
@@ -139,6 +168,13 @@ extension SolidGaugeStyleFluent on SolidGaugeStyle {
 
   /// Replaces [SolidGaugeStyle.opacity] with [value].
   SolidGaugeStyle withOpacity(double value) => copyWith(opacity: value);
+
+  /// Replaces [SolidGaugeStyle.gradient] with [value].
+  SolidGaugeStyle withGradient(GaugeGradientStyle value) =>
+      copyWith(gradient: value);
+
+  /// Clears [SolidGaugeStyle.gradient] to `null`.
+  SolidGaugeStyle clearGradient() => copyWith(clearGradient: true);
 }
 
 /// Generated fluent modifiers for [GaugeChartSeries].

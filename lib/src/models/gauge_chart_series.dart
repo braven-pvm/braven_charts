@@ -230,6 +230,93 @@ sealed class GaugeIndicatorStyle {
   void validate();
 }
 
+/// Direction used to shade a Solid Gauge progress arc.
+enum GaugeGradientType {
+  /// Follows the progress arc from the domain minimum towards the value.
+  sweep,
+
+  /// Runs across the arc thickness from the inner to the outer edge.
+  radial,
+}
+
+/// Serializable gradient applied to a Solid Gauge progress arc.
+///
+/// Null colors are derived from the resolved indicator color so gradients
+/// preserve theme and active-zone identity unless fixed colors are requested.
+@immutable
+@chartSurface
+class GaugeGradientStyle {
+  const GaugeGradientStyle({
+    this.enabled = true,
+    this.type = GaugeGradientType.sweep,
+    this.startColor,
+    this.endColor,
+    this.startLightnessShift = 0.18,
+    this.endLightnessShift = -0.12,
+  });
+
+  final bool enabled;
+  final GaugeGradientType type;
+  final Color? startColor;
+  final Color? endColor;
+  final double startLightnessShift;
+  final double endLightnessShift;
+
+  void validate() {
+    for (final (name, value) in <(String, double)>[
+      ('startLightnessShift', startLightnessShift),
+      ('endLightnessShift', endLightnessShift),
+    ]) {
+      if (!value.isFinite || value < -1 || value > 1) {
+        throw ArgumentError.value(
+          value,
+          'solidGaugeStyle.gradient.$name',
+          'Value must be finite and in [-1, 1]',
+        );
+      }
+    }
+  }
+
+  GaugeGradientStyle copyWith({
+    bool? enabled,
+    GaugeGradientType? type,
+    Color? startColor,
+    bool clearStartColor = false,
+    Color? endColor,
+    bool clearEndColor = false,
+    double? startLightnessShift,
+    double? endLightnessShift,
+  }) => GaugeGradientStyle(
+    enabled: enabled ?? this.enabled,
+    type: type ?? this.type,
+    startColor: clearStartColor ? null : (startColor ?? this.startColor),
+    endColor: clearEndColor ? null : (endColor ?? this.endColor),
+    startLightnessShift: startLightnessShift ?? this.startLightnessShift,
+    endLightnessShift: endLightnessShift ?? this.endLightnessShift,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GaugeGradientStyle &&
+          enabled == other.enabled &&
+          type == other.type &&
+          startColor == other.startColor &&
+          endColor == other.endColor &&
+          startLightnessShift == other.startLightnessShift &&
+          endLightnessShift == other.endLightnessShift;
+
+  @override
+  int get hashCode => Object.hash(
+    enabled,
+    type,
+    startColor,
+    endColor,
+    startLightnessShift,
+    endLightnessShift,
+  );
+}
+
 /// Needle, pivot, and passive axis appearance.
 @immutable
 @chartSurface
@@ -334,6 +421,7 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
     this.borderColor,
     this.borderWidth = 0,
     this.opacity = 1,
+    this.gradient,
   });
 
   final Color? trackColor;
@@ -342,6 +430,7 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
   final Color? borderColor;
   final double borderWidth;
   final double opacity;
+  final GaugeGradientStyle? gradient;
 
   @override
   void validate() {
@@ -354,6 +443,7 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
     _requireNonNegative(cornerRadius, 'solidGaugeStyle.cornerRadius');
     _requireNonNegative(borderWidth, 'solidGaugeStyle.borderWidth');
     _requireRange(opacity, 'solidGaugeStyle.opacity', minimum: 0, maximum: 1);
+    gradient?.validate();
   }
 
   SolidGaugeStyle copyWith({
@@ -365,6 +455,8 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
     bool clearBorderColor = false,
     double? borderWidth,
     double? opacity,
+    GaugeGradientStyle? gradient,
+    bool clearGradient = false,
   }) => SolidGaugeStyle(
     trackColor: clearTrackColor ? null : (trackColor ?? this.trackColor),
     trackOpacity: trackOpacity ?? this.trackOpacity,
@@ -372,6 +464,7 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
     borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
     borderWidth: borderWidth ?? this.borderWidth,
     opacity: opacity ?? this.opacity,
+    gradient: clearGradient ? null : (gradient ?? this.gradient),
   );
 
   @override
@@ -383,7 +476,8 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
           cornerRadius == other.cornerRadius &&
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
-          opacity == other.opacity;
+          opacity == other.opacity &&
+          gradient == other.gradient;
 
   @override
   int get hashCode => Object.hash(
@@ -393,6 +487,7 @@ final class SolidGaugeStyle extends GaugeIndicatorStyle {
     borderColor,
     borderWidth,
     opacity,
+    gradient,
   );
 }
 

@@ -215,16 +215,36 @@ void main() {
         needleLengthFactor: 0.8,
         axisThickness: 14,
       );
-      const solid = SolidGaugeStyle(trackOpacity: 0.2, cornerRadius: 10);
+      const gradient = GaugeGradientStyle(
+        type: GaugeGradientType.radial,
+        startColor: Colors.cyan,
+        endColor: Colors.blue,
+      );
+      const solid = SolidGaugeStyle(
+        trackOpacity: 0.2,
+        cornerRadius: 10,
+        gradient: gradient,
+      );
       const config = GaugeChartConfig(
         tickCount: 7,
-        center: GaugeCenterConfig(showTarget: true),
+        scale: GaugeScaleStyle(tickWidth: 2, tickLength: 14),
+        references: GaugeReferenceStyle(labelOffset: 12, showLabelPanel: true),
+        center: GaugeCenterConfig(
+          showTarget: true,
+          horizontalOffset: 4,
+          verticalOffset: -3,
+          lineSpacing: 5,
+        ),
       );
 
       expect(needle.validate, returnsNormally);
       expect(solid.validate, returnsNormally);
+      expect(solid.copyWith(opacity: 0.8).gradient, gradient);
+      expect(solid.copyWith(clearGradient: true).gradient, isNull);
       expect(config.validate, returnsNormally);
       expect(config.copyWith(showZones: false).showZones, isFalse);
+      expect(config.copyWith().scale.tickLength, 14);
+      expect(config.references.showLabelPanel, isTrue);
     });
 
     test('rejects invalid style and plot values', () {
@@ -245,7 +265,29 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        const GaugeGradientStyle(startLightnessShift: 1.1).validate,
+        throwsArgumentError,
+      );
+      expect(
         const GaugeChartConfig(tickCount: 1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(
+          scale: GaugeScaleStyle(labelOffset: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(
+          references: GaugeReferenceStyle(panelPadding: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(
+          center: GaugeCenterConfig(lineSpacing: -1),
+        ).validate,
         throwsArgumentError,
       );
     });
