@@ -838,6 +838,251 @@ void main() {
       expect(rings.last.dataLabels, insideLabels);
     });
 
+    test('ringIds supplies explicit per-ring series ids', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+          ),
+        ],
+      )).lower();
+
+      // The ids come from the map, NOT from '<markId>-<ringKey>'. Everything
+      // else about the ring is unchanged — the NAME still comes from the ring
+      // key, which is what every display surface renders.
+      final rings = lowered.series.cast<DonutChartSeries>();
+      expect(rings.map((r) => r.id), <String>['current', 'previous']);
+      expect(rings.map((r) => r.name), <String>['A', 'B']);
+    });
+
+    test('a ring with no ringIds entry cannot fall back — the map is all or '
+        'nothing', () {
+      // Half the rings named explicitly and half generated would put TWO id
+      // schemes in one composition, and `ringWeights` is keyed by the resulting
+      // id — so which scheme a given ring used would have to be worked out per
+      // ring. Refused by name instead.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.partialRingIds);
+      expect(failure.message, contains('fruit'));
+      expect(failure.message, contains('ringIds'));
+      // Both sides are named: the ring that was left out, and the one that was
+      // named — so the fix is readable off the message.
+      expect(failure.message, contains('"B"'));
+      expect(failure.message, contains('"A"'));
+    });
+
+    test('a ringIds key naming no ring is refused by name', () {
+      // The same mistake `dataLabelsByRing` reports, on the id map: keyed by the
+      // BARE ring value, so a series id names nothing.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{
+                'A': 'current',
+                'B': 'previous',
+                'fruit-C': 'forecast',
+              },
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.unknownRingKey);
+      expect(failure.message, contains('"fruit-C"'));
+      expect(failure.message, contains('ringIds'));
+      expect(failure.message, contains('"A"'));
+      expect(failure.message, contains('"B"'));
+    });
+
+    test('a ring-less donut refuses ringIds by name, above the empty-data '
+        'guard', () {
+      // Decidable from the mark's SHAPE alone — with no ring channel there are
+      // no rings at all for the map to name — so it sits with the other shape
+      // checks and must fire even over an empty data set. The `data: []` arm is
+      // the ordering assertion: `emptyData` must not win.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
+      );
+
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
+      );
+    });
+
+    test('a ring-less donut with an EMPTY ringIds lowers clean', () {
+      // Same exemption `dataLabelsByRing` has: an empty map carries no override,
+      // so it is the no-op here that it is on the ringed path.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+    });
+
+    test('a single-ring collapse honours its ringIds entry', () {
+      // The collapse branch rebuilds the lone donut from `_lowerConcentricRings`
+      // and only copyWiths the center onto it, so the explicit id must survive
+      // that path too.
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            ringIds: <String, String>{'A': 'current'},
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(lowered.series.single.id, 'current');
+    });
+
+    test('ringWeights keys by the RESULTING ring id, whichever scheme named '
+        'it', () {
+      // One rule, not two: the composition validator is handed the ids the rings
+      // actually lowered to, so an explicit id is weighted by that explicit id.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'current': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+
+      // …and the GENERATED id is no longer a key once ringIds renamed the ring.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'fruit-A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+      );
+    });
+
+    test('ringIds participates in DonutMark equality', () {
+      const base = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+      );
+      const named = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'current'},
+      );
+      expect(named == base, isFalse);
+      expect(base.ringIds, isNull);
+      // Null and an empty map mean the same thing everywhere else, so they
+      // compare equal here — exactly as `dataLabelsByRing` does.
+      expect(
+        const DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{},
+            ) ==
+            base,
+        isTrue,
+      );
+    });
+
     test(
       'a genuine multi-value ring keeps center on the config (no regression)',
       () {

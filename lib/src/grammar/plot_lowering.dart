@@ -1074,6 +1074,21 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     );
   }
 
+  // …and for the ring-ID map, for the identical reason: with no ring channel
+  // there are no ring series for it to name, so every entry would be dropped.
+  // The remedy differs — a ring-less donut's series id is the MARK id — so the
+  // diagnostic names `id:` rather than `dataLabels:`.
+  if (mark is DonutMark<T> &&
+      mark.ring == null &&
+      (mark.ringIds?.isNotEmpty ?? false)) {
+    throw GrammarSpecException.perRingOverrideOnRinglessDonut(
+      markId,
+      'ringIds',
+      mark.ringIds!.keys,
+      singleDonutParameter: 'id:',
+    );
+  }
+
   // The polar composition contract that is decidable from the spec's SHAPE.
   if (allPolar) {
     _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
@@ -1531,10 +1546,46 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
       order,
     );
   }
+  // The same check for the ring-ID map, which is keyed the same way and goes
+  // just as silently inert.
+  final unknownIdRings = <String>[
+    for (final key in mark.ringIds?.keys ?? const <String>[])
+      if (!buckets.containsKey(key)) key,
+  ];
+  if (unknownIdRings.isNotEmpty) {
+    throw GrammarSpecException.unknownRingKey(
+      markId,
+      'ringIds',
+      unknownIdRings,
+      order,
+    );
+  }
+  // ALL OR NOTHING. Naming half the rings leaves the rest on the generated
+  // '<markId>-<ringKey>' id, so one composition would carry two id schemes and
+  // `ringWeights` — keyed by the RESULTING id — would take a different scheme
+  // per ring. Checked AFTER the unknown-key guard so a typo is reported as the
+  // typo it is rather than as the hole it leaves.
+  if (mark.ringIds?.isNotEmpty ?? false) {
+    final unnamed = <String>[
+      for (final key in order)
+        if (!mark.ringIds!.containsKey(key)) key,
+    ];
+    if (unnamed.isNotEmpty) {
+      throw GrammarSpecException.partialRingIds(
+        markId,
+        mark.ringIds!.keys,
+        unnamed,
+      );
+    }
+  }
   return <DonutChartSeries>[
     for (final key in order)
       DonutChartSeries.fromMap(
-        id: '$markId-$key',
+        // The explicit id when `ringIds` names this ring, else the generated
+        // '<markId>-<ringKey>' that is the family's convention. Whichever one
+        // wins, THIS is the id `ConcentricDonutConfig.ringWeights` keys by —
+        // the validator below is handed these very ids.
+        id: mark.ringIds?[key] ?? '$markId-$key',
         name: key,
         unit: mark.unit,
         values: _radialValues(buckets[key]!, mark.category, mark.value),

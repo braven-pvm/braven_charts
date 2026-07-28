@@ -4737,6 +4737,210 @@ void main() {
       expect(generated.warnings, isEmpty);
     });
 
+    testWidgets('the showcase concentric composition that used to be BLOCKER 1 '
+        'now emits ringIds and round-trips', (tester) async {
+      // CONVERTED from the pinned known-gap test
+      // "blocker 1: ring ids that are not "<markId>-<ring>" are refused —
+      // ConcentricDonutPage names its rings itself". That test asserted the
+      // REFUSAL of exactly this chart; this slice closes the gap, so the same
+      // chart is asserted to emit AND round-trip instead. The chart itself is
+      // unchanged from the pinned version — the same slug ids ('current',
+      // 'previous') decoupled from the ring names, the same names, unit, values
+      // and the same non-default config — so the two are directly comparable.
+      //
+      // The ids ride the chain as an explicit `ringIds:` map instead of being
+      // recovered from the id pattern, so nothing is renamed: the document the
+      // rebuilt chain produces carries the author's own ids back.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_explicit_ring_ids',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'ringIds: {',
+          "'Current period': 'current',",
+          "'Previous period': 'previous',",
+          'concentric: ConcentricDonutConfig(',
+          'innerRadiusFactor: 0.28,',
+          "unit: 'USD'",
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(
+            innerRadiusFactor: 0.28,
+            outerRadiusFactor: 0.94,
+            ringGap: 6,
+          ),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'current',
+              name: 'Current period',
+              unit: 'USD',
+              values: const <String, num>{'Subscriptions': 48, 'Services': 27},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'previous',
+              name: 'Previous period',
+              unit: 'USD',
+              values: const <String, num>{'Subscriptions': 41, 'Services': 33},
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(hierarchyLabelGrammarRows)
+            .geomDonut(
+              id: 'donut',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              unit: 'USD',
+              concentric: const ConcentricDonutConfig(
+                innerRadiusFactor: 0.28,
+                outerRadiusFactor: 0.94,
+                ringGap: 6,
+              ),
+              ringIds: const <String, String>{
+                'Current period': 'current',
+                'Previous period': 'previous',
+              },
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+
+      // BYTE-IDENTITY GUARD, and the reason this channel is safe to add: the
+      // emitter consults `ringIds` ONLY when the '<markId>-<ring>' pattern
+      // fails to recover a markId. The SAME composition with conforming ids
+      // therefore takes the original path and emits no `ringIds:` at all — so
+      // every concentric chart that emitted before this slice emits exactly the
+      // text it emitted before.
+      final conforming = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(
+              innerRadiusFactor: 0.28,
+              outerRadiusFactor: 0.94,
+              ringGap: 6,
+            ),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'revenue-Current period',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+              ),
+              DonutChartSeries.fromMap(
+                id: 'revenue-Previous period',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(conforming), isTrue);
+      expect(conforming.warnings, isEmpty);
+      expect(conforming.source, isNot(contains('ringIds')));
+      expect(conforming.source, contains("id: 'revenue',"));
+    });
+
+    testWidgets('an explicit ringIds composition keys ringWeights by the '
+        'AUTHORED id, and emits both', (tester) async {
+      // The one-rule claim, asserted on emitted text: `ringWeights` is keyed by
+      // the RESULTING series id, so a composition whose rings are named by
+      // `ringIds` weights them by those same authored ids. If the reversal had
+      // renamed the rings instead, this config would name no ring and the
+      // re-lowering would be refused by `invalidConcentricComposition`.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_explicit_ring_ids_weights',
+        fragments: <String>[
+          'ringIds: {',
+          "'Current period': 'current',",
+          "'current': 1.25,",
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(
+            ringWeights: <String, double>{'current': 1.25},
+          ),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'current',
+              name: 'Current period',
+              values: const <String, num>{'Subscriptions': 48, 'Services': 27},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'previous',
+              name: 'Previous period',
+              values: const <String, num>{'Subscriptions': 41, 'Services': 33},
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(hierarchyLabelGrammarRows)
+            .geomDonut(
+              id: 'donut',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              concentric: const ConcentricDonutConfig(
+                ringWeights: <String, double>{'current': 1.25},
+              ),
+              ringIds: const <String, String>{
+                'Current period': 'current',
+                'Previous period': 'previous',
+              },
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a concentric composition whose rings are unnamed stays '
+        'refused, by name', (tester) async {
+      // `ringIds` is keyed by the RING KEY, and the ring key is the series
+      // NAME — that is the channel `ring:` reads. A composition whose rings
+      // carry no name has nothing to key by and no `ring:` accessor could
+      // reproduce it (every row would bucket together), so it stays an honest
+      // refusal rather than being renamed into one that emits.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'current',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+              ),
+              DonutChartSeries.fromMap(
+                id: 'previous',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(generated.isComplete, isFalse);
+      expect(blockedReason(generated), contains('distinct, non-empty name'));
+    });
+
     testWidgets('a donut with a STYLED, FORMATTED centre emits with the '
         'centre carried whole and an honest formatter placeholder', (
       tester,
@@ -6074,19 +6278,24 @@ void main() {
   //
   // The acceptance gate above is about POLAR. `concentric_donut_page.dart` and
   // `donut_charts_page.dart` are the radial workbench pages it does NOT cover,
-  // and both are blocked today. Recording that in a comment alone would decay,
-  // so each blocker below is mounted and its refusal pinned. Every test here
-  // asserts a REFUSAL: closing the gap turns them red, and the fix is to move
-  // the case into the acceptance gate and update the wording in
+  // and both were blocked. Recording that in a comment alone would decay, so
+  // each blocker below was mounted and its refusal pinned. Every test here
+  // asserted a REFUSAL: closing a gap turns its test red, and the fix is to
+  // move the case into the acceptance gate and update the wording in
   // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
   // test.
   //
-  // The blockers, each independent (fixing one leaves the page blocked on the
+  // The blockers, each independent (fixing one left the page blocked on the
   // others):
   //
-  //   1. RING IDS. `concentric_donut_page.dart` names its ring series from its
-  //      own descriptors (`current`, `previous`, …), not the `<markId>-<ring>`
-  //      pattern the ring channel reproduces.
+  //   1. RING IDS — **CLOSED**. `concentric_donut_page.dart` named its ring
+  //      series from its own descriptors (`current`, `previous`, …), not the
+  //      `<markId>-<ring>` pattern the ring channel reproduces. Those pages now
+  //      id their rings by the pattern, AND `DonutMark` carries a `ringIds` map
+  //      so a composition that ids its rings independently reverses too — the
+  //      emitter consults it only when the pattern fails, so conforming charts
+  //      emit unchanged. Its pinned refusal test was CONVERTED into a
+  //      round-trip acceptance test (see below) rather than deleted.
   //   2. PER-SLICE COLOURS — **CLOSED**. Both pages pass `sliceColors`
   //      (`donut_charts_page.dart:487`); `PieMark`/`DonutMark` now carry a
   //      `sliceColor` channel of their own, mirroring `PolarMark.columnColor`,
@@ -6113,58 +6322,21 @@ void main() {
   // =========================================================================
 
   group('KNOWN GAP: the donut showcase pages do not emit', () {
-    testWidgets('blocker 1: ring ids that are not "<markId>-<ring>" are '
-        'refused — ConcentricDonutPage names its rings itself', (tester) async {
-      // `concentric_donut_page.dart` builds one series per `_ringDescriptor`,
-      // ids and all (`current`, `previous`, `forecast`, …). The ring channel
-      // reproduces each ring's series id by joining the mark id to the ring
-      // key, so ids that do not follow that shape cannot be reversed.
-      //
-      // The CONTROL for this one is the acceptance case immediately above:
-      // the same two-ring composition, the same non-default config, ids
-      // following `'<markId>-<ring>'` — and it emits. Only the ids differ.
-      final generated = generateGrammar(
-        await snapshotOf(
-          tester,
-          (controller) => BravenChartPlus(
-            bravenChartController: controller,
-            concentricDonutConfig: const ConcentricDonutConfig(
-              innerRadiusFactor: 0.28,
-              outerRadiusFactor: 0.94,
-              ringGap: 6,
-            ),
-            series: <ChartSeries>[
-              DonutChartSeries.fromMap(
-                id: 'current',
-                name: 'Current period',
-                unit: 'USD',
-                values: const <String, num>{
-                  'Subscriptions': 48,
-                  'Services': 27,
-                },
-              ),
-              DonutChartSeries.fromMap(
-                id: 'previous',
-                name: 'Previous period',
-                unit: 'USD',
-                values: const <String, num>{
-                  'Subscriptions': 41,
-                  'Services': 33,
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-      expect(emittedChain(generated), isFalse);
-      expect(generated.isComplete, isFalse);
-      expect(
-        blockedReason(generated),
-        contains(
-          'the donut series ids do not follow the concentric ring pattern',
-        ),
-      );
-    });
+    // BLOCKER 1 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
+    // into "the showcase concentric composition that used to be BLOCKER 1 now
+    // emits ringIds and round-trips" in the `showcase-representative radial
+    // series config emits` group — same chart, same slug ids ('current',
+    // 'previous') decoupled from the ring names, same names/unit/values and the
+    // same non-default config, now asserting emission and a full round trip
+    // instead of the refusal. `DonutMark` carries a `ringIds` map naming each
+    // ring's series id explicitly, and the emitter consults it ONLY when the
+    // '<markId>-<ring>' pattern fails to recover a markId — so the converted
+    // test keeps the original CONTROL (the same composition with conforming
+    // ids) as the byte-identity guard that a conforming chart emits no
+    // `ringIds` at all. What stays refused is a composition whose rings are
+    // unnamed or share a name: the ring key IS the series name, so there is
+    // nothing for a `ring:` channel to bucket by. That refusal has its own test
+    // in the same group.
 
     // BLOCKER 2 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
     // into "the showcase donut that used to be BLOCKER 2 now emits and

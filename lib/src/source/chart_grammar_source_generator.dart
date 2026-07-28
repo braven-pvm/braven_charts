@@ -37,7 +37,8 @@
 /// | a polar series carrying per-category column colors, targets or intervals, or the rose preset | emitted as geomPolar row-channels + `rose: true` |
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
-/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
+/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | emitted as `geomDonut(ringIds: {...})` — `DonutMark` carries an explicit ring-key→series-id map, consulted ONLY when the id pattern fails to recover a markId, so a conforming composition emits unchanged |
+/// | a concentric composition whose rings are unnamed or share a name | blocked — the ring key IS the series name, so no `ring:` channel could bucket those rows apart |
 /// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
 /// | a donut center setting `labelStyle` or `valueStyle` | emitted as `center: DonutCenterContent(...)` — the captured center rides the mark VERBATIM and is written by the config emitter's own center renderer, so both styles survive |
 /// | a donut center setting `valueFormatter` | emitted with a `// valueFormatter:` placeholder and a runtime-value-omitted warning, exactly as the config form does — the chain is real but not complete |
@@ -1068,18 +1069,46 @@ class _GrammarChainEmitter {
   ) {
     // The forward path ids each ring `'<markId>-<ringKey>'` and names it
     // `<ringKey>`. Recover that shared markId so the re-lowered ring ids
-    // reproduce the captured ones; if the ids do not follow that pattern the
-    // chart was not authored as a concentric composition and cannot round-trip.
-    final markId = _concentricMarkId(donuts);
-    if (markId == null) {
-      block(
-        'Grammar chain not emitted: the donut series ids do not follow the '
-        "concentric ring pattern '<markId>-<ring>', so the composition cannot "
-        'be reversed to a geomDonut(ring:) chain.',
-        path: r'$.series',
-      );
-      return null;
+    // reproduce the captured ones.
+    //
+    // When the ids do NOT follow that pattern the chart is still a concentric
+    // composition — it just chose its ids independently of its ring names,
+    // which is what a config-authored chart usually does. The chain then names
+    // every ring explicitly through `geomDonut(ringIds:)` and the markId is
+    // synthesised, because with a full map it no longer reaches any series id.
+    //
+    // This branch is entered ONLY when the pattern fails, so a conforming
+    // composition takes the original path untouched and its emitted text is
+    // byte-identical to what it was before this channel existed.
+    final recovered = _concentricMarkId(donuts);
+    final Map<String, String>? explicitRingIds;
+    if (recovered == null) {
+      // The ring KEY is the series NAME — that is the value the `ring:` channel
+      // returns and the map is keyed by — so a composition whose rings are
+      // unnamed, or share a name, cannot be reversed to a ring channel at all:
+      // its rows would bucket together into one ring. Refused by name, as
+      // before, rather than renamed into something that emits.
+      final keys = <String>[for (final donut in donuts) donut.name ?? ''];
+      if (keys.any((key) => key.isEmpty) ||
+          keys.toSet().length != keys.length) {
+        block(
+          'Grammar chain not emitted: a geomDonut(ring:) chain builds each ring '
+          'from the value its ring channel returns and names the ring series '
+          'after it, so every donut series in the composition needs a distinct, '
+          'non-empty name. These do not: '
+          '${donuts.map((donut) => '"${donut.id}" (name '
+              '${donut.name == null ? 'unset' : '"${donut.name}"'})').join(', ')}.',
+          path: r'$.series',
+        );
+        return null;
+      }
+      explicitRingIds = <String, String>{
+        for (final donut in donuts) donut.name!: donut.id,
+      };
+    } else {
+      explicitRingIds = null;
     }
+    final markId = recovered ?? _synthesisedConcentricMarkId;
     // EVERY field must be allocated here, BEFORE `_synthesiseRadialRows`: the
     // rows below are sized from the current slot counts, so a field added
     // afterwards would throw a `RangeError` on the first row write.
@@ -1187,6 +1216,9 @@ class _GrammarChainEmitter {
         selectionStyle: donuts.first.selectionStyle,
         center: carriesConfig ? null : center,
         concentric: carriesConfig ? captured : null,
+        // Null whenever the captured ids follow the pattern, which is what
+        // keeps a conforming composition's emitted text unchanged.
+        ringIds: explicitRingIds,
         dataLabels: baseLabels,
         dataLabelsByRing: labelsByRing.isEmpty ? null : labelsByRing,
         sliceRadiusConfig: donuts.first.sliceRadiusConfig,
@@ -1432,9 +1464,23 @@ class _GrammarChainEmitter {
       ),
   ];
 
+  /// The mark id a concentric composition takes when its captured ring ids do
+  /// NOT follow the `'<markId>-<ringKey>'` pattern.
+  ///
+  /// In that case `ringIds` names every ring explicitly — the map is all or
+  /// nothing — so the mark id no longer contributes to any series id and only
+  /// has to be stable and readable. A fixed word is both, and it cannot collide
+  /// with anything: the chain carries exactly one radial mark.
+  static const String _synthesisedConcentricMarkId = 'donut';
+
   /// The shared markId of a concentric composition, recovered from the
   /// `'<markId>-<ringKey>'` id pattern the forward lowering writes, or null when
   /// the ids do not match it.
+  ///
+  /// Null is not a refusal on its own any more: `_planConcentric` falls back to
+  /// naming every ring explicitly through `DonutMark.ringIds`. It IS still the
+  /// discriminator, though — the fallback runs only when this returns null, so
+  /// a conforming composition keeps emitting exactly what it emitted before.
   String? _concentricMarkId(List<DonutChartSeries> donuts) {
     final first = donuts.first;
     final firstKey = first.name ?? '';
@@ -2780,6 +2826,12 @@ class _GrammarChainEmitter {
               when concentric != const ConcentricDonutConfig()) {
             _config.emitConcentricDonutConfig(writer, 'concentric', concentric);
           }
+          // Present only for a composition whose captured ids do not follow the
+          // `'<markId>-<ringKey>'` pattern, so a conforming chart writes nothing
+          // here and its emitted text is unchanged.
+          if (mark.ringIds case final ringIds?) {
+            _emitRingIds(writer, ringIds);
+          }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
           }
@@ -3373,6 +3425,28 @@ class _GrammarChainEmitter {
   void _optionalString(DartSourceWriter writer, String name, String? value) {
     if (value == null) return;
     writer.namedArgument(name, DartSourceWriter.stringLiteral(value));
+  }
+
+  /// Emits `ringIds: {'<ringKey>': '<seriesId>', …}` for a concentric
+  /// composition whose captured ids do not follow `'<markId>-<ringKey>'`.
+  ///
+  /// Both sides are plain strings, so this writes the shared string literal
+  /// renderer's output directly — there is no nested config to hand to the
+  /// config emitter. Keys are sorted so the emitted source does not depend on
+  /// ring order, exactly as `ringWeights:` and `dataLabelsByRing:` are.
+  void _emitRingIds(DartSourceWriter writer, Map<String, String> ringIds) {
+    if (ringIds.isEmpty) return;
+    final keys = ringIds.keys.toList()..sort();
+    writer.writeLine('ringIds: {');
+    writer.indented(() {
+      for (final key in keys) {
+        writer.writeLine(
+          '${DartSourceWriter.stringLiteral(key)}: '
+          '${DartSourceWriter.stringLiteral(ringIds[key]!)},',
+        );
+      }
+    });
+    writer.writeLine('},');
   }
 
   void _optionalNumber(DartSourceWriter writer, String name, num? value) {

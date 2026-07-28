@@ -491,9 +491,19 @@ final class BravenChart<T> {
   /// through its `centerContent`; [center] is the shorthand for that same slot
   /// and may only be used when [concentric] is omitted. [concentric] requires
   /// [ring] — a ring-less donut composes nothing for it to describe — and its
-  /// `ringWeights` is keyed by the lowered ring SERIES id `'<markId>-<ringKey>'`
-  /// (a mark ided `'seasons'` weights its `'Winter'` ring as
-  /// `{'seasons-Winter': 2}`), not by the bare ring value.
+  /// `ringWeights` is keyed by the RESULTING ring SERIES id, not by the bare
+  /// ring value: `'<markId>-<ringKey>'` (a mark ided `'seasons'` weights its
+  /// `'Winter'` ring as `{'seasons-Winter': 2}`), or the [ringIds] entry when
+  /// that map names the ring.
+  ///
+  /// [ringIds] names each ring's series id explicitly, keyed by the BARE ring
+  /// key, for a composition whose ids were chosen independently of its ring
+  /// names. Omit it and every ring takes the generated `'<markId>-<ringKey>'`
+  /// id, which stays the convention. It is ALL OR NOTHING — naming some rings
+  /// and not others raises `GrammarDiagnosticCode.partialRingIds` — and, like
+  /// [concentric], it requires [ring]
+  /// (`GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`); a key naming a
+  /// ring the rows never produce raises `GrammarDiagnosticCode.unknownRingKey`.
   ///
   /// [sliceColor] overrides the slice color per row; returning null for a row
   /// leaves that slice on the series color. With [ring] set it is resolved per
@@ -521,6 +531,7 @@ final class BravenChart<T> {
     RadialSelectionStyle? selectionStyle,
     DonutCenterContent? center,
     ConcentricDonutConfig? concentric,
+    Map<String, String>? ringIds,
     PieDataLabelConfig? dataLabels,
     Map<String, PieDataLabelConfig>? dataLabelsByRing,
     RadialSliceRadiusConfig? sliceRadiusConfig,
@@ -540,6 +551,7 @@ final class BravenChart<T> {
       selectionStyle: selectionStyle,
       center: center,
       concentric: concentric,
+      ringIds: ringIds,
       dataLabels: dataLabels,
       dataLabelsByRing: dataLabelsByRing,
       sliceRadiusConfig: sliceRadiusConfig,

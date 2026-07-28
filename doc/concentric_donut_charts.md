@@ -102,10 +102,16 @@ Ring weights affect visual thickness only. They never change a series value,
 total, share, source order, or selection identity.
 
 Id every ring `'<markId>-<ring name>'` — one mark id shared by the composition,
-then the ring name verbatim, spaces and capitals included. `ringWeights` keys by
-that same stable series ID, and the Chart Grammar reverses exactly that shape
-back into a `geomDonut(ring:)` chain, so a conforming id is what lets the
-composition round-trip.
+then the ring name verbatim, spaces and capitals included. The Chart Grammar
+reverses exactly that shape back into a `geomDonut(ring:)` chain with no extra
+argument, so it is the convention worth following. Ids chosen independently of
+the ring names round-trip too: the Grammar names them explicitly through
+`geomDonut(ringIds: {'<ring name>': '<series id>', …})`, an all-or-nothing map
+it consults only when the id pattern does not hold.
+
+Either way `ringWeights` keys by the **resulting** stable series ID — one rule,
+whichever scheme produced it — and every ring needs a distinct, non-empty
+`name`, because that name is the ring value the `ring:` channel buckets by.
 
 The allocator preserves positive ring thickness in constrained layouts. When
 necessary, it reduces the effective gap before allowing a band to collapse.

@@ -55,6 +55,11 @@ class ConcentricDonutConfig {
   /// Optional relative band thickness keyed by stable series ID.
   ///
   /// Series without an entry use a weight of `1`.
+  ///
+  /// For a composition authored through the Chart Grammar the key is the
+  /// RESULTING ring series id — one rule, whichever scheme produced it:
+  /// `'<markId>-<ringKey>'` by default, or the `DonutMark.ringIds` entry when
+  /// that map names the ring. Never the bare ring value.
   final Map<String, double> ringWeights;
 
   /// Default legend organization for the composition.

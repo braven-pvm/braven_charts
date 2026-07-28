@@ -977,6 +977,7 @@ final class DonutMark<T> extends RadialMark<T> {
     this.selectionStyle,
     this.center,
     this.concentric,
+    this.ringIds,
     this.dataLabels,
     this.dataLabelsByRing,
     this.sliceRadiusConfig,
@@ -1025,10 +1026,11 @@ final class DonutMark<T> extends RadialMark<T> {
   /// the center would be discarded silently — that raises
   /// `GrammarDiagnosticCode.concentricConfigOnRinglessDonut`.
   ///
-  /// `ringWeights` is keyed by the lowered ring SERIES id, which this mark
-  /// names `'<markId>-<ringKey>'` — NOT by the bare ring value. A mark ided
-  /// `'seasons'` over a `'Winter'` ring is weighted as
-  /// `ringWeights: {'seasons-Winter': 2}`.
+  /// `ringWeights` is keyed by the RESULTING ring series id — NOT by the bare
+  /// ring value. One rule, whichever scheme produced that id: the generated
+  /// `'<markId>-<ringKey>'` by default (a mark ided `'seasons'` weights its
+  /// `'Winter'` ring as `ringWeights: {'seasons-Winter': 2}`), or the [ringIds]
+  /// entry when that map names the ring.
   ///
   /// A key that names no ring raises
   /// `GrammarDiagnosticCode.invalidConcentricComposition` listing the real ids
@@ -1042,6 +1044,32 @@ final class DonutMark<T> extends RadialMark<T> {
   /// weight magnitudes — are validated unconditionally, above the `emptyData`
   /// guard.
   final ConcentricDonutConfig? concentric;
+
+  /// Explicit per-ring SERIES ids, keyed by the BARE ring key — the value the
+  /// [ring] accessor returns, which becomes each ring series' name.
+  ///
+  /// Null (or an empty map — the two mean the same thing, so they compare equal
+  /// here) keeps the default scheme, in which each ring is ided
+  /// `'<markId>-<ringKey>'`. That scheme is still the convention; this map
+  /// exists so a composition whose ids were chosen independently of its ring
+  /// names — the common shape in config-authored charts — can be expressed
+  /// exactly rather than renamed.
+  ///
+  /// `ConcentricDonutConfig.ringWeights` keys by the RESULTING series id, one
+  /// rule whichever scheme produced it: `'<markId>-<ringKey>'` for a ring this
+  /// map does not name, and the map's value for a ring it does.
+  ///
+  /// The map is ALL OR NOTHING. Naming only some rings would put two id schemes
+  /// in one composition — half authored, half generated — and leave a
+  /// `ringWeights` author working out per ring which one applies, so it raises
+  /// `GrammarDiagnosticCode.partialRingIds`.
+  ///
+  /// Requires [ring], exactly as [concentric] and [dataLabelsByRing] do: a
+  /// ring-less donut composes no rings for the map to name, so every entry
+  /// would be discarded silently. A non-empty map without [ring] raises
+  /// `GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`; a key naming a ring
+  /// the rows never produce raises `GrammarDiagnosticCode.unknownRingKey`.
+  final Map<String, String>? ringIds;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
@@ -1094,6 +1122,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.selectionStyle == selectionStyle &&
           other.center == center &&
           other.concentric == concentric &&
+          _sameRingOverrides(other.ringIds, ringIds) &&
           other.dataLabels == dataLabels &&
           _sameRingOverrides(other.dataLabelsByRing, dataLabelsByRing) &&
           other.sliceRadiusConfig == sliceRadiusConfig &&
@@ -1114,31 +1143,36 @@ final class DonutMark<T> extends RadialMark<T> {
     selectionStyle,
     center,
     concentric,
+    _ringOverrideHash(ringIds),
     dataLabels,
-    // Order-independent, matching [_sameRingOverrides] above: two override maps
-    // with the same entries in a different insertion order are the same mark,
-    // and an empty map hashes as the absent one it means the same thing as.
-    dataLabelsByRing == null || dataLabelsByRing!.isEmpty
-        ? null
-        : Object.hashAllUnordered(
-            dataLabelsByRing!.entries.map((e) => Object.hash(e.key, e.value)),
-          ),
+    _ringOverrideHash(dataLabelsByRing),
     sliceRadiusConfig,
     sliceGroupingConfig,
   );
 
-  /// Compares two [dataLabelsByRing] maps by ENTRY, treating null and an empty
-  /// map as the same thing.
+  /// Compares two per-ring maps by ENTRY, treating null and an empty map as the
+  /// same thing.
   ///
-  /// They mean the same thing everywhere else — both lower every ring onto
-  /// [dataLabels] and both emit no `dataLabelsByRing:` argument — so leaving
-  /// them unequal here would make two marks describing byte-identically the
-  /// same chart compare different. `mapEquals(null, {})` is false, hence the
-  /// explicit empty check.
-  static bool _sameRingOverrides(
-    Map<String, PieDataLabelConfig>? a,
-    Map<String, PieDataLabelConfig>? b,
-  ) => ((a?.isEmpty ?? true) && (b?.isEmpty ?? true)) || mapEquals(a, b);
+  /// They mean the same thing everywhere else — an absent and an empty
+  /// [dataLabelsByRing] both lower every ring onto [dataLabels], an absent and
+  /// an empty [ringIds] both leave every ring on the generated id, and neither
+  /// emits an argument — so leaving them unequal here would make two marks
+  /// describing byte-identically the same chart compare different.
+  /// `mapEquals(null, {})` is false, hence the explicit empty check.
+  static bool _sameRingOverrides<V>(Map<String, V>? a, Map<String, V>? b) =>
+      ((a?.isEmpty ?? true) && (b?.isEmpty ?? true)) || mapEquals(a, b);
+
+  /// The [hashCode] contribution of one per-ring map.
+  ///
+  /// Order-independent, matching [_sameRingOverrides]: two maps with the same
+  /// entries in a different insertion order are the same mark, and an empty map
+  /// hashes as the absent one it means the same thing as.
+  static Object? _ringOverrideHash<V>(Map<String, V>? overrides) =>
+      overrides == null || overrides.isEmpty
+      ? null
+      : Object.hashAllUnordered(
+          overrides.entries.map((e) => Object.hash(e.key, e.value)),
+        );
 
   @override
   String toString() => 'DonutMark(id: $id, name: $name)';

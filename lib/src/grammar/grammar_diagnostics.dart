@@ -113,10 +113,15 @@ enum GrammarDiagnosticCode {
   /// or misdirected ring weight, or an unrenderable shared center.
   invalidConcentricComposition,
 
-  /// A concentric donut's per-ring override map (such as `dataLabelsByRing`)
-  /// is keyed to a ring the `ring` channel never produces, so the entry would
-  /// be silently inert.
+  /// A concentric donut's per-ring override map (such as `dataLabelsByRing` or
+  /// `ringIds`) is keyed to a ring the `ring` channel never produces, so the
+  /// entry would be silently inert.
   unknownRingKey,
+
+  /// A concentric donut's `ringIds` named only some of its rings, leaving the
+  /// rest on the generated `'<markId>-<ringKey>'` id — two id schemes in one
+  /// composition, which `ringWeights` is then keyed against per ring.
+  partialRingIds,
 
   /// A per-ring override map (such as `dataLabelsByRing`) was set on a donut
   /// geom that declares no `ring` channel, so it composes no rings for the map
@@ -462,10 +467,10 @@ final class GrammarSpecException implements Exception {
   /// A per-ring override map named a ring the data never produces.
   ///
   /// [markId] names the geomDonut mark, [parameter] the map that carries the
-  /// bad key (`dataLabelsByRing`), [unknownKeys] the keys that match nothing
-  /// and [ringKeys] the ring keys the data actually produced. Naming both sides
-  /// is the point: the override is keyed by the BARE ring value, and an author
-  /// who reached for the `'<markId>-<ringKey>'` series id that
+  /// bad key (`dataLabelsByRing`, `ringIds`), [unknownKeys] the keys that match
+  /// nothing and [ringKeys] the ring keys the data actually produced. Naming
+  /// both sides is the point: the map is keyed by the BARE ring value, and an
+  /// author who reached for the ring SERIES id that
   /// `ConcentricDonutConfig.ringWeights` is keyed by sees the difference at
   /// once.
   factory GrammarSpecException.unknownRingKey(
@@ -479,27 +484,56 @@ final class GrammarSpecException implements Exception {
     'its ring channel produced no such ring, so the entry would apply to '
     'nothing and change nothing. This composition\'s rings are '
     '${_list(ringKeys)}; $parameter is keyed by that bare ring value, not by '
-    'the "<markId>-<ringKey>" series id ringWeights is keyed by.',
+    'the ring series id — "<markId>-<ringKey>" unless ringIds names it — that '
+    'ringWeights is keyed by.',
+  );
+
+  /// A `ringIds` map named some of a composition's rings but not all of them.
+  ///
+  /// [markId] names the geomDonut mark, [namedKeys] the rings the map does name
+  /// and [unnamedKeys] the ones it leaves out. Both sides are listed because
+  /// the fix is either direction — name the rest, or drop the map — and because
+  /// the half-named state is precisely what makes `ringWeights` ambiguous:
+  /// keying it needs the RESULTING id, which would be the authored one for some
+  /// rings and the generated one for others.
+  factory GrammarSpecException.partialRingIds(
+    String markId,
+    Iterable<String> namedKeys,
+    Iterable<String> unnamedKeys,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.partialRingIds,
+    'The donut mark "$markId" set ringIds for ${_list(namedKeys)} but left '
+    '${_list(unnamedKeys)} unnamed, so this one composition would carry two id '
+    'schemes at once — the authored ids for some rings and the generated '
+    '"<markId>-<ringKey>" for the rest — and ringWeights, which is keyed by '
+    'the resulting id, would take a different scheme per ring. Name every ring '
+    'in ringIds, or drop it and let every ring take the generated id.',
   );
 
   /// A per-ring override map was set on a donut geom with no `ring` channel.
   ///
   /// [markId] names the geomDonut mark, [parameter] the map that has nothing to
-  /// key against (`dataLabelsByRing`) and [keys] its entries. This is the same
-  /// mistake [unknownRingKey] reports, in its most inert form: with no ring
-  /// channel there are no rings AT ALL, so the whole map applies to nothing
+  /// key against (`dataLabelsByRing`, `ringIds`) and [keys] its entries. This is
+  /// the same mistake [unknownRingKey] reports, in its most inert form: with no
+  /// ring channel there are no rings AT ALL, so the whole map applies to nothing
   /// rather than just one bad entry — and the ring loop that raises
   /// [unknownRingKey] never runs to say so.
+  ///
+  /// [singleDonutParameter] names the argument that expresses the same thing on
+  /// a donut with no rings (`dataLabels:` for a label override, `id:` for an
+  /// id), because the remedy is the map's own, not one shared sentence.
   factory GrammarSpecException.perRingOverrideOnRinglessDonut(
     String markId,
     String parameter,
-    Iterable<String> keys,
-  ) => GrammarSpecException(
+    Iterable<String> keys, {
+    String singleDonutParameter = 'dataLabels:',
+  }) => GrammarSpecException(
     GrammarDiagnosticCode.perRingOverrideOnRinglessDonut,
     'The donut mark "$markId" keyed $parameter to ${_list(keys)} but declares '
     'no ring channel, so it composes no rings for those entries to override: '
     'every one of them would apply to nothing and change nothing. Add ring: to '
-    'compose a concentric donut, or set dataLabels: for this single donut.',
+    'compose a concentric donut, or set $singleDonutParameter for this single '
+    'donut.',
   );
 
   /// A Cartesian axis/grid option was set on a radial spec.
