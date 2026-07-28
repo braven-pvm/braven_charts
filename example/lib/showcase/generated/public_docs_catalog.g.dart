@@ -12,7 +12,7 @@ const publicDocsShowcaseBaseUrl = "https://braven-pvm.github.io/braven_charts/";
 const publicDocsRepositoryBaseUrl = "https://github.com/braven-pvm/braven_charts/blob/master/";
 const publicDocsApiBaseUrl = "https://braven-pvm.github.io/braven_charts/api/";
 const publicDocsGuidesBaseUrl = "https://braven-pvm.github.io/braven_charts/guides/";
-const publicDocsPackageVersion = "0.14.0";
+const publicDocsPackageVersion = "0.15.0";
 const publicDocsDartConstraint = ">=3.9.0 <4.0.0";
 const publicDocsFlutterConstraint = ">=3.35.0";
 

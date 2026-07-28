@@ -8,6 +8,7 @@ on:
       - example/**
       - lib/**
       - doc/**
+      - docs/**
       - dartdoc_options.yaml
       - tool/public_docs.dart
       - tool/public_docs_support.dart
