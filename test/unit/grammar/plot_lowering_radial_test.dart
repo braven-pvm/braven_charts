@@ -1142,7 +1142,7 @@ void main() {
       expect(refusal.message, isNot(contains(r"'<markId>-<ringKey>'")));
     });
 
-    test('ringIds participates in DonutMark equality', () {
+    test('ringIds participates in DonutMark equality AND hashCode', () {
       const base = DonutMark<Fruit>(
         category: fruitName,
         value: fruitCount,
@@ -1157,20 +1157,63 @@ void main() {
         ringIds: <String, String>{'A': 'current'},
       );
       expect(named == base, isFalse);
+      // The hash half, asserted separately because `operator==` alone does not
+      // imply it: `hashCode` is a hand-maintained argument list, so a field can
+      // be carried by equality and silently left out of the hash — which is
+      // exactly what makes two unequal marks collide in a Set or a Map key.
+      // Deleting `_ringOverrideHash(ringIds)` from `DonutMark.hashCode` must
+      // turn this red, the way the same line does for `dataLabelsByRing`.
+      expect(named.hashCode == base.hashCode, isFalse);
       expect(base.ringIds, isNull);
       // Null and an empty map mean the same thing everywhere else, so they
-      // compare equal here — exactly as `dataLabelsByRing` does.
-      expect(
-        const DonutMark<Fruit>(
-              category: fruitName,
-              value: fruitCount,
-              ring: fruitBasket,
-              id: 'fruit',
-              ringIds: <String, String>{},
-            ) ==
-            base,
-        isTrue,
+      // compare equal here — exactly as `dataLabelsByRing` does. And "equal"
+      // has to include the hash: an empty map that hashed as itself rather than
+      // as the absent one would break the equal-implies-same-hash contract that
+      // the comparison above establishes.
+      const empty = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{},
       );
+      expect(empty == base, isTrue);
+      expect(empty.hashCode, base.hashCode);
+      // Order-independent, matching the comparison: two marks that name the
+      // same rings in a different insertion order are one mark and must hash
+      // alike.
+      //
+      // Deliberately `final`, not `const`, despite what prefer_const_constructors
+      // says — the same choice the `dataLabelsByRing` pair makes. Const
+      // canonicalisation could collapse these into ONE object, at which point
+      // `identical(this, other)` satisfies the comparison and neither
+      // `_sameRingOverrides` nor `_ringOverrideHash` is ever reached.
+      final forwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+      );
+      final backwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'B': 'previous', 'A': 'current'},
+      );
+      expect(forwards, backwards);
+      expect(forwards.hashCode, backwards.hashCode);
+      // A different VALUE for the same key is a different mark, in both halves.
+      final swapped = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'previous', 'B': 'current'},
+      );
+      expect(forwards == swapped, isFalse);
+      expect(forwards.hashCode == swapped.hashCode, isFalse);
     });
 
     test(
