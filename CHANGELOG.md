@@ -108,12 +108,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   depend on them.
 - Every radial Workbench Grammar pane now emits a chain — pie, donut,
   concentric donut and polar column. What stays refused in the radial families
-  is narrow and named: a radial-bar, gauge or range-area chart (no grammar
-  geometry), a concentric composition whose rings are unnamed or share a name
-  (the ring key *is* the series name), and a per-point `PointStyle` carrying
-  more than a colour and a size. The pie and donut pages emit with
-  `isComplete == false`, each for a live formatter callback that has no literal
-  form. Full detail is in `doc/chart_grammar.md`.
+  is narrow: a radial-bar, gauge or range-area chart (no grammar geometry), a
+  per-point `PointStyle` carrying more than a colour and a size, and a
+  concentric composition that breaks one of the ring preconditions. A
+  concentric composition emits only when every ring shares one `donutStyle`,
+  one `selectionStyle`, one `unit`, one `sliceRadiusConfig` and one
+  `sliceGroupingConfig`, carries no series `color` of its own, carries no
+  centre of its own, and has a distinct, non-empty name — `DonutMark` holds one
+  of each for the whole composition, and the ring lowering never carries a
+  per-ring `color`. Sharing a NON-DEFAULT value is fine; it is divergence that
+  is refused. Of these, the ring name and the ring centre are refused with a
+  reason of their own; the five config divergences and the ring colour are
+  refused by the round-trip proof's catch-all and are not yet named. The pie
+  and donut pages emit with `isComplete == false`, each for a live formatter
+  callback that has no literal form. Full detail is in
+  `doc/chart_grammar.md`.
 
 ## 0.14.0 - 2026-07-27
 

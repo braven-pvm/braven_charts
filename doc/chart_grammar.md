@@ -797,17 +797,62 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     reaching a user as unpasteable source.
   - **A non-default `ConcentricDonutConfig` emits** — radii, ring gap, order,
     legend mode, per-ring weights and center all survive to
-    `geomDonut(concentric: ...)`. The one remaining precondition is that no
-    ring carries a centre of its own. Ring series ids following
+    `geomDonut(concentric: ...)`. Ring series ids following
     `'<markId>-<ring>'` are no longer required — a composition that ids its
     rings independently emits `ringIds:` instead — and rings that carry
     DIFFERENT `dataLabels` emit as `dataLabelsByRing:`.
+  - **The concentric preconditions are a SET, not one.** This paragraph used to
+    say the one remaining precondition was that no ring carry a centre of its
+    own. That was false. `DonutMark` holds ONE `style`, ONE `selectionStyle`,
+    ONE `unit`, ONE `sliceRadiusConfig` and ONE `sliceGroupingConfig` for the
+    WHOLE composition, and `_lowerDonutRings`
+    (`lib/src/grammar/plot_lowering.dart:1596`) stamps each of them onto every
+    ring — and, unlike the single-donut `_lowerDonut` beside it, never passes
+    `mark.color` at all. So a concentric composition emits only when every
+    ring:
+    - shares one `donutStyle`,
+    - shares one `selectionStyle`,
+    - shares one `unit`,
+    - shares one `sliceRadiusConfig`,
+    - shares one `sliceGroupingConfig`,
+    - carries **no** series `color` of its own,
+    - carries no centre of its own, and
+    - has a distinct, non-empty name.
 
-  What stays refused in the radial families is narrow and named: a radial-bar,
-  gauge or range-area chart (no grammar geometry at all), a concentric
-  composition whose rings are unnamed or share a name (the ring key *is* the
-  series name), and a per-point `PointStyle` carrying more than a colour and a
-  size. `concentric_donut_page.dart`'s live `donutCenterBuilder` is a widget
+    Two clarifications the list alone would not give. On the five shared
+    configs it is DIVERGENCE that is refused, not a non-default value: rings
+    that all carry the same non-default `donutStyle` emit, and the style is
+    carried through. The series `color` is different in kind — no ring may
+    carry one *even when every ring carries the same one*, because the ring
+    path never reads `mark.color`; a single, non-concentric donut's series
+    colour DOES emit.
+
+    Only the ring centre and the ring name are refused BY NAME. The five
+    config divergences and the ring colour arrive as the round-trip proof's
+    catch-all sentence, whose own round-trip list states that `unit`, the
+    series style, the selection style and the slice-radius and grouping
+    configs round-trip — true of a conforming composition, and actively
+    misleading to the author who just tripped one of them. That is a gap worth
+    closing: a precondition a user can reach deserves a reason of its own.
+
+    Pinned matched-pair style in the `fidelity matrix diagnostics` group of
+    `test/unit/source/chart_grammar_source_generator_test.dart` — the
+    divergent-`donutStyle` refusal sits beside a control proving the SHARED
+    non-default style emits and is carried, the other four divergences are
+    refused together, and the ring-colour refusal sits beside the
+    single-donut control that emits.
+
+  What stays refused in the radial families is narrow, and mostly named: a
+  radial-bar, gauge or range-area chart (no grammar geometry at all), a
+  concentric composition whose rings are unnamed or share a name (the ring key
+  *is* the series name), a concentric composition whose rings disagree on
+  `donutStyle` / `selectionStyle` / `unit` / `sliceRadiusConfig` /
+  `sliceGroupingConfig` or in which any ring carries a series `color` or a
+  centre of its own, and a per-point `PointStyle` carrying more than a colour
+  and a size. Of those, everything except the five ring-config divergences and
+  the ring colour is refused with a reason of its own; those six are the
+  catch-all cases described above.
+  `concentric_donut_page.dart`'s live `donutCenterBuilder` is a widget
   builder the capture layer does not model at all; the emitted chain carries
   the portable `ConcentricDonutConfig.centerContent` that builder's own doc
   names as the artifact fallback — a capture-layer limitation shared with the

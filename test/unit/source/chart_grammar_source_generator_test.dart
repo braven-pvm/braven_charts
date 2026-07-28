@@ -6410,6 +6410,247 @@ void main() {
       expect(generated.source, isNot(contains('Cartesian-only')));
     });
 
+    // =======================================================================
+    // THE CONCENTRIC RING PRECONDITIONS.
+    //
+    // `doc/chart_grammar.md` used to claim the ONE remaining precondition on a
+    // concentric composition was that no ring carry a centre of its own. That
+    // was false, and nothing failed when it went stale. `DonutMark` holds ONE
+    // `style`, `selectionStyle`, `unit`, `sliceRadiusConfig` and
+    // `sliceGroupingConfig` for the WHOLE composition, and
+    // `_lowerDonutRings` (`plot_lowering.dart:1596`) stamps each of them onto
+    // every ring — and, unlike the single-donut `_lowerDonut` beside it, never
+    // passes `mark.color` at all. So SIX further preconditions exist, every one
+    // of them reachable by an author writing ordinary config-form Dart.
+    //
+    // These tests are the gate on that list. They assert the BOUNDARY, not the
+    // implementation: the fix for any of them would be a mark field, which is
+    // a feature, not a doc correction.
+    // =======================================================================
+
+    testWidgets('rings SHARING one non-default donutStyle emit — it is '
+        'DIVERGENCE that is refused, not a non-default value', (tester) async {
+      // The control that gives the refusal below its meaning. Without it, a
+      // regression that refused every non-default ring style would leave the
+      // refusal test passing while the family quietly stopped emitting.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'mix-Inner',
+              name: 'Inner',
+              values: const <String, num>{'Apple': 40, 'Pear': 60},
+              donutStyle: const DonutChartStyle(innerRadiusFactor: 0.4),
+            ),
+            DonutChartSeries.fromMap(
+              id: 'mix-Outer',
+              name: 'Outer',
+              values: const <String, num>{'Apple': 30, 'Pear': 70},
+              donutStyle: const DonutChartStyle(innerRadiusFactor: 0.4),
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.isComplete, isTrue);
+      // The shared value is not merely tolerated, it is CARRIED.
+      expect(generated.source, contains('innerRadiusFactor: 0.4'));
+    });
+
+    testWidgets('a concentric composition whose rings DIVERGE in donutStyle is '
+        'refused', (tester) async {
+      // The headline case. Conforming ids, distinct non-empty names, no ring
+      // centre — every precondition the docs used to name is satisfied — and
+      // it is still refused, because the mark has one `style` to give.
+      final snapshot = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'mix-Inner',
+              name: 'Inner',
+              values: const <String, num>{'Apple': 40, 'Pear': 60},
+              donutStyle: const DonutChartStyle(innerRadiusFactor: 0.4),
+            ),
+            DonutChartSeries.fromMap(
+              id: 'mix-Outer',
+              name: 'Outer',
+              values: const <String, num>{'Apple': 30, 'Pear': 70},
+              donutStyle: const DonutChartStyle(innerRadiusFactor: 0.7),
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(emittedChain(generated), isFalse);
+      expect(generated.isComplete, isFalse);
+      expect(blockedReason(generated), contains('mix-Outer'));
+      // The refusal is HONEST but UNNAMED: it arrives through the round-trip
+      // proof's catch-all sentence, whose own round-trip list names "series
+      // style" among the things that DO round-trip. Asserting the catch-all
+      // here is deliberate — it records that this precondition has no reason
+      // of its own, so giving it one (which it deserves) fails this test and
+      // forces the four doc sites to be updated in the same change.
+      expect(
+        blockedReason(generated),
+        contains('It carries a series option the radial marks do not carry'),
+      );
+    });
+
+    testWidgets('every other per-ring divergence — selectionStyle, unit, '
+        'sliceRadiusConfig, sliceGroupingConfig — is refused too', (
+      tester,
+    ) async {
+      Future<void> expectRefused(String label, List<ChartSeries> series) async {
+        final snapshot = await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(),
+            series: series,
+          ),
+        );
+        final generated = generateGrammar(snapshot);
+        expect(
+          emittedChain(generated),
+          isFalse,
+          reason: '$label must be refused, but a chain was emitted',
+        );
+        expect(generated.isComplete, isFalse, reason: label);
+      }
+
+      await expectRefused('a divergent selectionStyle', <ChartSeries>[
+        DonutChartSeries.fromMap(
+          id: 'mix-Inner',
+          name: 'Inner',
+          values: const <String, num>{'Apple': 40, 'Pear': 60},
+          selectionStyle: const RadialSelectionStyle(
+            effect: RadialSelectionEffect.lift,
+          ),
+        ),
+        DonutChartSeries.fromMap(
+          id: 'mix-Outer',
+          name: 'Outer',
+          values: const <String, num>{'Apple': 30, 'Pear': 70},
+        ),
+      ]);
+
+      await expectRefused('a divergent unit', <ChartSeries>[
+        DonutChartSeries.fromMap(
+          id: 'mix-Inner',
+          name: 'Inner',
+          unit: 'USD',
+          values: const <String, num>{'Apple': 40, 'Pear': 60},
+        ),
+        DonutChartSeries.fromMap(
+          id: 'mix-Outer',
+          name: 'Outer',
+          unit: 'EUR',
+          values: const <String, num>{'Apple': 30, 'Pear': 70},
+        ),
+      ]);
+
+      await expectRefused('a divergent sliceRadiusConfig', <ChartSeries>[
+        DonutChartSeries.fromMap(
+          id: 'mix-Inner',
+          name: 'Inner',
+          values: const <String, num>{'Apple': 40, 'Pear': 60},
+          radiusValues: const <String, num>{'Apple': 1, 'Pear': 2},
+          sliceRadiusConfig: const RadialSliceRadiusConfig(minimumFactor: 0.3),
+        ),
+        DonutChartSeries.fromMap(
+          id: 'mix-Outer',
+          name: 'Outer',
+          values: const <String, num>{'Apple': 30, 'Pear': 70},
+          radiusValues: const <String, num>{'Apple': 1, 'Pear': 2},
+          sliceRadiusConfig: const RadialSliceRadiusConfig(minimumFactor: 0.6),
+        ),
+      ]);
+
+      await expectRefused('a divergent sliceGroupingConfig', <ChartSeries>[
+        DonutChartSeries.fromMap(
+          id: 'mix-Inner',
+          name: 'Inner',
+          values: const <String, num>{'Apple': 40, 'Pear': 58, 'Fig': 2},
+          sliceGroupingConfig: const RadialSliceGroupingConfig(
+            minimumShare: 0.1,
+          ),
+        ),
+        DonutChartSeries.fromMap(
+          id: 'mix-Outer',
+          name: 'Outer',
+          values: const <String, num>{'Apple': 30, 'Pear': 68, 'Fig': 2},
+        ),
+      ]);
+    });
+
+    testWidgets('ANY per-ring series colour is refused — even when every ring '
+        'carries the SAME one', (tester) async {
+      // Not a divergence at all: `_lowerDonutRings` never passes `mark.color`,
+      // so no concentric ring can carry a series colour. The single-donut path
+      // beside it DOES (`_lowerDonut` passes `color: mark.color`), which is why
+      // this is a ring precondition and not a donut one — the control below
+      // proves the difference rather than asserting it.
+      final rings = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'mix-Inner',
+              name: 'Inner',
+              color: const Color(0xFF2563EB),
+              values: const <String, num>{'Apple': 40, 'Pear': 60},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'mix-Outer',
+              name: 'Outer',
+              color: const Color(0xFF2563EB),
+              values: const <String, num>{'Apple': 30, 'Pear': 70},
+            ),
+          ],
+        ),
+      );
+      final ringsGenerated = generateGrammar(rings);
+      expect(emittedChain(ringsGenerated), isFalse);
+      expect(ringsGenerated.isComplete, isFalse);
+
+      final single = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'mix',
+              name: 'Mix',
+              color: const Color(0xFF2563EB),
+              values: const <String, num>{'Apple': 40, 'Pear': 60},
+            ),
+          ],
+        ),
+      );
+      final singleGenerated = generateGrammar(single);
+      expect(
+        emittedChain(singleGenerated),
+        isTrue,
+        reason:
+            'a NON-concentric donut carries its series colour; only the ring '
+            'path drops it. Blocked with: ${blockedReason(singleGenerated)}',
+      );
+      expect(singleGenerated.isComplete, isTrue);
+    });
+
     testWidgets('polar series whose category domains differ are refused by '
         'HYDRATION, before the emitter runs', (tester) async {
       // N geomPolar marks share ONE row list, so every polar series must have a
