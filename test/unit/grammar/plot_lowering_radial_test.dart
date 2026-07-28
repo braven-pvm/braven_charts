@@ -95,6 +95,20 @@ const customConcentric = ConcentricDonutConfig(
 Matcher throwsGrammarCode(GrammarDiagnosticCode code) =>
     throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
 
+/// The [GrammarSpecException] [action] raises, for tests that pin its SENTENCE
+/// rather than just its code.
+///
+/// A refusal's wording is the only thing the author who hit it ever reads, so
+/// where the sentence prescribes a remedy it is asserted, not assumed.
+GrammarSpecException _refusalOf(void Function() action) {
+  try {
+    action();
+  } on GrammarSpecException catch (error) {
+    return error;
+  }
+  fail('expected a GrammarSpecException, but nothing was thrown');
+}
+
 void main() {
   group('lowering plumbing', () {
     test(
@@ -1050,6 +1064,82 @@ void main() {
         )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
       );
+    });
+
+    test('the ringWeights refusal names the scheme that ACTUALLY ided the '
+        'rings', () {
+      // The remedy clause is the whole value of this diagnostic, and on a
+      // `ringIds` composition the '<markId>-<ringKey>' scheme is not the one in
+      // force — prescribing it would send the author back to the very key that
+      // just failed. The rings ARE listed by their real ids, so the sentence
+      // that explains where those ids came from has to agree with them.
+      final refusal = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'fruit-A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+      );
+      expect(refusal.code, GrammarDiagnosticCode.invalidConcentricComposition);
+      expect(refusal.message, contains('"current", "previous"'));
+      expect(refusal.message, contains('ringIds:'));
+      expect(refusal.message, isNot(contains(r"'<markId>-<ringKey>'")));
+
+      // The DEFAULT scheme keeps its own sentence, unchanged — this is a
+      // parameterisation, not a softening.
+      final generated = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+      );
+      expect(generated.message, contains('"fruit-A", "fruit-B"'));
+      expect(generated.message, contains(r"'<markId>-<ringKey>'"));
+      expect(generated.message, isNot(contains('ringIds:')));
+    });
+
+    test('the duplicate-id refusal names the ringIds scheme too', () {
+      // The other route into `invalidConcentricComposition` on a `ringIds`
+      // composition: two rings pointed at ONE id. The rings the sentence lists
+      // are the authored ones, so the scheme it names must be too.
+      final refusal = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'same', 'B': 'same'},
+            ),
+          ],
+        )).lower(),
+      );
+      expect(refusal.code, GrammarDiagnosticCode.invalidConcentricComposition);
+      expect(refusal.message, contains('must be unique'));
+      expect(refusal.message, contains('ringIds:'));
+      expect(refusal.message, isNot(contains(r"'<markId>-<ringKey>'")));
     });
 
     test('ringIds participates in DonutMark equality', () {
@@ -2839,6 +2929,82 @@ void main() {
               value: fruitCount,
               ring: fruitBasket,
               id: 'fruit',
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+      );
+    });
+
+    // ORDERING, pinned because `doc/chart_grammar.md`'s numbered radial list is
+    // read as a contract and had these two the wrong way round. The ring-map
+    // guards run on the BUCKET KEYS, immediately after bucketing and before any
+    // ring series is materialized, so a mis-keyed map is reported as the
+    // authoring mistake it is rather than behind whatever the rows happen to do
+    // — and a chart that is wrong BOTH ways reports the map first. Do not
+    // "correct" the code to the old prose: correct the prose.
+    const dupInsideRingA = <Fruit>[
+      Fruit(name: 'Apple', count: 30, basket: 'A'),
+      Fruit(name: 'Apple', count: 12, basket: 'A'),
+      Fruit(name: 'Pear', count: 20, basket: 'B'),
+    ];
+
+    test('a ringIds key naming no ring outranks a duplicate category inside a '
+        'ring', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupInsideRingA,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'a', 'B': 'b', 'Z': 'z'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unknownRingKey),
+      );
+    });
+
+    test(
+      'a PARTIAL ringIds map outranks a duplicate category inside a ring',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: dupInsideRingA,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                ring: fruitBasket,
+                id: 'fruit',
+                ringIds: <String, String>{'A': 'a'},
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.partialRingIds),
+        );
+      },
+    );
+
+    test('a duplicate category outranks a misdirected ringWeights key', () {
+      // The other side of the same ordering: `invalidConcentricComposition` is
+      // raised by the series-half guard, which runs only once every ring is
+      // materialized — so materialization's own diagnostic gets there first.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupInsideRingA,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'nope': 2},
+              ),
             ),
           ],
         )).lower(),

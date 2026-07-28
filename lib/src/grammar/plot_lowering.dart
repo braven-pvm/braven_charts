@@ -1190,14 +1190,18 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // pipeline validates: below two donut series the widget nulls the
         // config and lays a plain donut out, so refusing here would reject a
         // chart that renders. A ring weight naming no ring — the natural
-        // mistake, because the rings are ided `<markId>-<ringKey>` — is caught
-        // here instead of as a raw ArgumentError at widget mount.
+        // mistake, because the rings are ided `<markId>-<ringKey>` unless
+        // `ringIds` names them — is caught here instead of as a raw
+        // ArgumentError at widget mount. WHICH scheme ided them is passed
+        // along: the diagnostic's remedy clause has to prescribe the one in
+        // force, not the one that just failed.
         _guardConcentric(
           () => ConcentricDonutLayoutCalculator.validateSeries(
             rings,
             concentric!,
           ),
           ringIds: <String>[for (final ring in rings) ring.id],
+          explicitRingIds: mark.ringIds?.isNotEmpty ?? false,
         );
       }
     }
@@ -1244,10 +1248,13 @@ String _authorityDetail(ArgumentError error) {
 /// delegates to it and translates the raw `ArgumentError` into a named
 /// diagnostic, rather than restating (and eventually contradicting) its rules.
 /// [ringIds] is supplied for the series half, where naming the real ring ids is
-/// what makes a misdirected `ringWeights` key actionable.
+/// what makes a misdirected `ringWeights` key actionable, and
+/// [explicitRingIds] says which scheme produced them so the remedy clause
+/// prescribes the scheme this composition actually uses.
 void _guardConcentric(
   void Function() check, {
   Iterable<String> ringIds = const <String>[],
+  bool explicitRingIds = false,
 }) {
   try {
     check();
@@ -1255,6 +1262,7 @@ void _guardConcentric(
     throw GrammarSpecException.invalidConcentricComposition(
       _authorityDetail(error),
       ringIds: ringIds,
+      explicitRingIds: explicitRingIds,
     );
   }
 }

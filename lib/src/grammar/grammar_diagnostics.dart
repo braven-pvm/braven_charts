@@ -451,17 +451,29 @@ final class GrammarSpecException implements Exception {
   /// [ringIds] names the composition's lowered ring series when they are known,
   /// because `ringWeights` is keyed by those ids and the ring VALUE an author
   /// writes is not one of them.
+  ///
+  /// [explicitRingIds] says which scheme produced those ids, and the remedy
+  /// clause follows it. Naming `'<markId>-<ringKey>'` at a composition whose
+  /// rings were ided by `DonutMark.ringIds` would prescribe the very key that
+  /// just failed, so the sentence adapts rather than teaching one scheme to
+  /// every author — the same correction [unknownRingKey] already carries.
+  /// All-or-nothing is enforced upstream by [partialRingIds], so this really is
+  /// a binary: one scheme ided every ring in the composition.
   factory GrammarSpecException.invalidConcentricComposition(
     String detail, {
     Iterable<String> ringIds = const <String>[],
+    bool explicitRingIds = false,
   }) => GrammarSpecException(
     GrammarDiagnosticCode.invalidConcentricComposition,
     'The rings of this concentric donut share one pane, so its '
     'ConcentricDonutConfig must describe a layout every ring fits into. '
     '$detail'
     '${ringIds.isEmpty ? '' : " This composition's rings are "
-              '${_list(ringIds)} — geomDonut(ring:) ids each ring '
-              "'<markId>-<ringKey>', and ringWeights is keyed by that id."}',
+              '${_list(ringIds)} — '
+              '${explicitRingIds ? 'geomDonut(ringIds:) names each ring series '
+                        'id explicitly' : "geomDonut(ring:) ids each ring "
+                        "'<markId>-<ringKey>'"}'
+              ', and ringWeights is keyed by that id.'}',
   );
 
   /// A per-ring override map named a ring the data never produces.
