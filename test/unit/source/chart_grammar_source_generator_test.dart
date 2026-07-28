@@ -471,6 +471,64 @@ const List<ConcentricColorRow> concentricColorGrammarRows =
     ];
 
 // ---------------------------------------------------------------------------
+// PER-RING LABEL fixtures. A concentric composition whose rings carry DIFFERENT
+// `PieDataLabelConfig`s reverses to ONE base `dataLabels:` plus a
+// `dataLabelsByRing:` override map holding only the rings that DIFFER from the
+// base. The third ring is deliberately the family DEFAULT: against a
+// non-default base that is a real override, and an emitter that treated
+// "equals the default" as "nothing to write" would silently change the chart.
+// ---------------------------------------------------------------------------
+
+/// The base — ring 0's config, and therefore what `dataLabels:` emits.
+const outerRingLabels = PieDataLabelConfig(
+  position: PieDataLabelPosition.inside,
+  padding: 10,
+);
+
+/// A different NON-default config: projected into the override map.
+const middleRingLabels = PieDataLabelConfig(
+  content: PieDataLabelContent.category,
+  minimumShare: 0.2,
+);
+
+const List<RadialGrammarRow> concentricLabelGrammarRows = <RadialGrammarRow>[
+  RadialGrammarRow(ring: 'Outer', category: 'Subscriptions', value: 48),
+  RadialGrammarRow(ring: 'Outer', category: 'Services', value: 27),
+  RadialGrammarRow(ring: 'Middle', category: 'Subscriptions', value: 41),
+  RadialGrammarRow(ring: 'Middle', category: 'Services', value: 33),
+  RadialGrammarRow(ring: 'Inner', category: 'Subscriptions', value: 35),
+  RadialGrammarRow(ring: 'Inner', category: 'Services', value: 29),
+];
+
+/// `concentric_donut_page.dart`'s `hierarchy` label layout: the outer ring keeps
+/// the family default and every inner ring moves its labels inside and drops
+/// the percentage. This is the exact pair the pinned BLOCKER 3 test used.
+const hierarchyOuterLabels = PieDataLabelConfig(
+  position: PieDataLabelPosition.outside,
+  content: PieDataLabelContent.categoryAndPercentage,
+);
+
+const hierarchyInnerLabels = PieDataLabelConfig(
+  position: PieDataLabelPosition.inside,
+  content: PieDataLabelContent.category,
+);
+
+const List<RadialGrammarRow> hierarchyLabelGrammarRows = <RadialGrammarRow>[
+  RadialGrammarRow(
+    ring: 'Current period',
+    category: 'Subscriptions',
+    value: 48,
+  ),
+  RadialGrammarRow(ring: 'Current period', category: 'Services', value: 27),
+  RadialGrammarRow(
+    ring: 'Previous period',
+    category: 'Subscriptions',
+    value: 41,
+  ),
+  RadialGrammarRow(ring: 'Previous period', category: 'Services', value: 33),
+];
+
+// ---------------------------------------------------------------------------
 // MULTI-SERIES POLAR fixtures. A layered/grouped/stacked polar composition is
 // N `PolarColumnChartSeries` over ONE category domain plus a plot-level
 // `PolarChartConfig`; the chain reverses it to N `geomPolar` marks reading one
@@ -4240,6 +4298,236 @@ void main() {
       expect(generated.isComplete, isTrue);
     });
 
+    testWidgets('a concentric composition whose rings carry DIFFERENT '
+        'dataLabels emits dataLabelsByRing and round-trips', (tester) async {
+      // THREE rings, three label configs. Ring 0 fixes the base the mark's
+      // `dataLabels:` carries; the other two are projected into the override
+      // map because they differ from it.
+      //
+      // The Inner ring is the discriminating one: its config is EXACTLY the
+      // family default. Against a non-default base that is a real override, so
+      // the map has to write it. The single `dataLabels:` renderer elides a
+      // default config — correctly, because there "default" means "say
+      // nothing" — and reusing that behaviour inside the map would re-lower
+      // Inner with the base's `inside`/`padding: 10` labels, a different chart.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_labels_by_ring',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'dataLabels: PieDataLabelConfig(',
+          'position: PieDataLabelPosition.inside,',
+          'padding: 10.0,',
+          'dataLabelsByRing: {',
+          "'Inner': PieDataLabelConfig(",
+          "'Middle': PieDataLabelConfig(",
+          'content: PieDataLabelContent.category,',
+          'minimumShare: 0.2,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'revenue-Outer',
+              name: 'Outer',
+              values: const <String, num>{'Subscriptions': 48, 'Services': 27},
+              dataLabels: outerRingLabels,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Middle',
+              name: 'Middle',
+              values: const <String, num>{'Subscriptions': 41, 'Services': 33},
+              dataLabels: middleRingLabels,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Inner',
+              name: 'Inner',
+              values: const <String, num>{'Subscriptions': 35, 'Services': 29},
+              dataLabels: const PieDataLabelConfig(),
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(concentricLabelGrammarRows)
+            .geomDonut(
+              id: 'revenue',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              dataLabels: outerRingLabels,
+              dataLabelsByRing: const <String, PieDataLabelConfig>{
+                'Middle': middleRingLabels,
+                'Inner': PieDataLabelConfig(),
+              },
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+      // The BASE ring is not projected — it is already carried by `dataLabels:`,
+      // and repeating it would be noise the round trip cannot tell apart.
+      expect(generated.source, isNot(contains("'Outer': PieDataLabelConfig(")));
+      // Keys are SORTED, so the emitted text does not depend on ring order.
+      expect(
+        generated.source.indexOf("'Inner': PieDataLabelConfig("),
+        lessThan(generated.source.indexOf("'Middle': PieDataLabelConfig(")),
+      );
+    });
+
+    testWidgets('a concentric composition whose rings SHARE one dataLabels '
+        'emits no dataLabelsByRing at all', (tester) async {
+      // BYTE-IDENTITY GUARD for the uniform case: projecting only the rings
+      // that DIFFER from the base means a uniform composition allocates no
+      // override map, and an empty map must stay null rather than emit
+      // `dataLabelsByRing: {}`. Without this, every existing concentric chart's
+      // emitted text would change.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'revenue-Outer',
+                name: 'Outer',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+                dataLabels: outerRingLabels,
+              ),
+              DonutChartSeries.fromMap(
+                id: 'revenue-Inner',
+                name: 'Inner',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+                dataLabels: outerRingLabels,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isTrue);
+      expect(generated.warnings, isEmpty);
+      expect(generated.source, contains('dataLabels: PieDataLabelConfig('));
+      expect(generated.source, isNot(contains('dataLabelsByRing')));
+    });
+
+    testWidgets('the showcase concentric composition that used to be BLOCKER 3 '
+        'now emits and round-trips', (tester) async {
+      // CONVERTED from the pinned known-gap test
+      // "blocker 3: rings with DIFFERENT dataLabels are refused — one DonutMark
+      // carries one label config". That test asserted the REFUSAL of exactly
+      // this chart; this slice closes the gap, so the same chart is asserted to
+      // emit AND round-trip instead. The chart itself is unchanged from the
+      // pinned version — same ids, names, unit, values and the same `hierarchy`
+      // outer/inner label pair `concentric_donut_page.dart` builds — so the two
+      // are directly comparable.
+      //
+      // The outer ring's config IS the family default here, so it fixes a
+      // DEFAULT base that emits no `dataLabels:` at all and only the inner ring
+      // is projected — the mirror image of the three-ring case above, where a
+      // non-default base makes a default-valued ring the thing that must be
+      // written.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_hierarchy_labels',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'dataLabelsByRing: {',
+          "'Previous period': PieDataLabelConfig(",
+          'position: PieDataLabelPosition.inside,',
+          'content: PieDataLabelContent.category,',
+          "unit: 'USD'",
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'revenue-Current period',
+              name: 'Current period',
+              unit: 'USD',
+              values: const <String, num>{'Subscriptions': 48, 'Services': 27},
+              dataLabels: hierarchyOuterLabels,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Previous period',
+              name: 'Previous period',
+              unit: 'USD',
+              values: const <String, num>{'Subscriptions': 41, 'Services': 33},
+              dataLabels: hierarchyInnerLabels,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(hierarchyLabelGrammarRows)
+            .geomDonut(
+              id: 'revenue',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              unit: 'USD',
+              dataLabelsByRing: const <String, PieDataLabelConfig>{
+                'Previous period': hierarchyInnerLabels,
+              },
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+      // The base ring IS the family default, so nothing carries it — neither a
+      // `dataLabels:` argument nor an entry of its own.
+      expect(
+        generated.source,
+        isNot(contains('dataLabels: PieDataLabelConfig')),
+      );
+      expect(
+        generated.source,
+        isNot(contains("'Current period': PieDataLabelConfig(")),
+      );
+
+      // CONTROL, kept verbatim in intent from the converted test: the same two
+      // rings sharing ONE label config still emit, so what changed is the
+      // handling of rings that DISAGREE — and a uniform composition emits no
+      // `dataLabelsByRing` at all.
+      final uniform = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'revenue-Current period',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+                dataLabels: hierarchyOuterLabels,
+              ),
+              DonutChartSeries.fromMap(
+                id: 'revenue-Previous period',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+                dataLabels: hierarchyOuterLabels,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(uniform), isTrue);
+      expect(uniform.warnings, isEmpty);
+      expect(uniform.source, contains('ring: (row) => row.ring,'));
+      expect(uniform.source, isNot(contains('dataLabelsByRing')));
+    });
+
     testWidgets('the showcase donut that used to be BLOCKER 2 now emits and '
         'round-trips; without colours it emits no sliceColor at all', (
       tester,
@@ -5743,9 +6031,14 @@ void main() {
   //      `sliceColor` channel of their own, mirroring `PolarMark.columnColor`,
   //      and the emitter reverses it. Its pinned refusal test was CONVERTED
   //      into a round-trip acceptance test (see below) rather than deleted.
-  //   3. PER-RING DATA LABELS. The concentric page's `hierarchy` label layout
-  //      gives the outer and inner rings DIFFERENT `PieDataLabelConfig`s, and
-  //      one `DonutMark` carries one `dataLabels` for every ring.
+  //   3. PER-RING DATA LABELS — **CLOSED**. The concentric page's `hierarchy`
+  //      label layout gives the outer and inner rings DIFFERENT
+  //      `PieDataLabelConfig`s; `DonutMark` now carries a `dataLabelsByRing`
+  //      override map beside its base `dataLabels`, the emitter projects the
+  //      rings that differ from the base, and a new UNCONDITIONAL seam writes
+  //      the map (an entry equal to the family default is a real override).
+  //      Its pinned refusal test was CONVERTED into a round-trip acceptance
+  //      test (see below) rather than deleted.
   //   4. THE DONUT CENTRE — **CLOSED**. `_markCenter` used to rebuild the
   //      centre from four fields and drop `labelStyle` / `valueStyle` /
   //      `valueFormatter`; it now carries the captured centre VERBATIM, and
@@ -5819,77 +6112,14 @@ void main() {
     // emission and a full round trip instead of the refusal, plus the
     // byte-identity control that a colourless donut emits no `sliceColor`.
 
-    testWidgets('blocker 3: rings with DIFFERENT dataLabels are refused — one '
-        'DonutMark carries one label config', (tester) async {
-      // `concentric_donut_page.dart`'s `hierarchy` label layout gives the
-      // outer ring `outside`/`categoryAndPercentage` and every inner ring
-      // `inside`/`category` (`_buildDataLabels`). The ring channel splits ONE
-      // mark into N series, so all N get the mark's single `dataLabels`, and
-      // the ring that disagrees is named.
-      Future<ChartGeneratedSource> generateFor({
-        required PieDataLabelConfig outer,
-        required PieDataLabelConfig inner,
-      }) async => generateGrammar(
-        await snapshotOf(
-          tester,
-          (controller) => BravenChartPlus(
-            bravenChartController: controller,
-            series: <ChartSeries>[
-              DonutChartSeries.fromMap(
-                id: 'revenue-Current period',
-                name: 'Current period',
-                unit: 'USD',
-                values: const <String, num>{
-                  'Subscriptions': 48,
-                  'Services': 27,
-                },
-                dataLabels: outer,
-              ),
-              DonutChartSeries.fromMap(
-                id: 'revenue-Previous period',
-                name: 'Previous period',
-                unit: 'USD',
-                values: const <String, num>{
-                  'Subscriptions': 41,
-                  'Services': 33,
-                },
-                dataLabels: inner,
-              ),
-            ],
-          ),
-        ),
-      );
-
-      const hierarchyOuter = PieDataLabelConfig(
-        position: PieDataLabelPosition.outside,
-        content: PieDataLabelContent.categoryAndPercentage,
-      );
-      const hierarchyInner = PieDataLabelConfig(
-        position: PieDataLabelPosition.inside,
-        content: PieDataLabelContent.category,
-      );
-
-      final refused = await generateFor(
-        outer: hierarchyOuter,
-        inner: hierarchyInner,
-      );
-      expect(emittedChain(refused), isFalse);
-      expect(refused.isComplete, isFalse);
-      expect(
-        blockedReason(refused),
-        contains('does not reproduce series "revenue-Previous period" exactly'),
-      );
-
-      // CONTROL: the same two rings sharing ONE label config emit, so the
-      // refusal is about the rings DISAGREEING, not about `dataLabels` itself.
-      final emitted = await generateFor(
-        outer: hierarchyOuter,
-        inner: hierarchyOuter,
-      );
-      expect(emittedChain(emitted), isTrue);
-      expect(emitted.warnings, isEmpty);
-      expect(emitted.source, contains('ring: (row) => row.ring,'));
-    });
+    // BLOCKER 3 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
+    // into "the showcase concentric composition that used to be BLOCKER 3 now
+    // emits and round-trips" in the `showcase-representative radial series
+    // config emits` group — same chart, same ids/names/unit/values and the same
+    // `hierarchy` outer/inner label pair, now asserting emission and a full
+    // round trip instead of the refusal, and keeping the original CONTROL arm
+    // (two rings sharing ONE config) as the byte-identity guard that a uniform
+    // composition emits no `dataLabelsByRing` at all.
 
     // BLOCKER 4 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
     // into "the showcase donut centre that used to be BLOCKER 4 now emits and

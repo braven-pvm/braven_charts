@@ -235,6 +235,24 @@ class ChartConfigDartEmitter {
     int seriesIndex,
   ) => _emitRadialLabels(writer, labels, seriesIndex);
 
+  /// Writes `dataLabelsByRing: {...}` for the grammar's per-ring override map.
+  ///
+  /// UNCONDITIONAL, unlike [emitRadialLabels]: it writes EVERY entry it is
+  /// given, including one that equals the family default. In a map keyed
+  /// against a base config, "equal to the default" is a meaningful override —
+  /// the ring is asking NOT to inherit the base — so eliding it would emit a
+  /// different chart. Only an empty map writes nothing, and the caller is
+  /// expected to pass null rather than an empty map anyway.
+  ///
+  /// Every entry is rendered by the SAME `PieDataLabelConfig(...)` renderer
+  /// [emitRadialLabels] uses, so the two forms cannot disagree about a field,
+  /// its order or its default. Keys are sorted so the emitted source does not
+  /// depend on ring order.
+  void emitRadialLabelsByRing(
+    DartSourceWriter writer,
+    Map<String, PieDataLabelConfig> byRing,
+  ) => _emitRadialLabelsByRing(writer, byRing);
+
   /// Writes `<argument>: PolarColumnStyle(...)`, the field body the polar
   /// geometry verb (`geomPolar`) hands to its `style:` argument. Writes nothing
   /// for a default style (unless `includeDefaultValues`).
@@ -4012,7 +4030,41 @@ class ChartConfigDartEmitter {
     if (!options.includeDefaultValues && labels == const PieDataLabelConfig()) {
       return;
     }
-    writer.writeLine('dataLabels: PieDataLabelConfig(');
+    _emitRadialLabelConfig(writer, 'dataLabels', labels);
+    if (labels.valueFormatter != null || labels.percentageFormatter != null) {
+      _warn(
+        code: ChartSourceWarningCodes.runtimeValueOmitted,
+        message:
+            'Radial label formatter callbacks were omitted. Provide them from your application.',
+        path: '\$.series[$seriesIndex].style.dataLabels',
+      );
+    }
+  }
+
+  /// Writes one `<argument>: PieDataLabelConfig(...)` literal in full — opener,
+  /// every field, and the closing `),`.
+  ///
+  /// UNCONDITIONAL: the caller decides whether a config is worth writing at all
+  /// and records any formatter-omission warning, because the two callers differ
+  /// on both counts. [_emitRadialLabels] elides a default config and reports
+  /// against a series path; [_emitRadialLabelsByRing] writes every entry it is
+  /// given (inside an override map a default-valued entry is meaningful) and
+  /// names the ring.
+  ///
+  /// [argument] is written verbatim before the colon, so it is either a plain
+  /// name (`dataLabels`) or an already-quoted map key (`'Previous period'`).
+  ///
+  /// Extracted so the two forms share ONE field list and cannot drift apart on
+  /// a field, its order or its default — and deliberately extracted WHOLE
+  /// rather than as a bare field body, so `test/meta/source_emitter_drift_test`
+  /// still sees a `PieDataLabelConfig(` … `),` construction block to attribute
+  /// the class's 16 properties to.
+  void _emitRadialLabelConfig(
+    DartSourceWriter writer,
+    String argument,
+    PieDataLabelConfig labels,
+  ) {
+    writer.writeLine('$argument: PieDataLabelConfig(');
     writer.indented(() {
       _valueIf(writer, 'isVisible', labels.isVisible, defaultValue: true);
       _enumIf(
@@ -4076,14 +4128,36 @@ class ChartConfigDartEmitter {
       }
     });
     writer.writeLine('),');
-    if (labels.valueFormatter != null || labels.percentageFormatter != null) {
-      _warn(
-        code: ChartSourceWarningCodes.runtimeValueOmitted,
-        message:
-            'Radial label formatter callbacks were omitted. Provide them from your application.',
-        path: '\$.series[$seriesIndex].style.dataLabels',
-      );
-    }
+  }
+
+  void _emitRadialLabelsByRing(
+    DartSourceWriter writer,
+    Map<String, PieDataLabelConfig> byRing,
+  ) {
+    if (byRing.isEmpty) return;
+    final keys = byRing.keys.toList()..sort();
+    writer.writeLine('dataLabelsByRing: {');
+    writer.indented(() {
+      for (final key in keys) {
+        final labels = byRing[key]!;
+        _emitRadialLabelConfig(
+          writer,
+          DartSourceWriter.stringLiteral(key),
+          labels,
+        );
+        if (labels.valueFormatter != null ||
+            labels.percentageFormatter != null) {
+          _warn(
+            code: ChartSourceWarningCodes.runtimeValueOmitted,
+            message:
+                'Radial label formatter callbacks were omitted for ring "$key". '
+                'Provide them from your application.',
+            path: r'$.series[*].style.dataLabels',
+          );
+        }
+      }
+    });
+    writer.writeLine('},');
   }
 
   void _emitPieGradient(DartSourceWriter writer, PieGradientStyle style) {

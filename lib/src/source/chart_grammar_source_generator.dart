@@ -119,6 +119,7 @@ import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
@@ -1138,6 +1139,21 @@ class _GrammarChainEmitter {
         ? const ConcentricDonutConfig()
         : ConcentricDonutConfig(centerContent: center);
     final carriesConfig = fromCenter != captured;
+    // ONE mark splits into N ring series, so the label config is carried as a
+    // base plus overrides: ring 0 fixes `dataLabels`, and only the rings whose
+    // config DIFFERS from it are projected into `dataLabelsByRing`. A uniform
+    // composition therefore builds an EMPTY map, which is kept as null below so
+    // it emits exactly the text it emitted before this channel existed.
+    //
+    // An override that happens to EQUAL the family default is still projected:
+    // "same as the default" and "same as the base" are different facts, and
+    // only the second one means the ring needs no entry.
+    final baseLabels = donuts.first.dataLabels;
+    final labelsByRing = <String, PieDataLabelConfig>{
+      for (final donut in donuts)
+        if (donut.dataLabels != baseLabels)
+          (donut.name ?? ''): donut.dataLabels,
+    };
     return _RadialPlan(
       kind: _RadialKind.concentric,
       verb: 'geomDonut',
@@ -1154,10 +1170,11 @@ class _GrammarChainEmitter {
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
       // deliberately left null here. The mark carries ONE unit / style /
-      // selection / dataLabels / slice-config set applied to EVERY ring (that is
-      // how `_lowerConcentricRings` lowers), so the first ring's config is used;
+      // selection / slice-config set applied to EVERY ring (that is how
+      // `_lowerConcentricRings` lowers), so the first ring's config is used;
       // rings whose config differs are caught by the round-trip proof (each
-      // lowered ring must match), never silently flattened.
+      // lowered ring must match), never silently flattened. `dataLabels` is the
+      // exception: it has a per-ring override channel, projected above.
       mark: DonutMark<_SourceRow>(
         id: markId,
         unit: donuts.first.unit,
@@ -1170,7 +1187,8 @@ class _GrammarChainEmitter {
         selectionStyle: donuts.first.selectionStyle,
         center: carriesConfig ? null : center,
         concentric: carriesConfig ? captured : null,
-        dataLabels: donuts.first.dataLabels,
+        dataLabels: baseLabels,
+        dataLabelsByRing: labelsByRing.isEmpty ? null : labelsByRing,
         sliceRadiusConfig: donuts.first.sliceRadiusConfig,
         sliceGroupingConfig: donuts.first.sliceGroupingConfig,
       ),
@@ -2764,6 +2782,16 @@ class _GrammarChainEmitter {
           }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
+          }
+          // The per-ring overrides ride straight after their base, in the
+          // `geomDonut` signature's order. The planner only builds this map for
+          // rings that DIFFER from the base and keeps an empty one as null, so
+          // a uniform-label composition reaches here with nothing to write and
+          // emits exactly the text it emitted before. The seam itself is
+          // UNCONDITIONAL: an entry equal to the family default is a real
+          // override against a non-default base.
+          if (mark.dataLabelsByRing case final byRing?) {
+            _config.emitRadialLabelsByRing(writer, byRing);
           }
           if (mark.sliceRadiusConfig != null) {
             _config.emitSliceRadiusConfig(writer, mark.sliceRadiusConfig!, 0);
