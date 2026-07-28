@@ -74,6 +74,12 @@ Color? crossRingSliceColor(Fruit row) => switch ((row.basket, row.name)) {
   _ => null,
 };
 
+// Per-ring data-label fixtures. Top-level so the marks stay const. The BASE is
+// itself non-default, so a resolution that fell back to the family default
+// (rather than to `dataLabels`) fails on the unlisted ring too.
+const insideLabels = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+const hiddenLabels = PieDataLabelConfig(isVisible: false);
+
 /// A ConcentricDonutConfig whose every field differs from the default, so a
 /// passthrough that quietly drops one cannot masquerade as success.
 const customConcentric = ConcentricDonutConfig(
@@ -779,6 +785,59 @@ void main() {
       expect(series.centerContent, const DonutCenterContent(label: 'Total'));
     });
 
+    test('a single-ring collapse still honours its per-ring label override', () {
+      // One distinct ring key only, so the composition collapses to a single
+      // donut. That branch does not build its series the way the multi-ring
+      // branch does, so it is a separate regression risk and gets its own test.
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.dataLabels.isVisible, isFalse);
+      expect(series.dataLabels, hiddenLabels);
+    });
+
+    test('per-ring label overrides reach each ring; unlisted rings take the '
+        'mark base', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            dataLabels: insideLabels,
+            dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
+          ),
+        ],
+      )).lower();
+
+      // Ring A is overridden; ring B is unlisted and must take `dataLabels` —
+      // NOT the family default, which `insideLabels` is deliberately not.
+      final rings = lowered.series.cast<DonutChartSeries>();
+      expect(rings.map((r) => r.name), ['A', 'B']);
+      expect(rings.first.dataLabels.isVisible, isFalse);
+      expect(rings.first.dataLabels, hiddenLabels);
+      expect(rings.last.dataLabels.position, PieDataLabelPosition.inside);
+      expect(rings.last.dataLabels, insideLabels);
+    });
+
     test(
       'a genuine multi-value ring keeps center on the config (no regression)',
       () {
@@ -1006,6 +1065,61 @@ void main() {
       expect(failure.code, GrammarDiagnosticCode.invalidConcentricComposition);
       expect(failure.message, contains('"A"'));
       expect(failure.message, contains('fruit-A'));
+    });
+
+    test('a dataLabelsByRing key naming no ring is refused by name', () {
+      // The mirror of the ringWeights mistake, in the other direction: the
+      // override map is keyed by the BARE ring value, so the series id
+      // 'fruit-A' names nothing. Left unchecked the entry is simply inert — it
+      // applies to no ring and reports nothing — so the typo would survive into
+      // the rendered chart.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{
+                'fruit-A': hiddenLabels,
+              },
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.unknownRingKey);
+      expect(failure.message, contains('"fruit-A"'));
+      expect(failure.message, contains('dataLabelsByRing'));
+      // The real ring keys are named, so the fix is readable off the message.
+      expect(failure.message, contains('"A"'));
+      expect(failure.message, contains('"B"'));
+    });
+
+    test('every dataLabelsByRing key naming a real ring lowers clean', () {
+      // The guard must not fire on the legitimate shape, and an empty override
+      // map must stay a no-op rather than a refusal.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
     });
 
     test('concentric plus center raises conflictingConcentricCenter', () {

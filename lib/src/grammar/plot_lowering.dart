@@ -1129,6 +1129,11 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // series is present, so the lone ring must carry the mark's center on
         // itself — exactly like the ring-less donut path — or the center is
         // silently hidden.
+        //
+        // The center is the ONLY thing this branch overrides. Everything else,
+        // per-ring data labels included, is already resolved for this ring key
+        // by [_lowerConcentricRings]; re-stating any of it here would fork the
+        // collapse away from the composition it collapsed from.
         series.add(
           rings.single.copyWith(
             centerContent: center ?? DonutCenterContent.hidden,
@@ -1464,6 +1469,13 @@ DonutChartSeries _lowerDonut<T>(
 /// builds one `DonutChartSeries` per ring. The shared center is carried by the
 /// composition's `ConcentricDonutConfig`, so each ring donut's own center is
 /// hidden.
+///
+/// Per-ring data labels resolve here, which is what makes the single-ring
+/// COLLAPSE honor an override too: `_lowerRadial` builds that lone donut from
+/// this function's output and only `copyWith`s the center onto it, so the
+/// resolution below is the one authority for both concentric paths. Keep it
+/// that way — resolving at the call site instead would leave the collapse
+/// branch on the base config.
 List<DonutChartSeries> _lowerConcentricRings<T>(
   DonutMark<T> mark,
   String markId,
@@ -1479,6 +1491,23 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
           return <T>[];
         })
         .add(row);
+  }
+  // An override keyed to a ring this data never produces is INERT: it applies
+  // to nothing and reports nothing, so the typo survives into the rendered
+  // chart. It is checked against the ACTUAL ring keys, which is why it lives
+  // here — below the emptyData guard — instead of with the shape-decidable
+  // checks in [_lowerRadial].
+  final unknownRings = <String>[
+    for (final key in mark.dataLabelsByRing?.keys ?? const <String>[])
+      if (!buckets.containsKey(key)) key,
+  ];
+  if (unknownRings.isNotEmpty) {
+    throw GrammarSpecException.unknownRingKey(
+      markId,
+      'dataLabelsByRing',
+      unknownRings,
+      order,
+    );
   }
   return <DonutChartSeries>[
     for (final key in order)
@@ -1498,7 +1527,10 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
         donutStyle: mark.style ?? const DonutChartStyle(),
         selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
         centerContent: DonutCenterContent.hidden,
-        dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+        dataLabels:
+            mark.dataLabelsByRing?[key] ??
+            mark.dataLabels ??
+            const PieDataLabelConfig(),
       ),
   ];
 }

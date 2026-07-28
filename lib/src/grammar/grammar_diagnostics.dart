@@ -113,6 +113,11 @@ enum GrammarDiagnosticCode {
   /// or misdirected ring weight, or an unrenderable shared center.
   invalidConcentricComposition,
 
+  /// A concentric donut's per-ring override map (such as `dataLabelsByRing`)
+  /// is keyed to a ring the `ring` channel never produces, so the entry would
+  /// be silently inert.
+  unknownRingKey,
+
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
   axisOptionOnRadialSpec,
@@ -447,6 +452,29 @@ final class GrammarSpecException implements Exception {
     '${ringIds.isEmpty ? '' : " This composition's rings are "
               '${_list(ringIds)} — geomDonut(ring:) ids each ring '
               "'<markId>-<ringKey>', and ringWeights is keyed by that id."}',
+  );
+
+  /// A per-ring override map named a ring the data never produces.
+  ///
+  /// [markId] names the geomDonut mark, [parameter] the map that carries the
+  /// bad key (`dataLabelsByRing`), [unknownKeys] the keys that match nothing
+  /// and [ringKeys] the ring keys the data actually produced. Naming both sides
+  /// is the point: the override is keyed by the BARE ring value, and an author
+  /// who reached for the `'<markId>-<ringKey>'` series id that
+  /// `ConcentricDonutConfig.ringWeights` is keyed by sees the difference at
+  /// once.
+  factory GrammarSpecException.unknownRingKey(
+    String markId,
+    String parameter,
+    Iterable<String> unknownKeys,
+    Iterable<String> ringKeys,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.unknownRingKey,
+    'The donut mark "$markId" keyed $parameter to ${_list(unknownKeys)}, but '
+    'its ring channel produced no such ring, so the entry would apply to '
+    'nothing and change nothing. This composition\'s rings are '
+    '${_list(ringKeys)}; $parameter is keyed by that bare ring value, not by '
+    'the "<markId>-<ringKey>" series id ringWeights is keyed by.',
   );
 
   /// A Cartesian axis/grid option was set on a radial spec.
