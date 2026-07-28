@@ -776,10 +776,13 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     `example/test/showcase/`. `concentric_donut_page.dart` and the selection
     lab's concentric family emit **complete, warning-free** chains;
     `pie_charts_page.dart` and `donut_charts_page.dart` emit with
-    `isComplete == false`, each because of a live formatter callback that has
-    no literal form (the pie's radial label formatters, the donut's centre
-    `valueFormatter`) — the established contract for runtime values, not a
-    degradation.
+    `isComplete == false`, because of live formatter callbacks that have no
+    literal form — the established contract for runtime values, not a
+    degradation. The counts differ and each gate pins its own whole warning
+    set: the pie carries **one** `runtimeValueOmitted`, covering the two
+    radial label formatters it binds; the donut carries **two** — one for the
+    `valueFormatter` on its centre and one covering the two radial label
+    formatters — leaving three placeholder comments in the chain.
   - **All four mounted-page gates COMPILE the chain they assert on**, through
     the same `dart format` + `dart analyze` harness
     (`test/helpers/generated_source_compile.dart`) the polar gate uses. That is
@@ -805,8 +808,8 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     say the one remaining precondition was that no ring carry a centre of its
     own. That was false. `DonutMark` holds ONE `style`, ONE `selectionStyle`,
     ONE `unit`, ONE `sliceRadiusConfig` and ONE `sliceGroupingConfig` for the
-    WHOLE composition, and `_lowerDonutRings`
-    (`lib/src/grammar/plot_lowering.dart:1596`) stamps each of them onto every
+    WHOLE composition, and `_lowerConcentricRings`
+    (`lib/src/grammar/plot_lowering.dart:1524`) stamps each of them onto every
     ring — and, unlike the single-donut `_lowerDonut` beside it, never passes
     `mark.color` at all. So a concentric composition emits only when every
     ring:

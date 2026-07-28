@@ -53,7 +53,9 @@ The emitter projects only rings whose labels **differ from the base**, so unifor
 
 Stop reconstructing the centre. **Carry the captured `DonutCenterContent` verbatim** onto `DonutMark.center` — exactly how `dataLabels` is already carried — and replace `_emitDonutCenter` with the shared full-fidelity renderer the **concentric** path already uses (`_emitConcentricCenterContent`), parameterised on the argument name (`center:` vs `centerContent:`). That renderer emits `labelStyle` and `valueStyle` and degrades a `valueFormatter` to a `// valueFormatter:` placeholder plus a `runtimeValueOmitted` warning.
 
-Result: `DonutChartsPage` emits with `isComplete == false` for the formatter — the acceptance bar agreed above. It also un-refuses the page's `compact`/`accent` centre presets, which set non-null `LabelStyle`s and would still refuse after a formatter-only fix.
+Result: `DonutChartsPage` emits with `isComplete == false` — the acceptance bar agreed above. It also un-refuses the page's `compact`/`accent` centre presets, which set non-null `LabelStyle`s and would still refuse after a formatter-only fix.
+
+> **Correction, recorded after running the generator on the mounted page.** "For the formatter", singular, was wrong, and this section, the acceptance gate's own name and four prose sites all repeated it. The page trips **two** `runtimeValueOmitted` warnings, not one: `$.series[0].style.centerContent.valueFormatter` (the centre, which is the one this section is about) and `$.series[0].style.dataLabels` (the page's radial data labels bind BOTH a `valueFormatter` and a `percentageFormatter`, and one warning covers the pair). The chain therefore carries **three** placeholder comments. The gate now pins the whole warning set — codes AND paths — so a third omission fails it.
 
 ### D. Ring identity
 
@@ -83,9 +85,9 @@ Result: `DonutChartsPage` emits with `isComplete == false` for the formatter —
 ## Slices (each independently testable, each ends green)
 
 1. **`sliceColor` channel** — mark + builder + lowering (pie, donut, concentric buckets) + emitter; family-aware loss detail; convert the pinned blocker-2 test to an acceptance case; add refusals for `scatterMarkerShape`, bare `PointStyle()`, and mixed colour-only/size-only; partial-colouring and per-ring-colour cases.
-2. **Donut centre parity** — carry the captured centre verbatim; swap `_emitDonutCenter` for the shared renderer. **`DonutChartsPage` DONE** (mounted-page assertion; `isComplete == false` with the formatter warning).
+2. **Donut centre parity** — carry the captured centre verbatim; swap `_emitDonutCenter` for the shared renderer. **`DonutChartsPage` DONE** (mounted-page assertion; `isComplete == false` with **two** `runtimeValueOmitted` warnings — the centre formatter and the radial label formatters — pinned as a whole set).
 3. **`dataLabelsByRing`** — mark field, `geomDonut` param, both lowering paths incl. the single-ring collapse, unknown-key diagnostic, override projection, the unconditional sorted-key seam; convert the pinned blocker-3 test.
-4. **Ring identity** — D1 rename (atomic with `ringWeights`) + D2 `ringIds` map and diagnostics. **`ConcentricDonutPage` and the selection showcase DONE.**
+4. **Ring identity** — D1 rename (atomic with `ringWeights`) + D2 `ringIds` map and diagnostics. **`ConcentricDonutPage` and the selection showcase DONE — by D1.** Both pages now conform, so neither emits `ringIds:` and both gates assert it is ABSENT; D2 is the carry for compositions that did not conform, exercised by the emitter round-trip tests.
 5. **Close the gap in prose** — docs, matrix, acceptance gate, roadmap; BC-0032 evidence and status.
 
 Serialised, not parallel: slices 1, 3 and 4 all touch `mark.dart`, `plot_lowering.dart` and the two emitters.
@@ -94,7 +96,7 @@ Serialised, not parallel: slices 1, 3 and 4 all touch `mark.dart`, `plot_lowerin
 
 - **Round-trip per blocker:** a pie/donut with per-slice colours; with colours *and* variable radius; with partial colouring; a concentric chart with divergent per-ring labels; a donut with a styled centre; a concentric chart with arbitrary ring ids via `ringIds`.
 - **Honest refusals, each pinned:** `scatterMarkerShape`/`scatterMarkerStyle`, bare `const PointStyle()`, mixed colour-only/size-only, unknown/partial `ringIds` keys.
-- **Mounted-page acceptance:** `ConcentricDonutPage`, `DonutChartsPage` and the selection showcase's concentric family each mounted, their live documents generated, asserted to emit — with `DonutChartsPage` asserted at `isComplete == false` naming the formatter.
+- **Mounted-page acceptance:** `ConcentricDonutPage`, `DonutChartsPage` and the selection showcase's concentric family each mounted, their live documents generated, asserted to emit — with `DonutChartsPage` asserted at `isComplete == false` naming **both** omissions (centre formatter, radial label formatters) as a whole warning set rather than a `contains`.
 - **No regression:** Cartesian/polar/pie and uniform-label/default-centre radial emission byte-identical; drift gates green; the fidelity guard stays mutation-killing.
 
 ## Files

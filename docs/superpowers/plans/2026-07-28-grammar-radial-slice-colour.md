@@ -518,6 +518,8 @@ testWidgets('ACCEPTANCE: the real DonutChartsPage emits', (tester) async {
 
 If it does not emit, diagnose the real gap and fix it — do **not** weaken the assertion.
 
+> **As delivered, stronger than this sketch.** Running the generator on the mounted page showed **two** `runtimeValueOmitted` warnings, not one: the centre's `valueFormatter` (`$.series[0].style.centerContent.valueFormatter`) and the page's radial data-label formatters (`$.series[0].style.dataLabels`, covering both a `valueFormatter` and a `percentageFormatter`). The `contains` above would have passed while naming only half of that, so `example/test/showcase/donut_charts_page_grammar_test.dart` pins the whole warning set — codes AND paths — and asserts each of the three resulting placeholder comments in the argument it belongs to.
+
 - [ ] **Step 7: Full suite + drift gates + both analyzes, then commit**
 
 ```bash

@@ -6418,10 +6418,11 @@ void main() {
     // was false, and nothing failed when it went stale. `DonutMark` holds ONE
     // `style`, `selectionStyle`, `unit`, `sliceRadiusConfig` and
     // `sliceGroupingConfig` for the WHOLE composition, and
-    // `_lowerDonutRings` (`plot_lowering.dart:1596`) stamps each of them onto
-    // every ring — and, unlike the single-donut `_lowerDonut` beside it, never
-    // passes `mark.color` at all. So SIX further preconditions exist, every one
-    // of them reachable by an author writing ordinary config-form Dart.
+    // `_lowerConcentricRings` (`plot_lowering.dart:1524`) stamps each of them
+    // onto every ring — and, unlike the single-donut `_lowerDonut` beside it,
+    // never passes `mark.color` at all. So SIX further preconditions exist,
+    // every one of them reachable by an author writing ordinary config-form
+    // Dart.
     //
     // These tests are the gate on that list. They assert the BOUNDARY, not the
     // implementation: the fix for any of them would be a mark field, which is
@@ -6596,11 +6597,12 @@ void main() {
 
     testWidgets('ANY per-ring series colour is refused — even when every ring '
         'carries the SAME one', (tester) async {
-      // Not a divergence at all: `_lowerDonutRings` never passes `mark.color`,
-      // so no concentric ring can carry a series colour. The single-donut path
-      // beside it DOES (`_lowerDonut` passes `color: mark.color`), which is why
-      // this is a ring precondition and not a donut one — the control below
-      // proves the difference rather than asserting it.
+      // Not a divergence at all: `_lowerConcentricRings` never passes
+      // `mark.color`, so no concentric ring can carry a series colour. The
+      // single-donut path beside it DOES (`_lowerDonut` passes
+      // `color: mark.color`), which is why this is a ring precondition and not
+      // a donut one — the control below proves the difference rather than
+      // asserting it.
       final rings = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
