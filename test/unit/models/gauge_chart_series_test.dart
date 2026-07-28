@@ -236,6 +236,7 @@ void main() {
           tickWidth: 2,
           tickLength: 14,
           tickPosition: GaugeTickPosition.inside,
+          tickGap: 8,
           minorTickWidth: 1.5,
           minorTickLength: 6,
           labelPosition: GaugeScaleLabelPosition.outside,
@@ -263,6 +264,7 @@ void main() {
       expect(config.copyWith(showZones: false).showZones, isFalse);
       expect(config.copyWith().scale.tickLength, 14);
       expect(config.minorTicksPerInterval, 4);
+      expect(config.scale.tickGap, 8);
       expect(config.zones.gap, 3);
       expect(config.references.showLabelPanel, isTrue);
     });
@@ -311,6 +313,12 @@ void main() {
       expect(
         const GaugeChartConfig(
           scale: GaugeScaleStyle(labelOffset: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(
+          scale: GaugeScaleStyle(tickGap: -1),
         ).validate,
         throwsArgumentError,
       );

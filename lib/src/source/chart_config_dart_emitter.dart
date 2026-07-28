@@ -3645,6 +3645,7 @@ class ChartConfigDartEmitter {
             config.scale.tickPosition.name,
             defaultName: GaugeTickPosition.centered.name,
           );
+          _numberIf(writer, 'tickGap', config.scale.tickGap, 0);
           _optionalColor(writer, 'minorTickColor', config.scale.minorTickColor);
           _numberIf(writer, 'minorTickWidth', config.scale.minorTickWidth, 1);
           _numberIf(writer, 'minorTickLength', config.scale.minorTickLength, 5);

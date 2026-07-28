@@ -177,6 +177,7 @@ const GaugeChartConfig(
   minorTicksPerInterval: 4,
   scale: GaugeScaleStyle(
     tickPosition: GaugeTickPosition.inside,
+    tickGap: 12,
     minorTickWidth: 1,
     minorTickLength: 5,
     labelPosition: GaugeScaleLabelPosition.outside,
@@ -192,7 +193,9 @@ const GaugeChartConfig(
 `tickCount` always counts labelled major ticks. Each major interval receives
 the requested minor ticks, so the example above paints 9 major and 32 minor
 marks. `inside`, `centered`, and `outside` are semantic placements relative to
-the pane boundary; they do not require fragile signed offsets.
+the rendered axis band. Inside and outside ticks can use `tickGap` for a clear
+edge-to-edge rail separation; centered ticks retain the established outer-edge
+split and ignore that gap.
 
 `GaugeZoneStyle` changes only the visual presentation of operational zones.
 Its gap, corner radius, opacity, border colour, and border width are portable;

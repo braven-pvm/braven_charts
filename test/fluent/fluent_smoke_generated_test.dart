@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1804 verbs total; 10 of them have an argument type with no
+// 1805 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -3146,7 +3146,7 @@ void _smokeGaugeCenterConfig(_Verb verb, GaugeCenterConfig subject) {
   );
 }
 
-/// Smoke coverage for [GaugeScaleStyle]'s 16 executable verb(s).
+/// Smoke coverage for [GaugeScaleStyle]'s 17 executable verb(s).
 void _smokeGaugeScaleStyle(_Verb verb, GaugeScaleStyle subject) {
   verb(
     'GaugeScaleStyleFluent.withTickColor',
@@ -3167,6 +3167,7 @@ void _smokeGaugeScaleStyle(_Verb verb, GaugeScaleStyle subject) {
     'GaugeScaleStyleFluent.withTickPosition',
     () => subject.withTickPosition(GaugeTickPosition.centered),
   );
+  verb('GaugeScaleStyleFluent.withTickGap', () => subject.withTickGap(0));
   verb(
     'GaugeScaleStyleFluent.withMinorTickColor',
     () => subject.withMinorTickColor(const Color(0xFF2196F3)),

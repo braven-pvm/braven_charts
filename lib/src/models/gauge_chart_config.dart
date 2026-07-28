@@ -6,9 +6,10 @@ import 'package:flutter/widgets.dart' show FontWeight;
 import '../meta/chart_surface.dart';
 import 'polar_chart_config.dart';
 
-/// Radial placement of Gauge tick marks relative to the pane's outer radius.
+/// Radial placement of Gauge tick marks relative to the Gauge axis band.
 enum GaugeTickPosition {
-  /// The complete tick extends towards the Gauge center.
+  /// The complete tick sits beyond the inner edge of the axis band and extends
+  /// towards the Gauge center.
   inside,
 
   /// The tick straddles the pane boundary.
@@ -138,6 +139,7 @@ class GaugeScaleStyle {
     this.tickWidth,
     this.tickLength,
     this.tickPosition = GaugeTickPosition.centered,
+    this.tickGap = 0,
     this.minorTickColor,
     this.minorTickWidth = 1,
     this.minorTickLength = 5,
@@ -156,6 +158,13 @@ class GaugeScaleStyle {
   final double? tickLength;
 
   final GaugeTickPosition tickPosition;
+
+  /// Edge-to-edge gap between the axis band and ticks placed fully inside or
+  /// outside it.
+  ///
+  /// Centered ticks continue to straddle the outer axis edge and ignore this
+  /// value.
+  final double tickGap;
 
   /// Null derives a quieter color from [tickColor] or the active chart theme.
   final Color? minorTickColor;
@@ -180,6 +189,7 @@ class GaugeScaleStyle {
     if (tickLength case final value?) {
       _requireNonNegative(value, 'scale.tickLength');
     }
+    _requireNonNegative(tickGap, 'scale.tickGap');
     _requirePositive(minorTickWidth, 'scale.minorTickWidth');
     _requireNonNegative(minorTickLength, 'scale.minorTickLength');
     labelStyle.validate(argumentName: 'scale.labelStyle');
@@ -195,6 +205,7 @@ class GaugeScaleStyle {
     double? tickLength,
     bool clearTickLength = false,
     GaugeTickPosition? tickPosition,
+    double? tickGap,
     Color? minorTickColor,
     bool clearMinorTickColor = false,
     double? minorTickWidth,
@@ -208,6 +219,7 @@ class GaugeScaleStyle {
     tickWidth: clearTickWidth ? null : (tickWidth ?? this.tickWidth),
     tickLength: clearTickLength ? null : (tickLength ?? this.tickLength),
     tickPosition: tickPosition ?? this.tickPosition,
+    tickGap: tickGap ?? this.tickGap,
     minorTickColor: clearMinorTickColor
         ? null
         : (minorTickColor ?? this.minorTickColor),
@@ -227,6 +239,7 @@ class GaugeScaleStyle {
           tickWidth == other.tickWidth &&
           tickLength == other.tickLength &&
           tickPosition == other.tickPosition &&
+          tickGap == other.tickGap &&
           minorTickColor == other.minorTickColor &&
           minorTickWidth == other.minorTickWidth &&
           minorTickLength == other.minorTickLength &&
@@ -241,6 +254,7 @@ class GaugeScaleStyle {
     tickWidth,
     tickLength,
     tickPosition,
+    tickGap,
     minorTickColor,
     minorTickWidth,
     minorTickLength,

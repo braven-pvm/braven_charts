@@ -159,6 +159,7 @@ void main() {
         tickLength: 12,
         minorTickLength: 5,
         tickPosition: GaugeTickPosition.inside,
+        tickGap: 8,
         labelPosition: GaugeScaleLabelPosition.outside,
         tickLabelOffset: 8,
       );
@@ -169,7 +170,7 @@ void main() {
       for (final tick in geometry.ticks) {
         expect(
           (tick.outerPoint - pane.center).distance,
-          closeTo(geometry.axis.outerRadius, 1e-9),
+          closeTo(geometry.axis.innerRadius - 8, 1e-9),
         );
         expect(
           (tick.innerPoint - pane.center).distance,
@@ -178,7 +179,7 @@ void main() {
       }
       expect(
         (geometry.ticks.first.labelAnchor - pane.center).distance,
-        greaterThan(geometry.axis.outerRadius),
+        closeTo(geometry.axis.outerRadius + 8, 1e-9),
       );
     });
 
@@ -278,6 +279,17 @@ void main() {
           maximum: 0,
           value: 0,
           style: const NeedleGaugeStyle(),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => GaugeGeometryCalculator.calculate(
+          pane: pane,
+          minimum: 0,
+          maximum: 100,
+          value: 50,
+          style: const NeedleGaugeStyle(),
+          tickGap: -1,
         ),
         throwsArgumentError,
       );

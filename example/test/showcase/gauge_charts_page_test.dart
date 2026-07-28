@@ -82,6 +82,7 @@ void main() {
     final needle = series.indicatorStyle as NeedleGaugeStyle;
     expect(chart.gaugeChartConfig.minorTicksPerInterval, 4);
     expect(chart.gaugeChartConfig.scale.tickPosition, GaugeTickPosition.inside);
+    expect(chart.gaugeChartConfig.scale.tickGap, 12);
     expect(
       chart.gaugeChartConfig.scale.labelPosition,
       GaugeScaleLabelPosition.outside,

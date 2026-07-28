@@ -156,7 +156,7 @@ class GaugeSeriesElement implements DataHitElement {
     final outwardTickExtent = switch (config.scale.tickPosition) {
       GaugeTickPosition.inside => 0.0,
       GaugeTickPosition.centered => majorTickLength * 0.4,
-      GaugeTickPosition.outside => majorTickLength,
+      GaugeTickPosition.outside => config.scale.tickGap + majorTickLength,
     };
     final scaleLabelReserve = config.showTickLabels
         ? config.scale.labelPosition == GaugeScaleLabelPosition.outside
@@ -318,6 +318,7 @@ class GaugeSeriesElement implements DataHitElement {
       minorTicksPerInterval: config.minorTicksPerInterval,
       minorTickLength: config.scale.minorTickLength,
       tickPosition: config.scale.tickPosition,
+      tickGap: config.scale.tickGap,
       labelPosition: config.scale.labelPosition,
       tickLabelOffset: config.scale.labelOffset * textScaleFactor,
       zoneGap: config.zones.gap,

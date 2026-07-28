@@ -55,6 +55,7 @@ class _RandomGaugeState {
     required this.tickWidth,
     required this.tickLength,
     required this.tickPosition,
+    required this.tickGap,
     required this.scaleLabelPosition,
     required this.scaleLabelSize,
     required this.scaleLabelOffset,
@@ -103,6 +104,7 @@ class _RandomGaugeState {
   final double tickWidth;
   final double tickLength;
   final GaugeTickPosition tickPosition;
+  final double tickGap;
   final GaugeScaleLabelPosition scaleLabelPosition;
   final double scaleLabelSize;
   final double scaleLabelOffset;
@@ -184,6 +186,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
   double? _tickWidth;
   double? _tickLength;
   GaugeTickPosition _tickPosition = GaugeTickPosition.centered;
+  double _tickGap = 0;
   Color? _minorTickColor;
   double _minorTickWidth = 1;
   double _minorTickLength = 5;
@@ -649,6 +652,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       tickWidth: _tickWidth,
       tickLength: _tickLength,
       tickPosition: _tickPosition,
+      tickGap: _tickGap,
       minorTickColor: _minorTickColor,
       minorTickWidth: _minorTickWidth,
       minorTickLength: _minorTickLength,
@@ -1033,6 +1037,18 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         },
         onChanged: (value) => setState(() => _tickPosition = value),
       ),
+      if (_tickPosition != GaugeTickPosition.centered)
+        SliderOption(
+          label: 'Tick rail gap',
+          description:
+              'Separates fully inside or outside ticks from the axis band.',
+          value: _tickGap,
+          min: 0,
+          max: 30,
+          divisions: 30,
+          suffix: 'px',
+          onChanged: (value) => setState(() => _tickGap = value),
+        ),
       PaletteColorOption(
         label: 'Tick color',
         subtitle: 'Clear to inherit the chart axis theme.',
@@ -2235,6 +2251,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         _tickCount = 9;
         _minorTicksPerInterval = 4;
         _tickPosition = GaugeTickPosition.inside;
+        _tickGap = 12;
         _tickWidth = 2;
         _tickLength = 12;
         _minorTickWidth = 1;
@@ -2430,6 +2447,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
     _tickWidth = null;
     _tickLength = null;
     _tickPosition = GaugeTickPosition.centered;
+    _tickGap = 0;
     _minorTickColor = null;
     _minorTickWidth = 1;
     _minorTickLength = 5;
@@ -2572,6 +2590,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       tickLength: 4 + random.nextDouble() * 18,
       tickPosition: GaugeTickPosition
           .values[random.nextInt(GaugeTickPosition.values.length)],
+      tickGap: random.nextDouble() * 18,
       scaleLabelPosition: GaugeScaleLabelPosition
           .values[random.nextInt(GaugeScaleLabelPosition.values.length)],
       scaleLabelSize: 8 + random.nextDouble() * 6,
@@ -2638,6 +2657,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       _tickWidth = value.tickWidth;
       _tickLength = value.tickLength;
       _tickPosition = value.tickPosition;
+      _tickGap = value.tickGap;
       _scaleLabelPosition = value.scaleLabelPosition;
       _scaleLabelSize = value.scaleLabelSize;
       _scaleLabelOffset = value.scaleLabelOffset;

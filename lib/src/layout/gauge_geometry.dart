@@ -158,6 +158,7 @@ abstract final class GaugeGeometryCalculator {
     double tickLength = 10,
     double minorTickLength = 5,
     GaugeTickPosition tickPosition = GaugeTickPosition.centered,
+    double tickGap = 0,
     GaugeScaleLabelPosition labelPosition = GaugeScaleLabelPosition.outside,
     double tickLabelOffset = 10,
     double zoneGap = 0,
@@ -177,6 +178,7 @@ abstract final class GaugeGeometryCalculator {
       minorTicksPerInterval: minorTicksPerInterval,
       tickLength: tickLength,
       minorTickLength: minorTickLength,
+      tickGap: tickGap,
       tickLabelOffset: tickLabelOffset,
       zoneGap: zoneGap,
       zoneCornerRadius: zoneCornerRadius,
@@ -234,6 +236,9 @@ abstract final class GaugeGeometryCalculator {
       majorTickLength: tickLength,
       minorTickLength: minorTickLength,
       tickPosition: tickPosition,
+      tickGap: tickGap,
+      axisInnerRadius: axisInnerRadius,
+      axisOuterRadius: axisOuterRadius,
       labelPosition: labelPosition,
       labelOffset: tickLabelOffset,
     );
@@ -345,6 +350,9 @@ List<GaugeTickGeometry> _ticks({
   required double majorTickLength,
   required double minorTickLength,
   required GaugeTickPosition tickPosition,
+  required double tickGap,
+  required double axisInnerRadius,
+  required double axisOuterRadius,
   required GaugeScaleLabelPosition labelPosition,
   required double labelOffset,
 }) {
@@ -362,6 +370,9 @@ List<GaugeTickGeometry> _ticks({
         domain: domain,
         tickLength: majorTickLength,
         tickPosition: tickPosition,
+        tickGap: tickGap,
+        axisInnerRadius: axisInnerRadius,
+        axisOuterRadius: axisOuterRadius,
         labelPosition: labelPosition,
         labelOffset: labelOffset,
       ),
@@ -384,6 +395,9 @@ List<GaugeTickGeometry> _ticks({
           domain: domain,
           tickLength: minorTickLength,
           tickPosition: tickPosition,
+          tickGap: tickGap,
+          axisInnerRadius: axisInnerRadius,
+          axisOuterRadius: axisOuterRadius,
           labelPosition: labelPosition,
           labelOffset: labelOffset,
         ),
@@ -402,21 +416,38 @@ GaugeTickGeometry _tick({
   required double domain,
   required double tickLength,
   required GaugeTickPosition tickPosition,
+  required double tickGap,
+  required double axisInnerRadius,
+  required double axisOuterRadius,
   required GaugeScaleLabelPosition labelPosition,
   required double labelOffset,
 }) {
   final angle = pane.angleAt(fraction);
-  final (innerReach, outerReach) = switch (tickPosition) {
-    GaugeTickPosition.inside => (tickLength, 0.0),
-    // Preserve Gauge V1's established 60/40 boundary split.
-    GaugeTickPosition.centered => (tickLength * 0.6, tickLength * 0.4),
-    GaugeTickPosition.outside => (0.0, tickLength),
+  final (innerRadius, outerRadius) = switch (tickPosition) {
+    GaugeTickPosition.inside => (
+      math.max(0.0, axisInnerRadius - tickGap - tickLength),
+      math.max(0.0, axisInnerRadius - tickGap),
+    ),
+    // Preserve Gauge V1's established 60/40 outer-boundary split.
+    GaugeTickPosition.centered => (
+      math.max(0.0, axisOuterRadius - tickLength * 0.6),
+      axisOuterRadius + tickLength * 0.4,
+    ),
+    GaugeTickPosition.outside => (
+      axisOuterRadius + tickGap,
+      axisOuterRadius + tickGap + tickLength,
+    ),
   };
-  final innerPoint =
-      pane.center +
-      Offset.fromDirection(angle, math.max(0, pane.outerRadius - innerReach));
-  final outerPoint =
-      pane.center + Offset.fromDirection(angle, pane.outerRadius + outerReach);
+  final innerPoint = pane.center + Offset.fromDirection(angle, innerRadius);
+  final outerPoint = pane.center + Offset.fromDirection(angle, outerRadius);
+  final labelRadius = switch (labelPosition) {
+    GaugeScaleLabelPosition.outside =>
+      math.max(axisOuterRadius, outerRadius) + labelOffset,
+    GaugeScaleLabelPosition.inside => math.max(
+      0.0,
+      math.min(axisInnerRadius, innerRadius) - labelOffset,
+    ),
+  };
   return GaugeTickGeometry(
     index: index,
     isMajor: isMajor,
@@ -425,12 +456,7 @@ GaugeTickGeometry _tick({
     angle: angle,
     innerPoint: innerPoint,
     outerPoint: outerPoint,
-    labelAnchor: switch (labelPosition) {
-      GaugeScaleLabelPosition.outside =>
-        outerPoint + Offset.fromDirection(angle, labelOffset),
-      GaugeScaleLabelPosition.inside =>
-        innerPoint - Offset.fromDirection(angle, labelOffset),
-    },
+    labelAnchor: pane.center + Offset.fromDirection(angle, labelRadius),
   );
 }
 
@@ -559,6 +585,7 @@ void _validateInput({
   required int minorTicksPerInterval,
   required double tickLength,
   required double minorTickLength,
+  required double tickGap,
   required double tickLabelOffset,
   required double zoneGap,
   required double zoneCornerRadius,
@@ -595,6 +622,7 @@ void _validateInput({
   }
   _requireNonNegative(tickLength, 'tickLength');
   _requireNonNegative(minorTickLength, 'minorTickLength');
+  _requireNonNegative(tickGap, 'tickGap');
   _requireNonNegative(tickLabelOffset, 'tickLabelOffset');
   _requireNonNegative(zoneGap, 'zoneGap');
   _requireNonNegative(zoneCornerRadius, 'zoneCornerRadius');

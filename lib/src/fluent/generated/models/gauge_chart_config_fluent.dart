@@ -106,6 +106,9 @@ extension GaugeScaleStyleFluent on GaugeScaleStyle {
   GaugeScaleStyle withTickPosition(GaugeTickPosition value) =>
       copyWith(tickPosition: value);
 
+  /// Replaces [GaugeScaleStyle.tickGap] with [value].
+  GaugeScaleStyle withTickGap(double value) => copyWith(tickGap: value);
+
   /// Replaces [GaugeScaleStyle.minorTickColor] with [value].
   GaugeScaleStyle withMinorTickColor(Color value) =>
       copyWith(minorTickColor: value);

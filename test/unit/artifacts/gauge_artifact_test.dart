@@ -104,6 +104,7 @@ void main() {
         tickWidth: 2.5,
         tickLength: 18,
         tickPosition: GaugeTickPosition.inside,
+        tickGap: 9,
         minorTickColor: Color(0xFF64748B),
         minorTickWidth: 1.25,
         minorTickLength: 6,

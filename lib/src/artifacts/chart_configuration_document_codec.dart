@@ -673,6 +673,7 @@ abstract final class ChartConfigurationDocumentCodec {
               if (config.scale.tickLength != null)
                 'tickLength': config.scale.tickLength,
               'tickPosition': config.scale.tickPosition.name,
+              'tickGap': config.scale.tickGap,
               if (config.scale.minorTickColor != null)
                 'minorTickColor': config.scale.minorTickColor!.toARGB32(),
               'minorTickWidth': config.scale.minorTickWidth,
@@ -862,6 +863,7 @@ GaugeScaleStyle _decodeGaugeScaleStyle(Object? value, String path) {
       map['tickPosition'],
       '$path.tickPosition',
     ),
+    tickGap: _optionalDouble(map, 'tickGap', path) ?? 0,
     minorTickColor: minorTickColor == null
         ? null
         : Color(minorTickColor as int),
