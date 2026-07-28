@@ -320,6 +320,7 @@ class _RadialPlan {
     required this.value,
     this.radius,
     this.ring,
+    this.sliceColor,
     this.center,
   });
 
@@ -338,6 +339,10 @@ class _RadialPlan {
 
   /// Concentric-ring grouping field, present only for a `geomDonut(ring:)`.
   final _Field? ring;
+
+  /// Optional per-slice colour-override field, present only when some captured
+  /// point carries a colour. A row whose category has no override writes null.
+  final _Field? sliceColor;
 
   /// The donut center summary to emit, or null when there is none.
   final DonutCenterContent? center;
@@ -912,11 +917,23 @@ class _GrammarChainEmitter {
   }
 
   _RadialPlan _planPie(PieChartSeries series) {
+    // EVERY field is allocated before the rows are synthesised: a row is sized
+    // from the slot counts at the moment it is built, so a field added after
+    // this point would index past the end of its slot list.
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField([series]);
+    final sliceColor = _radialSliceColorField([series]);
     final rows = _synthesiseRadialRows(series.points.length);
-    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    _fillRadialRows(
+      rows,
+      series.points,
+      category,
+      value,
+      radius,
+      ring: null,
+      sliceColor: sliceColor,
+    );
     return _RadialPlan(
       kind: _RadialKind.pie,
       verb: 'geomPie',
@@ -924,6 +941,7 @@ class _GrammarChainEmitter {
       category: category,
       value: value,
       radius: radius,
+      sliceColor: sliceColor,
       mark: PieMark<_SourceRow>(
         id: series.id,
         name: series.name,
@@ -932,6 +950,7 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         // Carry the series' unit, slice styling, selection, data labels and the
         // slice-radius / grouping configs onto the mark so the round-trip proof
         // reproduces the whole pie (the lowering maps PieMark.style →
@@ -950,11 +969,21 @@ class _GrammarChainEmitter {
   }
 
   _RadialPlan _planDonut(DonutChartSeries series) {
+    // As for pie: every field is allocated BEFORE the rows are synthesised.
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField([series]);
+    final sliceColor = _radialSliceColorField([series]);
     final rows = _synthesiseRadialRows(series.points.length);
-    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    _fillRadialRows(
+      rows,
+      series.points,
+      category,
+      value,
+      radius,
+      ring: null,
+      sliceColor: sliceColor,
+    );
     final center = _markCenter(series.centerContent, DonutCenterContent.hidden);
     return _RadialPlan(
       kind: _RadialKind.donut,
@@ -963,6 +992,7 @@ class _GrammarChainEmitter {
       category: category,
       value: value,
       radius: radius,
+      sliceColor: sliceColor,
       center: center,
       mark: DonutMark<_SourceRow>(
         id: series.id,
@@ -972,6 +1002,7 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         // As for pie: carry the donut unit, styling, selection, data labels and
         // slice-radius / grouping configs so the whole donut round-trips
         // (DonutMark.style → DonutChartSeries.donutStyle, .selectionStyle →
@@ -1005,12 +1036,19 @@ class _GrammarChainEmitter {
       );
       return null;
     }
+    // EVERY field must be allocated here, BEFORE `_synthesiseRadialRows`: the
+    // rows below are sized from the current slot counts, so a field added
+    // afterwards would throw a `RangeError` on the first row write.
     final ring = _addField('ring', _FieldKind.string);
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField(donuts);
+    final sliceColor = _radialSliceColorField(donuts);
     final totalRows = donuts.fold<int>(0, (sum, d) => sum + d.points.length);
     final rows = _synthesiseRadialRows(totalRows);
+    // This loop is the concentric equivalent of `_fillRadialRows` — it walks
+    // the ring list rather than one point list — so every channel that path
+    // writes must be written here too.
     var index = 0;
     for (final donut in donuts) {
       final key = donut.name ?? '';
@@ -1020,6 +1058,9 @@ class _GrammarChainEmitter {
         rows[index].numbers[value.slot] = point.y;
         if (radius != null) {
           rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+        }
+        if (sliceColor != null) {
+          rows[index].colors[sliceColor.slot] = point.pointStyle?.color;
         }
         index += 1;
       }
@@ -1052,6 +1093,7 @@ class _GrammarChainEmitter {
       value: value,
       radius: radius,
       ring: ring,
+      sliceColor: sliceColor,
       // The config owns the center when it rides the mark: lowering reads
       // `concentric.centerContent` and REFUSES a mark that sets both, so the
       // plan's `center` (what `geomDonut` emits as `center:`) drops out too.
@@ -1070,6 +1112,7 @@ class _GrammarChainEmitter {
         value: _number(value),
         radius: radius == null ? null : _number(radius),
         ring: _string(ring),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         style: donuts.first.donutStyle,
         selectionStyle: donuts.first.selectionStyle,
         center: carriesConfig ? null : center,
@@ -1265,6 +1308,23 @@ class _GrammarChainEmitter {
     return hasRadius ? _addField('radius', _FieldKind.number) : null;
   }
 
+  /// A slice-colour field when ANY point across [seriesList] carries a colour
+  /// override, or null otherwise.
+  ///
+  /// Allocated on ANY point, not on every point: `PieChartSeries.fromMap` /
+  /// `DonutChartSeries.fromMap` build `sliceColors` from the entries that HAVE
+  /// a colour, so a partially-coloured chart reverses to a field whose
+  /// uncoloured rows are null, which the lowering helper skips again.
+  ///
+  /// MUST be called before [_synthesiseRadialRows] — a row is sized from the
+  /// slot counts at the moment it is built.
+  _Field? _radialSliceColorField(List<ChartSeries> seriesList) {
+    final hasColor = seriesList.any(
+      (series) => series.points.any((point) => point.pointStyle?.color != null),
+    );
+    return hasColor ? _addField('sliceColor', _FieldKind.color) : null;
+  }
+
   /// Fills one row per point with the reversed radial channels.
   void _fillRadialRows(
     List<_SourceRow> rows,
@@ -1273,6 +1333,7 @@ class _GrammarChainEmitter {
     _Field value,
     _Field? radius, {
     required _Field? ring,
+    required _Field? sliceColor,
   }) {
     for (var index = 0; index < points.length; index++) {
       final point = points[index];
@@ -1280,6 +1341,11 @@ class _GrammarChainEmitter {
       rows[index].numbers[value.slot] = point.y;
       if (radius != null) {
         rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+      }
+      // Null is written through deliberately: a category with no override is a
+      // real state the lowering reproduces by leaving it out of `sliceColors`.
+      if (sliceColor != null) {
+        rows[index].colors[sliceColor.slot] = point.pointStyle?.color;
       }
     }
   }
@@ -1433,21 +1499,32 @@ class _GrammarChainEmitter {
   /// Explains why a captured radial series is not reproduced by the lowered one.
   ///
   /// The radial marks now carry the unit, selection style, data labels, series
-  /// style, (pie/donut) the slice-radius and grouping configs and (polar) the
-  /// preset, per-category column colours, targets and intervals with their two
-  /// styles, so those all round-trip. What remains un-carried is series
-  /// metadata, a per-point style that is not a plain colour override, and a
-  /// polar interval list whose every entry is null (which reverses to "no
-  /// intervals" rather than to a list of nulls); a series that sets one of
-  /// those is what reaches here.
+  /// style, (pie/donut) the per-slice colours and the slice-radius and grouping
+  /// configs and (polar) the preset, per-category column colours, targets and
+  /// intervals with their two styles, so those all round-trip. What remains
+  /// un-carried is series metadata, a per-point style beyond what the family
+  /// reverses, and a polar interval list whose every entry is null (which
+  /// reverses to "no intervals" rather than to a list of nulls); a series that
+  /// sets one of those is what reaches here.
+  ///
+  /// The per-point sentence is FAMILY-AWARE because the two radial families
+  /// reverse different amounts of a `PointStyle`. Pie and donut reverse both
+  /// `color` (as `sliceColor:`) and `size` (as `radius:`), because their
+  /// `fromMap` builds the general `PointStyle(color:, size:)`. Polar reverses
+  /// `color` only — `PolarColumnChartSeries._fromMap` writes the narrowing
+  /// `PointStyle.color(...)` and a polar column ignores `size` when it paints.
+  /// Telling a pie author that `size` is un-carried would be false.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
+    final perPoint = expected is PolarColumnChartSeries
+        ? 'a per-point style beyond a colour override'
+        : 'a per-point style beyond a colour and size override';
     return 'It carries a series option the radial marks do not carry — the '
         'category, value, optional radius, concentric ring, donut center, '
         'unit, series style, selection style, data labels, (pie/donut) the '
-        'slice-radius and grouping configs and (polar) the preset, per-category '
-        'column colours, targets and intervals round-trip, but series metadata, '
-        'a per-point style beyond a colour override, and an all-null polar '
-        'interval list do not.';
+        'per-slice colours and the slice-radius and grouping configs and '
+        '(polar) the preset, per-category column colours, targets and '
+        'intervals round-trip, but series metadata, $perPoint, and an all-null '
+        'polar interval list do not.';
   }
 
   // =========================================================================
@@ -2504,6 +2581,12 @@ class _GrammarChainEmitter {
       }
       if (plan.ring != null) {
         writer.namedArgument('ring', plan.ring!.accessor());
+      }
+      // `sliceColor:` sits after `radius:` / `ring:` in the geomPie/geomDonut
+      // signatures, so it is written here to keep the emitted argument order
+      // the same as the API's.
+      if (plan.sliceColor != null) {
+        writer.namedArgument('sliceColor', plan.sliceColor!.accessor());
       }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);

@@ -318,6 +318,104 @@ final List<RadialRadiusRow> radiusGrammarRows = <RadialRadiusRow>[
     ),
 ];
 
+/// A colour-bearing synthesised radial row: category / value / sliceColor.
+///
+/// The generator names the per-slice colour field `sliceColor` and types it
+/// `Color?`, because a category with NO override is a real, reproducible state
+/// — it rides the series colour — and `null` is how the row writes it.
+class RadialColorRow {
+  const RadialColorRow({
+    required this.category,
+    required this.value,
+    required this.sliceColor,
+  });
+
+  final String category;
+  final double value;
+  final Color? sliceColor;
+}
+
+/// PARTIAL colouring on purpose: two of the four harvest categories carry an
+/// override and two do not, so the round trip has to reproduce the ABSENCES as
+/// well as the colours. A map that coloured every slice would pass even if the
+/// reversal invented a colour for the uncoloured ones.
+const _harvestSliceColors = <String, Color>{
+  'Apple': Color(0xFF2563EB),
+  'Plum': Color(0xFF0D9488),
+};
+
+final List<RadialColorRow> sliceColorGrammarRows = <RadialColorRow>[
+  for (final row in harvest)
+    RadialColorRow(
+      category: row.fruit,
+      value: row.count,
+      sliceColor: _harvestSliceColors[row.fruit],
+    ),
+];
+
+/// A colour AND radius bearing synthesised radial row. The generator allocates
+/// `radius` before `sliceColor`, so the field order here mirrors the emitted
+/// row class.
+class RadialColorRadiusRow {
+  const RadialColorRadiusRow({
+    required this.category,
+    required this.value,
+    required this.radius,
+    required this.sliceColor,
+  });
+
+  final String category;
+  final double value;
+  final double radius;
+  final Color? sliceColor;
+}
+
+final List<RadialColorRadiusRow> sliceColorRadiusGrammarRows =
+    <RadialColorRadiusRow>[
+      for (final row in harvest)
+        RadialColorRadiusRow(
+          category: row.fruit,
+          value: row.count,
+          radius: _harvestRadii[row.fruit]!.toDouble(),
+          sliceColor: _harvestSliceColors[row.fruit],
+        ),
+    ];
+
+/// A ring-bearing colour row: ring / category / value / sliceColor, in the
+/// generator's own allocation order (`ring` first for a concentric plan).
+class ConcentricColorRow {
+  const ConcentricColorRow({
+    required this.ring,
+    required this.category,
+    required this.value,
+    required this.sliceColor,
+  });
+
+  final String ring;
+  final String category;
+  final double value;
+  final Color? sliceColor;
+}
+
+/// One colour per ring, and NOT the same category in each: `Apple` is coloured
+/// in Winter only and `Plum` in Summer only, which is the shape a colour map
+/// resolved across the whole data set instead of per ring bucket cannot fake.
+const _concentricSliceColors = <String, Map<String, Color>>{
+  'Winter': <String, Color>{'Apple': Color(0xFF2563EB)},
+  'Summer': <String, Color>{'Plum': Color(0xFFDC2626)},
+};
+
+final List<ConcentricColorRow> concentricColorGrammarRows =
+    <ConcentricColorRow>[
+      for (final row in harvest)
+        ConcentricColorRow(
+          ring: row.season,
+          category: row.fruit,
+          value: row.count,
+          sliceColor: _concentricSliceColors[row.season]?[row.fruit],
+        ),
+    ];
+
 // ---------------------------------------------------------------------------
 // MULTI-SERIES POLAR fixtures. A layered/grouped/stacked polar composition is
 // N `PolarColumnChartSeries` over ONE category domain plus a plot-level
@@ -3905,6 +4003,239 @@ void main() {
       expect(generated.isComplete, isTrue);
     });
 
+    testWidgets('a pie with PARTIAL per-slice colours emits and round-trips', (
+      tester,
+    ) async {
+      // `PieChartSeries.fromMap` turns `sliceColors` into a per-point
+      // `PointStyle(color:)`, which the emitter reverses onto a `sliceColor:`
+      // row channel. Only two of the four categories carry an override, so the
+      // uncoloured ones must come back as `null` rows and re-lower to points
+      // with NO `pointStyle` at all — an invented colour would fail the
+      // round-trip proof.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'pie_slice_colours',
+        fragments: <String>[
+          '.geomPie(',
+          'sliceColor: (row) => row.sliceColor,',
+          'sliceColor: Color(0xFF2563EB),',
+          'sliceColor: Color(0xFF0D9488),',
+          'sliceColor: null,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PieChartSeries.fromMap(
+              id: 'pie-colours',
+              name: 'Revenue',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              sliceColors: _harvestSliceColors,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(sliceColorGrammarRows)
+            .geomPie(
+              id: 'pie-colours',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              sliceColor: (row) => row.sliceColor,
+              name: 'Revenue',
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+      // Exactly two categories are uncoloured, so exactly two rows write null.
+      expect('sliceColor: null,'.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('a donut whose slices carry BOTH a colour and a variable '
+        'radius emits and round-trips', (tester) async {
+      // The pie/donut `fromMap` builds the GENERAL `PointStyle(color:, size:)`,
+      // so the two channels share one point style and both must reverse
+      // together. The radius reversal reads `.size` and the colour reversal
+      // reads `.color`; if either clobbered the other the re-lowered point
+      // style would diverge and the chain would be refused.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'donut_slice_colours_and_radius',
+        fragments: <String>[
+          '.geomDonut(',
+          'radius: (row) => row.radius,',
+          'sliceColor: (row) => row.sliceColor,',
+          'sliceRadiusConfig: PieSliceRadiusConfig(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-colours',
+              name: 'Revenue',
+              values: const <String, num>{
+                'Apple': 42,
+                'Pear': 31,
+                'Plum': 17,
+                'Fig': 10,
+              },
+              radiusValues: _harvestRadii,
+              sliceColors: _harvestSliceColors,
+              sliceRadiusConfig: showcaseRadius,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(sliceColorRadiusGrammarRows)
+            .geomDonut(
+              id: 'donut-colours',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              radius: (row) => row.radius,
+              sliceColor: (row) => row.sliceColor,
+              name: 'Revenue',
+              sliceRadiusConfig: showcaseRadius,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a concentric composition colours the SAME category '
+        'differently per ring and round-trips', (tester) async {
+      // The per-ring shape is the one a single shared colour map cannot fake:
+      // `Apple` is coloured in Winter and uncoloured in Summer, `Plum` the
+      // other way round. The reversal writes one row per (ring, category) pair,
+      // so a lowering that resolved colours across the WHOLE data set instead
+      // of per ring bucket would colour both and diverge.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_slice_colours',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'sliceColor: (row) => row.sliceColor,',
+          'sliceColor: Color(0xFF2563EB),',
+          'sliceColor: Color(0xFFDC2626),',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              sliceColors: _concentricSliceColors['Winter']!,
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+              sliceColors: _concentricSliceColors['Summer']!,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(concentricColorGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              sliceColor: (row) => row.sliceColor,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('the showcase donut that used to be BLOCKER 2 now emits and '
+        'round-trips; without colours it emits no sliceColor at all', (
+      tester,
+    ) async {
+      // CONVERTED from the pinned known-gap test
+      // "blocker 2: per-slice colours are refused — both donut pages pass
+      // sliceColors and no pie/donut mark carries them". That test asserted the
+      // REFUSAL of exactly this chart; this slice closes the gap, so the same
+      // chart is asserted to emit AND round-trip instead. The chart itself is
+      // unchanged from the pinned version — same id, name, unit, values and
+      // slice colours — so the two are directly comparable.
+      final audienceRows = const <RadialColorRow>[
+        RadialColorRow(
+          category: 'Apple',
+          value: 42,
+          sliceColor: Color(0xFF2563EB),
+        ),
+        RadialColorRow(
+          category: 'Pear',
+          value: 31,
+          sliceColor: Color(0xFF0D9488),
+        ),
+      ];
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'donut_showcase_slice_colours',
+        fragments: <String>[
+          '.geomDonut(',
+          'sliceColor: (row) => row.sliceColor,',
+          'sliceColor: Color(0xFF2563EB),',
+          'sliceColor: Color(0xFF0D9488),',
+          "unit: 'USD'",
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'donut-audience',
+              name: 'Audience',
+              unit: 'USD',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+              sliceColors: const <String, Color>{
+                'Apple': Color(0xFF2563EB),
+                'Pear': Color(0xFF0D9488),
+              },
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(audienceRows)
+            .geomDonut(
+              id: 'donut-audience',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              sliceColor: (row) => row.sliceColor,
+              name: 'Audience',
+              unit: 'USD',
+            )
+            .build(bravenChartController: controller),
+      );
+      expect(generated.isComplete, isTrue);
+
+      // BYTE-IDENTITY GUARD, kept from the converted test's CONTROL arm: the
+      // same donut with NO slice colours must emit exactly what it emitted
+      // before this slice — no field, no argument, no row column.
+      final plain = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut-audience',
+                name: 'Audience',
+                unit: 'USD',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(plain), isTrue);
+      expect(plain.warnings, isEmpty);
+      expect(plain.source, isNot(contains('sliceColor')));
+      expect(plain.source, isNot(contains('Color(')));
+    });
+
     testWidgets('a pie sliceRadiusConfig FORMATTER stays an honest refusal '
         '(placeholder + omitted warning), the chart still emits', (
       tester,
@@ -4985,21 +5316,26 @@ void main() {
   // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
   // test.
   //
-  // The three blockers, each independent (fixing one leaves the page blocked
-  // on the other two):
+  // The blockers, each independent (fixing one leaves the page blocked on the
+  // others):
   //
   //   1. RING IDS. `concentric_donut_page.dart` names its ring series from its
   //      own descriptors (`current`, `previous`, …), not the `<markId>-<ring>`
   //      pattern the ring channel reproduces.
-  //   2. PER-SLICE COLOURS. Both pages pass `sliceColors`
-  //      (`donut_charts_page.dart:487`), and `PieMark`/`DonutMark` have no
-  //      per-point colour channel — only `PolarMark` does, via `columnColor`.
+  //   2. PER-SLICE COLOURS — **CLOSED**. Both pages pass `sliceColors`
+  //      (`donut_charts_page.dart:487`); `PieMark`/`DonutMark` now carry a
+  //      `sliceColor` channel of their own, mirroring `PolarMark.columnColor`,
+  //      and the emitter reverses it. Its pinned refusal test was CONVERTED
+  //      into a round-trip acceptance test (see below) rather than deleted.
   //   3. PER-RING DATA LABELS. The concentric page's `hierarchy` label layout
   //      gives the outer and inner rings DIFFERENT `PieDataLabelConfig`s, and
   //      one `DonutMark` carries one `dataLabels` for every ring.
-  //
-  // Closing (2) means a per-point colour channel on `PieMark`/`DonutMark`,
-  // which is an owner-scoped feature, not a repair to this file.
+  //   4. THE DONUT CENTRE. `_markCenter` rebuilds the centre from four fields
+  //      and drops `labelStyle` / `valueStyle` / `valueFormatter`, so a styled
+  //      or formatted centre diverges. `DonutChartsPage` sets a formatter in
+  //      every knob state, so it stays blocked on this ALONE now that (2) is
+  //      closed. Recorded here because the original three-blocker list missed
+  //      it; it is closed by the donut-centre slice, not by this file.
   // =========================================================================
 
   group('KNOWN GAP: the donut showcase pages do not emit', () {
@@ -5056,55 +5392,12 @@ void main() {
       );
     });
 
-    testWidgets('blocker 2: per-slice colours are refused — both donut pages '
-        'pass sliceColors and no pie/donut mark carries them', (tester) async {
-      // The one blocker BOTH pages share, and the reason `DonutChartsPage` is
-      // blocked on its own (it is a single-ring donut, so blockers 1 and 3
-      // never arise there). `PolarMark.columnColor` is the per-point colour
-      // channel; `PieMark`/`DonutMark` have no equivalent, so a per-point
-      // `PointStyle.color` diverges on re-lowering and is honestly refused.
-      Future<ChartGeneratedSource> generateFor(
-        Map<String, Color> sliceColors,
-      ) async => generateGrammar(
-        await snapshotOf(
-          tester,
-          (controller) => BravenChartPlus(
-            bravenChartController: controller,
-            series: <ChartSeries>[
-              DonutChartSeries.fromMap(
-                id: 'donut-audience',
-                name: 'Audience',
-                unit: 'USD',
-                values: const <String, num>{'Apple': 42, 'Pear': 31},
-                sliceColors: sliceColors,
-              ),
-            ],
-          ),
-        ),
-      );
-
-      final refused = await generateFor(const <String, Color>{
-        'Apple': Color(0xFF2563EB),
-        'Pear': Color(0xFF0D9488),
-      });
-      expect(emittedChain(refused), isFalse);
-      expect(refused.isComplete, isFalse);
-      expect(refused.source, isNot(contains('.geomDonut(')));
-      expect(
-        blockedReason(refused),
-        allOf(
-          contains('does not reproduce series "donut-audience" exactly'),
-          contains('a per-point style beyond a colour override'),
-        ),
-      );
-
-      // CONTROL: the SAME donut without `sliceColors` emits, so the refusal is
-      // attributable to the missing channel and to nothing else about the page.
-      final emitted = await generateFor(const <String, Color>{});
-      expect(emittedChain(emitted), isTrue);
-      expect(emitted.warnings, isEmpty);
-      expect(emitted.source, contains('.geomDonut('));
-    });
+    // BLOCKER 2 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
+    // into "the showcase donut that used to be BLOCKER 2 now emits and
+    // round-trips" in the `showcase-representative radial series config emits`
+    // group — same chart, same id/name/unit/values/colours, now asserting
+    // emission and a full round trip instead of the refusal, plus the
+    // byte-identity control that a colourless donut emits no `sliceColor`.
 
     testWidgets('blocker 3: rings with DIFFERENT dataLabels are refused — one '
         'DonutMark carries one label config', (tester) async {
@@ -6000,6 +6293,194 @@ void main() {
       expect(emitted.isComplete, isTrue);
       expect(emitted.source, contains('.geomDonut('));
       expect(emitted.source, contains('ring: (row) => row.ring'));
+    });
+
+    testWidgets('a donut point whose pointStyle sets a scatter marker is '
+        'refused; the colour-only override emits as a row channel', (
+      tester,
+    ) async {
+      // `PointStyle` carries four fields. Pie/donut now reverse TWO of them
+      // (`color` as `sliceColor:`, `size` as `radius:`); the scatter-marker
+      // pair has no radial mark channel at all, so a point that sets one stays
+      // an honest refusal rather than emitting a chain that silently drops it.
+      Future<ChartGeneratedSource> generateFor(PointStyle style) async =>
+          generateGrammar(
+            await snapshotOf(
+              tester,
+              (controller) => BravenChartPlus(
+                bravenChartController: controller,
+                series: <ChartSeries>[
+                  DonutChartSeries(
+                    id: 'donut',
+                    points: <ChartDataPoint>[
+                      const ChartDataPoint(
+                        x: 0,
+                        y: 3,
+                        label: 'A',
+                        pointStyle: PointStyle(color: Color(0xFF112233)),
+                      ),
+                      ChartDataPoint(x: 1, y: 5, label: 'B', pointStyle: style),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+
+      final refused = await generateFor(
+        const PointStyle(
+          color: Color(0xFF445566),
+          scatterMarkerShape: SeriesMarkerShape.square,
+        ),
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "donut" exactly'),
+          contains('a per-point style beyond a colour and size override'),
+        ),
+      );
+
+      // CONTROL: drop the marker shape and the very same point emits as a
+      // slice colour, so the refusal is attributable to the extra override
+      // alone — not to per-point styling on a donut.
+      final emitted = await generateFor(
+        const PointStyle(color: Color(0xFF445566)),
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('sliceColor: (row) => row.sliceColor,'));
+    });
+
+    testWidgets('a donut point carrying a BARE const PointStyle() is refused', (
+      tester,
+    ) async {
+      // The document codec writes an override-less style as `pointStyle: {}`
+      // and decodes it back to a NON-NULL `const PointStyle()`, while the
+      // grammar reversal allocates no field for it and yields `null`. The
+      // asymmetry is real — the two series are not equal — so it stays an
+      // honest refusal rather than a chain that quietly changes the document.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries(
+                id: 'donut',
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(
+                    x: 0,
+                    y: 3,
+                    label: 'A',
+                    pointStyle: PointStyle(),
+                  ),
+                  ChartDataPoint(x: 1, y: 5, label: 'B'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(generated.isComplete, isFalse);
+      expect(
+        blockedReason(generated),
+        allOf(
+          contains('does not reproduce series "donut" exactly'),
+          contains('a per-point style beyond a colour and size override'),
+        ),
+      );
+    });
+
+    testWidgets('a donut MIXING colour-only and size-only points never reaches '
+        'the emitter — the series itself refuses it', (tester) async {
+      // This slice's design predicted an EMITTER-level surprise here: the
+      // radius field is allocated on ANY point that has a size and the row fill
+      // synthesises 0 for the sizeless ones, so a colour-only point would
+      // re-lower with `size: 0.0` where the capture had null and be refused by
+      // the round-trip proof.
+      //
+      // Probing it showed the shape is UNREACHABLE.
+      // `validateRadialConfiguration` requires all-or-nothing sizing — one
+      // sized point obliges a `sliceRadiusConfig` AND a finite size on EVERY
+      // point — so the mixture is rejected a layer lower, and more strictly.
+      // Pinned at the layer that actually enforces it, with both doors tried,
+      // so a later relaxation of the series guard surfaces here rather than as
+      // a `size: 0.0` chart the emitter quietly hands back.
+      const mixed = <ChartDataPoint>[
+        ChartDataPoint(
+          x: 0,
+          y: 3,
+          label: 'A',
+          pointStyle: PointStyle(size: 10),
+        ),
+        ChartDataPoint(
+          x: 1,
+          y: 5,
+          label: 'B',
+          pointStyle: PointStyle(color: Color(0xFF112233)),
+        ),
+      ];
+      expect(
+        () => DonutChartSeries(id: 'donut', points: mixed),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('one PointStyle.size value for every point'),
+          ),
+        ),
+      );
+      expect(
+        () => DonutChartSeries(
+          id: 'donut',
+          points: mixed,
+          sliceRadiusConfig: const RadialSliceRadiusConfig(),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('must be finite and non-negative'),
+          ),
+        ),
+      );
+
+      // The REACHABLE neighbour: every point sized, only SOME coloured. Both
+      // channels reverse onto their own row field, and the uncoloured slice
+      // writes a null colour beside a real radius — the mixed state that IS
+      // expressible.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut',
+                values: const <String, num>{'A': 3, 'B': 5},
+                radiusValues: const <String, num>{'A': 10, 'B': 4},
+                sliceColors: const <String, Color>{'B': Color(0xFF112233)},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isTrue);
+      expect(generated.source, contains('radius: (row) => row.radius,'));
+      expect(
+        generated.source,
+        contains('sliceColor: (row) => row.sliceColor,'),
+      );
+      expect('sliceColor: null,'.allMatches(generated.source).length, 1);
     });
 
     testWidgets('a pie series carrying metadata is refused too — the proof '
