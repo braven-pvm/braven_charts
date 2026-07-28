@@ -5582,7 +5582,7 @@ void main() {
   //
   // The unit tests above each isolate ONE mechanism (a config field, a channel,
   // a composition). This group asks the question the slice exists to answer:
-  // does the chart the showcase page ACTUALLY MOUNTS reach the Grammar pane as
+  // does the chart the showcase page ACTUALLY AUTHORS reach the Grammar pane as
   // a real chain? Each polar case is `polar_column_page.dart`'s own construction
   // — `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
   // config, at that presentation's authored knob values — so a regression that
