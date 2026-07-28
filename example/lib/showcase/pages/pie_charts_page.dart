@@ -10,6 +10,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 import '../data/radial_demo_data.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
 import '../widgets/showcase_randomizer.dart';
@@ -1581,9 +1582,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 children: [
                   _buildExamplePicker(),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    height: compact ? 680 : 660,
-                    child: ChartCard(
+                  PersistentResizableChartPanelWorkspace(
+                    preferenceKey: showcaseChartPanelHeightKey(
+                      compact: compact,
+                    ),
+                    minimumPanelHeight: compact ? 520 : 360,
+                    maximumPanelHeight: compact ? 1400 : 1200,
+                    initialPanelHeight: compact ? 680 : 660,
+                    wrapExplicitContentInScrollView: false,
+                    panel: ChartCard(
                       key: const ValueKey('pie-showcase-card'),
                       title: _dataset.title,
                       subtitle: _chartSummary(),

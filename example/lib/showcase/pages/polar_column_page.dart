@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/polar_showcase_randomizer.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
@@ -359,26 +360,14 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
-        final contentHeight = math.max(
-          constraints.maxHeight,
-          compact ? 1040.0 : 860.0,
-        );
-        final content = SizedBox(
-          height: contentHeight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildPresentationSelector(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildChartCard()),
-            ],
-          ),
-        );
-        if (contentHeight <= constraints.maxHeight) return content;
-        return SingleChildScrollView(
-          key: const ValueKey('polar-column-showcase-scroll'),
-          primary: false,
-          child: content,
+        return PersistentResizableChartPanelWorkspace(
+          preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+          minimumPanelHeight: compact ? 520 : 360,
+          maximumPanelHeight: compact ? 1400 : 1200,
+          initialPanelHeight: compact ? 760 : 620,
+          scrollViewKey: const ValueKey('polar-column-showcase-scroll'),
+          leading: [_buildPresentationSelector(), const SizedBox(height: 16)],
+          panel: _buildChartCard(),
         );
       },
     );

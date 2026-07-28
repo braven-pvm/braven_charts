@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../data/scatter_point_generator.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
@@ -585,6 +586,31 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
+          if (!_isLineSynchronized) {
+            return PersistentResizableChartPanelWorkspace(
+              preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+              minimumPanelHeight: compact ? 520 : 360,
+              maximumPanelHeight: compact ? 1400 : 1200,
+              initialPanelHeight: switch ((widget.family, compact)) {
+                (_CartesianFamily.scatter, true) => 1080,
+                (_CartesianFamily.scatter, false) => 600,
+                (_, true) => 760,
+                (_, false) => 760,
+              },
+              scrollViewKey: widget.family == _CartesianFamily.line
+                  ? const ValueKey('line-showcase-scroll')
+                  : const ValueKey('cartesian-chart-panel-scroll'),
+              leading: [
+                _buildPresetPicker(compact: compact),
+                SizedBox(height: compact ? 8 : 16),
+              ],
+              panel: _buildChartCard(),
+              trailing: [if (!compact) _FeatureCoverage(family: widget.family)],
+            );
+          }
+
+          // This specialist multi-panel composition has its own coordinated
+          // sizing contract and remains intentionally independent.
           final preferredHeight = switch ((widget.family, compact)) {
             (_CartesianFamily.line, true) =>
               _isLineSynchronized ? 2060.0 : 1040.0,
