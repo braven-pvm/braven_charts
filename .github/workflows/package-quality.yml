@@ -78,6 +78,17 @@ jobs:
         working-directory: example
         run: flutter analyze
 
+      # The showcase pages are where several guarantees are ACCEPTANCE-tested:
+      # a page is mounted, its live chart document is read off its own
+      # controller, and the claim is asserted against the real widget tree
+      # rather than a transcription. Those tests live here because the package's
+      # own tests cannot import `example/lib`, so leaving the suite out of CI
+      # meant a page-level regression (a Workbench pane that stops emitting, a
+      # preset that stops rendering) could merge green.
+      - name: Test showcase
+        working-directory: example
+        run: flutter test
+
       - name: Generate public API documentation
         run: |
           dart pub global activate dartdoc
