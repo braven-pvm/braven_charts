@@ -1204,5 +1204,6 @@ final class PolarMark<T> extends RadialMark<T> {
   );
 
   @override
-  String toString() => 'PolarMark(id: $id, name: $name, preset: ${preset.name})';
+  String toString() =>
+      'PolarMark(id: $id, name: $name, preset: ${preset.name})';
 }

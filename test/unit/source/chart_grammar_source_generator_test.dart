@@ -1032,10 +1032,7 @@ const showcaseEarthPalette = <Color>[
 /// `_categoryColors` for `_PolarPalette.theme`: the base theme's own series
 /// colors, at least eight of them.
 List<Color> showcaseThemePalette(ChartTheme theme, int categoryCount) =>
-    List<Color>.generate(
-      math.max(8, categoryCount),
-      theme.seriesTheme.colorAt,
-    );
+    List<Color>.generate(math.max(8, categoryCount), theme.seriesTheme.colorAt);
 
 /// The showcase's per-category color map: the palette cycled over the value
 /// map's key order (`_buildSeriesList`).
@@ -2913,7 +2910,11 @@ void main() {
           "name: 'Harvest'",
         ],
         original: (controller) => BravenChart.of(harvest)
-            .geomPie(category: harvestFruit, value: harvestCount, name: 'Harvest')
+            .geomPie(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+            )
             .build(bravenChartController: controller),
         rebuilt: (controller) => BravenChart.of(radialGrammarRows)
             .geomPie(
@@ -5199,7 +5200,8 @@ void main() {
               values: showcaseUncertaintyValues,
               intervals: <String, PolarColumnInterval>{
                 for (final category in showcaseUncertaintyValues.keys)
-                  if (showcaseUncertaintyLowerValues[category] case final lower?)
+                  if (showcaseUncertaintyLowerValues[category]
+                      case final lower?)
                     if (showcaseUncertaintyUpperValues[category]
                         case final upper?)
                       category: PolarColumnInterval(
@@ -5521,24 +5523,25 @@ void main() {
       // The LIVE formatter is not the reachable form of this blocker — a
       // callback makes `extractDocument()` fail outright, before the generator
       // ever runs — so the mounted shape here is the styled centre.
-      Future<ChartGeneratedSource> generateFor(DonutCenterContent center) async =>
-          generateGrammar(
-            await snapshotOf(
-              tester,
-              (controller) => BravenChartPlus(
-                bravenChartController: controller,
-                series: <ChartSeries>[
-                  DonutChartSeries.fromMap(
-                    id: 'donut-audience',
-                    name: 'Audience',
-                    unit: 'USD',
-                    values: const <String, num>{'Apple': 42, 'Pear': 31},
-                    centerContent: center,
-                  ),
-                ],
+      Future<ChartGeneratedSource> generateFor(
+        DonutCenterContent center,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut-audience',
+                name: 'Audience',
+                unit: 'USD',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+                centerContent: center,
               ),
-            ),
-          );
+            ],
+          ),
+        ),
+      );
 
       const styled = DonutCenterContent(
         label: 'Total',
@@ -5714,7 +5717,8 @@ void main() {
       });
       final result = ChartGrammarSourceGenerator.generate(snapshot);
       expect(result, isA<ChartArtifactFailure<ChartGeneratedSource>>());
-      final error = (result as ChartArtifactFailure<ChartGeneratedSource>).error;
+      final error =
+          (result as ChartArtifactFailure<ChartGeneratedSource>).error;
       expect(error.code, ChartArtifactDiagnosticCodes.invalidArtifact);
       expect(error.path, r'$.document.configuration.polarChart');
       expect(

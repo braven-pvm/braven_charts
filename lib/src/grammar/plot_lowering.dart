@@ -387,10 +387,20 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     switch (mark) {
       case LineMark<T>():
         series.add(_lowerLine(mark, markId, axis!, spec.data));
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case AreaMark<T>():
         series.add(_lowerArea(mark, markId, axis!, spec.data));
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case BarMark<T>():
         series.add(
           _lowerBar(
@@ -401,7 +411,12 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
             transposed: spec.transposed,
           ),
         );
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case ScatterMark<T>():
         series.add(_lowerScatter(mark, markId, axis!, spec.data));
       case CandlestickMark<T>():
@@ -679,7 +694,13 @@ LineChartSeries _lowerLine<T>(
   name: mark.name,
   points: mark.colorBy == null
       ? _xyPoints(data, mark.x, mark.y)
-      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
+      : _xyColorPoints(
+          data,
+          mark.x,
+          mark.y,
+          mark.colorBy!,
+          mark.colorEncoding!,
+        ),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,
@@ -701,7 +722,13 @@ AreaChartSeries _lowerArea<T>(
   name: mark.name,
   points: mark.colorBy == null
       ? _xyPoints(data, mark.x, mark.y)
-      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
+      : _xyColorPoints(
+          data,
+          mark.x,
+          mark.y,
+          mark.colorBy!,
+          mark.colorEncoding!,
+        ),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,
@@ -1414,24 +1441,24 @@ DonutChartSeries _lowerDonut<T>(
   List<T> data,
   DonutCenterContent? center,
 ) => DonutChartSeries.fromMap(
-      id: id,
-      name: mark.name,
-      color: mark.color,
-      unit: mark.unit,
-      values: _radialValues(data, mark.category, mark.value),
-      sliceColors: mark.sliceColor == null
-          ? const <String, Color>{}
-          : _sliceColors(data, mark.category, mark.sliceColor!),
-      radiusValues: mark.radius == null
-          ? const <String, num>{}
-          : _radiusValues(data, mark.category, mark.radius!),
-      sliceRadiusConfig: mark.sliceRadiusConfig,
-      sliceGroupingConfig: mark.sliceGroupingConfig,
-      donutStyle: mark.style ?? const DonutChartStyle(),
-      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
-      centerContent: center ?? DonutCenterContent.hidden,
-      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
-    );
+  id: id,
+  name: mark.name,
+  color: mark.color,
+  unit: mark.unit,
+  values: _radialValues(data, mark.category, mark.value),
+  sliceColors: mark.sliceColor == null
+      ? const <String, Color>{}
+      : _sliceColors(data, mark.category, mark.sliceColor!),
+  radiusValues: mark.radius == null
+      ? const <String, num>{}
+      : _radiusValues(data, mark.category, mark.radius!),
+  sliceRadiusConfig: mark.sliceRadiusConfig,
+  sliceGroupingConfig: mark.sliceGroupingConfig,
+  donutStyle: mark.style ?? const DonutChartStyle(),
+  selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
+  centerContent: center ?? DonutCenterContent.hidden,
+  dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+);
 
 /// Partitions [data] by the donut mark's ring accessor (first-seen order) and
 /// builds one `DonutChartSeries` per ring. The shared center is carried by the
@@ -1446,10 +1473,12 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
   final buckets = <String, List<T>>{};
   for (final row in data) {
     final key = mark.ring!(row).toString();
-    buckets.putIfAbsent(key, () {
-      order.add(key);
-      return <T>[];
-    }).add(row);
+    buckets
+        .putIfAbsent(key, () {
+          order.add(key);
+          return <T>[];
+        })
+        .add(row);
   }
   return <DonutChartSeries>[
     for (final key in order)

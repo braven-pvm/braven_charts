@@ -2675,7 +2675,12 @@ class _GrammarChainEmitter {
       switch (mark) {
         case PieMark<_SourceRow>():
           if (mark.style != null) {
-            _config.emitRadialStyle(writer, 'style', 'PieChartStyle', mark.style!);
+            _config.emitRadialStyle(
+              writer,
+              'style',
+              'PieChartStyle',
+              mark.style!,
+            );
           }
           if (mark.selectionStyle != null) {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);

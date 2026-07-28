@@ -779,12 +779,7 @@ final class BravenChart<T> {
     FacetScales scales = FacetScales.fixed,
     String? label,
   }) => _copy(
-    facet: FacetSpec<T>(
-      by: by,
-      columns: columns,
-      scales: scales,
-      label: label,
-    ),
+    facet: FacetSpec<T>(by: by, columns: columns, scales: scales, label: label),
   );
 
   /// The specification this chain describes.
@@ -813,8 +808,10 @@ final class BravenChart<T> {
   XAxisConfig? _specXAxis(String? xLabel) {
     final base = _xAxis ?? (xLabel == null ? null : XAxisConfig(label: xLabel));
     if (_xScaleType == AxisScaleType.linear) return base;
-    return (base ?? const XAxisConfig())
-        .copyWith(scaleType: _xScaleType, logBase: _xLogBase);
+    return (base ?? const XAxisConfig()).copyWith(
+      scaleType: _xScaleType,
+      logBase: _xLogBase,
+    );
   }
 
   /// The Y axes for the spec, folding in any `.yLog()` scale intent.

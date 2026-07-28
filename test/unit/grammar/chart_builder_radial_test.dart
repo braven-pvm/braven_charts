@@ -9,7 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class Fruit {
-  const Fruit({required this.name, required this.count, this.mass = 0, this.basket = ''});
+  const Fruit({
+    required this.name,
+    required this.count,
+    this.mass = 0,
+    this.basket = '',
+  });
   final String name;
   final double count;
   final double mass;
@@ -209,17 +214,17 @@ void main() {
     });
 
     test('geomPolar rose: true selects the rose preset', () {
-      final spec = BravenChart.of(fruits)
-          .geomPolar(category: fruitName, value: fruitCount, rose: true)
-          .toSpec();
+      final spec = BravenChart.of(
+        fruits,
+      ).geomPolar(category: fruitName, value: fruitCount, rose: true).toSpec();
       final mark = spec.marks.single as PolarMark<Fruit>;
       expect(mark.preset, PolarColumnPreset.rose);
     });
 
     test('geomPolar defaults to the standard preset', () {
-      final spec = BravenChart.of(fruits)
-          .geomPolar(category: fruitName, value: fruitCount)
-          .toSpec();
+      final spec = BravenChart.of(
+        fruits,
+      ).geomPolar(category: fruitName, value: fruitCount).toSpec();
       final mark = spec.marks.single as PolarMark<Fruit>;
       expect(mark.preset, PolarColumnPreset.standard);
     });
