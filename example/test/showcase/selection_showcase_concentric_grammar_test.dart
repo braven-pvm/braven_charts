@@ -25,6 +25,12 @@ import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// The package's own compile gate, reached by path because it lives in the
+// package's `test/` tree rather than its `lib/` and so has no `package:` URI.
+// Copying it here instead would fork the format-then-analyze recipe the helper
+// exists to stop forking.
+import '../../../test/helpers/generated_source_compile.dart';
+
 void main() {
   testWidgets('ACCEPTANCE: the selection lab CONCENTRIC family emits a '
       'COMPLETE grammar chain', (tester) async {
@@ -63,6 +69,22 @@ void main() {
     // Conforming ids, so the mark id is RECOVERED from them and no explicit
     // `ringIds:` map is written — this family stays on the original path.
     expect(generated.source, isNot(contains('ringIds:')));
+
+    // The FLOOR. Every assertion above reads the emitted TEXT, and text
+    // assertions cannot tell a chain that would compile from one that only
+    // looks right — an ambiguous import, a parameter the builder does not have,
+    // a dropped paren all read the same to `contains`. The polar gate has held
+    // this floor since that pane shipped; a chain a user copies out of the
+    // Workbench has to compile, so this one holds it too.
+    //
+    // Real subprocesses, so the same `runAsync` escape hatch the package-side
+    // callers document applies here.
+    await tester.runAsync(
+      () => expectGeneratedSourceCompiles(
+        generated.source,
+        fixtureName: 'showcase_selection_concentric_grammar',
+      ),
+    );
 
     expect(tester.takeException(), isNull);
   });
