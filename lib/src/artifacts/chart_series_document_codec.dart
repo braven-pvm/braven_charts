@@ -3214,8 +3214,36 @@ Map<String, Object?> _encodeGaugeIndicatorStyle(
     if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
     'borderWidth': _number(style.borderWidth),
     'opacity': _number(style.opacity),
+    if (style.gradient != null)
+      'gradient': _encodeGaugeGradient(style.gradient!),
   },
 };
+
+Map<String, Object?> _encodeGaugeGradient(GaugeGradientStyle gradient) => {
+  'enabled': gradient.enabled,
+  'type': gradient.type.name,
+  if (gradient.startColor != null)
+    'startColor': gradient.startColor!.toARGB32(),
+  if (gradient.endColor != null) 'endColor': gradient.endColor!.toARGB32(),
+  'startLightnessShift': _number(gradient.startLightnessShift),
+  'endLightnessShift': _number(gradient.endLightnessShift),
+};
+
+GaugeGradientStyle _decodeGaugeGradient(Map<String, Object?> value) =>
+    GaugeGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: GaugeGradientType.values.byName(_string(value, 'type')),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.gaugeIndicatorStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.gaugeIndicatorStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+    );
 
 GaugeIndicatorStyle _decodeGaugeIndicatorStyle(Map<String, Object?> value) =>
     switch (_string(value, 'type')) {
@@ -3251,6 +3279,9 @@ GaugeIndicatorStyle _decodeGaugeIndicatorStyle(Map<String, Object?> value) =>
         ),
         borderWidth: _double(value, 'borderWidth'),
         opacity: _double(value, 'opacity'),
+        gradient: value['gradient'] == null
+            ? null
+            : _decodeGaugeGradient(_map(value, 'gradient')),
       ),
       final type => throw _UnsupportedModelException(
         'Unsupported Gauge indicator type "$type".',

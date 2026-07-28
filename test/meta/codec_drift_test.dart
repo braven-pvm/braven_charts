@@ -223,6 +223,12 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'GaugeCenterConfig': [
     [_configFile, 'encodeGaugeChart'],
   ],
+  'GaugeScaleStyle': [
+    [_configFile, 'encodeGaugeChart'],
+  ],
+  'GaugeReferenceStyle': [
+    [_configFile, 'encodeGaugeChart'],
+  ],
   'NeedleGaugeStyle': [
     [_seriesFile, '_encodeGaugeIndicatorStyle'],
   ],

@@ -21,8 +21,11 @@ void main() {
     for (final label in [
       'Needle',
       'Solid',
+      'Gradient',
       'Zones',
       'Target',
+      'Legend',
+      'Popup',
       'Partial sweep',
       'Accessible',
       'Density',
@@ -42,6 +45,141 @@ void main() {
     expect(series.indicatorStyle, isA<NeedleGaugeStyle>());
     expect(series.status, 'Elevated');
     expect(chart.gaugeChartConfig.pane.sweepAngleDegrees, 270);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('authored examples exercise scale and callout styling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: GaugeChartsPage()));
+    await tester.pump();
+
+    await tester.tap(find.text('Target').first);
+    await tester.pump();
+    final targetChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-1')),
+    );
+    expect(targetChart.gaugeChartConfig.references.showLabelPanel, isTrue);
+    expect(targetChart.gaugeChartConfig.references.labelOffset, 12);
+
+    await tester.tap(find.text('Accessible').first);
+    await tester.pump();
+    final accessibleChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-2')),
+    );
+    expect(accessibleChart.gaugeChartConfig.scale.tickWidth, 3);
+    expect(accessibleChart.gaugeChartConfig.scale.tickLength, 16);
+    expect(accessibleChart.gaugeChartConfig.scale.labelStyle.fontSize, 13);
+    expect(accessibleChart.gaugeChartConfig.references.showLabelPanel, isTrue);
+
+    await tester.tap(find.text('Density').first);
+    await tester.pump();
+    final densityChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-3')),
+    );
+    expect(densityChart.gaugeChartConfig.scale.tickWidth, 0.75);
+    expect(densityChart.gaugeChartConfig.scale.labelOffset, 5);
+    expect(densityChart.gaugeChartConfig.center.verticalOffset, 8);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('gradient, legend, popup, and motion controls are live', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: GaugeChartsPage()));
+    await tester.pump();
+
+    await tester.tap(find.text('Gradient').first);
+    await tester.pump();
+    final gradientChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-1')),
+    );
+    final gradientStyle =
+        (gradientChart.series.single as GaugeChartSeries).indicatorStyle
+            as SolidGaugeStyle;
+    expect(gradientStyle.gradient?.type, GaugeGradientType.sweep);
+
+    await tester.tap(find.text('Legend').first);
+    await tester.pump();
+    final legendChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-2')),
+    );
+    expect(legendChart.showLegend, isTrue);
+    expect(legendChart.theme?.legendStyle.position, LegendPosition.centerRight);
+    expect(find.byKey(const ValueKey('gauge-legend')), findsOneWidget);
+
+    await tester.tap(find.text('Popup').first);
+    await tester.pump();
+    final popupChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-3')),
+    );
+    expect(popupChart.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
+    expect(
+      popupChart.interactionConfig?.tooltip.preferredPosition,
+      TooltipPosition.right,
+    );
+    expect(popupChart.interactionConfig?.tooltip.followCursor, isTrue);
+    expect(
+      popupChart.theme?.animationTheme.dataUpdateDuration,
+      isNot(Duration.zero),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('authored examples expose distinct pane geometries', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: GaugeChartsPage()));
+    await tester.pump();
+
+    const expected = <String, (double, double)>{
+      'Needle': (-135, 270),
+      'Solid': (-150, 300),
+      'Gradient': (-120, 240),
+      'Zones': (-180, 360),
+      'Target': (-90, 180),
+      'Legend': (-160, 320),
+      'Popup': (-105, 210),
+      'Partial sweep': (15, 150),
+      'Accessible': (-140, 280),
+      'Density': (-165, 330),
+    };
+    final observedSweeps = <double>{};
+
+    for (final (index, entry) in expected.entries.indexed) {
+      if (index > 0) {
+        await tester.tap(find.text(entry.key).first);
+        await tester.pump();
+      }
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(ValueKey('gauge-chart-$index')),
+      );
+      expect(
+        chart.gaugeChartConfig.pane.startAngleDegrees,
+        entry.value.$1,
+        reason: '${entry.key} start angle',
+      );
+      expect(
+        chart.gaugeChartConfig.pane.sweepAngleDegrees,
+        entry.value.$2,
+        reason: '${entry.key} sweep angle',
+      );
+      observedSweeps.add(chart.gaugeChartConfig.pane.sweepAngleDegrees);
+    }
+
+    expect(observedSweeps, hasLength(expected.length));
     expect(tester.takeException(), isNull);
   });
 

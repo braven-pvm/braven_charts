@@ -11,6 +11,7 @@ import '../widgets/bar_gallery_cards.dart';
 import '../widgets/cartesian_release_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
+import '../widgets/gauge_gallery_cards.dart';
 import '../widgets/pie_gallery_cards.dart';
 import '../widgets/polar_column_gallery_cards.dart';
 import '../widgets/radial_bar_gallery_cards.dart';
@@ -381,6 +382,19 @@ class _GalleryPageState extends State<GalleryPage> {
           const _RadialGalleryGrid(
             gridKey: ValueKey('gallery-radial-bar-compositions'),
             cards: radialBarGalleryCards,
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'GAUGE COMPOSITIONS',
+              title: 'Three operational readings, one explicit domain',
+              subtitle:
+                  'Compare a status-aware needle, a portable gradient with an informational legend, and a high-contrast partial sweep without turning state into selection.',
+              count: 3,
+            ),
+          ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-gauge-compositions'),
+            cards: gaugeGalleryCards,
           ),
         ],
       ),

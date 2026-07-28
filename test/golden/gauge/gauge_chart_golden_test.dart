@@ -97,12 +97,57 @@ void main() {
         series: _needleSeries(),
         config: _standardConfig,
         chartTheme: ChartTheme.highContrast,
+        showLegend: false,
       ),
     );
 
     await expectLater(
       find.byKey(const ValueKey('gauge-high-contrast')),
       matchesGoldenFile('goldens/gauge_high_contrast_large_text.png'),
+    );
+  });
+
+  testWidgets('zero offset labels, ticks, and references remain aligned', (
+    tester,
+  ) async {
+    const size = Size(720, 520);
+    await _pumpSurface(
+      tester,
+      key: const ValueKey('gauge-zero-offset-labels'),
+      size: size,
+      child: _GaugeTile(
+        title: 'Service availability',
+        subtitle: '20 px scale labels · zero edge gap · adjacent references',
+        series: _zeroOffsetSolidSeries(),
+        config: const GaugeChartConfig(
+          tickCount: 6,
+          pane: PolarPaneConfig(
+            startAngleDegrees: -150,
+            sweepAngleDegrees: 300,
+            innerRadiusFactor: 0.56,
+            outerRadiusFactor: 0.86,
+          ),
+          scale: GaugeScaleStyle(
+            tickWidth: 4,
+            tickLength: 16,
+            labelStyle: PolarLabelStyle(fontSize: 20),
+            labelOffset: 0,
+          ),
+          references: GaugeReferenceStyle(
+            outerLineOffset: 12,
+            labelOffset: 0,
+            showLabelPanel: true,
+          ),
+          center: GaugeCenterConfig(showTarget: true),
+        ),
+        chartTheme: ChartTheme.light,
+        showLegend: false,
+      ),
+    );
+
+    await expectLater(
+      find.byKey(const ValueKey('gauge-zero-offset-labels')),
+      matchesGoldenFile('goldens/gauge_zero_offset_labels.png'),
     );
   });
 }
@@ -150,6 +195,29 @@ GaugeChartSeries _solidSeries() => GaugeChartSeries.solid(
   ),
 );
 
+GaugeChartSeries _zeroOffsetSolidSeries() => GaugeChartSeries.solid(
+  id: 'availability-zero-offset',
+  metric: 'Service availability',
+  unit: '%',
+  value: 99.94,
+  minimum: 99,
+  maximum: 100,
+  target: const GaugeTarget(value: 99.9, label: 'SLO'),
+  thresholds: const [
+    GaugeThreshold(value: 99.8, label: 'Alert', color: Color(0xFFDC2626)),
+  ],
+  zones: const [
+    GaugeZone(from: 99, to: 99.8, status: 'Critical', color: Color(0xFFDC2626)),
+    GaugeZone(from: 99.8, to: 99.9, status: 'Alert', color: Color(0xFFF59E0B)),
+    GaugeZone(from: 99.9, to: 100, status: 'Healthy', color: Color(0xFF16A34A)),
+  ],
+  style: const SolidGaugeStyle(
+    cornerRadius: 12,
+    borderColor: Color(0xFF334155),
+    borderWidth: 1,
+  ),
+);
+
 class _GaugeTile extends StatelessWidget {
   const _GaugeTile({
     required this.title,
@@ -157,6 +225,7 @@ class _GaugeTile extends StatelessWidget {
     required this.series,
     required this.config,
     required this.chartTheme,
+    this.showLegend = true,
   });
 
   final String title;
@@ -164,6 +233,7 @@ class _GaugeTile extends StatelessWidget {
   final GaugeChartSeries series;
   final GaugeChartConfig config;
   final ChartTheme chartTheme;
+  final bool showLegend;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -191,6 +261,7 @@ class _GaugeTile extends StatelessWidget {
               theme: chartTheme,
               series: [series],
               gaugeChartConfig: config,
+              showLegend: showLegend,
             ),
           ),
         ],

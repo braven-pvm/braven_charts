@@ -7,6 +7,8 @@ import '../models/chart_data_point.dart';
 import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/donut_chart_series.dart';
+import '../models/gauge_chart_config.dart';
+import '../models/gauge_chart_series.dart';
 import '../models/legend_style.dart';
 import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
@@ -280,6 +282,133 @@ class RadialBarLegend extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Native, informational legend for a single Gauge measurement.
+///
+/// Gauge represents current state rather than a selectable collection, so the
+/// legend intentionally exposes no activation behavior. It shares the same
+/// theme-owned layout, marker, panel, and typography contract as the other
+/// radial legends.
+class GaugeLegend extends StatelessWidget {
+  /// Creates a compact legend for one Gauge measurement.
+  const GaugeLegend({
+    super.key,
+    required this.series,
+    required this.config,
+    required this.chartTheme,
+  });
+
+  /// Source Gauge measurement.
+  final GaugeChartSeries series;
+
+  /// Effective Gauge configuration used to resolve active-zone coloring.
+  final GaugeChartConfig config;
+
+  /// Effective chart theme used by the Gauge painter.
+  final ChartTheme chartTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = chartTheme.legendStyle;
+    final color = _gaugeLegendColor(series, config, chartTheme);
+    final value = MultiAxisValueFormatter.format(
+      value: series.value,
+      unit: series.unit,
+    );
+    final status = series.status?.trim();
+    final secondary = status == null || status.isEmpty
+        ? value
+        : '$value · $status';
+    final textStyle = style.textStyle;
+
+    return Transform.translate(
+      offset: style.offset,
+      child: Opacity(
+        opacity: style.opacity.clamp(0, 1),
+        child: Material(
+          color: style.backgroundColor ?? chartTheme.backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: style.effectiveBorderRadius,
+            side: style.borderWidth > 0
+                ? BorderSide(
+                    color: style.borderColor ?? chartTheme.axisStyle.lineColor,
+                    width: style.borderWidth,
+                  )
+                : BorderSide.none,
+          ),
+          child: Padding(
+            padding: style.padding ?? const EdgeInsets.fromLTRB(10, 6, 10, 8),
+            child: Semantics(
+              container: true,
+              label: '${series.metric}, $secondary',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _PieLegendMarker(
+                    color: color,
+                    borderColor: textStyle.color ?? Colors.black87,
+                    selectionColor: chartTheme.focusBorderColor,
+                    shape: style.markerShape,
+                    size: style.markerSize,
+                    lineWidth: style.markerLineWidth,
+                    selected: false,
+                  ),
+                  SizedBox(width: style.markerLabelSpacing),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          series.metric,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textStyle.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          secondary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textStyle.copyWith(
+                            fontSize: (textStyle.fontSize ?? 11) * 0.92,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _gaugeLegendColor(
+  GaugeChartSeries series,
+  GaugeChartConfig config,
+  ChartTheme theme,
+) {
+  final base =
+      (config.colorIndicatorByActiveZone ? series.activeZone?.color : null) ??
+      series.color ??
+      theme.seriesTheme.colors.first;
+  final indicator = series.indicatorStyle;
+  if (indicator is! SolidGaugeStyle) return base;
+  final gradient = indicator.gradient;
+  if (gradient == null || !gradient.enabled) return base;
+  final start =
+      gradient.startColor ??
+      _shiftRadialBarLegendLightness(base, gradient.startLightnessShift);
+  final end =
+      gradient.endColor ??
+      _shiftRadialBarLegendLightness(base, gradient.endLightnessShift);
+  return Color.lerp(start, end, 0.5)!;
 }
 
 Color _radialBarLegendColor(RadialBarGradientStyle? gradient, Color baseColor) {

@@ -6,6 +6,7 @@ import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/polar_column_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/radial_bar_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/gauge_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/range_area_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/synchronized_cartesian_gallery_card.dart';
@@ -420,6 +421,22 @@ void main() {
     expect(find.byType(RegionalProfileRadialBarGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
+      find.text('Three operational readings, one explicit domain'),
+      500,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const ValueKey('gallery-gauge-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-gauge-compositions'), 3);
+    expect(find.byType(OperationsHealthGaugeGalleryCard), findsOneWidget);
+    expect(find.byType(ReleaseConfidenceGaugeGalleryCard), findsOneWidget);
+    expect(find.byType(RecoveryWindowGaugeGalleryCard), findsOneWidget);
+
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('gallery-mode-control')),
       -800,
       scrollable: galleryScrollable,
@@ -484,6 +501,52 @@ void main() {
       charts[2].radialBarChartConfig.categoryLabels.position,
       RadialBarCategoryLabelPosition.outsideCallout,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Gauge Gallery cards preserve three distinct contracts', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              Expanded(child: OperationsHealthGaugeGalleryCard()),
+              Expanded(child: ReleaseConfidenceGaugeGalleryCard()),
+              Expanded(child: RecoveryWindowGaugeGalleryCard()),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(charts, hasLength(3));
+    expect(
+      charts.every((chart) => chart.series.single is GaugeChartSeries),
+      isTrue,
+    );
+    expect(
+      (charts[0].series.single as GaugeChartSeries).indicatorStyle,
+      isA<NeedleGaugeStyle>(),
+    );
+    final gradient =
+        (charts[1].series.single as GaugeChartSeries).indicatorStyle
+            as SolidGaugeStyle;
+    expect(gradient.gradient?.type, GaugeGradientType.sweep);
+    expect(charts[1].showLegend, isTrue);
+    expect(charts[2].theme?.backgroundColor, const Color(0xFF111827));
+    expect(charts[0].gaugeChartConfig.pane.sweepAngleDegrees, 300);
+    expect(charts[1].gaugeChartConfig.pane.sweepAngleDegrees, 240);
+    expect(charts[2].gaugeChartConfig.pane.sweepAngleDegrees, 180);
     expect(tester.takeException(), isNull);
   });
 
