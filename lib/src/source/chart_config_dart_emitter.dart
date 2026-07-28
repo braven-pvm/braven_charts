@@ -457,11 +457,13 @@ class ChartConfigDartEmitter {
     }
 
     // Build the header after the body so warnings discovered while emitting a
-    // nested option are visible both in the result metadata and in copied code.
+    // nested option are visible both in the result metadata and in copied code,
+    // and so the material import can hide the names the body actually made
+    // ambiguous.
     final writer = DartSourceWriter();
     if (options.includeImports) {
       writer.writeLine("import 'package:braven_charts/braven_charts.dart';");
-      writer.writeLine("import 'package:flutter/material.dart';");
+      writer.writeLine(DartSourceWriter.materialImport(body.toString()));
       writer.writeLine();
     }
     if (_warnings.isNotEmpty) {

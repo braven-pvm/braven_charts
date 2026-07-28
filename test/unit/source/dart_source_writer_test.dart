@@ -61,5 +61,41 @@ void main() {
       expect(DartSourceWriter.isIdentifier('chart-source'), isFalse);
       expect(DartSourceWriter.isIdentifier('2chart'), isFalse);
     });
+
+    group('materialImport', () {
+      // Which branch a chart lands on is not cosmetic. A chart that uses an
+      // ambiguous name and gets the plain import emits source that does not
+      // compile — that is the bug the radial acceptance gates now catch
+      // end-to-end. A chart that does NOT use one and gets a hide clause emits
+      // a combinator for a name it never mentions, which is the noise that
+      // makes copied code look wrong. Both branches are pinned here on the
+      // exact emitted string, so neither can drift silently.
+      test('is the plain import when the body uses no ambiguous name', () {
+        expect(
+          DartSourceWriter.materialImport(
+            "final chart = BravenChartPlus(title: 'Power');",
+          ),
+          "import 'package:flutter/material.dart';",
+        );
+      });
+
+      test('hides the ambiguous names the body actually uses', () {
+        expect(
+          DartSourceWriter.materialImport(
+            'tooltip: TooltipConfig(triggerMode: TooltipTriggerMode.both),',
+          ),
+          "import 'package:flutter/material.dart' hide TooltipTriggerMode;",
+        );
+      });
+
+      test('matches on whole identifiers, not substrings', () {
+        // `MyTooltipTriggerModeThing` is a different name and shadows nothing,
+        // so a substring match here would hide a name the file never uses.
+        expect(
+          DartSourceWriter.materialImport('id: MyTooltipTriggerModeThing.a,'),
+          "import 'package:flutter/material.dart';",
+        );
+      });
+    });
   });
 }

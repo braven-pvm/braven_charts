@@ -495,10 +495,12 @@ class _GrammarChainEmitter {
     final blocked = <String>[];
     final body = _tryEmitChain(blocked);
 
+    // The header is built after the chain, so the material import can hide the
+    // names the chain actually made ambiguous.
     final writer = DartSourceWriter();
     if (body != null && options.includeImports) {
       writer.writeLine("import 'package:braven_charts/braven_charts.dart';");
-      writer.writeLine("import 'package:flutter/material.dart';");
+      writer.writeLine(DartSourceWriter.materialImport(body));
       writer.writeLine();
     }
     if (body == null) {
