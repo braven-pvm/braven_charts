@@ -780,6 +780,21 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     no literal form (the pie's radial label formatters, the donut's centre
     `valueFormatter`) — the established contract for runtime values, not a
     degradation.
+  - **All four mounted-page gates COMPILE the chain they assert on**, through
+    the same `dart format` + `dart analyze` harness
+    (`test/helpers/generated_source_compile.dart`) the polar gate uses. That is
+    the floor, not a nicety: every other assertion in those tests reads the
+    emitted *text*, and `contains` cannot tell a chain that would compile from
+    one that only looks right. It caught a real defect the text assertions had
+    all passed over — the emitted preamble imports
+    `package:braven_charts/braven_charts.dart` and
+    `package:flutter/material.dart` unprefixed, and `TooltipTriggerMode` is
+    declared in both, so every chain that emitted a non-default tooltip trigger
+    mode was `ambiguous_import`. The material import now carries `hide` for the
+    ambiguous names the body actually uses, in **both** source forms;
+    `test/unit/source/generated_import_ambiguity_test.dart` re-derives that
+    list from the analyzer so a future collision fails a test instead of
+    reaching a user as unpasteable source.
   - **A non-default `ConcentricDonutConfig` emits** — radii, ring gap, order,
     legend mode, per-ring weights and center all survive to
     `geomDonut(concentric: ...)`. The one remaining precondition is that no

@@ -74,6 +74,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chain: Cartesian, polar, and pie/donut/concentric charts with no per-slice
   colours, uniform ring labels, conforming ring ids and a default centre.
 
+### Fixed
+
+- Generated Dart source that sets a non-default tooltip trigger mode now
+  compiles. Both the Config and the Grammar form open with
+  `import 'package:braven_charts/braven_charts.dart';` and
+  `import 'package:flutter/material.dart';`, and `TooltipTriggerMode` is
+  declared in both libraries, so `triggerMode: TooltipTriggerMode.<mode>` was
+  `ambiguous_import` — the copied source parsed, read correctly and did not
+  compile. The material import is now written as
+  `import 'package:flutter/material.dart' hide TooltipTriggerMode;` whenever
+  the emitted body uses that name. Charts that do not emit an ambiguous name
+  are byte-identical; for those that do, the only change is that one import
+  line.
+
 ### Breaking Changes
 
 - `GrammarDiagnosticCode` gained nine enum values (listed under Added). They are
