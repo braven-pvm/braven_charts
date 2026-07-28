@@ -6212,14 +6212,16 @@ void main() {
       // mark carried the whole config, because lowering rebuilt the
       // composition from the center alone. That is the CONFIG PASSTHROUGH.
       //
-      // What it does NOT prove: that `concentric_donut_page.dart` emits. It
-      // does not. The chart below is authored the way the grammar's own
-      // concentric lowering emits one — ring series ids following the
-      // `<markId>-<ring>` pattern, no per-slice colours, one `dataLabels` for
-      // the whole composition — and the showcase page does none of those three
-      // things. The KNOWN GAP group after this one mounts each blocker and
-      // pins its refusal, so the difference stays visible instead of being
-      // implied by this test's neighbours.
+      // What it does NOT prove: that `concentric_donut_page.dart` emits. This
+      // chart is authored the way the grammar's own concentric lowering emits
+      // one — no per-slice colours, one `dataLabels` for the whole composition
+      // — and the page does neither. That claim is a MOUNTED-PAGE one and is
+      // made where it can be honest, in
+      // `example/test/showcase/concentric_donut_page_grammar_test.dart`, which
+      // mounts `ConcentricDonutPage`, reads the live document off the chart's
+      // own controller and asserts a complete chain; its sibling does the same
+      // for the selection lab's concentric family. (A hand copy of a page
+      // cannot make that claim, which is why it is not made here.)
       await expectShowcaseEmits(
         tester,
         presentation: 'grammar-authored concentric config',
