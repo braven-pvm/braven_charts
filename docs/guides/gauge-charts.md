@@ -148,6 +148,12 @@ to the nearest label or panel edge.
 Center content supports independent typography for metric, value, target, and
 status plus horizontal/vertical offsets and line spacing.
 
+Compact and large-text layouts reserve enough of the pane to keep the value
+readable. If every optional center line still cannot fit, the portable fallback
+removes target, status, and metric copy in that order before reducing the value
+below its readability threshold. The single semantic summary and tooltip retain
+the complete metric, range, target, and active status.
+
 For runtime-only center content, pass `gaugeCenterBuilder`. The builder receives
 an immutable `GaugeCenterContext` with the metric, source value, formatted
 value, domain, target, active status, and available center bounds. Runtime

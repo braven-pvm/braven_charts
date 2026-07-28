@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/gauge_series_element.dart';
-import 'package:braven_charts/src/models/gauge_chart_config.dart';
-import 'package:braven_charts/src/models/gauge_chart_series.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -332,6 +330,216 @@ void main() {
       final hovered = element.copyWith(isHovered: true);
       expect(hovered.highContrast, isTrue);
       expect(hovered.isHovered, isTrue);
+    });
+
+    test('constrained large-text center content keeps the value readable', () {
+      final element = GaugeSeriesElement(
+        series: GaugeChartSeries.solid(
+          id: 'large-text',
+          metric: 'Response latency across the primary service',
+          unit: 'ms',
+          value: 72,
+          minimum: 0,
+          maximum: 100,
+          target: const GaugeTarget(value: 70, label: 'Release target'),
+          zones: const [
+            GaugeZone(from: 0, to: 60, status: 'Healthy'),
+            GaugeZone(from: 60, to: 100, status: 'Requires investigation'),
+          ],
+        ),
+        config: const GaugeChartConfig(
+          showTickLabels: false,
+          references: GaugeReferenceStyle(showLabels: false),
+          center: GaugeCenterConfig(showTarget: true),
+        ),
+        size: const Size.square(220),
+        theme: ChartTheme.highContrast,
+        textScaleFactor: 1.5,
+        highContrast: true,
+      );
+
+      expect(element.resolvedCenterContentScale, greaterThanOrEqualTo(0.8));
+      expect(element.resolvedCenterLineKinds, contains('value'));
+      expect(element.resolvedCenterLineKinds.length, lessThan(4));
+
+      final recorder = PictureRecorder();
+      expect(
+        () => element.paint(Canvas(recorder), const Size.square(220)),
+        returnsNormally,
+      );
+      expect(recorder.endRecording(), isNotNull);
+    });
+
+    test('center reservation stays stable across value revisions', () {
+      GaugeSeriesElement build(double value) => GaugeSeriesElement(
+        series: GaugeChartSeries.solid(
+          id: 'stable-center',
+          metric: 'Load',
+          unit: '%',
+          value: value,
+          minimum: 0,
+          maximum: 100,
+        ),
+        config: const GaugeChartConfig(showTickLabels: false),
+        size: const Size.square(220),
+        theme: ChartTheme.highContrast,
+        textScaleFactor: 1.5,
+      );
+
+      final shortValue = build(9);
+      final longValue = build(100);
+
+      expect(shortValue.pane.innerRadius, longValue.pane.innerRadius);
+      expect(shortValue.pane.outerRadius, longValue.pane.outerRadius);
+      expect(shortValue.geometry.centerBounds, longValue.geometry.centerBounds);
+    });
+
+    test('center reservation preserves an authored thin solid ring', () {
+      const pane = PolarPaneConfig(
+        innerRadiusFactor: 0.86,
+        outerRadiusFactor: 0.88,
+      );
+      final element = GaugeSeriesElement(
+        series: GaugeChartSeries.solid(
+          id: 'thin-ring',
+          metric: 'Load',
+          value: 72,
+          minimum: 0,
+          maximum: 100,
+        ),
+        config: const GaugeChartConfig(pane: pane, showTickLabels: false),
+        size: const Size.square(360),
+        theme: ChartTheme.highContrast,
+        textScaleFactor: 1.5,
+      );
+
+      expect(
+        element.pane.innerRadius / element.pane.availableOuterRadius,
+        closeTo(pane.innerRadiusFactor, 0.0001),
+      );
+      expect(
+        element.pane.outerRadius / element.pane.availableOuterRadius,
+        closeTo(pane.outerRadiusFactor, 0.0001),
+      );
+    });
+
+    test('adversarial geometry matrix remains finite and collision-safe', () {
+      const sizes = <Size>[Size(180, 180), Size(320, 220), Size(720, 420)];
+      const panes = <PolarPaneConfig>[
+        PolarPaneConfig(
+          startAngleDegrees: -180,
+          sweepAngleDegrees: 180,
+          innerRadiusFactor: 0.45,
+          outerRadiusFactor: 0.88,
+        ),
+        PolarPaneConfig(
+          startAngleDegrees: -135,
+          sweepAngleDegrees: 270,
+          innerRadiusFactor: 0.52,
+          outerRadiusFactor: 0.9,
+        ),
+        PolarPaneConfig(
+          startAngleDegrees: 45,
+          sweepAngleDegrees: 360,
+          clockwise: false,
+          innerRadiusFactor: 0.58,
+          outerRadiusFactor: 0.92,
+        ),
+      ];
+
+      for (final size in sizes) {
+        for (final pane in panes) {
+          for (final solid in const [false, true]) {
+            final series = solid
+                ? GaugeChartSeries.solid(
+                    id: 'matrix-solid',
+                    metric: 'Service availability',
+                    unit: '%',
+                    value: 99.92,
+                    minimum: 99,
+                    maximum: 100,
+                    target: const GaugeTarget(value: 99.9, label: 'SLO'),
+                    thresholds: const [
+                      GaugeThreshold(value: 99.8, label: 'Alert'),
+                    ],
+                    zones: const [
+                      GaugeZone(from: 99, to: 99.9, status: 'At risk'),
+                      GaugeZone(from: 99.9, to: 100, status: 'Healthy'),
+                    ],
+                  )
+                : GaugeChartSeries.needle(
+                    id: 'matrix-needle',
+                    metric: 'Service availability',
+                    unit: '%',
+                    value: 99.92,
+                    minimum: 99,
+                    maximum: 100,
+                    target: const GaugeTarget(value: 99.9, label: 'SLO'),
+                    thresholds: const [
+                      GaugeThreshold(value: 99.8, label: 'Alert'),
+                    ],
+                    zones: const [
+                      GaugeZone(from: 99, to: 99.9, status: 'At risk'),
+                      GaugeZone(from: 99.9, to: 100, status: 'Healthy'),
+                    ],
+                  );
+            final element = GaugeSeriesElement(
+              series: series,
+              config: GaugeChartConfig(
+                pane: pane,
+                tickCount: 12,
+                scale: const GaugeScaleStyle(
+                  labelStyle: PolarLabelStyle(fontSize: 18),
+                  labelOffset: 0,
+                ),
+                references: const GaugeReferenceStyle(
+                  labelOffset: 0,
+                  showLabelPanel: true,
+                ),
+                center: const GaugeCenterConfig(showTarget: true),
+              ),
+              size: size,
+              theme: ChartTheme.highContrast,
+              textScaleFactor: 1.35,
+              highContrast: true,
+            );
+
+            final references = element.resolvedReferenceLabelBounds;
+            final ticks = element.resolvedTickLabelBounds;
+            for (final bounds in [...references, ...ticks]) {
+              expect(
+                [
+                  bounds.left,
+                  bounds.top,
+                  bounds.right,
+                  bounds.bottom,
+                ].every((value) => value.isFinite),
+                isTrue,
+              );
+              expect(
+                (Offset.zero & size).inflate(0.01).contains(bounds.topLeft),
+                isTrue,
+              );
+              expect(
+                (Offset.zero & size).inflate(0.01).contains(bounds.bottomRight),
+                isTrue,
+              );
+            }
+            for (final reference in references) {
+              for (final tick in ticks) {
+                expect(reference.inflate(2).overlaps(tick.inflate(2)), isFalse);
+              }
+            }
+
+            final recorder = PictureRecorder();
+            expect(
+              () => element.paint(Canvas(recorder), size),
+              returnsNormally,
+            );
+            expect(recorder.endRecording(), isNotNull);
+          }
+        }
+      }
     });
   });
 }
