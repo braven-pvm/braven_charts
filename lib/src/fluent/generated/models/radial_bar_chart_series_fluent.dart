@@ -7,6 +7,94 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/widgets.dart' show Color;
 
+/// Generated fluent modifiers for [RadialBarGradientStyle].
+extension RadialBarGradientStyleFluent on RadialBarGradientStyle {
+  /// Replaces [RadialBarGradientStyle.enabled] with [value].
+  RadialBarGradientStyle withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [RadialBarGradientStyle.type] with [value].
+  RadialBarGradientStyle withType(RadialBarGradientType value) =>
+      copyWith(type: value);
+
+  /// Replaces [RadialBarGradientStyle.startColor] with [value].
+  RadialBarGradientStyle withStartColor(Color value) =>
+      copyWith(startColor: value);
+
+  /// Clears [RadialBarGradientStyle.startColor] to `null`.
+  RadialBarGradientStyle clearStartColor() => copyWith(clearStartColor: true);
+
+  /// Replaces [RadialBarGradientStyle.endColor] with [value].
+  RadialBarGradientStyle withEndColor(Color value) => copyWith(endColor: value);
+
+  /// Clears [RadialBarGradientStyle.endColor] to `null`.
+  RadialBarGradientStyle clearEndColor() => copyWith(clearEndColor: true);
+
+  /// Replaces [RadialBarGradientStyle.startLightnessShift] with [value].
+  RadialBarGradientStyle withStartLightnessShift(double value) =>
+      copyWith(startLightnessShift: value);
+
+  /// Replaces [RadialBarGradientStyle.endLightnessShift] with [value].
+  RadialBarGradientStyle withEndLightnessShift(double value) =>
+      copyWith(endLightnessShift: value);
+}
+
+/// Generated fluent modifiers for [RadialBarDataLabelConfig].
+extension RadialBarDataLabelConfigFluent on RadialBarDataLabelConfig {
+  /// Replaces [RadialBarDataLabelConfig.position] with [value].
+  RadialBarDataLabelConfig withPosition(RadialBarDataLabelPosition value) =>
+      copyWith(position: value);
+
+  /// Replaces [RadialBarDataLabelConfig.content] with [value].
+  RadialBarDataLabelConfig withContent(RadialBarDataLabelContent value) =>
+      copyWith(content: value);
+
+  /// Replaces [RadialBarDataLabelConfig.colorMode] with [value].
+  RadialBarDataLabelConfig withColorMode(RadialBarDataLabelColorMode value) =>
+      copyWith(colorMode: value);
+
+  /// Replaces [RadialBarDataLabelConfig.textStyle] with [value].
+  RadialBarDataLabelConfig withTextStyle(PolarLabelStyle value) =>
+      copyWith(textStyle: value);
+
+  /// Rebuilds [RadialBarDataLabelConfig.textStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadialBarDataLabelConfig updateTextStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(textStyle: update(textStyle));
+
+  /// Replaces [RadialBarDataLabelConfig.offset] with [value].
+  RadialBarDataLabelConfig withOffset(double value) => copyWith(offset: value);
+
+  /// Replaces [RadialBarDataLabelConfig.showPanel] with [value].
+  RadialBarDataLabelConfig withShowPanel(bool value) =>
+      copyWith(showPanel: value);
+
+  /// Replaces [RadialBarDataLabelConfig.panelStyle] with [value].
+  RadialBarDataLabelConfig withPanelStyle(LabelStyle value) =>
+      copyWith(panelStyle: value);
+
+  /// Clears [RadialBarDataLabelConfig.panelStyle] to `null`.
+  RadialBarDataLabelConfig clearPanelStyle() => copyWith(clearPanelStyle: true);
+
+  /// Replaces [RadialBarDataLabelConfig.connectorLength] with [value].
+  RadialBarDataLabelConfig withConnectorLength(double value) =>
+      copyWith(connectorLength: value);
+
+  /// Replaces [RadialBarDataLabelConfig.connectorWidth] with [value].
+  RadialBarDataLabelConfig withConnectorWidth(double value) =>
+      copyWith(connectorWidth: value);
+
+  /// Replaces [RadialBarDataLabelConfig.connectorColor] with [value].
+  RadialBarDataLabelConfig withConnectorColor(Color value) =>
+      copyWith(connectorColor: value);
+
+  /// Clears [RadialBarDataLabelConfig.connectorColor] to `null`.
+  RadialBarDataLabelConfig clearConnectorColor() =>
+      copyWith(clearConnectorColor: true);
+}
+
 /// Generated fluent modifiers for [RadialBarStyle].
 extension RadialBarStyleFluent on RadialBarStyle {
   /// Replaces [RadialBarStyle.cornerRadius] with [value].
@@ -35,9 +123,28 @@ extension RadialBarStyleFluent on RadialBarStyle {
   RadialBarStyle withTrackOpacity(double value) =>
       copyWith(trackOpacity: value);
 
+  /// Replaces [RadialBarStyle.gradient] with [value].
+  RadialBarStyle withGradient(RadialBarGradientStyle value) =>
+      copyWith(gradient: value);
+
+  /// Clears [RadialBarStyle.gradient] to `null`.
+  RadialBarStyle clearGradient() => copyWith(clearGradient: true);
+
   /// Replaces [RadialBarStyle.showDataLabels] with [value].
   RadialBarStyle withShowDataLabels(bool value) =>
       copyWith(showDataLabels: value);
+
+  /// Replaces [RadialBarStyle.dataLabels] with [value].
+  RadialBarStyle withDataLabels(RadialBarDataLabelConfig value) =>
+      copyWith(dataLabels: value);
+
+  /// Rebuilds [RadialBarStyle.dataLabels] from its current value.
+  ///
+  /// `update` receives the current [RadialBarDataLabelConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadialBarStyle updateDataLabels(
+    RadialBarDataLabelConfig Function(RadialBarDataLabelConfig current) update,
+  ) => copyWith(dataLabels: update(dataLabels));
 }
 
 /// Generated fluent modifiers for [RadialBarChartSeries].

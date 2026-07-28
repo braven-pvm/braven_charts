@@ -3,12 +3,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../artifacts/chart_view_state.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/legend_style.dart';
+import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_legend_item.dart';
+import '../formatting/multi_axis_value_formatter.dart';
 import '../formatting/radial_value_formatter.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 
@@ -146,6 +149,153 @@ class PieChartLegend extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Native, category-aware legend for one Radial Bar series.
+///
+/// Each item represents one independently scaled category track. Activating
+/// an item selects the same source point as activating the corresponding mark,
+/// so legend, canvas, table, keyboard, and controller state stay aligned.
+class RadialBarLegend extends StatelessWidget {
+  /// Creates a selectable legend for one Radial Bar series.
+  const RadialBarLegend({
+    super.key,
+    required this.series,
+    required this.chartTheme,
+    required this.selectedPointIndices,
+    required this.onTrackTap,
+    this.itemBuilder,
+    this.disableAnimations = false,
+  });
+
+  /// Source Radial Bar series.
+  final RadialBarChartSeries series;
+
+  /// Effective chart theme used by the track painter.
+  final ChartTheme chartTheme;
+
+  /// Durable source-point selection shown by the legend.
+  final Set<int> selectedPointIndices;
+
+  /// Invoked with the source point index of an activated legend item.
+  final ValueChanged<int> onTrackTap;
+
+  /// Optional host builder for each category legend item.
+  final RadialLegendItemBuilder? itemBuilder;
+
+  /// Whether selection transitions must complete immediately.
+  final bool disableAnimations;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = chartTheme.legendStyle;
+    final span = series.maximum - series.minimum;
+    final colors = <Color>[
+      for (final (index, point) in series.points.indexed)
+        _radialBarLegendColor(
+          series.radialBarStyle.gradient,
+          point.pointStyle?.color ??
+              series.color ??
+              chartTheme.seriesTheme.colors[index %
+                  chartTheme.seriesTheme.colors.length],
+        ),
+    ];
+    final items = <Widget>[
+      for (final (index, point) in series.points.indexed)
+        _PieLegendItem(
+          key: ValueKey<String>('radial-bar-legend-item-${series.id}-$index'),
+          markerShape: style.markerShape,
+          markerSize: style.markerSize,
+          markerLineWidth: style.markerLineWidth,
+          markerLabelSpacing: style.markerLabelSpacing,
+          itemBuilder: itemBuilder,
+          showShare: false,
+          data: RadialLegendItemData(
+            seriesId: series.id,
+            seriesName: series.name,
+            unit: series.unit,
+            visibleIndex: index,
+            pointIndex: index,
+            sourcePointIndices: <int>[index],
+            sourcePoints: <ChartDataPoint>[point],
+            point: point,
+            category: point.label!.trim(),
+            value: point.y,
+            share: ((point.y - series.minimum) / span).clamp(0, 1),
+            color: colors[index],
+            selectionColor: chartTheme.focusBorderColor,
+            defaultTextStyle: style.textStyle,
+            selected: selectedPointIndices.contains(index),
+            animationDuration: disableAnimations
+                ? Duration.zero
+                : chartTheme.animationTheme.interactionDuration,
+            valueLabel: MultiAxisValueFormatter.format(
+              value: point.y,
+              unit: series.unit,
+            ),
+          ),
+          onTap: () => onTrackTap(index),
+        ),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final itemLayout = style.orientation == LegendOrientation.vertical
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (index, item) in items.indexed) ...[
+                if (index > 0) SizedBox(height: math.max(8, style.itemSpacing)),
+                item,
+              ],
+            ],
+          )
+        : Wrap(
+            alignment: WrapAlignment.center,
+            spacing: math.max(8, style.itemSpacing),
+            runSpacing: 8,
+            children: items,
+          );
+
+    return Transform.translate(
+      offset: style.offset,
+      child: Opacity(
+        opacity: style.opacity.clamp(0, 1),
+        child: Material(
+          color: style.backgroundColor ?? chartTheme.backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: style.effectiveBorderRadius,
+            side: style.borderWidth > 0
+                ? BorderSide(
+                    color: style.borderColor ?? chartTheme.axisStyle.lineColor,
+                    width: style.borderWidth,
+                  )
+                : BorderSide.none,
+          ),
+          child: Padding(
+            padding: style.padding ?? const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: itemLayout,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _radialBarLegendColor(RadialBarGradientStyle? gradient, Color baseColor) {
+  if (gradient == null || !gradient.enabled) return baseColor;
+  final start =
+      gradient.startColor ??
+      _shiftRadialBarLegendLightness(baseColor, gradient.startLightnessShift);
+  final end =
+      gradient.endColor ??
+      _shiftRadialBarLegendLightness(baseColor, gradient.endLightnessShift);
+  return Color.lerp(start, end, 0.5)!;
+}
+
+Color _shiftRadialBarLegendLightness(Color color, double shift) {
+  final hsl = HSLColor.fromColor(color);
+  return hsl.withLightness((hsl.lightness + shift).clamp(0.0, 1.0)).toColor();
 }
 
 /// Native legend for two or more independently normalized Donut rings.
@@ -385,6 +535,7 @@ class _PieLegendItem extends StatelessWidget {
     required this.itemBuilder,
     required this.onTap,
     this.defaultCategoryLabel,
+    this.showShare = true,
   });
 
   final LegendMarkerShape markerShape;
@@ -395,6 +546,7 @@ class _PieLegendItem extends StatelessWidget {
   final RadialLegendItemBuilder? itemBuilder;
   final VoidCallback onTap;
   final String? defaultCategoryLabel;
+  final bool showShare;
 
   @override
   Widget build(BuildContext context) {
@@ -444,7 +596,7 @@ class _PieLegendItem extends StatelessWidget {
                         style: textStyle.copyWith(fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        '$valueText · $shareText',
+                        showShare ? '$valueText · $shareText' : valueText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textStyle.copyWith(

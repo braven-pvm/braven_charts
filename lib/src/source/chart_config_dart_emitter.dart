@@ -2727,12 +2727,91 @@ class ChartConfigDartEmitter {
         _numberIf(writer, 'borderWidth', style.borderWidth, 0);
         _optionalColor(writer, 'trackColor', style.trackColor);
         _numberIf(writer, 'trackOpacity', style.trackOpacity, 0.12);
+        if (style.gradient != null) {
+          final gradient = style.gradient!;
+          writer.writeLine('gradient: RadialBarGradientStyle(');
+          writer.indented(() {
+            _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+            _enumIf(
+              writer,
+              'type',
+              'RadialBarGradientType',
+              gradient.type.name,
+              defaultName: RadialBarGradientType.sweep.name,
+            );
+            _optionalColor(writer, 'startColor', gradient.startColor);
+            _optionalColor(writer, 'endColor', gradient.endColor);
+            _numberIf(
+              writer,
+              'startLightnessShift',
+              gradient.startLightnessShift,
+              0.18,
+            );
+            _numberIf(
+              writer,
+              'endLightnessShift',
+              gradient.endLightnessShift,
+              -0.12,
+            );
+          });
+          writer.writeLine('),');
+        }
         _valueIf(
           writer,
           'showDataLabels',
           style.showDataLabels,
           defaultValue: true,
         );
+        if (options.includeDefaultValues ||
+            style.dataLabels != const RadialBarDataLabelConfig()) {
+          final labels = style.dataLabels;
+          writer.writeLine('dataLabels: RadialBarDataLabelConfig(');
+          writer.indented(() {
+            _enumIf(
+              writer,
+              'position',
+              'RadialBarDataLabelPosition',
+              labels.position.name,
+              defaultName: RadialBarDataLabelPosition.insideEnd.name,
+            );
+            _enumIf(
+              writer,
+              'content',
+              'RadialBarDataLabelContent',
+              labels.content.name,
+              defaultName: RadialBarDataLabelContent.value.name,
+            );
+            _enumIf(
+              writer,
+              'colorMode',
+              'RadialBarDataLabelColorMode',
+              labels.colorMode.name,
+              defaultName: RadialBarDataLabelColorMode.autoContrast.name,
+            );
+            if (options.includeDefaultValues ||
+                labels.textStyle !=
+                    const PolarLabelStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    )) {
+              _emitPolarLabelStyle(writer, 'textStyle', labels.textStyle);
+            }
+            _numberIf(writer, 'offset', labels.offset, 0);
+            _valueIf(
+              writer,
+              'showPanel',
+              labels.showPanel,
+              defaultValue: false,
+            );
+            if (labels.panelStyle != null) {
+              _emitLabelStyle(writer, 'panelStyle', labels.panelStyle!);
+            }
+            _numberIf(writer, 'connectorLength', labels.connectorLength, 14);
+            _numberIf(writer, 'connectorWidth', labels.connectorWidth, 1);
+            _optionalColor(writer, 'connectorColor', labels.connectorColor);
+          });
+          writer.writeLine('),');
+        }
       });
       writer.writeLine('),');
     }
@@ -3185,6 +3264,59 @@ class ChartConfigDartEmitter {
         config.showCategoryLabels,
         defaultValue: true,
       );
+      final categoryLabels = config.categoryLabels;
+      if (options.includeDefaultValues ||
+          categoryLabels != const RadialBarCategoryLabelConfig()) {
+        writer.writeLine('categoryLabels: RadialBarCategoryLabelConfig(');
+        writer.indented(() {
+          _enumIf(
+            writer,
+            'position',
+            'RadialBarCategoryLabelPosition',
+            categoryLabels.position.name,
+            defaultName: RadialBarCategoryLabelPosition.startGap.name,
+          );
+          _enumIf(
+            writer,
+            'orientation',
+            'RadialBarCategoryLabelOrientation',
+            categoryLabels.orientation.name,
+            defaultName:
+                RadialBarCategoryLabelOrientation.followStartAngle.name,
+          );
+          _numberIf(writer, 'offset', categoryLabels.offset, 8);
+          if (options.includeDefaultValues ||
+              categoryLabels.textStyle !=
+                  const PolarLabelStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  )) {
+            _emitPolarLabelStyle(writer, 'textStyle', categoryLabels.textStyle);
+          }
+          _valueIf(
+            writer,
+            'showPanel',
+            categoryLabels.showPanel,
+            defaultValue: false,
+          );
+          if (categoryLabels.panelStyle != null) {
+            _emitLabelStyle(writer, 'panelStyle', categoryLabels.panelStyle!);
+          }
+          _numberIf(
+            writer,
+            'connectorLength',
+            categoryLabels.connectorLength,
+            14,
+          );
+          _numberIf(writer, 'connectorWidth', categoryLabels.connectorWidth, 0);
+          _optionalColor(
+            writer,
+            'connectorColor',
+            categoryLabels.connectorColor,
+          );
+        });
+        writer.writeLine('),');
+      }
       _valueIf(
         writer,
         'showScaleLabels',

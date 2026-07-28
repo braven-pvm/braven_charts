@@ -24,6 +24,7 @@ import '../../models/chart_series.dart';
 import '../../models/braven_chart_controller.dart'
     show ChartSelectionBrushState;
 import '../../models/interaction_config.dart';
+import '../../models/radial_bar_chart_series.dart';
 import '../../models/range_area_chart_series.dart';
 
 /// Delegate interface for EventHandlerManager to interact with ChartRenderBox.
@@ -2723,9 +2724,16 @@ class EventHandlerManager {
         if (minDistance == 0) break;
         final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
         if (hit == null) continue;
-        final distance = hit.share == null
-            ? (plotPosition - hit.plotPosition).distance
-            : 0.0;
+        // Pie-style shares and Radial Bar tracks own their complete painted
+        // area. Their tooltip anchor is a presentation position, not a
+        // proximity target; remeasuring against it would reject hover across
+        // most of a long arc even though the renderer already confirmed an
+        // exact path hit.
+        final ownsCompletePaintedArea =
+            hit.share != null || element.series is RadialBarChartSeries;
+        final distance = ownsCompletePaintedArea
+            ? 0.0
+            : (plotPosition - hit.plotPosition).distance;
         if (distance < minDistance) {
           minDistance = distance;
           nearestMarker = HoveredMarkerInfo(

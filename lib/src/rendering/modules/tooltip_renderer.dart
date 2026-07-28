@@ -127,7 +127,7 @@ class TooltipRenderer {
   /// - [effectiveBindings]: Series-to-axis bindings for unit resolution
   /// - [formatDataValue]: Function to format data values for display
   /// - [plotToWidget]: Function to convert plot coordinates to widget coordinates
-  void drawMarkerTooltip({
+  Rect? drawMarkerTooltip({
     required Canvas canvas,
     required Size size,
     required HoveredMarkerInfo markerInfo,
@@ -158,7 +158,7 @@ class TooltipRenderer {
     final dataHit =
         markerInfo.dataHit ??
         dataElement.dataHitForPointIndex(markerInfo.markerIndex);
-    if (dataHit == null) return;
+    if (dataHit == null) return null;
     final dataPoint = dataHit.point;
 
     // Convert data point to screen coordinates for tooltip anchor
@@ -390,6 +390,7 @@ class TooltipRenderer {
       canvas,
       Offset(tooltipX + padding, tooltipY + padding),
     );
+    return tooltipRect;
   }
 
   /// Resolves an explicit tooltip style before the chart-theme fallback.

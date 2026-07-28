@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 138 of 139 classes have a synthesizable subject: every verb they
+// 141 of 142 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1702 verbs total; 10 of them have an argument type with no
+// 1741 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 138;
+const int _executedClasses = 141;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 1;
@@ -4995,6 +4995,72 @@ void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
   );
 }
 
+/// Smoke coverage for [RadialBarCategoryLabelConfig]'s 12 executable verb(s).
+void _smokeRadialBarCategoryLabelConfig(
+  _Verb verb,
+  RadialBarCategoryLabelConfig subject,
+) {
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withPosition',
+    () => subject.withPosition(RadialBarCategoryLabelPosition.startGap),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withOrientation',
+    () => subject.withOrientation(
+      RadialBarCategoryLabelOrientation.followStartAngle,
+    ),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withOffset',
+    () => subject.withOffset(8),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withTextStyle',
+    () => subject.withTextStyle(PolarLabelStyle()),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.updateTextStyle',
+    () => subject.updateTextStyle((current) => current),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withShowPanel',
+    () => subject.withShowPanel(false),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withPanelStyle',
+    () => subject.withPanelStyle(
+      LabelStyle(
+        textStyle: const TextStyle(),
+        backgroundColor: const Color(0xFF2196F3),
+        borderColor: const Color(0xFF2196F3),
+        borderWidth: 1.0,
+        borderRadius: 1.0,
+        padding: EdgeInsets.zero,
+      ),
+    ),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.clearPanelStyle',
+    () => subject.clearPanelStyle(),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withConnectorLength',
+    () => subject.withConnectorLength(14),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withConnectorWidth',
+    () => subject.withConnectorWidth(0),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.withConnectorColor',
+    () => subject.withConnectorColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadialBarCategoryLabelConfigFluent.clearConnectorColor',
+    () => subject.clearConnectorColor(),
+  );
+}
+
 /// Smoke coverage for [RadialBarThreshold]'s 7 executable verb(s).
 void _smokeRadialBarThreshold(_Verb verb, RadialBarThreshold subject) {
   verb('RadialBarThresholdFluent.withValue', () => subject.withValue(1.0));
@@ -5012,7 +5078,7 @@ void _smokeRadialBarThreshold(_Verb verb, RadialBarThreshold subject) {
   );
 }
 
-/// Smoke coverage for [RadialBarChartConfig]'s 9 executable verb(s).
+/// Smoke coverage for [RadialBarChartConfig]'s 11 executable verb(s).
 void _smokeRadialBarChartConfig(_Verb verb, RadialBarChartConfig subject) {
   verb(
     'RadialBarChartConfigFluent.withPane',
@@ -5035,6 +5101,14 @@ void _smokeRadialBarChartConfig(_Verb verb, RadialBarChartConfig subject) {
     () => subject.withShowCategoryLabels(true),
   );
   verb(
+    'RadialBarChartConfigFluent.withCategoryLabels',
+    () => subject.withCategoryLabels(const RadialBarCategoryLabelConfig()),
+  );
+  verb(
+    'RadialBarChartConfigFluent.updateCategoryLabels',
+    () => subject.updateCategoryLabels((current) => current),
+  );
+  verb(
     'RadialBarChartConfigFluent.withShowScaleLabels',
     () => subject.withShowScaleLabels(true),
   );
@@ -5052,7 +5126,111 @@ void _smokeRadialBarChartConfig(_Verb verb, RadialBarChartConfig subject) {
   );
 }
 
-/// Smoke coverage for [RadialBarStyle]'s 9 executable verb(s).
+/// Smoke coverage for [RadialBarGradientStyle]'s 8 executable verb(s).
+void _smokeRadialBarGradientStyle(_Verb verb, RadialBarGradientStyle subject) {
+  verb(
+    'RadialBarGradientStyleFluent.withEnabled',
+    () => subject.withEnabled(true),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.withType',
+    () => subject.withType(RadialBarGradientType.sweep),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.withStartColor',
+    () => subject.withStartColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.clearStartColor',
+    () => subject.clearStartColor(),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.withEndColor',
+    () => subject.withEndColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.clearEndColor',
+    () => subject.clearEndColor(),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.withStartLightnessShift',
+    () => subject.withStartLightnessShift(0.18),
+  );
+  verb(
+    'RadialBarGradientStyleFluent.withEndLightnessShift',
+    () => subject.withEndLightnessShift(-0.12),
+  );
+}
+
+/// Smoke coverage for [RadialBarDataLabelConfig]'s 13 executable verb(s).
+void _smokeRadialBarDataLabelConfig(
+  _Verb verb,
+  RadialBarDataLabelConfig subject,
+) {
+  verb(
+    'RadialBarDataLabelConfigFluent.withPosition',
+    () => subject.withPosition(RadialBarDataLabelPosition.insideEnd),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withContent',
+    () => subject.withContent(RadialBarDataLabelContent.value),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withColorMode',
+    () => subject.withColorMode(RadialBarDataLabelColorMode.autoContrast),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withTextStyle',
+    () => subject.withTextStyle(PolarLabelStyle()),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.updateTextStyle',
+    () => subject.updateTextStyle((current) => current),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withOffset',
+    () => subject.withOffset(0),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withShowPanel',
+    () => subject.withShowPanel(false),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withPanelStyle',
+    () => subject.withPanelStyle(
+      LabelStyle(
+        textStyle: const TextStyle(),
+        backgroundColor: const Color(0xFF2196F3),
+        borderColor: const Color(0xFF2196F3),
+        borderWidth: 1.0,
+        borderRadius: 1.0,
+        padding: EdgeInsets.zero,
+      ),
+    ),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.clearPanelStyle',
+    () => subject.clearPanelStyle(),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withConnectorLength',
+    () => subject.withConnectorLength(14),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withConnectorWidth',
+    () => subject.withConnectorWidth(1),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.withConnectorColor',
+    () => subject.withConnectorColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadialBarDataLabelConfigFluent.clearConnectorColor',
+    () => subject.clearConnectorColor(),
+  );
+}
+
+/// Smoke coverage for [RadialBarStyle]'s 13 executable verb(s).
 void _smokeRadialBarStyle(_Verb verb, RadialBarStyle subject) {
   verb(
     'RadialBarStyleFluent.withCornerRadius',
@@ -5081,8 +5259,21 @@ void _smokeRadialBarStyle(_Verb verb, RadialBarStyle subject) {
     () => subject.withTrackOpacity(0.12),
   );
   verb(
+    'RadialBarStyleFluent.withGradient',
+    () => subject.withGradient(RadialBarGradientStyle()),
+  );
+  verb('RadialBarStyleFluent.clearGradient', () => subject.clearGradient());
+  verb(
     'RadialBarStyleFluent.withShowDataLabels',
     () => subject.withShowDataLabels(true),
+  );
+  verb(
+    'RadialBarStyleFluent.withDataLabels',
+    () => subject.withDataLabels(const RadialBarDataLabelConfig()),
+  );
+  verb(
+    'RadialBarStyleFluent.updateDataLabels',
+    () => subject.updateDataLabels((current) => current),
   );
 }
 
@@ -8031,6 +8222,15 @@ void main() {
         reason: 'generated PolarColumnChartSeriesFluent verb(s) threw',
       );
     });
+    test('RadialBarCategoryLabelConfig', () {
+      final subject = _subject(() => RadialBarCategoryLabelConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadialBarCategoryLabelConfig, subject),
+        isEmpty,
+        reason: 'generated RadialBarCategoryLabelConfigFluent verb(s) threw',
+      );
+    });
     test('RadialBarThreshold', () {
       final subject = _subject(() => RadialBarThreshold(value: 0.5));
       if (subject == null) return;
@@ -8047,6 +8247,24 @@ void main() {
         _record(_smokeRadialBarChartConfig, subject),
         isEmpty,
         reason: 'generated RadialBarChartConfigFluent verb(s) threw',
+      );
+    });
+    test('RadialBarGradientStyle', () {
+      final subject = _subject(() => RadialBarGradientStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadialBarGradientStyle, subject),
+        isEmpty,
+        reason: 'generated RadialBarGradientStyleFluent verb(s) threw',
+      );
+    });
+    test('RadialBarDataLabelConfig', () {
+      final subject = _subject(() => RadialBarDataLabelConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadialBarDataLabelConfig, subject),
+        isEmpty,
+        reason: 'generated RadialBarDataLabelConfigFluent verb(s) threw',
       );
     });
     test('RadialBarStyle', () {
@@ -8673,7 +8891,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 138);
+    expect(_executedClasses, 141);
     expect(_skippedClasses, 1);
     expect(_compileOnlyCases, hasLength(6));
     expect(_compileOnlyVerbs, hasLength(10));

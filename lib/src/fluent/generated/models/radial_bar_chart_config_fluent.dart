@@ -7,6 +7,63 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/widgets.dart' show Color;
 
+/// Generated fluent modifiers for [RadialBarCategoryLabelConfig].
+extension RadialBarCategoryLabelConfigFluent on RadialBarCategoryLabelConfig {
+  /// Replaces [RadialBarCategoryLabelConfig.position] with [value].
+  RadialBarCategoryLabelConfig withPosition(
+    RadialBarCategoryLabelPosition value,
+  ) => copyWith(position: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.orientation] with [value].
+  RadialBarCategoryLabelConfig withOrientation(
+    RadialBarCategoryLabelOrientation value,
+  ) => copyWith(orientation: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.offset] with [value].
+  RadialBarCategoryLabelConfig withOffset(double value) =>
+      copyWith(offset: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.textStyle] with [value].
+  RadialBarCategoryLabelConfig withTextStyle(PolarLabelStyle value) =>
+      copyWith(textStyle: value);
+
+  /// Rebuilds [RadialBarCategoryLabelConfig.textStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadialBarCategoryLabelConfig updateTextStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(textStyle: update(textStyle));
+
+  /// Replaces [RadialBarCategoryLabelConfig.showPanel] with [value].
+  RadialBarCategoryLabelConfig withShowPanel(bool value) =>
+      copyWith(showPanel: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.panelStyle] with [value].
+  RadialBarCategoryLabelConfig withPanelStyle(LabelStyle value) =>
+      copyWith(panelStyle: value);
+
+  /// Clears [RadialBarCategoryLabelConfig.panelStyle] to `null`.
+  RadialBarCategoryLabelConfig clearPanelStyle() =>
+      copyWith(clearPanelStyle: true);
+
+  /// Replaces [RadialBarCategoryLabelConfig.connectorLength] with [value].
+  RadialBarCategoryLabelConfig withConnectorLength(double value) =>
+      copyWith(connectorLength: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.connectorWidth] with [value].
+  RadialBarCategoryLabelConfig withConnectorWidth(double value) =>
+      copyWith(connectorWidth: value);
+
+  /// Replaces [RadialBarCategoryLabelConfig.connectorColor] with [value].
+  RadialBarCategoryLabelConfig withConnectorColor(Color value) =>
+      copyWith(connectorColor: value);
+
+  /// Clears [RadialBarCategoryLabelConfig.connectorColor] to `null`.
+  RadialBarCategoryLabelConfig clearConnectorColor() =>
+      copyWith(clearConnectorColor: true);
+}
+
 /// Generated fluent modifiers for [RadialBarThreshold].
 extension RadialBarThresholdFluent on RadialBarThreshold {
   /// Replaces [RadialBarThreshold.value] with [value].
@@ -55,6 +112,19 @@ extension RadialBarChartConfigFluent on RadialBarChartConfig {
   /// Replaces [RadialBarChartConfig.showCategoryLabels] with [value].
   RadialBarChartConfig withShowCategoryLabels(bool value) =>
       copyWith(showCategoryLabels: value);
+
+  /// Replaces [RadialBarChartConfig.categoryLabels] with [value].
+  RadialBarChartConfig withCategoryLabels(RadialBarCategoryLabelConfig value) =>
+      copyWith(categoryLabels: value);
+
+  /// Rebuilds [RadialBarChartConfig.categoryLabels] from its current value.
+  ///
+  /// `update` receives the current [RadialBarCategoryLabelConfig] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadialBarChartConfig updateCategoryLabels(
+    RadialBarCategoryLabelConfig Function(RadialBarCategoryLabelConfig current)
+    update,
+  ) => copyWith(categoryLabels: update(categoryLabels));
 
   /// Replaces [RadialBarChartConfig.showScaleLabels] with [value].
   RadialBarChartConfig withShowScaleLabels(bool value) =>

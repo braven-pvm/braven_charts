@@ -5,11 +5,18 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 /// Showcase-owned radial legend content used to demonstrate the public
-/// [RadialLegendItemBuilder] contract on both Pie and Donut charts.
+/// [RadialLegendItemBuilder] contract across radial chart families.
 class RadialLegendValueCard extends StatelessWidget {
-  const RadialLegendValueCard({required this.item, super.key});
+  const RadialLegendValueCard({
+    required this.item,
+    this.showShare = true,
+    super.key,
+  });
 
   final RadialLegendItemData item;
+
+  /// Whether the contribution/share badge belongs to this chart family.
+  final bool showShare;
 
   @override
   Widget build(BuildContext context) {
@@ -69,27 +76,28 @@ class RadialLegendValueCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: item.color.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
+                    if (showShare)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          item.shareLabel,
-                          style: item.defaultTextStyle.copyWith(
-                            color: textColor,
-                            fontSize:
-                                (item.defaultTextStyle.fontSize ?? 11) * 0.88,
-                            fontWeight: FontWeight.w700,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            item.shareLabel,
+                            style: item.defaultTextStyle.copyWith(
+                              color: textColor,
+                              fontSize:
+                                  (item.defaultTextStyle.fontSize ?? 11) * 0.88,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],

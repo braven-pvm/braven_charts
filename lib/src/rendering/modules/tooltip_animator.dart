@@ -55,9 +55,7 @@ void prewarmTooltipRendering() {
 /// - Properly cancels timers to prevent memory leaks
 /// - Minimal overhead when not animating
 class TooltipAnimator {
-  TooltipAnimator({
-    required this.onRepaint,
-  });
+  TooltipAnimator({required this.onRepaint});
 
   /// Callback invoked when a repaint is needed (opacity changed).
   final RepaintCallback onRepaint;
@@ -205,6 +203,10 @@ class TooltipAnimator {
           onRepaint();
         }
       });
+      // A post-frame callback does not itself request a frame. Static charts
+      // can otherwise leave the first tooltip animation at its updated
+      // opacity without ever repainting the overlay.
+      SchedulerBinding.instance.ensureVisualUpdate();
     }
   }
 

@@ -463,6 +463,24 @@ abstract final class ChartConfigurationDocumentCodec {
             'trackGap': config.trackGap,
             'trackOrder': config.trackOrder.name,
             'showCategoryLabels': config.showCategoryLabels,
+            'categoryLabels': {
+              'position': config.categoryLabels.position.name,
+              'orientation': config.categoryLabels.orientation.name,
+              'offset': config.categoryLabels.offset,
+              'textStyle': _encodePolarLabelStyle(
+                config.categoryLabels.textStyle,
+              ),
+              'showPanel': config.categoryLabels.showPanel,
+              if (config.categoryLabels.panelStyle != null)
+                'panelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+                  config.categoryLabels.panelStyle!,
+                ).toJson(),
+              'connectorLength': config.categoryLabels.connectorLength,
+              'connectorWidth': config.categoryLabels.connectorWidth,
+              if (config.categoryLabels.connectorColor != null)
+                'connectorColor': config.categoryLabels.connectorColor!
+                    .toARGB32(),
+            },
             'showScaleLabels': config.showScaleLabels,
             'showGridLines': config.showGridLines,
             'tickCount': config.tickCount,
@@ -503,6 +521,9 @@ abstract final class ChartConfigurationDocumentCodec {
     try {
       final map = raw.toJson() as Map<String, Object?>;
       final pane = _requiredMap(map, 'pane', path);
+      final categoryLabels = map['categoryLabels'] == null
+          ? null
+          : _requiredMap(map, 'categoryLabels', path);
       final config = RadialBarChartConfig(
         pane: PolarPaneConfig(
           startAngleDegrees: _requiredDouble(
@@ -536,6 +557,75 @@ abstract final class ChartConfigurationDocumentCodec {
           path,
         ),
         showCategoryLabels: _requiredBool(map, 'showCategoryLabels', path),
+        categoryLabels: categoryLabels == null
+            ? const RadialBarCategoryLabelConfig(
+                position: RadialBarCategoryLabelPosition.legacyOnTrack,
+              )
+            : RadialBarCategoryLabelConfig(
+                position: _requiredEnum(
+                  categoryLabels,
+                  'position',
+                  RadialBarCategoryLabelPosition.values,
+                  '$path.categoryLabels',
+                ),
+                orientation:
+                    _optionalEnum(
+                      categoryLabels,
+                      'orientation',
+                      RadialBarCategoryLabelOrientation.values,
+                      '$path.categoryLabels',
+                    ) ??
+                    RadialBarCategoryLabelOrientation.followStartAngle,
+                offset: _requiredDouble(
+                  categoryLabels,
+                  'offset',
+                  '$path.categoryLabels',
+                ),
+                textStyle: _decodePolarLabelStyle(
+                  _requiredMap(
+                    categoryLabels,
+                    'textStyle',
+                    '$path.categoryLabels',
+                  ),
+                  '$path.categoryLabels.textStyle',
+                ),
+                showPanel: _requiredBool(
+                  categoryLabels,
+                  'showPanel',
+                  '$path.categoryLabels',
+                ),
+                panelStyle: categoryLabels['panelStyle'] == null
+                    ? null
+                    : ChartStyleDocumentCodec.decodeLabelStyle(
+                        JsonValue.fromJson(
+                              _requiredMap(
+                                categoryLabels,
+                                'panelStyle',
+                                '$path.categoryLabels',
+                              ),
+                            )
+                            as JsonObjectValue,
+                      ),
+                connectorLength: _requiredDouble(
+                  categoryLabels,
+                  'connectorLength',
+                  '$path.categoryLabels',
+                ),
+                connectorWidth: _requiredDouble(
+                  categoryLabels,
+                  'connectorWidth',
+                  '$path.categoryLabels',
+                ),
+                connectorColor: categoryLabels['connectorColor'] == null
+                    ? null
+                    : Color(
+                        _requiredInt(
+                          categoryLabels,
+                          'connectorColor',
+                          '$path.categoryLabels',
+                        ),
+                      ),
+              ),
         showScaleLabels: _requiredBool(map, 'showScaleLabels', path),
         showGridLines: _requiredBool(map, 'showGridLines', path),
         tickCount: _requiredInt(map, 'tickCount', path),

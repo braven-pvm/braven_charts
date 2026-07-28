@@ -7610,6 +7610,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
+  void _activateNonCartesianPointIndex(String seriesId, int pointIndex) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final hit = renderBox?.dataHitForPointIndex(seriesId, pointIndex);
+    if (hit == null) return;
+    _activateNonCartesianDataHit(hit, position: _widgetPositionForDataHit(hit));
+  }
+
   void _clearRadialPointSelection() {
     _keyboardSelectionAnchorRef = null;
     if (_selectedPointRefs.isEmpty) return;
@@ -11286,33 +11294,57 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               growable: false,
             )
           : const <RadialCategorySeries>[];
-      if (widget.showLegend && radialSeries.isNotEmpty) {
+      final radialBarSeries = isPolarAxis
+          ? _effectiveRenderSeries.whereType<RadialBarChartSeries>().toList(
+              growable: false,
+            )
+          : const <RadialBarChartSeries>[];
+      if (widget.showLegend &&
+          (radialSeries.isNotEmpty || radialBarSeries.isNotEmpty)) {
         final theme = chartTheme;
-        final legend = radialSeries.length == 1
-            ? PieChartLegend(
-                series: radialSeries.single,
-                chartTheme: theme,
-                selectedPointIndices: {
-                  for (final ref in _selectedPointRefs)
-                    if (ref.seriesId == radialSeries.single.id) ref.pointIndex,
-                },
-                onSliceTap: _activateRadialPointIndex,
-                itemBuilder: widget.radialLegendItemBuilder,
-                disableAnimations: _disableAnimations,
-              )
-            : ConcentricDonutLegend(
-                key: const ValueKey('concentric-donut-legend'),
-                series: radialSeries.cast<DonutChartSeries>(),
-                config: widget.concentricDonutConfig,
-                chartTheme: theme,
-                selectedPointRefs: _selectedPointRefs,
-                onSliceTap: (ref) => _activateRadialPointIndex(
-                  ref.pointIndex,
-                  seriesId: ref.seriesId,
-                ),
-                itemBuilder: widget.radialLegendItemBuilder,
-                disableAnimations: _disableAnimations,
-              );
+        final Widget legend;
+        if (radialBarSeries.isNotEmpty) {
+          final series = radialBarSeries.single;
+          legend = RadialBarLegend(
+            key: const ValueKey('radial-bar-legend'),
+            series: series,
+            chartTheme: theme,
+            selectedPointIndices: {
+              for (final ref in _selectedPointRefs)
+                if (ref.seriesId == series.id) ref.pointIndex,
+            },
+            onTrackTap: (pointIndex) =>
+                _activateNonCartesianPointIndex(series.id, pointIndex),
+            itemBuilder: widget.radialLegendItemBuilder,
+            disableAnimations: _disableAnimations,
+          );
+        } else if (radialSeries.length == 1) {
+          legend = PieChartLegend(
+            series: radialSeries.single,
+            chartTheme: theme,
+            selectedPointIndices: {
+              for (final ref in _selectedPointRefs)
+                if (ref.seriesId == radialSeries.single.id) ref.pointIndex,
+            },
+            onSliceTap: _activateRadialPointIndex,
+            itemBuilder: widget.radialLegendItemBuilder,
+            disableAnimations: _disableAnimations,
+          );
+        } else {
+          legend = ConcentricDonutLegend(
+            key: const ValueKey('concentric-donut-legend'),
+            series: radialSeries.cast<DonutChartSeries>(),
+            config: widget.concentricDonutConfig,
+            chartTheme: theme,
+            selectedPointRefs: _selectedPointRefs,
+            onSliceTap: (ref) => _activateRadialPointIndex(
+              ref.pointIndex,
+              seriesId: ref.seriesId,
+            ),
+            itemBuilder: widget.radialLegendItemBuilder,
+            disableAnimations: _disableAnimations,
+          );
+        }
         children.add(
           Expanded(
             child: _buildPieLegendLayout(

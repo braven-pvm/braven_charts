@@ -217,6 +217,9 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'RadialBarThreshold': [
     [_configFile, 'encodeRadialBarChart'],
   ],
+  'RadialBarCategoryLabelConfig': [
+    [_configFile, 'encodeRadialBarChart'],
+  ],
   'GaugeCenterConfig': [
     [_configFile, 'encodeGaugeChart'],
   ],

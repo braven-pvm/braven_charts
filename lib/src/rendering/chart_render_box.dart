@@ -25,6 +25,7 @@ import '../axis/log_ticks.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/pie_series_element.dart';
+import '../elements/radial_bar_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
@@ -365,6 +366,7 @@ class ChartRenderBox extends RenderBox {
   /// - Hide delay: Wait before hiding tooltip when moving away
   /// - Fade animation: Smooth opacity transitions
   late final TooltipAnimator _tooltipAnimator;
+  Rect? _debugTooltipRect;
 
   /// Whether tooltip rendering has been pre-warmed.
   ///
@@ -1685,6 +1687,14 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   HoveredMarkerInfo? get debugSelectedTooltipMarker =>
       _resolveSelectedTooltipMarker();
+
+  /// Current tooltip opacity for focused rendering regressions.
+  @visibleForTesting
+  double get debugTooltipOpacity => _tooltipAnimator.opacity;
+
+  /// Bounds of the most recently painted tooltip surface.
+  @visibleForTesting
+  Rect? get debugTooltipRect => _debugTooltipRect;
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
@@ -4599,10 +4609,7 @@ class ChartRenderBox extends RenderBox {
     if (_isHorizontalBarChart && _transform != null) {
       xTicks = _buildTransposedAxesPainter().valueGridPositions(_plotArea);
       final categoryTicks = _buildXAxisPainter(
-        bounds: DataRange(
-          min: _transform!.dataXMin,
-          max: _transform!.dataXMax,
-        ),
+        bounds: DataRange(min: _transform!.dataXMin, max: _transform!.dataXMax),
       ).resolveTickValues(_plotArea.height);
       yTicks = categoryTicks
           .map(
@@ -4644,11 +4651,7 @@ class ChartRenderBox extends RenderBox {
           ? _yAxis!.ticks
                 .map((t) => _yAxis!.scale.dataToPixel(t.value))
                 .toList()
-          : decadeTicks(
-              _yAxis!.dataMin,
-              _yAxis!.dataMax,
-              base: _yAxis!.logBase,
-            )
+          : decadeTicks(_yAxis!.dataMin, _yAxis!.dataMax, base: _yAxis!.logBase)
                 .map(
                   (v) =>
                       _plotArea.bottom -
@@ -5300,9 +5303,10 @@ class ChartRenderBox extends RenderBox {
       (element) => element.id == markerInfo.seriesId,
     )) {
       _tooltipAnimator.hideImmediately();
+      _debugTooltipRect = null;
       return;
     }
-    _tooltipRenderer.drawMarkerTooltip(
+    _debugTooltipRect = _tooltipRenderer.drawMarkerTooltip(
       canvas: canvas,
       size: size,
       markerInfo: markerInfo,
@@ -5351,7 +5355,12 @@ class ChartRenderBox extends RenderBox {
     final isRadial = hits.any(
       (hit) => hit.share != null || hit.groupCount != null,
     );
-    config.label = groupCount != null
+    final isRadialBar = _elements.any(
+      (element) => element is RadialBarSeriesElement,
+    );
+    config.label = isRadialBar
+        ? 'Radial Bar chart with $hitCount categories'
+        : groupCount != null
         ? 'Concentric Donut chart with $groupCount rings and $hitCount slices'
         : isRadial
         ? 'Radial chart with $hitCount slices'
