@@ -50,6 +50,30 @@ const fruits = <Fruit>[
   Fruit(name: 'Plum', count: 10, mass: 2, basket: 'B'),
 ];
 
+// A CROSS-RING fixture: the same two categories appear in BOTH baskets, and
+// `Apple` takes a DIFFERENT colour in each. `fruits` cannot express that —
+// every fruit there belongs to exactly one basket, and `fromMap` reads
+// `sliceColors[category]` only for the categories present in `values`, so a
+// colour map resolved across the WHOLE data set would produce byte-identical
+// rings and leave the per-bucket resolution unproven.
+const crossRingFruits = <Fruit>[
+  Fruit(name: 'Apple', count: 30, mass: 5, basket: 'A'),
+  Fruit(name: 'Pear', count: 20, mass: 3, basket: 'A'),
+  Fruit(name: 'Apple', count: 12, mass: 4, basket: 'B'),
+  Fruit(name: 'Pear', count: 8, mass: 1, basket: 'B'),
+];
+
+/// Basket A colours `Apple` only; basket B colours BOTH, and gives `Apple` a
+/// different colour. Resolved over the whole list the map collapses to
+/// `{Apple: 0xFFDC2626, Pear: 0xFF0D9488}` (last non-null wins), which is wrong
+/// for basket A on both keys.
+Color? crossRingSliceColor(Fruit row) => switch ((row.basket, row.name)) {
+  ('A', 'Apple') => const Color(0xFF2563EB),
+  ('B', 'Apple') => const Color(0xFFDC2626),
+  ('B', 'Pear') => const Color(0xFF0D9488),
+  _ => null,
+};
+
 /// A ConcentricDonutConfig whose every field differs from the default, so a
 /// passthrough that quietly drops one cannot masquerade as success.
 const customConcentric = ConcentricDonutConfig(
@@ -593,10 +617,11 @@ void main() {
       expect(lowered.polarChartConfig, isNull);
     });
 
-    test('sliceColor is resolved per ring bucket', () {
-      // The accessor is evaluated against each bucket's own rows, so ring A
-      // takes the override and ring B's sole row is skipped back onto the
-      // series colour.
+    test('a ring the accessor does not colour keeps the series colour', () {
+      // Ring A takes the override and ring B's sole row is skipped back onto
+      // the series colour. NOTE what this does NOT prove: every category here
+      // lives in exactly one bucket, so it cannot distinguish a per-bucket
+      // resolution from a whole-data-set one. That is the next test's job.
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
@@ -630,6 +655,42 @@ void main() {
           centerContent: DonutCenterContent.hidden,
         ),
       );
+    });
+
+    test('sliceColor is resolved per ring bucket: the SAME category takes a '
+        'DIFFERENT colour in each ring', () {
+      // The discriminating shape. `Apple` and `Pear` are in BOTH baskets;
+      // `Apple` is blue in A and red in B, and `Pear` is uncoloured in A but
+      // teal in B. Resolving the accessor over the whole data set instead of
+      // over `buckets[key]` collapses to one map per category (last non-null
+      // wins), so ring A would come back red/teal. Both assertions below fail
+      // under that mutation, which is what makes them worth having.
+      final lowered = (const PlotSpec<Fruit>(
+        data: crossRingFruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            sliceColor: crossRingSliceColor,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
+      final ringA = lowered.series.first as DonutChartSeries;
+      final ringB = lowered.series.last as DonutChartSeries;
+      expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
+      expect(ringA.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF2563EB),
+        isNull,
+      ]);
+      expect(ringB.points.map((p) => p.label), ['Apple', 'Pear']);
+      expect(ringB.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFFDC2626),
+        const Color(0xFF0D9488),
+      ]);
     });
 
     test('each ring donut parity + shared center goes to the config', () {

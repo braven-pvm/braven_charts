@@ -397,23 +397,50 @@ class ConcentricColorRow {
   final Color? sliceColor;
 }
 
-/// One colour per ring, and NOT the same category in each: `Apple` is coloured
-/// in Winter only and `Plum` in Summer only, which is the shape a colour map
-/// resolved across the whole data set instead of per ring bucket cannot fake.
+/// A CROSS-RING colour fixture: both rings carry the SAME two categories, and
+/// `Apple` takes a DIFFERENT colour in each.
+///
+/// `harvest` cannot express this — every fruit there belongs to exactly one
+/// season — and that matters, because `fromMap` reads `sliceColors[category]`
+/// only for the categories present in `values`. Over a disjoint fixture a
+/// colour map resolved across the WHOLE data set produces byte-identical rings,
+/// so it would prove nothing about per-bucket resolution. Here it does: over
+/// the whole list the map collapses to `{Apple: 0xFFDC2626, Pear: 0xFF0D9488}`
+/// (last non-null wins) and the Winter ring comes back wrong on both keys.
 const _concentricSliceColors = <String, Map<String, Color>>{
   'Winter': <String, Color>{'Apple': Color(0xFF2563EB)},
-  'Summer': <String, Color>{'Plum': Color(0xFFDC2626)},
+  'Summer': <String, Color>{
+    'Apple': Color(0xFFDC2626),
+    'Pear': Color(0xFF0D9488),
+  },
 };
 
-final List<ConcentricColorRow> concentricColorGrammarRows =
+const List<ConcentricColorRow> concentricColorGrammarRows =
     <ConcentricColorRow>[
-      for (final row in harvest)
-        ConcentricColorRow(
-          ring: row.season,
-          category: row.fruit,
-          value: row.count,
-          sliceColor: _concentricSliceColors[row.season]?[row.fruit],
-        ),
+      ConcentricColorRow(
+        ring: 'Winter',
+        category: 'Apple',
+        value: 42,
+        sliceColor: Color(0xFF2563EB),
+      ),
+      ConcentricColorRow(
+        ring: 'Winter',
+        category: 'Pear',
+        value: 31,
+        sliceColor: null,
+      ),
+      ConcentricColorRow(
+        ring: 'Summer',
+        category: 'Apple',
+        value: 17,
+        sliceColor: Color(0xFFDC2626),
+      ),
+      ConcentricColorRow(
+        ring: 'Summer',
+        category: 'Pear',
+        value: 10,
+        sliceColor: Color(0xFF0D9488),
+      ),
     ];
 
 // ---------------------------------------------------------------------------
@@ -4104,11 +4131,15 @@ void main() {
 
     testWidgets('a concentric composition colours the SAME category '
         'differently per ring and round-trips', (tester) async {
-      // The per-ring shape is the one a single shared colour map cannot fake:
-      // `Apple` is coloured in Winter and uncoloured in Summer, `Plum` the
-      // other way round. The reversal writes one row per (ring, category) pair,
-      // so a lowering that resolved colours across the WHOLE data set instead
-      // of per ring bucket would colour both and diverge.
+      // The discriminating shape. BOTH rings carry `Apple` and `Pear`, and
+      // `Apple` is blue in Winter but red in Summer, while `Pear` is
+      // uncoloured in Winter and teal in Summer. The reversal writes one row
+      // per (ring, category) pair, so a lowering that resolved colours across
+      // the WHOLE data set instead of per ring bucket collapses to one colour
+      // per category and re-lowers Winter with Summer's palette — which the
+      // round-trip proof refuses. A fixture whose categories are disjoint per
+      // ring cannot tell the two apart, because `fromMap` ignores a
+      // `sliceColors` key that is absent from `values`.
       final generated = await expectRoundTrip(
         tester,
         name: 'concentric_slice_colours',
@@ -4118,6 +4149,7 @@ void main() {
           'sliceColor: (row) => row.sliceColor,',
           'sliceColor: Color(0xFF2563EB),',
           'sliceColor: Color(0xFFDC2626),',
+          'sliceColor: Color(0xFF0D9488),',
         ],
         original: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -4132,7 +4164,7 @@ void main() {
             DonutChartSeries.fromMap(
               id: 'seasons-Summer',
               name: 'Summer',
-              values: const <String, num>{'Plum': 17, 'Fig': 10},
+              values: const <String, num>{'Apple': 17, 'Pear': 10},
               sliceColors: _concentricSliceColors['Summer']!,
             ),
           ],
@@ -5332,10 +5364,14 @@ void main() {
   //      one `DonutMark` carries one `dataLabels` for every ring.
   //   4. THE DONUT CENTRE. `_markCenter` rebuilds the centre from four fields
   //      and drops `labelStyle` / `valueStyle` / `valueFormatter`, so a styled
-  //      or formatted centre diverges. `DonutChartsPage` sets a formatter in
-  //      every knob state, so it stays blocked on this ALONE now that (2) is
-  //      closed. Recorded here because the original three-blocker list missed
-  //      it; it is closed by the donut-centre slice, not by this file.
+  //      or formatted centre diverges. `DonutChartsPage` styles and formats its
+  //      centre in every knob state, so it stays blocked on this ALONE now that
+  //      (2) is closed — which makes it the only remaining pinned coverage of
+  //      that page, and the reason it is MOUNTED below rather than recorded in
+  //      this comment. (The LIVE formatter is not the reachable shape: a
+  //      callback makes `extractDocument()` fail before the generator runs, so
+  //      the mounted blocker is the styled centre.) It is closed by the
+  //      donut-centre slice, not by this file.
   // =========================================================================
 
   group('KNOWN GAP: the donut showcase pages do not emit', () {
@@ -5469,6 +5505,90 @@ void main() {
       expect(emittedChain(emitted), isTrue);
       expect(emitted.warnings, isEmpty);
       expect(emitted.source, contains('ring: (row) => row.ring,'));
+    });
+
+    testWidgets('blocker 4: a STYLED donut centre is refused — _markCenter '
+        'rebuilds the centre and drops its two styles and its formatter', (
+      tester,
+    ) async {
+      // This is the blocker `DonutChartsPage` hits ON ITS OWN now that the
+      // per-slice colour blocker is closed: it builds its centre with
+      // `labelStyle`, `valueStyle` and a live `valueFormatter`
+      // (`donut_charts_page.dart:566-581`). `_markCenter` rebuilds the centre
+      // from four fields only, and `DonutCenterContent.==` compares all seven,
+      // so a centre that sets any of the other three diverges.
+      //
+      // The LIVE formatter is not the reachable form of this blocker — a
+      // callback makes `extractDocument()` fail outright, before the generator
+      // ever runs — so the mounted shape here is the styled centre.
+      Future<ChartGeneratedSource> generateFor(DonutCenterContent center) async =>
+          generateGrammar(
+            await snapshotOf(
+              tester,
+              (controller) => BravenChartPlus(
+                bravenChartController: controller,
+                series: <ChartSeries>[
+                  DonutChartSeries.fromMap(
+                    id: 'donut-audience',
+                    name: 'Audience',
+                    unit: 'USD',
+                    values: const <String, num>{'Apple': 42, 'Pear': 31},
+                    centerContent: center,
+                  ),
+                ],
+              ),
+            ),
+          );
+
+      const styled = DonutCenterContent(
+        label: 'Total',
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
+          backgroundColor: Color(0x00000000),
+          borderColor: Color(0x00000000),
+          borderWidth: 0,
+          borderRadius: 0,
+          padding: EdgeInsets.zero,
+        ),
+      );
+
+      final refused = await generateFor(styled);
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      // The reason must NAME the centre. Nothing else about this chart is
+      // non-default — no per-point style, no metadata, no polar intervals — so
+      // a reason that sent the reader hunting for one of those would be a
+      // misdiagnosis, not merely a vague message.
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "donut-audience" exactly'),
+          contains('donut center'),
+          contains('labelStyle'),
+          contains('valueStyle'),
+          contains('valueFormatter'),
+        ),
+      );
+      expect(
+        blockedReason(refused),
+        isNot(contains('a per-point style beyond')),
+      );
+
+      // CONTROL: strip the style and the very same centre — same label, same
+      // value mode — emits, so the refusal is attributable to the runtime-only
+      // appearance alone and not to donut centres.
+      final emitted = await generateFor(
+        const DonutCenterContent(label: 'Total'),
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('.geomDonut('));
+      expect(emitted.source, contains("label: 'Total'"));
     });
   });
 
@@ -6280,9 +6400,19 @@ void main() {
         allOf(
           contains('does not reproduce series "seasons-Summer" exactly'),
           contains('would hand back a different chart'),
+          // And the reason NAMES the centre, rather than falling through to the
+          // catch-all list of series options. The ring's centre is the only
+          // thing that diverges here; a reason that named "series metadata" or
+          // "a per-point style" would be a misdiagnosis.
+          contains('carries ONE shared donut center'),
+          contains('re-lowers every ring with a hidden center'),
         ),
       );
       expect(blockedReason(refused), isNot(contains('seasons-Winter')));
+      expect(
+        blockedReason(refused),
+        isNot(contains('a per-point style beyond')),
+      );
 
       // CONTROL: give the second ring the same hidden center as the first and
       // the composition emits, so the refusal is attributable to the ring whose
@@ -6303,6 +6433,9 @@ void main() {
       // (`color` as `sliceColor:`, `size` as `radius:`); the scatter-marker
       // pair has no radial mark channel at all, so a point that sets one stays
       // an honest refusal rather than emitting a chain that silently drops it.
+      // BOTH halves of that pair are exercised below — `PointStyle.==` compares
+      // all four fields, so covering only `scatterMarkerShape` would leave the
+      // claim about the pair half-proven.
       Future<ChartGeneratedSource> generateFor(PointStyle style) async =>
           generateGrammar(
             await snapshotOf(
@@ -6348,6 +6481,28 @@ void main() {
         ),
       );
 
+      // The OTHER half of the scatter-marker pair. Same mechanism, same named
+      // reason — asserted rather than assumed.
+      final refusedStyle = await generateFor(
+        const PointStyle(
+          color: Color(0xFF445566),
+          scatterMarkerStyle: ScatterMarkerStyle(
+            fillColor: Color(0xFF778899),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+      expect(emittedChain(refusedStyle), isFalse);
+      expect(refusedStyle.isComplete, isFalse);
+      expect(refusedStyle.source, isNot(contains('.geomDonut(')));
+      expect(
+        blockedReason(refusedStyle),
+        allOf(
+          contains('does not reproduce series "donut" exactly'),
+          contains('a per-point style beyond a colour and size override'),
+        ),
+      );
+
       // CONTROL: drop the marker shape and the very same point emits as a
       // slice colour, so the refusal is attributable to the extra override
       // alone — not to per-point styling on a donut.
@@ -6367,6 +6522,13 @@ void main() {
       // grammar reversal allocates no field for it and yields `null`. The
       // asymmetry is real — the two series are not equal — so it stays an
       // honest refusal rather than a chain that quietly changes the document.
+      //
+      // The reason gets its OWN clause. `const PointStyle()` has no overrides
+      // at all (`PointStyle.hasOverrides` is false), so the catch-all sentence
+      // — "a per-point style beyond a colour and size override" — would state
+      // the exact opposite of the input. A refusal pinned to a reason that
+      // describes the wrong thing sends a Workbench reader hunting for an
+      // override that is not there.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -6395,8 +6557,13 @@ void main() {
         blockedReason(generated),
         allOf(
           contains('does not reproduce series "donut" exactly'),
-          contains('a per-point style beyond a colour and size override'),
+          contains('a point whose PointStyle sets NO override at all'),
+          contains('an override-less style reverses to no style'),
         ),
+      );
+      expect(
+        blockedReason(generated),
+        isNot(contains('a per-point style beyond')),
       );
     });
 

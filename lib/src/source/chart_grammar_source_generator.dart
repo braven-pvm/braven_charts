@@ -38,7 +38,8 @@
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
 /// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
-/// | a pie or donut carrying per-slice colors (`sliceColors`) | blocked, naming the series — `PolarMark` has a per-point color channel (`columnColor`), `PieMark`/`DonutMark` do not |
+/// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
+/// | a donut center setting `labelStyle`, `valueStyle` or `valueFormatter` | blocked, naming the center — the center is rebuilt from its visibility, label, value mode and custom value, and the runtime-only trio is dropped |
 /// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
 /// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
@@ -1498,14 +1499,21 @@ class _GrammarChainEmitter {
 
   /// Explains why a captured radial series is not reproduced by the lowered one.
   ///
-  /// The radial marks now carry the unit, selection style, data labels, series
-  /// style, (pie/donut) the per-slice colours and the slice-radius and grouping
-  /// configs and (polar) the preset, per-category column colours, targets and
-  /// intervals with their two styles, so those all round-trip. What remains
-  /// un-carried is series metadata, a per-point style beyond what the family
-  /// reverses, and a polar interval list whose every entry is null (which
-  /// reverses to "no intervals" rather than to a list of nulls); a series that
-  /// sets one of those is what reaches here.
+  /// Two causes are DIAGNOSED by name before the catch-all sentence runs,
+  /// because the catch-all describes neither of them and a reader who trusts it
+  /// goes hunting for something that is not there:
+  ///
+  ///  1. a donut center the reversal cannot carry ([_radialCenterLossDetail]);
+  ///  2. a point whose `PointStyle` sets no override at all
+  ///     ([_radialBareStyleLossDetail]) — which the catch-all would call a
+  ///     style "beyond" a colour and size override when it falls short of both.
+  ///
+  /// What the catch-all then covers is series metadata, a per-point style
+  /// beyond what the family reverses, and a polar interval list whose every
+  /// entry is null (which reverses to "no intervals" rather than to a list of
+  /// nulls). Its round-trip list is accurate at that point and only there: a
+  /// series that reaches it has a matching center, so naming the center among
+  /// the things that round-tripped is true of the series being described.
   ///
   /// The per-point sentence is FAMILY-AWARE because the two radial families
   /// reverse different amounts of a `PointStyle`. Pie and donut reverse both
@@ -1515,6 +1523,10 @@ class _GrammarChainEmitter {
   /// `PointStyle.color(...)` and a polar column ignores `size` when it paints.
   /// Telling a pie author that `size` is un-carried would be false.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
+    final center = _radialCenterLossDetail(expected, lowered);
+    if (center != null) return center;
+    final bareStyle = _radialBareStyleLossDetail(expected);
+    if (bareStyle != null) return bareStyle;
     final perPoint = expected is PolarColumnChartSeries
         ? 'a per-point style beyond a colour override'
         : 'a per-point style beyond a colour and size override';
@@ -1525,6 +1537,64 @@ class _GrammarChainEmitter {
         '(polar) the preset, per-category column colours, targets and '
         'intervals round-trip, but series metadata, $perPoint, and an all-null '
         'polar interval list do not.';
+  }
+
+  /// Names the DONUT CENTER as the cause when it is, or null when the captured
+  /// and rebuilt centers match.
+  ///
+  /// [_markCenter] rebuilds a center from four of its seven fields, and
+  /// `DonutCenterContent.==` compares all seven, so there are exactly two ways
+  /// a center diverges and they have different remedies:
+  ///
+  ///  - the four carried fields survive and the runtime-only trio does not
+  ///    (`labelStyle`, `valueStyle`, `valueFormatter`);
+  ///  - the center is replaced wholesale, which is what a concentric
+  ///    composition does to a ring that carries a center of its own.
+  String? _radialCenterLossDetail(ChartSeries expected, ChartSeries lowered) {
+    if (expected is! DonutChartSeries || lowered is! DonutChartSeries) {
+      return null;
+    }
+    final captured = expected.centerContent;
+    final rebuilt = lowered.centerContent;
+    if (captured == rebuilt) return null;
+    final withoutRuntimeStyling = DonutCenterContent(
+      isVisible: captured.isVisible,
+      label: captured.label,
+      valueMode: captured.valueMode,
+      customValue: captured.customValue,
+    );
+    if (withoutRuntimeStyling == rebuilt) {
+      return 'Its donut center carries a runtime-only appearance the chain '
+          'does not carry. A center round-trips its visibility, label, value '
+          'mode and custom value; labelStyle, valueStyle and valueFormatter '
+          'are rebuilt away, so a center that sets one of those three is '
+          'refused rather than emitted as a center that silently drops it.';
+    }
+    return 'Its donut center is not the one the chain would rebuild. A '
+        'concentric composition carries ONE shared donut center on '
+        'geomDonut(concentric: ...) and re-lowers every ring with a hidden '
+        'center, so a ring carrying a center of its own cannot be reproduced.';
+  }
+
+  /// Names an OVERRIDE-LESS `PointStyle` as the cause when the series carries
+  /// one, or null when every point style either sets an override or is absent.
+  ///
+  /// The reversal builds a point style out of the row channels it allocated, so
+  /// a style with nothing to allocate reverses to `pointStyle: null`. The
+  /// document codec disagrees — it writes the style as `{}` and decodes it back
+  /// to a non-null `const PointStyle()` — and `PointStyle.==` separates the
+  /// two. The asymmetry is real, so it stays an honest refusal; it just is not
+  /// the refusal the catch-all sentence describes.
+  String? _radialBareStyleLossDetail(ChartSeries expected) {
+    final hasBareStyle = expected.points.any(
+      (point) => point.pointStyle != null && !point.pointStyle!.hasOverrides,
+    );
+    if (!hasBareStyle) return null;
+    return 'It carries a point whose PointStyle sets NO override at all. The '
+        'reversal builds a point style out of the row channels it allocated, '
+        'so an override-less style reverses to no style — which is not what '
+        'the captured document holds. The asymmetry is real, so it is refused '
+        'rather than emitted as a chain that quietly rewrites the document.';
   }
 
   // =========================================================================

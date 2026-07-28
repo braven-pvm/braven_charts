@@ -687,7 +687,8 @@ runtime-only bindings.
 | A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the three **Blocked** radial rows that follow — read them together with *Known gap* below before reading this row as "every radial chart emits". |
 | A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
 | A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **Blocked**: the ring channel names each ring's series from its ring key, so ids that do not follow that pattern cannot be reproduced. |
-| A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **Blocked**, naming the series: `PolarMark` has a per-point colour channel (`columnColor`), `PieMark`/`DonutMark` do **not**. See *Known gap* below. |
+| A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
+| A donut **centre** setting `labelStyle`, `valueStyle` or `valueFormatter` | **Blocked**, naming the centre: the chain rebuilds a centre from its visibility, label, value mode and custom value, and those three runtime-only fields are dropped. See *Known gap* below. |
 | A concentric composition whose rings carry **different `dataLabels`** | **Blocked**, naming the ring that disagrees: one `DonutMark` splits into N ring series and hands all of them its single `dataLabels`. See *Known gap* below. |
 | Polar series whose category domains differ | **Blocked**, naming the series that disagree: N `geomPolar` marks read ONE row list, so every polar series needs one value at every category of the shared domain, in the same order. |
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
@@ -750,34 +751,37 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     legend mode, per-ring weights and center all survive to
     `geomDonut(concentric: ...)` — *when the composition is authored the way
     the grammar's own concentric lowering produces one*: ring series ids
-    following `'<markId>-<ring>'`, no per-slice colours, one `dataLabels` for
-    the whole composition.
+    following `'<markId>-<ring>'`, one `dataLabels` for the whole composition,
+    and no ring carrying a centre of its own.
 
 #### Known gap: the two donut showcase pages do not emit
 
 `concentric_donut_page.dart` and `donut_charts_page.dart` are the radial
-workbench pages that still show a diagnostic rather than a chain. Three
-**independent** blockers stand behind that (fixing one leaves the page blocked
-on the others):
+workbench pages that still show a diagnostic rather than a chain. The
+**independent** blockers standing behind that (fixing one leaves the page
+blocked on the others):
 
 1. **Ring ids.** `concentric_donut_page.dart` names its ring series from its own
    descriptors (`current`, `previous`, …), not the `'<markId>-<ring>'` pattern
    the `ring:` channel reproduces.
-2. **Per-slice colours.** Both pages pass `sliceColors`
-   (`donut_charts_page.dart:487`), and `PieMark`/`DonutMark` have no per-point
-   colour channel — only `PolarMark` does, via `columnColor`. This is the
-   blocker `donut_charts_page.dart` hits on its own, being a single-ring donut.
+2. ~~**Per-slice colours.**~~ **CLOSED.** `PieMark`/`DonutMark` now carry a
+   `sliceColor` channel of their own, mirroring `PolarMark.columnColor`, and
+   the emitter reverses it — so `sliceColors` no longer blocks either page. Its
+   pinned refusal test was *converted* into a round-trip acceptance test.
 3. **Per-ring data labels.** The concentric page's `hierarchy` label layout gives
    the outer and inner rings *different* `PieDataLabelConfig`s, and one
    `DonutMark` carries one `dataLabels` for every ring it splits into.
+4. **The donut centre.** The chain rebuilds a centre from four of its seven
+   fields and drops `labelStyle`, `valueStyle` and `valueFormatter`, so a styled
+   or formatted centre diverges. `donut_charts_page.dart` styles *and* formats
+   its centre in every knob state, so this is the blocker it now hits on its
+   own. (This one was missing from the original three-blocker list.)
 
-Closing (2) means a per-point colour channel on `PieMark`/`DonutMark` — a
-grammar-surface addition, not an emitter repair, and not in this release.
 `PieChartsPage` is the third radial page and it *does* emit, with an honest
 known-limitation warning (`isComplete == false`) for the radial label formatter
 callbacks a literal cannot carry.
 
-Each blocker is mounted and its refusal pinned in
+Each open blocker is mounted and its refusal pinned in
 `group('KNOWN GAP: the donut showcase pages do not emit')` in
 `test/unit/source/chart_grammar_source_generator_test.dart`, so closing one
 turns that test red and brings you back to this paragraph.
@@ -803,10 +807,12 @@ Deferred deliberately, so the V1 mark list stays closed:
   the top *edge*, not the fill) and `geomBar` carries a linear `sizeBy` width
   multiplier; opacity on non-scatter families and value-driven area *fill*
   remain deferred.
-- **A per-point colour channel on `PieMark` / `DonutMark`.** `PolarMark` has
-  `columnColor`; pie and donut do not, so a series carrying `sliceColors` is
-  refused rather than degraded. This is blocker (2) of the donut *Known gap*
-  above and the reason both donut showcase pages still show a diagnostic.
+- **A styled or formatted donut centre.** `DonutMark` carries a centre's
+  visibility, label, value mode and custom value; `labelStyle`, `valueStyle` and
+  `valueFormatter` are rebuilt away, so a centre setting one of those three is
+  refused rather than degraded. This is blocker (4) of the donut *Known gap*
+  above. (A per-point colour channel on `PieMark`/`DonutMark` — blocker (2) —
+  is no longer deferred: `sliceColor` ships as of V2.0.)
 - **The remaining chart-level options.** `legendStyle`, the toolbar toggle,
   `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization
   knobs, width/height and background live on `BravenChartPlus`, not on
