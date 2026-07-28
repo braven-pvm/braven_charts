@@ -317,9 +317,7 @@ void main() {
         throwsArgumentError,
       );
       expect(
-        const GaugeChartConfig(
-          scale: GaugeScaleStyle(tickGap: -1),
-        ).validate,
+        const GaugeChartConfig(scale: GaugeScaleStyle(tickGap: -1)).validate,
         throwsArgumentError,
       );
       expect(
