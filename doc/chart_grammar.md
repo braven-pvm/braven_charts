@@ -688,7 +688,8 @@ runtime-only bindings.
 | A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
 | A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **Blocked**: the ring channel names each ring's series from its ring key, so ids that do not follow that pattern cannot be reproduced. |
 | A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
-| A donut **centre** setting `labelStyle`, `valueStyle` or `valueFormatter` | **Blocked**, naming the centre: the chain rebuilds a centre from its visibility, label, value mode and custom value, and those three runtime-only fields are dropped. See *Known gap* below. |
+| A donut **centre** setting `labelStyle` or `valueStyle` | **EMITTED** *(V2.0)* as `center: DonutCenterContent(...)`. `DonutMark.center` carries the captured centre VERBATIM, and the argument is written by the same renderer the config form's `centerContent:` uses, so both styles survive. |
+| A donut **centre** setting `valueFormatter` | **Emitted with a `// valueFormatter:` placeholder and a warning** (`isComplete == false`), exactly as every other runtime callback is — a live closure has no literal form. |
 | A concentric composition whose rings carry **different `dataLabels`** | **Blocked**, naming the ring that disagrees: one `DonutMark` splits into N ring series and hands all of them its single `dataLabels`. See *Known gap* below. |
 | Polar series whose category domains differ | **Blocked**, naming the series that disagree: N `geomPolar` marks read ONE row list, so every polar series needs one value at every category of the shared domain, in the same order. |
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
@@ -754,12 +755,15 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     following `'<markId>-<ring>'`, one `dataLabels` for the whole composition,
     and no ring carrying a centre of its own.
 
-#### Known gap: the two donut showcase pages do not emit
+#### Known gap: `concentric_donut_page.dart` does not emit
 
-`concentric_donut_page.dart` and `donut_charts_page.dart` are the radial
-workbench pages that still show a diagnostic rather than a chain. The
-**independent** blockers standing behind that (fixing one leaves the page
-blocked on the others):
+`concentric_donut_page.dart` is the radial workbench page that still shows a
+diagnostic rather than a chain. `donut_charts_page.dart` **now emits**, with an
+honest `// valueFormatter:` placeholder for its live centre formatter
+(`isComplete == false`) — asserted on the MOUNTED page in
+`example/test/showcase/donut_charts_page_grammar_test.dart`. The **independent**
+blockers standing behind the remaining page (fixing one leaves it blocked on the
+others):
 
 1. **Ring ids.** `concentric_donut_page.dart` names its ring series from its own
    descriptors (`current`, `previous`, …), not the `'<markId>-<ring>'` pattern
@@ -771,11 +775,14 @@ blocked on the others):
 3. **Per-ring data labels.** The concentric page's `hierarchy` label layout gives
    the outer and inner rings *different* `PieDataLabelConfig`s, and one
    `DonutMark` carries one `dataLabels` for every ring it splits into.
-4. **The donut centre.** The chain rebuilds a centre from four of its seven
-   fields and drops `labelStyle`, `valueStyle` and `valueFormatter`, so a styled
-   or formatted centre diverges. `donut_charts_page.dart` styles *and* formats
-   its centre in every knob state, so this is the blocker it now hits on its
-   own. (This one was missing from the original three-blocker list.)
+4. ~~**The donut centre.**~~ **CLOSED.** The chain used to rebuild a centre from
+   four of its seven fields and drop `labelStyle`, `valueStyle` and
+   `valueFormatter`; `DonutMark.center` now carries the captured centre VERBATIM
+   and `center:` is written by the config emitter's own centre renderer, so a
+   styled centre emits and a formatted one emits with a placeholder. That was
+   the last blocker `donut_charts_page.dart` hit, which is why that page now
+   emits. Its pinned refusal test was *converted* into a round-trip acceptance
+   test. (This blocker was missing from the original three-blocker list.)
 
 `PieChartsPage` is the third radial page and it *does* emit, with an honest
 known-limitation warning (`isComplete == false`) for the radial label formatter
@@ -807,12 +814,16 @@ Deferred deliberately, so the V1 mark list stays closed:
   the top *edge*, not the fill) and `geomBar` carries a linear `sizeBy` width
   multiplier; opacity on non-scatter families and value-driven area *fill*
   remain deferred.
-- **A styled or formatted donut centre.** `DonutMark` carries a centre's
-  visibility, label, value mode and custom value; `labelStyle`, `valueStyle` and
-  `valueFormatter` are rebuilt away, so a centre setting one of those three is
-  refused rather than degraded. This is blocker (4) of the donut *Known gap*
-  above. (A per-point colour channel on `PieMark`/`DonutMark` — blocker (2) —
-  is no longer deferred: `sliceColor` ships as of V2.0.)
+- ~~**A styled or formatted donut centre.**~~ No longer deferred, and no longer
+  blocker (4) of the donut *Known gap* above: `DonutMark.center` carries the
+  captured `DonutCenterContent` VERBATIM as of V2.0 — `labelStyle` and
+  `valueStyle` included — and `center:` is written by the same renderer the
+  config form's `centerContent:` uses. A live `valueFormatter` has no literal
+  form and degrades to a `// valueFormatter:` placeholder with a
+  runtime-value-omitted warning, exactly as every other callback does, so the
+  chain emits and is honestly incomplete rather than refused. (A per-point
+  colour channel on `PieMark`/`DonutMark` — blocker (2) — is likewise no longer
+  deferred: `sliceColor` ships as of V2.0.)
 - **The remaining chart-level options.** `legendStyle`, the toolbar toggle,
   `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization
   knobs, width/height and background live on `BravenChartPlus`, not on
