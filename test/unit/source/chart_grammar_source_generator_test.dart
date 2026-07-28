@@ -5550,23 +5550,35 @@ void main() {
   });
 
   // =========================================================================
-  // ACCEPTANCE GATE — every POLAR workbench Grammar pane emits, plus a
-  // non-default `ConcentricDonutConfig` authored through the grammar.
+  // ACCEPTANCE GATE — every RADIAL workbench Grammar pane emits: polar 8/8,
+  // pie, donut and concentric.
   //
-  // Read that title literally, because it is narrower than "every radial pane
-  // emits" and deliberately so:
+  // The claim is now whole-family, but it is proven in two different places and
+  // only one of them is this file. Read the split literally, because the two
+  // halves buy different things:
   //
-  //   * POLAR is proven against the real page. All eight `_PolarPresentation`
-  //     values are mounted below from `polar_column_page.dart`'s own
-  //     construction, and all eight emit.
-  //   * The CONCENTRIC case is NOT the showcase page. It is a non-default
-  //     `ConcentricDonutConfig` authored the way the grammar's own concentric
-  //     lowering produces one, which is a claim about the CONFIG PASSTHROUGH,
-  //     not about `concentric_donut_page.dart`. That page DOES emit as of this
-  //     slice, but the claim is made where it can be honest — against the
-  //     mounted page, in
-  //     `example/test/showcase/concentric_donut_page_grammar_test.dart` — not
-  //     here.
+  //   * POLAR — all eight `_PolarPresentation` values, HERE. Each case is
+  //     `polar_column_page.dart`'s own construction (`_buildSeriesList` for the
+  //     series, `_buildPolarConfig` for the plot config) at that presentation's
+  //     authored knob values, TRANSCRIBED into this file and held to the page
+  //     by the two drift guards described below. It is NOT the mounted page:
+  //     the package's tests cannot import the example package.
+  //   * PIE, DONUT and CONCENTRIC — against the MOUNTED page, in
+  //     `example/test/showcase/`: `pie_charts_page_grammar_test.dart`,
+  //     `donut_charts_page_grammar_test.dart`,
+  //     `concentric_donut_page_grammar_test.dart` and
+  //     `selection_showcase_concentric_grammar_test.dart`. Each pumps the real
+  //     page, reads the live document off the chart's OWN controller and runs
+  //     the generator on it, so there is no fixture to drift. Pie and donut
+  //     emit with `isComplete == false` — each carries a live formatter
+  //     callback, which has no literal form — while the concentric page and the
+  //     selection lab's concentric family emit COMPLETE, warning-free chains.
+  //   * The CONCENTRIC case in THIS group is still NOT the showcase page. It is
+  //     a non-default `ConcentricDonutConfig` authored the way the grammar's
+  //     own concentric lowering produces one — a claim about the CONFIG
+  //     PASSTHROUGH mechanism, which is why it stays here while the claim about
+  //     `concentric_donut_page.dart` is made where it can be honest, against
+  //     the mounted page.
   //
   // The unit tests above each isolate ONE mechanism (a config field, a channel,
   // a composition). This group asks the question the slice exists to answer:
@@ -6279,98 +6291,43 @@ void main() {
   });
 
   // =========================================================================
-  // CLOSED GAP — the two DONUT showcase pages now emit.
+  // RETIRED — "KNOWN GAP: the donut showcase pages do not emit".
   //
-  // The acceptance gate above is about POLAR. `concentric_donut_page.dart` and
-  // `donut_charts_page.dart` are the radial workbench pages it does NOT cover,
-  // and both were blocked. Recording that in a comment alone would decay, so
-  // each blocker below was mounted and its refusal pinned. Every test here
-  // asserted a REFUSAL: closing a gap turned its test red, and the fix was to
-  // move the case into the acceptance gate and update the wording in
-  // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
-  // test. All four are now closed and all four were CONVERTED, which is why
-  // this block is an index rather than a set of pins. The live gates are the
-  // mounted-page tests in `example/test/showcase/`:
-  // `concentric_donut_page_grammar_test.dart`,
-  // `donut_charts_page_grammar_test.dart` and
-  // `selection_showcase_concentric_grammar_test.dart`.
+  // This file used to carry a group of PINNED REFUSALS standing in for the
+  // radial workbench panes that showed a diagnostic instead of a chain, plus a
+  // banner claiming THREE independent blockers and that `donut_charts_page.dart`
+  // hit only blocker 2. Both counts were wrong: there were FOUR, and the fourth
+  // — the donut centre, which `_markCenter` rebuilt from four of its fields and
+  // which `donut_charts_page.dart` tripped in EVERY knob state through its live
+  // `valueFormatter` — was unrecorded, so that page was refused independently of
+  // its `sliceColors`.
   //
-  // The blockers, each independent (fixing one left the page blocked on the
-  // others):
+  // All four are now closed, and every pin was CONVERTED into a stronger
+  // round-trip acceptance test rather than deleted. The converted tests live in
+  // the `showcase-representative radial series config emits` group and name
+  // their origin, each keeping the original refusal chart AND a byte-identity
+  // control that the un-overridden shape emits no new argument:
   //
-  //   1. RING IDS — **CLOSED**. `concentric_donut_page.dart` named its ring
-  //      series from its own descriptors (`current`, `previous`, …), not the
-  //      `<markId>-<ring>` pattern the ring channel reproduces. Those pages now
-  //      id their rings by the pattern, AND `DonutMark` carries a `ringIds` map
-  //      so a composition that ids its rings independently reverses too — the
-  //      emitter consults it only when the pattern fails, so conforming charts
-  //      emit unchanged. Its pinned refusal test was CONVERTED into a
-  //      round-trip acceptance test (see below) rather than deleted.
-  //   2. PER-SLICE COLOURS — **CLOSED**. Both pages pass `sliceColors`
-  //      (`donut_charts_page.dart:487`); `PieMark`/`DonutMark` now carry a
-  //      `sliceColor` channel of their own, mirroring `PolarMark.columnColor`,
-  //      and the emitter reverses it. Its pinned refusal test was CONVERTED
-  //      into a round-trip acceptance test (see below) rather than deleted.
-  //   3. PER-RING DATA LABELS — **CLOSED**. The concentric page's `hierarchy`
-  //      label layout gives the outer and inner rings DIFFERENT
-  //      `PieDataLabelConfig`s; `DonutMark` now carries a `dataLabelsByRing`
-  //      override map beside its base `dataLabels`, the emitter projects the
-  //      rings that differ from the base, and a new UNCONDITIONAL seam writes
-  //      the map (an entry equal to the family default is a real override).
-  //      Its pinned refusal test was CONVERTED into a round-trip acceptance
-  //      test (see below) rather than deleted.
-  //   4. THE DONUT CENTRE — **CLOSED**. `_markCenter` used to rebuild the
-  //      centre from four fields and drop `labelStyle` / `valueStyle` /
-  //      `valueFormatter`; it now carries the captured centre VERBATIM, and
-  //      `center:` is written by the config emitter's own centre renderer, so a
-  //      styled or formatted centre emits. Its pinned refusal test was
-  //      CONVERTED into a round-trip acceptance test (see below) rather than
-  //      deleted. With (2) and (4) both closed, `DonutChartsPage` emits — with
-  //      an honest `// valueFormatter:` placeholder and `isComplete == false`,
-  //      which `example/test/showcase/donut_charts_page_grammar_test.dart`
-  //      asserts on the MOUNTED page.
+  //   * ring ids       → "…that used to be BLOCKER 1 now emits ringIds and
+  //                       round-trips" (control: conforming ids emit no
+  //                       `ringIds`). Still refused: rings unnamed or sharing a
+  //                       name — the ring key IS the series name, so a `ring:`
+  //                       channel has nothing to bucket by. Its own test.
+  //   * per-slice      → "…that used to be BLOCKER 2 now emits and round-trips"
+  //     colours          (control: a colourless donut emits no `sliceColor`).
+  //   * per-ring       → "…that used to be BLOCKER 3 now emits and round-trips"
+  //     data labels      (control: a uniform composition emits no
+  //                       `dataLabelsByRing`).
+  //   * the donut      → "…that used to be BLOCKER 4 now emits and round-trips"
+  //     centre           (control: a default centre emits no `center:`).
+  //
+  // The live gates are no longer here at all: they are the MOUNTED-page tests
+  // in `example/test/showcase/` — `pie_charts_page_grammar_test.dart`,
+  // `donut_charts_page_grammar_test.dart`,
+  // `concentric_donut_page_grammar_test.dart` and
+  // `selection_showcase_concentric_grammar_test.dart` — which is why no group
+  // stands here. See the acceptance-gate banner above for the split.
   // =========================================================================
-
-  group('CLOSED GAP: where each donut showcase-page blocker went', () {
-    // BLOCKER 1 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
-    // into "the showcase concentric composition that used to be BLOCKER 1 now
-    // emits ringIds and round-trips" in the `showcase-representative radial
-    // series config emits` group — same chart, same slug ids ('current',
-    // 'previous') decoupled from the ring names, same names/unit/values and the
-    // same non-default config, now asserting emission and a full round trip
-    // instead of the refusal. `DonutMark` carries a `ringIds` map naming each
-    // ring's series id explicitly, and the emitter consults it ONLY when the
-    // '<markId>-<ring>' pattern fails to recover a markId — so the converted
-    // test keeps the original CONTROL (the same composition with conforming
-    // ids) as the byte-identity guard that a conforming chart emits no
-    // `ringIds` at all. What stays refused is a composition whose rings are
-    // unnamed or share a name: the ring key IS the series name, so there is
-    // nothing for a `ring:` channel to bucket by. That refusal has its own test
-    // in the same group.
-
-    // BLOCKER 2 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
-    // into "the showcase donut that used to be BLOCKER 2 now emits and
-    // round-trips" in the `showcase-representative radial series config emits`
-    // group — same chart, same id/name/unit/values/colours, now asserting
-    // emission and a full round trip instead of the refusal, plus the
-    // byte-identity control that a colourless donut emits no `sliceColor`.
-
-    // BLOCKER 3 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
-    // into "the showcase concentric composition that used to be BLOCKER 3 now
-    // emits and round-trips" in the `showcase-representative radial series
-    // config emits` group — same chart, same ids/names/unit/values and the same
-    // `hierarchy` outer/inner label pair, now asserting emission and a full
-    // round trip instead of the refusal, and keeping the original CONTROL arm
-    // (two rings sharing ONE config) as the byte-identity guard that a uniform
-    // composition emits no `dataLabelsByRing` at all.
-
-    // BLOCKER 4 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
-    // into "the showcase donut centre that used to be BLOCKER 4 now emits and
-    // round-trips" in the `showcase-representative radial series config emits`
-    // group — same chart, same id/name/unit/values and the same styled centre,
-    // now asserting emission and a full round trip instead of the refusal, plus
-    // the byte-identity control that a default centre emits no `center:` at all.
-  });
 
   group('fidelity matrix diagnostics', () {
     testWidgets('a family with no grammar mark (radial-bar) is named, and no '

@@ -40,6 +40,7 @@
 /// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | emitted as `geomDonut(ringIds: {...})` — `DonutMark` carries an explicit ring-key→series-id map, consulted ONLY when the id pattern fails to recover a markId, so a conforming composition emits unchanged |
 /// | a concentric composition whose rings are unnamed or share a name | blocked — the ring key IS the series name, so no `ring:` channel could bucket those rows apart |
 /// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
+/// | a pie or donut point whose `PointStyle` carries MORE than a color and a size | blocked, naming the family's reversible set — `scatterMarkerShape` / `scatterMarkerStyle` have no radial channel, and a bare `const PointStyle()` reverses to null, so both stay honest refusals rather than silent drops |
 /// | a donut center setting `labelStyle` or `valueStyle` | emitted as `center: DonutCenterContent(...)` — the captured center rides the mark VERBATIM and is written by the config emitter's own center renderer, so both styles survive |
 /// | a donut center setting `valueFormatter` | emitted with a `// valueFormatter:` placeholder and a runtime-value-omitted warning, exactly as the config form does — the chain is real but not complete |
 /// | a concentric composition whose rings carry DIFFERENT `dataLabels` | emitted as `geomDonut(dataLabelsByRing: {...})` — the mark carries ring 0's config as the base `dataLabels:` and only the rings that DIFFER from it are projected, so a uniform composition emits unchanged; inside the map an entry equal to the family default is a real override and is written |
@@ -49,7 +50,7 @@
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
 /// | a chart-level trend, threshold, range or point annotation | emitted as .trend/.threshold/.band/.pointAt |
 /// | any other annotation (text, pin, chord, error-bar, legend, a 2-D/half-open range, or ANY series-level annotation) | blocked and LISTED, never dropped |
-/// | a chart-level option `BravenPlot` does not forward (title, legend, grid, size, …) | blocked and named |
+/// | a chart-level option `BravenPlot` does not forward — `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization knobs, width/height, background, `legendStyle`, `radialBarChartConfig`, or a subtitle with no title | blocked and named. The title, subtitle, grid and legend toggle ARE forwarded and emit as `.title(...)` / `.grid(...)` / `.legend(...)` |
 /// | anything else the reconstructed chain would not reproduce | blocked by the round-trip proof below |
 /// | a runtime interaction binding | emitted with a warning, exactly as the config form does |
 /// | data above `maxInlinePoints` | emitted with a placeholder row list and a warning, exactly as the config form does |

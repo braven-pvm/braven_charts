@@ -39,7 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Six Grammar diagnostics for the compositions the new surface makes
   expressible: `polarConfigOnNonPolarSpec`, `invalidPolarComposition`,
   `incompletePolarInterval`, `conflictingConcentricCenter`,
-  `concentricConfigOnRinglessDonut`, and `invalidConcentricComposition`.
+  `concentricConfigOnRinglessDonut`, and `invalidConcentricComposition`, plus
+  three more for the per-ring surface below: `unknownRingKey`, `partialRingIds`
+  and `perRingOverrideOnRinglessDonut`.
+- A per-slice colour channel on the radial marks: `PieMark.sliceColor` and
+  `DonutMark.sliceColor`, with `sliceColor:` on `BravenChart.geomPie()` and
+  `geomDonut()`, mirroring `PolarMark.columnColor`. A null return leaves that
+  category on the series colour, and a concentric composition resolves the
+  channel per ring bucket.
+- Per-ring overrides on `DonutMark`: `dataLabelsByRing`, keyed by the bare ring
+  key, with `dataLabels` as the base, and `ringIds`, giving each ring an
+  explicit series id so a composition whose ids are decoupled from its ring
+  names round-trips. Both are exposed on `BravenChart.geomDonut()`.
 
 ### Changed
 
@@ -54,10 +65,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not all `geomPolar`, and its message names polar columns as the one
   exception to "at most one radial geom". Two pies, or a pie alongside a donut
   or a polar column, are still rejected exactly as before.
+- Generated Dart source now also reverses per-slice colours, per-ring data
+  labels and non-conforming concentric ring ids, and carries a donut's captured
+  `DonutCenterContent` verbatim — `labelStyle` and `valueStyle` included — so a
+  styled centre emits rather than being refused, and a live `valueFormatter`
+  emits as a `// valueFormatter:` placeholder with a runtime-value-omitted
+  warning. Output is unchanged for Cartesian, polar, pie, and donut and
+  concentric charts with uniform ring labels, conforming ring ids, no
+  per-slice colours and a default centre.
 
 ### Breaking Changes
 
-- `GrammarDiagnosticCode` gained six enum values (listed under Added). They are
+- `GrammarDiagnosticCode` gained nine enum values (listed under Added). They are
   declared beside the radial codes they belong with rather than appended, so
   the ordinals of the values after them shifted. The breakage is confined to
   compile time: an exhaustive `switch` over `GrammarDiagnosticCode` with no
@@ -73,16 +92,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PlotSpec`, marks/channels, and `braven_charts_fluent.dart`) remain Beta /
   experimental and may change before a stable release. Pin a version if you
   depend on them.
-- Known limitation, so the concentric-donut passthrough above is not read wider
-  than it is: a pie or donut series carrying **per-slice colours**
-  (`sliceColors`) is still refused by the Grammar source emitter, because
-  `PieMark` and `DonutMark` have no per-point colour channel — only `PolarMark`
-  does, through `columnColor`. A concentric composition whose rings carry
-  *different* `dataLabels` is refused for the same class of reason: one
-  `DonutMark` holds one `dataLabels` for every ring it splits into. Both are
-  named diagnostics, never a silently different chart. Full detail, including
-  which showcase pages this leaves blocked, is under *Known gap* in
-  `doc/chart_grammar.md`.
+- Every radial Workbench Grammar pane now emits a chain — pie, donut,
+  concentric donut and polar column. What stays refused in the radial families
+  is narrow and named: a radial-bar, gauge or range-area chart (no grammar
+  geometry), a concentric composition whose rings are unnamed or share a name
+  (the ring key *is* the series name), and a per-point `PointStyle` carrying
+  more than a colour and a size. The pie and donut pages emit with
+  `isComplete == false`, each for a live formatter callback that has no literal
+  form. Full detail is in `doc/chart_grammar.md`.
 
 ## 0.14.0 - 2026-07-27
 
