@@ -5,6 +5,7 @@ import 'package:braven_charts_example/showcase/widgets/donut_gallery_cards.dart'
 import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/polar_column_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/radial_bar_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/range_area_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/synchronized_cartesian_gallery_card.dart';
@@ -202,6 +203,31 @@ void main() {
     },
   );
 
+  testWidgets('Radial Bar family tile opens its complete workbench', (
+    tester,
+  ) async {
+    String? openedSlug;
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GalleryPage(onOpenChartType: (slug) => openedSlug = slug),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final radialBarCard = find.byKey(
+      const ValueKey('chart-type-card-radial-bar'),
+    );
+    expect(radialBarCard, findsOneWidget);
+    await tester.tap(radialBarCard);
+    await tester.pump();
+
+    expect(openedSlug, 'radial-bar');
+  });
+
   testWidgets('gallery separates curated highlights from the full catalog', (
     tester,
   ) async {
@@ -378,6 +404,22 @@ void main() {
     expect(find.byType(LifecycleArcPolarGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
+      find.text('Three independent measurements on explicit scales'),
+      500,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const ValueKey('gallery-radial-bar-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-radial-bar-compositions'), 3);
+    expect(find.byType(JourneyProgressRadialBarGalleryCard), findsOneWidget);
+    expect(find.byType(SignedDriversRadialBarGalleryCard), findsOneWidget);
+    expect(find.byType(RegionalProfileRadialBarGalleryCard), findsOneWidget);
+
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('gallery-mode-control')),
       -800,
       scrollable: galleryScrollable,
@@ -398,6 +440,51 @@ void main() {
     );
     expect(_gridCount(tester, 'gallery-advanced-full'), 14);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 16);
+  });
+
+  testWidgets('Radial Bar Gallery cards preserve three distinct contracts', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              Expanded(child: JourneyProgressRadialBarGalleryCard()),
+              Expanded(child: SignedDriversRadialBarGalleryCard()),
+              Expanded(child: RegionalProfileRadialBarGalleryCard()),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(charts, hasLength(3));
+    expect(
+      charts.every((chart) => chart.series.single is RadialBarChartSeries),
+      isTrue,
+    );
+    expect(charts[0].radialBarChartConfig.thresholds.single.value, 75);
+    final signed = charts[1].series.single as RadialBarChartSeries;
+    expect((signed.minimum, signed.maximum, signed.baseline), (-100, 100, 0));
+    expect(charts[1].radialBarChartConfig.pane.sweepAngleDegrees, 270);
+    expect(
+      (charts[2].series.single as RadialBarChartSeries).points,
+      hasLength(12),
+    );
+    expect(
+      charts[2].radialBarChartConfig.categoryLabels.position,
+      RadialBarCategoryLabelPosition.outsideCallout,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('synchronized Gallery card mounts charts and navigator', (

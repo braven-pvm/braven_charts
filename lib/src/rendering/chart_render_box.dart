@@ -25,6 +25,7 @@ import '../axis/log_ticks.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/pie_series_element.dart';
+import '../elements/radial_bar_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
@@ -367,6 +368,7 @@ class ChartRenderBox extends RenderBox {
   /// - Hide delay: Wait before hiding tooltip when moving away
   /// - Fade animation: Smooth opacity transitions
   late final TooltipAnimator _tooltipAnimator;
+  Rect? _debugTooltipRect;
 
   /// Whether tooltip rendering has been pre-warmed.
   ///
@@ -1666,6 +1668,10 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   HoveredMarkerInfo? get debugSelectedTooltipMarker =>
       _resolveSelectedTooltipMarker();
+
+  /// Bounds of the most recently painted tooltip surface.
+  @visibleForTesting
+  Rect? get debugTooltipRect => _debugTooltipRect;
 
   /// Current tap-pinned tooltip marker for widget tests.
   @visibleForTesting
@@ -5331,9 +5337,10 @@ class ChartRenderBox extends RenderBox {
       (element) => element.id == markerInfo.seriesId,
     )) {
       _tooltipAnimator.hideImmediately();
+      _debugTooltipRect = null;
       return;
     }
-    _tooltipRenderer.drawMarkerTooltip(
+    _debugTooltipRect = _tooltipRenderer.drawMarkerTooltip(
       canvas: canvas,
       size: size,
       markerInfo: markerInfo,
@@ -5382,7 +5389,12 @@ class ChartRenderBox extends RenderBox {
     final isRadial = hits.any(
       (hit) => hit.share != null || hit.groupCount != null,
     );
-    config.label = groupCount != null
+    final isRadialBar = _elements.any(
+      (element) => element is RadialBarSeriesElement,
+    );
+    config.label = isRadialBar
+        ? 'Radial Bar chart with $hitCount categories'
+        : groupCount != null
         ? 'Concentric Donut chart with $groupCount rings and $hitCount slices'
         : isRadial
         ? 'Radial chart with $hitCount slices'

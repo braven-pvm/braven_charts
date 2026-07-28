@@ -1,14 +1,311 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, FontWeight;
 
 import 'package:flutter/foundation.dart' show immutable;
 
 import '../meta/chart_surface.dart';
+import '../theming/styles/label_style.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
 import 'radial_selection_style.dart';
 import 'segment_style.dart';
+import 'polar_chart_config.dart';
 import 'y_axis_config.dart';
+
+/// Direction used to shade a Radial Bar mark.
+enum RadialBarGradientType {
+  /// Follows the mark from its baseline towards its value endpoint.
+  sweep,
+
+  /// Runs across the mark thickness from the inner to the outer track edge.
+  radial,
+}
+
+/// Serializable gradient applied independently to every Radial Bar mark.
+///
+/// Null colors are derived from each category's resolved mark color so a
+/// gradient preserves categorical identity unless fixed colors are requested.
+@immutable
+@chartSurface
+class RadialBarGradientStyle {
+  const RadialBarGradientStyle({
+    this.enabled = true,
+    this.type = RadialBarGradientType.sweep,
+    this.startColor,
+    this.endColor,
+    this.startLightnessShift = 0.18,
+    this.endLightnessShift = -0.12,
+  });
+
+  final bool enabled;
+  final RadialBarGradientType type;
+  final Color? startColor;
+  final Color? endColor;
+  final double startLightnessShift;
+  final double endLightnessShift;
+
+  void validate() {
+    for (final (name, value) in <(String, double)>[
+      ('startLightnessShift', startLightnessShift),
+      ('endLightnessShift', endLightnessShift),
+    ]) {
+      if (!value.isFinite || value < -1 || value > 1) {
+        throw ArgumentError.value(
+          value,
+          'radialBarStyle.gradient.$name',
+          'Value must be finite and in [-1, 1]',
+        );
+      }
+    }
+  }
+
+  RadialBarGradientStyle copyWith({
+    bool? enabled,
+    RadialBarGradientType? type,
+    Color? startColor,
+    bool clearStartColor = false,
+    Color? endColor,
+    bool clearEndColor = false,
+    double? startLightnessShift,
+    double? endLightnessShift,
+  }) => RadialBarGradientStyle(
+    enabled: enabled ?? this.enabled,
+    type: type ?? this.type,
+    startColor: clearStartColor ? null : (startColor ?? this.startColor),
+    endColor: clearEndColor ? null : (endColor ?? this.endColor),
+    startLightnessShift: startLightnessShift ?? this.startLightnessShift,
+    endLightnessShift: endLightnessShift ?? this.endLightnessShift,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RadialBarGradientStyle &&
+          enabled == other.enabled &&
+          type == other.type &&
+          startColor == other.startColor &&
+          endColor == other.endColor &&
+          startLightnessShift == other.startLightnessShift &&
+          endLightnessShift == other.endLightnessShift;
+
+  @override
+  int get hashCode => Object.hash(
+    enabled,
+    type,
+    startColor,
+    endColor,
+    startLightnessShift,
+    endLightnessShift,
+  );
+}
+
+/// Placement of one Radial Bar data label.
+enum RadialBarDataLabelPosition {
+  /// Keep the label inside the colored mark near its value endpoint.
+  ///
+  /// Labels that cannot fit without crossing the rounded endpoint or track
+  /// edges are omitted.
+  insideEnd,
+
+  /// Place labels in collision-managed lanes outside the radial pane.
+  ///
+  /// A two-segment connector links each label to its category-track endpoint.
+  outsideCallout,
+}
+
+/// Content shown by a Radial Bar data label.
+enum RadialBarDataLabelContent {
+  /// The formatted numeric value only.
+  value,
+
+  /// The category name only.
+  category,
+
+  /// The category name followed by the formatted numeric value.
+  categoryAndValue,
+}
+
+/// Color resolution used for Radial Bar data labels.
+enum RadialBarDataLabelColorMode {
+  /// Choose an accessible foreground against the mark or chart background.
+  autoContrast,
+
+  /// Use [RadialBarDataLabelConfig.textStyle]'s color.
+  ///
+  /// When that color is null, the chart theme's label color is used.
+  fixed,
+}
+
+/// Presentation and placement policy for Radial Bar data labels.
+@immutable
+@chartSurface
+class RadialBarDataLabelConfig {
+  const RadialBarDataLabelConfig({
+    this.position = RadialBarDataLabelPosition.insideEnd,
+    this.content = RadialBarDataLabelContent.value,
+    this.colorMode = RadialBarDataLabelColorMode.autoContrast,
+    this.textStyle = const PolarLabelStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+    ),
+    this.offset = 0,
+    this.showPanel = false,
+    this.panelStyle,
+    this.connectorLength = 14,
+    this.connectorWidth = 1,
+    this.connectorColor,
+  });
+
+  /// Inside-end or outside-callout placement.
+  final RadialBarDataLabelPosition position;
+
+  /// Category/value content shown by each label.
+  final RadialBarDataLabelContent content;
+
+  /// Automatic accessible contrast or an explicit text color.
+  final RadialBarDataLabelColorMode colorMode;
+
+  /// Label typography.
+  ///
+  /// Font size and weight are honored in both color modes. [PolarLabelStyle.color]
+  /// is used only when [colorMode] is [RadialBarDataLabelColorMode.fixed].
+  final PolarLabelStyle textStyle;
+
+  /// Additional logical-pixel distance from the default placement.
+  ///
+  /// For [RadialBarDataLabelPosition.insideEnd], positive values move the
+  /// label farther inside the colored arc. For
+  /// [RadialBarDataLabelPosition.outsideCallout], positive values move the
+  /// outside label lane farther from the pane.
+  final double offset;
+
+  /// Whether outside callouts use a background panel.
+  ///
+  /// Inside-end labels remain unboxed so they stay contained by their mark.
+  final bool showPanel;
+
+  /// Optional outside-callout panel override.
+  ///
+  /// Null derives an opaque-enough background, border, radius, and padding
+  /// from the active chart theme. [LabelStyle.textStyle] is ignored;
+  /// [textStyle] remains the single callout typography contract.
+  final LabelStyle? panelStyle;
+
+  /// Logical-pixel connector reach beyond the radial pane.
+  final double connectorLength;
+
+  /// Logical-pixel connector stroke width.
+  final double connectorWidth;
+
+  /// Optional connector override. Null uses the owning mark color.
+  final Color? connectorColor;
+
+  void validate() {
+    textStyle.validate(argumentName: 'radialBarStyle.dataLabels.textStyle');
+    if (!offset.isFinite || offset < 0) {
+      throw ArgumentError.value(
+        offset,
+        'radialBarStyle.dataLabels.offset',
+        'Value must be finite and non-negative',
+      );
+    }
+    if (!connectorLength.isFinite || connectorLength < 0) {
+      throw ArgumentError.value(
+        connectorLength,
+        'radialBarStyle.dataLabels.connectorLength',
+        'Value must be finite and non-negative',
+      );
+    }
+    if (!connectorWidth.isFinite || connectorWidth < 0) {
+      throw ArgumentError.value(
+        connectorWidth,
+        'radialBarStyle.dataLabels.connectorWidth',
+        'Value must be finite and non-negative',
+      );
+    }
+    final labelStyle = panelStyle;
+    if (labelStyle == null) return;
+    if (!labelStyle.borderWidth.isFinite || labelStyle.borderWidth < 0) {
+      throw ArgumentError.value(
+        labelStyle.borderWidth,
+        'radialBarStyle.dataLabels.panelStyle.borderWidth',
+        'Value must be finite and non-negative',
+      );
+    }
+    if (!labelStyle.borderRadius.isFinite || labelStyle.borderRadius < 0) {
+      throw ArgumentError.value(
+        labelStyle.borderRadius,
+        'radialBarStyle.dataLabels.panelStyle.borderRadius',
+        'Value must be finite and non-negative',
+      );
+    }
+    final shadowBlur = labelStyle.shadowBlurRadius;
+    if (shadowBlur != null && (!shadowBlur.isFinite || shadowBlur < 0)) {
+      throw ArgumentError.value(
+        shadowBlur,
+        'radialBarStyle.dataLabels.panelStyle.shadowBlurRadius',
+        'Value must be finite and non-negative',
+      );
+    }
+  }
+
+  RadialBarDataLabelConfig copyWith({
+    RadialBarDataLabelPosition? position,
+    RadialBarDataLabelContent? content,
+    RadialBarDataLabelColorMode? colorMode,
+    PolarLabelStyle? textStyle,
+    double? offset,
+    bool? showPanel,
+    LabelStyle? panelStyle,
+    bool clearPanelStyle = false,
+    double? connectorLength,
+    double? connectorWidth,
+    Color? connectorColor,
+    bool clearConnectorColor = false,
+  }) => RadialBarDataLabelConfig(
+    position: position ?? this.position,
+    content: content ?? this.content,
+    colorMode: colorMode ?? this.colorMode,
+    textStyle: textStyle ?? this.textStyle,
+    offset: offset ?? this.offset,
+    showPanel: showPanel ?? this.showPanel,
+    panelStyle: clearPanelStyle ? null : (panelStyle ?? this.panelStyle),
+    connectorLength: connectorLength ?? this.connectorLength,
+    connectorWidth: connectorWidth ?? this.connectorWidth,
+    connectorColor: clearConnectorColor
+        ? null
+        : (connectorColor ?? this.connectorColor),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RadialBarDataLabelConfig &&
+          position == other.position &&
+          content == other.content &&
+          colorMode == other.colorMode &&
+          textStyle == other.textStyle &&
+          offset == other.offset &&
+          showPanel == other.showPanel &&
+          panelStyle == other.panelStyle &&
+          connectorLength == other.connectorLength &&
+          connectorWidth == other.connectorWidth &&
+          connectorColor == other.connectorColor;
+
+  @override
+  int get hashCode => Object.hash(
+    position,
+    content,
+    colorMode,
+    textStyle,
+    offset,
+    showPanel,
+    panelStyle,
+    connectorLength,
+    connectorWidth,
+    connectorColor,
+  );
+}
 
 /// Appearance of Radial Bar marks and their background category tracks.
 @immutable
@@ -21,7 +318,9 @@ class RadialBarStyle {
     this.borderWidth = 0,
     this.trackColor,
     this.trackOpacity = 0.12,
+    this.gradient,
     this.showDataLabels = true,
+    this.dataLabels = const RadialBarDataLabelConfig(),
   });
 
   final double cornerRadius;
@@ -30,7 +329,9 @@ class RadialBarStyle {
   final double borderWidth;
   final Color? trackColor;
   final double trackOpacity;
+  final RadialBarGradientStyle? gradient;
   final bool showDataLabels;
+  final RadialBarDataLabelConfig dataLabels;
 
   void validate() {
     if (!cornerRadius.isFinite || cornerRadius < 0) {
@@ -61,6 +362,8 @@ class RadialBarStyle {
         'Value must be finite and in [0, 1]',
       );
     }
+    gradient?.validate();
+    dataLabels.validate();
   }
 
   RadialBarStyle copyWith({
@@ -72,7 +375,10 @@ class RadialBarStyle {
     Color? trackColor,
     bool clearTrackColor = false,
     double? trackOpacity,
+    RadialBarGradientStyle? gradient,
+    bool clearGradient = false,
     bool? showDataLabels,
+    RadialBarDataLabelConfig? dataLabels,
   }) => RadialBarStyle(
     cornerRadius: cornerRadius ?? this.cornerRadius,
     opacity: opacity ?? this.opacity,
@@ -80,7 +386,9 @@ class RadialBarStyle {
     borderWidth: borderWidth ?? this.borderWidth,
     trackColor: clearTrackColor ? null : (trackColor ?? this.trackColor),
     trackOpacity: trackOpacity ?? this.trackOpacity,
+    gradient: clearGradient ? null : (gradient ?? this.gradient),
     showDataLabels: showDataLabels ?? this.showDataLabels,
+    dataLabels: dataLabels ?? this.dataLabels,
   );
 
   @override
@@ -93,7 +401,9 @@ class RadialBarStyle {
           borderWidth == other.borderWidth &&
           trackColor == other.trackColor &&
           trackOpacity == other.trackOpacity &&
-          showDataLabels == other.showDataLabels;
+          gradient == other.gradient &&
+          showDataLabels == other.showDataLabels &&
+          dataLabels == other.dataLabels;
 
   @override
   int get hashCode => Object.hash(
@@ -103,7 +413,9 @@ class RadialBarStyle {
     borderWidth,
     trackColor,
     trackOpacity,
+    gradient,
     showDataLabels,
+    dataLabels,
   );
 }
 
@@ -244,6 +556,39 @@ class RadialBarChartSeries extends ChartSeries {
       }
     }
     radialBarStyle.validate();
+    _requireSelectionRange(
+      selectionStyle.liftScale,
+      'selectionStyle.liftScale',
+      minimum: 1,
+      maximum: 1.5,
+    );
+    _requireSelectionRange(
+      selectionStyle.liftOffset,
+      'selectionStyle.liftOffset',
+      minimum: 0,
+      maximum: 40,
+    );
+    _requireSelectionRange(
+      selectionStyle.backdropBlur,
+      'selectionStyle.backdropBlur',
+      minimum: 0,
+      maximum: 20,
+    );
+  }
+
+  static void _requireSelectionRange(
+    double value,
+    String name, {
+    required double minimum,
+    required double maximum,
+  }) {
+    if (!value.isFinite || value < minimum || value > maximum) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Value must be finite and in [$minimum, $maximum]',
+      );
+    }
   }
 
   @override

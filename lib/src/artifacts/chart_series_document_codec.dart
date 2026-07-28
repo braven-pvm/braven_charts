@@ -2960,7 +2960,10 @@ Map<String, Object?> _encodeRadialBarStyle(RadialBarStyle style) => {
   'borderWidth': _number(style.borderWidth),
   if (style.trackColor != null) 'trackColor': style.trackColor!.toARGB32(),
   'trackOpacity': _number(style.trackOpacity),
+  if (style.gradient != null)
+    'gradient': _encodeRadialBarGradient(style.gradient!),
   'showDataLabels': style.showDataLabels,
+  'dataLabels': _encodeRadialBarDataLabels(style.dataLabels),
 };
 
 RadialBarStyle _decodeRadialBarStyle(Map<String, Object?> value) =>
@@ -2977,8 +2980,83 @@ RadialBarStyle _decodeRadialBarStyle(Map<String, Object?> value) =>
         r'$.style.radialBarStyle.trackColor',
       ),
       trackOpacity: _double(value, 'trackOpacity'),
+      gradient: value['gradient'] == null
+          ? null
+          : _decodeRadialBarGradient(_map(value, 'gradient')),
       showDataLabels: _bool(value, 'showDataLabels'),
+      dataLabels: value['dataLabels'] == null
+          ? const RadialBarDataLabelConfig()
+          : _decodeRadialBarDataLabels(_map(value, 'dataLabels')),
     );
+
+Map<String, Object?> _encodeRadialBarGradient(
+  RadialBarGradientStyle gradient,
+) => {
+  'enabled': gradient.enabled,
+  'type': gradient.type.name,
+  if (gradient.startColor != null)
+    'startColor': gradient.startColor!.toARGB32(),
+  if (gradient.endColor != null) 'endColor': gradient.endColor!.toARGB32(),
+  'startLightnessShift': _number(gradient.startLightnessShift),
+  'endLightnessShift': _number(gradient.endLightnessShift),
+};
+
+RadialBarGradientStyle _decodeRadialBarGradient(Map<String, Object?> value) =>
+    RadialBarGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: _enum(value, 'type', RadialBarGradientType.values),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.radialBarStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.radialBarStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+    );
+
+Map<String, Object?> _encodeRadialBarDataLabels(
+  RadialBarDataLabelConfig config,
+) => {
+  'position': config.position.name,
+  'content': config.content.name,
+  'colorMode': config.colorMode.name,
+  'textStyle': _encodePolarLabelStyle(config.textStyle),
+  'offset': _number(config.offset),
+  'showPanel': config.showPanel,
+  if (config.panelStyle != null)
+    'panelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      config.panelStyle!,
+    ).toJson(),
+  'connectorLength': _number(config.connectorLength),
+  'connectorWidth': _number(config.connectorWidth),
+  if (config.connectorColor != null)
+    'connectorColor': config.connectorColor!.toARGB32(),
+};
+
+RadialBarDataLabelConfig _decodeRadialBarDataLabels(
+  Map<String, Object?> value,
+) => RadialBarDataLabelConfig(
+  position: _enum(value, 'position', RadialBarDataLabelPosition.values),
+  content: _enum(value, 'content', RadialBarDataLabelContent.values),
+  colorMode: _enum(value, 'colorMode', RadialBarDataLabelColorMode.values),
+  textStyle: _decodePolarLabelStyle(value['textStyle']),
+  offset: _double(value, 'offset'),
+  showPanel: _optionalBool(value['showPanel']) ?? false,
+  panelStyle: value['panelStyle'] == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          JsonValue.fromJson(_map(value, 'panelStyle')) as JsonObjectValue,
+        ),
+  connectorLength: _double(value, 'connectorLength'),
+  connectorWidth: _double(value, 'connectorWidth'),
+  connectorColor: _optionalColor(
+    value['connectorColor'],
+    r'$.style.radialBarStyle.dataLabels.connectorColor',
+  ),
+);
 
 GaugeChartSeries _decodeGaugeSeries({
   required ChartSeriesDocument document,

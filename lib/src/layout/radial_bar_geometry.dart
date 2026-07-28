@@ -155,7 +155,10 @@ abstract final class RadialBarGeometryCalculator {
           : categories.length - 1 - sourceIndex;
       final outerRadius =
           pane.outerRadius - radialIndex * (trackThickness + effectiveTrackGap);
-      final innerRadius = outerRadius - trackThickness;
+      // A zero-radius pane can leave the innermost subtraction a few ulps
+      // below zero. Clamp only that floating-point residue so the public
+      // non-negative annular-sector invariant remains exact.
+      final innerRadius = math.max(0.0, outerRadius - trackThickness);
       final value = values[sourceIndex];
       final valueFraction = (value - minimum) / (maximum - minimum);
       final startAngle = pane.angleAt(baselineFraction);
@@ -182,7 +185,10 @@ abstract final class RadialBarGeometryCalculator {
       final middleRadius = (innerRadius + outerRadius) / 2;
       final middleAngle = startAngle + valueSweep / 2;
       final endAngle = startAngle + valueSweep;
-      final categoryAngle = pane.startAngle + pane.signedSweepAngle * 0.025;
+      // Every category begins on the same angular scale origin. Keeping the
+      // label on that exact radial guide makes concentric labels read as one
+      // aligned column instead of drifting diagonally as radius increases.
+      final categoryAngle = pane.startAngle;
       marks.add(
         RadialBarMarkGeometry._(
           category: category,

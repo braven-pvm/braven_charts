@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 
 import '../meta/chart_surface.dart';
 
-/// Visual treatment applied to a durably selected partition-radial slice.
+/// Visual treatment applied to a durably selected radial mark.
 ///
 /// Selection identity remains owned by the controller, legend, table, and
 /// chart interaction model. This enum only chooses how that shared identity is
-/// presented by Pie, Donut, and Concentric Donut charts.
+/// presented by Pie, Donut, Concentric Donut, Polar Column, and Radial Bar
+/// charts.
 enum RadialSelectionEffect {
   /// Translate the selected slice away from the shared center.
   explode,
@@ -16,11 +17,11 @@ enum RadialSelectionEffect {
   lift,
 }
 
-/// Presentation controls for durable partition-radial slice selection.
+/// Presentation controls for durable radial-mark selection.
 @immutable
 @chartSurface
 class RadialSelectionStyle {
-  /// Creates a radial slice-selection presentation.
+  /// Creates a radial-mark selection presentation.
   const RadialSelectionStyle({
     this.effect = RadialSelectionEffect.explode,
     this.liftScale = 1.08,

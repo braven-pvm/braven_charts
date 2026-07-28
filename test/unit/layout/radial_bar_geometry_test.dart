@@ -40,6 +40,23 @@ void main() {
       expect(geometry.marks[1].mark.sweepAngle, closeTo(math.pi, 1e-9));
       expect(geometry.hitTest(geometry.marks[1].tooltipAnchor)?.index, 1);
       expect(geometry.hitTest(pane.center), isNull);
+
+      final startDirection = Offset.fromDirection(pane.startAngle);
+      for (final mark in geometry.marks) {
+        final labelDirection =
+            (mark.categoryLabelAnchor - pane.center) /
+            (mark.categoryLabelAnchor - pane.center).distance;
+        expect(
+          labelDirection.dx,
+          closeTo(startDirection.dx, 1e-9),
+          reason: '${mark.category} must align to the shared scale origin',
+        );
+        expect(
+          labelDirection.dy,
+          closeTo(startDirection.dy, 1e-9),
+          reason: '${mark.category} must align to the shared scale origin',
+        );
+      }
     });
 
     test('negative values sweep backward from a non-edge baseline', () {

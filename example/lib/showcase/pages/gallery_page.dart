@@ -13,6 +13,7 @@ import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
 import '../widgets/polar_column_gallery_cards.dart';
+import '../widgets/radial_bar_gallery_cards.dart';
 import '../widgets/range_area_gallery_cards.dart';
 import '../widgets/scatter_gallery_cards.dart';
 import '../widgets/synchronized_cartesian_gallery_card.dart';
@@ -367,6 +368,19 @@ class _GalleryPageState extends State<GalleryPage> {
           const _RadialGalleryGrid(
             gridKey: ValueKey('gallery-polar-column-compositions'),
             cards: polarColumnGalleryCards,
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'RADIAL BAR COMPOSITIONS',
+              title: 'Three independent measurements on explicit scales',
+              subtitle:
+                  'Compare progress against a target, signed movement around a baseline, and a dense regional profile without converting values into Pie shares.',
+              count: 3,
+            ),
+          ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-radial-bar-compositions'),
+            cards: radialBarGalleryCards,
           ),
         ],
       ),

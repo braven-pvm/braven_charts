@@ -571,7 +571,8 @@ class BravenChartController extends ChangeNotifier {
   /// Clears durable point selection.
   void clearPointSelection() => _clearPointSelectionHandler?.call();
 
-  /// Replays the configured Pie, Donut, or Polar Column entrance animation.
+  /// Replays the configured Pie, Donut, Radial Bar, Polar Column, or Gauge
+  /// entrance animation.
   ///
   /// Reduced-motion preferences, `PieAnimationMode.none`,
   /// `PolarColumnAnimationMode.none`, and zero-duration animation themes still

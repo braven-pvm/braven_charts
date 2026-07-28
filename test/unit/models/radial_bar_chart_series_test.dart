@@ -115,6 +115,106 @@ void main() {
       expect(() => series.copyWith(yAxisId: 'cartesian'), throwsArgumentError);
       expect(() => series.copyWith(isXOrdered: false), throwsArgumentError);
     });
+
+    test('rejects unsafe selection transforms', () {
+      RadialBarChartSeries build(RadialSelectionStyle selectionStyle) =>
+          RadialBarChartSeries.fromMap(
+            id: 'progress',
+            values: const {'A': 20},
+            selectionStyle: selectionStyle,
+          );
+
+      expect(
+        () => build(const RadialSelectionStyle(liftScale: 1.51)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(const RadialSelectionStyle(liftOffset: 40.1)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(const RadialSelectionStyle(backdropBlur: 20.1)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(RadialSelectionStyle(liftScale: double.nan)),
+        throwsArgumentError,
+      );
+    });
+
+    test('preserves configurable data-label presentation', () {
+      const labels = RadialBarDataLabelConfig(
+        position: RadialBarDataLabelPosition.outsideCallout,
+        content: RadialBarDataLabelContent.categoryAndValue,
+        colorMode: RadialBarDataLabelColorMode.fixed,
+        textStyle: PolarLabelStyle(
+          color: Color(0xFF112233),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+        offset: 8,
+        showPanel: true,
+        panelStyle: LabelStyle(
+          textStyle: TextStyle(),
+          backgroundColor: Color(0xFFF8FAFC),
+          borderColor: Color(0xFFCBD5E1),
+          borderWidth: 1,
+          borderRadius: 6,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+        connectorLength: 18,
+        connectorWidth: 1.5,
+        connectorColor: Color(0xFF445566),
+      );
+      const style = RadialBarStyle(dataLabels: labels);
+
+      expect(style.validate, returnsNormally);
+      expect(style.copyWith(opacity: 0.8).dataLabels, labels);
+      expect(labels.copyWith(clearConnectorColor: true).connectorColor, isNull);
+      expect(labels.copyWith(clearPanelStyle: true).panelStyle, isNull);
+    });
+
+    test('rejects invalid data-label measurements', () {
+      expect(
+        const RadialBarStyle(
+          dataLabels: RadialBarDataLabelConfig(offset: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadialBarStyle(
+          dataLabels: RadialBarDataLabelConfig(connectorWidth: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadialBarStyle(
+          dataLabels: RadialBarDataLabelConfig(
+            textStyle: PolarLabelStyle(fontSize: 0),
+          ),
+        ).validate,
+        throwsArgumentError,
+      );
+    });
+
+    test('preserves and validates mark gradients', () {
+      const gradient = RadialBarGradientStyle(
+        type: RadialBarGradientType.radial,
+        startColor: Color(0xFF22D3EE),
+        endColor: Color(0xFF1D4ED8),
+        startLightnessShift: 0.2,
+        endLightnessShift: -0.18,
+      );
+      const style = RadialBarStyle(gradient: gradient);
+
+      expect(style.validate, returnsNormally);
+      expect(style.copyWith(opacity: 0.8).gradient, gradient);
+      expect(style.copyWith(clearGradient: true).gradient, isNull);
+      expect(
+        const RadialBarGradientStyle(startLightnessShift: 1.1).validate,
+        throwsArgumentError,
+      );
+    });
   });
 
   group('RadialBarChartConfig', () {
@@ -122,11 +222,47 @@ void main() {
       const config = RadialBarChartConfig(
         trackGap: 4,
         tickCount: 6,
+        categoryLabels: RadialBarCategoryLabelConfig(
+          position: RadialBarCategoryLabelPosition.startGap,
+          orientation: RadialBarCategoryLabelOrientation.followStartAngle,
+          offset: 10,
+          textStyle: PolarLabelStyle(color: Color(0xFF112233), fontSize: 12),
+          showPanel: true,
+          panelStyle: LabelStyle(
+            textStyle: TextStyle(),
+            backgroundColor: Color(0xFFF8FAFC),
+            borderColor: Color(0xFFCBD5E1),
+            borderWidth: 1,
+            borderRadius: 6,
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          ),
+          connectorLength: 18,
+          connectorWidth: 1.5,
+          connectorColor: Color(0xFF445566),
+        ),
         thresholds: [RadialBarThreshold(value: 75, label: 'Target')],
       );
 
       expect(config.validate, returnsNormally);
       expect(config.copyWith(showGridLines: false).showGridLines, isFalse);
+      expect(
+        config.categoryLabels.position,
+        RadialBarCategoryLabelPosition.startGap,
+      );
+      expect(
+        config.categoryLabels.orientation,
+        RadialBarCategoryLabelOrientation.followStartAngle,
+      );
+      expect(
+        config.categoryLabels
+            .copyWith(orientation: RadialBarCategoryLabelOrientation.horizontal)
+            .orientation,
+        RadialBarCategoryLabelOrientation.horizontal,
+      );
+      expect(
+        config.categoryLabels.copyWith(clearPanelStyle: true).panelStyle,
+        isNull,
+      );
     });
 
     test('rejects invalid guide configuration', () {
@@ -136,6 +272,18 @@ void main() {
       );
       expect(
         const RadialBarChartConfig(tickCount: 1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadialBarChartConfig(
+          categoryLabels: RadialBarCategoryLabelConfig(offset: -1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadialBarChartConfig(
+          categoryLabels: RadialBarCategoryLabelConfig(connectorWidth: -1),
+        ).validate,
         throwsArgumentError,
       );
       expect(

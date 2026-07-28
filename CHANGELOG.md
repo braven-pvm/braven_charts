@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Three production-shaped Radial Bar Gallery compositions covering target
+  progress, signed values around a shared baseline, and dense collision-aware
+  category tracks, linked to the complete Radial Bar workbench and public
+  guide.
 - Multi-series Chart Grammar polar columns. A plot may now carry several
   `geomPolar` marks sharing one angular and one radial axis, covering layered,
   grouped, and stacked compositions, and `PolarMark` gained the advanced
