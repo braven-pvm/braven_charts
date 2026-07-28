@@ -13,9 +13,13 @@
 /// fixture to drift.
 ///
 /// The expected verdict is a real chain that is deliberately NOT complete: the
-/// page's radial data labels carry live formatter callbacks, and a callback has
-/// no literal form, so it is emitted as a named placeholder with a
-/// `runtimeValueOmitted` warning.
+/// page's radial data labels carry live formatter callbacks — a
+/// `valueFormatter` and a `percentageFormatter` — and a callback has no literal
+/// form, so each is emitted as a named placeholder. Both are reported by ONE
+/// `runtimeValueOmitted` warning at `$.series[0].style.dataLabels`, and that
+/// single-warning set is pinned whole. (The sibling donut gate carries TWO,
+/// because `DonutChartsPage` binds a centre formatter as well; the counts are
+/// genuinely different and neither gate borrows the other's.)
 library;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -123,14 +127,26 @@ void main() {
     );
 
     // The page's slice colours come from the THEME palette, not from per-point
-    // overrides, so this page emits no `sliceColor` channel. Read off the live
-    // points rather than asserted flat: if the page ever gains a per-slice
-    // colour knob the expectation flips with it instead of failing about the
-    // wrong thing.
+    // overrides, so this page carries no per-slice colour and emits no
+    // `sliceColor` channel. BOTH halves are asserted outright.
+    //
+    // This used to be one conditional — `expect(sourceHasChannel,
+    // pageHasColours)` — and with this page on the theme palette it ran as
+    // `expect(false, false)`. It pinned only that the two AGREE, which is a
+    // fact about the emitter, and said nothing whatever about this page: it
+    // would have passed just as happily had the page grown a per-slice colour
+    // knob and the emitter reversed it. Stated as two positive expectations,
+    // the first goes red the day the page stops taking its colours from the
+    // theme — a stale gate reported as one, which is what the sibling guards
+    // in the concentric gate do — and the second pins the emitted text.
     expect(
-      generated.source.contains('sliceColor: (row) => row.sliceColor,'),
-      series.points.any((point) => point.pointStyle?.color != null),
+      series.points.where((point) => point.pointStyle?.color != null),
+      isEmpty,
+      reason:
+          'the page must still take its slice colours from the theme palette '
+          'for the no-channel expectation below to mean anything',
     );
+    expect(generated.source, isNot(contains('sliceColor:')));
 
     // The things that cannot be literals, stated honestly rather than dropped.
     // The page binds BOTH formatters, and each has to leave a named
