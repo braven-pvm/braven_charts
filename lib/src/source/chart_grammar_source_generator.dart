@@ -3430,23 +3430,14 @@ class _GrammarChainEmitter {
   /// Emits `ringIds: {'<ringKey>': '<seriesId>', …}` for a concentric
   /// composition whose captured ids do not follow `'<markId>-<ringKey>'`.
   ///
-  /// Both sides are plain strings, so this writes the shared string literal
-  /// renderer's output directly — there is no nested config to hand to the
-  /// config emitter. Keys are sorted so the emitted source does not depend on
-  /// ring order, exactly as `ringWeights:` and `dataLabelsByRing:` are.
+  /// `ringIds` is a `geomDonut` argument with no config-form counterpart, but
+  /// its LITERAL rendering — sorted string keys, string values, the same map
+  /// framing `ringWeights:` and `dataLabelsByRing:` use — is not grammar-only,
+  /// so it goes through the config emitter's shared map seam rather than
+  /// growing a third private copy of that framing here. Every other literal
+  /// this chain writes is delegated the same way.
   void _emitRingIds(DartSourceWriter writer, Map<String, String> ringIds) {
-    if (ringIds.isEmpty) return;
-    final keys = ringIds.keys.toList()..sort();
-    writer.writeLine('ringIds: {');
-    writer.indented(() {
-      for (final key in keys) {
-        writer.writeLine(
-          '${DartSourceWriter.stringLiteral(key)}: '
-          '${DartSourceWriter.stringLiteral(ringIds[key]!)},',
-        );
-      }
-    });
-    writer.writeLine('},');
+    _config.emitStringMapArgument(writer, 'ringIds', ringIds);
   }
 
   void _optionalNumber(DartSourceWriter writer, String name, num? value) {

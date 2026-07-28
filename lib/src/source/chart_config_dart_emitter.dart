@@ -3312,20 +3312,15 @@ class ChartConfigDartEmitter {
         config.order.name,
         defaultName: 'outerToInner',
       );
-      if (config.ringWeights.isNotEmpty) {
-        final entries = config.ringWeights.entries.toList()
-          ..sort((a, b) => a.key.compareTo(b.key));
-        writer.writeLine('ringWeights: {');
-        writer.indented(() {
-          for (final entry in entries) {
-            writer.writeLine(
-              '${DartSourceWriter.stringLiteral(entry.key)}: '
-              '${DartSourceWriter.numberLiteral(entry.value)},',
-            );
-          }
-        });
-        writer.writeLine('},');
-      }
+      _emitSortedMapArgument(
+        writer,
+        'ringWeights',
+        config.ringWeights,
+        (key, weight) => writer.writeLine(
+          '${DartSourceWriter.stringLiteral(key)}: '
+          '${DartSourceWriter.numberLiteral(weight)},',
+        ),
+      );
       _enumIf(
         writer,
         'legendMode',
@@ -4134,30 +4129,75 @@ class ChartConfigDartEmitter {
     DartSourceWriter writer,
     Map<String, PieDataLabelConfig> byRing,
   ) {
-    if (byRing.isEmpty) return;
-    final keys = byRing.keys.toList()..sort();
-    writer.writeLine('dataLabelsByRing: {');
+    _emitSortedMapArgument(writer, 'dataLabelsByRing', byRing, (key, labels) {
+      _emitRadialLabelConfig(
+        writer,
+        DartSourceWriter.stringLiteral(key),
+        labels,
+      );
+      if (labels.valueFormatter != null || labels.percentageFormatter != null) {
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'Radial label formatter callbacks were omitted for ring "$key". '
+              'Provide them from your application.',
+          path: r'$.series[*].style.dataLabels',
+        );
+      }
+    });
+  }
+
+  /// Emits `<argument>: {'key': …, …}` — a string-keyed map literal — writing
+  /// each entry through [writeEntry] in sorted-key order.
+  ///
+  /// The ONE place that decides how a map argument is framed and how its keys
+  /// are ordered. Three renderers had grown the same six lines independently
+  /// (`ringWeights:`, `dataLabelsByRing:` and the grammar form's `ringIds:`),
+  /// which is three chances for the config and grammar source forms to disagree
+  /// about entry order over the same chart. Sorting by key is what makes the
+  /// emitted source stable across runs, so it belongs here rather than at each
+  /// call site.
+  ///
+  /// An EMPTY map writes nothing: for every argument that reaches here, `{}`
+  /// and "absent" describe the same chart. That is NOT the exemption
+  /// [_emitRadialLabels]' conditional wrapper makes — an entry equal to the
+  /// family default is still written, because inside an override map it is a
+  /// real override.
+  void _emitSortedMapArgument<V>(
+    DartSourceWriter writer,
+    String argument,
+    Map<String, V> entries,
+    void Function(String key, V value) writeEntry,
+  ) {
+    if (entries.isEmpty) return;
+    final keys = entries.keys.toList()..sort();
+    writer.writeLine('$argument: {');
     writer.indented(() {
       for (final key in keys) {
-        final labels = byRing[key]!;
-        _emitRadialLabelConfig(
-          writer,
-          DartSourceWriter.stringLiteral(key),
-          labels,
-        );
-        if (labels.valueFormatter != null ||
-            labels.percentageFormatter != null) {
-          _warn(
-            code: ChartSourceWarningCodes.runtimeValueOmitted,
-            message:
-                'Radial label formatter callbacks were omitted for ring "$key". '
-                'Provide them from your application.',
-            path: r'$.series[*].style.dataLabels',
-          );
-        }
+        writeEntry(key, entries[key] as V);
       }
     });
     writer.writeLine('},');
+  }
+
+  /// Emits `<argument>: {'key': 'value', …}` for a string-to-string map.
+  ///
+  /// The seam the grammar generator's `ringIds:` goes through. `ringIds` has no
+  /// config-form counterpart — it is a `geomDonut` argument — but its literal
+  /// rendering is the same rendering `ringWeights:` uses, and routing it here
+  /// is what keeps one map framing and one key order across both source forms
+  /// instead of a second copy living in the generator.
+  void emitStringMapArgument(
+    DartSourceWriter writer,
+    String argument,
+    Map<String, String> entries,
+  ) {
+    _emitSortedMapArgument(writer, argument, entries, (key, value) {
+      writer.writeLine(
+        '${DartSourceWriter.stringLiteral(key)}: '
+        '${DartSourceWriter.stringLiteral(value)},',
+      );
+    });
   }
 
   void _emitPieGradient(DartSourceWriter writer, PieGradientStyle style) {
