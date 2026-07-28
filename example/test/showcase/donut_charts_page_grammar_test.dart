@@ -11,11 +11,21 @@
 /// document is read off the chart's OWN controller, and the generator runs on
 /// it. There is no fixture to drift.
 ///
-/// The expected verdict is a real chain that is deliberately NOT complete. The
-/// page's centre carries a live `valueFormatter` in every knob state, and a
-/// callback has no literal form: it is emitted as a named placeholder with a
-/// `runtimeValueOmitted` warning. That is the established contract for runtime
-/// values, and the state `PieChartsPage` already ships in.
+/// The expected verdict is a real chain that is deliberately NOT complete, on
+/// TWO counts — not one, as this file claimed until it was checked against the
+/// generator. The page binds a live `valueFormatter` on its donut CENTRE in
+/// every knob state, and a live `valueFormatter` AND `percentageFormatter` on
+/// its radial DATA LABELS. A callback has no literal form, so each is emitted
+/// as a named placeholder, and the generator reports two `runtimeValueOmitted`
+/// warnings:
+///
+/// 1. `$.series[0].style.centerContent.valueFormatter` — the centre formatter,
+/// 2. `$.series[0].style.dataLabels` — the label formatters, one warning
+///    covering both of them, leaving two placeholder comments.
+///
+/// That is the established contract for runtime values, and the state
+/// `PieChartsPage` already ships in. The gate pins that WHOLE set, so a third
+/// omission appearing cannot slip past it as a `contains` would.
 library;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -31,11 +41,11 @@ import '../../../test/helpers/generated_source_compile.dart';
 
 void main() {
   testWidgets('ACCEPTANCE: the real DonutChartsPage emits a grammar chain, '
-      'incomplete only because its centre formatter is a live callback', (
-    tester,
-  ) async {
+      'incomplete only because its centre AND label formatters are live '
+      'callbacks', (tester) async {
     await _pumpPage(tester);
 
+    final series = _liveSeries(tester);
     final generated = _generateGrammarFromPage(tester);
 
     // Matched on the ASSIGNMENT: the refusal diagnostic quotes the chain's own
@@ -60,19 +70,62 @@ void main() {
     // its default value mode is `selectedOrTotal`, which the page pairs with a
     // null label — so this block is exactly that mode plus the formatter
     // placeholder.
-    expect(_centerArgumentLines(generated.source), <String>[
+    expect(series.centerContent.valueFormatter, isNotNull);
+    final centerLines = _argumentLines(
+      generated.source,
+      'center: DonutCenterContent(',
+    );
+    expect(centerLines, <String>[
       'center: DonutCenterContent(',
       'valueMode: DonutCenterValueMode.selectedOrTotal,',
       '// valueFormatter: (value) => ..., // Supply application formatting.',
       ')',
     ]);
 
-    // The one thing that cannot be a literal, stated honestly rather than
-    // dropped: a placeholder, a warning, and `isComplete == false`.
+    // The SECOND runtime omission, which this gate did not name until it was
+    // checked against the generator: the page's radial data labels bind BOTH
+    // formatter callbacks, and each has to leave its own named placeholder.
+    // Guarded off the live series first, so this cannot go on passing about
+    // formatters the page stopped binding — and sliced out by paren matching,
+    // because the centre emits a `// valueFormatter:` line too and a bare
+    // `contains` could not tell the two apart.
+    expect(series.dataLabels.valueFormatter, isNotNull);
+    expect(series.dataLabels.percentageFormatter, isNotNull);
+    final labelLines = _argumentLines(
+      generated.source,
+      'dataLabels: PieDataLabelConfig(',
+    );
+    expect(
+      labelLines,
+      contains(
+        '// valueFormatter: (value) => ..., // Supply application formatting.',
+      ),
+    );
+    expect(
+      labelLines,
+      contains(
+        '// percentageFormatter: (share) => ..., '
+        '// Supply application formatting.',
+      ),
+    );
+
+    // The warning state as the WHOLE set, not a `contains`: those two
+    // callbacks are the only things this page cannot carry, so a THIRD
+    // omission appearing is a regression and must not slip past this gate.
+    // The PATHS are pinned alongside the codes, so the pair also cannot
+    // silently collapse into two warnings about the same value.
     expect(generated.isComplete, isFalse);
     expect(
-      generated.warnings.map((warning) => warning.code),
-      contains(ChartSourceWarningCodes.runtimeValueOmitted),
+      generated.warnings
+          .map((warning) => '${warning.code} @ ${warning.path}')
+          .toList(),
+      <String>[
+        '${ChartSourceWarningCodes.runtimeValueOmitted} @ '
+            r'$.series[0].style.centerContent.valueFormatter',
+        '${ChartSourceWarningCodes.runtimeValueOmitted} @ '
+            r'$.series[0].style.dataLabels',
+      ],
+      reason: generated.warnings.map((warning) => warning.message).join('\n'),
     );
 
     // The FLOOR. Every assertion above reads the emitted TEXT, and text
@@ -117,7 +170,10 @@ void main() {
           '${generated.source}',
     );
 
-    final center = _centerArgumentLines(generated.source);
+    final center = _argumentLines(
+      generated.source,
+      'center: DonutCenterContent(',
+    );
     expect(center, contains('labelStyle: LabelStyle('));
     expect(center, contains('valueStyle: LabelStyle('));
     // The values, not just the argument names: the compact preset's label is
@@ -178,7 +234,11 @@ void main() {
     );
     expect(chain, contains('.geomDonut('));
     expect(chain, contains('center: DonutCenterContent('));
+    expect(chain, contains('dataLabels: PieDataLabelConfig('));
+    // BOTH omissions reach the pane a user actually opens, not just the
+    // generator this file drives directly.
     expect(chain, contains('// valueFormatter:'));
+    expect(chain, contains('// percentageFormatter:'));
     expect(
       find.byKey(const ValueKey('chart-grammar-source-code')),
       findsOneWidget,
@@ -198,6 +258,16 @@ Future<void> _pumpPage(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+BravenChartPlus _liveChart(WidgetTester tester) => tester
+    .widget<BravenChartPlus>(find.byKey(const ValueKey('donut-showcase-chart')));
+
+/// The one donut series the page mounted.
+///
+/// Read off the widget rather than rebuilt from the page's private dataset
+/// table, so the guards derived from it describe what is actually on screen.
+DonutChartSeries _liveSeries(WidgetTester tester) =>
+    _liveChart(tester).series.single as DonutChartSeries;
+
 /// Runs the grammar generator over the LIVE document of the chart the page
 /// mounted.
 ///
@@ -207,9 +277,7 @@ Future<void> _pumpPage(WidgetTester tester) async {
 /// for, while the source path represents it with a stable placeholder
 /// descriptor.
 ChartGeneratedSource _generateGrammarFromPage(WidgetTester tester) {
-  final chart = tester.widget<BravenChartPlus>(
-    find.byKey(const ValueKey('donut-showcase-chart')),
-  );
+  final chart = _liveChart(tester);
   final extracted = chart.bravenChartController!.extractSourceDocument();
   expect(extracted, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
   final snapshot =
@@ -239,19 +307,20 @@ Future<void> _selectCenterStyle(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
-/// The `center: DonutCenterContent(...)` argument of [source], one trimmed line
+/// The argument literal of [source] that starts at [opening], one trimmed line
 /// per entry.
 ///
 /// A bare `contains('labelStyle:')` proves nothing about the CENTRE — the
-/// emitted theme is full of label styles — so the centre's own argument list is
-/// sliced out by paren matching and asserted on directly.
-List<String> _centerArgumentLines(String source) {
-  const opening = 'center: DonutCenterContent(';
+/// emitted theme is full of label styles — and a bare
+/// `contains('// valueFormatter:')` proves nothing about the LABELS, because
+/// the centre emits one of those too. So each argument's own list is sliced out
+/// by paren matching and asserted on directly.
+List<String> _argumentLines(String source, String opening) {
   final start = source.indexOf(opening);
   expect(
     start,
     isNonNegative,
-    reason: 'no center: argument was emitted in:\n$source',
+    reason: 'no "$opening" argument was emitted in:\n$source',
   );
   var depth = 0;
   for (var index = start + opening.length - 1; index < source.length; index++) {
@@ -267,5 +336,5 @@ List<String> _centerArgumentLines(String source) {
       }
     }
   }
-  fail('the center: argument is unbalanced in:\n$source');
+  fail('the "$opening" argument is unbalanced in:\n$source');
 }
