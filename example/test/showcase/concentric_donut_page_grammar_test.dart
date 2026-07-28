@@ -50,8 +50,28 @@ void main() {
     expect(generated.source, contains('.geomDonut('));
     expect(generated.source, contains('ring: (row) => row.ring,'));
 
-    // Nothing about this composition is a runtime value, so unlike the plain
-    // Donut page the chain is not merely emitted but COMPLETE and warning-free.
+    // COMPLETE and warning-free — but the reason is narrower than "the page
+    // holds nothing runtime", and stating it that way would be false. The page
+    // DOES bind a live `donutCenterBuilder` on this state. What is true is that
+    // the capture layer models no widget BUILDER at all, so neither the grammar
+    // form nor the config form sees one and neither warns; that is the
+    // documented contract rather than a hole this slice opened —
+    // `BravenChartPlus.donutCenterBuilder` names the portable centre content as
+    // its artifact fallback and says the builder must be rebound after
+    // hydration — and the emitted chain does carry that fallback.
+    //
+    // Both halves are pinned so the qualification stays VISIBLE in the gate: if
+    // the page stops binding a runtime centre, or the capture layer starts
+    // modelling builders (at which point "complete" would need re-earning),
+    // this goes red instead of quietly continuing to claim more than it proves.
+    expect(
+      _liveChart(tester).donutCenterBuilder,
+      isNotNull,
+      reason:
+          'the page must still bind a runtime centre for the completeness '
+          'claim below to be the QUALIFIED one it says it is',
+    );
+    expect(generated.source, contains('centerContent: DonutCenterContent('));
     expect(
       generated.warnings,
       isEmpty,

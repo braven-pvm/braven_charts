@@ -5562,8 +5562,11 @@ void main() {
   //   * The CONCENTRIC case is NOT the showcase page. It is a non-default
   //     `ConcentricDonutConfig` authored the way the grammar's own concentric
   //     lowering produces one, which is a claim about the CONFIG PASSTHROUGH,
-  //     not about `concentric_donut_page.dart`. That page does not emit — see
-  //     the KNOWN GAP group below, which pins each blocker.
+  //     not about `concentric_donut_page.dart`. That page DOES emit as of this
+  //     slice, but the claim is made where it can be honest — against the
+  //     mounted page, in
+  //     `example/test/showcase/concentric_donut_page_grammar_test.dart` — not
+  //     here.
   //
   // The unit tests above each isolate ONE mechanism (a config field, a channel,
   // a composition). This group asks the question the slice exists to answer:
@@ -6276,16 +6279,21 @@ void main() {
   });
 
   // =========================================================================
-  // KNOWN GAP — the two DONUT showcase pages do not emit.
+  // CLOSED GAP — the two DONUT showcase pages now emit.
   //
   // The acceptance gate above is about POLAR. `concentric_donut_page.dart` and
   // `donut_charts_page.dart` are the radial workbench pages it does NOT cover,
   // and both were blocked. Recording that in a comment alone would decay, so
   // each blocker below was mounted and its refusal pinned. Every test here
-  // asserted a REFUSAL: closing a gap turns its test red, and the fix is to
+  // asserted a REFUSAL: closing a gap turned its test red, and the fix was to
   // move the case into the acceptance gate and update the wording in
   // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
-  // test.
+  // test. All four are now closed and all four were CONVERTED, which is why
+  // this block is an index rather than a set of pins. The live gates are the
+  // mounted-page tests in `example/test/showcase/`:
+  // `concentric_donut_page_grammar_test.dart`,
+  // `donut_charts_page_grammar_test.dart` and
+  // `selection_showcase_concentric_grammar_test.dart`.
   //
   // The blockers, each independent (fixing one left the page blocked on the
   // others):
@@ -6323,7 +6331,7 @@ void main() {
   //      asserts on the MOUNTED page.
   // =========================================================================
 
-  group('KNOWN GAP: the donut showcase pages do not emit', () {
+  group('CLOSED GAP: where each donut showcase-page blocker went', () {
     // BLOCKER 1 IS CLOSED. Its pinned refusal test was CONVERTED, not deleted,
     // into "the showcase concentric composition that used to be BLOCKER 1 now
     // emits ringIds and round-trips" in the `showcase-representative radial
