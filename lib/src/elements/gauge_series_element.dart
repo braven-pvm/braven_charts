@@ -55,6 +55,8 @@ class _GaugeReferenceLabelLayout {
 
 enum _GaugeCenterLineKind { metric, value, target, status }
 
+const double _minimumReadableCenterScale = 0.8;
+
 /// Paints and resolves interaction for one needle or solid Gauge measurement.
 class GaugeSeriesElement implements DataHitElement {
   factory GaugeSeriesElement({
@@ -200,16 +202,93 @@ class GaugeSeriesElement implements DataHitElement {
       config.showTickLabels ? 22.0 * textScaleFactor : 0.0,
       math.max(scaleLabelReserve, referenceLabelReserve),
     );
+    final resolvedLabelReserve = reservedLabelExtent > 0
+        ? math.min(reservedLabelExtent, size.shortestSide * 0.24)
+        : 0.0;
+    var effectiveInnerRadiusFactor = paneConfig.innerRadiusFactor;
+    var effectiveOuterRadiusFactor = paneConfig.outerRadiusFactor;
+
+    // Preserve a readable value before optional center lines are shed. For a
+    // Solid Gauge the opening may grow inward; for a Needle Gauge the outer
+    // axis may use more of the already label-safe pane. The authored radius
+    // factors remain minimums unless accessibility text needs more room.
+    if (paintCenterContent && config.center.showValue) {
+      final valueStyle = theme.axisStyle.labelStyle.copyWith(
+        color: config.center.valueStyle.color,
+        fontSize: config.center.valueStyle.fontSize,
+        fontWeight: config.center.valueStyle.fontWeight ?? FontWeight.w800,
+      );
+      final valuePainters = <TextPainter>[
+        for (final value in {series.minimum, series.value, series.maximum})
+          TextPainter(
+            text: TextSpan(
+              text: MultiAxisValueFormatter.format(
+                value: value,
+                unit: series.unit,
+              ),
+              style: valueStyle,
+            ),
+            textDirection: textDirection,
+            textScaler: TextScaler.linear(textScaleFactor),
+            maxLines: 1,
+          )..layout(),
+      ];
+      final maximumValueWidth = valuePainters.fold<double>(
+        0,
+        (width, painter) => math.max(width, painter.width),
+      );
+      final maximumValueHeight = valuePainters.fold<double>(
+        0,
+        (height, painter) => math.max(height, painter.height),
+      );
+      final centerOffset =
+          Offset(config.center.horizontalOffset, config.center.verticalOffset) *
+          textScaleFactor;
+      final requiredCenterRadius = Offset(
+        centerOffset.dx.abs() +
+            maximumValueWidth * _minimumReadableCenterScale / 2,
+        centerOffset.dy.abs() +
+            maximumValueHeight * _minimumReadableCenterScale / 2,
+      ).distance;
+      final availableOuterRadius =
+          (size.shortestSide -
+              2 * (14 * textScaleFactor + resolvedLabelReserve)) /
+          2;
+      if (availableOuterRadius > 0) {
+        switch (series.indicatorStyle) {
+          case final NeedleGaugeStyle style:
+            effectiveOuterRadiusFactor = math.min(
+              1,
+              math.max(
+                effectiveOuterRadiusFactor,
+                (requiredCenterRadius + style.axisThickness + 8) /
+                    availableOuterRadius,
+              ),
+            );
+          case SolidGaugeStyle():
+            final minimumTrackFactor = 8 / availableOuterRadius;
+            final maximumInnerRadiusFactor = math.max(
+              effectiveInnerRadiusFactor,
+              effectiveOuterRadiusFactor - minimumTrackFactor,
+            );
+            effectiveInnerRadiusFactor = math.min(
+              maximumInnerRadiusFactor,
+              math.max(
+                effectiveInnerRadiusFactor,
+                (requiredCenterRadius + 8) / availableOuterRadius,
+              ),
+            );
+        }
+      }
+    }
     final pane = RadialPaneGeometry.resolve(
       viewportBounds: Offset.zero & size,
       viewportInsets: EdgeInsets.all(14 * textScaleFactor),
-      reservedLabelInsets: reservedLabelExtent > 0
-          ? EdgeInsets.all(
-              math.min(reservedLabelExtent, size.shortestSide * 0.24),
-            )
+      reservedLabelInsets: resolvedLabelReserve > 0
+          ? EdgeInsets.all(resolvedLabelReserve)
           : EdgeInsets.zero,
-      innerRadiusFactor: paneConfig.innerRadiusFactor,
-      outerRadiusFactor: paneConfig.outerRadiusFactor,
+      innerRadiusFactor: effectiveInnerRadiusFactor,
+      outerRadiusFactor: effectiveOuterRadiusFactor,
       startAngle: paneConfig.startAngleDegrees * math.pi / 180,
       sweepAngle: paneConfig.sweepAngleDegrees * math.pi / 180,
       clockwise: paneConfig.clockwise,
@@ -469,6 +548,16 @@ class GaugeSeriesElement implements DataHitElement {
             ..style = PaintingStyle.fill
             ..color = pivotColor,
         );
+        if (highContrast) {
+          final outline = Paint()
+            ..isAntiAlias = true
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(1.5, theme.axisStyle.lineWidth)
+            ..color = theme.axisStyle.lineColor;
+          canvas
+            ..drawPath(needle.visualPath, outline)
+            ..drawCircle(pane.center, style.pivotRadius, outline);
+        }
       case SolidGaugeStyle():
         final solid = geometry.solid!;
         final style = series.indicatorStyle as SolidGaugeStyle;
@@ -483,13 +572,19 @@ class GaugeSeriesElement implements DataHitElement {
                 : Colors.white
             ..shader = gradient,
         );
-        if (style.borderWidth > 0) {
+        final borderWidth = highContrast
+            ? math.max(
+                1.5,
+                math.max(style.borderWidth, theme.axisStyle.lineWidth),
+              )
+            : style.borderWidth;
+        if (borderWidth > 0) {
           canvas.drawPath(
             solid.progress.path,
             Paint()
               ..isAntiAlias = true
               ..style = PaintingStyle.stroke
-              ..strokeWidth = style.borderWidth
+              ..strokeWidth = borderWidth
               ..color = style.borderColor ?? theme.axisStyle.lineColor,
           );
         }
@@ -586,7 +681,15 @@ class GaugeSeriesElement implements DataHitElement {
         .toColor();
   }
 
-  void _paintCenterContent(Canvas canvas) {
+  ({
+    List<TextPainter> painters,
+    List<_GaugeCenterLineKind> kinds,
+    double height,
+    double scale,
+    Offset centerOffset,
+    double spacing,
+  })?
+  _resolveCenterContentLayout() {
     final lines =
         <(String, PolarLabelStyle, FontWeight, _GaugeCenterLineKind)>[];
     if (config.center.showMetric) {
@@ -632,7 +735,7 @@ class GaugeSeriesElement implements DataHitElement {
         _GaugeCenterLineKind.status,
       ));
     }
-    if (lines.isEmpty) return;
+    if (lines.isEmpty) return null;
     final availableDiameter = geometry.centerBounds.width;
     List<TextPainter> buildPainters() => <TextPainter>[
       for (final (text, style, fallbackWeight, _) in lines)
@@ -695,26 +798,49 @@ class GaugeSeriesElement implements DataHitElement {
       return lower;
     }
 
-    // A target rendered on the radial scale already has an external label.
-    // In a constrained center, remove that duplicate before shrinking the
-    // primary metric, value, or status content.
-    if (resolveContentScale() < 0.8 &&
-        config.references.showLabels &&
-        lines.any((line) => line.$4 == _GaugeCenterLineKind.target)) {
-      lines.removeWhere((line) => line.$4 == _GaugeCenterLineKind.target);
+    var contentScale = resolveContentScale();
+
+    // Large-text and compact layouts must not turn the center summary into
+    // unreadably small copy. Retain the value, then shed duplicate/supporting
+    // lines in deterministic priority order until the remaining content is
+    // readable. The complete metric, range, target, and status remain present
+    // in the single semantic node and tooltip.
+    for (final kind in const [
+      _GaugeCenterLineKind.target,
+      _GaugeCenterLineKind.status,
+      _GaugeCenterLineKind.metric,
+    ]) {
+      if (contentScale >= _minimumReadableCenterScale || lines.length <= 1) {
+        break;
+      }
+      if (!lines.any((line) => line.$4 == kind)) continue;
+      lines.removeWhere((line) => line.$4 == kind);
       painters = buildPainters();
+      contentScale = resolveContentScale();
     }
     final height = measuredTextHeight();
-    final contentScale = resolveContentScale();
-    final center = pane.center + centerOffset;
+    return (
+      painters: painters,
+      kinds: lines.map((line) => line.$4).toList(growable: false),
+      height: height,
+      scale: contentScale,
+      centerOffset: centerOffset,
+      spacing: configuredSpacing,
+    );
+  }
+
+  void _paintCenterContent(Canvas canvas) {
+    final layout = _resolveCenterContentLayout();
+    if (layout == null) return;
+    final center = pane.center + layout.centerOffset;
     canvas
       ..save()
       ..translate(center.dx, center.dy)
-      ..scale(contentScale);
-    var y = -height / 2;
-    for (final painter in painters) {
+      ..scale(layout.scale);
+    var y = -layout.height / 2;
+    for (final painter in layout.painters) {
       painter.paint(canvas, Offset(-painter.width / 2, y));
-      y += painter.height + configuredSpacing;
+      y += painter.height + layout.spacing;
     }
     canvas.restore();
   }
@@ -949,6 +1075,17 @@ class GaugeSeriesElement implements DataHitElement {
   List<Rect> get resolvedReferenceLabelBounds => _resolvedReferenceLabels()
       .map((label) => label.rect)
       .toList(growable: false);
+
+  @visibleForTesting
+  double get resolvedCenterContentScale =>
+      _resolveCenterContentLayout()?.scale ?? 1;
+
+  @visibleForTesting
+  List<String> get resolvedCenterLineKinds =>
+      _resolveCenterContentLayout()?.kinds
+          .map((kind) => kind.name)
+          .toList(growable: false) ??
+      const <String>[];
 
   ChartDataHit _dataHit() {
     final semanticBounds =
