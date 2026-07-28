@@ -70,9 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `DonutCenterContent` verbatim — `labelStyle` and `valueStyle` included — so a
   styled centre emits rather than being refused, and a live `valueFormatter`
   emits as a `// valueFormatter:` placeholder with a runtime-value-omitted
-  warning. Output is unchanged for Cartesian, polar, pie, and donut and
-  concentric charts with uniform ring labels, conforming ring ids, no
-  per-slice colours and a default centre.
+  warning. Output is byte-identical for every shape that already emitted a
+  chain: Cartesian, polar, and pie/donut/concentric charts with no per-slice
+  colours, uniform ring labels, conforming ring ids and a default centre.
 
 ### Breaking Changes
 
