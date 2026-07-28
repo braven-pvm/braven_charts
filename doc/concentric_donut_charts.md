@@ -19,7 +19,11 @@ not a progress chart:
 
 ```dart
 final current = DonutChartSeries.fromMap(
-  id: 'current',
+  // Ring ids follow the Grammar's '<markId>-<ring name>' contract: one shared
+  // mark id, then the ring name verbatim. `ringWeights` is keyed by that same
+  // stable series id, and the Grammar reverses the composition to a
+  // `geomDonut(ring:)` chain.
+  id: 'revenue-Current quarter',
   name: 'Current quarter',
   unit: 'k USD',
   values: const {
@@ -31,7 +35,7 @@ final current = DonutChartSeries.fromMap(
 );
 
 final previous = DonutChartSeries.fromMap(
-  id: 'previous',
+  id: 'revenue-Previous quarter',
   name: 'Previous quarter',
   unit: 'k USD',
   values: const {
@@ -50,7 +54,7 @@ BravenChartPlus(
     outerRadiusFactor: 0.92,
     ringGap: 6,
     order: ConcentricRingOrder.outerToInner,
-    ringWeights: {'current': 1.25},
+    ringWeights: {'revenue-Current quarter': 1.25},
     legendMode: ConcentricDonutLegendMode.groupedByRing,
     centerContent: DonutCenterContent(
       label: 'Comparison',
@@ -96,6 +100,12 @@ table, and keyboard traversal order.
 
 Ring weights affect visual thickness only. They never change a series value,
 total, share, source order, or selection identity.
+
+Id every ring `'<markId>-<ring name>'` — one mark id shared by the composition,
+then the ring name verbatim, spaces and capitals included. `ringWeights` keys by
+that same stable series ID, and the Chart Grammar reverses exactly that shape
+back into a `geomDonut(ring:)` chain, so a conforming id is what lets the
+composition round-trip.
 
 The allocator preserves positive ring thickness in constrained layouts. When
 necessary, it reduces the effective gap before allowing a band to collapse.
@@ -224,7 +234,8 @@ category labels inside its sectors:
 
 ```dart
 final outer = DonutChartSeries.fromMap(
-  id: 'current',
+  id: 'revenue-Current quarter',
+  name: 'Current quarter',
   values: currentValues,
   dataLabels: const PieDataLabelConfig(
     position: PieDataLabelPosition.outside,
@@ -233,7 +244,8 @@ final outer = DonutChartSeries.fromMap(
 );
 
 final inner = DonutChartSeries.fromMap(
-  id: 'previous',
+  id: 'revenue-Previous quarter',
+  name: 'Previous quarter',
   values: previousValues,
   dataLabels: const PieDataLabelConfig(
     position: PieDataLabelPosition.inside,

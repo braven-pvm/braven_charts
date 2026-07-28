@@ -2716,9 +2716,12 @@ final _donutSeries = <ChartSeries>[
   ),
 ];
 
+// The Grammar ids a lowered concentric ring '<markId>-<ring name>' and the
+// source generator reverses exactly that shape, so these rings share one mark
+// id and spell the ring NAME verbatim. Nothing user-visible keys off the id.
 final _concentricSeries = <ChartSeries>[
   DonutChartSeries.fromMap(
-    id: 'current',
+    id: 'revenue-Current',
     name: 'Current',
     values: _radialValues,
     donutStyle: const DonutChartStyle(sliceGap: 2, cornerRadius: 4),
@@ -2727,7 +2730,7 @@ final _concentricSeries = <ChartSeries>[
     ),
   ),
   DonutChartSeries.fromMap(
-    id: 'previous',
+    id: 'revenue-Previous',
     name: 'Previous',
     values: const {
       'Subscriptions': 36,
@@ -2742,7 +2745,7 @@ final _concentricSeries = <ChartSeries>[
     ),
   ),
   DonutChartSeries.fromMap(
-    id: 'forecast',
+    id: 'revenue-Forecast',
     name: 'Forecast',
     values: const {
       'Subscriptions': 48,

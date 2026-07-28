@@ -771,9 +771,13 @@ honest `// valueFormatter:` placeholder for its live centre formatter
 blockers standing behind the remaining page (fixing one leaves it blocked on the
 others):
 
-1. **Ring ids.** `concentric_donut_page.dart` names its ring series from its own
-   descriptors (`current`, `previous`, …), not the `'<markId>-<ring>'` pattern
-   the `ring:` channel reproduces.
+1. **Ring ids.** ~~`concentric_donut_page.dart` names its ring series from its
+   own descriptors (`current`, `previous`, …), not the `'<markId>-<ring>'`
+   pattern the `ring:` channel reproduces.~~ **CLOSED for the showcase pages.**
+   `concentric_donut_page.dart` and the selection showcase's concentric family
+   now id every ring `'<markId>-<ring name>'` (`'revenue-Current period'`, …)
+   and key `ringWeights` by that same id. A composition authored with ids that
+   do NOT follow the pattern is still blocked — see the reversal table above.
 2. ~~**Per-slice colours.**~~ **CLOSED.** `PieMark`/`DonutMark` now carry a
    `sliceColor` channel of their own, mirroring `PolarMark.columnColor`, and
    the emitter reverses it — so `sliceColors` no longer blocks either page. Its

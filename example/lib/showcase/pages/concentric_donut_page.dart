@@ -13,6 +13,22 @@ import '../widgets/radial_legend_value_card.dart';
 import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
+/// The mark id shared by every ring of this page's one composition.
+///
+/// The Grammar ids a lowered concentric ring `'<markId>-<ring name>'`, and the
+/// source generator reverses exactly that shape, so a ring id here is built
+/// from the ring NAME verbatim — spaces and capitals included.
+/// `ConcentricDonutConfig.ringWeights` is keyed by the same stable series id,
+/// which is why the ids below and every weight key move together.
+const _ringMarkId = 'revenue';
+
+const _currentRingId = '$_ringMarkId-Current period';
+const _previousRingId = '$_ringMarkId-Previous period';
+const _forecastRingId = '$_ringMarkId-Forecast period';
+const _planRingId = '$_ringMarkId-Plan period';
+const _baselineRingId = '$_ringMarkId-Baseline period';
+const _targetRingId = '$_ringMarkId-Target period';
+
 /// First public review surface for independent multi-ring Donut composition.
 class ConcentricDonutPage extends StatefulWidget {
   const ConcentricDonutPage({super.key});
@@ -38,12 +54,12 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   double _outerRadiusFactor = 0.94;
   double _ringGap = 6;
   final Map<String, double> _ringWeights = {
-    'current': 1.25,
-    'previous': 1,
-    'forecast': 1,
-    'plan': 1,
-    'baseline': 1,
-    'target': 1,
+    _currentRingId: 1.25,
+    _previousRingId: 1,
+    _forecastRingId: 1,
+    _planRingId: 1,
+    _baselineRingId: 1,
+    _targetRingId: 1,
   };
   double _sweepAngleDegrees = 360;
   double _startAngleDegrees = -90;
@@ -184,32 +200,32 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
 
   static const _ringDescriptors = <_ConcentricRingDescriptor>[
     _ConcentricRingDescriptor(
-      id: 'current',
+      id: _currentRingId,
       name: 'Current period',
       generatedTotal: 100,
     ),
     _ConcentricRingDescriptor(
-      id: 'previous',
+      id: _previousRingId,
       name: 'Previous period',
       generatedTotal: 200,
     ),
     _ConcentricRingDescriptor(
-      id: 'forecast',
+      id: _forecastRingId,
       name: 'Forecast period',
       generatedTotal: 300,
     ),
     _ConcentricRingDescriptor(
-      id: 'plan',
+      id: _planRingId,
       name: 'Plan period',
       generatedTotal: 400,
     ),
     _ConcentricRingDescriptor(
-      id: 'baseline',
+      id: _baselineRingId,
       name: 'Baseline period',
       generatedTotal: 500,
     ),
     _ConcentricRingDescriptor(
-      id: 'target',
+      id: _targetRingId,
       name: 'Target period',
       generatedTotal: 600,
     ),
@@ -929,8 +945,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       _ringDescriptors.take(_ringCount).toList(growable: false);
 
   Map<String, num> _valuesForRing(String ringId) => switch (ringId) {
-    'current' => _currentValues,
-    'previous' => _previousValues,
+    _currentRingId => _currentValues,
+    _previousRingId => _previousValues,
     _ => _additionalRingValues[ringId]!,
   };
 
@@ -1735,10 +1751,10 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       random: _random,
     );
     switch (ring.id) {
-      case 'current':
+      case _currentRingId:
         _currentValues = values;
         return;
-      case 'previous':
+      case _previousRingId:
         _previousValues = values;
         return;
       default:
@@ -1795,7 +1811,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           _innerRadiusFactor = 0.4;
           _outerRadiusFactor = 1;
           _ringGap = 0;
-          _ringWeights['current'] = 1;
+          _ringWeights[_currentRingId] = 1;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -90;
           _clockwise = true;
@@ -1848,13 +1864,13 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           break;
         case _ConcentricShowcasePreset.partial:
           _ringCount = 3;
-          _additionalRingValues['forecast'] = Map<String, num>.of(
+          _additionalRingValues[_forecastRingId] = Map<String, num>.of(
             _baseForecastValues,
           );
           _innerRadiusFactor = 0.38;
           _outerRadiusFactor = 0.9;
           _ringGap = 8;
-          _ringWeights['current'] = 1;
+          _ringWeights[_currentRingId] = 1;
           _sweepAngleDegrees = 260;
           _startAngleDegrees = -140;
           _sliceGap = 3;
@@ -1885,7 +1901,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           _innerRadiusFactor = 0.38;
           _outerRadiusFactor = 0.94;
           _ringGap = 10;
-          _ringWeights['current'] = 1.25;
+          _ringWeights[_currentRingId] = 1.25;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -30;
           _clockwise = true;
@@ -1950,7 +1966,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           _innerRadiusFactor = 0.38;
           _outerRadiusFactor = 1;
           _ringGap = 9;
-          _ringWeights['current'] = 1;
+          _ringWeights[_currentRingId] = 1;
           _sweepAngleDegrees = 360;
           _startAngleDegrees = -90;
           _clockwise = true;
@@ -2052,7 +2068,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     _categoryCount = 5;
     _currentValues = Map<String, num>.of(_baseCurrentValues);
     _previousValues = Map<String, num>.of(_basePreviousValues);
-    _additionalRingValues['forecast'] = Map<String, num>.of(
+    _additionalRingValues[_forecastRingId] = Map<String, num>.of(
       _baseForecastValues,
     );
     for (final ring in _ringDescriptors) {
@@ -2061,7 +2077,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     _innerRadiusFactor = 0.28;
     _outerRadiusFactor = 0.94;
     _ringGap = 6;
-    _ringWeights['current'] = 1.25;
+    _ringWeights[_currentRingId] = 1.25;
     _sweepAngleDegrees = 360;
     _startAngleDegrees = -90;
     _sliceGap = 2;
@@ -2142,14 +2158,14 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
 
   void _applyComparisonPresentation() {
     _ringCount = 3;
-    _additionalRingValues['forecast'] = Map<String, num>.of(
+    _additionalRingValues[_forecastRingId] = Map<String, num>.of(
       _baseForecastValues,
     );
     _innerRadiusFactor = 0.36;
     _outerRadiusFactor = 0.88;
     _ringGap = 12;
-    _ringWeights['current'] = 1;
-    _ringWeights['forecast'] = 0.9;
+    _ringWeights[_currentRingId] = 1;
+    _ringWeights[_forecastRingId] = 0.9;
     _sliceGap = 8;
     _cornerRadius = 6;
     _selectionEffect = RadialSelectionEffect.lift;
@@ -2328,7 +2344,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           for (final ring in _activeRingDescriptors)
             SliderOption(
               key: ValueKey(
-                ring.id == 'current'
+                ring.id == _currentRingId
                     ? 'concentric-current-weight'
                     : 'concentric-ring-weight-${ring.id}',
               ),
@@ -3382,10 +3398,13 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                 "  concentricDonutConfig: ConcentricDonutConfig(\n"
                 "    innerRadiusFactor: 0.28,\n"
                 "    ringGap: 6,\n"
+                "    // Keyed by the stable series id. Ids follow the Grammar's\n"
+                "    // '<markId>-<ring name>' contract, so the composition\n"
+                "    // also round-trips through geomDonut(ring:).\n"
                 "    ringWeights: {\n"
-                "      'current': 1.25,\n"
-                "      'previous': 1,\n"
-                "      'forecast': 0.8,\n"
+                "      'revenue-Current period': 1.25,\n"
+                "      'revenue-Previous period': 1,\n"
+                "      'revenue-Forecast period': 0.8,\n"
                 "    },\n"
                 "    legendMode: ConcentricDonutLegendMode.groupedByRing,\n"
                 "    centerContent: DonutCenterContent(\n"
