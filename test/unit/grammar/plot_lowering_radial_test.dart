@@ -38,6 +38,12 @@ num? fruitSparseTarget(Fruit row) => row.basket == 'A' ? row.mass : null;
 Color? fruitColumnColor(Fruit row) =>
     row.basket == 'A' ? const Color(0xFF112233) : null;
 
+// Pie/donut per-slice colour. Top-level so the marks stay const.
+Color? fruitSliceColor(Fruit row) =>
+    row.basket == 'A' ? const Color(0xFF112233) : null;
+Color? fruitSolidSliceColor(Fruit row) => const Color(0xFF445566);
+Color? fruitNoSliceColor(Fruit row) => null;
+
 const fruits = <Fruit>[
   Fruit(name: 'Apple', count: 30, mass: 5, basket: 'A'),
   Fruit(name: 'Pear', count: 20, mass: 3, basket: 'A'),
@@ -256,6 +262,54 @@ void main() {
       expect(series.sliceRadiusConfig, isNotNull);
       expect(series.points.map((p) => p.pointStyle?.size), [5, 3, 2]);
     });
+
+    test('a sliceColor accessor lowers to per-point PointStyle colors, '
+        'skipping nulls', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PieChartSeries;
+      expect(series.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF112233),
+        const Color(0xFF112233),
+        null,
+      ]);
+      // A skipped category carries no PointStyle at all, so it stays on the
+      // series colour exactly as an unset accessor leaves it.
+      expect(series.points.last.pointStyle, isNull);
+    });
+
+    test('an all-null sliceColor accessor lowers identically to an unset one',
+        () {
+      final allNull = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitNoSliceColor,
+          ),
+        ],
+      )).lower();
+      final unset = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(id: 'fruit', category: fruitName, value: fruitCount),
+        ],
+      )).lower();
+
+      expect(allNull.series.single, unset.series.single);
+    });
   });
 
   group('pie config parity', () {
@@ -470,6 +524,45 @@ void main() {
         ),
       );
     });
+
+    test('sliceColor and radius compose on one donut point', () {
+      // `fromMap` builds the GENERAL `PointStyle(color:, size:)`, so the two
+      // channels must land on the same point rather than one overwriting the
+      // other.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            radius: fruitMass,
+            sliceColor: fruitSolidSliceColor,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF445566),
+        const Color(0xFF445566),
+        const Color(0xFF445566),
+      ]);
+      expect(series.points.map((p) => p.pointStyle?.size), [5, 3, 2]);
+      expect(
+        series,
+        DonutChartSeries.fromMap(
+          id: 'fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+          sliceColors: const {
+            'Apple': Color(0xFF445566),
+            'Pear': Color(0xFF445566),
+            'Plum': Color(0xFF445566),
+          },
+          radiusValues: const {'Apple': 5, 'Pear': 3, 'Plum': 2},
+        ),
+      );
+    });
   });
 
   group('concentric donut (ring channel)', () {
@@ -498,6 +591,45 @@ void main() {
       expect(ringB.points.map((p) => p.y), [10]);
       expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
       expect(lowered.polarChartConfig, isNull);
+    });
+
+    test('sliceColor is resolved per ring bucket', () {
+      // The accessor is evaluated against each bucket's own rows, so ring A
+      // takes the override and ring B's sole row is skipped back onto the
+      // series colour.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            sliceColor: fruitSliceColor,
+          ),
+        ],
+      )).lower();
+
+      final ringA = lowered.series.first as DonutChartSeries;
+      final ringB = lowered.series.last as DonutChartSeries;
+      expect(ringA.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF112233),
+        const Color(0xFF112233),
+      ]);
+      expect(ringB.points.single.pointStyle, isNull);
+      expect(
+        ringA,
+        DonutChartSeries.fromMap(
+          id: 'fruit-A',
+          name: 'A',
+          values: const {'Apple': 30, 'Pear': 20},
+          sliceColors: const {
+            'Apple': Color(0xFF112233),
+            'Pear': Color(0xFF112233),
+          },
+          centerContent: DonutCenterContent.hidden,
+        ),
+      );
     });
 
     test('each ring donut parity + shared center goes to the config', () {

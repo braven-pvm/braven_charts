@@ -1365,6 +1365,26 @@ Map<String, num> _radiusValues<T>(
   return result;
 }
 
+/// Builds the per-category slice-color map for a pie/donut geom.
+///
+/// A null return SKIPS the category, leaving it on the series color — exactly
+/// what an unset accessor does for every row, so an unset accessor and an
+/// all-null accessor produce the same series. The families' `fromMap` builds
+/// the GENERAL `PointStyle(color:, size:)`, so a color and a radius on the same
+/// category compose rather than one displacing the other.
+Map<String, Color> _sliceColors<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, Color?> sliceColor,
+) {
+  final result = <String, Color>{};
+  for (final row in data) {
+    final color = sliceColor(row);
+    if (color != null) result[category(row).toString()] = color;
+  }
+  return result;
+}
+
 PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
     PieChartSeries.fromMap(
       id: id,
@@ -1372,6 +1392,9 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       color: mark.color,
       unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
+      sliceColors: mark.sliceColor == null
+          ? const <String, Color>{}
+          : _sliceColors(data, mark.category, mark.sliceColor!),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
@@ -1396,6 +1419,9 @@ DonutChartSeries _lowerDonut<T>(
       color: mark.color,
       unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
+      sliceColors: mark.sliceColor == null
+          ? const <String, Color>{}
+          : _sliceColors(data, mark.category, mark.sliceColor!),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
@@ -1432,6 +1458,9 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
         name: key,
         unit: mark.unit,
         values: _radialValues(buckets[key]!, mark.category, mark.value),
+        sliceColors: mark.sliceColor == null
+            ? const <String, Color>{}
+            : _sliceColors(buckets[key]!, mark.category, mark.sliceColor!),
         radiusValues: mark.radius == null
             ? const <String, num>{}
             : _radiusValues(buckets[key]!, mark.category, mark.radius!),
