@@ -6334,7 +6334,35 @@ void main() {
         allOf(
           contains('does not reproduce series "capacity" exactly'),
           contains('a per-point style beyond a colour override'),
+          // The polar half of the round-trip list, pinned so the polar-facing
+          // text is asserted rather than merely inherited.
+          contains(
+            '(polar) the preset, per-category column colours, targets and '
+            'intervals round-trip',
+          ),
         ),
+      );
+      // The family split, asserted from the POLAR side too: a polar column
+      // ignores `size` when it paints and `PolarColumnChartSeries._fromMap`
+      // writes the narrowing `PointStyle.color(...)`, so telling a polar author
+      // that `size` round-trips would be false.
+      expect(
+        blockedReason(refused),
+        isNot(contains('a colour and size override')),
+      );
+      // ACCEPTED DELTA, pinned. `_radialSeriesLossDetail` is SHARED by both
+      // radial families, so this slice's new `(pie/donut) the per-slice colours`
+      // clause also appears in a REFUSED POLAR chart's blocked header. It is
+      // the one place polar output is not byte-identical to the pre-slice
+      // generator — diagnostic prose only, never an emitted chain
+      // (`_radialSliceColorField` is called from `_planPie` / `_planDonut` /
+      // `_planConcentric` and from nowhere else). The plan prescribes exactly
+      // this shared sentence (Task 1.3 Step 7); pinning it here means a later
+      // edit to the polar-facing text turns a test red instead of passing
+      // unnoticed.
+      expect(
+        blockedReason(refused),
+        contains('(pie/donut) the per-slice colours'),
       );
 
       // CONTROL: drop the `size` and the very same point emits as a column
