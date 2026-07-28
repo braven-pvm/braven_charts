@@ -324,6 +324,13 @@ void main() {
     );
     const config = GaugeChartConfig(
       tickCount: 5,
+      minorTicksPerInterval: 3,
+      scale: GaugeScaleStyle(
+        tickPosition: GaugeTickPosition.inside,
+        tickGap: 7,
+        labelPosition: GaugeScaleLabelPosition.outside,
+      ),
+      zones: GaugeZoneStyle(gap: 3, cornerRadius: 2, opacity: 0.9),
       center: GaugeCenterConfig(showTarget: true),
     );
     await tester.pumpWidget(
@@ -371,6 +378,10 @@ void main() {
     expect(generated, contains('GaugeChartSeries.solid('));
     expect(generated, contains('metric: \'Service availability\''));
     expect(generated, contains('gaugeChartConfig: GaugeChartConfig('));
+    expect(generated, contains('minorTicksPerInterval: 3'));
+    expect(generated, contains('tickPosition: GaugeTickPosition.inside'));
+    expect(generated, contains('tickGap: 7'));
+    expect(generated, contains('GaugeZoneStyle('));
     expect(generated, contains('GaugeCenterConfig('));
     expect(tester.takeException(), isNull);
   });

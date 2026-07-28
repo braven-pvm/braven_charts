@@ -324,19 +324,29 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
   const NeedleGaugeStyle({
     this.needleLengthFactor = 0.88,
     this.needleWidth = 3,
+    this.needleTipWidth = 0,
     this.needleColor,
     this.pivotRadius = 6,
     this.pivotColor,
+    this.pivotBorderColor,
+    this.pivotBorderWidth = 0,
     this.axisThickness = 12,
     this.axisColor,
     this.axisOpacity = 0.16,
   });
 
   final double needleLengthFactor;
+
+  /// Width of the needle where it meets the pivot.
   final double needleWidth;
+
+  /// Width of the needle tip. Zero preserves the original pointed triangle.
+  final double needleTipWidth;
   final Color? needleColor;
   final double pivotRadius;
   final Color? pivotColor;
+  final Color? pivotBorderColor;
+  final double pivotBorderWidth;
   final double axisThickness;
   final Color? axisColor;
   final double axisOpacity;
@@ -351,7 +361,16 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
       minimumInclusive: false,
     );
     _requirePositive(needleWidth, 'needleGaugeStyle.needleWidth');
+    _requireNonNegative(needleTipWidth, 'needleGaugeStyle.needleTipWidth');
+    if (needleTipWidth > needleWidth) {
+      throw ArgumentError.value(
+        needleTipWidth,
+        'needleGaugeStyle.needleTipWidth',
+        'Needle tip width cannot exceed its base width',
+      );
+    }
     _requireNonNegative(pivotRadius, 'needleGaugeStyle.pivotRadius');
+    _requireNonNegative(pivotBorderWidth, 'needleGaugeStyle.pivotBorderWidth');
     _requirePositive(axisThickness, 'needleGaugeStyle.axisThickness');
     _requireRange(
       axisOpacity,
@@ -364,11 +383,15 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
   NeedleGaugeStyle copyWith({
     double? needleLengthFactor,
     double? needleWidth,
+    double? needleTipWidth,
     Color? needleColor,
     bool clearNeedleColor = false,
     double? pivotRadius,
     Color? pivotColor,
     bool clearPivotColor = false,
+    Color? pivotBorderColor,
+    bool clearPivotBorderColor = false,
+    double? pivotBorderWidth,
     double? axisThickness,
     Color? axisColor,
     bool clearAxisColor = false,
@@ -376,9 +399,14 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
   }) => NeedleGaugeStyle(
     needleLengthFactor: needleLengthFactor ?? this.needleLengthFactor,
     needleWidth: needleWidth ?? this.needleWidth,
+    needleTipWidth: needleTipWidth ?? this.needleTipWidth,
     needleColor: clearNeedleColor ? null : (needleColor ?? this.needleColor),
     pivotRadius: pivotRadius ?? this.pivotRadius,
     pivotColor: clearPivotColor ? null : (pivotColor ?? this.pivotColor),
+    pivotBorderColor: clearPivotBorderColor
+        ? null
+        : (pivotBorderColor ?? this.pivotBorderColor),
+    pivotBorderWidth: pivotBorderWidth ?? this.pivotBorderWidth,
     axisThickness: axisThickness ?? this.axisThickness,
     axisColor: clearAxisColor ? null : (axisColor ?? this.axisColor),
     axisOpacity: axisOpacity ?? this.axisOpacity,
@@ -390,9 +418,12 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
       other is NeedleGaugeStyle &&
           needleLengthFactor == other.needleLengthFactor &&
           needleWidth == other.needleWidth &&
+          needleTipWidth == other.needleTipWidth &&
           needleColor == other.needleColor &&
           pivotRadius == other.pivotRadius &&
           pivotColor == other.pivotColor &&
+          pivotBorderColor == other.pivotBorderColor &&
+          pivotBorderWidth == other.pivotBorderWidth &&
           axisThickness == other.axisThickness &&
           axisColor == other.axisColor &&
           axisOpacity == other.axisOpacity;
@@ -401,9 +432,12 @@ final class NeedleGaugeStyle extends GaugeIndicatorStyle {
   int get hashCode => Object.hash(
     needleLengthFactor,
     needleWidth,
+    needleTipWidth,
     needleColor,
     pivotRadius,
     pivotColor,
+    pivotBorderColor,
+    pivotBorderWidth,
     axisThickness,
     axisColor,
     axisOpacity,

@@ -151,10 +151,19 @@ class GaugeSeriesElement implements DataHitElement {
         );
       }
     }
+    final majorTickLength =
+        config.scale.tickLength ?? theme.axisStyle.tickLength;
+    final outwardTickExtent = switch (config.scale.tickPosition) {
+      GaugeTickPosition.inside => 0.0,
+      GaugeTickPosition.centered => majorTickLength * 0.4,
+      GaugeTickPosition.outside => config.scale.tickGap + majorTickLength,
+    };
     final scaleLabelReserve = config.showTickLabels
-        ? (config.scale.tickLength ?? theme.axisStyle.tickLength) * 0.4 +
-              config.scale.labelOffset * textScaleFactor +
-              maximumScaleLabelExtent
+        ? config.scale.labelPosition == GaugeScaleLabelPosition.outside
+              ? outwardTickExtent +
+                    config.scale.labelOffset * textScaleFactor +
+                    maximumScaleLabelExtent
+              : outwardTickExtent
         : 0.0;
     final hasReferenceLabels =
         config.references.showLabels &&
@@ -306,7 +315,14 @@ class GaugeSeriesElement implements DataHitElement {
       thresholds: series.thresholds,
       tickCount: config.tickCount,
       tickLength: config.scale.tickLength ?? theme.axisStyle.tickLength,
+      minorTicksPerInterval: config.minorTicksPerInterval,
+      minorTickLength: config.scale.minorTickLength,
+      tickPosition: config.scale.tickPosition,
+      tickGap: config.scale.tickGap,
+      labelPosition: config.scale.labelPosition,
       tickLabelOffset: config.scale.labelOffset * textScaleFactor,
+      zoneGap: config.zones.gap,
+      zoneCornerRadius: config.zones.cornerRadius,
       referenceInnerOffset: config.references.innerLineOffset,
       referenceOuterOffset: config.references.outerLineOffset,
     );
@@ -447,7 +463,9 @@ class GaugeSeriesElement implements DataHitElement {
       final fallback =
           theme.seriesTheme.colors[index % theme.seriesTheme.colors.length];
       final source = zoneGeometry.zone.color ?? fallback;
-      final alpha = series.indicatorStyle is NeedleGaugeStyle ? 0.58 : 0.34;
+      final alpha =
+          config.zones.opacity ??
+          (series.indicatorStyle is NeedleGaugeStyle ? 0.58 : 0.34);
       canvas.drawPath(
         zoneGeometry.sector.path,
         Paint()
@@ -455,14 +473,22 @@ class GaugeSeriesElement implements DataHitElement {
           ..style = PaintingStyle.fill
           ..color = source.withValues(alpha: source.a * alpha),
       );
-      if (highContrast) {
+      final borderWidth = highContrast
+          ? math.max(
+              math.max(config.zones.borderWidth, 1.5),
+              theme.axisStyle.lineWidth,
+            )
+          : config.zones.borderWidth;
+      if (borderWidth > 0) {
         canvas.drawPath(
           zoneGeometry.sector.path,
           Paint()
             ..isAntiAlias = true
             ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(1.5, theme.axisStyle.lineWidth)
-            ..color = theme.axisStyle.lineColor,
+            ..strokeWidth = borderWidth
+            ..color =
+                config.zones.borderColor ??
+                (highContrast ? theme.axisStyle.lineColor : source),
         );
       }
     }
@@ -470,19 +496,33 @@ class GaugeSeriesElement implements DataHitElement {
 
   void _paintTicks(Canvas canvas) {
     final scale = config.scale;
-    final tickPaint = Paint()
+    final majorTickPaint = Paint()
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = scale.tickWidth ?? theme.axisStyle.tickWidth
       ..color = scale.tickColor ?? theme.axisStyle.tickColor;
+    final minorTickPaint = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = scale.minorTickWidth
+      ..color =
+          scale.minorTickColor ??
+          (scale.tickColor ?? theme.axisStyle.tickColor).withValues(
+            alpha: 0.55,
+          );
     final paintedTickPoints = <Offset>[];
     for (final tick in geometry.ticks) {
       final coincidesWithPaintedTick = paintedTickPoints.any(
         (point) => (tick.outerPoint - point).distance < 0.5,
       );
       if (config.showTicks && !coincidesWithPaintedTick) {
-        canvas.drawLine(tick.innerPoint, tick.outerPoint, tickPaint);
+        canvas.drawLine(
+          tick.innerPoint,
+          tick.outerPoint,
+          tick.isMajor ? majorTickPaint : minorTickPaint,
+        );
         paintedTickPoints.add(tick.outerPoint);
       }
     }
@@ -548,6 +588,17 @@ class GaugeSeriesElement implements DataHitElement {
             ..style = PaintingStyle.fill
             ..color = pivotColor,
         );
+        if (style.pivotBorderWidth > 0) {
+          canvas.drawCircle(
+            pane.center,
+            style.pivotRadius,
+            Paint()
+              ..isAntiAlias = true
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = style.pivotBorderWidth
+              ..color = style.pivotBorderColor ?? theme.axisStyle.lineColor,
+          );
+        }
         if (highContrast) {
           final outline = Paint()
             ..isAntiAlias = true
@@ -975,32 +1026,36 @@ class GaugeSeriesElement implements DataHitElement {
     );
     final candidates = <_GaugeTextLayout>[
       for (final tick in geometry.ticks)
-        (() {
-          final painter = _createTextPainter(
-            MultiAxisValueFormatter.format(
-              value: tick.value,
-              unit: series.unit,
-            ),
-            textStyle,
-            maxWidth: scale.labelMaxWidth,
-          );
-          final center = _radialTextCenter(
-            tick.labelAnchor,
-            tick.angle,
-            painter.size,
-          );
-          return _GaugeTextLayout(
-            index: tick.index,
-            painter: painter,
-            rect: _clampTextRect(
-              Rect.fromCenter(
-                center: center,
-                width: painter.width,
-                height: painter.height,
+        if (tick.isMajor)
+          (() {
+            final painter = _createTextPainter(
+              MultiAxisValueFormatter.format(
+                value: tick.value,
+                unit: series.unit,
               ),
-            ),
-          );
-        })(),
+              textStyle,
+              maxWidth: scale.labelMaxWidth,
+            );
+            final center = _radialTextCenter(
+              tick.labelAnchor,
+              tick.angle,
+              painter.size,
+              direction: scale.labelPosition == GaugeScaleLabelPosition.outside
+                  ? 1
+                  : -1,
+            );
+            return _GaugeTextLayout(
+              index: tick.index,
+              painter: painter,
+              rect: _clampTextRect(
+                Rect.fromCenter(
+                  center: center,
+                  width: painter.width,
+                  height: painter.height,
+                ),
+              ),
+            );
+          })(),
     ];
     if (candidates.length < 2) return candidates;
 
@@ -1041,11 +1096,17 @@ class GaugeSeriesElement implements DataHitElement {
     ellipsis: '…',
   )..layout(maxWidth: math.max(36, maxWidth));
 
-  Offset _radialTextCenter(Offset boundaryAnchor, double angle, Size textSize) {
+  Offset _radialTextCenter(
+    Offset boundaryAnchor,
+    double angle,
+    Size textSize, {
+    double direction = 1,
+  }) {
     final radialExtent =
         math.cos(angle).abs() * textSize.width / 2 +
         math.sin(angle).abs() * textSize.height / 2;
-    return boundaryAnchor + Offset.fromDirection(angle, radialExtent);
+    return boundaryAnchor +
+        Offset.fromDirection(angle, radialExtent * direction);
   }
 
   Rect _clampTextRect(Rect desired) => desired.shift(

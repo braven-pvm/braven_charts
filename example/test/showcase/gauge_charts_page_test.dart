@@ -20,6 +20,7 @@ void main() {
     expect(find.text('Gauge Charts'), findsOneWidget);
     for (final label in [
       'Needle',
+      'Instrument',
       'Solid',
       'Gradient',
       'Zones',
@@ -45,6 +46,51 @@ void main() {
     expect(series.indicatorStyle, isA<NeedleGaugeStyle>());
     expect(series.status, 'Elevated');
     expect(chart.gaugeChartConfig.pane.sweepAngleDegrees, 270);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Gauge page deep-links directly to an authored preset', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: GaugeChartsPage(initialPreset: 'instrument')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Instrument revenue gauge'), findsOneWidget);
+    expect(find.textContaining('Dense inside ticks'), findsOneWidget);
+  });
+
+  testWidgets('instrument preset exposes dense scale and segmented zones', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: GaugeChartsPage()));
+    await tester.pump();
+    await tester.tap(find.text('Instrument').first);
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('gauge-chart-1')),
+    );
+    final series = chart.series.single as GaugeChartSeries;
+    final needle = series.indicatorStyle as NeedleGaugeStyle;
+    expect(chart.gaugeChartConfig.minorTicksPerInterval, 4);
+    expect(chart.gaugeChartConfig.scale.tickPosition, GaugeTickPosition.inside);
+    expect(chart.gaugeChartConfig.scale.tickGap, 12);
+    expect(
+      chart.gaugeChartConfig.scale.labelPosition,
+      GaugeScaleLabelPosition.outside,
+    );
+    expect(chart.gaugeChartConfig.zones.gap, 5);
+    expect(needle.needleWidth, 28);
+    expect(needle.needleTipWidth, 2);
+    expect(needle.pivotBorderWidth, 6);
     expect(tester.takeException(), isNull);
   });
 
@@ -146,6 +192,7 @@ void main() {
 
     const expected = <String, (double, double)>{
       'Needle': (-135, 270),
+      'Instrument': (180, 180),
       'Solid': (-150, 300),
       'Gradient': (-120, 240),
       'Zones': (-180, 360),
@@ -156,7 +203,7 @@ void main() {
       'Accessible': (-140, 280),
       'Density': (-165, 330),
     };
-    final observedSweeps = <double>{};
+    final observedPanes = <(double, double)>{};
 
     for (final (index, entry) in expected.entries.indexed) {
       if (index > 0) {
@@ -176,10 +223,13 @@ void main() {
         entry.value.$2,
         reason: '${entry.key} sweep angle',
       );
-      observedSweeps.add(chart.gaugeChartConfig.pane.sweepAngleDegrees);
+      observedPanes.add((
+        chart.gaugeChartConfig.pane.startAngleDegrees,
+        chart.gaugeChartConfig.pane.sweepAngleDegrees,
+      ));
     }
 
-    expect(observedSweeps, hasLength(expected.length));
+    expect(observedPanes, hasLength(expected.length));
     expect(tester.takeException(), isNull);
   });
 

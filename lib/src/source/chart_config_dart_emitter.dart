@@ -3091,9 +3091,16 @@ class ChartConfigDartEmitter {
                 0.88,
               );
               _numberIf(writer, 'needleWidth', style.needleWidth, 3);
+              _numberIf(writer, 'needleTipWidth', style.needleTipWidth, 0);
               _optionalColor(writer, 'needleColor', style.needleColor);
               _numberIf(writer, 'pivotRadius', style.pivotRadius, 6);
               _optionalColor(writer, 'pivotColor', style.pivotColor);
+              _optionalColor(
+                writer,
+                'pivotBorderColor',
+                style.pivotBorderColor,
+              );
+              _numberIf(writer, 'pivotBorderWidth', style.pivotBorderWidth, 0);
               _numberIf(writer, 'axisThickness', style.axisThickness, 12);
               _optionalColor(writer, 'axisColor', style.axisColor);
               _numberIf(writer, 'axisOpacity', style.axisOpacity, 0.16);
@@ -3603,6 +3610,12 @@ class ChartConfigDartEmitter {
       if (options.includeDefaultValues || config.tickCount != 6) {
         writer.namedArgument('tickCount', config.tickCount.toString());
       }
+      if (options.includeDefaultValues || config.minorTicksPerInterval != 0) {
+        writer.namedArgument(
+          'minorTicksPerInterval',
+          config.minorTicksPerInterval.toString(),
+        );
+      }
       _valueIf(writer, 'showAxis', config.showAxis, defaultValue: true);
       _valueIf(writer, 'showTicks', config.showTicks, defaultValue: true);
       _valueIf(
@@ -3625,12 +3638,42 @@ class ChartConfigDartEmitter {
           _optionalColor(writer, 'tickColor', config.scale.tickColor);
           _optionalNumber(writer, 'tickWidth', config.scale.tickWidth);
           _optionalNumber(writer, 'tickLength', config.scale.tickLength);
+          _enumIf(
+            writer,
+            'tickPosition',
+            'GaugeTickPosition',
+            config.scale.tickPosition.name,
+            defaultName: GaugeTickPosition.centered.name,
+          );
+          _numberIf(writer, 'tickGap', config.scale.tickGap, 0);
+          _optionalColor(writer, 'minorTickColor', config.scale.minorTickColor);
+          _numberIf(writer, 'minorTickWidth', config.scale.minorTickWidth, 1);
+          _numberIf(writer, 'minorTickLength', config.scale.minorTickLength, 5);
           if (options.includeDefaultValues ||
               config.scale.labelStyle != const PolarLabelStyle(fontSize: 9)) {
             _emitPolarLabelStyle(writer, 'labelStyle', config.scale.labelStyle);
           }
+          _enumIf(
+            writer,
+            'labelPosition',
+            'GaugeScaleLabelPosition',
+            config.scale.labelPosition.name,
+            defaultName: GaugeScaleLabelPosition.outside.name,
+          );
           _numberIf(writer, 'labelOffset', config.scale.labelOffset, 10);
           _numberIf(writer, 'labelMaxWidth', config.scale.labelMaxWidth, 72);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.zones != const GaugeZoneStyle()) {
+        writer.writeLine('zones: GaugeZoneStyle(');
+        writer.indented(() {
+          _numberIf(writer, 'gap', config.zones.gap, 0);
+          _numberIf(writer, 'cornerRadius', config.zones.cornerRadius, 0);
+          _optionalNumber(writer, 'opacity', config.zones.opacity);
+          _optionalColor(writer, 'borderColor', config.zones.borderColor);
+          _numberIf(writer, 'borderWidth', config.zones.borderWidth, 0);
         });
         writer.writeLine('),');
       }

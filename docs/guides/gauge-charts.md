@@ -138,6 +138,74 @@ and text colours inherit the active axis theme. `labelOffset` is the
 edge-to-edge gap between the tick endpoint and the nearest label edge, so
 `0` keeps the two touching without drawing the text over the tick or arc.
 
+### Dense instrument scales and segmented zones
+
+Major ticks remain the labelled scale contract. Add unlabeled subdivisions
+with `minorTicksPerInterval`, then place ticks and labels independently:
+
+```dart
+GaugeChartSeries.needle(
+  id: 'revenue',
+  metric: 'Revenue this month',
+  unit: 'k',
+  value: 80,
+  minimum: 0,
+  maximum: 200,
+  zones: const [
+    GaugeZone(from: 0, to: 100, status: 'Baseline'),
+    GaugeZone(from: 100, to: 150, status: 'On plan'),
+    GaugeZone(from: 150, to: 200, status: 'Ahead'),
+  ],
+  style: const NeedleGaugeStyle(
+    needleWidth: 28,
+    needleTipWidth: 2,
+    pivotRadius: 14,
+    pivotColor: Color(0xFFFFFFFF),
+    pivotBorderColor: Color(0xFF111111),
+    pivotBorderWidth: 6,
+    axisThickness: 42,
+  ),
+)
+
+const GaugeChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: 180,
+    sweepAngleDegrees: 180,
+    clockwise: false,
+  ),
+  tickCount: 9,
+  minorTicksPerInterval: 4,
+  scale: GaugeScaleStyle(
+    tickPosition: GaugeTickPosition.inside,
+    tickGap: 12,
+    minorTickWidth: 1,
+    minorTickLength: 5,
+    labelPosition: GaugeScaleLabelPosition.outside,
+  ),
+  zones: GaugeZoneStyle(
+    gap: 5,
+    cornerRadius: 2,
+    opacity: 1,
+  ),
+)
+```
+
+`tickCount` always counts labelled major ticks. Each major interval receives
+the requested minor ticks, so the example above paints 9 major and 32 minor
+marks. `inside`, `centered`, and `outside` are semantic placements relative to
+the rendered axis band. Inside and outside ticks can use `tickGap` for a clear
+edge-to-edge rail separation; centered ticks retain the established outer-edge
+split and ignore that gap.
+
+`GaugeZoneStyle` changes only the visual presentation of operational zones.
+Its gap, corner radius, opacity, border colour, and border width are portable;
+the source `GaugeZone.from` and `to` values remain unchanged. Gaps are inserted
+only between contiguous zones, not across genuine uncovered domain ranges.
+
+`needleTipWidth: 0` preserves the classic pointed needle. A positive tip width
+creates a tapered instrument pointer, while pivot fill and border remain
+independently styleable.
+
 `GaugeReferenceStyle` controls the shared target/threshold callout reach and
 outside-label typography, offset, width, and optional panel. The target and
 threshold still own their individual stroke colour, width, and dash pattern;
@@ -217,10 +285,11 @@ document.
 
 See the runnable desktop showcase at `?page=gauge-charts`. Its authored
 examples cover Needle, Solid, Gradient, Zones, Target, Legend, Popup, partial
-sweeps, accessibility, and dense references. They use distinct 150–360 degree
-panes and varied start angles to demonstrate compact, semicircular, broad, and
-complete-dial compositions. The Playground stays last and randomizes portable
-data, geometry, colours, gradients, labels, references, legend, popup, theme,
+sweeps, accessibility, dense references, and a semicircular Instrument gauge.
+They use varied 150–360 degree panes and start angles to demonstrate compact,
+semicircular, broad, and complete-dial compositions. The Playground stays last
+and randomizes portable data, major/minor scale geometry, zone segmentation,
+needle shape, colours, gradients, labels, references, legend, popup, theme,
 and motion while leaving every generated property editable in Options.
 
 The main Gallery includes operational Needle, gradient Solid, and

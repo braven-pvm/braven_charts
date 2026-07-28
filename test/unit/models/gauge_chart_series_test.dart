@@ -213,6 +213,10 @@ void main() {
     test('validates style and plot configuration', () {
       const needle = NeedleGaugeStyle(
         needleLengthFactor: 0.8,
+        needleWidth: 18,
+        needleTipWidth: 3,
+        pivotBorderColor: Colors.black,
+        pivotBorderWidth: 2,
         axisThickness: 14,
       );
       const gradient = GaugeGradientStyle(
@@ -227,7 +231,22 @@ void main() {
       );
       const config = GaugeChartConfig(
         tickCount: 7,
-        scale: GaugeScaleStyle(tickWidth: 2, tickLength: 14),
+        minorTicksPerInterval: 4,
+        scale: GaugeScaleStyle(
+          tickWidth: 2,
+          tickLength: 14,
+          tickPosition: GaugeTickPosition.inside,
+          tickGap: 8,
+          minorTickWidth: 1.5,
+          minorTickLength: 6,
+          labelPosition: GaugeScaleLabelPosition.outside,
+        ),
+        zones: GaugeZoneStyle(
+          gap: 3,
+          cornerRadius: 2,
+          opacity: 0.9,
+          borderWidth: 1,
+        ),
         references: GaugeReferenceStyle(labelOffset: 12, showLabelPanel: true),
         center: GaugeCenterConfig(
           showTarget: true,
@@ -244,6 +263,9 @@ void main() {
       expect(config.validate, returnsNormally);
       expect(config.copyWith(showZones: false).showZones, isFalse);
       expect(config.copyWith().scale.tickLength, 14);
+      expect(config.minorTicksPerInterval, 4);
+      expect(config.scale.tickGap, 8);
+      expect(config.zones.gap, 3);
       expect(config.references.showLabelPanel, isTrue);
     });
 
@@ -254,6 +276,14 @@ void main() {
       );
       expect(
         const NeedleGaugeStyle(axisOpacity: -0.1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const NeedleGaugeStyle(needleWidth: 4, needleTipWidth: 5).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const NeedleGaugeStyle(pivotBorderWidth: -1).validate,
         throwsArgumentError,
       );
       expect(
@@ -273,9 +303,21 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        const GaugeChartConfig(minorTicksPerInterval: 21).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(zones: GaugeZoneStyle(gap: -1)).validate,
+        throwsArgumentError,
+      );
+      expect(
         const GaugeChartConfig(
           scale: GaugeScaleStyle(labelOffset: -1),
         ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const GaugeChartConfig(scale: GaugeScaleStyle(tickGap: -1)).validate,
         throwsArgumentError,
       );
       expect(

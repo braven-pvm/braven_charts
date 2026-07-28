@@ -150,6 +150,59 @@ void main() {
       matchesGoldenFile('goldens/gauge_zero_offset_labels.png'),
     );
   });
+
+  testWidgets('dense instrument scale and separated zones remain aligned', (
+    tester,
+  ) async {
+    const size = Size(720, 480);
+    await _pumpSurface(
+      tester,
+      key: const ValueKey('gauge-dense-instrument'),
+      size: size,
+      child: _GaugeTile(
+        title: 'Revenue this month',
+        subtitle: 'Dense inside ticks · outside labels · segmented zones',
+        series: _instrumentSeries(),
+        config: const GaugeChartConfig(
+          tickCount: 9,
+          minorTicksPerInterval: 4,
+          pane: PolarPaneConfig(
+            startAngleDegrees: 180,
+            sweepAngleDegrees: 180,
+            innerRadiusFactor: 0.42,
+            outerRadiusFactor: 0.88,
+          ),
+          scale: GaugeScaleStyle(
+            tickPosition: GaugeTickPosition.inside,
+            tickWidth: 2,
+            tickLength: 12,
+            minorTickWidth: 1,
+            minorTickLength: 5,
+            labelPosition: GaugeScaleLabelPosition.outside,
+            labelStyle: PolarLabelStyle(fontSize: 10),
+            labelOffset: 10,
+          ),
+          zones: GaugeZoneStyle(gap: 5, cornerRadius: 2, opacity: 1),
+          center: GaugeCenterConfig(
+            showMetric: false,
+            showStatus: false,
+            verticalOffset: 58,
+            valueStyle: PolarLabelStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        chartTheme: ChartTheme.light,
+        showLegend: false,
+      ),
+    );
+
+    await expectLater(
+      find.byKey(const ValueKey('gauge-dense-instrument')),
+      matchesGoldenFile('goldens/gauge_dense_instrument.png'),
+    );
+  });
 }
 
 const _standardConfig = GaugeChartConfig(
@@ -215,6 +268,32 @@ GaugeChartSeries _zeroOffsetSolidSeries() => GaugeChartSeries.solid(
     cornerRadius: 12,
     borderColor: Color(0xFF334155),
     borderWidth: 1,
+  ),
+);
+
+GaugeChartSeries _instrumentSeries() => GaugeChartSeries.needle(
+  id: 'instrument-revenue',
+  metric: 'Revenue this month',
+  unit: 'k',
+  value: 80,
+  minimum: 0,
+  maximum: 200,
+  zones: const [
+    GaugeZone(from: 0, to: 100, status: 'Baseline', color: Color(0xFFE5E7EB)),
+    GaugeZone(from: 100, to: 150, status: 'On plan', color: Color(0xFFFBBF24)),
+    GaugeZone(from: 150, to: 200, status: 'Ahead', color: Color(0xFF10B981)),
+  ],
+  style: const NeedleGaugeStyle(
+    axisThickness: 42,
+    axisOpacity: 0.12,
+    needleColor: Color(0xFF111111),
+    needleLengthFactor: 0.72,
+    needleWidth: 28,
+    needleTipWidth: 2,
+    pivotRadius: 14,
+    pivotColor: Color(0xFFFFFFFF),
+    pivotBorderColor: Color(0xFF111111),
+    pivotBorderWidth: 6,
   ),
 );
 

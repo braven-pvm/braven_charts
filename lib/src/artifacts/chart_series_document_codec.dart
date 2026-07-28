@@ -3199,9 +3199,13 @@ Map<String, Object?> _encodeGaugeIndicatorStyle(
     'type': 'needle',
     'needleLengthFactor': _number(style.needleLengthFactor),
     'needleWidth': _number(style.needleWidth),
+    'needleTipWidth': _number(style.needleTipWidth),
     if (style.needleColor != null) 'needleColor': style.needleColor!.toARGB32(),
     'pivotRadius': _number(style.pivotRadius),
     if (style.pivotColor != null) 'pivotColor': style.pivotColor!.toARGB32(),
+    if (style.pivotBorderColor != null)
+      'pivotBorderColor': style.pivotBorderColor!.toARGB32(),
+    'pivotBorderWidth': _number(style.pivotBorderWidth),
     'axisThickness': _number(style.axisThickness),
     if (style.axisColor != null) 'axisColor': style.axisColor!.toARGB32(),
     'axisOpacity': _number(style.axisOpacity),
@@ -3250,6 +3254,7 @@ GaugeIndicatorStyle _decodeGaugeIndicatorStyle(Map<String, Object?> value) =>
       'needle' => NeedleGaugeStyle(
         needleLengthFactor: _double(value, 'needleLengthFactor'),
         needleWidth: _double(value, 'needleWidth'),
+        needleTipWidth: _optionalDouble(value['needleTipWidth']) ?? 0,
         needleColor: _optionalColor(
           value['needleColor'],
           r'$.style.gaugeIndicatorStyle.needleColor',
@@ -3259,6 +3264,11 @@ GaugeIndicatorStyle _decodeGaugeIndicatorStyle(Map<String, Object?> value) =>
           value['pivotColor'],
           r'$.style.gaugeIndicatorStyle.pivotColor',
         ),
+        pivotBorderColor: _optionalColor(
+          value['pivotBorderColor'],
+          r'$.style.gaugeIndicatorStyle.pivotBorderColor',
+        ),
+        pivotBorderWidth: _optionalDouble(value['pivotBorderWidth']) ?? 0,
         axisThickness: _double(value, 'axisThickness'),
         axisColor: _optionalColor(
           value['axisColor'],

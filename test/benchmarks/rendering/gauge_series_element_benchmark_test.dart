@@ -37,6 +37,12 @@ void main() {
       series: series,
       config: const GaugeChartConfig(
         tickCount: 12,
+        minorTicksPerInterval: 10,
+        scale: GaugeScaleStyle(
+          tickPosition: GaugeTickPosition.inside,
+          labelPosition: GaugeScaleLabelPosition.outside,
+        ),
+        zones: GaugeZoneStyle(gap: 2, cornerRadius: 2, borderWidth: 1),
         center: GaugeCenterConfig(showTarget: true),
       ),
       size: size,
@@ -44,7 +50,7 @@ void main() {
     );
 
     expect(element.geometry.zones, hasLength(12));
-    expect(element.geometry.ticks, hasLength(12));
+    expect(element.geometry.ticks, hasLength(12 + 11 * 10));
     expect(element.semanticDataHits, hasLength(1));
 
     for (var index = 0; index < 10; index++) {
@@ -61,7 +67,7 @@ void main() {
     final averageMilliseconds =
         stopwatch.elapsedMicroseconds / iterations / 1000;
     print(
-      'Gauge paint (12 zones, 12 ticks, 2 references, center labels): '
+      'Gauge paint (12 zones, 122 ticks, 2 references, center labels): '
       '${averageMilliseconds.toStringAsFixed(3)}ms average',
     );
     expect(

@@ -659,6 +659,7 @@ abstract final class ChartConfigurationDocumentCodec {
               'clipMarks': config.pane.clipMarks,
             },
             'tickCount': config.tickCount,
+            'minorTicksPerInterval': config.minorTicksPerInterval,
             'showAxis': config.showAxis,
             'showTicks': config.showTicks,
             'showTickLabels': config.showTickLabels,
@@ -671,9 +672,24 @@ abstract final class ChartConfigurationDocumentCodec {
                 'tickWidth': config.scale.tickWidth,
               if (config.scale.tickLength != null)
                 'tickLength': config.scale.tickLength,
+              'tickPosition': config.scale.tickPosition.name,
+              'tickGap': config.scale.tickGap,
+              if (config.scale.minorTickColor != null)
+                'minorTickColor': config.scale.minorTickColor!.toARGB32(),
+              'minorTickWidth': config.scale.minorTickWidth,
+              'minorTickLength': config.scale.minorTickLength,
               'labelStyle': _encodePolarLabelStyle(config.scale.labelStyle),
+              'labelPosition': config.scale.labelPosition.name,
               'labelOffset': config.scale.labelOffset,
               'labelMaxWidth': config.scale.labelMaxWidth,
+            },
+            'zones': {
+              'gap': config.zones.gap,
+              'cornerRadius': config.zones.cornerRadius,
+              if (config.zones.opacity != null) 'opacity': config.zones.opacity,
+              if (config.zones.borderColor != null)
+                'borderColor': config.zones.borderColor!.toARGB32(),
+              'borderWidth': config.zones.borderWidth,
             },
             'references': {
               'showLabels': config.references.showLabels,
@@ -760,6 +776,8 @@ abstract final class ChartConfigurationDocumentCodec {
           clipMarks: _requiredBool(pane, 'clipMarks', '$path.pane'),
         ),
         tickCount: _requiredInt(map, 'tickCount', path),
+        minorTicksPerInterval:
+            _optionalInt(map, 'minorTicksPerInterval', path) ?? 0,
         showAxis: _requiredBool(map, 'showAxis', path),
         showTicks: _requiredBool(map, 'showTicks', path),
         showTickLabels: _requiredBool(map, 'showTickLabels', path),
@@ -770,6 +788,7 @@ abstract final class ChartConfigurationDocumentCodec {
           path,
         ),
         scale: _decodeGaugeScaleStyle(map['scale'], '$path.scale'),
+        zones: _decodeGaugeZoneStyle(map['zones'], '$path.zones'),
         references: _decodeGaugeReferenceStyle(
           map['references'],
           '$path.references',
@@ -823,21 +842,106 @@ GaugeScaleStyle _decodeGaugeScaleStyle(Object? value, String path) {
   }
   final map = value.cast<String, Object?>();
   final tickColor = map['tickColor'];
+  final minorTickColor = map['minorTickColor'];
   if (tickColor != null && tickColor is! int) {
     throw _ConfigurationFormatException(
       'Optional tick color must be an ARGB integer.',
       '$path.tickColor',
     );
   }
+  if (minorTickColor != null && minorTickColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional minor tick color must be an ARGB integer.',
+      '$path.minorTickColor',
+    );
+  }
   return GaugeScaleStyle(
     tickColor: tickColor == null ? null : Color(tickColor as int),
     tickWidth: _optionalDouble(map, 'tickWidth', path),
     tickLength: _optionalDouble(map, 'tickLength', path),
+    tickPosition: _decodeGaugeTickPosition(
+      map['tickPosition'],
+      '$path.tickPosition',
+    ),
+    tickGap: _optionalDouble(map, 'tickGap', path) ?? 0,
+    minorTickColor: minorTickColor == null
+        ? null
+        : Color(minorTickColor as int),
+    minorTickWidth: _optionalDouble(map, 'minorTickWidth', path) ?? 1,
+    minorTickLength: _optionalDouble(map, 'minorTickLength', path) ?? 5,
     labelStyle: map['labelStyle'] == null
         ? const PolarLabelStyle(fontSize: 9)
         : _decodePolarLabelStyle(map['labelStyle'], '$path.labelStyle'),
+    labelPosition: _decodeGaugeScaleLabelPosition(
+      map['labelPosition'],
+      '$path.labelPosition',
+    ),
     labelOffset: _optionalDouble(map, 'labelOffset', path) ?? 10,
     labelMaxWidth: _optionalDouble(map, 'labelMaxWidth', path) ?? 72,
+  );
+}
+
+GaugeTickPosition _decodeGaugeTickPosition(Object? value, String path) {
+  if (value == null) return GaugeTickPosition.centered;
+  if (value is! String) {
+    throw _ConfigurationFormatException(
+      'Gauge tick position must be a string.',
+      path,
+    );
+  }
+  try {
+    return GaugeTickPosition.values.byName(value);
+  } on ArgumentError {
+    throw _ConfigurationFormatException(
+      'Unknown Gauge tick position "$value".',
+      path,
+    );
+  }
+}
+
+GaugeScaleLabelPosition _decodeGaugeScaleLabelPosition(
+  Object? value,
+  String path,
+) {
+  if (value == null) return GaugeScaleLabelPosition.outside;
+  if (value is! String) {
+    throw _ConfigurationFormatException(
+      'Gauge scale-label position must be a string.',
+      path,
+    );
+  }
+  try {
+    return GaugeScaleLabelPosition.values.byName(value);
+  } on ArgumentError {
+    throw _ConfigurationFormatException(
+      'Unknown Gauge scale-label position "$value".',
+      path,
+    );
+  }
+}
+
+GaugeZoneStyle _decodeGaugeZoneStyle(Object? value, String path) {
+  if (value == null) return const GaugeZoneStyle();
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Gauge zone style must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final borderColor = map['borderColor'];
+  if (borderColor != null && borderColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional zone border color must be an ARGB integer.',
+      '$path.borderColor',
+    );
+  }
+  return GaugeZoneStyle(
+    gap: _optionalDouble(map, 'gap', path) ?? 0,
+    cornerRadius: _optionalDouble(map, 'cornerRadius', path) ?? 0,
+    opacity: _optionalDouble(map, 'opacity', path),
+    borderColor: borderColor == null ? null : Color(borderColor as int),
+    borderWidth: _optionalDouble(map, 'borderWidth', path) ?? 0,
   );
 }
 
