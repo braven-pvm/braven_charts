@@ -1,7 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import 'package:flutter/painting.dart' show Color;
 
 import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
@@ -978,6 +978,7 @@ final class DonutMark<T> extends RadialMark<T> {
     this.center,
     this.concentric,
     this.dataLabels,
+    this.dataLabelsByRing,
     this.sliceRadiusConfig,
     this.sliceGroupingConfig,
   });
@@ -1045,6 +1046,17 @@ final class DonutMark<T> extends RadialMark<T> {
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
 
+  /// Per-ring data-label overrides, keyed by the BARE ring key — the value the
+  /// [ring] accessor returns, which becomes each ring series' name — NOT by the
+  /// `'<markId>-<ringKey>'` series id that `ConcentricDonutConfig.ringWeights`
+  /// uses.
+  ///
+  /// A ring with no entry uses [dataLabels]; [dataLabels] itself stays the base
+  /// for every ring. Null means every ring shares [dataLabels]. The override is
+  /// honored on the single-ring collapse too, so a one-ring composition is not
+  /// a special case.
+  final Map<String, PieDataLabelConfig>? dataLabelsByRing;
+
   /// Variable slice-radius encoding for the [radius] second metric. Null keeps
   /// a fixed radius. Its optional `formatter` callback is not reproducible as a
   /// literal and is dropped by the source emitter with an honest placeholder.
@@ -1071,6 +1083,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.center == center &&
           other.concentric == concentric &&
           other.dataLabels == dataLabels &&
+          mapEquals(other.dataLabelsByRing, dataLabelsByRing) &&
           other.sliceRadiusConfig == sliceRadiusConfig &&
           other.sliceGroupingConfig == sliceGroupingConfig;
 
@@ -1090,6 +1103,13 @@ final class DonutMark<T> extends RadialMark<T> {
     center,
     concentric,
     dataLabels,
+    // Order-independent, matching the `mapEquals` above: two override maps with
+    // the same entries in a different insertion order are the same mark.
+    dataLabelsByRing == null
+        ? null
+        : Object.hashAllUnordered(
+            dataLabelsByRing!.entries.map((e) => Object.hash(e.key, e.value)),
+          ),
     sliceRadiusConfig,
     sliceGroupingConfig,
   );

@@ -117,6 +117,38 @@ void main() {
       );
       expect((donut.marks.single as DonutMark<Fruit>).sliceColor, isNotNull);
     });
+
+    test('geomDonut forwards dataLabelsByRing onto the mark', () {
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      final donut = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            dataLabels: const PieDataLabelConfig(isVisible: false),
+            dataLabelsByRing: const {'A': outer},
+          )
+          .toSpec();
+      expect(
+        donut,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              dataLabels: PieDataLabelConfig(isVisible: false),
+              dataLabelsByRing: {'A': outer},
+            ),
+          ],
+        ),
+      );
+      expect((donut.marks.single as DonutMark<Fruit>).dataLabelsByRing, const {
+        'A': outer,
+      });
+    });
   });
 
   group('geomDonut equals the hand-written spec', () {

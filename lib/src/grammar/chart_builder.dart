@@ -498,6 +498,11 @@ final class BravenChart<T> {
   /// [sliceColor] overrides the slice color per row; returning null for a row
   /// leaves that slice on the series color. With [ring] set it is resolved per
   /// ring, so one category may take a different color in each ring.
+  ///
+  /// [dataLabelsByRing] overrides [dataLabels] for named rings. It is keyed by
+  /// the BARE ring key — the value [ring] returns, which becomes the ring
+  /// series' name — not by the `'<markId>-<ringKey>'` series id `concentric`'s
+  /// `ringWeights` uses. A ring with no entry keeps [dataLabels].
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
@@ -513,6 +518,7 @@ final class BravenChart<T> {
     DonutCenterContent? center,
     ConcentricDonutConfig? concentric,
     PieDataLabelConfig? dataLabels,
+    Map<String, PieDataLabelConfig>? dataLabelsByRing,
     RadialSliceRadiusConfig? sliceRadiusConfig,
     RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
@@ -531,6 +537,7 @@ final class BravenChart<T> {
       center: center,
       concentric: concentric,
       dataLabels: dataLabels,
+      dataLabelsByRing: dataLabelsByRing,
       sliceRadiusConfig: sliceRadiusConfig,
       sliceGroupingConfig: sliceGroupingConfig,
     ),

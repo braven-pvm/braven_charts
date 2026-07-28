@@ -128,6 +128,73 @@ void main() {
       );
     });
 
+    test('dataLabelsByRing participates in DonutMark equality', () {
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      const withOverrides = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: {'outer': outer},
+      );
+      const without = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+      );
+      expect(withOverrides == without, isFalse);
+      expect(withOverrides.hashCode == without.hashCode, isFalse);
+      expect(withOverrides.dataLabelsByRing, const {'outer': outer});
+      expect(without.dataLabelsByRing, isNull);
+      expect(
+        withOverrides,
+        const DonutMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          ring: fruitBasket,
+          dataLabelsByRing: {'outer': outer},
+        ),
+      );
+    });
+
+    test('dataLabelsByRing equality compares entries, not map order', () {
+      // Two maps with the same entries in a different insertion order are the
+      // same override set, so the marks must be equal AND hash alike.
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      const inner = PieDataLabelConfig(isVisible: false);
+      final forwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'outer': outer,
+          'inner': inner,
+        },
+      );
+      final backwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'inner': inner,
+          'outer': outer,
+        },
+      );
+      expect(forwards, backwards);
+      expect(forwards.hashCode, backwards.hashCode);
+
+      // A different VALUE for the same key is a different mark.
+      final swapped = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'outer': inner,
+          'inner': outer,
+        },
+      );
+      expect(forwards == swapped, isFalse);
+    });
+
     test('PolarMark holds a polar style', () {
       const mark = PolarMark<Fruit>(
         category: fruitName,
