@@ -23,6 +23,7 @@ double fruitCount(Fruit row) => row.count;
 double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
+Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -46,6 +47,46 @@ void main() {
       );
       const without = PieMark<Fruit>(category: fruitName, value: fruitCount);
       expect(withRadius == without, isFalse);
+    });
+
+    test('sliceColor participates in PieMark and DonutMark equality', () {
+      const pieA = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        sliceColor: fruitSliceColor,
+      );
+      const pieB = PieMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(pieA == pieB, isFalse);
+      expect(pieA.hashCode == pieB.hashCode, isFalse);
+      expect(pieA.sliceColor, same(fruitSliceColor));
+      expect(pieB.sliceColor, isNull);
+      expect(
+        pieA,
+        const PieMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          sliceColor: fruitSliceColor,
+        ),
+      );
+
+      const donutA = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        sliceColor: fruitSliceColor,
+      );
+      const donutB = DonutMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(donutA == donutB, isFalse);
+      expect(donutA.hashCode == donutB.hashCode, isFalse);
+      expect(donutA.sliceColor, same(fruitSliceColor));
+      expect(donutB.sliceColor, isNull);
+      expect(
+        donutA,
+        const DonutMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          sliceColor: fruitSliceColor,
+        ),
+      );
     });
 
     test('DonutMark carries a ring accessor and center content', () {

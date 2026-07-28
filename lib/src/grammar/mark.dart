@@ -883,6 +883,7 @@ final class PieMark<T> extends RadialMark<T> {
     super.color,
     super.unit,
     this.radius,
+    this.sliceColor,
     this.style,
     this.selectionStyle,
     this.dataLabels,
@@ -893,6 +894,12 @@ final class PieMark<T> extends RadialMark<T> {
   /// Optional second metric → variable slice radius (Nightingale). Null keeps
   /// every slice at the series radius.
   final FieldAccessor<T, num>? radius;
+
+  /// Per-slice color override, keyed by the row's category.
+  ///
+  /// Returning null for a row leaves that slice on the series color, which is
+  /// what an unset accessor does for every row.
+  final FieldAccessor<T, Color?>? sliceColor;
 
   /// Slice geometry/appearance. Null lowers to `const PieChartStyle()`.
   final PieChartStyle? style;
@@ -919,6 +926,7 @@ final class PieMark<T> extends RadialMark<T> {
           other.category == category &&
           other.value == value &&
           other.radius == radius &&
+          other.sliceColor == sliceColor &&
           other.id == id &&
           other.name == name &&
           other.color == color &&
@@ -934,6 +942,7 @@ final class PieMark<T> extends RadialMark<T> {
     category,
     value,
     radius,
+    sliceColor,
     id,
     name,
     color,
@@ -963,6 +972,7 @@ final class DonutMark<T> extends RadialMark<T> {
     super.unit,
     this.radius,
     this.ring,
+    this.sliceColor,
     this.style,
     this.selectionStyle,
     this.center,
@@ -977,6 +987,14 @@ final class DonutMark<T> extends RadialMark<T> {
 
   /// Concentric-ring grouping channel. Absent = a single donut.
   final FieldAccessor<T, Object?>? ring;
+
+  /// Per-slice color override, keyed by the row's category.
+  ///
+  /// Returning null for a row leaves that slice on the series color, which is
+  /// what an unset accessor does for every row. With [ring] set the override is
+  /// resolved per ring, so the same category may take a different color in each
+  /// ring.
+  final FieldAccessor<T, Color?>? sliceColor;
 
   /// Donut geometry/appearance. Null lowers to `const DonutChartStyle()`.
   final DonutChartStyle? style;
@@ -1043,6 +1061,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.value == value &&
           other.radius == radius &&
           other.ring == ring &&
+          other.sliceColor == sliceColor &&
           other.id == id &&
           other.name == name &&
           other.color == color &&
@@ -1061,6 +1080,7 @@ final class DonutMark<T> extends RadialMark<T> {
     value,
     radius,
     ring,
+    sliceColor,
     id,
     name,
     color,

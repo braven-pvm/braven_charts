@@ -21,6 +21,7 @@ double fruitCount(Fruit row) => row.count;
 double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
+Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -62,6 +63,54 @@ void main() {
           ],
         ),
       );
+    });
+
+    test('geomPie and geomDonut forward sliceColor onto the mark', () {
+      final pie = BravenChart.of(fruits)
+          .geomPie(
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          )
+          .toSpec();
+      expect(
+        pie,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              sliceColor: fruitSliceColor,
+            ),
+          ],
+        ),
+      );
+      expect((pie.marks.single as PieMark<Fruit>).sliceColor, isNotNull);
+
+      final donut = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          )
+          .toSpec();
+      expect(
+        donut,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              sliceColor: fruitSliceColor,
+            ),
+          ],
+        ),
+      );
+      expect((donut.marks.single as DonutMark<Fruit>).sliceColor, isNotNull);
     });
   });
 

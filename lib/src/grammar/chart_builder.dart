@@ -446,10 +446,14 @@ final class BravenChart<T> {
   /// Cartesian axis/grid option. [radius] encodes an optional second metric as
   /// a variable slice radius. Rich styling is deferred to [style]/[dataLabels],
   /// the real config objects, exactly as the Cartesian geoms defer to config.
+  ///
+  /// [sliceColor] overrides the slice color per row; returning null for a row
+  /// leaves that slice on the series color.
   BravenChart<T> geomPie({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
     FieldAccessor<T, num>? radius,
+    FieldAccessor<T, Color?>? sliceColor,
     String? id,
     String? name,
     Color? color,
@@ -465,6 +469,7 @@ final class BravenChart<T> {
       category: category,
       value: value,
       radius: radius,
+      sliceColor: sliceColor,
       name: name,
       color: color,
       unit: unit,
@@ -489,11 +494,16 @@ final class BravenChart<T> {
   /// `ringWeights` is keyed by the lowered ring SERIES id `'<markId>-<ringKey>'`
   /// (a mark ided `'seasons'` weights its `'Winter'` ring as
   /// `{'seasons-Winter': 2}`), not by the bare ring value.
+  ///
+  /// [sliceColor] overrides the slice color per row; returning null for a row
+  /// leaves that slice on the series color. With [ring] set it is resolved per
+  /// ring, so one category may take a different color in each ring.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
     FieldAccessor<T, num>? radius,
     FieldAccessor<T, Object?>? ring,
+    FieldAccessor<T, Color?>? sliceColor,
     String? id,
     String? name,
     Color? color,
@@ -512,6 +522,7 @@ final class BravenChart<T> {
       value: value,
       radius: radius,
       ring: ring,
+      sliceColor: sliceColor,
       name: name,
       color: color,
       unit: unit,
