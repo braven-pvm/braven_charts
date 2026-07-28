@@ -3,6 +3,8 @@
 
 import 'package:flutter/painting.dart' show Color;
 
+import '../layout/concentric_donut_layout.dart';
+import '../layout/polar_column_composition.dart';
 import '../models/axis_scale_type.dart';
 import '../models/bar_chart_style.dart' show BarOrientation;
 import '../models/candlestick_chart_series.dart';
@@ -20,6 +22,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
@@ -92,7 +95,11 @@ class LoweredPlot {
   final bool? showLegend;
 
   /// The concentric-donut composition config, when the lowered chart is a
-  /// concentric donut. Null for every other family.
+  /// concentric donut. Null for every other family — INCLUDING a ring-less
+  /// donut, which refuses `DonutMark.concentric` by name rather than carrying
+  /// a config it composes nothing for. `ChartGrammarSourceGenerator` relies on
+  /// that: it treats a non-null config as the authoritative "this is a
+  /// concentric composition" discriminator.
   final ConcentricDonutConfig? concentricDonutConfig;
 
   /// The polar pane/axis config, when the lowered chart is a polar column.
@@ -193,11 +200,20 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// first. All DATA-INDEPENDENT structural checks run before the emptyData
 /// guard, so an authoring error surfaces even against a momentarily-empty
 /// dataset (which is what lets `BravenPlot` swallow ONLY emptyData): empty
-/// marks, mark ids, axis ids, transposition, then each mark's structural
-/// checks in spec order (axis binding, scatter channel/encoding pairing,
-/// trend source), then unbound axes. Only then comes empty data, followed by
-/// the DATA-DEPENDENT materialization — the per-row candlestick validation
-/// that cannot run on an empty dataset.
+/// marks, mark ids, misplaced `.polarConfig(...)`, axis ids, transposition,
+/// then each mark's structural checks in spec order (axis binding, scatter
+/// channel/encoding pairing, trend source), then unbound axes. Only then comes
+/// empty data, followed by the DATA-DEPENDENT materialization — the per-row
+/// candlestick validation that cannot run on an empty dataset.
+///
+/// The radial branch follows the same rule: coordinate-system and radial-family
+/// checks, Cartesian-option checks, the `.polarConfig(...)` placement check and
+/// the SHAPE half of the polar composition contract (clashing mark units, a
+/// grouped/stacked composition with fewer than two polar marks, a
+/// half-specified interval, clashing mark presets) all run above the emptyData
+/// guard; the row-dependent half — visible categories, and the
+/// `PolarColumnComposition.validate` pass over the lowered series — runs below
+/// it.
 extension PlotSpecLowering<T> on PlotSpec<T> {
   /// Lowers this spec onto ordinary chart config objects.
   LoweredPlot lower() => _lower<T>(this);
@@ -208,6 +224,18 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   if (spec.marks.isEmpty) throw GrammarSpecException.emptyMarks();
 
   final markIds = _resolveMarkIds(spec.marks);
+  // Data-INDEPENDENT placement check, hoisted ABOVE the radial dispatch because
+  // `.polarConfig(...)` is a PLOT-level verb every chain exposes, so the most
+  // likely way to misplace it is on a Cartesian chain — which never enters
+  // `_lowerRadial`. Leaving the guard there dropped the config silently, which
+  // is exactly the outcome the module's contract forbids. A spec holding a
+  // `PolarMark` is radial by definition, so this fires only when the spec has no
+  // polar geom at all; the radial branch keeps its own guard for the mixed
+  // radial families (a pie or donut spec), where `mixedCoordinateSystems` and
+  // `multipleRadialGeoms` must be reported first.
+  if (spec.polar != null && !spec.isRadial) {
+    throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds.first);
+  }
   if (spec.isRadial) return _lowerRadial<T>(spec, markIds);
   final axes = _resolveAxes(spec.yAxes);
   final axesById = <String, YAxisConfig>{
@@ -899,29 +927,47 @@ PointAnnotation _lowerPoint<T>(PointMark<T> mark, String id) {
   );
 }
 
-/// Lowers a RADIAL spec: exactly one radial geom, no Cartesian marks, no
-/// Cartesian axis/grid option. The whole dataset maps to one radial series
-/// (or, for a ring channel, one per ring). Validation order is deterministic
-/// and matches the Cartesian contract: every data-INDEPENDENT structural check
-/// runs before the emptyData guard, so BravenPlot swallows ONLY an otherwise
+/// Lowers a RADIAL spec: no Cartesian marks, no Cartesian axis/grid option.
+/// The whole dataset maps to one radial series (or, for a ring channel, one
+/// per ring). Exactly one radial geom is the rule for pie/donut; the polar
+/// family relaxes it — N [PolarMark]s lower to N `PolarColumnChartSeries`
+/// sharing the spec-level [PlotSpec.polar] composition — which they must be
+/// ABLE to share: the composition contract
+/// ([PolarColumnComposition.validate], the same one the render pipeline and the
+/// artifact hydrator enforce) is checked here so a chain fails with a named
+/// diagnostic instead of a raw `ArgumentError` at widget mount. The concentric
+/// donut family is held to the same rule against
+/// [ConcentricDonutLayoutCalculator]. Validation order is deterministic and
+/// matches the Cartesian contract: every data-INDEPENDENT structural check runs
+/// before the emptyData guard, so BravenPlot swallows ONLY an otherwise
 /// well-formed empty spec.
 LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   final radialIndices = <int>[
     for (var index = 0; index < spec.marks.length; index++)
       if (spec.marks[index] is RadialMark<T>) index,
   ];
-  if (radialIndices.length > 1) {
+  // Multiple radial marks are legal ONLY when every one is a polar column:
+  // polar composition (layered/grouped/stacked) genuinely spans series, while
+  // two pies or a pie plus a donut have no shared coordinate meaning.
+  final allPolar = radialIndices.every(
+    (index) => spec.marks[index] is PolarMark<T>,
+  );
+  if (radialIndices.length > 1 && !allPolar) {
     throw GrammarSpecException.multipleRadialGeoms(<String>[
       for (final index in radialIndices) markIds[index],
     ]);
   }
-  final markIndex = radialIndices.single;
-  if (spec.marks.length > 1) {
+  final markIndex = radialIndices.first;
+  // Any non-radial mark in the spec mixes coordinate systems. Counting rather
+  // than comparing against `1` keeps the multi-polar spec legal while a polar
+  // plus a line (or reference) mark still fails exactly as before.
+  if (spec.marks.length > radialIndices.length) {
+    final radialSet = radialIndices.toSet();
     throw GrammarSpecException.mixedCoordinateSystems(
       markIds[markIndex],
       <String>[
         for (var index = 0; index < spec.marks.length; index++)
-          if (index != markIndex) markIds[index],
+          if (!radialSet.contains(index)) markIds[index],
       ],
     );
   }
@@ -943,25 +989,111 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     throw GrammarSpecException.axisOptionOnRadialSpec('grid');
   }
 
+  // A plot-level PolarChartConfig only has meaning over polar columns; on a
+  // pie/donut spec it would be silently discarded, so it is refused by name.
+  // (The Cartesian case is caught earlier, in `_lower`.)
+  if (spec.polar != null && !allPolar) {
+    throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds[markIndex]);
+  }
+
+  // A ConcentricDonutConfig owns the shared center through its centerContent,
+  // and `center` is the shorthand for that same slot: honoring one would have
+  // to discard the other silently, so the ambiguity is refused by name.
+  if (mark is DonutMark<T> && mark.concentric != null && mark.center != null) {
+    throw GrammarSpecException.conflictingConcentricCenter(markId);
+  }
+
+  if (mark is DonutMark<T> && mark.concentric != null) {
+    // Without a ring channel there is no composition for the config to
+    // describe: the ring gap, order, weights, radii and legend mode are all
+    // inert, the render path never reads it (`braven_chart_plus` stamps
+    // `concentricDonutConfig` only for MORE THAN ONE donut series), and the
+    // capture path drops it — so a chain that set it would come back from the
+    // source generator without it. Refused by name, as `.polarConfig(...)` on
+    // a non-polar spec is.
+    if (mark.ring == null) {
+      throw GrammarSpecException.concentricConfigOnRinglessDonut(markId);
+    }
+    // The DATA-INDEPENDENT half of the concentric contract: pane radii, ring
+    // gap, ring-weight magnitudes and the shared center are decidable from the
+    // config alone, so they are checked ABOVE the emptyData guard — a chain
+    // must not lower clean over an empty (or momentarily single-ring) dataset
+    // and then throw a raw ArgumentError out of the layout calculator once the
+    // real rows arrive.
+    _guardConcentric(
+      () => ConcentricDonutLayoutCalculator.validateConfig(mark.concentric!),
+    );
+  }
+
+  // The polar composition contract that is decidable from the spec's SHAPE.
+  if (allPolar) {
+    _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
+  }
+
   // Data-dependent checks live below the emptyData guard.
   if (spec.data.isEmpty) throw GrammarSpecException.emptyData();
 
-  final hasVisibleCategory = spec.data.any(
-    (row) => mark.category(row).toString().trim().isNotEmpty,
-  );
-  if (!hasVisibleCategory) {
-    throw GrammarSpecException.emptyRadialCategories(markId);
+  // Every radial mark is checked, not just the first: a multi-polar spec whose
+  // second mark labels nothing would otherwise draw an unlabelled band.
+  for (final index in radialIndices) {
+    final radialMark = spec.marks[index] as RadialMark<T>;
+    final hasVisibleCategory = spec.data.any(
+      (row) => radialMark.category(row).toString().trim().isNotEmpty,
+    );
+    if (!hasVisibleCategory) {
+      throw GrammarSpecException.emptyRadialCategories(markIds[index]);
+    }
   }
 
   final series = <ChartSeries>[];
   ConcentricDonutConfig? concentric;
   PolarChartConfig? polar;
 
-  if (mark is PieMark<T>) {
+  if (allPolar) {
+    final columns = <PolarColumnChartSeries>[
+      for (final index in radialIndices)
+        _lowerPolar<T>(
+          spec.marks[index] as PolarMark<T>,
+          markIds[index],
+          spec.data,
+        ),
+    ];
+    series.addAll(columns);
+    polar = spec.polar ?? const PolarChartConfig();
+    // The DATA-DEPENDENT half of the composition contract (diverging category
+    // domains, and — once the advanced per-series fields land — presets and
+    // intervals). Delegating to the same validator the render pipeline and the
+    // artifact hydrator run is what keeps the grammar from drifting away from
+    // the contract it lowers onto: without it a chain lowers clean and then
+    // throws a raw ArgumentError at widget mount.
+    //
+    // The "stacked composition cannot carry intervals" rule stays HERE, below
+    // the emptyData guard, and that is deliberate — do not hoist it into
+    // [_validatePolarMarkComposition] alongside the config and preset checks.
+    // `PolarColumnChartSeries.hasIntervals` is a property of the LOWERED series,
+    // not of the mark: a mark may declare both interval accessors and still
+    // produce ZERO intervals, because `_lowerPolar` only records a category's
+    // interval when BOTH bounds come back non-null for that row. So a stacked
+    // spec whose interval accessors return null for every row composes cleanly
+    // and must lower, and only the materialized series can tell us which case we
+    // are in. What IS decidable from the mark — that exactly one of the two
+    // bounds was supplied — is already hoisted, as `incompletePolarInterval`.
+    _guardPolar(() => PolarColumnComposition.validate(columns, config: polar));
+  } else if (mark is PieMark<T>) {
     series.add(_lowerPie<T>(mark, markId, spec.data));
   } else if (mark is DonutMark<T>) {
+    // Center precedence: an explicit ConcentricDonutConfig is authoritative,
+    // including its centerContent; `center` is the shorthand honored only when
+    // no config was supplied (setting both is refused above). Keeping the two
+    // sources in one local is what makes every donut path agree.
+    final center = mark.concentric?.centerContent ?? mark.center;
     if (mark.ring == null) {
-      series.add(_lowerDonut<T>(mark, markId, spec.data));
+      // `concentric` on a ring-less donut is refused above, so `center` here is
+      // exactly the mark's own shorthand and no config is produced: the
+      // family's `LoweredPlot.concentricDonutConfig` stays null, which is what
+      // lets the source emitter keep treating a non-null config as the
+      // authoritative "this is a concentric composition" discriminator.
+      series.add(_lowerDonut<T>(mark, markId, spec.data, center));
     } else {
       final rings = _lowerConcentricRings<T>(mark, markId, spec.data);
       if (rings.length == 1) {
@@ -972,20 +1104,34 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // silently hidden.
         series.add(
           rings.single.copyWith(
-            centerContent: mark.center ?? DonutCenterContent.hidden,
+            centerContent: center ?? DonutCenterContent.hidden,
           ),
         );
-        concentric = const ConcentricDonutConfig();
+        concentric = mark.concentric ?? const ConcentricDonutConfig();
       } else {
         series.addAll(rings);
-        concentric = mark.center == null
-            ? const ConcentricDonutConfig()
-            : ConcentricDonutConfig(centerContent: mark.center!);
+        concentric =
+            mark.concentric ??
+            (mark.center == null
+                ? const ConcentricDonutConfig()
+                : ConcentricDonutConfig(centerContent: mark.center!));
+        // The DATA-DEPENDENT half of the concentric contract, delegated to the
+        // same validator the render pipeline runs. It is scoped to a real
+        // composition (>1 ring) because that is exactly the shape the render
+        // pipeline validates: below two donut series the widget nulls the
+        // config and lays a plain donut out, so refusing here would reject a
+        // chart that renders. A ring weight naming no ring — the natural
+        // mistake, because the rings are ided `<markId>-<ringKey>` — is caught
+        // here instead of as a raw ArgumentError at widget mount.
+        _guardConcentric(
+          () => ConcentricDonutLayoutCalculator.validateSeries(
+            rings,
+            concentric!,
+          ),
+          ringIds: <String>[for (final ring in rings) ring.id],
+        );
       }
     }
-  } else if (mark is PolarMark<T>) {
-    series.add(_lowerPolar<T>(mark, markId, spec.data));
-    polar = const PolarChartConfig();
   } else {
     throw StateError('Unhandled radial mark: $mark');
   }
@@ -1005,6 +1151,175 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     polarChartConfig: polar,
   );
 }
+
+/// One authority `ArgumentError` rendered as a diagnostic detail sentence.
+///
+/// Leads with the error's `name` — the FIELD that failed, e.g.
+/// "pane.innerRadiusFactor" — because the named diagnostic REPLACES the raw
+/// error rather than accompanying it. A `PolarChartConfig` range-checks eight
+/// fields and a `ConcentricDonutConfig` three, so "Value must be in [0, 1)" on
+/// its own would make the grammar's diagnostic strictly less actionable than
+/// the error it hides. An `ArgumentError` raised without a name still renders
+/// (the authority's sentence alone), so this cannot regress into "null: ".
+String _authorityDetail(ArgumentError error) {
+  final field = error.name == null ? '' : '${error.name}: ';
+  return error.invalidValue == null
+      ? '$field${error.message}.'
+      : '$field${error.message} ("${error.invalidValue}").';
+}
+
+/// Runs one concentric-donut contract check and renames its failure.
+///
+/// [ConcentricDonutLayoutCalculator] is the authority — the same validator the
+/// render pipeline runs before it allocates ring bands — so the grammar
+/// delegates to it and translates the raw `ArgumentError` into a named
+/// diagnostic, rather than restating (and eventually contradicting) its rules.
+/// [ringIds] is supplied for the series half, where naming the real ring ids is
+/// what makes a misdirected `ringWeights` key actionable.
+void _guardConcentric(
+  void Function() check, {
+  Iterable<String> ringIds = const <String>[],
+}) {
+  try {
+    check();
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidConcentricComposition(
+      _authorityDetail(error),
+      ringIds: ringIds,
+    );
+  }
+}
+
+/// Runs one polar contract check and renames its failure.
+///
+/// The twin of [_guardConcentric], for the polar half. [PolarChartConfig] (for
+/// the config's own rules) and [PolarColumnComposition] (for the lowered
+/// series') are the authorities — the same validators `BravenChartPlus` runs
+/// before it lays a polar pane out, and the artifact hydrator runs on load — so
+/// the grammar delegates to them and translates the raw `ArgumentError` into a
+/// named diagnostic, rather than restating (and eventually contradicting) their
+/// rules.
+void _guardPolar(void Function() check) {
+  try {
+    check();
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidPolarComposition(_authorityDetail(error));
+  }
+}
+
+/// The DATA-INDEPENDENT half of the polar composition contract.
+///
+/// [PolarColumnComposition.validate] is the authority, but it needs the lowered
+/// series — which need rows. The facts below are decidable from the spec's
+/// SHAPE alone — the `.polarConfig(...)` object's own self-consistency, a mark's
+/// `unit`, how many polar marks the plot holds against the composition mode the
+/// config selects, whether a mark set exactly one interval bound, and a mark's
+/// `preset` — so they are checked here, ABOVE the emptyData guard, exactly like
+/// every other structural check. That is what stops an authoring mistake from
+/// hiding behind a momentarily-empty dataset and only surfacing — as a raw
+/// `ArgumentError` from the render pipeline — once real rows arrive.
+///
+/// Order within this function is deliberate and matches the order the checks
+/// occupied when they were spread across lowering: config, then unit, then
+/// composition mode, then intervals, then preset. Reshuffling would change which
+/// diagnostic a spec with several mistakes reports first.
+void _validatePolarMarkComposition<T>(
+  PlotSpec<T> spec,
+  List<int> radialIndices,
+  List<String> markIds,
+) {
+  // The config is the pane every mark is measured in, so its own contract is
+  // settled before the marks are compared against each other. Every rule
+  // `PolarChartConfig.validate()` enforces — pane geometry, radial-axis bounds,
+  // the grouped sub-band padding, per-threshold finiteness and dash-pair parity,
+  // and the stacked zero-baseline — reads the config and nothing else, so it
+  // belongs above the emptyData guard for the same reason the concentric
+  // config check does: `BravenChartPlus` runs this very validator at mount, and
+  // a chain must not lower clean over an empty dataset only to throw a raw
+  // ArgumentError there once the real rows arrive.
+  if (spec.polar case final config?) {
+    _guardPolar(config.validate);
+  }
+
+  final firstIndex = radialIndices.first;
+  final firstUnit = _normalizedPolarUnit(
+    (spec.marks[firstIndex] as PolarMark<T>).unit,
+  );
+  for (final index in radialIndices.skip(1)) {
+    final unit = _normalizedPolarUnit((spec.marks[index] as PolarMark<T>).unit);
+    if (unit != firstUnit) {
+      throw GrammarSpecException.invalidPolarComposition(
+        'The mark "${markIds[index]}" reads in ${_polarUnitLabel(unit)} while '
+        '"${markIds[firstIndex]}" reads in ${_polarUnitLabel(firstUnit)}; one '
+        'shared radial axis cannot measure both. Give every geomPolar the same '
+        'unit, or split them into separate charts.',
+      );
+    }
+  }
+
+  final mode = spec.polar?.composition.mode;
+  if ((mode == PolarColumnCompositionMode.grouped ||
+          mode == PolarColumnCompositionMode.stacked) &&
+      radialIndices.length < 2) {
+    throw GrammarSpecException.invalidPolarComposition(
+      '.polarConfig(...) selects ${mode!.name} composition, which divides every '
+      'category between at least two series, but this plot has '
+      '${radialIndices.length} geomPolar mark. Add another geomPolar, or drop '
+      'the composition mode to leave the columns layered.',
+    );
+  }
+
+  // An interval needs BOTH endpoints. Which of the two accessors is null is a
+  // property of the mark, not of any row, so the half-specified channel is
+  // refused here rather than during materialization — a bound alone cannot be
+  // drawn no matter what rows arrive. Checked over every polar mark in spec
+  // order, which is the order `_lowerPolar` would have reached them in.
+  for (final index in radialIndices) {
+    final mark = spec.marks[index] as PolarMark<T>;
+    if ((mark.intervalLow == null) != (mark.intervalHigh == null)) {
+      throw GrammarSpecException.incompletePolarInterval(markIds[index]);
+    }
+  }
+
+  // A rose series divides the circle into equal angles and encodes value as
+  // AREA; a standard series encodes it as radius. One pane cannot draw both.
+  // `PolarColumnComposition.validate` is the authority and still re-checks the
+  // lowered series below, but it needs rows to have series at all — so the
+  // rule is restated here, over the marks' own `preset` fields, in the
+  // authority's exact words. `test/unit/grammar/plot_lowering_radial_test.dart`
+  // pins this message to the one the authority renders, so the restatement
+  // cannot drift into a second sentence for the same mistake.
+  //
+  // Compared as "is it rose", not by raw enum identity, because that is the
+  // only distinction `_lowerPolar` makes when it picks a constructor: should
+  // the enum ever gain a third member that still lowers to `standard`, this
+  // check stays LAX (the authority below catches any real clash a moment
+  // later) instead of refusing a pair that would have lowered compatibly.
+  final firstIsRose = _isRosePolar<T>(spec.marks[firstIndex]);
+  for (final index in radialIndices.skip(1)) {
+    if (_isRosePolar<T>(spec.marks[index]) != firstIsRose) {
+      throw GrammarSpecException.invalidPolarComposition(
+        'Multiple Polar Column series must use the same preset '
+        '("${markIds[index]}").',
+      );
+    }
+  }
+}
+
+/// Whether [mark] lowers to the Rose constructor.
+///
+/// This is the ONLY distinction `_lowerPolar` draws from `PolarMark.preset`, so
+/// comparing marks through it — rather than by raw enum identity — is what keeps
+/// the shape check in step with what the marks actually lower to.
+bool _isRosePolar<T>(Mark<T> mark) =>
+    (mark as PolarMark<T>).preset == PolarColumnPreset.rose;
+
+/// Units compare the way [PolarColumnComposition] compares them: trimmed, with
+/// "no unit" and an all-whitespace unit treated as the same thing.
+String _normalizedPolarUnit(String? unit) => (unit ?? '').trim();
+
+String _polarUnitLabel(String normalized) =>
+    normalized.isEmpty ? 'no unit' : '"$normalized"';
 
 /// Builds an insertion-ordered category→value map, failing loud on a repeated
 /// category rather than collapsing it.
@@ -1055,25 +1370,40 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       id: id,
       name: mark.name,
       color: mark.color,
+      unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
+      sliceRadiusConfig: mark.sliceRadiusConfig,
+      sliceGroupingConfig: mark.sliceGroupingConfig,
       pieStyle: mark.style ?? const PieChartStyle(),
+      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 
-DonutChartSeries _lowerDonut<T>(DonutMark<T> mark, String id, List<T> data) =>
-    DonutChartSeries.fromMap(
+/// Builds the single (ring-less) donut. [center] is the center resolved by the
+/// caller's precedence rule (`concentric.centerContent` over `mark.center`),
+/// so this function never reads `mark.center` itself.
+DonutChartSeries _lowerDonut<T>(
+  DonutMark<T> mark,
+  String id,
+  List<T> data,
+  DonutCenterContent? center,
+) => DonutChartSeries.fromMap(
       id: id,
       name: mark.name,
       color: mark.color,
+      unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
+      sliceRadiusConfig: mark.sliceRadiusConfig,
+      sliceGroupingConfig: mark.sliceGroupingConfig,
       donutStyle: mark.style ?? const DonutChartStyle(),
-      centerContent: mark.center ?? DonutCenterContent.hidden,
+      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
+      centerContent: center ?? DonutCenterContent.hidden,
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
     );
 
@@ -1100,28 +1430,84 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
       DonutChartSeries.fromMap(
         id: '$markId-$key',
         name: key,
+        unit: mark.unit,
         values: _radialValues(buckets[key]!, mark.category, mark.value),
         radiusValues: mark.radius == null
             ? const <String, num>{}
             : _radiusValues(buckets[key]!, mark.category, mark.radius!),
+        sliceRadiusConfig: mark.sliceRadiusConfig,
+        sliceGroupingConfig: mark.sliceGroupingConfig,
         donutStyle: mark.style ?? const DonutChartStyle(),
+        selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
         centerContent: DonutCenterContent.hidden,
         dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
       ),
   ];
 }
 
+/// Materializes one polar mark.
+///
+/// Every DATA-INDEPENDENT check this needed — notably the half-specified
+/// interval, which is decidable from the accessors' nullity alone — lives in
+/// [_validatePolarMarkComposition], above the emptyData guard. So the
+/// `intervalHigh!` below is safe: a mark that reached here has both bounds or
+/// neither.
 PolarColumnChartSeries _lowerPolar<T>(
   PolarMark<T> mark,
   String id,
   List<T> data,
-) => PolarColumnChartSeries.fromMap(
-  id: id,
-  name: mark.name,
-  color: mark.color,
-  values: _radialValues(data, mark.category, mark.value),
-  polarStyle: mark.style ?? const PolarColumnStyle(),
-);
+) {
+  // `_radialValues` iterates `data` in order and rejects duplicate categories,
+  // so the per-category maps built below share its key order — which is what
+  // `PolarColumnChartSeries._fromMap` aligns `targetValues` and the interval
+  // bound lists to.
+  final values = _radialValues(data, mark.category, mark.value);
+  final columnColors = <String, Color>{};
+  final targets = <String, num?>{};
+  final intervals = <String, PolarColumnInterval>{};
+  for (final row in data) {
+    final category = mark.category(row).toString();
+    if (mark.columnColor != null) {
+      final color = mark.columnColor!(row);
+      // A null color leaves the category on the series color, exactly as an
+      // unset accessor does for every row.
+      if (color != null) columnColors[category] = color;
+    }
+    if (mark.target != null) {
+      // Null is meaningful: the category keeps its point but loses its marker.
+      targets[category] = mark.target!(row);
+    }
+    if (mark.intervalLow != null) {
+      final lower = mark.intervalLow!(row);
+      final upper = mark.intervalHigh!(row);
+      if (lower != null && upper != null) {
+        intervals[category] = PolarColumnInterval(
+          lower: lower.toDouble(),
+          upper: upper.toDouble(),
+        );
+      }
+    }
+  }
+
+  final build = _isRosePolar<T>(mark)
+      ? PolarColumnChartSeries.rose
+      : PolarColumnChartSeries.fromMap;
+  return build(
+    id: id,
+    name: mark.name,
+    color: mark.color,
+    unit: mark.unit,
+    values: values,
+    columnColors: columnColors,
+    polarStyle: mark.style ?? const PolarColumnStyle(),
+    selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
+    targets: targets,
+    targetMarkerStyle:
+        mark.targetMarkerStyle ?? const PolarColumnTargetMarkerStyle(),
+    intervals: intervals,
+    intervalStyle: mark.intervalStyle ?? const PolarColumnIntervalStyle(),
+  );
+}
 
 void _requireScale(
   String markId,

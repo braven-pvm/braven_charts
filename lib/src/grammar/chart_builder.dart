@@ -14,12 +14,22 @@ import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
 import '../models/chart_theme.dart' show ChartTheme;
+import '../models/concentric_donut_config.dart' show ConcentricDonutConfig;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
-import '../models/pie_chart_config.dart' show PieChartStyle, PieDataLabelConfig;
-import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/pie_chart_config.dart'
+    show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
+import '../models/polar_chart_config.dart' show PolarChartConfig;
+import '../models/polar_column_chart_series.dart'
+    show
+        PolarColumnIntervalStyle,
+        PolarColumnPreset,
+        PolarColumnStyle,
+        PolarColumnTargetMarkerStyle;
+import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
+import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -103,6 +113,7 @@ final class BravenChart<T> {
     String? subtitle,
     bool? showLegend,
     FacetSpec<T>? facet,
+    PolarChartConfig? polar,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -121,7 +132,8 @@ final class BravenChart<T> {
        _title = title,
        _subtitle = subtitle,
        _showLegend = showLegend,
-       _facet = facet;
+       _facet = facet,
+       _polar = polar;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -156,6 +168,7 @@ final class BravenChart<T> {
   final String? _subtitle;
   final bool? _showLegend;
   final FacetSpec<T>? _facet;
+  final PolarChartConfig? _polar;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -176,6 +189,7 @@ final class BravenChart<T> {
     String? subtitle,
     bool? showLegend,
     FacetSpec<T>? facet,
+    PolarChartConfig? polar,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -196,6 +210,7 @@ final class BravenChart<T> {
     subtitle: subtitle ?? _subtitle,
     showLegend: showLegend ?? _showLegend,
     facet: facet ?? _facet,
+    polar: polar ?? _polar,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -438,8 +453,12 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     PieChartStyle? style,
+    RadialSelectionStyle? selectionStyle,
     PieDataLabelConfig? dataLabels,
+    RadialSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
     PieMark<T>(
       id: _idFor(id),
@@ -448,8 +467,12 @@ final class BravenChart<T> {
       radius: radius,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
       dataLabels: dataLabels,
+      sliceRadiusConfig: sliceRadiusConfig,
+      sliceGroupingConfig: sliceGroupingConfig,
     ),
   );
 
@@ -457,6 +480,15 @@ final class BravenChart<T> {
   /// (one per distinct ring value, first-seen order); without it, a single
   /// donut. [value] is the angle-share; [radius] is an optional variable
   /// radius. Rich styling is deferred to [style]/[center]/[dataLabels].
+  ///
+  /// [concentric] configures the whole ring composition (ring gap, radial
+  /// order, ring weights, legend mode, pane radii) and owns the shared center
+  /// through its `centerContent`; [center] is the shorthand for that same slot
+  /// and may only be used when [concentric] is omitted. [concentric] requires
+  /// [ring] — a ring-less donut composes nothing for it to describe — and its
+  /// `ringWeights` is keyed by the lowered ring SERIES id `'<markId>-<ringKey>'`
+  /// (a mark ided `'seasons'` weights its `'Winter'` ring as
+  /// `{'seasons-Winter': 2}`), not by the bare ring value.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
@@ -465,9 +497,14 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     DonutChartStyle? style,
+    RadialSelectionStyle? selectionStyle,
     DonutCenterContent? center,
+    ConcentricDonutConfig? concentric,
     PieDataLabelConfig? dataLabels,
+    RadialSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
     DonutMark<T>(
       id: _idFor(id),
@@ -477,22 +514,43 @@ final class BravenChart<T> {
       ring: ring,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
       center: center,
+      concentric: concentric,
       dataLabels: dataLabels,
+      sliceRadiusConfig: sliceRadiusConfig,
+      sliceGroupingConfig: sliceGroupingConfig,
     ),
   );
 
   /// Appends a polar column: [category] is the angular position and [value] is
   /// the radius (magnitude) — values are NOT converted into pie shares. Rich
   /// styling (labels, gradients, shadows) is deferred to [style].
+  ///
+  /// [rose] switches the series to the equal-angle Rose/Nightingale
+  /// presentation. [columnColor] overrides the column color per row;
+  /// [target] adds an absolute benchmark marker per row (styled by
+  /// [targetMarkerStyle]); [intervalLow] and [intervalHigh] add an absolute
+  /// uncertainty interval per row (styled by [intervalStyle]) and must be
+  /// supplied together.
   BravenChart<T> geomPolar({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
     String? id,
     String? name,
     Color? color,
+    String? unit,
     PolarColumnStyle? style,
+    RadialSelectionStyle? selectionStyle,
+    bool rose = false,
+    FieldAccessor<T, Color?>? columnColor,
+    FieldAccessor<T, num?>? target,
+    PolarColumnTargetMarkerStyle? targetMarkerStyle,
+    FieldAccessor<T, num?>? intervalLow,
+    FieldAccessor<T, num?>? intervalHigh,
+    PolarColumnIntervalStyle? intervalStyle,
   }) => _append(
     PolarMark<T>(
       id: _idFor(id),
@@ -500,7 +558,16 @@ final class BravenChart<T> {
       value: value,
       name: name,
       color: color,
+      unit: unit,
       style: style,
+      selectionStyle: selectionStyle,
+      columnColor: columnColor,
+      target: target,
+      targetMarkerStyle: targetMarkerStyle,
+      intervalLow: intervalLow,
+      intervalHigh: intervalHigh,
+      intervalStyle: intervalStyle,
+      preset: rose ? PolarColumnPreset.rose : PolarColumnPreset.standard,
     ),
   );
 
@@ -671,6 +738,14 @@ final class BravenChart<T> {
   /// Sets the chart's grid configuration, forwarded to the chart unchanged.
   BravenChart<T> grid(GridConfig grid) => _copy(grid: grid);
 
+  /// Sets the plot-level polar configuration shared by every polar mark.
+  ///
+  /// This is where the pane geometry, angular/radial axes, multi-series
+  /// composition and pane-wide thresholds live — one config for the whole
+  /// plot, however many `geomPolar` marks the chain appends. Setting it on a
+  /// chain whose radial geometry is not polar is rejected at lowering.
+  BravenChart<T> polarConfig(PolarChartConfig config) => _copy(polar: config);
+
   /// Sets the chart [title], and optionally a [subtitle] beneath it.
   BravenChart<T> title(String title, {String? subtitle}) =>
       _copy(title: title, subtitle: subtitle);
@@ -716,6 +791,7 @@ final class BravenChart<T> {
       subtitle: _subtitle,
       showLegend: _showLegend,
       facet: _facet,
+      polar: _polar,
     );
   }
 

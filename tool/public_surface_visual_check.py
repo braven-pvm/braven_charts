@@ -2,9 +2,9 @@
 """Capture and validate Braven Charts' pre-release public surfaces.
 
 The input is the same release artifact deployed to GitHub Pages: the Flutter
-showcase at its root and generated dartdoc under ``api/``. The README preview
-is rendered from the checked-in README after ``tool/public_docs.dart --check``
-has verified all generated blocks.
+showcase at its root, generated guides under ``guides/``, and generated dartdoc
+under ``api/``. The README preview is rendered from the checked-in README after
+``tool/public_docs.dart --check`` has verified all generated blocks.
 
 Requirements:
     python -m pip install -r tool/requirements-public-surface-visual.txt
@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -34,6 +35,7 @@ from PIL import Image, ImageChops, ImageEnhance, ImageStat
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 
@@ -46,11 +48,17 @@ VIEWPORTS = {
     "tablet": (768, 1024),
     "desktop": (1440, 1000),
 }
+SHORT_DESKTOP_GUIDE_VIEWPORT = (1440, 800)
 SURFACES = {
     "readme": "/preview/readme.html",
+    "gallery": "/braven_charts/?page=gallery",
+    "chart-types": "/braven_charts/?page=chart-types",
     "documentation": "/braven_charts/?page=docs",
+    "guide-index": "/braven_charts/guides/",
+    "guide-detail": "/braven_charts/guides/chart-grammar/",
     "api": "/braven_charts/api/",
 }
+FLUTTER_SURFACES = {"gallery", "chart-types", "documentation"}
 DEFAULT_BASELINE_DIR = (
     REPOSITORY_ROOT / ".github" / "visual-baselines" / "public-surfaces"
 )
@@ -95,6 +103,18 @@ class PublicSurfaceHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return
+
+
+class PublicSurfaceServer(ThreadingHTTPServer):
+    """Ignore browser disconnects while still surfacing real server errors."""
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        if isinstance(
+            sys.exc_info()[1],
+            (ConnectionAbortedError, ConnectionResetError),
+        ):
+            return
+        super().handle_error(request, client_address)
 
 
 def _run_public_docs_check() -> None:
@@ -422,7 +442,7 @@ def _wait_for_surface(
                 "[...document.images].every((image) => image.complete)"
             )
         )
-    elif surface == "documentation":
+    elif surface in FLUTTER_SURFACES:
         wait.until(lambda current: current.title == "Braven Charts Showcase")
         wait.until(
             lambda current: current.execute_script(
@@ -430,6 +450,18 @@ def _wait_for_surface(
             )
         )
         time.sleep(4)
+    elif surface.startswith("guide-"):
+        wait.until(
+            lambda current: current.execute_script(
+                "return document.readyState === 'complete' && "
+                "Boolean(document.querySelector('#main-content'))"
+            )
+        )
+        wait.until(
+            lambda current: current.execute_script(
+                "return document.fonts ? document.fonts.status === 'loaded' : true"
+            )
+        )
     else:
         wait.until(
             lambda current: "Dart API docs" in current.title
@@ -608,11 +640,110 @@ if (sidebar && content && sidebar.right > content.left + 1) {
 return {docsNav, title, content, sidebar, issues};
 """
 
+GUIDE_GEOMETRY_SCRIPT = """
+function rect(selector) {
+  const node = document.querySelector(selector);
+  if (!node) return null;
+  const value = node.getBoundingClientRect();
+  if (value.width === 0 || value.height === 0) return null;
+  return {left: value.left, right: value.right, top: value.top, bottom: value.bottom};
+}
+const main = rect('#main-content');
+const header = rect('.site-header');
+const search = document.querySelector('#guide-search');
+const searchLabel = document.querySelector('label[for="guide-search"]');
+const liveRegion = document.querySelector('#search-status[aria-live="polite"]');
+const article = rect('.guide-content');
+const tocNode = document.querySelector('.table-of-contents');
+const toc = rect('.table-of-contents');
+const tocStyle = tocNode ? getComputedStyle(tocNode) : null;
+const tocScrollable = tocNode
+  ? tocNode.scrollHeight > tocNode.clientHeight + 1
+  : false;
+const sourceLink = document.querySelector('.source-link a[href]');
+const issues = [];
+if (!main) issues.push('missing guide main content');
+if (!header) issues.push('missing guide site header');
+if (header && main && window.scrollY < 2 && header.bottom > main.top + 1) {
+  issues.push('guide header overlaps main content');
+}
+if (document.body.classList.contains('guide-index')) {
+  if (!search) issues.push('missing labelled guide search input');
+  if (!searchLabel) issues.push('missing guide search label');
+  if (!liveRegion) issues.push('missing polite guide result status');
+  if (!document.querySelector('[data-guide-card]')) {
+    issues.push('missing guide index entries');
+  }
+  if (search) {
+    const originalScrollX = window.scrollX;
+    search.focus();
+    if (document.activeElement !== search) issues.push('guide search is not focusable');
+    window.scrollTo(originalScrollX, window.scrollY);
+  }
+}
+if (document.body.classList.contains('guide-detail')) {
+  if (!article) issues.push('missing guide article');
+  if (!toc) issues.push('missing guide table of contents');
+  if (!sourceLink) issues.push('missing guide source link');
+  if (toc && article && toc.left < article.right && toc.right > article.left &&
+      toc.top < article.bottom && toc.bottom > article.top &&
+      window.innerWidth >= 980) {
+    issues.push('guide table of contents overlaps article');
+  }
+  if (tocNode && window.innerWidth > 860) {
+    if (tocNode.tabIndex < 0) {
+      issues.push('desktop guide table of contents is not keyboard-focusable');
+    }
+    if (toc && toc.top <= 90 && toc.bottom > window.innerHeight - 16) {
+      issues.push('sticky guide table of contents extends below the viewport');
+    }
+    if (tocScrollable) {
+      if (!tocStyle || !['auto', 'scroll'].includes(tocStyle.overflowY)) {
+        issues.push('long desktop guide table of contents is not scrollable');
+      }
+      const originalScrollTop = tocNode.scrollTop;
+      tocNode.focus({preventScroll: true});
+      if (document.activeElement !== tocNode) {
+        issues.push('desktop guide table of contents cannot receive focus');
+      }
+      tocNode.scrollTop = tocNode.scrollHeight;
+      if (tocNode.scrollTop <= originalScrollTop) {
+        issues.push('desktop guide table of contents cannot be scrolled');
+      }
+      tocNode.scrollTop = originalScrollTop;
+      tocNode.blur();
+    }
+  }
+  if (tocNode && window.innerWidth <= 860) {
+    if (tocStyle && tocStyle.overflowY !== 'visible') {
+      issues.push('responsive guide table of contents creates a nested scroll');
+    }
+    if (tocNode.scrollHeight > tocNode.clientHeight + 1) {
+      issues.push('responsive guide table of contents clips its links');
+    }
+  }
+}
+return {
+  main,
+  header,
+  search: Boolean(search),
+  article,
+  toc,
+  tocClientHeight: tocNode ? tocNode.clientHeight : null,
+  tocScrollHeight: tocNode ? tocNode.scrollHeight : null,
+  tocOverflowY: tocStyle ? tocStyle.overflowY : null,
+  tocTabIndex: tocNode ? tocNode.tabIndex : null,
+  issues
+};
+"""
+
 
 def _geometry(driver: webdriver.Chrome, surface: str) -> dict[str, Any]:
     result = {"document": driver.execute_script(GENERIC_GEOMETRY_SCRIPT)}
     if surface == "readme":
         result["readme"] = driver.execute_script(README_GEOMETRY_SCRIPT)
+    elif surface.startswith("guide-"):
+        result["guide"] = driver.execute_script(GUIDE_GEOMETRY_SCRIPT)
     elif surface == "api":
         result["api"] = driver.execute_script(API_GEOMETRY_SCRIPT)
     return result
@@ -644,9 +775,74 @@ def _issues_for_geometry(surface: str, geometry: dict[str, Any]) -> list[str]:
         issues.append(f"{surface} has horizontally clipped content: {labels}")
     if surface == "readme":
         issues.extend(geometry["readme"]["issues"])
+    elif surface.startswith("guide-"):
+        issues.extend(geometry["guide"]["issues"])
     elif surface == "api":
         issues.extend(geometry["api"]["issues"])
     return issues
+
+
+def _validate_api_search(
+    driver: webdriver.Chrome,
+    base_url: str,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    expected_path = "braven_charts/GaugeChartSeries-class.html"
+    result: dict[str, Any] = {
+        "query": "GaugeChartSeries",
+        "expectedPath": expected_path,
+        "resolvedPath": None,
+        "indexLoaded": False,
+        "issues": [],
+    }
+    try:
+        search = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: next(
+                (
+                    element
+                    for element in current.find_elements(
+                        By.CSS_SELECTOR,
+                        "#search-box, #search-sidebar",
+                    )
+                    if element.is_displayed() and element.is_enabled()
+                ),
+                False,
+            )
+        )
+        search.clear()
+        search.send_keys(result["query"])
+        suggestion = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: next(
+                (
+                    element
+                    for element in current.find_elements(
+                        By.CSS_SELECTOR,
+                        f'.tt-suggestion[data-href="{expected_path}"]',
+                    )
+                    if element.is_displayed()
+                ),
+                False,
+            )
+        )
+        result["resolvedPath"] = suggestion.get_attribute("data-href")
+        suggestion.click()
+        WebDriverWait(driver, timeout_seconds).until(
+            lambda current: expected_path in current.current_url
+        )
+        driver.get(f"{base_url}/braven_charts/api/index.json")
+        body = WebDriverWait(driver, timeout_seconds).until(
+            lambda current: current.find_element(By.TAG_NAME, "body")
+        )
+        result["indexLoaded"] = "GaugeChartSeries" in body.text
+        if not result["indexLoaded"]:
+            result["issues"].append(
+                "dartdoc index.json does not contain GaugeChartSeries"
+            )
+    except TimeoutException:
+        result["issues"].append(
+            "dartdoc search did not resolve GaugeChartSeries to its class page"
+        )
+    return result
 
 
 def _capture(
@@ -667,6 +863,14 @@ def _capture(
                     issues = _issues_for_geometry(surface, geometry)
                     screenshot = output_dir / f"{surface}-{viewport_name}.png"
                     screenshot.write_bytes(driver.get_screenshot_as_png())
+                    if surface == "api" and viewport_name == "desktop":
+                        api_search = _validate_api_search(
+                            driver,
+                            base_url,
+                            timeout_seconds,
+                        )
+                        geometry["apiSearch"] = api_search
+                        issues.extend(api_search["issues"])
                     captures.append(
                         {
                             "surface": surface,
@@ -713,6 +917,52 @@ def _capture(
                 failures.append(
                     f"readme-dark/{viewport_name}: timed out loading {dark_url}"
                 )
+
+        width, height = SHORT_DESKTOP_GUIDE_VIEWPORT
+        surface = "guide-detail"
+        viewport_name = "desktop-short"
+        _set_viewport(driver, width, height)
+        url = f"{base_url}{SURFACES[surface]}"
+        try:
+            driver.get(url)
+            _wait_for_surface(driver, surface, timeout_seconds)
+            geometry = _geometry(driver, surface)
+            driver.execute_script(
+                """
+                document.documentElement.style.scrollBehavior = 'auto';
+                const layout = document.querySelector('.guide-layout');
+                if (layout) window.scrollTo(0, layout.offsetTop);
+                """
+            )
+            geometry["guide"] = driver.execute_script(GUIDE_GEOMETRY_SCRIPT)
+            issues = _issues_for_geometry(surface, geometry)
+            driver.execute_script(
+                """
+                const toc = document.querySelector('.table-of-contents');
+                if (toc) toc.scrollTop = toc.scrollHeight;
+                """
+            )
+            screenshot = output_dir / f"{surface}-{viewport_name}.png"
+            screenshot.write_bytes(driver.get_screenshot_as_png())
+            captures.append(
+                {
+                    "surface": surface,
+                    "viewport": viewport_name,
+                    "width": width,
+                    "height": height,
+                    "url": url,
+                    "screenshot": screenshot.name,
+                    "geometry": geometry,
+                    "issues": issues,
+                }
+            )
+            failures.extend(
+                f"{surface}/{viewport_name}: {issue}" for issue in issues
+            )
+        except TimeoutException:
+            failures.append(
+                f"{surface}/{viewport_name}: timed out loading {url}"
+            )
     finally:
         driver.quit()
     return captures, failures
@@ -885,9 +1135,15 @@ def main() -> int:
     args = _parse_args()
     site_dir = args.site_dir.resolve()
     api_index = site_dir / "api" / "index.html"
-    if not (site_dir / "index.html").is_file() or not api_index.is_file():
+    guides_index = site_dir / "guides" / "index.html"
+    if (
+        not (site_dir / "index.html").is_file()
+        or not api_index.is_file()
+        or not guides_index.is_file()
+    ):
         raise SystemExit(
-            f"{site_dir} must contain the built showcase and api/index.html"
+            f"{site_dir} must contain the built showcase, guides/index.html, "
+            "and api/index.html"
         )
     if not args.skip_public_docs_check:
         _run_public_docs_check()
@@ -904,7 +1160,7 @@ def main() -> int:
         site=site_dir,
     )
     handler = partial(PublicSurfaceHandler, roots=roots)
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server = PublicSurfaceServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base_url = f"http://127.0.0.1:{server.server_port}"

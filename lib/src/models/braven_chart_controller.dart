@@ -51,8 +51,15 @@ typedef ChartSelectionZoomCommandHandler =
 /// Internal chart-state bridge for viewport scaling.
 typedef ChartViewportZoomCommandHandler = bool Function(double factor);
 
+/// Internal chart-state bridge for viewport translation in logical pixels.
+typedef ChartViewportPanCommandHandler =
+    bool Function(double horizontalPixels, double verticalPixels);
+
 /// Internal chart-state bridge for restoring the complete data viewport.
 typedef ChartViewportFitCommandHandler = bool Function();
+
+/// Internal chart-state bridge for renderer-aware boolean commands.
+typedef ChartBooleanCommandHandler = bool Function();
 
 /// Internal chart-state bridge for setting a persistent selection brush.
 typedef ChartSelectionBrushSetCommandHandler =
@@ -178,7 +185,11 @@ class BravenChartController extends ChangeNotifier {
   ChartSelectionCommandHandler? _invertSelectionHandler;
   ChartSelectionZoomCommandHandler? _zoomToSelectionHandler;
   ChartViewportZoomCommandHandler? _zoomViewportHandler;
+  ChartViewportPanCommandHandler? _panViewportHandler;
   ChartViewportFitCommandHandler? _fitDataHandler;
+  ChartBooleanCommandHandler? _selectAllDataHandler;
+  ChartBooleanCommandHandler? _clearAllSelectionHandler;
+  ChartBooleanCommandHandler? _returnToLiveHandler;
   ChartSelectionBrushSetCommandHandler? _setSelectionBrushHandler;
   ChartSelectionBrushBoxSetCommandHandler? _setSelectionBrushBoxHandler;
   ChartSelectionBrushVisibilityCommandHandler?
@@ -427,10 +438,44 @@ class BravenChartController extends ChangeNotifier {
     return _zoomViewportHandler?.call(factor) ?? false;
   }
 
+  /// Translates the mounted Cartesian viewport in logical pixels.
+  ///
+  /// Positive horizontal values pan right and positive vertical values pan
+  /// down. Returns false when detached or attached to a non-Cartesian chart.
+  bool panViewport({
+    required double horizontalPixels,
+    required double verticalPixels,
+  }) {
+    if (!horizontalPixels.isFinite || !verticalPixels.isFinite) {
+      throw ArgumentError(
+        'Viewport pan distances must be finite logical-pixel values.',
+      );
+    }
+    return _panViewportHandler?.call(horizontalPixels, verticalPixels) ?? false;
+  }
+
   /// Restores the mounted Cartesian chart's complete data viewport.
   ///
   /// Returns false when detached or attached to a non-Cartesian chart.
   bool fitData() => _fitDataHandler?.call() ?? false;
+
+  /// Selects all chart data when the mounted renderer can do so safely.
+  ///
+  /// Point selection is bounded by the package's accessibility and keyboard
+  /// limits. Whole-series selection remains compact. Returns false when the
+  /// command is unsupported or would require an unbounded point allocation.
+  bool selectAllData() => _selectAllDataHandler?.call() ?? false;
+
+  /// Clears durable point, series, expression, and brush selection together.
+  ///
+  /// Returns false when detached or when the chart has no durable selection.
+  bool clearAllSelection() => _clearAllSelectionHandler?.call() ?? false;
+
+  /// Returns a managed streaming viewport to follow-latest mode.
+  ///
+  /// Returns false when detached, when the chart does not manage a live
+  /// viewport, or when it is already following current data.
+  bool returnToLive() => _returnToLiveHandler?.call() ?? false;
 
   /// Sets the persistent interval brush to [minimum] and [maximum].
   ///
@@ -649,7 +694,11 @@ class BravenChartController extends ChangeNotifier {
     ChartSelectionCommandHandler? onInvertSelection,
     ChartSelectionZoomCommandHandler? onZoomToSelection,
     ChartViewportZoomCommandHandler? onZoomViewport,
+    ChartViewportPanCommandHandler? onPanViewport,
     ChartViewportFitCommandHandler? onFitData,
+    ChartBooleanCommandHandler? onSelectAllData,
+    ChartBooleanCommandHandler? onClearAllSelection,
+    ChartBooleanCommandHandler? onReturnToLive,
     ChartSelectionBrushSetCommandHandler? onSetSelectionBrush,
     ChartSelectionBrushBoxSetCommandHandler? onSetSelectionBrushBox,
     ChartSelectionBrushVisibilityCommandHandler? onSetSelectionBrushVisibility,
@@ -676,7 +725,11 @@ class BravenChartController extends ChangeNotifier {
     _invertSelectionHandler = onInvertSelection;
     _zoomToSelectionHandler = onZoomToSelection;
     _zoomViewportHandler = onZoomViewport;
+    _panViewportHandler = onPanViewport;
     _fitDataHandler = onFitData;
+    _selectAllDataHandler = onSelectAllData;
+    _clearAllSelectionHandler = onClearAllSelection;
+    _returnToLiveHandler = onReturnToLive;
     _setSelectionBrushHandler = onSetSelectionBrush;
     _setSelectionBrushBoxHandler = onSetSelectionBrushBox;
     _setSelectionBrushVisibilityHandler = onSetSelectionBrushVisibility;
@@ -712,7 +765,11 @@ class BravenChartController extends ChangeNotifier {
     _invertSelectionHandler = null;
     _zoomToSelectionHandler = null;
     _zoomViewportHandler = null;
+    _panViewportHandler = null;
     _fitDataHandler = null;
+    _selectAllDataHandler = null;
+    _clearAllSelectionHandler = null;
+    _returnToLiveHandler = null;
     _setSelectionBrushHandler = null;
     _setSelectionBrushBoxHandler = null;
     _setSelectionBrushVisibilityHandler = null;

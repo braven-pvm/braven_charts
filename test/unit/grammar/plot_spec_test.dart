@@ -75,6 +75,7 @@ const _trend = TrendMark<Sample>(sourceMarkId: 'mark-0');
 const _threshold = ThresholdMark<Sample>(value: 250);
 const _band = BandMark<Sample>(start: 200, end: 260);
 const _point = PointMark<Sample>(seriesId: 'mark-0', dataPointIndex: 0);
+const _polar = PolarMark<Sample>(category: sampleZone, value: samplePower);
 
 void main() {
   group('const-ness', () {
@@ -449,6 +450,45 @@ void main() {
         marks: <Mark<Sample>>[_line],
         xAxis: XAxisConfig(label: 'Time'),
       ));
+    });
+  });
+
+  group('polar field', () {
+    test('polar defaults to null on a spec that never sets it', () {
+      const spec = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_polar],
+      );
+      expect(spec.polar, isNull);
+    });
+
+    test('polar config participates in equality and survives facetCleared', () {
+      const polar = PolarChartConfig(
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.grouped,
+        ),
+      );
+      const a = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_polar],
+        polar: polar,
+      );
+      const b = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_polar],
+      );
+      // Identical marks and data: only `polar` differs, so inequality here can
+      // only come from the new field participating in `==`.
+      expect(a == b, isFalse);
+      expect(a.hashCode == b.hashCode, isFalse);
+      const twin = PlotSpec<Sample>(
+        data: <Sample>[],
+        marks: <Mark<Sample>>[_polar],
+        polar: polar,
+      );
+      expect(a, twin);
+      expect(a.hashCode, twin.hashCode);
+      expect(a.facetCleared().polar, same(polar));
     });
   });
 }

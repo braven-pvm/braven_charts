@@ -25,7 +25,9 @@ jobs:
         run: flutter pub get
 
       - name: Verify public documentation catalog
-        run: dart run tool/public_docs.dart --check
+        run: |
+          dart run tool/public_docs.dart --check
+          dart run tool/public_guides.dart --output=build/public-guides-check
 
       # The generator enforces the whole config surface, so it is verified
       # before it is trusted to regenerate anything.

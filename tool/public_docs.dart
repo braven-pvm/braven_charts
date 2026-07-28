@@ -9,9 +9,12 @@ const _generatedCatalogPath =
     'example/lib/showcase/generated/public_docs_catalog.g.dart';
 const _runtimeCatalogPath =
     'example/lib/showcase/widgets/chart_type_catalog.dart';
+const _galleryPagePath = 'example/lib/showcase/pages/gallery_page.dart';
+const _mediaCapturePath = 'tool/capture_pubdev_static_media_test.dart';
 const _showcaseAppPath = 'example/lib/showcase/showcase_app.dart';
 const _pubspecPath = 'pubspec.yaml';
 const _heroMediaPath = 'doc/screenshots/chart_type_strip.png';
+const _chartFamilyTopicPath = 'doc/topics/chart_families.md';
 
 const _generatedSections = <String>[
   'FEATURES',
@@ -176,6 +179,7 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     'showcaseBaseUrl',
     'repositoryBaseUrl',
     'apiBaseUrl',
+    'guidesBaseUrl',
   ]) {
     final value = catalog[key];
     if (value is! String || Uri.tryParse(value)?.hasScheme != true) {
@@ -185,6 +189,7 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
 
   final features = _objects(catalog, 'features', errors);
   final families = _objects(catalog, 'chartFamilies', errors);
+  final hostedGuides = _objects(catalog, 'hostedGuides', errors);
   final guides = _objects(catalog, 'guides', errors);
   final snippets = _objects(catalog, 'snippets', errors);
   final gallery = _objects(catalog, 'gallery', errors);
@@ -195,6 +200,7 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   if (families.length != 12) {
     errors.add('chartFamilies must contain exactly 12 built-in families.');
   }
+  _validateFamilyCountCopy(root, families, errors);
   if (gallery.length < 12 || gallery.length > 18) {
     errors.add('gallery must contain between 12 and 18 curated entries.');
   }
@@ -221,9 +227,11 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     height: 280,
     errors: errors,
   );
+  _validateHeroCaptureFamilies(root, families, errors);
 
   _validateUniqueIds('features', features, errors);
   _validateUniqueIds('chartFamilies', families, errors);
+  _validateUniqueIds('hostedGuides', hostedGuides, errors);
   _validateUniqueIds('guides', guides, errors);
   _validateUniqueIds('snippets', snippets, errors);
   _validateUniqueIds('gallery', gallery, errors);
@@ -249,6 +257,62 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     }
   }
   final showcaseRoutes = _showcaseRouteSlugs(root, runtimeSlugs, errors);
+  final hostedGuideIds = <String>{};
+  final hostedGuidePaths = <String>{};
+  final hostedGuideSources = <String>{};
+  const hostedGuideGroups = {
+    'Get started',
+    'Chart families',
+    'Interaction and display',
+    'Data, authoring, and live updates',
+    'Workbench, artifacts, and export',
+    'API reference',
+  };
+  for (final guide in hostedGuides) {
+    final id = guide['id'];
+    for (final field in const [
+      'id',
+      'title',
+      'group',
+      'summary',
+      'sourcePath',
+      'path',
+    ]) {
+      _requireText('hostedGuides.$id.$field', guide[field], errors);
+    }
+    if (id is String) hostedGuideIds.add(id);
+    final group = guide['group'];
+    if (group is String && !hostedGuideGroups.contains(group)) {
+      errors.add('hostedGuides.$id.group is not a public guide group.');
+    }
+    final sourcePath = guide['sourcePath'];
+    if (sourcePath is String) {
+      if (!(sourcePath.startsWith('doc/') ||
+          sourcePath.startsWith('docs/guides/'))) {
+        errors.add(
+          'hostedGuides.$id.sourcePath must stay under doc/ or docs/guides/.',
+        );
+      }
+      if (!hostedGuideSources.add(sourcePath)) {
+        errors.add('Hosted guide source $sourcePath is registered twice.');
+      }
+      _requireFile(root, sourcePath, 'hostedGuides.$id.sourcePath', errors);
+    }
+    final path = guide['path'];
+    if (path is String) {
+      final validPath = RegExp(
+        r'^[a-z0-9]+(?:[a-z0-9/-]*[a-z0-9])?/$',
+      ).hasMatch(path);
+      if (!validPath || path.contains('..') || path.startsWith('/')) {
+        errors.add(
+          'hostedGuides.$id.path must be a stable relative directory path.',
+        );
+      }
+      if (!hostedGuidePaths.add(path)) {
+        errors.add('Hosted guide path $path is registered twice.');
+      }
+    }
+  }
 
   final primaryAssets = <String>{};
   for (final family in families) {
@@ -260,12 +324,15 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
       'summary',
       'bestFor',
       'page',
-      'guide',
+      'guideId',
       'pairAsset',
     ]) {
       _requireText('chartFamilies.$id.$field', family[field], errors);
     }
-    _requireFile(root, family['guide'], 'chartFamilies.$id.guide', errors);
+    final guideId = family['guideId'];
+    if (guideId is String && !hostedGuideIds.contains(guideId)) {
+      errors.add('chartFamilies.$id.guideId references unknown $guideId.');
+    }
     _requireFile(
       root,
       family['pairAsset'],
@@ -385,14 +452,15 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     }
     final hasTarget =
         guide['page'] is String ||
-        guide['path'] is String ||
+        guide['guideId'] is String ||
         guide.containsKey('apiPath') ||
         guide['snippet'] is String;
     if (!hasTarget) {
       errors.add('guides.$id must define a public destination.');
     }
-    if (guide['path'] != null) {
-      _requireFile(root, guide['path'], 'guides.$id.path', errors);
+    final guideId = guide['guideId'];
+    if (guideId is String && !hostedGuideIds.contains(guideId)) {
+      errors.add('guides.$id.guideId references unknown $guideId.');
     }
     if (guide['page'] != null) {
       _requireShowcaseRoute(
@@ -494,6 +562,90 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   return errors;
 }
 
+void _validateFamilyCountCopy(
+  Directory root,
+  List<Map<String, dynamic>> families,
+  List<String> errors,
+) {
+  final count = families.length;
+  final countWord = switch (count) {
+    10 => 'ten',
+    11 => 'eleven',
+    12 => 'twelve',
+    _ => '$count',
+  };
+  final countTitle = '${countWord[0].toUpperCase()}${countWord.substring(1)}';
+  final checks = <String, List<String>>{
+    _readmePath: [
+      'Render $countWord chart families',
+      '[![$countTitle chart families rendered by Braven Charts]',
+    ],
+    _chartFamilyTopicPath: [
+      'Braven Charts ships $countWord native Flutter chart families',
+    ],
+    _galleryPagePath: [
+      "title: '$countTitle chart guides, grouped by visual grammar'",
+      'count: $count,',
+    ],
+  };
+
+  for (final entry in checks.entries) {
+    final file = root.file(entry.key);
+    if (!file.existsSync()) {
+      errors.add('Missing ${entry.key}.');
+      continue;
+    }
+    final source = file.readAsStringSync();
+    for (final expected in entry.value) {
+      if (!source.contains(expected)) {
+        errors.add(
+          '${entry.key} must describe all $count chart families using '
+          '"$expected".',
+        );
+      }
+    }
+  }
+}
+
+void _validateHeroCaptureFamilies(
+  Directory root,
+  List<Map<String, dynamic>> families,
+  List<String> errors,
+) {
+  final captureFile = root.file(_mediaCapturePath);
+  if (!captureFile.existsSync()) {
+    errors.add('Missing $_mediaCapturePath.');
+    return;
+  }
+  final source = captureFile.readAsStringSync();
+  final start = source.indexOf('List<_ChartTypeAsset> _chartTypeAssets()');
+  final end = source.indexOf(
+    '_ChartTypeAsset _radialBarSignedAsset()',
+    start < 0 ? 0 : start,
+  );
+  if (start < 0 || end < 0) {
+    errors.add(
+      'Unable to inspect chart-type hero captures in $_mediaCapturePath.',
+    );
+    return;
+  }
+  final captureSource = source.substring(start, end);
+  final captured = RegExp(
+    r"fileName:\s*'(chart_type_[^']+\.png)'",
+  ).allMatches(captureSource).map((match) => match.group(1)!).toSet();
+  final expected = <String>{
+    for (final family in families)
+      if (family['primaryExample'] case final Map<String, dynamic> primary)
+        if (primary['asset'] case final String asset) asset.split('/').last,
+  };
+  if (!const SetEquality<String>().equals(captured, expected)) {
+    errors.add(
+      'Chart-type hero capture assets must match the public family catalog. '
+      'catalog=${_sorted(expected)} capture=${_sorted(captured)}',
+    );
+  }
+}
+
 Set<String> _showcaseRouteSlugs(
   Directory root,
   Set<String> runtimeSlugs,
@@ -589,6 +741,12 @@ List<String> _validateApiDocumentation(
     }
     if (!head.contains("document.createElement('nav')")) {
       errors.add('index.html is missing the Braven documentation navigation.');
+    }
+    final guidesBaseUrl = catalog['guidesBaseUrl'];
+    if (guidesBaseUrl is String && !head.contains(guidesBaseUrl)) {
+      errors.add(
+        'index.html documentation navigation is missing the hosted Guides link.',
+      );
     }
   }
 
@@ -724,8 +882,10 @@ void _requireMediaDimensions(
 String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
   final features = _list(catalog, 'features');
   final families = _list(catalog, 'chartFamilies');
+  final hostedGuides = _list(catalog, 'hostedGuides');
   final guides = _list(catalog, 'guides');
   final snippets = _list(catalog, 'snippets');
+  final package = readPublicDocsPackageMetadata(root.file(_pubspecPath));
   final buffer = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND.')
     ..writeln('// Generated by: dart run tool/public_docs.dart --write')
@@ -741,13 +901,17 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
     ..writeln(
       'typedef PublicDocsChartFamilyEntry = ({String id, String label, '
       'String group, String summary, String bestFor, String page, '
-      'String guide, String pairAsset, List<String> apiSymbols, '
+      'String guideId, String pairAsset, List<String> apiSymbols, '
       'PublicDocsExampleEntry primaryExample, '
       'PublicDocsExampleEntry? secondaryExample});',
     )
     ..writeln(
+      'typedef PublicDocsHostedGuideEntry = ({String id, String title, '
+      'String group, String summary, String sourcePath, String path});',
+    )
+    ..writeln(
       'typedef PublicDocsGuideEntry = ({String id, String title, String group, '
-      'String summary, String? page, String? path, String? apiPath, '
+      'String summary, String? page, String? guideId, String? apiPath, '
       'String? snippet});',
     )
     ..writeln(
@@ -763,6 +927,17 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
       '${_dart(catalog['repositoryBaseUrl'])};',
     )
     ..writeln('const publicDocsApiBaseUrl = ${_dart(catalog['apiBaseUrl'])};')
+    ..writeln(
+      'const publicDocsGuidesBaseUrl = ${_dart(catalog['guidesBaseUrl'])};',
+    )
+    ..writeln('const publicDocsPackageVersion = ${_dart(package.version)};')
+    ..writeln(
+      'const publicDocsDartConstraint = ${_dart(package.dartConstraint)};',
+    )
+    ..writeln(
+      'const publicDocsFlutterConstraint = '
+      '${_dart(package.flutterConstraint)};',
+    )
     ..writeln()
     ..writeln('const publicDocsFeatures = <PublicDocsFeatureEntry>[');
   for (final feature in features) {
@@ -787,7 +962,7 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
       ..writeln('    summary: ${_dart(family['summary'])},')
       ..writeln('    bestFor: ${_dart(family['bestFor'])},')
       ..writeln('    page: ${_dart(family['page'])},')
-      ..writeln('    guide: ${_dart(family['guide'])},')
+      ..writeln('    guideId: ${_dart(family['guideId'])},')
       ..writeln('    pairAsset: ${_dart(family['pairAsset'])},')
       ..writeln(
         '    apiSymbols: ${_dartStringList(family['apiSymbols'] as List)},',
@@ -804,6 +979,21 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
   buffer
     ..writeln('];')
     ..writeln()
+    ..writeln('const publicDocsHostedGuides = <PublicDocsHostedGuideEntry>[');
+  for (final guide in hostedGuides) {
+    buffer
+      ..writeln('  (')
+      ..writeln('    id: ${_dart(guide['id'])},')
+      ..writeln('    title: ${_dart(guide['title'])},')
+      ..writeln('    group: ${_dart(guide['group'])},')
+      ..writeln('    summary: ${_dart(guide['summary'])},')
+      ..writeln('    sourcePath: ${_dart(guide['sourcePath'])},')
+      ..writeln('    path: ${_dart(guide['path'])},')
+      ..writeln('  ),');
+  }
+  buffer
+    ..writeln('];')
+    ..writeln()
     ..writeln('const publicDocsGuides = <PublicDocsGuideEntry>[');
   for (final guide in guides) {
     buffer
@@ -813,7 +1003,7 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
       ..writeln('    group: ${_dart(guide['group'])},')
       ..writeln('    summary: ${_dart(guide['summary'])},')
       ..writeln('    page: ${_dartNullable(guide['page'])},')
-      ..writeln('    path: ${_dartNullable(guide['path'])},')
+      ..writeln('    guideId: ${_dartNullable(guide['guideId'])},')
       ..writeln(
         '    apiPath: '
         '${guide.containsKey('apiPath') ? _dart(guide['apiPath']) : 'null'},',
@@ -863,8 +1053,12 @@ String _generateFeatures(Map<String, dynamic> catalog) {
 
 String _generateFamilies(Map<String, dynamic> catalog) {
   final base = catalog['showcaseBaseUrl'] as String;
-  final repository = catalog['repositoryBaseUrl'] as String;
+  final guidesBase = catalog['guidesBaseUrl'] as String;
   final families = _list(catalog, 'chartFamilies');
+  final hostedGuides = {
+    for (final guide in _list(catalog, 'hostedGuides'))
+      guide['id'] as String: guide,
+  };
   final buffer = StringBuffer();
 
   for (var index = 0; index < families.length; index += 2) {
@@ -883,7 +1077,8 @@ String _generateFamilies(Map<String, dynamic> catalog) {
       ..writeln(
         '| ${pair.map((family) {
           final pageUrl = _showcaseUrl(base, page: family['page'] as String);
-          final guideUrl = '$repository${family['guide']}';
+          final guide = hostedGuides[family['guideId']]!;
+          final guideUrl = '$guidesBase${guide['path']}';
           final primary = family['primaryExample'] as Map<String, dynamic>;
           final primaryUrl = _showcaseUrl(base, page: primary['page'] as String, preset: primary['preset'] as String?, view: primary['view'] as String?);
           final secondary = family['secondaryExample'] as Map<String, dynamic>?;
@@ -902,31 +1097,16 @@ String _generateFamilies(Map<String, dynamic> catalog) {
 }
 
 String _generateInstall(Directory root) {
-  final pubspec = root.file(_pubspecPath).readAsStringSync();
-  final version = RegExp(
-    r'^version:\s*(\S+)\s*$',
-    multiLine: true,
-  ).firstMatch(pubspec)?.group(1);
-  final dart = RegExp(
-    r'^\s+sdk:\s*"([^"]+)"\s*$',
-    multiLine: true,
-  ).firstMatch(pubspec)?.group(1);
-  final flutter = RegExp(
-    r'^\s+flutter:\s*"([^"]+)"\s*$',
-    multiLine: true,
-  ).firstMatch(pubspec)?.group(1);
-  if (version == null || dart == null || flutter == null) {
-    _fail('Could not read version and SDK constraints from $_pubspecPath.');
-  }
+  final package = readPublicDocsPackageMetadata(root.file(_pubspecPath));
   return '''
 ```yaml
 dependencies:
-  braven_charts: ^$version
+  braven_charts: ^${package.version}
 ```
 
 Then run `flutter pub get`.
 
-Compatibility: Dart `$dart` and Flutter `$flutter`.''';
+Compatibility: Dart `${package.dartConstraint}` and Flutter `${package.flutterConstraint}`.''';
 }
 
 String _generateSnippets(Directory root, Map<String, dynamic> catalog) {
@@ -993,17 +1173,21 @@ String _generateGallery(Map<String, dynamic> catalog) {
 }
 
 String _guideUrl(Map<String, dynamic> catalog, Map<String, dynamic> guide) {
+  if (guide['guideId'] is String) {
+    final hostedGuide = _list(
+      catalog,
+      'hostedGuides',
+    ).firstWhere((candidate) => candidate['id'] == guide['guideId']);
+    return '${catalog['guidesBaseUrl']}${hostedGuide['path']}';
+  }
+  if (guide.containsKey('apiPath')) {
+    return '${catalog['apiBaseUrl']}${guide['apiPath']}';
+  }
   if (guide['page'] is String) {
     return _showcaseUrl(
       catalog['showcaseBaseUrl'] as String,
       page: guide['page'] as String,
     );
-  }
-  if (guide.containsKey('apiPath')) {
-    return '${catalog['apiBaseUrl']}${guide['apiPath']}';
-  }
-  if (guide['path'] is String) {
-    return '${catalog['repositoryBaseUrl']}${guide['path']}';
   }
   return '#quick-start';
 }

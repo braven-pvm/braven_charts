@@ -14,9 +14,12 @@ enum ChartSourceForm {
 
   /// The `BravenChart.of(rows)…` grammar chain, over a synthesised row type.
   ///
-  /// Not every chart has one — the chain is Cartesian-only in V1 and refuses
-  /// anything it cannot reproduce exactly — so this form may render a named
-  /// diagnostic instead of code.
+  /// Not every chart has one — the chain covers the Cartesian families plus the
+  /// common radial ones (pie, donut, concentric-donut, polar-column, including
+  /// multi-series polar compositions and customised `PolarChartConfig` /
+  /// `ConcentricDonutConfig`) and refuses anything it cannot reproduce exactly
+  /// (radial-bar, gauge, …) — so this form may render a named diagnostic
+  /// instead of code.
   grammar,
 }
 

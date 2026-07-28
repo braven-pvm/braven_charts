@@ -29,6 +29,14 @@ class DocumentationPage extends StatefulWidget {
 
 class _DocumentationPageState extends State<DocumentationPage> {
   final _quickStartKey = GlobalKey();
+  final _guideSearchController = TextEditingController();
+  var _guideQuery = '';
+
+  @override
+  void dispose() {
+    _guideSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +50,7 @@ class _DocumentationPageState extends State<DocumentationPage> {
           SliverToBoxAdapter(
             child: _DocumentationIntroduction(
               onBuildFirstChart: _showQuickStart,
-              onChooseChart: () => widget.onOpenPage('chart-types'),
+              onBrowseGuides: () => openPublicUrl(publicDocsGuidesBaseUrl),
               onBrowseApi: () => openPublicUrl(publicDocsApiBaseUrl),
             ),
           ),
@@ -56,6 +64,15 @@ class _DocumentationPageState extends State<DocumentationPage> {
             ),
           ),
           _FeatureGrid(onOpenPage: widget.onOpenPage),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          SliverToBoxAdapter(
+            child: _GuideSearch(
+              controller: _guideSearchController,
+              resultCount: _matchingGuides.length,
+              onChanged: (value) => setState(() => _guideQuery = value),
+              onClear: _clearGuideSearch,
+            ),
+          ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
           SliverToBoxAdapter(
             child: KeyedSubtree(
@@ -89,24 +106,55 @@ class _DocumentationPageState extends State<DocumentationPage> {
   }
 
   List<Widget> _guideSlivers() {
+    final guides = _matchingGuides;
+    if (guides.isEmpty) {
+      return [
+        SliverToBoxAdapter(child: _GuideEmptyState(onClear: _clearGuideSearch)),
+        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+      ];
+    }
     return [
       for (final group in _guideGroupOrder) ...[
-        SliverToBoxAdapter(
-          child: _SectionHeading(
-            eyebrow: 'DOCUMENTATION',
-            title: group,
-            subtitle: _guideGroupSubtitle(group),
+        if (guides.any((guide) => guide.group == group)) ...[
+          SliverToBoxAdapter(
+            child: _SectionHeading(
+              eyebrow: 'DOCUMENTATION',
+              title: group,
+              subtitle: _guideGroupSubtitle(group),
+            ),
           ),
-        ),
-        _GuideGrid(
-          guides: publicDocsGuides
-              .where((guide) => guide.group == group)
-              .toList(growable: false),
-          onOpen: _openGuide,
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          _GuideGrid(
+            guides: guides
+                .where((guide) => guide.group == group)
+                .toList(growable: false),
+            onOpenGuide: _openGuide,
+            onOpenExample: _openRunnableGuide,
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
       ],
     ];
+  }
+
+  List<PublicDocsGuideEntry> get _matchingGuides {
+    final query = _guideQuery.trim().toLowerCase();
+    if (query.isEmpty) return publicDocsGuides;
+    return publicDocsGuides
+        .where((guide) {
+          final hosted = _hostedGuideFor(guide.guideId);
+          return <String>[
+            guide.title,
+            guide.group,
+            guide.summary,
+            if (hosted != null) ...[hosted.title, hosted.group, hosted.summary],
+          ].join(' ').toLowerCase().contains(query);
+        })
+        .toList(growable: false);
+  }
+
+  void _clearGuideSearch() {
+    _guideSearchController.clear();
+    setState(() => _guideQuery = '');
   }
 
   void _showQuickStart() {
@@ -121,31 +169,40 @@ class _DocumentationPageState extends State<DocumentationPage> {
   }
 
   void _openGuide(PublicDocsGuideEntry guide) {
-    if (guide.page != null) {
-      widget.onOpenPage(guide.page!);
+    final hosted = _hostedGuideFor(guide.guideId);
+    if (hosted != null) {
+      openPublicUrl('$publicDocsGuidesBaseUrl${hosted.path}');
       return;
     }
     if (guide.apiPath != null) {
       openPublicUrl('$publicDocsApiBaseUrl${guide.apiPath}');
       return;
     }
-    if (guide.path != null) {
-      openPublicUrl('$publicDocsRepositoryBaseUrl${guide.path}');
+    if (guide.page != null) {
+      widget.onOpenPage(guide.page!);
       return;
     }
     _showQuickStart();
+  }
+
+  void _openRunnableGuide(PublicDocsGuideEntry guide) {
+    if (guide.page != null) {
+      widget.onOpenPage(guide.page!);
+      return;
+    }
+    _openGuide(guide);
   }
 }
 
 class _DocumentationIntroduction extends StatelessWidget {
   const _DocumentationIntroduction({
     required this.onBuildFirstChart,
-    required this.onChooseChart,
+    required this.onBrowseGuides,
     required this.onBrowseApi,
   });
 
   final VoidCallback onBuildFirstChart;
-  final VoidCallback onChooseChart;
+  final VoidCallback onBrowseGuides;
   final VoidCallback onBrowseApi;
 
   @override
@@ -198,13 +255,13 @@ class _DocumentationIntroduction extends StatelessWidget {
                       label: const Text('Build first chart'),
                     ),
                     OutlinedButton.icon(
-                      key: const ValueKey('docs-choose-family'),
+                      key: const ValueKey('docs-browse-guides'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 48),
                       ),
-                      onPressed: onChooseChart,
-                      icon: const Icon(Icons.show_chart),
-                      label: const Text('Choose chart family'),
+                      onPressed: onBrowseGuides,
+                      icon: const Icon(Icons.menu_book_outlined),
+                      label: const Text('Browse guides'),
                     ),
                     TextButton.icon(
                       key: const ValueKey('docs-browse-api'),
@@ -258,9 +315,9 @@ class _ReferenceSummary extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final items = [
-      ('${publicDocsChartFamilies.length}', 'families'),
-      ('6', 'guide groups'),
-      ('1', 'API index'),
+      ('v$publicDocsPackageVersion', 'package'),
+      (publicDocsDartConstraint, 'Dart'),
+      (publicDocsFlutterConstraint, 'Flutter'),
     ];
     final children = [
       for (var index = 0; index < items.length; index++) ...[
@@ -523,6 +580,128 @@ class _FamilyGrid extends StatelessWidget {
   }
 }
 
+class _GuideSearch extends StatelessWidget {
+  const _GuideSearch({
+    required this.controller,
+    required this.resultCount,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final int resultCount;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      container: true,
+      label: 'Search documentation guides',
+      child: Material(
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final search = TextField(
+                key: const ValueKey('docs-guide-search'),
+                controller: controller,
+                onChanged: onChanged,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: 'Search guides',
+                  hintText: 'Try selection, Grammar, performance, or export',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const ValueKey('docs-guide-search-clear'),
+                          tooltip: 'Clear guide search',
+                          onPressed: onClear,
+                          icon: const Icon(Icons.close),
+                        ),
+                ),
+              );
+              final status = Semantics(
+                liveRegion: true,
+                child: Text(
+                  '$resultCount ${resultCount == 1 ? 'guide' : 'guides'} shown',
+                  key: const ValueKey('docs-guide-search-status'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+              if (constraints.maxWidth < 720) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [search, const SizedBox(height: 12), status],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: search),
+                  const SizedBox(width: 20),
+                  status,
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideEmptyState extends StatelessWidget {
+  const _GuideEmptyState({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      key: const ValueKey('docs-guide-empty'),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.search_off_rounded, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            'No guides match that search',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Try a chart family, interaction, authoring method, or export task.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onClear, child: const Text('Show all guides')),
+        ],
+      ),
+    );
+  }
+}
+
 class _QuickStartExamples extends StatefulWidget {
   const _QuickStartExamples();
 
@@ -639,10 +818,15 @@ class _QuickStartExamplesState extends State<_QuickStartExamples> {
 }
 
 class _GuideGrid extends StatelessWidget {
-  const _GuideGrid({required this.guides, required this.onOpen});
+  const _GuideGrid({
+    required this.guides,
+    required this.onOpenGuide,
+    required this.onOpenExample,
+  });
 
   final List<PublicDocsGuideEntry> guides;
-  final ValueChanged<PublicDocsGuideEntry> onOpen;
+  final ValueChanged<PublicDocsGuideEntry> onOpenGuide;
+  final ValueChanged<PublicDocsGuideEntry> onOpenExample;
 
   @override
   Widget build(BuildContext context) {
@@ -665,8 +849,12 @@ class _GuideGrid extends StatelessWidget {
               icon: _guideIcon(guide),
               title: guide.title,
               summary: guide.summary,
-              actionLabel: _guideAction(guide),
-              onOpen: () => onOpen(guide),
+              primaryActionLabel: _guideAction(guide),
+              onOpenGuide: () => onOpenGuide(guide),
+              secondaryActionLabel: guide.page == null ? null : 'Open example',
+              onOpenExample: guide.page == null
+                  ? null
+                  : () => onOpenExample(guide),
             );
           }, childCount: guides.length),
         );
@@ -680,15 +868,19 @@ class _DestinationCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.summary,
-    required this.actionLabel,
-    required this.onOpen,
+    required this.primaryActionLabel,
+    required this.onOpenGuide,
+    this.secondaryActionLabel,
+    this.onOpenExample,
   });
 
   final IconData icon;
   final String title;
   final String summary;
-  final String actionLabel;
-  final VoidCallback onOpen;
+  final String primaryActionLabel;
+  final VoidCallback onOpenGuide;
+  final String? secondaryActionLabel;
+  final VoidCallback? onOpenExample;
 
   @override
   Widget build(BuildContext context) {
@@ -696,70 +888,65 @@ class _DestinationCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     return Card(
       margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, size: 19, color: scheme.primary),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  child: Icon(icon, size: 19, color: scheme.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Text(
-                  summary,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    height: 1.4,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Text(
+                summary,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Flexible(
-                    child: Text(
-                      actionLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                TextButton(
+                  key: ValueKey('docs-guide-${_guideKey(title)}'),
+                  onPressed: onOpenGuide,
+                  child: Text(primaryActionLabel),
+                ),
+                if (onOpenExample != null)
+                  TextButton(
+                    onPressed: onOpenExample,
+                    child: Text(secondaryActionLabel!),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward, size: 17, color: scheme.primary),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -863,11 +1050,25 @@ IconData _guideIcon(PublicDocsGuideEntry guide) {
 }
 
 String _guideAction(PublicDocsGuideEntry guide) {
+  if (guide.guideId != null) return 'Read guide';
   if (guide.apiPath != null) return 'Browse API';
   if (guide.snippet != null && guide.page == null) return 'View starter code';
   if (guide.page != null) return 'Open runnable guide';
   return 'Open guide';
 }
+
+PublicDocsHostedGuideEntry? _hostedGuideFor(String? guideId) {
+  if (guideId == null) return null;
+  for (final guide in publicDocsHostedGuides) {
+    if (guide.id == guideId) return guide;
+  }
+  return null;
+}
+
+String _guideKey(String title) => title
+    .toLowerCase()
+    .replaceAll(RegExp('[^a-z0-9]+'), '-')
+    .replaceAll(RegExp(r'^-|-$'), '');
 
 String _guideGroupSubtitle(String group) => switch (group) {
   'Get started' =>

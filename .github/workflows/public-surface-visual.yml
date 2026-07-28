@@ -12,6 +12,7 @@ on:
       - pubspec.yaml
       - tool/public_docs.dart
       - tool/public_docs_support.dart
+      - tool/public_guides.dart
       - tool/public_surface_visual_check.py
       - tool/public_surface_visual_check_test.py
       - tool/requirements-public-surface-visual.txt
@@ -61,6 +62,9 @@ jobs:
       - name: Build showcase release artifact
         working-directory: example
         run: flutter build web --release --base-href /braven_charts/
+
+      - name: Generate hosted public guides
+        run: dart run tool/public_guides.dart --output=example/build/web/guides
 
       - name: Generate hosted API reference
         run: |

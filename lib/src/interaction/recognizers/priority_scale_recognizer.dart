@@ -38,11 +38,17 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
   /// Movement required before explore mode claims a one-pointer drag.
   double panThreshold = 10;
 
+  /// Optional hit test for a one-finger chart control that must beat an
+  /// ancestor scrollable while leaving ordinary chart touches scrollable.
+  bool Function(PointerDownEvent event)? shouldClaimPrimaryPointer;
+
   final Map<int, Offset> _globalPositions = <int, Offset>{};
   final Map<int, Offset> _localPositions = <int, Offset>{};
   final Map<int, Offset> _downPositions = <int, Offset>{};
 
   bool _accepted = false;
+  bool _ownsPrimarySequence = false;
+  bool _viewportClaimed = false;
   bool _started = false;
   bool _ended = false;
   Offset _previousGlobalFocalPoint = Offset.zero;
@@ -66,6 +72,7 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
       stopTrackingPointer(event.pointer);
       return;
     }
+    final isFirstPointer = _globalPositions.isEmpty;
     super.addAllowedPointer(event);
     _globalPositions[event.pointer] = event.position;
     _localPositions[event.pointer] = event.localPosition;
@@ -74,12 +81,23 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
     _kind ??= event.kind;
     _rebaseScaleSegment();
 
+    if (isFirstPointer && (shouldClaimPrimaryPointer?.call(event) ?? false)) {
+      _ownsPrimarySequence = true;
+      // The render object owns the brush manipulation itself. This recognizer
+      // claims the arena immediately so a vertical brush handle cannot drag
+      // the surrounding page. It remains the same recognizer when a second
+      // finger arrives, allowing the viewport gesture to take over.
+      resolve(GestureDisposition.accepted);
+      return;
+    }
+
     // Browse mode may claim as soon as its explicit second pointer arrives.
     // Explore mode must leave a stationary one-pointer sequence available to
     // tap/long-press recognizers and claim only after [panThreshold] movement.
     if (minimumPointerCount > 1 &&
         _globalPositions.length >= minimumPointerCount) {
       resolve(GestureDisposition.accepted);
+      if (_accepted) _tryClaimViewport();
     }
   }
 
@@ -99,8 +117,11 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
       }
 
       if (_accepted && !_ended) {
-        _startIfNeeded();
-        _dispatchUpdate(event.timeStamp);
+        _tryClaimViewport();
+        if (_viewportClaimed) {
+          _startIfNeeded();
+          _dispatchUpdate(event.timeStamp);
+        }
       }
     } else if (event is PointerUpEvent || event is PointerCancelEvent) {
       _globalPositions.remove(event.pointer);
@@ -125,6 +146,11 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
   @override
   void acceptGesture(int pointer) {
     if (_accepted || _ended) return;
+    if (_ownsPrimarySequence) {
+      _accepted = true;
+      _tryClaimViewport();
+      return;
+    }
     if (_globalPositions.length < minimumPointerCount ||
         !coordinator.canStartInteraction(
           InteractionMode.transformingViewport,
@@ -137,6 +163,7 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
       return;
     }
     _accepted = true;
+    _viewportClaimed = true;
     _startIfNeeded();
   }
 
@@ -153,7 +180,10 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
   }
 
   void _startIfNeeded() {
-    if (_started || _ended || _globalPositions.length < minimumPointerCount) {
+    if (_started ||
+        _ended ||
+        !_viewportClaimed ||
+        _globalPositions.length < minimumPointerCount) {
       return;
     }
     _started = true;
@@ -202,6 +232,21 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
     _previousGlobalFocalPoint = globalFocalPoint;
     _previousLocalFocalPoint = localFocalPoint;
     invokeCallback<void>('onUpdate', () => onUpdate(details));
+  }
+
+  void _tryClaimViewport() {
+    if (!_accepted ||
+        _viewportClaimed ||
+        _globalPositions.length < minimumPointerCount ||
+        !coordinator.canStartInteraction(
+          InteractionMode.transformingViewport,
+        )) {
+      return;
+    }
+    if (coordinator.claimMode(InteractionMode.transformingViewport)) {
+      _viewportClaimed = true;
+      _startIfNeeded();
+    }
   }
 
   void _finish() {
@@ -260,6 +305,8 @@ class PriorityScaleGestureRecognizer extends OneSequenceGestureRecognizer {
 
   void _reset() {
     _accepted = false;
+    _ownsPrimarySequence = false;
+    _viewportClaimed = false;
     _started = false;
     _ended = false;
     _sourceTimeStamp = null;

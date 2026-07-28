@@ -172,10 +172,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Ten chart guides, grouped by visual grammar',
+              title: 'Twelve chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 10,
+              count: 12,
             ),
           ),
           SliverToBoxAdapter(

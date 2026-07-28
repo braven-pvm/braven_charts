@@ -176,6 +176,110 @@ class ChartConfigDartEmitter {
   void emitBarLabelStyle(DartSourceWriter writer, BarLabelStyle style) =>
       _emitBarLabelStyle(writer, style, 0);
 
+  /// Writes `<argument>: PieChartStyle(...)` / `<argument>: DonutChartStyle(...)`
+  /// — the field body the radial geometry verbs (`geomPie`/`geomDonut`) hand to
+  /// their `style:` argument, the same nested-config rendering the config form's
+  /// `pieStyle:` / `donutStyle:` uses. Writes NOTHING when the style is the
+  /// family default (unless `includeDefaultValues`), so the caller can pass it
+  /// unconditionally. For a donut, pass its geometry through [innerRadiusFactor]
+  /// and [sweepAngleDegrees].
+  void emitRadialStyle(
+    DartSourceWriter writer,
+    String argument,
+    String constructor,
+    PieChartStyle style, {
+    double? innerRadiusFactor,
+    double? sweepAngleDegrees,
+  }) => _emitRadialStyle(
+    writer,
+    argument,
+    constructor,
+    style,
+    innerRadiusFactor: innerRadiusFactor,
+    sweepAngleDegrees: sweepAngleDegrees,
+  );
+
+  /// Writes `dataLabels: PieDataLabelConfig(...)`, the argument name the radial
+  /// geometry verbs use too. Writes nothing for the default config.
+  void emitRadialLabels(
+    DartSourceWriter writer,
+    PieDataLabelConfig labels,
+    int seriesIndex,
+  ) => _emitRadialLabels(writer, labels, seriesIndex);
+
+  /// Writes `<argument>: PolarColumnStyle(...)`, the field body the polar
+  /// geometry verb (`geomPolar`) hands to its `style:` argument. Writes nothing
+  /// for a default style (unless `includeDefaultValues`).
+  void emitPolarColumnStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnStyle style,
+  ) => _emitPolarColumnStyleArgument(writer, argument, style);
+
+  /// Writes `<argument>: PolarColumnTargetMarkerStyle(...)`, the field body the
+  /// polar geometry verb (`geomPolar`) hands to its `targetMarkerStyle:`
+  /// argument. Writes nothing for a default style (unless
+  /// `includeDefaultValues`).
+  void emitPolarTargetMarkerStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnTargetMarkerStyle style,
+  ) => _emitPolarTargetMarkerStyleArgument(writer, argument, style);
+
+  /// Writes `<argument>: PolarColumnIntervalStyle(...)`, the field body the
+  /// polar geometry verb (`geomPolar`) hands to its `intervalStyle:` argument.
+  /// Writes nothing for a default style (unless `includeDefaultValues`).
+  void emitPolarIntervalStyle(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnIntervalStyle style,
+  ) => _emitPolarIntervalStyleArgument(writer, argument, style);
+
+  /// Writes the `PolarChartConfig(...)` literal the grammar chain hands to
+  /// `.polarConfig(...)` — a BARE expression when [argument] is null, or
+  /// `<argument>: PolarChartConfig(...)` otherwise, which is the same rendering
+  /// the config form's `polarChartConfig:` uses. Unconditional: the caller
+  /// decides when the config is non-default and worth emitting.
+  void emitPolarChartConfig(
+    DartSourceWriter writer,
+    String? argument,
+    PolarChartConfig config,
+  ) => _emitPolarChartConfigArgument(writer, argument, config);
+
+  /// Writes `<argument>: ConcentricDonutConfig(...)` — the literal the grammar
+  /// chain hands to `geomDonut(concentric: ...)`, rendered by the same code the
+  /// config form's `concentricDonutConfig:` uses. Unconditional: the caller
+  /// decides when the config is non-default and worth emitting.
+  void emitConcentricDonutConfig(
+    DartSourceWriter writer,
+    String argument,
+    ConcentricDonutConfig config,
+  ) => _emitConcentricDonutConfigArgument(writer, argument, config);
+
+  /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
+  /// radial geometry verbs (`geomPie`/`geomDonut`/`geomPolar`) use too. Writes
+  /// nothing for the default style (unless `includeDefaultValues`).
+  void emitRadialSelectionStyle(
+    DartSourceWriter writer,
+    RadialSelectionStyle style,
+  ) => _emitRadialSelectionStyle(writer, style);
+
+  /// Writes `sliceRadiusConfig: PieSliceRadiusConfig(...)`, the argument name
+  /// the radial category geometry verbs (`geomPie`/`geomDonut`) use too. The
+  /// optional formatter callback is emitted as a placeholder with a warning.
+  void emitSliceRadiusConfig(
+    DartSourceWriter writer,
+    RadialSliceRadiusConfig config,
+    int seriesIndex,
+  ) => _emitSliceRadiusConfig(writer, config, seriesIndex);
+
+  /// Writes `sliceGroupingConfig: RadialSliceGroupingConfig(...)`, the argument
+  /// name the radial category geometry verbs (`geomPie`/`geomDonut`) use too.
+  void emitSliceGroupingConfig(
+    DartSourceWriter writer,
+    RadialSliceGroupingConfig config,
+  ) => _emitSliceGroupingConfig(writer, config);
+
   ChartGeneratedSource generate() {
     _captureKnownLimitations();
     final body = DartSourceWriter();
@@ -195,10 +299,14 @@ class ChartConfigDartEmitter {
       _emitSeriesList(body);
       final concentricDonutConfig = configuration.concentricDonutConfig;
       if (concentricDonutConfig != null) {
-        _emitConcentricDonutConfig(body, concentricDonutConfig);
+        _emitConcentricDonutConfigArgument(
+          body,
+          'concentricDonutConfig',
+          concentricDonutConfig,
+        );
       }
       if (configuration.polarChartConfig case final polarConfig?) {
-        _emitPolarChartConfig(body, polarConfig);
+        _emitPolarChartConfigArgument(body, 'polarChartConfig', polarConfig);
       }
       if (configuration.radialBarChartConfig case final radialBarConfig?) {
         _emitRadialBarChartConfig(body, radialBarConfig);
@@ -2578,103 +2686,15 @@ class ChartConfigDartEmitter {
       series.preset.name,
       defaultName: 'standard',
     );
-    final style = series.polarStyle;
-    if (options.includeDefaultValues || style != const PolarColumnStyle()) {
-      writer.writeLine('polarStyle: PolarColumnStyle(');
-      writer.indented(() {
-        _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
-        _enumIf(
-          writer,
-          'cornerRadiusMode',
-          'PolarColumnCornerRadiusMode',
-          style.cornerRadiusMode.name,
-          defaultName: 'outerEnd',
-        );
-        _numberIf(writer, 'opacity', style.opacity, 1);
-        _optionalColor(writer, 'borderColor', style.borderColor);
-        _numberIf(writer, 'borderWidth', style.borderWidth, 1);
-        _valueIf(
-          writer,
-          'showDataLabels',
-          style.showDataLabels,
-          defaultValue: true,
-        );
-        _numberIf(
-          writer,
-          'maximumVisibleDataLabels',
-          style.maximumVisibleDataLabels,
-          24,
-        );
-        _numberIf(
-          writer,
-          'dataLabelRadialPosition',
-          style.dataLabelRadialPosition,
-          0.5,
-        );
-        if (options.includeDefaultValues ||
-            style.dataLabelStyle != const PolarLabelStyle()) {
-          _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
-        }
-        if (style.gradient case final gradient?) {
-          writer.writeLine('gradient: PolarColumnGradientStyle(');
-          writer.indented(() {
-            _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
-            _optionalColor(writer, 'startColor', gradient.startColor);
-            _optionalColor(writer, 'endColor', gradient.endColor);
-            _numberIf(
-              writer,
-              'startLightnessShift',
-              gradient.startLightnessShift,
-              0.16,
-            );
-            _numberIf(
-              writer,
-              'endLightnessShift',
-              gradient.endLightnessShift,
-              -0.12,
-            );
-          });
-          writer.writeLine('),');
-        }
-        if (options.includeDefaultValues ||
-            style.shadow != const PolarColumnShadowStyle()) {
-          final shadow = style.shadow;
-          writer.writeLine('shadow: PolarColumnShadowStyle(');
-          writer.indented(() {
-            _optionalColor(writer, 'color', shadow.color);
-            _numberIf(writer, 'blurRadius', shadow.blurRadius, 0);
-            _numberIf(writer, 'spreadRadius', shadow.spreadRadius, 0);
-            if (options.includeDefaultValues || shadow.offset != Offset.zero) {
-              writer.namedArgument('offset', _offsetLiteral(shadow.offset));
-            }
-            _numberIf(writer, 'opacity', shadow.opacity, 0.28);
-          });
-          writer.writeLine('),');
-        }
-        _enumIf(
-          writer,
-          'animationMode',
-          'PolarColumnAnimationMode',
-          style.animationMode.name,
-          defaultName: 'none',
-        );
-      });
-      writer.writeLine('),');
-    }
+    _emitPolarColumnStyleArgument(writer, 'polarStyle', series.polarStyle);
     _emitRadialSelectionStyle(writer, series.selectionStyle);
     _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
-    if (series.targetValues.isNotEmpty &&
-        (options.includeDefaultValues ||
-            series.targetMarkerStyle != const PolarColumnTargetMarkerStyle())) {
-      final target = series.targetMarkerStyle;
-      writer.writeLine('targetMarkerStyle: PolarColumnTargetMarkerStyle(');
-      writer.indented(() {
-        _optionalColor(writer, 'color', target.color);
-        _numberIf(writer, 'width', target.width, 2.5);
-        _numberIf(writer, 'lengthFactor', target.lengthFactor, 0.72);
-        _numberIf(writer, 'opacity', target.opacity, 1);
-      });
-      writer.writeLine('),');
+    if (series.targetValues.isNotEmpty) {
+      _emitPolarTargetMarkerStyleArgument(
+        writer,
+        'targetMarkerStyle',
+        series.targetMarkerStyle,
+      );
     }
     _optionalNullableNumberList(
       writer,
@@ -2686,27 +2706,171 @@ class ChartConfigDartEmitter {
       'intervalUpperValues',
       series.intervalUpperValues,
     );
-    if (series.hasIntervals &&
-        (options.includeDefaultValues ||
-            series.intervalStyle != const PolarColumnIntervalStyle())) {
-      final interval = series.intervalStyle;
-      writer.writeLine('intervalStyle: PolarColumnIntervalStyle(');
-      writer.indented(() {
-        _enumIf(
-          writer,
-          'display',
-          'PolarColumnIntervalDisplay',
-          interval.display.name,
-          defaultName: 'whisker',
-        );
-        _optionalColor(writer, 'color', interval.color);
-        _numberIf(writer, 'width', interval.width, 1.5);
-        _numberIf(writer, 'capLengthFactor', interval.capLengthFactor, 0.62);
-        _numberIf(writer, 'bandLengthFactor', interval.bandLengthFactor, 0.58);
-        _numberIf(writer, 'opacity', interval.opacity, 0.92);
-      });
-      writer.writeLine('),');
+    if (series.hasIntervals) {
+      _emitPolarIntervalStyleArgument(
+        writer,
+        'intervalStyle',
+        series.intervalStyle,
+      );
     }
+  }
+
+  /// Writes `<argument>: PolarColumnTargetMarkerStyle(...)` — the appearance of
+  /// a polar column's per-category target markers — or nothing when [style] is
+  /// the default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`targetMarkerStyle:` on the series) and the
+  /// grammar form (`targetMarkerStyle:` on `geomPolar`, through
+  /// [emitPolarTargetMarkerStyle]) so the two cannot disagree about how a
+  /// `PolarColumnTargetMarkerStyle` is rendered.
+  void _emitPolarTargetMarkerStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnTargetMarkerStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const PolarColumnTargetMarkerStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnTargetMarkerStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'width', style.width, 2.5);
+      _numberIf(writer, 'lengthFactor', style.lengthFactor, 0.72);
+      _numberIf(writer, 'opacity', style.opacity, 1);
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `<argument>: PolarColumnIntervalStyle(...)` — the appearance of a
+  /// polar column's per-category intervals — or nothing when [style] is the
+  /// default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`intervalStyle:` on the series) and the
+  /// grammar form (`intervalStyle:` on `geomPolar`, through
+  /// [emitPolarIntervalStyle]) so the two cannot disagree about how a
+  /// `PolarColumnIntervalStyle` is rendered.
+  void _emitPolarIntervalStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnIntervalStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const PolarColumnIntervalStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnIntervalStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'display',
+        'PolarColumnIntervalDisplay',
+        style.display.name,
+        defaultName: 'whisker',
+      );
+      _optionalColor(writer, 'color', style.color);
+      _numberIf(writer, 'width', style.width, 1.5);
+      _numberIf(writer, 'capLengthFactor', style.capLengthFactor, 0.62);
+      _numberIf(writer, 'bandLengthFactor', style.bandLengthFactor, 0.58);
+      _numberIf(writer, 'opacity', style.opacity, 0.92);
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `<argument>: PolarColumnStyle(...)` — the polar mark appearance —
+  /// or nothing when [style] is the default (unless `includeDefaultValues`).
+  ///
+  /// Shared between the config form (`polarStyle:` on the series) and the
+  /// grammar form (`style:` on `geomPolar`, through [emitPolarColumnStyle]) so
+  /// the two cannot disagree about how a `PolarColumnStyle` is rendered.
+  void _emitPolarColumnStyleArgument(
+    DartSourceWriter writer,
+    String argument,
+    PolarColumnStyle style,
+  ) {
+    if (!options.includeDefaultValues && style == const PolarColumnStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: PolarColumnStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
+      _enumIf(
+        writer,
+        'cornerRadiusMode',
+        'PolarColumnCornerRadiusMode',
+        style.cornerRadiusMode.name,
+        defaultName: 'outerEnd',
+      );
+      _numberIf(writer, 'opacity', style.opacity, 1);
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _numberIf(writer, 'borderWidth', style.borderWidth, 1);
+      _valueIf(
+        writer,
+        'showDataLabels',
+        style.showDataLabels,
+        defaultValue: true,
+      );
+      _numberIf(
+        writer,
+        'maximumVisibleDataLabels',
+        style.maximumVisibleDataLabels,
+        24,
+      );
+      _numberIf(
+        writer,
+        'dataLabelRadialPosition',
+        style.dataLabelRadialPosition,
+        0.5,
+      );
+      if (options.includeDefaultValues ||
+          style.dataLabelStyle != const PolarLabelStyle()) {
+        _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
+      }
+      if (style.gradient case final gradient?) {
+        writer.writeLine('gradient: PolarColumnGradientStyle(');
+        writer.indented(() {
+          _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+          _optionalColor(writer, 'startColor', gradient.startColor);
+          _optionalColor(writer, 'endColor', gradient.endColor);
+          _numberIf(
+            writer,
+            'startLightnessShift',
+            gradient.startLightnessShift,
+            0.16,
+          );
+          _numberIf(
+            writer,
+            'endLightnessShift',
+            gradient.endLightnessShift,
+            -0.12,
+          );
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          style.shadow != const PolarColumnShadowStyle()) {
+        final shadow = style.shadow;
+        writer.writeLine('shadow: PolarColumnShadowStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'color', shadow.color);
+          _numberIf(writer, 'blurRadius', shadow.blurRadius, 0);
+          _numberIf(writer, 'spreadRadius', shadow.spreadRadius, 0);
+          if (options.includeDefaultValues || shadow.offset != Offset.zero) {
+            writer.namedArgument('offset', _offsetLiteral(shadow.offset));
+          }
+          _numberIf(writer, 'opacity', shadow.opacity, 0.28);
+        });
+        writer.writeLine('),');
+      }
+      _enumIf(
+        writer,
+        'animationMode',
+        'PolarColumnAnimationMode',
+        style.animationMode.name,
+        defaultName: 'none',
+      );
+    });
+    writer.writeLine('),');
   }
 
   void _emitRadialBarOptions(
@@ -3031,11 +3195,19 @@ class ChartConfigDartEmitter {
     _emitAdvancedRadial(writer, series, seriesIndex);
   }
 
-  void _emitConcentricDonutConfig(
+  /// Writes `<argument>: ConcentricDonutConfig(...)`.
+  ///
+  /// Shared between the config form (`concentricDonutConfig:` on
+  /// `BravenChartPlus`) and the grammar form (`geomDonut(concentric: ...)`,
+  /// through [emitConcentricDonutConfig]) so the two cannot disagree about how a
+  /// `ConcentricDonutConfig` is rendered. Unconditional: the caller decides when
+  /// the config is worth emitting.
+  void _emitConcentricDonutConfigArgument(
     DartSourceWriter writer,
+    String argument,
     ConcentricDonutConfig config,
   ) {
-    writer.writeLine('concentricDonutConfig: ConcentricDonutConfig(');
+    writer.writeLine('$argument: ConcentricDonutConfig(');
     writer.indented(() {
       _numberIf(writer, 'innerRadiusFactor', config.innerRadiusFactor, 0.32);
       _numberIf(writer, 'outerRadiusFactor', config.outerRadiusFactor, 1);
@@ -3076,8 +3248,22 @@ class ChartConfigDartEmitter {
     writer.writeLine('),');
   }
 
-  void _emitPolarChartConfig(DartSourceWriter writer, PolarChartConfig config) {
-    writer.writeLine('polarChartConfig: PolarChartConfig(');
+  /// Writes `<argument>: PolarChartConfig(...)`, or a BARE `PolarChartConfig(`
+  /// literal when [argument] is null.
+  ///
+  /// Shared between the config form (`polarChartConfig:` on `BravenChartPlus`)
+  /// and the grammar form (`.polarConfig(<expr>)`, through
+  /// [emitPolarChartConfig]) so the two cannot disagree about how a
+  /// `PolarChartConfig` is rendered. Unconditional: the caller decides when the
+  /// config is worth emitting.
+  void _emitPolarChartConfigArgument(
+    DartSourceWriter writer,
+    String? argument,
+    PolarChartConfig config,
+  ) {
+    writer.writeLine(
+      argument == null ? 'PolarChartConfig(' : '$argument: PolarChartConfig(',
+    );
     writer.indented(() {
       final pane = config.pane;
       if (options.includeDefaultValues || pane != const PolarPaneConfig()) {
@@ -3745,49 +3931,74 @@ class ChartConfigDartEmitter {
   ) {
     final radius = series.sliceRadiusConfig;
     if (radius != null) {
-      writer.writeLine('sliceRadiusConfig: PieSliceRadiusConfig(');
-      writer.indented(() {
-        _numberIf(writer, 'minimumFactor', radius.minimumFactor, 0.35);
-        _enumIf(
-          writer,
-          'scale',
-          'PieSliceRadiusScale',
-          radius.scale.name,
-          defaultName: 'area',
-        );
-        _optionalString(writer, 'label', radius.label);
-        _optionalString(writer, 'unit', radius.unit);
-        if (radius.formatter != null) {
-          writer.writeLine(
-            '// formatter: (value) => ..., // Supply application formatting.',
-          );
-          _warn(
-            code: ChartSourceWarningCodes.runtimeValueOmitted,
-            message:
-                'A radial radius formatter callback was omitted. Provide it from your application.',
-            path: '\$.series[$seriesIndex].style.sliceRadiusConfig.formatter',
-          );
-        }
-      });
-      writer.writeLine('),');
+      _emitSliceRadiusConfig(writer, radius, seriesIndex);
     }
     final grouping = series.sliceGroupingConfig;
     if (grouping != null) {
-      writer.writeLine('sliceGroupingConfig: RadialSliceGroupingConfig(');
-      writer.indented(() {
-        _numberIf(writer, 'minimumShare', grouping.minimumShare, 0.05);
-        _numberIf(writer, 'minimumSourceCount', grouping.minimumSourceCount, 2);
-        _optionalString(writer, 'label', grouping.label);
-        _optionalColor(writer, 'color', grouping.color);
-        if (grouping.radiusAggregation != null) {
-          writer.namedArgument(
-            'radiusAggregation',
-            'RadialSliceRadiusAggregation.${grouping.radiusAggregation!.name}',
-          );
-        }
-      });
-      writer.writeLine('),');
+      _emitSliceGroupingConfig(writer, grouping);
     }
+  }
+
+  /// Writes `sliceRadiusConfig: PieSliceRadiusConfig(...)` for [radius].
+  ///
+  /// Shared between the config form (`sliceRadiusConfig:` on the series) and the
+  /// grammar form (`sliceRadiusConfig:` on `geomPie`/`geomDonut`, through
+  /// [emitSliceRadiusConfig]) so the two cannot disagree. The optional
+  /// `formatter` is a live callback, not a literal, so it is emitted as a
+  /// placeholder comment with a runtime-value-omitted warning.
+  void _emitSliceRadiusConfig(
+    DartSourceWriter writer,
+    RadialSliceRadiusConfig radius,
+    int seriesIndex,
+  ) {
+    writer.writeLine('sliceRadiusConfig: PieSliceRadiusConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumFactor', radius.minimumFactor, 0.35);
+      _enumIf(
+        writer,
+        'scale',
+        'PieSliceRadiusScale',
+        radius.scale.name,
+        defaultName: 'area',
+      );
+      _optionalString(writer, 'label', radius.label);
+      _optionalString(writer, 'unit', radius.unit);
+      if (radius.formatter != null) {
+        writer.writeLine(
+          '// formatter: (value) => ..., // Supply application formatting.',
+        );
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'A radial radius formatter callback was omitted. Provide it from your application.',
+          path: '\$.series[$seriesIndex].style.sliceRadiusConfig.formatter',
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  /// Writes `sliceGroupingConfig: RadialSliceGroupingConfig(...)` for
+  /// [grouping]. Shared between the config and grammar forms (through
+  /// [emitSliceGroupingConfig]).
+  void _emitSliceGroupingConfig(
+    DartSourceWriter writer,
+    RadialSliceGroupingConfig grouping,
+  ) {
+    writer.writeLine('sliceGroupingConfig: RadialSliceGroupingConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumShare', grouping.minimumShare, 0.05);
+      _numberIf(writer, 'minimumSourceCount', grouping.minimumSourceCount, 2);
+      _optionalString(writer, 'label', grouping.label);
+      _optionalColor(writer, 'color', grouping.color);
+      if (grouping.radiusAggregation != null) {
+        writer.namedArgument(
+          'radiusAggregation',
+          'RadialSliceRadiusAggregation.${grouping.radiusAggregation!.name}',
+        );
+      }
+    });
+    writer.writeLine('),');
   }
 
   void _emitXAxis(DartSourceWriter writer, XAxisConfig axis) {
@@ -5780,6 +5991,13 @@ class ChartConfigDartEmitter {
         'TouchInteractionProfile',
         config.profile.name,
         defaultName: TouchInteractionProfile.browse.name,
+      );
+      _enumIf(
+        writer,
+        'tapBehavior',
+        'TouchTapBehavior',
+        config.tapBehavior.name,
+        defaultName: TouchTapBehavior.inspectAndSelect.name,
       );
       _valueIf(
         writer,

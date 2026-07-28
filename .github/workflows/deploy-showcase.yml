@@ -10,6 +10,8 @@ on:
       - doc/**
       - dartdoc_options.yaml
       - tool/public_docs.dart
+      - tool/public_docs_support.dart
+      - tool/public_guides.dart
       - pubspec.yaml
   workflow_dispatch:
   workflow_call:
@@ -53,6 +55,9 @@ jobs:
         working-directory: example
         run: flutter build web --release --base-href /braven_charts/
 
+      - name: Generate hosted public guides
+        run: dart run tool/public_guides.dart --output=example/build/web/guides
+
       - name: Generate hosted API reference
         run: |
           dart pub global activate dartdoc
@@ -71,6 +76,8 @@ jobs:
 
       - name: Verify hosted documentation artifact
         run: |
+          test -f example/build/web/guides/index.html
+          test -f example/build/web/guides/index.json
           dart run tool/public_docs.dart --check --api-dir=example/build/web/api
 
       - name: Configure GitHub Pages

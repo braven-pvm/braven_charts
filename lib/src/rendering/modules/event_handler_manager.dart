@@ -493,6 +493,7 @@ class EventHandlerManager {
   Rect? _selectionBrushStartRect;
   Rect? _activeSelectionBrushRect;
   Offset? _selectionBrushStartPointer;
+  bool _selectionBrushDidManipulate = false;
   bool _selectionBrushHovered = false;
   Rect? _pendingSelectionBrushRect;
   bool _selectionBrushFrameScheduled = false;
@@ -539,10 +540,13 @@ class EventHandlerManager {
   HoveredMarkerInfo? get tappedMarker => _tappedMarker;
 
   /// Clears a tap-pinned tooltip without disturbing cursor or hover state.
-  void clearTappedMarker() {
-    if (_tappedMarker == null) return;
+  ///
+  /// Returns whether a pinned marker was dismissed.
+  bool clearTappedMarker() {
+    if (_tappedMarker == null) return false;
     _tappedMarker = null;
     _delegate.markNeedsPaint();
+    return true;
   }
 
   // ==========================================================================
@@ -678,8 +682,17 @@ class EventHandlerManager {
       return;
     }
 
+    final visiblePersistentBrush =
+        interaction.enableSelection &&
+        interaction.selection.brush.enabled &&
+        (_delegate.selectionBrushState?.visible ?? false);
+    final persistentBrushManipulating =
+        _delegate.coordinator.currentMode ==
+        InteractionMode.selectionBrushManipulating;
     final selectionOwnsPrimaryTouchDrag =
-        interaction.enableSelection && interaction.selection.ownsPrimaryDrag();
+        interaction.enableSelection &&
+        interaction.selection.ownsPrimaryDrag() &&
+        (!visiblePersistentBrush || persistentBrushManipulating);
     final isBrowseTouch =
         isDirectTouch &&
         interaction.touch.enabled &&
@@ -738,7 +751,17 @@ class EventHandlerManager {
     } else if (event is PointerMoveEvent) {
       _handlePointerMove(event, localPosition);
     } else if (event is PointerUpEvent) {
-      _handlePointerUp(event, localPosition);
+      final allowTapActivation =
+          !isDirectTouch ||
+          interaction.touch.tapBehavior != TouchTapBehavior.disabled;
+      if (!allowTapActivation) {
+        _clearDeferredTapActivation();
+      }
+      _handlePointerUp(
+        event,
+        localPosition,
+        allowTapActivation: allowTapActivation,
+      );
     } else if (event is PointerCancelEvent) {
       _handlePointerCancel();
     } else if (event is PointerHoverEvent) {
@@ -951,6 +974,38 @@ class EventHandlerManager {
   }
 
   bool _beginSelectionBrushInteraction(Offset position) {
+    if (!hitTestSelectionBrushInteraction(position)) return false;
+
+    final selection =
+        _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
+    final state = _delegate.selectionBrushState!;
+    final rect = _delegate.selectionBrushWidgetRect!;
+    final kind = _selectionBrushHitKind(position, rect, selection)!;
+
+    _cancelDeferredEmptyAreaClick();
+    _selectionBrushDragKind = kind;
+    _selectionBrushStartRect = rect;
+    _activeSelectionBrushRect = rect;
+    _selectionBrushStartPointer = position;
+    _selectionBrushDidManipulate = false;
+    _delegate.coordinator.startInteraction(position);
+    _delegate.coordinator.claimMode(InteractionMode.selectionBrushManipulating);
+    _delegate.onCursorChange?.call(
+      kind == _SelectionBrushDragKind.move
+          ? SystemMouseCursors.grabbing
+          : _selectionBrushResizeCursor(state.acquisitionMode, kind),
+    );
+    _delegate.markNeedsPaint();
+    return true;
+  }
+
+  /// Whether [position] starts a move or resize on the persistent brush.
+  ///
+  /// The widget-level touch recognizer uses this before the pointer moves so a
+  /// brush manipulation can defeat an ancestor [Scrollable] in the gesture
+  /// arena. Ordinary touches outside the brush remain available to page
+  /// scrolling.
+  bool hitTestSelectionBrushInteraction(Offset position) {
     final selection =
         _delegate.interactionConfig?.selection ?? const ChartSelectionConfig();
     final state = _delegate.selectionBrushState;
@@ -961,23 +1016,7 @@ class EventHandlerManager {
         rect == null) {
       return false;
     }
-    final kind = _selectionBrushHitKind(position, rect, selection);
-    if (kind == null) return false;
-
-    _cancelDeferredEmptyAreaClick();
-    _selectionBrushDragKind = kind;
-    _selectionBrushStartRect = rect;
-    _activeSelectionBrushRect = rect;
-    _selectionBrushStartPointer = position;
-    _delegate.coordinator.startInteraction(position);
-    _delegate.coordinator.claimMode(InteractionMode.selectionBrushManipulating);
-    _delegate.onCursorChange?.call(
-      kind == _SelectionBrushDragKind.move
-          ? SystemMouseCursors.grabbing
-          : _selectionBrushResizeCursor(state.acquisitionMode, kind),
-    );
-    _delegate.markNeedsPaint();
-    return true;
+    return _selectionBrushHitKind(position, rect, selection) != null;
   }
 
   _SelectionBrushDragKind? _selectionBrushHitKind(
@@ -1197,6 +1236,7 @@ class EventHandlerManager {
         }
         next = Rect.fromLTRB(left, top, right, bottom);
       }
+      _beginSelectionBrushMutation(next, startRect);
       _activeSelectionBrushRect = next;
       _pendingSelectionBrushRect = next;
       _scheduleSelectionBrushUpdate();
@@ -1263,10 +1303,20 @@ class EventHandlerManager {
             )
           : Rect.fromLTRB(startRect.left, startRect.top, startRect.right, edge);
     }
+    _beginSelectionBrushMutation(next, startRect);
     _activeSelectionBrushRect = next;
     _pendingSelectionBrushRect = next;
     _scheduleSelectionBrushUpdate();
     _delegate.markNeedsPaint();
+  }
+
+  void _beginSelectionBrushMutation(Rect next, Rect startRect) {
+    if (_selectionBrushDidManipulate || next == startRect) return;
+    _selectionBrushDidManipulate = true;
+    // A durable tap target must never outlive a brush move or resize that can
+    // change whether that datum belongs to the active selection.
+    clearTappedMarker();
+    _delegate.coordinator.setHoveredMarker(null);
   }
 
   void _scheduleSelectionBrushUpdate() {
@@ -1749,11 +1799,34 @@ class EventHandlerManager {
     _potentialSelectEvent = null;
   }
 
+  void _clearDeferredTapActivation() {
+    _cancelDeferredEmptyAreaClick();
+    _potentialDragPointAnnotation = null;
+    _potentialDragStartPosition = null;
+    _potentialDragRangeAnnotation = null;
+    _potentialDragRangeStartPosition = null;
+    _potentialDragRangeStartBounds = null;
+    _potentialDragTextAnnotation = null;
+    _potentialDragTextStartPosition = null;
+    _potentialDragThresholdAnnotation = null;
+    _potentialDragThresholdStartPosition = null;
+    _potentialDragPinAnnotation = null;
+    _potentialDragPinStartPosition = null;
+    _potentialDragValueSummary = null;
+    _potentialDragValueSummaryStart = null;
+    _potentialDragLegendAnnotation = null;
+    _potentialDragLegendStartPosition = null;
+  }
+
   // ==========================================================================
   // Pointer Up Handler
   // ==========================================================================
 
-  void _handlePointerUp(PointerUpEvent event, Offset position) {
+  void _handlePointerUp(
+    PointerUpEvent event,
+    Offset position, {
+    bool allowTapActivation = true,
+  }) {
     final coordinator = _delegate.coordinator;
     coordinator.setPressedMarker(null);
 
@@ -1767,7 +1840,16 @@ class EventHandlerManager {
 
     if (coordinator.currentMode == InteractionMode.selectionBrushManipulating) {
       _cursorPosition = position;
-      _completeSelectionBrushInteraction();
+      final brushKind = _selectionBrushDragKind;
+      final didManipulate = _selectionBrushDidManipulate;
+      if (didManipulate) {
+        _completeSelectionBrushInteraction();
+      } else {
+        _cancelSelectionBrushInteraction();
+        if (brushKind == _SelectionBrushDragKind.move) {
+          _handleTapForTooltip();
+        }
+      }
       coordinator.endInteraction();
       coordinator.releaseMode();
       _delegate.markNeedsPaint();
@@ -1834,7 +1916,7 @@ class EventHandlerManager {
     _completePan();
 
     // Handle tap on marker for tap-triggered tooltips
-    if (!valueSummaryHandled) {
+    if (!valueSummaryHandled && allowTapActivation) {
       _handleTapForTooltip();
     }
 
@@ -1912,6 +1994,7 @@ class EventHandlerManager {
     _selectionBrushStartRect = null;
     if (!preserveActiveRect) _activeSelectionBrushRect = null;
     _selectionBrushStartPointer = null;
+    _selectionBrushDidManipulate = false;
   }
 
   void _completeBoxSelection() {
@@ -2287,6 +2370,10 @@ class EventHandlerManager {
     // Handle deferred empty-area click (was deferred from pointer-down)
     if (_pointerDownOnEmptyArea) {
       final coordinator = _delegate.coordinator;
+      // Empty chart space dismisses only the tap-pinned popup. A persistent
+      // brush remains authoritative and is reconciled by the host callback.
+      clearTappedMarker();
+      coordinator.setHoveredMarker(null);
       coordinator.clearSelection();
       _delegate.markSpatialIndexDirty();
       if (_emptyAreaClickPosition != null && _emptyAreaClickEvent != null) {
@@ -2512,16 +2599,27 @@ class EventHandlerManager {
     final config =
         _delegate.interactionConfig?.tooltip ?? const TooltipConfig();
 
-    if ((config.triggerMode == TooltipTriggerMode.tap ||
-            config.triggerMode == TooltipTriggerMode.both) &&
-        coordinator.hoveredMarker != null &&
-        !coordinator.isPanning &&
-        coordinator.currentMode != InteractionMode.panning) {
-      if (_tappedMarker == coordinator.hoveredMarker) {
-        _tappedMarker = null;
-      } else {
-        _tappedMarker = coordinator.hoveredMarker;
-      }
+    final supportsTap =
+        config.triggerMode == TooltipTriggerMode.tap ||
+        config.triggerMode == TooltipTriggerMode.both;
+    if (!supportsTap ||
+        coordinator.isPanning ||
+        coordinator.currentMode == InteractionMode.panning) {
+      return;
+    }
+
+    final hoveredMarker = coordinator.hoveredMarker;
+    if (hoveredMarker == null) {
+      // A click on empty plot or empty persistent-brush body is an explicit
+      // dismissal surface. It must not require hiding the brush itself.
+      clearTappedMarker();
+      return;
+    }
+
+    if (_tappedMarker == hoveredMarker) {
+      _tappedMarker = null;
+    } else {
+      _tappedMarker = hoveredMarker;
     }
   }
 
@@ -2563,7 +2661,16 @@ class EventHandlerManager {
     if (brushKind != null) {
       _setSelectionBrushHovered(true);
       _setHoveredElement(null);
-      coordinator.setHoveredMarker(null);
+      if (brushKind == _SelectionBrushDragKind.move &&
+          selection.scope.includesMarks) {
+        // The brush body is a movable visual surface, but its interior remains
+        // data-active until a drag actually begins. Resize handles retain
+        // exclusive ownership so their larger hit targets cannot activate a
+        // nearby datum accidentally.
+        _updateHoveredMarker(position);
+      } else {
+        coordinator.setHoveredMarker(null);
+      }
       final mode = _delegate.selectionBrushState?.acquisitionMode;
       _delegate.onCursorChange?.call(
         brushKind == _SelectionBrushDragKind.move || mode == null

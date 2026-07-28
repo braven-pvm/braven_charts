@@ -145,19 +145,49 @@ void main() {
     expect(find.text('Mobile interaction'), findsOneWidget);
     expect(find.text('Browse'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Short tap selects'), findsOneWidget);
     expect(find.text('Long-press tracking'), findsOneWidget);
     expect(find.text('Haptic steps'), findsOneWidget);
     expect(find.text('Pan inertia'), findsOneWidget);
+    final pageScroll = find.descendant(
+      of: find.byKey(const ValueKey('mobile-interaction-scroll')),
+      matching: find.byType(Scrollable),
+    );
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('mobile-interaction-chart')),
       300,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: pageScroll,
     );
+    await tester.pumpAndSettle();
+    TouchInteractionConfig touchConfig() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .interactionConfig!
+        .touch;
+    expect(touchConfig().profile, TouchInteractionProfile.browse);
+    expect(touchConfig().tapBehavior, TouchTapBehavior.disabled);
+
+    await tester.drag(pageScroll, const Offset(0, 700));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-short-tap-activation-switch')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('mobile-short-tap-activation-switch')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-short-tap-activation-switch')),
+    );
+    await tester.pump();
+
+    await tester.drag(pageScroll, const Offset(0, -700));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('mobile-interaction-chart')),
       findsOneWidget,
     );
+    expect(touchConfig().tapBehavior, TouchTapBehavior.inspectAndSelect);
     expect(
       tester
           .getSize(
@@ -166,6 +196,70 @@ void main() {
               matching: find.byType(FilledButton),
             ),
           )
+          .height,
+      greaterThanOrEqualTo(48),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-action-select-all')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final selectAllButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-action-select-all')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    selectAllButton.onPressed!();
+    await tester.pump();
+    expect(find.text('Selected all bounded chart data.'), findsOneWidget);
+
+    final clearSelectionButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-action-clear-selection')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    clearSelectionButton.onPressed!();
+    await tester.pump();
+    expect(find.text('Cleared chart selection.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Mobile Interaction actions reflow at 200% text scaling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: Size(390, 844),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: MobileInteractionPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-action-select-all')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Accessible chart actions'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-action-fit-data')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('mobile-action-select-all')))
           .height,
       greaterThanOrEqualTo(48),
     );

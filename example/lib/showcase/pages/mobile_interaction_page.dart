@@ -16,11 +16,14 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
   TouchInteractionProfile _profile = TouchInteractionProfile.browse;
   Map<String, double>? _visibleBounds;
   int _viewportUpdates = 0;
+  TouchTapBehavior _tapBehavior = TouchTapBehavior.disabled;
   bool _enableTrackingScrub = true;
   bool _enableHaptics = true;
   bool _enablePanInertia = true;
   double _panInertiaDeceleration = 6;
   double? _trackedDay;
+  String _accessibilityActionStatus =
+      'Ready. Use the buttons or a screen reader action menu.';
 
   late final List<ChartDataPoint> _primary = _signal(phase: 0);
   late final List<ChartDataPoint> _comparison = _signal(phase: 0.8);
@@ -47,7 +50,12 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
 
   void _setProfile(TouchInteractionProfile profile) {
     if (_profile == profile) return;
-    setState(() => _profile = profile);
+    setState(() {
+      _profile = profile;
+      _tapBehavior = profile == TouchInteractionProfile.browse
+          ? TouchTapBehavior.disabled
+          : TouchTapBehavior.inspectAndSelect;
+    });
   }
 
   void _onViewportChanged(Map<String, double> bounds) {
@@ -66,6 +74,18 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
     setState(() => _trackedDay = trackedDay);
   }
 
+  void _runAccessibilityAction({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  }) {
+    final changed = action();
+    if (!mounted) return;
+    setState(() {
+      _accessibilityActionStatus = changed ? successMessage : unchangedMessage;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -76,6 +96,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
     return ColoredBox(
       color: colors.surface,
       child: ListView(
+        key: const ValueKey('mobile-interaction-scroll'),
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 80),
         children: [
           Text(
@@ -100,16 +121,24 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                 ? 'Browse: the page keeps one finger'
                 : 'Explore: the chart keeps one finger',
             message: isBrowse
-                ? 'Drag with one finger to scroll this page. Use two fingers together to pan and pinch the chart.'
+                ? 'Drag with one finger to scroll this page. Hold to inspect, or use two fingers together to pan and pinch the chart.'
                 : 'Drag the chart with one finger to pan. Pinch with two fingers to zoom. Scroll the page outside the chart.',
           ),
           const SizedBox(height: 12),
           _TrackingControls(
+            shortTapEnabled: _tapBehavior == TouchTapBehavior.inspectAndSelect,
             enabled: _enableTrackingScrub,
             hapticsEnabled: _enableHaptics,
             inertiaEnabled: _enablePanInertia,
             inertiaDeceleration: _panInertiaDeceleration,
             trackedDay: _trackedDay,
+            onShortTapChanged: (value) {
+              setState(() {
+                _tapBehavior = value
+                    ? TouchTapBehavior.inspectAndSelect
+                    : TouchTapBehavior.disabled;
+              });
+            },
             onEnabledChanged: (value) {
               setState(() {
                 _enableTrackingScrub = value;
@@ -156,6 +185,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                       interactionConfig: InteractionConfig(
                         touch: TouchInteractionConfig(
                           profile: _profile,
+                          tapBehavior: _tapBehavior,
                           enablePanInertia: _enablePanInertia,
                           panInertiaDeceleration: _panInertiaDeceleration,
                           enableLongPressTracking: _enableTrackingScrub,
@@ -197,7 +227,11 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _ViewportControls(controller: _controller),
+                  _AccessibleActionControls(
+                    controller: _controller,
+                    status: _accessibilityActionStatus,
+                    onAction: _runAccessibilityAction,
+                  ),
                 ],
               ),
             ),
@@ -217,7 +251,7 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
             ),
           ),
           const SizedBox(height: 20),
-          _ContractSummary(profile: _profile),
+          _ContractSummary(profile: _profile, tapBehavior: _tapBehavior),
         ],
       ),
     );
@@ -226,22 +260,26 @@ class _MobileInteractionPageState extends State<MobileInteractionPage> {
 
 class _TrackingControls extends StatelessWidget {
   const _TrackingControls({
+    required this.shortTapEnabled,
     required this.enabled,
     required this.hapticsEnabled,
     required this.inertiaEnabled,
     required this.inertiaDeceleration,
     required this.trackedDay,
+    required this.onShortTapChanged,
     required this.onEnabledChanged,
     required this.onHapticsChanged,
     required this.onInertiaChanged,
     required this.onInertiaDecelerationChanged,
   });
 
+  final bool shortTapEnabled;
   final bool enabled;
   final bool hapticsEnabled;
   final bool inertiaEnabled;
   final double inertiaDeceleration;
   final double? trackedDay;
+  final ValueChanged<bool> onShortTapChanged;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<bool> onHapticsChanged;
   final ValueChanged<bool> onInertiaChanged;
@@ -257,6 +295,17 @@ class _TrackingControls extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
         child: Column(
           children: [
+            SwitchListTile.adaptive(
+              key: const ValueKey('mobile-short-tap-activation-switch'),
+              title: const Text('Short tap selects'),
+              subtitle: const Text(
+                'Turn off for scroll-first browsing; hold to inspect instead.',
+              ),
+              secondary: const Icon(Icons.ads_click_outlined),
+              value: shortTapEnabled,
+              onChanged: onShortTapChanged,
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
             SwitchListTile.adaptive(
               title: const Text('Long-press tracking'),
               subtitle: const Text(
@@ -436,65 +485,276 @@ class _InstructionCard extends StatelessWidget {
   }
 }
 
-class _ViewportControls extends StatelessWidget {
-  const _ViewportControls({required this.controller});
+class _AccessibleActionControls extends StatelessWidget {
+  const _AccessibleActionControls({
+    required this.controller,
+    required this.status,
+    required this.onAction,
+  });
 
   final BravenChartController controller;
+  final String status;
+  final void Function({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  })
+  onAction;
+
+  void _run({
+    required String successMessage,
+    required String unchangedMessage,
+    required bool Function() action,
+  }) {
+    onAction(
+      successMessage: successMessage,
+      unchangedMessage: unchangedMessage,
+      action: action,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final zoomOut = OutlinedButton.icon(
-          onPressed: () => controller.zoomViewport(0.8),
-          icon: const Icon(Icons.zoom_out),
-          label: const Text('Zoom out'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        final fitData = FilledButton.tonalIcon(
-          onPressed: controller.fitData,
-          icon: const Icon(Icons.fit_screen_outlined),
-          label: const Text('Fit data'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        final zoomIn = OutlinedButton.icon(
-          onPressed: () => controller.zoomViewport(1.25),
-          icon: const Icon(Icons.zoom_in),
-          label: const Text('Zoom in'),
-          style: const ButtonStyle(
-            minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-          ),
-        );
-        if (constraints.maxWidth < 430) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: zoomOut),
-                  const SizedBox(width: 8),
-                  Expanded(child: zoomIn),
-                ],
-              ),
-              const SizedBox(height: 8),
-              fitData,
-            ],
-          );
-        }
-        return Row(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: zoomOut),
-            const SizedBox(width: 8),
-            Expanded(child: fitData),
-            const SizedBox(width: 8),
-            Expanded(child: zoomIn),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.accessibility_new, color: colors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Accessible chart actions',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'These controls use the same controller commands exposed as TalkBack and VoiceOver custom actions.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ActionGroup(
+              title: 'Viewport',
+              children: [
+                _ActionButton(
+                  key: const ValueKey('mobile-action-zoom-out'),
+                  icon: Icons.zoom_out,
+                  label: 'Zoom out',
+                  onPressed: () => _run(
+                    successMessage: 'Zoomed out.',
+                    unchangedMessage: 'Zoom out is unavailable.',
+                    action: () => controller.zoomViewport(0.8),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-zoom-in'),
+                  icon: Icons.zoom_in,
+                  label: 'Zoom in',
+                  onPressed: () => _run(
+                    successMessage: 'Zoomed in.',
+                    unchangedMessage: 'Zoom in is unavailable.',
+                    action: () => controller.zoomViewport(1.25),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-pan-left'),
+                  icon: Icons.arrow_back,
+                  label: 'Pan left',
+                  onPressed: () => _run(
+                    successMessage: 'Panned left.',
+                    unchangedMessage: 'Pan left reached the data boundary.',
+                    action: () => controller.panViewport(
+                      horizontalPixels: -48,
+                      verticalPixels: 0,
+                    ),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-pan-right'),
+                  icon: Icons.arrow_forward,
+                  label: 'Pan right',
+                  onPressed: () => _run(
+                    successMessage: 'Panned right.',
+                    unchangedMessage: 'Pan right reached the data boundary.',
+                    action: () => controller.panViewport(
+                      horizontalPixels: 48,
+                      verticalPixels: 0,
+                    ),
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-fit-data'),
+                  icon: Icons.fit_screen_outlined,
+                  label: 'Fit data',
+                  emphasized: true,
+                  onPressed: () => _run(
+                    successMessage: 'Showing all chart data.',
+                    unchangedMessage: 'Fit data is unavailable.',
+                    action: controller.fitData,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ActionGroup(
+              title: 'Selection',
+              children: [
+                _ActionButton(
+                  key: const ValueKey('mobile-action-select-all'),
+                  icon: Icons.select_all,
+                  label: 'Select all',
+                  onPressed: () => _run(
+                    successMessage: 'Selected all bounded chart data.',
+                    unchangedMessage: 'Select all is unavailable.',
+                    action: controller.selectAllData,
+                  ),
+                ),
+                _ActionButton(
+                  key: const ValueKey('mobile-action-clear-selection'),
+                  icon: Icons.deselect,
+                  label: 'Clear selection',
+                  onPressed: () => _run(
+                    successMessage: 'Cleared chart selection.',
+                    unchangedMessage: 'There is no selection to clear.',
+                    action: controller.clearAllSelection,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Semantics(
+              key: const ValueKey('mobile-accessibility-action-status'),
+              liveRegion: true,
+              label: status,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.record_voice_over_outlined,
+                        size: 20,
+                        color: colors.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          status,
+                          key: const ValueKey(
+                            'mobile-accessibility-status-text',
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onPrimaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'On managed live charts, Return to live is added only while the viewport is exploring history.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionGroup extends StatelessWidget {
+  const _ActionGroup({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: children),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.emphasized = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = const ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
+    if (emphasized) {
+      return FilledButton.tonalIcon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+        style: style,
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: style,
     );
   }
 }
@@ -639,9 +899,10 @@ class _ViewportBadge extends StatelessWidget {
 }
 
 class _ContractSummary extends StatelessWidget {
-  const _ContractSummary({required this.profile});
+  const _ContractSummary({required this.profile, required this.tapBehavior});
 
   final TouchInteractionProfile profile;
+  final TouchTapBehavior tapBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -666,7 +927,12 @@ class _ContractSummary extends StatelessWidget {
             ),
             const _ContractRow(gesture: 'Two-finger drag', result: 'Pan chart'),
             const _ContractRow(gesture: 'Pinch', result: 'Zoom at fingers'),
-            const _ContractRow(gesture: 'Tap point', result: 'Inspect/select'),
+            _ContractRow(
+              gesture: 'Tap point',
+              result: tapBehavior == TouchTapBehavior.inspectAndSelect
+                  ? 'Inspect/select'
+                  : 'No chart action',
+            ),
             const _ContractRow(
               gesture: 'Hold + drag',
               result: 'Scrub tracking',

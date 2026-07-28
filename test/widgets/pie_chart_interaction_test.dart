@@ -60,6 +60,36 @@ void main() {
     },
   );
 
+  testWidgets('disabled short-touch activation leaves radial slices inert', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    var tapCount = 0;
+
+    await tester.pumpWidget(
+      _host(
+        controller: controller,
+        onPointTap: (_, _) => tapCount += 1,
+        interactionConfig: const InteractionConfig(
+          touch: TouchInteractionConfig(tapBehavior: TouchTapBehavior.disabled),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = find.byKey(const ValueKey('interactive-pie'));
+    final firstSlice = tester.getCenter(chart) + const Offset(70, 0);
+    final touch = await tester.createGesture(kind: PointerDeviceKind.touch);
+    addTearDown(touch.removePointer);
+    await touch.down(firstSlice);
+    await touch.up();
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedPointRefs, isEmpty);
+    expect(tapCount, 0);
+  });
+
   testWidgets(
     'arrow keys traverse slices and Enter selects the focused slice',
     (tester) async {

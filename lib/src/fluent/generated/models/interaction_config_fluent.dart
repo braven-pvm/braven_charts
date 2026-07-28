@@ -207,6 +207,10 @@ extension TouchInteractionConfigFluent on TouchInteractionConfig {
   TouchInteractionConfig withProfile(TouchInteractionProfile value) =>
       copyWith(profile: value);
 
+  /// Replaces [TouchInteractionConfig.tapBehavior] with [value].
+  TouchInteractionConfig withTapBehavior(TouchTapBehavior value) =>
+      copyWith(tapBehavior: value);
+
   /// Replaces [TouchInteractionConfig.enablePinchZoom] with [value].
   TouchInteractionConfig withEnablePinchZoom(bool value) =>
       copyWith(enablePinchZoom: value);

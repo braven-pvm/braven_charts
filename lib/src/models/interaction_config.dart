@@ -901,6 +901,19 @@ enum TouchInteractionProfile {
   explore,
 }
 
+/// Determines whether a short direct-touch tap activates chart content.
+enum TouchTapBehavior {
+  /// Preserve the existing tap-to-inspect and tap-to-select behavior.
+  inspectAndSelect,
+
+  /// Leave short direct-touch taps inert.
+  ///
+  /// Long-press tracking, touch viewport gestures, mouse and pen taps,
+  /// keyboard navigation, and accessibility actions remain independently
+  /// configurable.
+  disabled,
+}
+
 /// Touch-specific viewport gesture policy.
 ///
 /// This policy does not replace [InteractionConfig.enableZoom] or
@@ -911,6 +924,7 @@ class TouchInteractionConfig {
   const TouchInteractionConfig({
     this.enabled = true,
     this.profile = TouchInteractionProfile.browse,
+    this.tapBehavior = TouchTapBehavior.inspectAndSelect,
     this.enablePinchZoom = true,
     this.enablePan = true,
     this.enablePanInertia = false,
@@ -931,6 +945,12 @@ class TouchInteractionConfig {
 
   /// How the chart arbitrates one-finger drags with surrounding content.
   final TouchInteractionProfile profile;
+
+  /// Whether a short direct-touch tap may inspect or select chart content.
+  ///
+  /// This applies only to touch taps. Use [enableLongPressTracking] to retain
+  /// hold-and-scrub inspection when short taps are disabled.
+  final TouchTapBehavior tapBehavior;
 
   /// Whether two-finger scale changes may zoom the chart.
   final bool enablePinchZoom;
@@ -975,6 +995,7 @@ class TouchInteractionConfig {
   TouchInteractionConfig copyWith({
     bool? enabled,
     TouchInteractionProfile? profile,
+    TouchTapBehavior? tapBehavior,
     bool? enablePinchZoom,
     bool? enablePan,
     bool? enablePanInertia,
@@ -986,6 +1007,7 @@ class TouchInteractionConfig {
     return TouchInteractionConfig(
       enabled: enabled ?? this.enabled,
       profile: profile ?? this.profile,
+      tapBehavior: tapBehavior ?? this.tapBehavior,
       enablePinchZoom: enablePinchZoom ?? this.enablePinchZoom,
       enablePan: enablePan ?? this.enablePan,
       enablePanInertia: enablePanInertia ?? this.enablePanInertia,
@@ -1005,6 +1027,7 @@ class TouchInteractionConfig {
     return other is TouchInteractionConfig &&
         other.enabled == enabled &&
         other.profile == profile &&
+        other.tapBehavior == tapBehavior &&
         other.enablePinchZoom == enablePinchZoom &&
         other.enablePan == enablePan &&
         other.enablePanInertia == enablePanInertia &&
@@ -1018,6 +1041,7 @@ class TouchInteractionConfig {
   int get hashCode => Object.hash(
     enabled,
     profile,
+    tapBehavior,
     enablePinchZoom,
     enablePan,
     enablePanInertia,
@@ -1682,10 +1706,7 @@ class ChartSelectionBrushConfig {
   ChartSelectionBrushConfig withInitialState(
     ChartSelectionBrushRange initialRange,
     bool initialVisible,
-  ) => copyWith(
-    initialRange: initialRange,
-    initialVisible: initialVisible,
-  );
+  ) => copyWith(initialRange: initialRange, initialVisible: initialVisible);
 
   ChartSelectionBrushConfig copyWith({
     bool? enabled,

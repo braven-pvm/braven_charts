@@ -125,6 +125,7 @@ class ChartRenderBox extends RenderBox {
     InteractionConfig? interactionConfig,
     ChartSelectionBrushState? selectionBrushState,
     bool selectionBrushKeyboardFocused = false,
+    bool disableAnimations = false,
     NormalizationMode? normalizationMode,
     List<ChartSeries>? series,
     this.onElementClick,
@@ -151,6 +152,7 @@ class ChartRenderBox extends RenderBox {
        _interactionConfig = interactionConfig,
        _selectionBrushState = selectionBrushState,
        _selectionBrushKeyboardFocused = selectionBrushKeyboardFocused,
+       _disableAnimations = disableAnimations,
        _textScaleFactor = textScaleFactor,
        _textDirection = textDirection,
        _axislessInsets = axislessInsets,
@@ -385,6 +387,7 @@ class ChartRenderBox extends RenderBox {
   InteractionConfig? _interactionConfig;
   ChartSelectionBrushState? _selectionBrushState;
   bool _selectionBrushKeyboardFocused;
+  bool _disableAnimations;
   _SelectionBrushKeyboardTarget _selectionBrushKeyboardTarget =
       _SelectionBrushKeyboardTarget.body;
 
@@ -579,31 +582,9 @@ class ChartRenderBox extends RenderBox {
   /// - Styling with background, border, shadow, and opacity animation
   static const TooltipRenderer _tooltipRenderer = TooltipRenderer();
 
-  // ==========================================================================
-  // Crosshair Label Caching (Sprint 3 Optimization)
-  // ==========================================================================
-
-  /// Cached TextPainter for X coordinate label.
-  ///
-  /// Reused across frames to avoid expensive TextPainter.layout() calls.
-  /// Only re-layout when label text actually changes.
-  // TODO: Implement crosshair label caching
-  // TextPainter? _cachedXLabelPainter;
-
-  /// Cached TextPainter for Y coordinate label.
-  ///
-  /// Reused across frames to avoid expensive TextPainter.layout() calls.
-  /// Only re-layout when label text actually changes.
-  // TODO: Implement crosshair label caching
-  // TextPainter? _cachedYLabelPainter;
-
-  /// Last X label text rendered (for change detection).
-  // TODO: Implement crosshair label caching
-  // final String _lastXLabelText = '';
-
-  /// Last Y label text rendered (for change detection).
-  // TODO: Implement crosshair label caching
-  // final String _lastYLabelText = '';
+  // Crosshair axis-label layout remains intentionally uncached. BC-0019's
+  // focused benchmark did not meet the approved absolute p95 benefit floor;
+  // see the committed design evidence.
 
   // ==========================================================================
   // Zoom/Pan Constraints
@@ -1688,13 +1669,29 @@ class ChartRenderBox extends RenderBox {
   HoveredMarkerInfo? get debugSelectedTooltipMarker =>
       _resolveSelectedTooltipMarker();
 
-  /// Current tooltip opacity for focused rendering regressions.
-  @visibleForTesting
-  double get debugTooltipOpacity => _tooltipAnimator.opacity;
-
   /// Bounds of the most recently painted tooltip surface.
   @visibleForTesting
   Rect? get debugTooltipRect => _debugTooltipRect;
+
+  /// Current tap-pinned tooltip marker for widget tests.
+  @visibleForTesting
+  HoveredMarkerInfo? get debugTappedTooltipMarker =>
+      _eventHandlerManager.tappedMarker;
+
+  /// Dismisses a tap-pinned data-point tooltip independently of selection.
+  ///
+  /// Persistent selection brushes and durable selected data are intentionally
+  /// left untouched.
+  bool dismissTapPinnedTooltip() => _eventHandlerManager.clearTappedMarker();
+
+  /// Current tooltip opacity for animation lifecycle tests.
+  @visibleForTesting
+  double get debugTooltipOpacity => _tooltipAnimator.opacity;
+
+  /// Marker currently owned by the tooltip animator for widget tests.
+  @visibleForTesting
+  HoveredMarkerInfo? get debugTooltipTargetMarker =>
+      _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
@@ -1712,10 +1709,35 @@ class ChartRenderBox extends RenderBox {
     markNeedsSemanticsUpdate();
   }
 
+  /// Updates whether ambient reduced-motion preferences disable transitions.
+  void setDisableAnimations(bool disableAnimations) {
+    if (_disableAnimations == disableAnimations) return;
+    _disableAnimations = disableAnimations;
+    if (_disableAnimations) {
+      final targetMarker = _tooltipAnimator
+          .getTargetMarker<HoveredMarkerInfo>();
+      if (targetMarker == null) {
+        _tooltipAnimator.hideImmediately();
+      } else {
+        _tooltipAnimator.show(
+          targetMarker,
+          const TooltipConfig(showDelay: Duration.zero),
+          animate: false,
+        );
+      }
+    }
+    markNeedsPaint();
+  }
+
   /// Updates the durable data-domain state used to paint the interval brush.
   void setSelectionBrushState(ChartSelectionBrushState? state) {
     if (_selectionBrushState == state) return;
     _selectionBrushState = state;
+    // A controller/keyboard brush mutation can move the durable range without
+    // producing a pointer gesture in EventHandlerManager. Do not retain a
+    // tap-pinned datum whose membership may have changed underneath it.
+    _eventHandlerManager.clearTappedMarker();
+    coordinator.setHoveredMarker(null);
     markNeedsPaint();
     markNeedsSemanticsUpdate();
   }
@@ -3240,6 +3262,14 @@ class ChartRenderBox extends RenderBox {
     return _selectionBrushWidgetRectForState(state);
   }
 
+  /// Whether a widget-local pointer can manipulate the persistent brush.
+  ///
+  /// This is consumed by the widget-level touch recognizer so a brush body or
+  /// handle owns its one-finger gesture before an ancestor scrollable can
+  /// claim it.
+  bool hitTestSelectionBrushInteraction(Offset position) =>
+      _eventHandlerManager.hitTestSelectionBrushInteraction(position);
+
   Rect? _selectionBrushWidgetRectForState(
     ChartSelectionBrushState state, {
     bool clipToPlot = true,
@@ -4453,7 +4483,11 @@ class ChartRenderBox extends RenderBox {
         final currentTarget = _tooltipAnimator
             .getTargetMarker<HoveredMarkerInfo>();
         if (!markerToShow.sameMarkerAs(currentTarget)) {
-          _tooltipAnimator.show(markerToShow, config);
+          _tooltipAnimator.show(
+            markerToShow,
+            config,
+            animate: !_disableAnimations,
+          );
         }
 
         // Only draw tooltip if it has some opacity (visible or fading)
@@ -4465,7 +4499,7 @@ class ChartRenderBox extends RenderBox {
         final currentTarget = _tooltipAnimator
             .getTargetMarker<HoveredMarkerInfo>();
         if (currentTarget != null) {
-          _tooltipAnimator.hide(config);
+          _tooltipAnimator.hide(config, animate: !_disableAnimations);
         }
 
         // Still draw tooltip during fade-out

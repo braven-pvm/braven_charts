@@ -34,6 +34,8 @@ GitHub publishing can be enabled on pub.dev after the package exists.
   warnings and zero errors.
 - [ ] `dart run tool/public_docs.dart --check --api-dir=<dartdoc output>`
   confirms every cataloged public symbol and API destination was generated.
+- [ ] `dart run tool/public_guides.dart --output=<web output>/guides`
+  generates every cataloged end-user guide with no unsafe or unresolved link.
 - [ ] `flutter pub outdated` is reviewed.
 - [ ] Run `pana` against a disposable copy of the package and review every lost
   pub point.
@@ -105,6 +107,8 @@ motion has settled.
 
 - [ ] `flutter build web --release --base-href /braven_charts/` succeeds from
   `example/`.
+- [ ] Generate `example/build/web/guides` with `tool/public_guides.dart`
+  before running the public-surface gate or deploying the Pages artifact.
 - [ ] Run `python tool/public_surface_visual_check.py` against the built
   showcase plus generated `example/build/web/api`; require an empty failure
   report, no unexplained baseline diffs, and review all phone, tablet, desktop,
@@ -121,6 +125,9 @@ motion has settled.
 - [ ] The deployed Tracking & Value Display route loads directly and after a browser refresh.
 - [ ] The deployed Documentation route loads directly on desktop and phone
   widths and after a browser refresh.
+- [ ] `/braven_charts/guides/` and a representative guide deep link load
+  directly; search, heading anchors, keyboard focus, source links, and
+  runnable-example links work.
 - [ ] `/braven_charts/api/index.html` and `/braven_charts/api/index.json` load
   directly; generated API search works.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
