@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
@@ -237,37 +238,25 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
-          final contentHeight = math.max(
-            constraints.maxHeight,
-            _showcaseMode == _CandlestickShowcaseMode.stock
-                ? (compact ? 2160.0 : 1360.0)
-                : (compact ? 1420.0 : 960.0),
-          );
-          final content = SizedBox(
-            height: contentHeight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildReviewHeader(compact: compact),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _showcaseMode == _CandlestickShowcaseMode.stock
-                      ? _buildStockComposition(compact: compact)
-                      : _buildChartCard(compact: compact),
-                ),
-                if (_showcaseMode == _CandlestickShowcaseMode.workbench &&
-                    _showDirectionLegend) ...[
-                  const SizedBox(height: 16),
-                  _buildDirectionLegend(),
-                ],
-              ],
-            ),
-          );
-          if (contentHeight <= constraints.maxHeight) return content;
-          return SingleChildScrollView(
-            key: const ValueKey('candlestick-showcase-scroll'),
-            primary: false,
-            child: content,
+          final stockMode = _showcaseMode == _CandlestickShowcaseMode.stock;
+          return PersistentResizableChartPanelWorkspace(
+            preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+            minimumPanelHeight: compact ? 620 : 420,
+            maximumPanelHeight: compact ? 1800 : 1400,
+            initialPanelHeight: stockMode
+                ? (compact ? 1600 : 1050)
+                : (compact ? 980 : 680),
+            scrollViewKey: const ValueKey('candlestick-showcase-scroll'),
+            leading: [
+              _buildReviewHeader(compact: compact),
+              const SizedBox(height: 16),
+            ],
+            panel: stockMode
+                ? _buildStockComposition(compact: compact)
+                : _buildChartCard(compact: compact),
+            trailing: [
+              if (!stockMode && _showDirectionLegend) _buildDirectionLegend(),
+            ],
           );
         },
       ),

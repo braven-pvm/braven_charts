@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/radial_legend_value_card.dart';
 import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
@@ -441,26 +442,14 @@ class _RadialBarPageState extends State<RadialBarPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
-        final contentHeight = math.max(
-          constraints.maxHeight,
-          compact ? 980.0 : 800.0,
-        );
-        final content = SizedBox(
-          height: contentHeight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildPresentationSelector(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildChartCard()),
-            ],
-          ),
-        );
-        if (contentHeight <= constraints.maxHeight) return content;
-        return SingleChildScrollView(
-          key: const ValueKey('radial-bar-showcase-scroll'),
-          primary: false,
-          child: content,
+        return PersistentResizableChartPanelWorkspace(
+          preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+          minimumPanelHeight: compact ? 520 : 360,
+          maximumPanelHeight: compact ? 1400 : 1200,
+          initialPanelHeight: compact ? 720 : 600,
+          scrollViewKey: const ValueKey('radial-bar-showcase-scroll'),
+          leading: [_buildPresentationSelector(), const SizedBox(height: 16)],
+          panel: _buildChartCard(),
         );
       },
     );

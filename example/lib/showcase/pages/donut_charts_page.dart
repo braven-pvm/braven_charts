@@ -9,6 +9,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/radial_demo_data.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
 import '../widgets/showcase_randomizer.dart';
@@ -186,9 +187,13 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             children: [
               _buildStorySelector(),
               const SizedBox(height: 16),
-              SizedBox(
-                height: compact ? 760 : 700,
-                child: _buildChartCard(compact: compact),
+              PersistentResizableChartPanelWorkspace(
+                preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+                minimumPanelHeight: compact ? 520 : 360,
+                maximumPanelHeight: compact ? 1400 : 1200,
+                initialPanelHeight: compact ? 760 : 700,
+                wrapExplicitContentInScrollView: false,
+                panel: _buildChartCard(compact: compact),
               ),
               const SizedBox(height: 32),
               _buildPortableWorkflow(compact: compact),

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/persistent_resizable_chart_panel.dart';
 import '../widgets/standard_options.dart';
 
 enum _RangeAreaPreset {
@@ -171,17 +172,18 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 760;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          return PersistentResizableChartPanelWorkspace(
+            preferenceKey: showcaseChartPanelHeightKey(compact: compact),
+            minimumPanelHeight: compact ? 520 : 360,
+            maximumPanelHeight: compact ? 1400 : 1200,
+            initialPanelHeight: compact ? 760 : 680,
+            scrollViewKey: const ValueKey('range-area-chart-panel-scroll'),
+            leading: [
               _buildPresetPicker(compact: compact),
               SizedBox(height: compact ? 8 : 16),
-              Expanded(child: _buildChartCard(compact: compact)),
-              if (!compact) ...[
-                const SizedBox(height: 16),
-                const _RangeAreaCoverageStrip(),
-              ],
             ],
+            panel: _buildChartCard(compact: compact),
+            trailing: [if (!compact) const _RangeAreaCoverageStrip()],
           );
         },
       ),
