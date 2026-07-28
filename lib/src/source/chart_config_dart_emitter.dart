@@ -109,6 +109,34 @@ class ChartConfigDartEmitter {
   /// Warnings raised while emitting sub-expressions through this seam.
   List<ChartSourceWarning> get emittedWarnings => List.unmodifiable(_warnings);
 
+  /// Where a donut centre carried by SERIES [seriesIndex] is reported from when
+  /// its `valueFormatter` cannot be written as a literal.
+  ///
+  /// A plain donut, and a concentric composition that collapsed to one ring,
+  /// both take their centre from `series[i].style.centerContent`, so this is
+  /// the site for both — in either source form.
+  static ({String message, String path}) donutCenterWarningSite(
+    int seriesIndex,
+  ) => (
+    message:
+        'A Donut center formatter callback was omitted. Provide it from your '
+        'application.',
+    path: '\$.series[$seriesIndex].style.centerContent.valueFormatter',
+  );
+
+  /// Where the SHARED centre of a multi-ring concentric composition is reported
+  /// from when its `valueFormatter` cannot be written as a literal.
+  ///
+  /// That centre lives on the plot-level configuration and no series carries
+  /// it, so reporting it at a series path would name a field the document does
+  /// not have.
+  static const ({String message, String path}) concentricCenterWarningSite = (
+    message:
+        'A Concentric Donut center formatter callback was omitted. Provide it '
+        'from your application.',
+    path: r'$.configuration.concentricDonut.centerContent.valueFormatter',
+  );
+
   /// Writes the constructor arguments of an [XAxisConfig], without the
   /// enclosing `XAxisConfig(` / `)` .
   void emitXAxisFields(DartSourceWriter writer, XAxisConfig axis) =>
@@ -260,21 +288,33 @@ class ChartConfigDartEmitter {
   /// chain hands to `geomDonut(center: ...)`, rendered by the same code the
   /// config form's `centerContent:` uses, so the two cannot disagree about a
   /// centre's styles or its formatter. Unconditional: the caller decides when a
-  /// centre is worth emitting. A live `valueFormatter` has no literal form and
-  /// is written as an honest placeholder with a runtime-value-omitted warning,
-  /// pathed at [seriesIndex] exactly as the config form's centre is.
+  /// centre is worth emitting.
+  ///
+  /// A live `valueFormatter` has no literal form and is written as an honest
+  /// placeholder with a runtime-value-omitted warning. [warningMessage] and
+  /// [warningPath] name the site the centre was CAPTURED from and are the
+  /// caller's to supply: a `geomDonut(center:)` may reverse a series' own
+  /// `style.centerContent` OR a multi-ring composition's plot-level
+  /// `configuration.concentricDonut.centerContent`, which no series carries.
+  /// Guessing one of them would point the workbench at a field that does not
+  /// exist, so the seam takes them rather than deriving them.
+  ///
+  /// The two sites are defined once, as [donutCenterWarningSite] and
+  /// [concentricCenterWarningSite], and the config form reports the very same
+  /// records — so neither form can drift into naming an object the other calls
+  /// something else.
   void emitDonutCenterContent(
     DartSourceWriter writer,
     String argument,
-    DonutCenterContent center,
-    int seriesIndex,
-  ) => _emitCenterContentArgument(
+    DonutCenterContent center, {
+    required String warningMessage,
+    required String warningPath,
+  }) => _emitCenterContentArgument(
     writer,
     argument,
     center,
-    warningMessage:
-        'A Donut center formatter callback was omitted. Provide it from your application.',
-    warningPath: '\$.series[$seriesIndex].style.centerContent.valueFormatter',
+    warningMessage: warningMessage,
+    warningPath: warningPath,
   );
 
   /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
@@ -3217,14 +3257,13 @@ class ChartConfigDartEmitter {
     _emitRadialSelectionStyle(writer, series.selectionStyle);
     final center = series.centerContent;
     if (center != DonutCenterContent.hidden) {
+      final site = donutCenterWarningSite(seriesIndex);
       _emitCenterContentArgument(
         writer,
         'centerContent',
         center,
-        warningMessage:
-            'A Donut center formatter callback was omitted. Provide it from your application.',
-        warningPath:
-            '\$.series[$seriesIndex].style.centerContent.valueFormatter',
+        warningMessage: site.message,
+        warningPath: site.path,
       );
     }
     _emitRadialLabels(writer, series.dataLabels, seriesIndex);
@@ -3282,10 +3321,8 @@ class ChartConfigDartEmitter {
           writer,
           'centerContent',
           config.centerContent,
-          warningMessage:
-              'A Concentric Donut center formatter callback was omitted. Provide it from your application.',
-          warningPath:
-              r'$.configuration.concentricDonut.centerContent.valueFormatter',
+          warningMessage: concentricCenterWarningSite.message,
+          warningPath: concentricCenterWarningSite.path,
         );
       }
     });

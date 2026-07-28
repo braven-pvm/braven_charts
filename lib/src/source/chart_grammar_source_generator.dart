@@ -301,6 +301,44 @@ class _GeometryPlan {
   final Map<String, _Field> accessors;
 }
 
+/// A planned donut center together with the document site it was CAPTURED
+/// from.
+///
+/// The two travel as one because the site is not decorative: when a center's
+/// `valueFormatter` is a live callback the emitter writes a placeholder and a
+/// `runtimeValueOmitted` warning, and that warning quotes this path. The two
+/// donut shapes capture their center from genuinely different places — a plain
+/// donut and a single-ring collapse from the series' own
+/// `style.centerContent`, a MULTI-RING concentric composition from the
+/// plot-level `configuration.concentricDonut.centerContent`, which no series
+/// carries at all. Letting the emitter guess produced a warning that pointed
+/// the workbench at a field the document did not have, and disagreed with what
+/// the config form calls the very same object.
+class _PlannedCenter {
+  const _PlannedCenter(this.content, this.message, this.path);
+
+  /// The center a plain donut, or a concentric composition that collapsed to a
+  /// single ring, carries on series [seriesIndex] itself.
+  factory _PlannedCenter.onSeries(DonutCenterContent content, int seriesIndex) {
+    final site = ChartConfigDartEmitter.donutCenterWarningSite(seriesIndex);
+    return _PlannedCenter(content, site.message, site.path);
+  }
+
+  /// The shared center a multi-ring concentric composition carries on its
+  /// plot-level [ConcentricDonutConfig].
+  factory _PlannedCenter.onConcentricConfig(DonutCenterContent content) {
+    const site = ChartConfigDartEmitter.concentricCenterWarningSite;
+    return _PlannedCenter(content, site.message, site.path);
+  }
+
+  final DonutCenterContent content;
+
+  /// The wording and document path the omitted-formatter warning quotes — the
+  /// same pair the config form reports for this object.
+  final String message;
+  final String path;
+}
+
 /// Which radial geometry a captured chart reverses to.
 ///
 /// The polar family is NOT here: it is the one radial family whose plot may
@@ -346,8 +384,9 @@ class _RadialPlan {
   /// point carries a colour. A row whose category has no override writes null.
   final _Field? sliceColor;
 
-  /// The donut center summary to emit, or null when there is none.
-  final DonutCenterContent? center;
+  /// The donut center summary to emit — with the site its formatter warning
+  /// names — or null when there is none.
+  final _PlannedCenter? center;
 }
 
 /// One polar series of a polar plan: the mark the proof lowers plus the value
@@ -987,6 +1026,8 @@ class _GrammarChainEmitter {
       sliceColor: sliceColor,
     );
     final center = _markCenter(series.centerContent, DonutCenterContent.hidden);
+    // `_planRadial` reaches here only for a chart of exactly ONE donut series,
+    // so this center really is `$.series[0].style.centerContent`.
     return _RadialPlan(
       kind: _RadialKind.donut,
       verb: 'geomDonut',
@@ -995,7 +1036,7 @@ class _GrammarChainEmitter {
       value: value,
       radius: radius,
       sliceColor: sliceColor,
-      center: center,
+      center: center == null ? null : _PlannedCenter.onSeries(center, 0),
       mark: DonutMark<_SourceRow>(
         id: series.id,
         name: series.name,
@@ -1076,6 +1117,15 @@ class _GrammarChainEmitter {
     final center = donuts.length == 1
         ? _markCenter(donuts.single.centerContent, DonutCenterContent.hidden)
         : _markCenter(captured.centerContent, const DonutCenterContent());
+    // …and the two shapes therefore report an omitted formatter at DIFFERENT
+    // document sites. The collapse's center is series[0]'s own; the multi-ring
+    // composition's belongs to the plot-level config, where the config form
+    // reports it too — and where, unlike any series path, it actually exists.
+    final plannedCenter = center == null
+        ? null
+        : donuts.length == 1
+        ? _PlannedCenter.onSeries(center, 0)
+        : _PlannedCenter.onConcentricConfig(center);
     // What lowering REBUILDS from `center` alone — the shape every concentric
     // chart emitted before `concentric:` existed. When it already reproduces the
     // captured composition the mark keeps carrying just the center, so those
@@ -1100,7 +1150,7 @@ class _GrammarChainEmitter {
       // The config owns the center when it rides the mark: lowering reads
       // `concentric.centerContent` and REFUSES a mark that sets both, so the
       // plan's `center` (what `geomDonut` emits as `center:`) drops out too.
-      center: carriesConfig ? null : center,
+      center: carriesConfig ? null : plannedCenter,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
       // deliberately left null here. The mark carries ONE unit / style /
@@ -2693,8 +2743,16 @@ class _GrammarChainEmitter {
           // config form's `centerContent:` and the concentric config both use —
           // so `center:` carries the styles and the formatter placeholder
           // instead of a four-field rebuild the proof would have to refuse.
-          if (plan.center != null) {
-            _config.emitDonutCenterContent(writer, 'center', plan.center!, 0);
+          // The planner also decided WHERE the centre came from, so an omitted
+          // formatter is reported at the site that actually holds it.
+          if (plan.center case final planned?) {
+            _config.emitDonutCenterContent(
+              writer,
+              'center',
+              planned.content,
+              warningMessage: planned.message,
+              warningPath: planned.path,
+            );
           }
           // `concentric:` and `center:` are mutually exclusive by lowering's
           // precedence rule, and the planner only carries a config the center

@@ -4432,10 +4432,194 @@ void main() {
       expect(generated.source, contains('valueStyle: LabelStyle('));
       expect(generated.source, contains('// valueFormatter:'));
       expect(generated.isComplete, isFalse);
+      // The warning must NAME THE SITE it is reporting, not merely carry the
+      // right code. A plain donut's centre really does live on the series, so
+      // the series-form path and message are the correct ones here — and
+      // pinning them is what makes the concentric case below (whose centre
+      // lives on the plot config, not on any series) a detectable mis-path
+      // rather than an invisible one.
+      final warning = generated.warnings.single;
+      expect(warning.code, ChartSourceWarningCodes.runtimeValueOmitted);
       expect(
-        generated.warnings.map((warning) => warning.code),
-        contains(ChartSourceWarningCodes.runtimeValueOmitted),
+        warning.path,
+        r'$.series[0].style.centerContent.valueFormatter',
+        reason:
+            'the omitted-formatter warning must point at the document location '
+            'the formatter was captured from',
       );
+      expect(
+        warning.message,
+        'A Donut center formatter callback was omitted. Provide it from your '
+        'application.',
+      );
+      // The two source forms must report the SAME omission at the SAME place
+      // for the same object — asked of the other form directly rather than
+      // assumed from a shared constant.
+      final configForm =
+          ChartDartSourceGenerator.generate(snapshot)
+              as ChartArtifactSuccess<ChartGeneratedSource>;
+      final configWarning = configForm.value.warnings.singleWhere(
+        (item) => item.code == ChartSourceWarningCodes.runtimeValueOmitted,
+      );
+      expect(configWarning.path, warning.path);
+      expect(configWarning.message, warning.message);
+      // The formatted chain cannot ROUND-TRIP by contract — the formatter has
+      // no literal form — but it is the exact text `DonutChartsPage` ships, so
+      // it must still parse and analyze. `expectRoundTrip` is the only other
+      // harness that runs this gate, and a deliberately incomplete chain can
+      // never go through it.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_donut_formatted_centre',
+        ),
+      );
+    });
+
+    testWidgets('a concentric composition whose SHARED centre is styled emits '
+        'center: instead of concentric: and round-trips', (tester) async {
+      // The shape this slice MOVED, and the one piece of the centre carry that
+      // had no test on either side of the `carriesConfig` branch. Before the
+      // verbatim carry, a styled centre could not be rebuilt from four fields,
+      // so `fromCenter != captured` and the whole `ConcentricDonutConfig` rode
+      // the mark as `concentric:`. Now the centre survives intact, the
+      // reconstruction matches, and the composition emits the SHORTHAND.
+      //
+      // Shape 28 pins the other half (a config customised beyond its centre
+      // still emits `concentric:`); together they fix the branch in both
+      // directions, so a later edit cannot silently flip either way.
+      const styled = DonutCenterContent(
+        label: 'Harvest',
+        labelStyle: donutCentreLabelStyle,
+        valueStyle: donutCentreValueStyle,
+      );
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_styled_centre',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'center: DonutCenterContent(',
+          "label: 'Harvest'",
+          'labelStyle: LabelStyle(',
+          'valueStyle: LabelStyle(',
+          'fontSize: 22.0',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              concentric: const ConcentricDonutConfig(centerContent: styled),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              center: styled,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The centre alone expresses the whole composition, so the config
+      // literal must NOT also be written — lowering refuses a mark that sets
+      // both, and the shorthand is what a reader should see.
+      expect(
+        generated.source,
+        isNot(contains('concentric: ConcentricDonutConfig(')),
+      );
+      expect(generated.isComplete, isTrue);
+      expect(generated.warnings, isEmpty);
+    });
+
+    testWidgets('a concentric composition\'s FORMATTED shared centre reports '
+        'the omission at the concentric config, not at a series', (
+      tester,
+    ) async {
+      // The centre a MULTI-RING composition carries comes from
+      // `configuration.concentricDonut.centerContent` — no series owns it. The
+      // captured document's `series[0].style.centerContent` here is the ring's
+      // own HIDDEN centre with no formatter at all, so a warning pathed there
+      // names a field that does not exist, and the config form reports the very
+      // same object as "Concentric Donut". Both forms must agree.
+      final snapshot = await sourceSnapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: ConcentricDonutConfig(
+            centerContent: DonutCenterContent(
+              label: 'Total',
+              labelStyle: donutCentreLabelStyle,
+              valueFormatter: (value) => value.toStringAsFixed(1),
+            ),
+          ),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'seasons-Winter',
+              name: 'Winter',
+              values: const <String, num>{'Apple': 42, 'Pear': 31},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'seasons-Summer',
+              name: 'Summer',
+              values: const <String, num>{'Plum': 17, 'Fig': 10},
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.source, contains('center: DonutCenterContent('));
+      expect(generated.source, contains('// valueFormatter:'));
+      expect(generated.isComplete, isFalse);
+
+      // The captured document really does carry NO formatter on series[0] —
+      // asserted, not assumed, so the path check below is anchored in the
+      // document rather than in a belief about it.
+      final seriesJson =
+          (snapshot.document.toJson()['series']! as List<Object?>)[0]!
+              as Map<String, Object?>;
+      final centre =
+          ((seriesJson['style'] as Map<String, Object?>?)?['centerContent']
+              as Map<String, Object?>?) ??
+          const <String, Object?>{};
+      expect(centre.containsKey('valueFormatter'), isFalse);
+
+      final warning = generated.warnings.single;
+      expect(warning.code, ChartSourceWarningCodes.runtimeValueOmitted);
+      expect(
+        warning.path,
+        r'$.configuration.concentricDonut.centerContent.valueFormatter',
+        reason:
+            'the shared centre lives on the concentric config, so the grammar '
+            'form must report the omission where the config form does',
+      );
+      expect(
+        warning.message,
+        'A Concentric Donut center formatter callback was omitted. Provide it '
+        'from your application.',
+      );
+
+      // And the claim the slice actually makes — that the two source forms
+      // "cannot disagree about a centre's styles or its formatter" — is only
+      // proven by asking the OTHER form the same question about the SAME
+      // document. Comparing the two warnings, rather than re-transcribing a
+      // path string, is what leaves nowhere for them to drift apart.
+      final configForm =
+          ChartDartSourceGenerator.generate(snapshot)
+              as ChartArtifactSuccess<ChartGeneratedSource>;
+      final configWarning = configForm.value.warnings.singleWhere(
+        (item) => item.code == ChartSourceWarningCodes.runtimeValueOmitted,
+      );
+      expect(configWarning.path, warning.path);
+      expect(configWarning.message, warning.message);
     });
 
     testWidgets('a DEFAULT donut centre still emits nothing at all', (
@@ -6919,6 +7103,20 @@ void main() {
         verbose.source,
         contains('valueMode: DonutCenterValueMode.total,'),
       );
+      // `includeDefaultValues` changes the `center:` literal, and no round-trip
+      // harness covers this option — so the widened centre is put through the
+      // same `dart format` + `dart analyze` gate `expectRoundTrip` uses, in
+      // both states.
+      await tester.runAsync(() async {
+        await expectGeneratedSourceCompiles(
+          terse.source,
+          fixtureName: 'grammar_source_donut_centre_terse',
+        );
+        await expectGeneratedSourceCompiles(
+          verbose.source,
+          fixtureName: 'grammar_source_donut_centre_verbose',
+        );
+      });
     });
 
     testWidgets('an invalid identifier fails the generation outright', (
