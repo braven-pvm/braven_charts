@@ -110,6 +110,10 @@ extension NeedleGaugeStyleFluent on NeedleGaugeStyle {
   NeedleGaugeStyle withNeedleWidth(double value) =>
       copyWith(needleWidth: value);
 
+  /// Replaces [NeedleGaugeStyle.needleTipWidth] with [value].
+  NeedleGaugeStyle withNeedleTipWidth(double value) =>
+      copyWith(needleTipWidth: value);
+
   /// Replaces [NeedleGaugeStyle.needleColor] with [value].
   NeedleGaugeStyle withNeedleColor(Color value) => copyWith(needleColor: value);
 
@@ -125,6 +129,18 @@ extension NeedleGaugeStyleFluent on NeedleGaugeStyle {
 
   /// Clears [NeedleGaugeStyle.pivotColor] to `null`.
   NeedleGaugeStyle clearPivotColor() => copyWith(clearPivotColor: true);
+
+  /// Replaces [NeedleGaugeStyle.pivotBorderColor] with [value].
+  NeedleGaugeStyle withPivotBorderColor(Color value) =>
+      copyWith(pivotBorderColor: value);
+
+  /// Clears [NeedleGaugeStyle.pivotBorderColor] to `null`.
+  NeedleGaugeStyle clearPivotBorderColor() =>
+      copyWith(clearPivotBorderColor: true);
+
+  /// Replaces [NeedleGaugeStyle.pivotBorderWidth] with [value].
+  NeedleGaugeStyle withPivotBorderWidth(double value) =>
+      copyWith(pivotBorderWidth: value);
 
   /// Replaces [NeedleGaugeStyle.axisThickness] with [value].
   NeedleGaugeStyle withAxisThickness(double value) =>

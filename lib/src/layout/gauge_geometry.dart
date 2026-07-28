@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../models/gauge_chart_config.dart';
 import '../models/gauge_chart_series.dart';
 import 'annular_sector_geometry.dart';
 import 'radial_pane_geometry.dart';
@@ -21,6 +22,7 @@ class GaugeZoneGeometry {
 class GaugeTickGeometry {
   const GaugeTickGeometry({
     required this.index,
+    required this.isMajor,
     required this.value,
     required this.fraction,
     required this.angle,
@@ -30,6 +32,7 @@ class GaugeTickGeometry {
   });
 
   final int index;
+  final bool isMajor;
   final double value;
   final double fraction;
   final double angle;
@@ -151,8 +154,14 @@ abstract final class GaugeGeometryCalculator {
     GaugeTarget? target,
     List<GaugeThreshold> thresholds = const [],
     int tickCount = 6,
+    int minorTicksPerInterval = 0,
     double tickLength = 10,
+    double minorTickLength = 5,
+    GaugeTickPosition tickPosition = GaugeTickPosition.centered,
+    GaugeScaleLabelPosition labelPosition = GaugeScaleLabelPosition.outside,
     double tickLabelOffset = 10,
+    double zoneGap = 0,
+    double zoneCornerRadius = 0,
     double referenceInnerOffset = 4,
     double referenceOuterOffset = 6,
   }) {
@@ -165,8 +174,12 @@ abstract final class GaugeGeometryCalculator {
       target: target,
       thresholds: thresholds,
       tickCount: tickCount,
+      minorTicksPerInterval: minorTicksPerInterval,
       tickLength: tickLength,
+      minorTickLength: minorTickLength,
       tickLabelOffset: tickLabelOffset,
+      zoneGap: zoneGap,
+      zoneCornerRadius: zoneCornerRadius,
       referenceInnerOffset: referenceInnerOffset,
       referenceOuterOffset: referenceOuterOffset,
     );
@@ -195,31 +208,35 @@ abstract final class GaugeGeometryCalculator {
       cornerRadius: cornerRadius,
     );
     final zoneGeometry = <GaugeZoneGeometry>[
-      for (final zone in zones)
+      for (final (index, zone) in zones.indexed)
         GaugeZoneGeometry(
           zone: zone,
-          sector: AnnularSectorGeometry(
-            center: pane.center,
+          sector: _zoneSector(
+            pane: pane,
+            zone: zone,
+            index: index,
+            zones: zones,
+            minimum: minimum,
+            domain: domain,
             innerRadius: axisInnerRadius,
             outerRadius: axisOuterRadius,
-            startAngle: pane.angleAt((zone.from - minimum) / domain),
-            sweepAngle:
-                pane.signedSweepAngle * ((zone.to - zone.from) / domain),
+            gap: zoneGap,
+            cornerRadius: zoneCornerRadius,
           ),
         ),
     ];
-    final ticks = <GaugeTickGeometry>[
-      for (var index = 0; index < tickCount; index++)
-        _tick(
-          pane: pane,
-          index: index,
-          tickCount: tickCount,
-          minimum: minimum,
-          domain: domain,
-          tickLength: tickLength,
-          labelOffset: tickLabelOffset,
-        ),
-    ];
+    final ticks = _ticks(
+      pane: pane,
+      majorTickCount: tickCount,
+      minorTicksPerInterval: minorTicksPerInterval,
+      minimum: minimum,
+      domain: domain,
+      majorTickLength: tickLength,
+      minorTickLength: minorTickLength,
+      tickPosition: tickPosition,
+      labelPosition: labelPosition,
+      labelOffset: tickLabelOffset,
+    );
     final markerInnerRadius = math.max(
       0.0,
       axisInnerRadius - referenceInnerOffset,
@@ -265,6 +282,7 @@ abstract final class GaugeGeometryCalculator {
             center: pane.center,
             tip: tip,
             width: style.needleWidth,
+            tipWidth: style.needleTipWidth,
           ),
           hitPath: _lineCorridor(
             start: pane.center,
@@ -318,19 +336,82 @@ abstract final class GaugeGeometryCalculator {
   }
 }
 
+List<GaugeTickGeometry> _ticks({
+  required RadialPaneGeometry pane,
+  required int majorTickCount,
+  required int minorTicksPerInterval,
+  required double minimum,
+  required double domain,
+  required double majorTickLength,
+  required double minorTickLength,
+  required GaugeTickPosition tickPosition,
+  required GaugeScaleLabelPosition labelPosition,
+  required double labelOffset,
+}) {
+  final ticks = <GaugeTickGeometry>[];
+  var index = 0;
+  final intervalCount = majorTickCount - 1;
+  for (var majorIndex = 0; majorIndex < majorTickCount; majorIndex++) {
+    ticks.add(
+      _tick(
+        pane: pane,
+        index: index++,
+        isMajor: true,
+        fraction: majorIndex / intervalCount,
+        minimum: minimum,
+        domain: domain,
+        tickLength: majorTickLength,
+        tickPosition: tickPosition,
+        labelPosition: labelPosition,
+        labelOffset: labelOffset,
+      ),
+    );
+    if (majorIndex == majorTickCount - 1) continue;
+    for (
+      var minorIndex = 1;
+      minorIndex <= minorTicksPerInterval;
+      minorIndex++
+    ) {
+      ticks.add(
+        _tick(
+          pane: pane,
+          index: index++,
+          isMajor: false,
+          fraction:
+              (majorIndex + minorIndex / (minorTicksPerInterval + 1)) /
+              intervalCount,
+          minimum: minimum,
+          domain: domain,
+          tickLength: minorTickLength,
+          tickPosition: tickPosition,
+          labelPosition: labelPosition,
+          labelOffset: labelOffset,
+        ),
+      );
+    }
+  }
+  return ticks;
+}
+
 GaugeTickGeometry _tick({
   required RadialPaneGeometry pane,
   required int index,
-  required int tickCount,
+  required bool isMajor,
+  required double fraction,
   required double minimum,
   required double domain,
   required double tickLength,
+  required GaugeTickPosition tickPosition,
+  required GaugeScaleLabelPosition labelPosition,
   required double labelOffset,
 }) {
-  final fraction = index / (tickCount - 1);
   final angle = pane.angleAt(fraction);
-  final innerReach = tickLength * 0.6;
-  final outerReach = tickLength - innerReach;
+  final (innerReach, outerReach) = switch (tickPosition) {
+    GaugeTickPosition.inside => (tickLength, 0.0),
+    // Preserve Gauge V1's established 60/40 boundary split.
+    GaugeTickPosition.centered => (tickLength * 0.6, tickLength * 0.4),
+    GaugeTickPosition.outside => (0.0, tickLength),
+  };
   final innerPoint =
       pane.center +
       Offset.fromDirection(angle, math.max(0, pane.outerRadius - innerReach));
@@ -338,12 +419,60 @@ GaugeTickGeometry _tick({
       pane.center + Offset.fromDirection(angle, pane.outerRadius + outerReach);
   return GaugeTickGeometry(
     index: index,
+    isMajor: isMajor,
     value: minimum + domain * fraction,
     fraction: fraction,
     angle: angle,
     innerPoint: innerPoint,
     outerPoint: outerPoint,
-    labelAnchor: outerPoint + Offset.fromDirection(angle, labelOffset),
+    labelAnchor: switch (labelPosition) {
+      GaugeScaleLabelPosition.outside =>
+        outerPoint + Offset.fromDirection(angle, labelOffset),
+      GaugeScaleLabelPosition.inside =>
+        innerPoint - Offset.fromDirection(angle, labelOffset),
+    },
+  );
+}
+
+AnnularSectorGeometry _zoneSector({
+  required RadialPaneGeometry pane,
+  required GaugeZone zone,
+  required int index,
+  required List<GaugeZone> zones,
+  required double minimum,
+  required double domain,
+  required double innerRadius,
+  required double outerRadius,
+  required double gap,
+  required double cornerRadius,
+}) {
+  final rawStart = pane.angleAt((zone.from - minimum) / domain);
+  final rawSweep = pane.signedSweepAngle * ((zone.to - zone.from) / domain);
+  final contiguousBefore =
+      index > 0 && (zones[index - 1].to - zone.from).abs() < 1e-9;
+  final contiguousAfter =
+      index < zones.length - 1 &&
+      (zone.to - zones[index + 1].from).abs() < 1e-9;
+  final gapAngle = gap == 0
+      ? 0.0
+      : gap / math.max(1, (innerRadius + outerRadius) / 2);
+  final requestedStartInset = contiguousBefore ? gapAngle / 2 : 0.0;
+  final requestedEndInset = contiguousAfter ? gapAngle / 2 : 0.0;
+  final requestedTotal = requestedStartInset + requestedEndInset;
+  final maximumTotal = rawSweep.abs() * 0.9;
+  final insetScale = requestedTotal > maximumTotal && requestedTotal > 0
+      ? maximumTotal / requestedTotal
+      : 1.0;
+  final direction = rawSweep.sign;
+  final startInset = requestedStartInset * insetScale;
+  final endInset = requestedEndInset * insetScale;
+  return AnnularSectorGeometry(
+    center: pane.center,
+    innerRadius: innerRadius,
+    outerRadius: outerRadius,
+    startAngle: rawStart + direction * startInset,
+    sweepAngle: rawSweep - direction * (startInset + endInset),
+    cornerRadius: cornerRadius,
   );
 }
 
@@ -370,17 +499,22 @@ Path _needlePath({
   required Offset center,
   required Offset tip,
   required double width,
+  required double tipWidth,
 }) {
   final direction = tip - center;
   final length = direction.distance;
   if (length == 0) return Path();
   final perpendicular = Offset(-direction.dy / length, direction.dx / length);
   final halfWidth = width / 2;
+  final halfTipWidth = tipWidth / 2;
   final left = center + perpendicular * halfWidth;
   final right = center - perpendicular * halfWidth;
+  final tipLeft = tip + perpendicular * halfTipWidth;
+  final tipRight = tip - perpendicular * halfTipWidth;
   return Path()
     ..moveTo(left.dx, left.dy)
-    ..lineTo(tip.dx, tip.dy)
+    ..lineTo(tipLeft.dx, tipLeft.dy)
+    ..lineTo(tipRight.dx, tipRight.dy)
     ..lineTo(right.dx, right.dy)
     ..close();
 }
@@ -422,8 +556,12 @@ void _validateInput({
   required GaugeTarget? target,
   required List<GaugeThreshold> thresholds,
   required int tickCount,
+  required int minorTicksPerInterval,
   required double tickLength,
+  required double minorTickLength,
   required double tickLabelOffset,
+  required double zoneGap,
+  required double zoneCornerRadius,
   required double referenceInnerOffset,
   required double referenceOuterOffset,
 }) {
@@ -448,8 +586,18 @@ void _validateInput({
       'Tick count must be between 2 and 12',
     );
   }
+  if (minorTicksPerInterval < 0 || minorTicksPerInterval > 20) {
+    throw ArgumentError.value(
+      minorTicksPerInterval,
+      'minorTicksPerInterval',
+      'Minor ticks per interval must be between 0 and 20',
+    );
+  }
   _requireNonNegative(tickLength, 'tickLength');
+  _requireNonNegative(minorTickLength, 'minorTickLength');
   _requireNonNegative(tickLabelOffset, 'tickLabelOffset');
+  _requireNonNegative(zoneGap, 'zoneGap');
+  _requireNonNegative(zoneCornerRadius, 'zoneCornerRadius');
   _requireNonNegative(referenceInnerOffset, 'referenceInnerOffset');
   _requireNonNegative(referenceOuterOffset, 'referenceOuterOffset');
   style.validate();

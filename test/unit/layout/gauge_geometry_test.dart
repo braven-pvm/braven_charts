@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/src/layout/gauge_geometry.dart';
 import 'package:braven_charts/src/layout/radial_pane_geometry.dart';
+import 'package:braven_charts/src/models/gauge_chart_config.dart';
 import 'package:braven_charts/src/models/gauge_chart_series.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,6 +137,105 @@ void main() {
       expect(
         (geometry.target!.outerPoint - pane.center).distance,
         closeTo(geometry.axis.outerRadius + 13, 1e-9),
+      );
+    });
+
+    test('lays out dense minor ticks inside while labels remain outside', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 300, 220),
+        innerRadiusFactor: 0.5,
+        outerRadiusFactor: 0.85,
+        startAngle: math.pi,
+        sweepAngle: math.pi,
+      );
+      final geometry = GaugeGeometryCalculator.calculate(
+        pane: pane,
+        minimum: 0,
+        maximum: 200,
+        value: 80,
+        style: const NeedleGaugeStyle(),
+        tickCount: 9,
+        minorTicksPerInterval: 4,
+        tickLength: 12,
+        minorTickLength: 5,
+        tickPosition: GaugeTickPosition.inside,
+        labelPosition: GaugeScaleLabelPosition.outside,
+        tickLabelOffset: 8,
+      );
+
+      expect(geometry.ticks, hasLength(9 + 8 * 4));
+      expect(geometry.ticks.where((tick) => tick.isMajor), hasLength(9));
+      expect(geometry.ticks.where((tick) => !tick.isMajor), hasLength(32));
+      for (final tick in geometry.ticks) {
+        expect(
+          (tick.outerPoint - pane.center).distance,
+          closeTo(geometry.axis.outerRadius, 1e-9),
+        );
+        expect(
+          (tick.innerPoint - pane.center).distance,
+          lessThan((tick.outerPoint - pane.center).distance),
+        );
+      }
+      expect(
+        (geometry.ticks.first.labelAnchor - pane.center).distance,
+        greaterThan(geometry.axis.outerRadius),
+      );
+    });
+
+    test('supports inside scale labels and separated contiguous zones', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 260, 260),
+        innerRadiusFactor: 0.5,
+        outerRadiusFactor: 0.9,
+        startAngle: -math.pi * 0.75,
+        sweepAngle: math.pi * 1.5,
+      );
+      final geometry = GaugeGeometryCalculator.calculate(
+        pane: pane,
+        minimum: 0,
+        maximum: 100,
+        value: 50,
+        style: const NeedleGaugeStyle(),
+        zones: const [
+          GaugeZone(from: 0, to: 50, status: 'Low'),
+          GaugeZone(from: 50, to: 100, status: 'High'),
+        ],
+        tickPosition: GaugeTickPosition.outside,
+        labelPosition: GaugeScaleLabelPosition.inside,
+        tickLabelOffset: 6,
+        zoneGap: 6,
+        zoneCornerRadius: 3,
+      );
+
+      expect(
+        (geometry.ticks.first.labelAnchor - pane.center).distance,
+        lessThan(geometry.axis.outerRadius),
+      );
+      expect(
+        geometry.zones.first.sector.startAngle +
+            geometry.zones.first.sector.sweepAngle,
+        lessThan(geometry.zones.last.sector.startAngle),
+      );
+    });
+
+    test('creates a tapered needle with an authored tip width', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 260, 260),
+        innerRadiusFactor: 0.5,
+        outerRadiusFactor: 0.9,
+      );
+      final geometry = GaugeGeometryCalculator.calculate(
+        pane: pane,
+        minimum: 0,
+        maximum: 100,
+        value: 50,
+        style: const NeedleGaugeStyle(needleWidth: 20, needleTipWidth: 4),
+      );
+
+      expect(geometry.needle!.visualPath.getBounds().height, greaterThan(3));
+      expect(
+        geometry.needle!.visualPath.contains(geometry.needle!.tip),
+        isTrue,
       );
     });
 

@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 144 of 145 classes have a synthesizable subject: every verb they
+// 145 of 146 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1784 verbs total; 10 of them have an argument type with no
+// 1804 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 144;
+const int _executedClasses = 145;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 1;
@@ -3146,7 +3146,7 @@ void _smokeGaugeCenterConfig(_Verb verb, GaugeCenterConfig subject) {
   );
 }
 
-/// Smoke coverage for [GaugeScaleStyle]'s 10 executable verb(s).
+/// Smoke coverage for [GaugeScaleStyle]'s 16 executable verb(s).
 void _smokeGaugeScaleStyle(_Verb verb, GaugeScaleStyle subject) {
   verb(
     'GaugeScaleStyleFluent.withTickColor',
@@ -3164,6 +3164,26 @@ void _smokeGaugeScaleStyle(_Verb verb, GaugeScaleStyle subject) {
     () => subject.clearTickLength(),
   );
   verb(
+    'GaugeScaleStyleFluent.withTickPosition',
+    () => subject.withTickPosition(GaugeTickPosition.centered),
+  );
+  verb(
+    'GaugeScaleStyleFluent.withMinorTickColor',
+    () => subject.withMinorTickColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'GaugeScaleStyleFluent.clearMinorTickColor',
+    () => subject.clearMinorTickColor(),
+  );
+  verb(
+    'GaugeScaleStyleFluent.withMinorTickWidth',
+    () => subject.withMinorTickWidth(1),
+  );
+  verb(
+    'GaugeScaleStyleFluent.withMinorTickLength',
+    () => subject.withMinorTickLength(5),
+  );
+  verb(
     'GaugeScaleStyleFluent.withLabelStyle',
     () => subject.withLabelStyle(PolarLabelStyle()),
   );
@@ -3172,12 +3192,39 @@ void _smokeGaugeScaleStyle(_Verb verb, GaugeScaleStyle subject) {
     () => subject.updateLabelStyle((current) => current),
   );
   verb(
+    'GaugeScaleStyleFluent.withLabelPosition',
+    () => subject.withLabelPosition(GaugeScaleLabelPosition.outside),
+  );
+  verb(
     'GaugeScaleStyleFluent.withLabelOffset',
     () => subject.withLabelOffset(10),
   );
   verb(
     'GaugeScaleStyleFluent.withLabelMaxWidth',
     () => subject.withLabelMaxWidth(72),
+  );
+}
+
+/// Smoke coverage for [GaugeZoneStyle]'s 7 executable verb(s).
+void _smokeGaugeZoneStyle(_Verb verb, GaugeZoneStyle subject) {
+  verb('GaugeZoneStyleFluent.withGap', () => subject.withGap(0));
+  verb(
+    'GaugeZoneStyleFluent.withCornerRadius',
+    () => subject.withCornerRadius(0),
+  );
+  verb('GaugeZoneStyleFluent.withOpacity', () => subject.withOpacity(1.0));
+  verb('GaugeZoneStyleFluent.clearOpacity', () => subject.clearOpacity());
+  verb(
+    'GaugeZoneStyleFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'GaugeZoneStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'GaugeZoneStyleFluent.withBorderWidth',
+    () => subject.withBorderWidth(0),
   );
 }
 
@@ -3245,7 +3292,7 @@ void _smokeGaugeReferenceStyle(_Verb verb, GaugeReferenceStyle subject) {
   );
 }
 
-/// Smoke coverage for [GaugeChartConfig]'s 14 executable verb(s).
+/// Smoke coverage for [GaugeChartConfig]'s 17 executable verb(s).
 void _smokeGaugeChartConfig(_Verb verb, GaugeChartConfig subject) {
   verb(
     'GaugeChartConfigFluent.withPane',
@@ -3256,6 +3303,10 @@ void _smokeGaugeChartConfig(_Verb verb, GaugeChartConfig subject) {
     () => subject.updatePane((current) => current),
   );
   verb('GaugeChartConfigFluent.withTickCount', () => subject.withTickCount(6));
+  verb(
+    'GaugeChartConfigFluent.withMinorTicksPerInterval',
+    () => subject.withMinorTicksPerInterval(0),
+  );
   verb('GaugeChartConfigFluent.withShowAxis', () => subject.withShowAxis(true));
   verb(
     'GaugeChartConfigFluent.withShowTicks',
@@ -3280,6 +3331,14 @@ void _smokeGaugeChartConfig(_Verb verb, GaugeChartConfig subject) {
   verb(
     'GaugeChartConfigFluent.updateScale',
     () => subject.updateScale((current) => current),
+  );
+  verb(
+    'GaugeChartConfigFluent.withZones',
+    () => subject.withZones(const GaugeZoneStyle()),
+  );
+  verb(
+    'GaugeChartConfigFluent.updateZones',
+    () => subject.updateZones((current) => current),
   );
   verb(
     'GaugeChartConfigFluent.withReferences',
@@ -3371,7 +3430,7 @@ void _smokeGaugeGradientStyle(_Verb verb, GaugeGradientStyle subject) {
   );
 }
 
-/// Smoke coverage for [NeedleGaugeStyle]'s 11 executable verb(s).
+/// Smoke coverage for [NeedleGaugeStyle]'s 15 executable verb(s).
 void _smokeNeedleGaugeStyle(_Verb verb, NeedleGaugeStyle subject) {
   verb(
     'NeedleGaugeStyleFluent.withNeedleLengthFactor',
@@ -3380,6 +3439,10 @@ void _smokeNeedleGaugeStyle(_Verb verb, NeedleGaugeStyle subject) {
   verb(
     'NeedleGaugeStyleFluent.withNeedleWidth',
     () => subject.withNeedleWidth(3),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withNeedleTipWidth',
+    () => subject.withNeedleTipWidth(0),
   );
   verb(
     'NeedleGaugeStyleFluent.withNeedleColor',
@@ -3400,6 +3463,18 @@ void _smokeNeedleGaugeStyle(_Verb verb, NeedleGaugeStyle subject) {
   verb(
     'NeedleGaugeStyleFluent.clearPivotColor',
     () => subject.clearPivotColor(),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withPivotBorderColor',
+    () => subject.withPivotBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.clearPivotBorderColor',
+    () => subject.clearPivotBorderColor(),
+  );
+  verb(
+    'NeedleGaugeStyleFluent.withPivotBorderWidth',
+    () => subject.withPivotBorderWidth(0),
   );
   verb(
     'NeedleGaugeStyleFluent.withAxisThickness',
@@ -7971,6 +8046,15 @@ void main() {
         reason: 'generated GaugeScaleStyleFluent verb(s) threw',
       );
     });
+    test('GaugeZoneStyle', () {
+      final subject = _subject(() => GaugeZoneStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeGaugeZoneStyle, subject),
+        isEmpty,
+        reason: 'generated GaugeZoneStyleFluent verb(s) threw',
+      );
+    });
     test('GaugeReferenceStyle', () {
       final subject = _subject(() => GaugeReferenceStyle());
       if (subject == null) return;
@@ -9084,7 +9168,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 144);
+    expect(_executedClasses, 145);
     expect(_skippedClasses, 1);
     expect(_compileOnlyCases, hasLength(6));
     expect(_compileOnlyVerbs, hasLength(10));

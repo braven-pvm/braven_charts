@@ -14,6 +14,7 @@ import '../widgets/standard_options.dart';
 
 enum _GaugePresentation {
   needle('Needle', Icons.speed_outlined),
+  instrument('Instrument', Icons.tune_outlined),
   solid('Solid', Icons.donut_large_outlined),
   gradient('Gradient', Icons.gradient_outlined),
   zones('Zones', Icons.traffic_outlined),
@@ -50,11 +51,16 @@ class _RandomGaugeState {
     required this.innerRadius,
     required this.outerRadius,
     required this.tickCount,
+    required this.minorTicksPerInterval,
     required this.tickWidth,
     required this.tickLength,
+    required this.tickPosition,
+    required this.scaleLabelPosition,
     required this.scaleLabelSize,
     required this.scaleLabelOffset,
     required this.showZones,
+    required this.zoneGap,
+    required this.zoneCornerRadius,
     required this.showTarget,
     required this.showReferenceLabels,
     required this.referenceLabelSize,
@@ -64,6 +70,9 @@ class _RandomGaugeState {
     required this.centerVerticalOffset,
     required this.centerLineSpacing,
     required this.cornerRadius,
+    required this.needleWidth,
+    required this.needleTipWidth,
+    required this.pivotBorderWidth,
     required this.indicatorOpacity,
     required this.theme,
     required this.gradient,
@@ -90,11 +99,16 @@ class _RandomGaugeState {
   final double innerRadius;
   final double outerRadius;
   final int tickCount;
+  final int minorTicksPerInterval;
   final double tickWidth;
   final double tickLength;
+  final GaugeTickPosition tickPosition;
+  final GaugeScaleLabelPosition scaleLabelPosition;
   final double scaleLabelSize;
   final double scaleLabelOffset;
   final bool showZones;
+  final double zoneGap;
+  final double zoneCornerRadius;
   final bool showTarget;
   final bool showReferenceLabels;
   final double referenceLabelSize;
@@ -104,6 +118,9 @@ class _RandomGaugeState {
   final double centerVerticalOffset;
   final double centerLineSpacing;
   final double cornerRadius;
+  final double needleWidth;
+  final double needleTipWidth;
+  final double pivotBorderWidth;
   final double indicatorOpacity;
   final ThemePreset theme;
   final _GaugeGradientPreset gradient;
@@ -123,7 +140,12 @@ class _RandomGaugeState {
 
 /// Public Gauge and Solid Gauge showcase with complete property inspection.
 class GaugeChartsPage extends StatefulWidget {
-  const GaugeChartsPage({super.key});
+  const GaugeChartsPage({super.key, this.initialPreset});
+
+  /// Optional test/embed override for the authored example selected at launch.
+  ///
+  /// The standalone showcase uses the matching `preset` query parameter.
+  final String? initialPreset;
 
   @override
   State<GaugeChartsPage> createState() => _GaugeChartsPageState();
@@ -152,6 +174,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
   double _innerRadius = 0.56;
   double _outerRadius = 0.88;
   int _tickCount = 6;
+  int _minorTicksPerInterval = 0;
   bool _showAxis = true;
   bool _showTicks = true;
   bool _showTickLabels = true;
@@ -160,9 +183,14 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
   Color? _tickColor;
   double? _tickWidth;
   double? _tickLength;
+  GaugeTickPosition _tickPosition = GaugeTickPosition.centered;
+  Color? _minorTickColor;
+  double _minorTickWidth = 1;
+  double _minorTickLength = 5;
   Color? _scaleLabelColor;
   double _scaleLabelSize = 9;
   bool _scaleLabelBold = false;
+  GaugeScaleLabelPosition _scaleLabelPosition = GaugeScaleLabelPosition.outside;
   double _scaleLabelOffset = 10;
   double _scaleLabelMaxWidth = 72;
 
@@ -195,6 +223,11 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
   Color? _healthyColor = const Color(0xFF16A34A);
   Color? _elevatedColor = const Color(0xFFF59E0B);
   Color? _criticalColor = const Color(0xFFDC2626);
+  double _zoneGap = 0;
+  double _zoneCornerRadius = 0;
+  double? _zoneOpacity;
+  Color? _zoneBorderColor;
+  double _zoneBorderWidth = 0;
 
   bool _targetEnabled = true;
   double _targetValue = 70;
@@ -225,9 +258,12 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
 
   double _needleLength = 0.88;
   double _needleWidth = 3;
+  double _needleTipWidth = 0;
   Color? _needleColor;
   double _pivotRadius = 6;
   Color? _pivotColor;
+  Color? _pivotBorderColor;
+  double _pivotBorderWidth = 0;
   double _axisThickness = 12;
   Color? _axisColor;
   double _axisOpacity = 0.16;
@@ -291,6 +327,15 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       generate: _generateRandomState,
       apply: _applyRandomState,
     );
+    final requestedPreset =
+        widget.initialPreset ?? Uri.base.queryParameters['preset'];
+    for (final presentation in _GaugePresentation.values) {
+      if (presentation.name == requestedPreset) {
+        _presentation = presentation;
+        _applyPresentationState(presentation);
+        break;
+      }
+    }
   }
 
   @override
@@ -571,9 +616,12 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       style: NeedleGaugeStyle(
         needleLengthFactor: _needleLength,
         needleWidth: _needleWidth,
+        needleTipWidth: math.min(_needleTipWidth, _needleWidth),
         needleColor: _needleColor,
         pivotRadius: _pivotRadius,
         pivotColor: _pivotColor,
+        pivotBorderColor: _pivotBorderColor,
+        pivotBorderWidth: _pivotBorderWidth,
         axisThickness: _axisThickness,
         axisColor: _axisColor,
         axisOpacity: _axisOpacity,
@@ -590,6 +638,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       outerRadiusFactor: _outerRadius,
     ),
     tickCount: _tickCount,
+    minorTicksPerInterval: _minorTicksPerInterval,
     showAxis: _showAxis,
     showTicks: _showTicks,
     showTickLabels: _showTickLabels,
@@ -599,13 +648,25 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       tickColor: _tickColor,
       tickWidth: _tickWidth,
       tickLength: _tickLength,
+      tickPosition: _tickPosition,
+      minorTickColor: _minorTickColor,
+      minorTickWidth: _minorTickWidth,
+      minorTickLength: _minorTickLength,
       labelStyle: _labelStyle(
         _scaleLabelColor,
         _scaleLabelSize,
         _scaleLabelBold,
       ),
+      labelPosition: _scaleLabelPosition,
       labelOffset: _scaleLabelOffset,
       labelMaxWidth: _scaleLabelMaxWidth,
+    ),
+    zones: GaugeZoneStyle(
+      gap: _zoneGap,
+      cornerRadius: _zoneCornerRadius,
+      opacity: _zoneOpacity,
+      borderColor: _zoneBorderColor,
+      borderWidth: _zoneBorderWidth,
     ),
     references: GaugeReferenceStyle(
       showLabels: _showReferenceLabels,
@@ -908,6 +969,15 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
           max: 12,
           onChanged: (value) => setState(() => _tickCount = value),
         ),
+        IntSliderOption(
+          label: 'Minor ticks per interval',
+          description:
+              'Adds unlabeled subdivisions between each pair of major ticks.',
+          value: _minorTicksPerInterval,
+          min: 0,
+          max: 10,
+          onChanged: (value) => setState(() => _minorTicksPerInterval = value),
+        ),
         BoolOption(
           label: 'Axis',
           value: _showAxis,
@@ -952,6 +1022,17 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         'Styles numeric ticks and labels independently from the indicator and chart theme.',
     initiallyExpanded: false,
     children: [
+      EnumOption<GaugeTickPosition>(
+        label: 'Tick position',
+        value: _tickPosition,
+        values: GaugeTickPosition.values,
+        labelBuilder: (value) => switch (value) {
+          GaugeTickPosition.inside => 'Inside',
+          GaugeTickPosition.centered => 'Centered',
+          GaugeTickPosition.outside => 'Outside',
+        },
+        onChanged: (value) => setState(() => _tickPosition = value),
+      ),
       PaletteColorOption(
         label: 'Tick color',
         subtitle: 'Clear to inherit the chart axis theme.',
@@ -990,6 +1071,43 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
           onChanged: (value) => setState(() => _tickLength = value),
         ),
       ],
+      PaletteColorOption(
+        label: 'Minor tick color',
+        subtitle: 'Clear to derive a quieter major-tick color.',
+        value: _minorTickColor,
+        keyPrefix: 'gauge-minor-tick-color',
+        customColorFallback: const Color(0xFF94A3B8),
+        onChanged: (value) => setState(() => _minorTickColor = value),
+      ),
+      SliderOption(
+        label: 'Minor tick width',
+        value: _minorTickWidth,
+        min: 0.5,
+        max: 4,
+        divisions: 14,
+        decimalPlaces: 2,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _minorTickWidth = value),
+      ),
+      SliderOption(
+        label: 'Minor tick length',
+        value: _minorTickLength,
+        min: 0,
+        max: 20,
+        divisions: 20,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _minorTickLength = value),
+      ),
+      EnumOption<GaugeScaleLabelPosition>(
+        label: 'Scale label position',
+        value: _scaleLabelPosition,
+        values: GaugeScaleLabelPosition.values,
+        labelBuilder: (value) => switch (value) {
+          GaugeScaleLabelPosition.outside => 'Outside',
+          GaugeScaleLabelPosition.inside => 'Inside',
+        },
+        onChanged: (value) => setState(() => _scaleLabelPosition = value),
+      ),
       SliderOption(
         label: 'Scale label size',
         value: _scaleLabelSize,
@@ -1054,10 +1172,24 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         label: 'Needle width',
         value: _needleWidth,
         min: 1,
-        max: 12,
-        divisions: 22,
+        max: 36,
+        divisions: 35,
         suffix: 'px',
-        onChanged: (value) => setState(() => _needleWidth = value),
+        onChanged: (value) => setState(() {
+          _needleWidth = value;
+          _needleTipWidth = math.min(_needleTipWidth, value);
+        }),
+      ),
+      SliderOption(
+        label: 'Needle tip width',
+        description:
+            '0 px creates a point; larger values create a tapered instrument pointer.',
+        value: _needleTipWidth.clamp(0, _needleWidth),
+        min: 0,
+        max: math.max(1, _needleWidth),
+        divisions: math.max(1, _needleWidth.round()),
+        suffix: 'px',
+        onChanged: (value) => setState(() => _needleTipWidth = value),
       ),
       SliderOption(
         label: 'Pivot radius',
@@ -1099,6 +1231,23 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         keyPrefix: 'gauge-pivot-color',
         customColorFallback: const Color(0xFF0F172A),
         onChanged: (value) => setState(() => _pivotColor = value),
+      ),
+      PaletteColorOption(
+        label: 'Pivot border color',
+        subtitle: 'Clear to inherit the chart axis color.',
+        value: _pivotBorderColor,
+        keyPrefix: 'gauge-pivot-border-color',
+        customColorFallback: const Color(0xFF0F172A),
+        onChanged: (value) => setState(() => _pivotBorderColor = value),
+      ),
+      SliderOption(
+        label: 'Pivot border width',
+        value: _pivotBorderWidth,
+        min: 0,
+        max: 8,
+        divisions: 16,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _pivotBorderWidth = value),
       ),
       PaletteColorOption(
         label: 'Axis color',
@@ -1606,6 +1755,59 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         onChanged: (value) => setState(() => _zonesEnabled = value),
       ),
       SliderOption(
+        label: 'Segment gap',
+        description:
+            'Separates contiguous operational ranges without changing their data bounds.',
+        value: _zoneGap,
+        min: 0,
+        max: 16,
+        divisions: 16,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _zoneGap = value),
+      ),
+      SliderOption(
+        label: 'Segment corner radius',
+        value: _zoneCornerRadius,
+        min: 0,
+        max: 16,
+        divisions: 16,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _zoneCornerRadius = value),
+      ),
+      BoolOption(
+        label: 'Override zone opacity',
+        value: _zoneOpacity != null,
+        onChanged: (value) =>
+            setState(() => _zoneOpacity = value ? (_zoneOpacity ?? 1) : null),
+      ),
+      if (_zoneOpacity != null)
+        SliderOption(
+          label: 'Zone opacity',
+          value: _zoneOpacity!,
+          min: 0,
+          max: 1,
+          divisions: 20,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _zoneOpacity = value),
+        ),
+      PaletteColorOption(
+        label: 'Zone border color',
+        subtitle: 'Clear to use each zone color.',
+        value: _zoneBorderColor,
+        keyPrefix: 'gauge-zone-border-color',
+        customColorFallback: const Color(0xFFFFFFFF),
+        onChanged: (value) => setState(() => _zoneBorderColor = value),
+      ),
+      SliderOption(
+        label: 'Zone border width',
+        value: _zoneBorderWidth,
+        min: 0,
+        max: 6,
+        divisions: 12,
+        suffix: 'px',
+        onChanged: (value) => setState(() => _zoneBorderWidth = value),
+      ),
+      SliderOption(
         label: 'Healthy upper bound',
         value: _resolvedHealthyEnd,
         min: _minimum + _zoneStep,
@@ -2011,6 +2213,55 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
         _value = 72;
         _startAngle = -135;
         _sweepAngle = 270;
+      case _GaugePresentation.instrument:
+        _solid = false;
+        _metric = 'Revenue this month';
+        _unit = 'k';
+        _maximum = 200;
+        _value = 80;
+        _healthyEnd = 100;
+        _elevatedEnd = 150;
+        _healthyStatus = 'Baseline';
+        _elevatedStatus = 'On plan';
+        _criticalStatus = 'Ahead';
+        _healthyColor = const Color(0xFFE5E7EB);
+        _elevatedColor = const Color(0xFFFBBF24);
+        _criticalColor = const Color(0xFF10B981);
+        _startAngle = 180;
+        _sweepAngle = 180;
+        _clockwise = true;
+        _innerRadius = 0.42;
+        _outerRadius = 0.88;
+        _tickCount = 9;
+        _minorTicksPerInterval = 4;
+        _tickPosition = GaugeTickPosition.inside;
+        _tickWidth = 2;
+        _tickLength = 12;
+        _minorTickWidth = 1;
+        _minorTickLength = 5;
+        _scaleLabelPosition = GaugeScaleLabelPosition.outside;
+        _scaleLabelSize = 10;
+        _scaleLabelOffset = 10;
+        _axisThickness = 42;
+        _axisOpacity = 0.12;
+        _zoneGap = 5;
+        _zoneCornerRadius = 2;
+        _zoneOpacity = 1;
+        _needleLength = 0.72;
+        _needleWidth = 28;
+        _needleTipWidth = 2;
+        _needleColor = const Color(0xFF111111);
+        _pivotRadius = 14;
+        _pivotColor = const Color(0xFFFFFFFF);
+        _pivotBorderColor = const Color(0xFF111111);
+        _pivotBorderWidth = 6;
+        _targetEnabled = false;
+        _thresholdEnabled = false;
+        _showMetric = false;
+        _showTargetInCenter = false;
+        _showStatus = false;
+        _centerVerticalOffset = 58;
+        _valueFontSize = 28;
       case _GaugePresentation.solid:
         _solid = true;
         _metric = 'Service availability';
@@ -2169,6 +2420,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
     _innerRadius = 0.56;
     _outerRadius = 0.88;
     _tickCount = 6;
+    _minorTicksPerInterval = 0;
     _showAxis = true;
     _showTicks = true;
     _showTickLabels = true;
@@ -2177,9 +2429,14 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
     _tickColor = null;
     _tickWidth = null;
     _tickLength = null;
+    _tickPosition = GaugeTickPosition.centered;
+    _minorTickColor = null;
+    _minorTickWidth = 1;
+    _minorTickLength = 5;
     _scaleLabelColor = null;
     _scaleLabelSize = 9;
     _scaleLabelBold = false;
+    _scaleLabelPosition = GaugeScaleLabelPosition.outside;
     _scaleLabelOffset = 10;
     _scaleLabelMaxWidth = 72;
     _showMetric = true;
@@ -2192,6 +2449,17 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
     _zonesEnabled = true;
     _healthyEnd = 60;
     _elevatedEnd = 85;
+    _healthyStatus = 'Healthy';
+    _elevatedStatus = 'Elevated';
+    _criticalStatus = 'Critical';
+    _healthyColor = const Color(0xFF16A34A);
+    _elevatedColor = const Color(0xFFF59E0B);
+    _criticalColor = const Color(0xFFDC2626);
+    _zoneGap = 0;
+    _zoneCornerRadius = 0;
+    _zoneOpacity = null;
+    _zoneBorderColor = null;
+    _zoneBorderWidth = 0;
     _targetEnabled = true;
     _targetValue = 70;
     _thresholdEnabled = true;
@@ -2212,8 +2480,14 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
     _referencePanelPadding = 4;
     _needleLength = 0.88;
     _needleWidth = 3;
+    _needleTipWidth = 0;
+    _needleColor = null;
     _pivotRadius = 6;
+    _pivotColor = null;
+    _pivotBorderColor = null;
+    _pivotBorderWidth = 0;
     _axisThickness = 12;
+    _axisColor = null;
     _axisOpacity = 0.16;
     _trackOpacity = 0.14;
     _cornerRadius = 8;
@@ -2293,11 +2567,18 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       innerRadius: 0.38 + random.nextDouble() * 0.28,
       outerRadius: 0.78 + random.nextDouble() * 0.18,
       tickCount: 3 + random.nextInt(10),
+      minorTicksPerInterval: random.nextInt(7),
       tickWidth: 0.5 + random.nextDouble() * 3.5,
       tickLength: 4 + random.nextDouble() * 18,
+      tickPosition: GaugeTickPosition
+          .values[random.nextInt(GaugeTickPosition.values.length)],
+      scaleLabelPosition: GaugeScaleLabelPosition
+          .values[random.nextInt(GaugeScaleLabelPosition.values.length)],
       scaleLabelSize: 8 + random.nextDouble() * 6,
       scaleLabelOffset: 4 + random.nextDouble() * 18,
       showZones: random.nextBool(),
+      zoneGap: random.nextDouble() * 8,
+      zoneCornerRadius: random.nextDouble() * 8,
       showTarget: random.nextBool(),
       showReferenceLabels: random.nextBool(),
       referenceLabelSize: 8 + random.nextDouble() * 6,
@@ -2307,6 +2588,9 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       centerVerticalOffset: -12 + random.nextDouble() * 24,
       centerLineSpacing: random.nextDouble() * 8,
       cornerRadius: random.nextDouble() * 18,
+      needleWidth: 2 + random.nextDouble() * 28,
+      needleTipWidth: random.nextDouble() * 6,
+      pivotBorderWidth: random.nextDouble() * 5,
       indicatorOpacity: 0.55 + random.nextDouble() * 0.45,
       theme: ThemePreset.values[random.nextInt(ThemePreset.values.length)],
       gradient: _GaugeGradientPreset
@@ -2350,12 +2634,17 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       _innerRadius = value.innerRadius;
       _outerRadius = math.max(value.outerRadius, value.innerRadius + 0.1);
       _tickCount = value.tickCount;
+      _minorTicksPerInterval = value.minorTicksPerInterval;
       _tickWidth = value.tickWidth;
       _tickLength = value.tickLength;
+      _tickPosition = value.tickPosition;
+      _scaleLabelPosition = value.scaleLabelPosition;
       _scaleLabelSize = value.scaleLabelSize;
       _scaleLabelOffset = value.scaleLabelOffset;
       _zonesEnabled = value.showZones;
       _showZones = value.showZones;
+      _zoneGap = value.zoneGap;
+      _zoneCornerRadius = value.zoneCornerRadius;
       _targetEnabled = value.showTarget;
       _showReferenceLabels = value.showReferenceLabels;
       _referenceLabelSize = value.referenceLabelSize;
@@ -2366,6 +2655,9 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
       _centerVerticalOffset = value.centerVerticalOffset;
       _centerLineSpacing = value.centerLineSpacing;
       _cornerRadius = value.cornerRadius;
+      _needleWidth = value.needleWidth;
+      _needleTipWidth = math.min(value.needleTipWidth, value.needleWidth);
+      _pivotBorderWidth = value.pivotBorderWidth;
       _solidOpacity = value.indicatorOpacity;
       _axisOpacity = value.indicatorOpacity * 0.3;
       _themePreset = value.theme;
@@ -2398,6 +2690,7 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
 
   String get _chartTitle => switch (_presentation) {
     _GaugePresentation.needle => 'Operational utilization',
+    _GaugePresentation.instrument => 'Instrument revenue gauge',
     _GaugePresentation.solid => 'Availability objective',
     _GaugePresentation.gradient => 'Gradient release confidence',
     _GaugePresentation.zones => 'Status-aware pressure',
@@ -2412,6 +2705,8 @@ class _GaugeChartsPageState extends State<GaugeChartsPage> {
   String get _presentationDescription => switch (_presentation) {
     _GaugePresentation.needle =>
       'A pointer locates one live measurement on an explicit numeric scale.',
+    _GaugePresentation.instrument =>
+      'Dense inside ticks, outside labels, separated zones, and a tapered pointer create a classic instrument dial.',
     _GaugePresentation.solid =>
       'A progress arc communicates the same measurement without changing its data contract.',
     _GaugePresentation.gradient =>

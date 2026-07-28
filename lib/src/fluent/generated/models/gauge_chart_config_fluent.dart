@@ -102,6 +102,25 @@ extension GaugeScaleStyleFluent on GaugeScaleStyle {
   /// Clears [GaugeScaleStyle.tickLength] to `null`.
   GaugeScaleStyle clearTickLength() => copyWith(clearTickLength: true);
 
+  /// Replaces [GaugeScaleStyle.tickPosition] with [value].
+  GaugeScaleStyle withTickPosition(GaugeTickPosition value) =>
+      copyWith(tickPosition: value);
+
+  /// Replaces [GaugeScaleStyle.minorTickColor] with [value].
+  GaugeScaleStyle withMinorTickColor(Color value) =>
+      copyWith(minorTickColor: value);
+
+  /// Clears [GaugeScaleStyle.minorTickColor] to `null`.
+  GaugeScaleStyle clearMinorTickColor() => copyWith(clearMinorTickColor: true);
+
+  /// Replaces [GaugeScaleStyle.minorTickWidth] with [value].
+  GaugeScaleStyle withMinorTickWidth(double value) =>
+      copyWith(minorTickWidth: value);
+
+  /// Replaces [GaugeScaleStyle.minorTickLength] with [value].
+  GaugeScaleStyle withMinorTickLength(double value) =>
+      copyWith(minorTickLength: value);
+
   /// Replaces [GaugeScaleStyle.labelStyle] with [value].
   GaugeScaleStyle withLabelStyle(PolarLabelStyle value) =>
       copyWith(labelStyle: value);
@@ -114,12 +133,41 @@ extension GaugeScaleStyleFluent on GaugeScaleStyle {
     PolarLabelStyle Function(PolarLabelStyle current) update,
   ) => copyWith(labelStyle: update(labelStyle));
 
+  /// Replaces [GaugeScaleStyle.labelPosition] with [value].
+  GaugeScaleStyle withLabelPosition(GaugeScaleLabelPosition value) =>
+      copyWith(labelPosition: value);
+
   /// Replaces [GaugeScaleStyle.labelOffset] with [value].
   GaugeScaleStyle withLabelOffset(double value) => copyWith(labelOffset: value);
 
   /// Replaces [GaugeScaleStyle.labelMaxWidth] with [value].
   GaugeScaleStyle withLabelMaxWidth(double value) =>
       copyWith(labelMaxWidth: value);
+}
+
+/// Generated fluent modifiers for [GaugeZoneStyle].
+extension GaugeZoneStyleFluent on GaugeZoneStyle {
+  /// Replaces [GaugeZoneStyle.gap] with [value].
+  GaugeZoneStyle withGap(double value) => copyWith(gap: value);
+
+  /// Replaces [GaugeZoneStyle.cornerRadius] with [value].
+  GaugeZoneStyle withCornerRadius(double value) =>
+      copyWith(cornerRadius: value);
+
+  /// Replaces [GaugeZoneStyle.opacity] with [value].
+  GaugeZoneStyle withOpacity(double value) => copyWith(opacity: value);
+
+  /// Clears [GaugeZoneStyle.opacity] to `null`.
+  GaugeZoneStyle clearOpacity() => copyWith(clearOpacity: true);
+
+  /// Replaces [GaugeZoneStyle.borderColor] with [value].
+  GaugeZoneStyle withBorderColor(Color value) => copyWith(borderColor: value);
+
+  /// Clears [GaugeZoneStyle.borderColor] to `null`.
+  GaugeZoneStyle clearBorderColor() => copyWith(clearBorderColor: true);
+
+  /// Replaces [GaugeZoneStyle.borderWidth] with [value].
+  GaugeZoneStyle withBorderWidth(double value) => copyWith(borderWidth: value);
 }
 
 /// Generated fluent modifiers for [GaugeReferenceStyle].
@@ -203,6 +251,10 @@ extension GaugeChartConfigFluent on GaugeChartConfig {
   /// Replaces [GaugeChartConfig.tickCount] with [value].
   GaugeChartConfig withTickCount(int value) => copyWith(tickCount: value);
 
+  /// Replaces [GaugeChartConfig.minorTicksPerInterval] with [value].
+  GaugeChartConfig withMinorTicksPerInterval(int value) =>
+      copyWith(minorTicksPerInterval: value);
+
   /// Replaces [GaugeChartConfig.showAxis] with [value].
   GaugeChartConfig withShowAxis(bool value) => copyWith(showAxis: value);
 
@@ -230,6 +282,17 @@ extension GaugeChartConfigFluent on GaugeChartConfig {
   GaugeChartConfig updateScale(
     GaugeScaleStyle Function(GaugeScaleStyle current) update,
   ) => copyWith(scale: update(scale));
+
+  /// Replaces [GaugeChartConfig.zones] with [value].
+  GaugeChartConfig withZones(GaugeZoneStyle value) => copyWith(zones: value);
+
+  /// Rebuilds [GaugeChartConfig.zones] from its current value.
+  ///
+  /// `update` receives the current [GaugeZoneStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  GaugeChartConfig updateZones(
+    GaugeZoneStyle Function(GaugeZoneStyle current) update,
+  ) => copyWith(zones: update(zones));
 
   /// Replaces [GaugeChartConfig.references] with [value].
   GaugeChartConfig withReferences(GaugeReferenceStyle value) =>
