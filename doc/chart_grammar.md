@@ -759,8 +759,10 @@ config the pipeline already understood (details under *V2.0 verbs* above):
 
   Stated precisely, because the showcase is the evidence:
 
-  - **Every radial Workbench Grammar pane emits a real chain** instead of a
-    diagnostic — pie, donut, concentric donut and polar column.
+  - **Every radial Workbench Grammar pane whose family HAS a geometry emits a
+    real chain** instead of a diagnostic — pie, donut, concentric donut and
+    polar column. (Radial bar, gauge and range area have no `geom*` verb at
+    all; their panes still show a named diagnostic.)
   - **Polar: all eight showcase presentations** (standard, rose, partial,
     layered, grouped, stacked, references, intervals), each verified against
     `polar_column_page.dart`'s own `_buildSeriesList` / `_buildPolarConfig`
