@@ -258,8 +258,10 @@ Future<void> _pumpPage(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-BravenChartPlus _liveChart(WidgetTester tester) => tester
-    .widget<BravenChartPlus>(find.byKey(const ValueKey('donut-showcase-chart')));
+BravenChartPlus _liveChart(WidgetTester tester) =>
+    tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('donut-showcase-chart')),
+    );
 
 /// The one donut series the page mounted.
 ///
