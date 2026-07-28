@@ -26,7 +26,9 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 
 ## Quality gates
 
-- [ ] `dart format --output=none --set-exit-if-changed lib example/lib test`
+- [ ] `dart run tool/check_dart_format.dart` confirms every Dart file changed
+      since the recorded baseline is formatted. See
+      [Dart format policy](dart_format_policy.md).
 - [ ] `flutter analyze lib`
 - [ ] Analyze the release-facing example separately.
 - [ ] Run the package test suite and focused showcase widget tests.
