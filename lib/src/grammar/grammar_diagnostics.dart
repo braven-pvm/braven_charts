@@ -83,8 +83,35 @@ enum GrammarDiagnosticCode {
   /// A radial geom was combined with a Cartesian (or reference) mark.
   mixedCoordinateSystems,
 
-  /// A spec declared more than one radial geom.
+  /// A spec declared more than one radial geom outside the polar family.
   multipleRadialGeoms,
+
+  /// `.polarConfig(...)` was set on a spec whose marks are not polar column
+  /// geoms.
+  polarConfigOnNonPolarSpec,
+
+  /// One polar pane's contract was broken — either by the `.polarConfig(...)`
+  /// itself (pane geometry, radial-axis bounds, the grouped sub-band padding,
+  /// threshold finiteness or dash-pair parity, the stacked zero baseline) or by
+  /// the geomPolar marks sharing it (clashing units or presets, diverging
+  /// categories, a grouped/stacked composition with fewer than two series).
+  invalidPolarComposition,
+
+  /// A polar column geom supplied only one of the two interval bounds.
+  incompletePolarInterval,
+
+  /// A donut geom set both `concentric` and the `center` shorthand, which name
+  /// the same shared center slot.
+  conflictingConcentricCenter,
+
+  /// A `ConcentricDonutConfig` was set on a donut geom that declares no `ring`
+  /// channel, so it composes no rings for the config to describe.
+  concentricConfigOnRinglessDonut,
+
+  /// A concentric donut's `ConcentricDonutConfig` cannot lay its rings out —
+  /// inverted or out-of-range pane radii, a negative ring gap, a non-positive
+  /// or misdirected ring weight, or an unrenderable shared center.
+  invalidConcentricComposition,
 
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
@@ -314,13 +341,112 @@ final class GrammarSpecException implements Exception {
     'charts.',
   );
 
-  /// A spec declared more than one radial geom.
+  /// A spec declared more than one radial geom outside the polar family.
   factory GrammarSpecException.multipleRadialGeoms(
     Iterable<String> radialMarkIds,
   ) => GrammarSpecException(
     GrammarDiagnosticCode.multipleRadialGeoms,
     'A plot may contain at most one radial geom, but ${_list(radialMarkIds)} '
-    'are all radial. Split them into separate charts.',
+    'are all radial. Split them into separate charts. (Polar columns are the '
+    'one exception: several geomPolar marks may share a plot.)',
+  );
+
+  /// `.polarConfig(...)` was set on a spec that holds no polar column geom.
+  ///
+  /// [markId] names the first mark that is not a `geomPolar` — which may be a
+  /// Cartesian mark, because `.polarConfig(...)` is a plot-level verb every
+  /// chain exposes.
+  factory GrammarSpecException.polarConfigOnNonPolarSpec(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.polarConfigOnNonPolarSpec,
+        'A PolarChartConfig was set, but the mark "$markId" is not a '
+        'polar-column geom, so the configuration would be silently discarded. '
+        'Remove .polarConfig(...), or author the chart with geomPolar(...).',
+      );
+
+  /// One polar pane's contract was broken — by its `.polarConfig(...)`, or by
+  /// the geomPolar marks that share it.
+  ///
+  /// This one code deliberately carries BOTH halves of that contract, because
+  /// both describe the same pane and an author fixes them in the same place:
+  ///
+  ///  * the CONFIG's own rules, delegated to `PolarChartConfig.validate()` —
+  ///    pane geometry, radial-axis bounds, the grouped sub-band padding, each
+  ///    threshold's finiteness and dash-pair parity, and the stacked zero
+  ///    baseline; and
+  ///  * the MARKS' agreement with each other and with that config — diverging
+  ///    units, categories or presets, and a grouped or stacked composition
+  ///    mode with fewer than two geomPolar marks.
+  ///
+  /// [detail] states the specific failure. Config failures are rendered from
+  /// the authority's own `ArgumentError` and lead with the field that failed;
+  /// mark failures name the mark that carries the clash.
+  factory GrammarSpecException.invalidPolarComposition(String detail) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.invalidPolarComposition,
+        'The polar columns in this plot share one pane: one angular axis, one '
+        'radial axis and one .polarConfig(...). So the configuration must be '
+        'valid on its own terms and every geomPolar mark must agree with it. '
+        '$detail',
+      );
+
+  /// A polar column geom supplied only one of the two interval bounds.
+  ///
+  /// [markId] names the geomPolar mark that set exactly one of `intervalLow`
+  /// and `intervalHigh`.
+  factory GrammarSpecException.incompletePolarInterval(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.incompletePolarInterval,
+        'The polar mark "$markId" set only one interval bound. A polar '
+        'interval spans an absolute lower and upper value, so supply both '
+        'intervalLow and intervalHigh (or neither).',
+      );
+
+  /// A donut geom set both `concentric` and the `center` shorthand.
+  ///
+  /// [markId] names the geomDonut mark that carries both.
+  factory GrammarSpecException.conflictingConcentricCenter(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.conflictingConcentricCenter,
+        'The donut mark "$markId" set both concentric and center, but a '
+        'ConcentricDonutConfig already owns the shared center through its '
+        'centerContent, so one of the two would be discarded silently. Drop '
+        'center, and put the summary in concentric: '
+        'ConcentricDonutConfig(centerContent: ...).',
+      );
+
+  /// A `ConcentricDonutConfig` was set on a donut geom with no `ring` channel.
+  ///
+  /// [markId] names the geomDonut mark that carries the misplaced config.
+  factory GrammarSpecException.concentricConfigOnRinglessDonut(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+        'The donut mark "$markId" set concentric but declares no ring channel, '
+        'so it composes no rings for the configuration to describe: the ring '
+        'gap, order, weights, radii and legend mode would all be discarded '
+        'silently. Add ring: to compose a concentric donut, or use '
+        'center: for a single donut\'s summary.',
+      );
+
+  /// A concentric donut composition cannot lay its rings out.
+  ///
+  /// [detail] states the specific clash — the offending radii, ring gap, ring
+  /// weight or center — in the layout calculator's own words, so the grammar
+  /// and the render pipeline cannot describe the same contract differently.
+  /// [ringIds] names the composition's lowered ring series when they are known,
+  /// because `ringWeights` is keyed by those ids and the ring VALUE an author
+  /// writes is not one of them.
+  factory GrammarSpecException.invalidConcentricComposition(
+    String detail, {
+    Iterable<String> ringIds = const <String>[],
+  }) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidConcentricComposition,
+    'The rings of this concentric donut share one pane, so its '
+    'ConcentricDonutConfig must describe a layout every ring fits into. '
+    '$detail'
+    '${ringIds.isEmpty ? '' : " This composition's rings are "
+              '${_list(ringIds)} — geomDonut(ring:) ids each ring '
+              "'<markId>-<ringKey>', and ringWeights is keyed by that id."}',
   );
 
   /// A Cartesian axis/grid option was set on a radial spec.

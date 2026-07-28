@@ -17,11 +17,17 @@ import '../models/scatter_marker_style.dart'
         ScatterOpacityEncoding,
         ScatterSizeEncoding;
 import '../theming/components/series_theme.dart' show SeriesMarkerShape;
+import '../models/concentric_donut_config.dart' show ConcentricDonutConfig;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
-import '../models/polar_column_chart_series.dart' show PolarColumnStyle;
+import '../models/polar_column_chart_series.dart'
+    show
+        PolarColumnIntervalStyle,
+        PolarColumnPreset,
+        PolarColumnStyle,
+        PolarColumnTargetMarkerStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import 'channel.dart';
@@ -960,6 +966,7 @@ final class DonutMark<T> extends RadialMark<T> {
     this.style,
     this.selectionStyle,
     this.center,
+    this.concentric,
     this.dataLabels,
     this.sliceRadiusConfig,
     this.sliceGroupingConfig,
@@ -978,9 +985,44 @@ final class DonutMark<T> extends RadialMark<T> {
   /// `const RadialSelectionStyle()`.
   final RadialSelectionStyle? selectionStyle;
 
-  /// Center summary. For a single donut this is the series' center; for a
-  /// concentric composition it is the shared `ConcentricDonutConfig.centerContent`.
+  /// Center summary shorthand, honored ONLY when [concentric] is null. For a
+  /// single donut this is the series' center; for a concentric composition it
+  /// is the shared `ConcentricDonutConfig.centerContent`.
+  ///
+  /// Setting both [center] and [concentric] raises
+  /// `GrammarDiagnosticCode.conflictingConcentricCenter`, because the two would
+  /// name the same slot and one would have to be discarded silently.
   final DonutCenterContent? center;
+
+  /// The full concentric composition: ring gap, radial order, ring weights,
+  /// legend mode, pane radii and the shared center.
+  ///
+  /// When non-null it is authoritative — including its `centerContent`, which
+  /// supersedes the [center] shorthand. Null keeps the [center]-derived
+  /// behavior: a `const ConcentricDonutConfig()` (optionally carrying [center])
+  /// for a ring composition.
+  ///
+  /// Requires [ring]: without it the mark composes no rings, so every field but
+  /// the center would be discarded silently — that raises
+  /// `GrammarDiagnosticCode.concentricConfigOnRinglessDonut`.
+  ///
+  /// `ringWeights` is keyed by the lowered ring SERIES id, which this mark
+  /// names `'<markId>-<ringKey>'` — NOT by the bare ring value. A mark ided
+  /// `'seasons'` over a `'Winter'` ring is weighted as
+  /// `ringWeights: {'seasons-Winter': 2}`.
+  ///
+  /// A key that names no ring raises
+  /// `GrammarDiagnosticCode.invalidConcentricComposition` listing the real ids
+  /// — but ONLY once the rows yield more than one ring. The per-series half of
+  /// the contract is delegated to the same authority the render pipeline runs
+  /// (`ConcentricDonutLayoutCalculator.validateSeries`), and that pipeline
+  /// stops composing rings below two donut series: it nulls the config and
+  /// lays a plain donut out. Refusing a single-ring spec here would reject a
+  /// chart that renders, so over one-ring data a misdirected key is inert
+  /// rather than reported. The config-only fields — pane radii, ring gap,
+  /// weight magnitudes — are validated unconditionally, above the `emptyData`
+  /// guard.
+  final ConcentricDonutConfig? concentric;
 
   /// Data-label configuration. Null lowers to `const PieDataLabelConfig()`.
   final PieDataLabelConfig? dataLabels;
@@ -1008,6 +1050,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.style == style &&
           other.selectionStyle == selectionStyle &&
           other.center == center &&
+          other.concentric == concentric &&
           other.dataLabels == dataLabels &&
           other.sliceRadiusConfig == sliceRadiusConfig &&
           other.sliceGroupingConfig == sliceGroupingConfig;
@@ -1025,6 +1068,7 @@ final class DonutMark<T> extends RadialMark<T> {
     style,
     selectionStyle,
     center,
+    concentric,
     dataLabels,
     sliceRadiusConfig,
     sliceGroupingConfig,
@@ -1047,6 +1091,13 @@ final class PolarMark<T> extends RadialMark<T> {
     super.unit,
     this.style,
     this.selectionStyle,
+    this.columnColor,
+    this.target,
+    this.targetMarkerStyle,
+    this.intervalLow,
+    this.intervalHigh,
+    this.intervalStyle,
+    this.preset = PolarColumnPreset.standard,
   });
 
   /// Column geometry/appearance. Null lowers to `const PolarColumnStyle()`.
@@ -1055,6 +1106,43 @@ final class PolarMark<T> extends RadialMark<T> {
   /// Durable column-selection presentation. Null lowers to
   /// `const RadialSelectionStyle()`.
   final RadialSelectionStyle? selectionStyle;
+
+  /// Per-row column color override, keyed by the row's category.
+  ///
+  /// Returning null for a row leaves that category on the series color, which
+  /// is what an unset accessor does for every row.
+  final FieldAccessor<T, Color?>? columnColor;
+
+  /// Per-row target (benchmark) value on the shared radial scale.
+  ///
+  /// Targets are absolute values, not deltas from [value]. Returning null for a
+  /// row leaves that category without a target marker.
+  final FieldAccessor<T, num?>? target;
+
+  /// Appearance of the target markers drawn for [target]. Null lowers to
+  /// `const PolarColumnTargetMarkerStyle()`.
+  final PolarColumnTargetMarkerStyle? targetMarkerStyle;
+
+  /// Per-row lower interval bound on the shared radial scale.
+  ///
+  /// Must be set together with [intervalHigh]; supplying only one bound raises
+  /// `GrammarDiagnosticCode.incompletePolarInterval` at lowering.
+  final FieldAccessor<T, num?>? intervalLow;
+
+  /// Per-row upper interval bound on the shared radial scale.
+  ///
+  /// Must be set together with [intervalLow]; supplying only one bound raises
+  /// `GrammarDiagnosticCode.incompletePolarInterval` at lowering.
+  final FieldAccessor<T, num?>? intervalHigh;
+
+  /// Appearance of the intervals drawn for [intervalLow]/[intervalHigh]. Null
+  /// lowers to `const PolarColumnIntervalStyle()`.
+  final PolarColumnIntervalStyle? intervalStyle;
+
+  /// Named interpretation of the series — linear-radius columns
+  /// ([PolarColumnPreset.standard]) or an equal-angle Rose/Nightingale
+  /// presentation ([PolarColumnPreset.rose]).
+  final PolarColumnPreset preset;
 
   @override
   bool operator ==(Object other) =>
@@ -1067,12 +1155,34 @@ final class PolarMark<T> extends RadialMark<T> {
           other.color == color &&
           other.unit == unit &&
           other.style == style &&
-          other.selectionStyle == selectionStyle;
+          other.selectionStyle == selectionStyle &&
+          other.columnColor == columnColor &&
+          other.target == target &&
+          other.targetMarkerStyle == targetMarkerStyle &&
+          other.intervalLow == intervalLow &&
+          other.intervalHigh == intervalHigh &&
+          other.intervalStyle == intervalStyle &&
+          other.preset == preset;
 
   @override
-  int get hashCode =>
-      Object.hash(category, value, id, name, color, unit, style, selectionStyle);
+  int get hashCode => Object.hash(
+    category,
+    value,
+    id,
+    name,
+    color,
+    unit,
+    style,
+    selectionStyle,
+    columnColor,
+    target,
+    targetMarkerStyle,
+    intervalLow,
+    intervalHigh,
+    intervalStyle,
+    preset,
+  );
 
   @override
-  String toString() => 'PolarMark(id: $id, name: $name)';
+  String toString() => 'PolarMark(id: $id, name: $name, preset: ${preset.name})';
 }

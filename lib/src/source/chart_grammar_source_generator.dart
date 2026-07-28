@@ -31,9 +31,16 @@
 ///
 /// | case | outcome |
 /// |------|---------|
-/// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar |
+/// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar, carrying the series style, unit, selection and slice configs |
+/// | a layered/grouped/stacked polar composition | emitted as ONE geomPolar per series over a shared category field |
+/// | a customised PolarChartConfig | emitted as .polarConfig(...) |
+/// | a polar series carrying per-category column colors, targets or intervals, or the rose preset | emitted as geomPolar row-channels + `rose: true` |
+/// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
-/// | a customised PolarChartConfig or non-default ConcentricDonutConfig | blocked by the round-trip proof — the grammar carries only the common radial shape |
+/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
+/// | a pie or donut carrying per-slice colors (`sliceColors`) | blocked, naming the series — `PolarMark` has a per-point color channel (`columnColor`), `PieMark`/`DonutMark` do not |
+/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
+/// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
@@ -44,16 +51,47 @@
 /// | a runtime interaction binding | emitted with a warning, exactly as the config form does |
 /// | data above `maxInlinePoints` | emitted with a placeholder row list and a warning, exactly as the config form does |
 ///
-/// ## The round-trip proof
+/// ## The round-trip proof, and exactly what it proves
 ///
 /// Before emitting anything, the generator BUILDS THE SPEC IT IS ABOUT TO
 /// WRITE — over an internal row type carrying the same synthesised values —
 /// lowers it with the real `PlotSpecLowering`, and compares the resulting
 /// `ChartSeries`, `ChartAnnotation`s, Y-axis configs AND the X axis, theme and
 /// interaction to the ones the document hydrated to. Anything that does not
-/// compare equal is refused. So "the generator emitted a chain" already means
-/// "this chain reproduces this chart", without the emitter having to enumerate
-/// every option a V1 mark happens not to carry.
+/// compare equal is refused.
+///
+/// What that buys is precise, and overstating it would be its own dishonesty.
+/// The proof covers the PLAN and the RE-LOWERED SERIES AND ANNOTATIONS: every
+/// channel, every accessor, every value the emitter reconstructed is read back
+/// out of the synthesised rows by real lowering, and every reference mark is
+/// turned back into a `ChartAnnotation`, so a mark that fails to carry
+/// something produces a divergent series or annotation and an honest refusal —
+/// without the emitter having to enumerate every option a V1 mark happens not
+/// to carry.
+///
+/// It does NOT cover the emitted CONFIG LITERALS. Anything the grammar carries
+/// verbatim — the plot-level options a `PlotSpec` forwards (`xAxis`, `theme`,
+/// `interaction`, `grid`, `title`, `subtitle`, `showLegend`, and for radial
+/// `PlotSpec.polar`), `DonutMark.concentric`, a mark's style/selection/label
+/// configs — is handed to the proof spec as the CAPTURED INSTANCE, and lowering
+/// hands that same instance straight back, so the comparison is an instance
+/// against itself. Those comparisons are regression TRIPWIRES on lowering (they
+/// fire if lowering ever stops forwarding a value, which is precisely what it
+/// did for the polar config before `.polarConfig(...)` existed), not proofs
+/// about the `.xAxis(...)` / `.grid(...)` / `.title(...)` / `.polarConfig(...)`
+/// / `geomDonut(concentric: ...)` TEXT — deleting one of those emissions
+/// produces zero refusals, and only the emitted-text assertions in the emitter
+/// tests fail.
+/// The literals are held to their own three guards instead: they are written
+/// by the config emitter's own shared renderers through public seams (so the
+/// CONFIG and GRAMMAR forms cannot disagree), `test/meta/source_emitter_drift_test.dart`
+/// fails on any field neither form renders, and the emitter tests assert the
+/// emitted text field by field.
+///
+/// So "the generator emitted a chain" means "this chain re-lowers to this
+/// chart's series and annotations"; "this chain's config literals are right" is
+/// what the shared renderer, the drift gate and the emitted-text assertions
+/// mean.
 library;
 
 import 'dart:ui' show Color;
@@ -73,12 +111,14 @@ import '../models/candlestick_chart_series.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
@@ -201,14 +241,29 @@ abstract final class ChartGrammarSourceGenerator {
 /// data reachable positionally, so the spec the proof lowers is built from the
 /// identical values without the generator having to compile its own output.
 class _SourceRow {
-  const _SourceRow(this.numbers, this.strings, this.stamps);
+  const _SourceRow(
+    this.numbers,
+    this.strings,
+    this.stamps,
+    this.optionalNumbers,
+    this.colors,
+  );
 
   final List<double> numbers;
   final List<String> strings;
   final List<DateTime?> stamps;
+
+  /// Slots for channels whose ABSENCE is meaningful — a polar category with no
+  /// target or no interval. A synthesised 0 there is a real value on the radial
+  /// scale and would draw a marker the captured chart does not have, so these
+  /// carry null instead.
+  final List<double?> optionalNumbers;
+
+  /// Slots for per-row colour overrides (a polar column's `columnColors`).
+  final List<Color?> colors;
 }
 
-enum _FieldKind { number, string, timestamp }
+enum _FieldKind { number, string, timestamp, optionalNumber, color }
 
 /// One synthesised field: its emitted name, its Dart type and its slot.
 class _Field {
@@ -222,6 +277,8 @@ class _Field {
     _FieldKind.number => 'double',
     _FieldKind.string => 'String',
     _FieldKind.timestamp => 'DateTime',
+    _FieldKind.optionalNumber => 'double?',
+    _FieldKind.color => 'Color?',
   };
 
   /// The closure the chain passes for this field.
@@ -243,7 +300,11 @@ class _GeometryPlan {
 }
 
 /// Which radial geometry a captured chart reverses to.
-enum _RadialKind { pie, donut, concentric, polar }
+///
+/// The polar family is NOT here: it is the one radial family whose plot may
+/// carry several geoms (a layered/grouped/stacked composition), so it is
+/// planned by [_PolarChartPlan] rather than the single-mark [_RadialPlan].
+enum _RadialKind { pie, donut, concentric }
 
 /// The plan for a RADIAL chain: the single radial mark the round-trip proof
 /// lowers, the synthesised rows, and the fields whose accessors the emitter
@@ -282,6 +343,61 @@ class _RadialPlan {
   final DonutCenterContent? center;
 }
 
+/// One polar series of a polar plan: the mark the proof lowers plus the value
+/// field its `value:` accessor reads. The category field is shared by every
+/// series and lives on the [_PolarChartPlan].
+class _PolarSeriesPlan {
+  _PolarSeriesPlan({
+    required this.value,
+    required this.mark,
+    this.columnColor,
+    this.target,
+    this.intervalLow,
+    this.intervalHigh,
+  });
+
+  final _Field value;
+
+  /// Per-category column colour, present only when the series carries one.
+  final _Field? columnColor;
+
+  /// Per-category absolute target, present only when the series carries any.
+  final _Field? target;
+
+  /// The two interval bounds, both present or both absent.
+  final _Field? intervalLow;
+  final _Field? intervalHigh;
+
+  final PolarMark<_SourceRow> mark;
+}
+
+/// The plan for a POLAR chain: N `geomPolar` marks over ONE row list, plus the
+/// plot-level configuration `.polarConfig(...)` carries.
+///
+/// A polar composition is the one radial shape with several geoms in a plot.
+/// Every series shares the category domain — the render and hydration layers
+/// both enforce it through `PolarColumnComposition.validate` — so one shared
+/// category field plus one value field per series reverses it exactly.
+class _PolarChartPlan {
+  _PolarChartPlan({
+    required this.rows,
+    required this.category,
+    required this.series,
+    required this.config,
+  });
+
+  final List<_SourceRow> rows;
+
+  /// The category accessor EVERY polar mark reads.
+  final _Field category;
+
+  final List<_PolarSeriesPlan> series;
+
+  /// The captured plot-level polar configuration, carried onto the proof spec
+  /// so the re-lowered plot reproduces it instead of defaulting.
+  final PolarChartConfig config;
+}
+
 // ===========================================================================
 // Emitter
 // ===========================================================================
@@ -307,6 +423,8 @@ class _GrammarChainEmitter {
   var _numberSlots = 0;
   var _stringSlots = 0;
   var _stampSlots = 0;
+  var _optionalNumberSlots = 0;
+  var _colorSlots = 0;
 
   late final bool _omitData =
       snapshot.document.pointCount > options.maxInlinePoints;
@@ -626,6 +744,13 @@ class _GrammarChainEmitter {
     void Function(String message, {String? path}) block,
   ) {
     _usedNames.add(options.rowsVariableName);
+    // The polar family takes its own path: it is the one radial family a plot
+    // may hold several geoms of, and the only one with a plot-level config the
+    // chain sets with a spec verb rather than a mark argument.
+    if (series.isNotEmpty &&
+        series.every((item) => item is PolarColumnChartSeries)) {
+      return _tryEmitPolarChain(series.cast<PolarColumnChartSeries>(), block);
+    }
     final plan = _planRadial(series, block);
     if (plan == null) return null;
 
@@ -670,6 +795,65 @@ class _GrammarChainEmitter {
     return _emitRadialBody(plan);
   }
 
+  /// Reverses a POLAR-COLUMN chart — one series or a layered/grouped/stacked
+  /// composition of several — into N `geomPolar` marks plus the plot-level
+  /// `.polarConfig(...)`, proving fidelity the same way [_tryEmitRadialChain]
+  /// does.
+  ///
+  /// The proof spec carries the CAPTURED `PolarChartConfig` on `PlotSpec.polar`,
+  /// so the re-lowered plot reproduces a customised pane / axis / composition
+  /// instead of defaulting — which is what turned a customised config from an
+  /// honest refusal into an emitted chain.
+  String? _tryEmitPolarChain(
+    List<PolarColumnChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    final plan = _planPolarChart(series, block);
+    if (plan == null) return null;
+
+    // As for the other radial families: the Cartesian axis/grid options MUST be
+    // null and the spec untransposed, or radial lowering throws
+    // `axisOptionOnRadialSpec`.
+    final spec = PlotSpec<_SourceRow>(
+      data: plan.rows,
+      marks: <Mark<_SourceRow>>[for (final item in plan.series) item.mark],
+      transposed: false,
+      theme: configuration.theme,
+      interaction: configuration.interaction,
+      xAxis: null,
+      yAxes: const <YAxisConfig>[],
+      grid: null,
+      title: configuration.title,
+      subtitle: configuration.subtitle,
+      showLegend: configuration.showLegend,
+      polar: plan.config,
+    );
+    final LoweredPlot lowered;
+    try {
+      lowered = spec.lower();
+    } on GrammarSpecException catch (error) {
+      block(
+        'Grammar chain not emitted: the reconstructed radial specification was '
+        'rejected by the grammar layer — ${error.message}',
+        path: r'$.series',
+      );
+      return null;
+    }
+    final mismatch = _firstRadialMismatch(lowered);
+    if (mismatch != null) {
+      block(
+        'Grammar chain not emitted: the reconstructed chain does not reproduce '
+        '${mismatch.subject} exactly, so writing it would hand back a '
+        'different chart. ${mismatch.detail}',
+        path: r'$.series',
+      );
+      return null;
+    }
+
+    _captureKnownLimitations();
+    return _emitPolarChartBody(plan);
+  }
+
   /// Classifies [series] into one radial kind and builds its plan, or blocks
   /// and returns null when the shape is not one radial geometry.
   _RadialPlan? _planRadial(
@@ -688,24 +872,20 @@ class _GrammarChainEmitter {
       }
       return _planPie(series.single as PieChartSeries);
     }
-    if (series.every((item) => item is PolarColumnChartSeries)) {
-      if (series.length != 1) {
-        block(
-          'Grammar chain not emitted: geomPolar lowers to a single '
-          'PolarColumnChartSeries, so a layered/grouped/stacked composition of '
-          '${series.length} polar series cannot be reversed to one geomPolar.',
-          path: r'$.series',
-        );
-        return null;
-      }
-      return _planPolar(series.single as PolarColumnChartSeries);
-    }
+    // An all-polar chart never reaches here: `_tryEmitRadialChain` routes it to
+    // `_planPolarChart`, which reverses one geomPolar PER series.
     if (series.every((item) => item is DonutChartSeries)) {
       final donuts = series.cast<DonutChartSeries>();
       // `concentricDonutConfig != null` is the AUTHORITATIVE discriminator: the
       // forward path sets it ONLY inside `DonutMark.ring != null` lowering, so
       // its presence — not the series count — means a concentric composition
       // (the single-distinct-ring collapse carries a non-null config too).
+      // That stays true because `geomDonut(concentric:)` REFUSES a ring-less
+      // donut by name (`concentricConfigOnRinglessDonut`) rather than carrying
+      // a config the composition-less family would never use. The document
+      // path agrees: hydration rejects a config paired with fewer than two
+      // donut series, so `_planConcentric` only ever sees a real composition
+      // through the public entry point.
       if (configuration.concentricDonutConfig != null) {
         return _planConcentric(donuts, block);
       }
@@ -721,9 +901,10 @@ class _GrammarChainEmitter {
       return _planDonut(donuts.single);
     }
     block(
-      'Grammar chain not emitted: a radial chain expresses exactly one radial '
-      'geometry and cannot mix radial families or combine a radial series with '
-      'a Cartesian one: '
+      'Grammar chain not emitted: a radial chain expresses ONE radial family — '
+      'several geomPolar marks, or exactly one geomPie / geomDonut — and '
+      'cannot mix radial families or combine a radial series with a Cartesian '
+      'one: '
       '${series.map((item) => '${item.id} (${item.runtimeType})').join(', ')}.',
       path: r'$.series',
     );
@@ -848,12 +1029,21 @@ class _GrammarChainEmitter {
     // the multi-ring composition carries it on the shared config (no-op = the
     // config's visible default, `mark.center == null ? const
     // ConcentricDonutConfig() : ...`). See `_lowerRadial`'s concentric branch.
+    final captured = configuration.concentricDonutConfig!;
     final center = donuts.length == 1
         ? _markCenter(donuts.single.centerContent, DonutCenterContent.hidden)
-        : _markCenter(
-            configuration.concentricDonutConfig!.centerContent,
-            const DonutCenterContent(),
-          );
+        : _markCenter(captured.centerContent, const DonutCenterContent());
+    // What lowering REBUILDS from `center` alone — the shape every concentric
+    // chart emitted before `concentric:` existed. When it already reproduces the
+    // captured composition the mark keeps carrying just the center, so those
+    // charts emit exactly the text they emitted before; only a composition the
+    // center cannot express (a ring gap, order, weights, radii, legend mode, or
+    // a center with runtime styling `_markCenter` drops) carries the whole
+    // config — which is precisely the set that used to be REFUSED.
+    final fromCenter = donuts.length == 1 || center == null
+        ? const ConcentricDonutConfig()
+        : ConcentricDonutConfig(centerContent: center);
+    final carriesConfig = fromCenter != captured;
     return _RadialPlan(
       kind: _RadialKind.concentric,
       verb: 'geomDonut',
@@ -862,7 +1052,10 @@ class _GrammarChainEmitter {
       value: value,
       radius: radius,
       ring: ring,
-      center: center,
+      // The config owns the center when it rides the mark: lowering reads
+      // `concentric.centerContent` and REFUSES a mark that sets both, so the
+      // plan's `center` (what `geomDonut` emits as `center:`) drops out too.
+      center: carriesConfig ? null : center,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
       // deliberately left null here. The mark carries ONE unit / style /
@@ -879,7 +1072,8 @@ class _GrammarChainEmitter {
         ring: _string(ring),
         style: donuts.first.donutStyle,
         selectionStyle: donuts.first.selectionStyle,
-        center: center,
+        center: carriesConfig ? null : center,
+        concentric: carriesConfig ? captured : null,
         dataLabels: donuts.first.dataLabels,
         sliceRadiusConfig: donuts.first.sliceRadiusConfig,
         sliceGroupingConfig: donuts.first.sliceGroupingConfig,
@@ -887,32 +1081,179 @@ class _GrammarChainEmitter {
     );
   }
 
-  _RadialPlan _planPolar(PolarColumnChartSeries series) {
+  /// Plans a polar chart: one shared category field, one value field per
+  /// series, and the captured plot-level configuration.
+  ///
+  /// The first series fixes the category domain and its order. Every polar
+  /// series in a rendered chart shares that domain — `PolarColumnComposition
+  /// .validate` enforces it at mount, at hydration AND now at grammar lowering,
+  /// and `ChartGrammarSourceGenerator.generate` hydrates before this runs. So
+  /// the misalignment guard below is UNREACHABLE through the public entry point
+  /// and is deliberately kept as defence in depth for a future caller that
+  /// builds a `HydratedChartConfiguration` directly: the rows are sized from the
+  /// FIRST series' domain, so a longer or differently-labelled second series
+  /// would index past the end of the row list (a `RangeError`) or re-lower with
+  /// a synthesised zero, which is a different chart. Blocking by name beats
+  /// both.
+  _PolarChartPlan? _planPolarChart(
+    List<PolarColumnChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    final categories = <String>[
+      for (final point in series.first.points) point.label ?? '',
+    ];
+    final misaligned = <String>[
+      for (final item in series.skip(1))
+        if (!_sameCategoryDomain(categories, item)) item.id,
+    ];
+    if (misaligned.isNotEmpty) {
+      block(
+        'Grammar chain not emitted: N geomPolar marks read ONE row list, so '
+        'every polar series must have exactly one value at every category of '
+        'the shared domain, in the same order. "${series.first.id}" sets the '
+        'domain; these series do not match it: ${misaligned.join(', ')}.',
+        path: r'$.series[*].data',
+      );
+      return null;
+    }
+
+    // EVERY field must be allocated before the rows are synthesised: a row is
+    // sized from the slot counts at the moment it is built. The advanced
+    // per-series channels are allocated INTERLEAVED with their series' value so
+    // a series that carries none leaves the field order exactly as it was.
     final category = _addField('category', _FieldKind.string);
-    final value = _addField('value', _FieldKind.number);
-    final rows = _synthesiseRadialRows(series.points.length);
-    _fillRadialRows(rows, series.points, category, value, null, ring: null);
-    return _RadialPlan(
-      kind: _RadialKind.polar,
-      verb: 'geomPolar',
+    final values = <_Field>[];
+    final columnColors = <_Field?>[];
+    final targets = <_Field?>[];
+    final intervalLows = <_Field?>[];
+    final intervalHighs = <_Field?>[];
+    for (final item in series) {
+      values.add(_addField('value', _FieldKind.number));
+      // A per-point colour is `columnColors` reversed: `_fromMap` writes it as
+      // `PointStyle.color(...)`, and lowering writes it back the same way, so a
+      // point whose style carries anything ELSE is caught by the proof.
+      columnColors.add(
+        item.points.any((point) => point.pointStyle?.color != null)
+            ? _addField('columnColor', _FieldKind.color)
+            : null,
+      );
+      targets.add(
+        item.targetValues.isEmpty
+            ? null
+            : _addField('target', _FieldKind.optionalNumber),
+      );
+      // The two bound lists are supplied together or not at all (the series
+      // validates it), so one flag decides both fields.
+      final hasIntervals = item.intervalLowerValues.isNotEmpty;
+      intervalLows.add(
+        hasIntervals
+            ? _addField('intervalLow', _FieldKind.optionalNumber)
+            : null,
+      );
+      intervalHighs.add(
+        hasIntervals
+            ? _addField('intervalHigh', _FieldKind.optionalNumber)
+            : null,
+      );
+    }
+    final rows = _synthesiseRadialRows(categories.length);
+    for (var index = 0; index < categories.length; index++) {
+      rows[index].strings[category.slot] = categories[index];
+    }
+    for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+      final item = series[seriesIndex];
+      final points = item.points;
+      final value = values[seriesIndex];
+      final columnColor = columnColors[seriesIndex];
+      final target = targets[seriesIndex];
+      final low = intervalLows[seriesIndex];
+      final high = intervalHighs[seriesIndex];
+      for (var index = 0; index < points.length; index++) {
+        rows[index].numbers[value.slot] = points[index].y;
+        if (columnColor != null) {
+          rows[index].colors[columnColor.slot] =
+              points[index].pointStyle?.color;
+        }
+        // These three lists are PARALLEL ARRAYS indexed by category — the same
+        // alignment `PolarColumnChartSeries._fromMap` builds them with — so the
+        // row at a category index carries that category's entry, null included.
+        if (target != null) {
+          rows[index].optionalNumbers[target.slot] = item.targetValues[index];
+        }
+        if (low != null && high != null) {
+          rows[index].optionalNumbers[low.slot] =
+              item.intervalLowerValues[index];
+          rows[index].optionalNumbers[high.slot] =
+              item.intervalUpperValues[index];
+        }
+      }
+    }
+
+    return _PolarChartPlan(
       rows: rows,
       category: category,
-      value: value,
-      mark: PolarMark<_SourceRow>(
-        id: series.id,
-        name: series.name,
-        color: series.color,
-        unit: series.unit,
-        category: _string(category),
-        value: _number(value),
-        // Carry the column unit, styling and selection so a styled polar column
-        // round-trips (PolarMark.style → PolarColumnChartSeries.polarStyle,
-        // .selectionStyle → .selectionStyle, .unit → .unit). A polar preset,
-        // target or interval option is NOT carried and stays an honest refusal.
-        style: series.polarStyle,
-        selectionStyle: series.selectionStyle,
-      ),
+      series: <_PolarSeriesPlan>[
+        for (var index = 0; index < series.length; index++)
+          _PolarSeriesPlan(
+            value: values[index],
+            columnColor: columnColors[index],
+            target: targets[index],
+            intervalLow: intervalLows[index],
+            intervalHigh: intervalHighs[index],
+            mark: PolarMark<_SourceRow>(
+              id: series[index].id,
+              name: series[index].name,
+              color: series[index].color,
+              unit: series[index].unit,
+              category: _string(category),
+              value: _number(values[index]),
+              // Carry the column unit, styling and selection so a styled polar
+              // column round-trips (PolarMark.style →
+              // PolarColumnChartSeries.polarStyle, .selectionStyle →
+              // .selectionStyle, .unit → .unit), plus the advanced per-category
+              // channels and their two styles and the preset — which is what
+              // turned the references / intervals / rose presentations from an
+              // honest refusal into an emitted chain.
+              style: series[index].polarStyle,
+              selectionStyle: series[index].selectionStyle,
+              columnColor: columnColors[index] == null
+                  ? null
+                  : _color(columnColors[index]!),
+              target: targets[index] == null
+                  ? null
+                  : _nullableNumber(targets[index]!),
+              targetMarkerStyle: series[index].targetMarkerStyle,
+              intervalLow: intervalLows[index] == null
+                  ? null
+                  : _nullableNumber(intervalLows[index]!),
+              intervalHigh: intervalHighs[index] == null
+                  ? null
+                  : _nullableNumber(intervalHighs[index]!),
+              intervalStyle: series[index].intervalStyle,
+              preset: series[index].preset,
+            ),
+          ),
+      ],
+      // Always non-null here: hydration REFUSES a document that carries polar
+      // series without a polar configuration (`_validatePolarComposition`), and
+      // `generate` returns that failure before this planner runs. The fallback
+      // is the same defence in depth as the domain guard above — a direct
+      // caller must get the default config, not a null that the round-trip
+      // proof would then report as a lost PolarChartConfig.
+      config: configuration.polarChartConfig ?? const PolarChartConfig(),
     );
+  }
+
+  /// Whether [series] carries exactly [categories], in the same order.
+  bool _sameCategoryDomain(
+    List<String> categories,
+    PolarColumnChartSeries series,
+  ) {
+    if (series.points.length != categories.length) return false;
+    for (var index = 0; index < categories.length; index++) {
+      if ((series.points[index].label ?? '') != categories[index]) return false;
+    }
+    return true;
   }
 
   /// A radius field when ANY point across [seriesList] carries a slice/column
@@ -949,6 +1290,8 @@ class _GrammarChainEmitter {
         List<double>.filled(_numberSlots, 0),
         List<String>.filled(_stringSlots, ''),
         List<DateTime?>.filled(_stampSlots, null),
+        List<double?>.filled(_optionalNumberSlots, null),
+        List<Color?>.filled(_colorSlots, null),
       ),
   ];
 
@@ -998,9 +1341,29 @@ class _GrammarChainEmitter {
   ///
   /// Unlike [_firstMismatch], a radial `LoweredPlot` legitimately nulls the X
   /// axis, Y axes and grid (radial has no Cartesian coordinate space), so those
-  /// are NOT compared. It DOES compare the two radial chart-level configs, which
-  /// is what turns a customised `PolarChartConfig`/`ConcentricDonutConfig` into
-  /// an honest, named refusal.
+  /// are NOT compared. It DOES compare both radial chart-level configs — but the
+  /// two comparisons have different strengths, and saying so is the honest
+  /// framing:
+  ///
+  /// - `ConcentricDonutConfig` is either RECONSTRUCTED by lowering from the
+  ///   donut mark's `center` (when the center alone expresses the captured
+  ///   composition) or carried verbatim on `DonutMark.concentric` (when it does
+  ///   not). The first case genuinely proves what the mark carries; the second
+  ///   is the same passthrough tripwire as the polar config below.
+  /// - `PolarChartConfig` rides `PlotSpec.polar` verbatim, so the re-lowered
+  ///   plot hands the SAME object back. That comparison is a regression tripwire
+  ///   on the lowering — before this slice lowering substituted
+  ///   `const PolarChartConfig()` and the check fired for every customised
+  ///   config — not a proof about the emitted `.polarConfig(...)` LITERAL. The
+  ///   literal's fidelity rests on it being written by the config emitter's own
+  ///   shared renderer (so the two forms cannot disagree), on
+  ///   `test/meta/source_emitter_drift_test.dart`, and on the per-field
+  ///   assertions in the emitter tests.
+  ///
+  /// The same distinction applies to every field the proof spec carries verbatim
+  /// (theme, interaction, title, subtitle, legend): a passthrough comparison
+  /// guards against lowering silently dropping it, which is worth having, and is
+  /// not the same thing as proving the emitted text.
   ({String subject, String detail})? _firstRadialMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
@@ -1044,20 +1407,24 @@ class _GrammarChainEmitter {
       return (
         subject: 'the concentric-donut composition',
         detail:
-            'The grammar carries only a concentric donut\'s shared center, so a '
-            'customised ConcentricDonutConfig (ring gap, weights, order, radius '
-            'factors or legend mode) is not reproduced. Author the chart through '
-            'the grammar to express it as a chain.',
+            'A concentric chain sets the ring gap, order, weights, radii, legend '
+            'mode and shared center with geomDonut(concentric: ...), so the '
+            're-lowered plot must carry the captured ConcentricDonutConfig '
+            'exactly. This one does not — the captured chart pairs the config '
+            'with a radial family that composes no rings.',
       );
     }
+    // The lowering tripwire described above: it fires only if lowering stops
+    // carrying `PlotSpec.polar` through to `LoweredPlot.polarChartConfig`, which
+    // is precisely what it did before `.polarConfig(...)` existed.
     if (lowered.polarChartConfig != configuration.polarChartConfig) {
       return (
         subject: 'the polar chart configuration',
         detail:
-            'geomPolar lowers to the default PolarChartConfig, so a customised '
-            'pane, angular/radial axis, composition or threshold is not '
-            'reproduced. Author the chart through the grammar to express it as a '
-            'chain.',
+            'A polar chain sets the plot-level pane, angular/radial axis, '
+            'composition and thresholds with .polarConfig(...), so the '
+            're-lowered plot must carry the captured PolarChartConfig exactly. '
+            'This one does not.',
       );
     }
     return null;
@@ -1066,16 +1433,21 @@ class _GrammarChainEmitter {
   /// Explains why a captured radial series is not reproduced by the lowered one.
   ///
   /// The radial marks now carry the unit, selection style, data labels, series
-  /// style, and (pie/donut) the slice-radius and grouping configs, so those all
-  /// round-trip. What remains un-carried is metadata and — on a polar column —
-  /// a non-standard preset, per-category targets or intervals; a series that
-  /// sets one of those is what reaches here.
+  /// style, (pie/donut) the slice-radius and grouping configs and (polar) the
+  /// preset, per-category column colours, targets and intervals with their two
+  /// styles, so those all round-trip. What remains un-carried is series
+  /// metadata, a per-point style that is not a plain colour override, and a
+  /// polar interval list whose every entry is null (which reverses to "no
+  /// intervals" rather than to a list of nulls); a series that sets one of
+  /// those is what reaches here.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
     return 'It carries a series option the radial marks do not carry — the '
         'category, value, optional radius, concentric ring, donut center, '
-        'unit, series style, selection style, data labels, and (pie/donut) the '
-        'slice-radius and grouping configs round-trip, but series metadata and '
-        'a polar preset / per-category target / interval option do not.';
+        'unit, series style, selection style, data labels, (pie/donut) the '
+        'slice-radius and grouping configs and (polar) the preset, per-category '
+        'column colours, targets and intervals round-trip, but series metadata, '
+        'a per-point style beyond a colour override, and an all-null polar '
+        'interval list do not.';
   }
 
   // =========================================================================
@@ -1144,11 +1516,11 @@ class _GrammarChainEmitter {
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
     }
-    // concentricDonutConfig and polarChartConfig are NO LONGER listed here:
-    // the radial marks carry the common radial shape (a concentric composition's
-    // shared center; a default polar pane), and the round-trip proof
-    // (_firstRadialMismatch) refuses a customised one with a named reason. Only
-    // radialBarChartConfig stays gated — radial-bar has no grammar mark.
+    // concentricDonutConfig and polarChartConfig are NO LONGER listed here: the
+    // grammar carries both (`geomDonut(concentric:)` and `.polarConfig(...)`),
+    // and the round-trip proof (_firstRadialMismatch) refuses anything they do
+    // not reproduce with a named reason. Only radialBarChartConfig stays gated —
+    // radial-bar has no grammar mark.
     if (configuration.radialBarChartConfig != null) {
       lost.add('radialBarChartConfig');
     }
@@ -1212,6 +1584,46 @@ class _GrammarChainEmitter {
   /// identified cheaply from the round-trip comparison the emitter already
   /// runs, so the reader learns the boundary instead of only reading "does not
   /// reproduce exactly".
+  ///
+  /// The comparisons below have two DIFFERENT strengths, and — exactly as for
+  /// [_firstRadialMismatch] — saying which is which is the honest framing:
+  ///
+  /// - **Genuine re-lowering.** `series` and `annotations` are REBUILT by
+  ///   `spec.lower()` out of the reconstructed marks: each point is recomputed
+  ///   by running the emitter's own accessors over the synthesised rows, and
+  ///   each reference mark is turned back into a `ChartAnnotation`. Comparing
+  ///   those to the captured ones field-for-field (`operator ==` for series,
+  ///   [_sameAnnotation] for annotations, which spells the comparison out
+  ///   because `ChartAnnotation` declares no `operator ==`) genuinely proves
+  ///   the reconstruction: a channel, value or option a mark fails to carry
+  ///   diverges here and is refused. The one caveat inside that proof is that a
+  ///   config object a mark carries VERBATIM (a data-label or style config)
+  ///   travels into the rebuilt series as the captured instance, so that field
+  ///   is a passthrough sitting inside an otherwise genuine comparison.
+  /// - **Passthrough.** `xAxis`, `theme`, `interaction`, `grid`, `title`,
+  ///   `subtitle` and `showLegend` are handed to the proof spec AS the captured
+  ///   instances (see the spec built in `_tryEmitChain`) and `lowerPlotSpec`
+  ///   assigns them straight onto the `LoweredPlot`, so each of those
+  ///   comparisons is an instance against ITSELF. They are regression TRIPWIRES
+  ///   on lowering — they fire if lowering ever stops forwarding a field or
+  ///   substitutes a default — and prove nothing about the emitted
+  ///   `.xAxis(...)` / `.theme(...)` / `.grid(...)` / `.title(...)` /
+  ///   `.legend(...)` TEXT, which the proof never reads. (Verified by mutation:
+  ///   deleting the `.grid(...)` and `.title(...)` emission produces ZERO
+  ///   refusals here — only the emitter test that asserts the emitted text
+  ///   fails.) `yAxes` sits just off pure passthrough: `_resolveAxes` returns
+  ///   the declared instances unchanged and normalises only a blank `id` and an
+  ///   empty list (replaced by one synthesised left axis), so this comparison
+  ///   catches exactly those two normalisations and is instance-vs-itself
+  ///   otherwise.
+  ///
+  /// The emitted literals rest on the guards named in the library docstring
+  /// instead: the config emitter's shared renderers behind public seams,
+  /// `test/meta/source_emitter_drift_test.dart`, and per-field assertions on
+  /// the emitted text in the emitter tests — plus, on this Cartesian path,
+  /// `test/unit/source/chart_grammar_source_generator_test.dart`'s third
+  /// assertion, which hand-writes the equivalent chain and requires the
+  /// document it extracts to equal the captured one.
   ({String subject, String detail})? _firstMismatch(LoweredPlot lowered) {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
@@ -1238,6 +1650,9 @@ class _GrammarChainEmitter {
         );
       }
     }
+    // Near-passthrough (see the doc above): `_resolveAxes` returns the declared
+    // axis instances, so this catches the two normalisations it performs — an
+    // empty captured axis list, and an axis whose `id` lowering has to fill in.
     if (lowered.yAxes.length != configuration.axes.length) {
       return (subject: 'the Y-axis list', detail: _genericLossDetail);
     }
@@ -1249,12 +1664,12 @@ class _GrammarChainEmitter {
         );
       }
     }
-    // The X axis, theme and interaction are carried verbatim by lowering and
-    // re-emitted by the shared config emitter. Comparing them here closes the
-    // loop so the "emitted == faithful" guarantee genuinely covers every field
-    // a LoweredPlot carries — not only series, annotations and Y-axes. Each is
-    // guarded by a complete operator==, so a captured value the chain cannot
-    // reproduce is refused rather than silently diverging.
+    // The X axis, theme and interaction ride the proof spec verbatim and
+    // lowering hands the same instances back, so these three are the
+    // passthrough tripwires described above: they fire if lowering ever stops
+    // forwarding one of them, and say nothing about the emitted `.xAxis(...)` /
+    // `.theme(...)` text — that is the shared config emitter's, the drift
+    // gate's and the emitted-text assertions' job.
     if (lowered.xAxis != configuration.xAxis) {
       return (subject: 'the X axis', detail: _genericLossDetail);
     }
@@ -1267,10 +1682,10 @@ class _GrammarChainEmitter {
         detail: _genericLossDetail,
       );
     }
-    // Grid, title, subtitle and legend visibility are carried verbatim by
-    // lowering too, so — like the X axis, theme and interaction above — they are
-    // compared here to keep the "emitted == faithful" guarantee covering every
-    // field a LoweredPlot carries, rather than dropping any of them.
+    // Grid, title, subtitle and legend visibility ride the proof spec verbatim
+    // too, so — exactly like the X axis, theme and interaction above — these
+    // are the same instance-vs-itself tripwires on lowering, not proofs about
+    // the emitted `.grid(...)` / `.title(...)` / `.legend(...)` literals.
     if (lowered.grid != configuration.grid) {
       return (subject: 'the grid', detail: _genericLossDetail);
     }
@@ -1548,6 +1963,8 @@ class _GrammarChainEmitter {
       _FieldKind.number => _numberSlots++,
       _FieldKind.string => _stringSlots++,
       _FieldKind.timestamp => _stampSlots++,
+      _FieldKind.optionalNumber => _optionalNumberSlots++,
+      _FieldKind.color => _colorSlots++,
     };
     final field = _Field(name, kind, slot);
     _fields.add(field);
@@ -1609,6 +2026,12 @@ class _GrammarChainEmitter {
 
   DateTime Function(_SourceRow) _stamp(_Field field) =>
       (row) => row.stamps[field.slot]!;
+
+  num? Function(_SourceRow) _nullableNumber(_Field field) =>
+      (row) => row.optionalNumbers[field.slot];
+
+  Color? Function(_SourceRow) _color(_Field field) =>
+      (row) => row.colors[field.slot];
 
   _GeometryPlan _planGeometry(ChartSeries series, _Field xField) {
     final base = _identifier(_baseNameFor(series));
@@ -1867,7 +2290,15 @@ class _GrammarChainEmitter {
       final numbers = List<double>.filled(_numberSlots, 0);
       final strings = List<String>.filled(_stringSlots, '');
       final stamps = List<DateTime?>.filled(_stampSlots, null);
-      rows.add(_SourceRow(numbers, strings, stamps));
+      rows.add(
+        _SourceRow(
+          numbers,
+          strings,
+          stamps,
+          List<double?>.filled(_optionalNumberSlots, null),
+          List<Color?>.filled(_colorSlots, null),
+        ),
+      );
     }
     // Slot 0 always holds the shared x.
     for (var index = 0; index < rowCount; index++) {
@@ -1964,6 +2395,103 @@ class _GrammarChainEmitter {
     return writer.toString();
   }
 
+  /// Emits the row class, row list and the POLAR chain: one `geomPolar` per
+  /// series over the shared rows, then `.polarConfig(...)` when the plot-level
+  /// configuration is not the default one lowering restores.
+  String _emitPolarChartBody(_PolarChartPlan plan) {
+    final writer = DartSourceWriter();
+    _emitRowClass(writer);
+    writer.writeLine();
+    _emitRows(writer, plan.rows);
+    writer.writeLine();
+    writer.writeLine(
+      'final ${options.variableName} = BravenChart.of('
+      '${options.rowsVariableName})',
+    );
+    writer.indented(() {
+      writer.indented(() {
+        for (final item in plan.series) {
+          _emitPolarGeometry(writer, plan.category, item);
+        }
+        if (plan.config != const PolarChartConfig()) {
+          writer.writeLine('.polarConfig(');
+          writer.indented(() {
+            // The SHARED config-emitter rendering, so the chain's config
+            // literal cannot disagree with the config form's.
+            _config.emitPolarChartConfig(writer, null, plan.config);
+            _absorbConfigWarnings();
+          });
+          writer.writeLine(')');
+        }
+        _emitTheme(writer);
+        _emitInteraction(writer);
+        _emitTitle(writer);
+        _emitLegend(writer);
+        writer.writeLine('.build();');
+      });
+    });
+    return writer.toString();
+  }
+
+  /// Emits one `.geomPolar(...)` — the polar arm of [_emitRadialGeometry], over
+  /// the plan's shared category field and this series' own value field.
+  void _emitPolarGeometry(
+    DartSourceWriter writer,
+    _Field category,
+    _PolarSeriesPlan plan,
+  ) {
+    final mark = plan.mark;
+    writer.writeLine('.geomPolar(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(mark.id!));
+      writer.namedArgument('category', category.accessor());
+      writer.namedArgument('value', plan.value.accessor());
+      _optionalString(writer, 'name', mark.name);
+      _optionalColor(writer, 'color', mark.color);
+      _optionalString(writer, 'unit', mark.unit);
+      if (mark.style != null) {
+        _config.emitPolarColumnStyle(writer, 'style', mark.style!);
+      }
+      if (mark.selectionStyle != null) {
+        _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
+      }
+      // The advanced per-category channels, in the `geomPolar` signature's own
+      // order. Each accessor field exists only when the captured series carried
+      // that channel, and each style literal is written by the SHARED config
+      // emitter (the same rendering the config form's `targetMarkerStyle:` /
+      // `intervalStyle:` uses), which writes nothing for a default style.
+      if (mark.preset == PolarColumnPreset.rose) {
+        writer.namedArgument('rose', 'true');
+      }
+      if (plan.columnColor != null) {
+        writer.namedArgument('columnColor', plan.columnColor!.accessor());
+      }
+      if (plan.target != null) {
+        writer.namedArgument('target', plan.target!.accessor());
+      }
+      if (mark.targetMarkerStyle != null) {
+        _config.emitPolarTargetMarkerStyle(
+          writer,
+          'targetMarkerStyle',
+          mark.targetMarkerStyle!,
+        );
+      }
+      if (plan.intervalLow != null && plan.intervalHigh != null) {
+        writer.namedArgument('intervalLow', plan.intervalLow!.accessor());
+        writer.namedArgument('intervalHigh', plan.intervalHigh!.accessor());
+      }
+      if (mark.intervalStyle != null) {
+        _config.emitPolarIntervalStyle(
+          writer,
+          'intervalStyle',
+          mark.intervalStyle!,
+        );
+      }
+      _absorbConfigWarnings();
+    });
+    writer.writeLine(')');
+  }
+
   void _emitRadialGeometry(DartSourceWriter writer, _RadialPlan plan) {
     final mark = plan.mark;
     writer.writeLine('.${plan.verb}(');
@@ -2023,6 +2551,14 @@ class _GrammarChainEmitter {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
           }
           if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+          // `concentric:` and `center:` are mutually exclusive by lowering's
+          // precedence rule, and the planner only carries a config the center
+          // could not express — so a concentric chart whose composition IS the
+          // default still emits neither, exactly as before.
+          if (mark.concentric case final concentric?
+              when concentric != const ConcentricDonutConfig()) {
+            _config.emitConcentricDonutConfig(writer, 'concentric', concentric);
+          }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
           }
@@ -2033,6 +2569,9 @@ class _GrammarChainEmitter {
             _config.emitSliceGroupingConfig(writer, mark.sliceGroupingConfig!);
           }
         case PolarMark<_SourceRow>():
+          // Kept for the sealed switch's exhaustiveness only: a polar chart is
+          // planned by `_planPolarChart` and emitted by `_emitPolarGeometry`,
+          // which writes exactly these two arguments.
           if (mark.style != null) {
             _config.emitPolarColumnStyle(writer, 'style', mark.style!);
           }
@@ -2128,6 +2667,16 @@ class _GrammarChainEmitter {
       row.strings[field.slot],
     ),
     _FieldKind.timestamp => _timestampLiteral(row.stamps[field.slot], field),
+    // `null` is the WHOLE point of these two kinds: it is how a category with
+    // no target, no interval and no colour override is written.
+    _FieldKind.optionalNumber => switch (row.optionalNumbers[field.slot]) {
+      final value? => DartSourceWriter.numberLiteral(value),
+      _ => 'null',
+    },
+    _FieldKind.color => switch (row.colors[field.slot]) {
+      final value? => DartSourceWriter.colorLiteral(value),
+      _ => 'null',
+    },
   };
 
   /// Writes a `DateTime.parse(...)` literal for a timestamp slot.

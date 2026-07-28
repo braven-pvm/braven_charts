@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Multi-series Chart Grammar polar columns. A plot may now carry several
+  `geomPolar` marks sharing one angular and one radial axis, covering layered,
+  grouped, and stacked compositions, and `PolarMark` gained the advanced
+  channels `columnColor`, `target`, `targetMarkerStyle`, `intervalLow`,
+  `intervalHigh`, `intervalStyle`, and `preset` (including the area-correct
+  rose presentation). The chain verb `BravenChart.geomPolar()` exposes the same
+  channels, with the preset as the `rose` flag.
+- Plot-level polar configuration through `PlotSpec.polar` and the
+  `BravenChart.polarConfig()` verb, forwarding a `PolarChartConfig` to every
+  polar mark in the plot. A misplaced `.polarConfig(...)` is diagnosed rather
+  than silently discarded. Like `grid`, `title`, `subtitle` and the legend
+  toggle, the config is a SPEC-level option, so `BravenPlot` also forwards it
+  on the empty-data path: a polar chain built over an empty dataset renders
+  its empty state inside the authored pane rather than a default one. Cartesian
+  charts are unaffected — a non-polar spec carrying a config is refused by
+  `polarConfigOnNonPolarSpec`, which runs above the empty-data guard, so it
+  still falls through to the const default.
+- Complete concentric-donut configuration passthrough through
+  `DonutMark.concentric` and `BravenChart.geomDonut(concentric: ...)`, carrying
+  ring gap, radial order, ring weights, legend mode, pane radii, and the shared
+  center into the Grammar, with the ring-series keying rules stated on the API.
+- Six Grammar diagnostics for the compositions the new surface makes
+  expressible: `polarConfigOnNonPolarSpec`, `invalidPolarComposition`,
+  `incompletePolarInterval`, `conflictingConcentricCenter`,
+  `concentricConfigOnRinglessDonut`, and `invalidConcentricComposition`.
+
+### Changed
+
+- Generated Dart source now reverses multi-series polar compositions, the
+  polar advanced channels and presets, `.polarConfig(...)`, and non-default
+  `ConcentricDonutConfig` ring geometry into Grammar chains instead of
+  refusing them. Output is unchanged for Cartesian, pie, donut, concentric
+  donut with default ring geometry, and single-series polar with a default
+  `PolarChartConfig` and no advanced channels — the shapes that already
+  emitted a chain.
+- `multipleRadialGeoms` is now raised only when the several radial geoms are
+  not all `geomPolar`, and its message names polar columns as the one
+  exception to "at most one radial geom". Two pies, or a pie alongside a donut
+  or a polar column, are still rejected exactly as before.
+
+### Breaking Changes
+
+- `GrammarDiagnosticCode` gained six enum values (listed under Added). They are
+  declared beside the radial codes they belong with rather than appended, so
+  the ordinals of the values after them shifted. The breakage is confined to
+  compile time: an exhaustive `switch` over `GrammarDiagnosticCode` with no
+  default or wildcard case will stop compiling until the new codes are
+  handled. Nothing serialises the enum, and chart artifacts and documents
+  encode every enum by NAME rather than by ordinal, so persisted documents
+  still load unchanged and the runtime behavior of existing code is
+  unaffected.
+
+### Notes
+
+- The Grammar of Graphics and fluent authoring APIs (`BravenChart`,
+  `PlotSpec`, marks/channels, and `braven_charts_fluent.dart`) remain Beta /
+  experimental and may change before a stable release. Pin a version if you
+  depend on them.
+- Known limitation, so the concentric-donut passthrough above is not read wider
+  than it is: a pie or donut series carrying **per-slice colours**
+  (`sliceColors`) is still refused by the Grammar source emitter, because
+  `PieMark` and `DonutMark` have no per-point colour channel — only `PolarMark`
+  does, through `columnColor`. A concentric composition whose rings carry
+  *different* `dataLabels` is refused for the same class of reason: one
+  `DonutMark` holds one `dataLabels` for every ring it splits into. Both are
+  named diagnostics, never a silently different chart. Full detail, including
+  which showcase pages this leaves blocked, is under *Known gap* in
+  `doc/chart_grammar.md`.
+
 ## 0.14.0 - 2026-07-27
 
 ### Added

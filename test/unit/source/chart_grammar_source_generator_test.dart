@@ -10,7 +10,9 @@
 ///
 /// So every supported shape runs three assertions:
 ///
-/// 1. the generated Dart formats and analyzes (`expectGeneratedSourceCompiles`),
+/// 1. the generated Dart parses and analyzes (`expectGeneratedSourceCompiles`
+///    — `dart format --output=none` is a syntax gate, not a "already
+///    formatted" assertion; see that helper's own doc),
 /// 2. the generated Dart contains the synthesised row type and the chain verbs
 ///    the shape calls for, and
 /// 3. the equivalent chain, written out in this file over a synthesised row
@@ -25,6 +27,9 @@
 /// fidelity matrix must produce a NAMED diagnostic and NO code, because a
 /// chain that would render a different chart is worse than no chain at all.
 library;
+
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
@@ -313,6 +318,1507 @@ final List<RadialRadiusRow> radiusGrammarRows = <RadialRadiusRow>[
     ),
 ];
 
+// ---------------------------------------------------------------------------
+// MULTI-SERIES POLAR fixtures. A layered/grouped/stacked polar composition is
+// N `PolarColumnChartSeries` over ONE category domain plus a plot-level
+// `PolarChartConfig`; the chain reverses it to N `geomPolar` marks reading one
+// shared category field and one value field each (`value`, `value2`, …) plus
+// `.polarConfig(...)`.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED multi-series polar row: the shared string `category` field
+/// and one number field per polar series, named the way the generator's
+/// de-duplication names them.
+class PolarGrammarRow {
+  const PolarGrammarRow({
+    required this.category,
+    required this.value,
+    this.value2 = 0,
+  });
+
+  final String category;
+  final double value;
+  final double value2;
+}
+
+const polarCapacity = <String, num>{
+  'Apple': 60,
+  'Pear': 50,
+  'Plum': 40,
+  'Fig': 30,
+};
+
+const polarObserved = <String, num>{
+  'Apple': 42,
+  'Pear': 31,
+  'Plum': 17,
+  'Fig': 10,
+};
+
+final List<PolarGrammarRow> polarGrammarRows = <PolarGrammarRow>[
+  for (final row in harvest)
+    PolarGrammarRow(
+      category: row.fruit,
+      value: polarCapacity[row.fruit]!.toDouble(),
+      value2: polarObserved[row.fruit]!.toDouble(),
+    ),
+];
+
+/// A NON-DEFAULT plot-level polar configuration. Every value differs from the
+/// class default, so a chain that dropped the config could not pass the
+/// round-trip proof by accident.
+const groupedPolarConfig = PolarChartConfig(
+  pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+  composition: PolarColumnCompositionConfig(
+    mode: PolarColumnCompositionMode.grouped,
+    groupInnerPadding: 0.2,
+  ),
+);
+
+/// A non-default plot-level polar configuration that leaves the COMPOSITION
+/// alone, so a single-series polar chart can carry it (grouped and stacked
+/// compositions require at least two series).
+const customPolarPaneConfig = PolarChartConfig(
+  pane: PolarPaneConfig(startAngleDegrees: -45, innerRadiusFactor: 0.15),
+  radialAxis: PolarNumericAxisConfig(tickCount: 7),
+);
+
+/// An EXHAUSTIVE plot-level polar configuration: every field of every nested
+/// config differs from its class default, and every value is distinct, so the
+/// per-field assertions over the emitted `.polarConfig(...)` literal cannot pass
+/// by coincidence.
+///
+/// The round-trip proof compares the config object the proof spec CARRIES, which
+/// is the captured instance itself — so it can only prove that lowering keeps
+/// hold of it, never that the emitted TEXT reproduces it. This fixture is what
+/// covers the text.
+const exhaustivePolarConfig = PolarChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: -45,
+    sweepAngleDegrees: 300,
+    clockwise: false,
+    innerRadiusFactor: 0.15,
+    outerRadiusFactor: 0.8,
+    clipMarks: false,
+  ),
+  angularAxis: PolarCategoryAxisConfig(
+    innerPadding: 0.2,
+    outerPadding: 0.08,
+    showLabels: false,
+    showGridLines: false,
+    maximumVisibleLabels: 12,
+    maximumVisibleGridLines: 36,
+    labelOffset: 6,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF102030),
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  radialAxis: PolarNumericAxisConfig(
+    minimum: 5,
+    maximum: 80,
+    scaleMode: PolarRadialScaleMode.areaCorrect,
+    tickCount: 7,
+    showLabels: false,
+    showGridLines: false,
+    labelPosition: PolarRadialLabelPosition.end,
+    labelAngleOffsetDegrees: 12,
+    labelOffset: 9,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF405060),
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  composition: PolarColumnCompositionConfig(
+    mode: PolarColumnCompositionMode.grouped,
+    groupInnerPadding: 0.2,
+  ),
+  thresholds: <PolarThreshold>[
+    PolarThreshold(
+      value: 55,
+      label: 'Target',
+      color: Color(0xFF708090),
+      width: 2.5,
+      dashPattern: <double>[3, 2],
+    ),
+  ],
+);
+
+/// Every value [exhaustivePolarConfig] sets, as the fragment the emitted
+/// `.polarConfig(...)` literal must contain for it.
+const exhaustivePolarConfigFragments = <String>[
+  'pane: PolarPaneConfig(',
+  'startAngleDegrees: -45.0,',
+  'sweepAngleDegrees: 300.0,',
+  'clockwise: false,',
+  'innerRadiusFactor: 0.15,',
+  'outerRadiusFactor: 0.8,',
+  'clipMarks: false,',
+  'angularAxis: PolarCategoryAxisConfig(',
+  'innerPadding: 0.2,',
+  'outerPadding: 0.08,',
+  'showLabels: false,',
+  'showGridLines: false,',
+  'maximumVisibleLabels: 12,',
+  'maximumVisibleGridLines: 36,',
+  'labelOffset: 6.0,',
+  'labelStyle: PolarLabelStyle(',
+  'color: Color(0xFF102030),',
+  'fontSize: 11.0,',
+  'fontWeight: FontWeight.w600,',
+  'radialAxis: PolarNumericAxisConfig(',
+  'minimum: 5.0,',
+  'maximum: 80.0,',
+  'scaleMode: PolarRadialScaleMode.areaCorrect,',
+  'tickCount: 7,',
+  'labelPosition: PolarRadialLabelPosition.end,',
+  'labelAngleOffsetDegrees: 12.0,',
+  'labelOffset: 9.0,',
+  'color: Color(0xFF405060),',
+  'fontSize: 13.0,',
+  'fontWeight: FontWeight.w700,',
+  'composition: PolarColumnCompositionConfig(',
+  'mode: PolarColumnCompositionMode.grouped,',
+  'groupInnerPadding: 0.2,',
+  'thresholds: [',
+  'PolarThreshold(',
+  'value: 55.0,',
+  "label: 'Target',",
+  'color: Color(0xFF708090),',
+  'width: 2.5,',
+  'dashPattern: <double>[3.0, 2.0],',
+];
+
+// ---------------------------------------------------------------------------
+// ADVANCED PER-SERIES POLAR fixtures. The `standard`, `rose`, `references` and
+// `intervals` showcase presentations carry per-CATEGORY data beyond the value:
+// a column color, an absolute target, and an interval's two bounds. Each of
+// those becomes its own synthesised row field, so the reversed chain reads
+// them exactly the way it reads the value.
+//
+// Every one of the three is NULLABLE per category on purpose. A category
+// without a target must stay null: a synthesised 0 is a real value on the
+// radial scale and would draw a marker at the origin instead of drawing none.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED advanced-polar row: the shared category, this series' value,
+/// and the nullable per-category channels the generator adds only for a series
+/// that carries them.
+class PolarAdvancedRow {
+  const PolarAdvancedRow({
+    required this.category,
+    required this.value,
+    this.columnColor,
+    this.target,
+    this.intervalLow,
+    this.intervalHigh,
+  });
+
+  final String category;
+  final double value;
+  final Color? columnColor;
+  final double? target;
+  final double? intervalLow;
+  final double? intervalHigh;
+}
+
+/// Per-category column colors for TWO of the four categories, so the reversal
+/// must keep the other two on the series color rather than inventing one.
+const polarColumnColors = <String, Color>{
+  'Apple': Color(0xFF16A34A),
+  'Plum': Color(0xFF7C3AED),
+};
+
+/// Targets for three of the four categories; 'Fig' stays null.
+const polarTargets = <String, num?>{
+  'Apple': 50,
+  'Pear': 36,
+  'Plum': 20,
+  'Fig': null,
+};
+
+/// Intervals for three of the four categories; 'Fig' has none.
+const polarIntervals = <String, PolarColumnInterval>{
+  'Apple': PolarColumnInterval(lower: 38, upper: 46),
+  'Pear': PolarColumnInterval(lower: 27, upper: 34),
+  'Plum': PolarColumnInterval(lower: 14, upper: 20),
+};
+
+/// Every field differs from the class default, so a dropped style cannot pass.
+const styledTargetMarker = PolarColumnTargetMarkerStyle(
+  color: Color(0xFF0F172A),
+  width: 3,
+  lengthFactor: 0.8,
+  opacity: 0.9,
+);
+
+/// Every field differs from the class default.
+const styledIntervalStyle = PolarColumnIntervalStyle(
+  display: PolarColumnIntervalDisplay.band,
+  color: Color(0xFF334155),
+  width: 2,
+  capLengthFactor: 0.5,
+  bandLengthFactor: 0.7,
+  opacity: 0.8,
+);
+
+/// The `references` presentation's rows: value + column color + target.
+final List<PolarAdvancedRow> polarReferenceRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+      target: polarTargets[row.fruit]?.toDouble(),
+    ),
+];
+
+/// The `intervals` presentation's rows: value + both interval bounds.
+final List<PolarAdvancedRow> polarIntervalRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      intervalLow: polarIntervals[row.fruit]?.lower,
+      intervalHigh: polarIntervals[row.fruit]?.upper,
+    ),
+];
+
+/// The `rose` presentation's rows: value + column color.
+final List<PolarAdvancedRow> polarRoseRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+    ),
+];
+
+// ---------------------------------------------------------------------------
+// MULTI-SERIES ADVANCED POLAR fixtures. The advanced per-category channels are
+// allocated INTERLEAVED with each series' value field, so a second series that
+// carries the same channel gets its OWN `columnColor2` / `target2` slot right
+// after its own `value2`. With one series every index is 0 and nothing
+// interleaves; these fixtures are what make the allocation observable.
+//
+// Every map below picks a DIFFERENT subset of the four categories from its
+// series-1 counterpart, so a reversal that read the wrong series' list, or
+// compacted the nulls, lands a value on the wrong category and fails.
+// ---------------------------------------------------------------------------
+
+/// The SYNTHESISED two-series advanced-polar row, field for field in the order
+/// the generator allocates them.
+class PolarPairRow {
+  const PolarPairRow({
+    required this.category,
+    required this.value,
+    required this.value2,
+    this.columnColor,
+    this.target,
+    this.columnColor2,
+    this.target2,
+    this.intervalLow,
+    this.intervalHigh,
+  });
+
+  final String category;
+  final double value;
+  final Color? columnColor;
+  final double? target;
+  final double value2;
+  final Color? columnColor2;
+  final double? target2;
+  final double? intervalLow;
+  final double? intervalHigh;
+}
+
+/// Series 2's column colors: 'Pear' and 'Fig', DISJOINT from series 1's
+/// 'Apple'/'Plum'.
+const polarForecastColumnColors = <String, Color>{
+  'Pear': Color(0xFFB91C1C),
+  'Fig': Color(0xFF0EA5E9),
+};
+
+/// Series 2's targets, absent for 'Apple' — series 1's are absent for 'Fig', so
+/// the two null positions cannot be confused.
+const polarForecastTargets = <String, num?>{
+  'Apple': null,
+  'Pear': 55,
+  'Plum': 45,
+  'Fig': 35,
+};
+
+/// Series 2's intervals, absent for 'Plum'.
+const polarForecastIntervals = <String, PolarColumnInterval>{
+  'Apple': PolarColumnInterval(lower: 54, upper: 66),
+  'Pear': PolarColumnInterval(lower: 44, upper: 56),
+  'Fig': PolarColumnInterval(lower: 26, upper: 34),
+};
+
+/// The two-series advanced rows: series 1's value + column color + target, then
+/// series 2's value + column color + target + both interval bounds.
+final List<PolarPairRow> polarPairRows = <PolarPairRow>[
+  for (final row in harvest)
+    PolarPairRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarColumnColors[row.fruit],
+      target: polarTargets[row.fruit]?.toDouble(),
+      value2: polarCapacity[row.fruit]!.toDouble(),
+      columnColor2: polarForecastColumnColors[row.fruit],
+      target2: polarForecastTargets[row.fruit]?.toDouble(),
+      intervalLow: polarForecastIntervals[row.fruit]?.lower,
+      intervalHigh: polarForecastIntervals[row.fruit]?.upper,
+    ),
+];
+
+// ---------------------------------------------------------------------------
+// SHOWCASE POLAR fixtures — the ACCEPTANCE GATE for this slice.
+//
+// These are a HAND TRANSCRIPTION of
+// `example/lib/showcase/pages/polar_column_page.dart` (`_buildSeriesList` and
+// `_buildPolarConfig`): the data maps, the palette swatches, the per-
+// presentation pane/axis/composition knobs and the per-presentation styling
+// each of the eight authored presentations applies. The showcase is what the
+// workbench Grammar pane actually renders, so a chart built from these values
+// emitting a chain IS the claim "every polar Grammar pane emits" — but ONLY
+// for as long as the transcription still says what the page says.
+//
+// A hand copy has exactly one failure mode: the page is edited and nothing
+// here notices, so the gate keeps passing about a chart the showcase no longer
+// mounts. Two things close that, and it is worth being exact about which does
+// what because they cover different halves of the copy:
+//
+//   * `group('showcase transcription sync guard')` parses the page's own
+//     source and compares it to the constants below — the presentation enum,
+//     every `<String, num>` value map (contents AND key order, which the
+//     palette cycling depends on) and every transcribed swatch.
+//   * [expectShowcaseKnobsMatchPage], which every polar acceptance case runs
+//     before it asserts anything about emission, resolves that presentation's
+//     KNOBS out of the page's two presentation methods and compares them to
+//     the `PolarChartConfig` and `PolarColumnStyle` the case actually mounted.
+//     That is the half the data guard never covered: pane geometry, the
+//     angular span, axis paddings and label styling, composition, column
+//     styling, gradient and shadow, the selection style, and the threshold,
+//     target-marker and interval styling.
+//
+// Add a presentation, rename one, nudge a number in a data map or move a knob
+// on the page, and one of the two goes red naming the drift; together they are
+// what keeps the sentence above true rather than merely historic.
+//
+// What is still a bare hand copy, stated so the gate is not read as wider than
+// it is: WHICH value map feeds which series and which channel (swap the page's
+// `_values` and `_comparisonValues` and both guards stay green), the series
+// ids, names and units, the per-series `copyWith` on `layered`'s reference
+// layer, and the palette a presentation SELECTS (the swatches are held to the
+// page, the per-presentation `_palette =` choice is not).
+// ---------------------------------------------------------------------------
+
+const showcaseStandardValues = <String, num>{
+  'Search': 86,
+  'Social': 58,
+  'Partners': 72,
+  'Email': 44,
+  'Events': 65,
+  'Direct': 92,
+  'Referral': 54,
+  'Other': 36,
+};
+
+const showcaseRoseValues = <String, num>{
+  'Jan': 42,
+  'Feb': 58,
+  'Mar': 76,
+  'Apr': 63,
+  'May': 88,
+  'Jun': 54,
+  'Jul': 97,
+  'Aug': 82,
+  'Sep': 69,
+  'Oct': 74,
+  'Nov': 49,
+  'Dec': 61,
+};
+
+/// The `partial` presentation's lifecycle stages (`_partialValues`).
+///
+/// This is the only presentation that moves the PANE off its defaults — a 240°
+/// sweep from 150° with an annular baseline — so it is the only one whose
+/// acceptance depends on `PolarPaneConfig.startAngleDegrees`/`sweepAngleDegrees`
+/// surviving the reversal.
+const showcasePartialValues = <String, num>{
+  'Discover': 84,
+  'Evaluate': 62,
+  'Trial': 73,
+  'Adopt': 91,
+  'Expand': 66,
+  'Renew': 79,
+};
+
+const showcaseLayeredObservedValues = <String, num>{
+  'Search': 72,
+  'Social': 48,
+  'Partners': 68,
+  'Email': 39,
+  'Events': 61,
+  'Direct': 83,
+};
+
+const showcaseLayeredCapacityValues = <String, num>{
+  'Search': 92,
+  'Social': 70,
+  'Partners': 84,
+  'Email': 62,
+  'Events': 78,
+  'Direct': 96,
+};
+
+const showcaseGroupedNorthValues = <String, num>{
+  'Search': 78,
+  'Social': 46,
+  'Partners': 64,
+  'Email': 52,
+  'Events': 70,
+  'Direct': 58,
+};
+
+const showcaseGroupedSouthValues = <String, num>{
+  'Search': 62,
+  'Social': 69,
+  'Partners': 51,
+  'Email': 73,
+  'Events': 55,
+  'Direct': 82,
+};
+
+const showcaseGroupedWestValues = <String, num>{
+  'Search': 54,
+  'Social': 57,
+  'Partners': 76,
+  'Email': 61,
+  'Events': 84,
+  'Direct': 67,
+};
+
+const showcaseStackedNewValues = <String, num>{
+  'Search': 34,
+  'Social': 26,
+  'Partners': 31,
+  'Email': 19,
+  'Events': 28,
+  'Direct': 37,
+};
+
+const showcaseStackedExpansionValues = <String, num>{
+  'Search': 16,
+  'Social': 12,
+  'Partners': 18,
+  'Email': 11,
+  'Events': 15,
+  'Direct': 20,
+};
+
+/// The stacked composition's third series is NEGATIVE at every category, which
+/// is what makes it worth its own acceptance case: a reversal that synthesised
+/// a zero, or clamped, would move every column.
+const showcaseStackedChurnValues = <String, num>{
+  'Search': -13,
+  'Social': -21,
+  'Partners': -12,
+  'Email': -17,
+  'Events': -10,
+  'Direct': -15,
+};
+
+const showcaseReferenceActualValues = <String, num>{
+  'Search': 74,
+  'Social': 56,
+  'Partners': 83,
+  'Email': 48,
+  'Events': 69,
+  'Direct': 91,
+};
+
+const showcaseReferenceTargetValues = <String, num>{
+  'Search': 78,
+  'Social': 62,
+  'Partners': 80,
+  'Email': 55,
+  'Events': 72,
+  'Direct': 88,
+};
+
+const showcaseUncertaintyValues = <String, num>{
+  'Search': 72,
+  'Social': 58,
+  'Partners': 81,
+  'Email': 46,
+  'Events': 67,
+  'Direct': 88,
+};
+
+const showcaseUncertaintyLowerValues = <String, num>{
+  'Search': 63,
+  'Social': 49,
+  'Partners': 70,
+  'Email': 38,
+  'Events': 57,
+  'Direct': 76,
+};
+
+const showcaseUncertaintyUpperValues = <String, num>{
+  'Search': 84,
+  'Social': 69,
+  'Partners': 94,
+  'Email': 56,
+  'Events': 79,
+  'Direct': 103,
+};
+
+/// The showcase's `_PolarPalette.ocean` swatch.
+const showcaseOceanPalette = <Color>[
+  Color(0xFF2563EB),
+  Color(0xFF0D9488),
+  Color(0xFF06B6D4),
+  Color(0xFF7C3AED),
+  Color(0xFF64748B),
+];
+
+/// The showcase's `_PolarPalette.sunset` swatch.
+const showcaseSunsetPalette = <Color>[
+  Color(0xFFE63946),
+  Color(0xFFF77F00),
+  Color(0xFFFCBF49),
+  Color(0xFF9D4EDD),
+  Color(0xFF5A189A),
+];
+
+/// The showcase's `_PolarPalette.earth` swatch.
+const showcaseEarthPalette = <Color>[
+  Color(0xFF386641),
+  Color(0xFF6A994E),
+  Color(0xFFA7C957),
+  Color(0xFFBC6C25),
+  Color(0xFFDDA15E),
+];
+
+/// `_categoryColors` for `_PolarPalette.theme`: the base theme's own series
+/// colors, at least eight of them.
+List<Color> showcaseThemePalette(ChartTheme theme, int categoryCount) =>
+    List<Color>.generate(
+      math.max(8, categoryCount),
+      theme.seriesTheme.colorAt,
+    );
+
+/// The showcase's per-category color map: the palette cycled over the value
+/// map's key order (`_buildSeriesList`).
+Map<String, Color> showcaseColumnColors(
+  Map<String, num> values,
+  List<Color> palette,
+) => <String, Color>{
+  for (final (index, category) in values.keys.indexed)
+    category: palette[index % palette.length],
+};
+
+/// `_buildSeriesList`'s shared `PolarColumnStyle`, with the knobs each
+/// presentation varies as parameters and the rest at the showcase's authored
+/// values.
+PolarColumnStyle showcasePolarStyle({
+  required double cornerRadius,
+  required double opacity,
+  required Color borderColor,
+  required PolarColumnAnimationMode animationMode,
+  PolarColumnCornerRadiusMode cornerRadiusMode =
+      PolarColumnCornerRadiusMode.outerEnd,
+  Color? valueLabelColor,
+  PolarColumnGradientStyle? gradient,
+  PolarColumnShadowStyle shadow = const PolarColumnShadowStyle(),
+}) => PolarColumnStyle(
+  cornerRadius: cornerRadius,
+  cornerRadiusMode: cornerRadiusMode,
+  opacity: opacity,
+  borderColor: borderColor,
+  borderWidth: 0.75,
+  maximumVisibleDataLabels: 24,
+  dataLabelRadialPosition: 0.56,
+  dataLabelStyle: PolarLabelStyle(
+    color: valueLabelColor,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+  ),
+  gradient: gradient,
+  shadow: shadow,
+  animationMode: animationMode,
+);
+
+/// `_buildSeriesList`'s shared `RadialSelectionStyle` at the showcase defaults.
+const showcasePolarSelection = RadialSelectionStyle(
+  liftScale: 1.08,
+  liftOffset: 6,
+  backdropBlur: 1.25,
+);
+
+/// `_buildPolarConfig`, with the knobs each presentation varies as parameters.
+PolarChartConfig showcasePolarConfig({
+  required double innerRadiusFactor,
+  required double outerRadiusFactor,
+  required double innerPadding,
+  required double outerPadding,
+  required Color categoryLabelColor,
+  required Color radialLabelColor,
+  required PolarColumnCompositionMode compositionMode,
+  PolarRadialScaleMode scaleMode = PolarRadialScaleMode.linear,
+  List<PolarThreshold> thresholds = const <PolarThreshold>[],
+  // Seven of the eight presentations leave the pane's angular span alone;
+  // `partial` is the one that authors it, so it rides parameters defaulted to
+  // the showcase's own resting values rather than a second forked helper.
+  double startAngleDegrees = -90,
+  double sweepAngleDegrees = 360,
+}) => PolarChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: startAngleDegrees,
+    sweepAngleDegrees: sweepAngleDegrees,
+    innerRadiusFactor: innerRadiusFactor,
+    outerRadiusFactor: outerRadiusFactor,
+  ),
+  angularAxis: PolarCategoryAxisConfig(
+    innerPadding: innerPadding,
+    outerPadding: outerPadding,
+    maximumVisibleLabels: 24,
+    maximumVisibleGridLines: 72,
+    labelOffset: 4,
+    labelStyle: PolarLabelStyle(
+      color: categoryLabelColor,
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    ),
+  ),
+  radialAxis: PolarNumericAxisConfig(
+    scaleMode: scaleMode,
+    labelOffset: 4,
+    labelStyle: PolarLabelStyle(
+      color: radialLabelColor,
+      fontSize: 10,
+      fontWeight: FontWeight.w500,
+    ),
+  ),
+  composition: PolarColumnCompositionConfig(mode: compositionMode),
+  thresholds: thresholds,
+);
+
+// ---------------------------------------------------------------------------
+// SYNC GUARD readers — how the transcription above is held to the page.
+//
+// The guard cannot import the page: `_PolarPresentation` and every `_…Values`
+// map are library-private to `polar_column_page.dart`, and the example is a
+// separate package this one does not depend on. So it reads the page as TEXT
+// and parses the few declarations the transcription copies. That is a narrow
+// contract — these readers know the page's declaration syntax, not its
+// meaning — and each one fails loudly, naming the declaration it could not
+// find, rather than quietly returning nothing (an empty result compared
+// against an empty expectation is how a guard dies silently).
+// ---------------------------------------------------------------------------
+
+/// The path the guard reads the polar showcase page from.
+///
+/// `flutter test` runs with the package root as its working directory — the
+/// same fact `expectGeneratedSourceCompiles` relies on when it drops a scratch
+/// file next to `pubspec.yaml` so `package:braven_charts` resolves.
+const showcasePolarPagePath =
+    'example/lib/showcase/pages/polar_column_page.dart';
+
+/// This file, which the guard reads to check every presentation is covered.
+const grammarGeneratorTestPath =
+    'test/unit/source/chart_grammar_source_generator_test.dart';
+
+/// Reads [path] relative to the package root, failing with a directed message
+/// when it is not there.
+String readRepoFile(String path) {
+  final file = File(path);
+  expect(
+    file.existsSync(),
+    isTrue,
+    reason:
+        'the showcase sync guard cannot find "$path" (working directory '
+        '"${Directory.current.path}"). If the file MOVED, move this path with '
+        'it — deleting the guard instead re-opens the drift it exists to stop.',
+  );
+  return file.readAsStringSync();
+}
+
+/// [source] with the INTERIOR of every quoted literal blanked to spaces,
+/// preserving both length and line structure.
+///
+/// The enum-value list ends at the first `;` after the header — but only if a
+/// scan can tell code from prose. `_PolarPresentation.references` describes
+/// itself as *'Amber ticks mark category targets; the dashed ring marks shared
+/// capacity'*, and a naive `indexOf(';')` stops THERE, truncating the enum to
+/// seven values and reporting `intervals` as deleted. (Observed: this guard's
+/// first run failed exactly that way.) A guard that cries drift over its own
+/// parser is worse than none, so the quotes are handled.
+String blankStringLiterals(String source) {
+  final out = source.split('');
+  var index = 0;
+  while (index < source.length) {
+    final quote = source[index];
+    if (quote != "'" && quote != '"') {
+      index++;
+      continue;
+    }
+    var cursor = index + 1;
+    while (cursor < source.length && source[cursor] != quote) {
+      final escaped = source[cursor] == r'\';
+      out[cursor] = source[cursor] == '\n' ? '\n' : ' ';
+      cursor++;
+      if (escaped && cursor < source.length) {
+        out[cursor] = source[cursor] == '\n' ? '\n' : ' ';
+        cursor++;
+      }
+    }
+    index = cursor + 1;
+  }
+  return out.join();
+}
+
+/// The value names of `enum [enumName]` in [source], in declaration order.
+///
+/// Every value sits at exactly two spaces of indent, so a value's own arguments
+/// (four spaces or more) cannot be mistaken for another value. The scan runs
+/// over the body from the header only — never the whole file — so an apostrophe
+/// in some unrelated comment cannot confuse [blankStringLiterals].
+List<String> enumValueNames(String source, String enumName) {
+  final header = 'enum $enumName {';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final body = blankStringLiterals(source.substring(start + header.length));
+  final end = body.indexOf(';');
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final names = <String>[
+    for (final match in RegExp(
+      r'^  ([a-z][A-Za-z0-9_]*)\s*\(',
+      multiLine: true,
+    ).allMatches(body.substring(0, end)))
+      match.group(1)!,
+  ];
+  expect(names, isNotEmpty, reason: 'parsed no values out of "$header"');
+  return names;
+}
+
+/// The names of every `static const _…Values = <String, num>{…}` map the
+/// showcase page declares.
+///
+/// This is the half of the guard that notices an ADDED map — a new
+/// presentation's data landing on the page with no transcription and no
+/// acceptance case.
+Set<String> showcaseNumMapNames(String source) => <String>{
+  for (final match in RegExp(
+    r'static const (_[A-Za-z0-9_]*Values) = <String, num>\{',
+  ).allMatches(source))
+    match.group(1)!,
+};
+
+/// The `static const [name] = <String, num>{…}` map in [source], in the page's
+/// own key order (which is what the palette cycles over, so it is load-bearing).
+Map<String, num> showcaseNumMap(String source, String name) {
+  final header = 'static const $name = <String, num>{';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final end = source.indexOf('};', start);
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final entries = <String, num>{
+    for (final match in RegExp(
+      r"'([^']*)'\s*:\s*(-?\d+(?:\.\d+)?)",
+    ).allMatches(source.substring(start + header.length, end)))
+      match.group(1)!: num.parse(match.group(2)!),
+  };
+  expect(entries, isNotEmpty, reason: 'parsed no entries out of "$header"');
+  return entries;
+}
+
+/// The `const [Color(0x…), …]` swatch `_categoryColors` returns for
+/// `_PolarPalette.[name]`.
+List<Color> showcasePaletteSwatch(String source, String name) {
+  final header = '_PolarPalette.$name => const [';
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final end = source.indexOf('],', start);
+  expect(end, isNonNegative, reason: 'unterminated "$header"');
+  final colors = <Color>[
+    for (final match in RegExp(
+      r'Color\(0x([0-9A-Fa-f]{8})\)',
+    ).allMatches(source.substring(start + header.length, end)))
+      Color(int.parse(match.group(1)!, radix: 16)),
+  ];
+  expect(colors, isNotEmpty, reason: 'parsed no colors out of "$header"');
+  return colors;
+}
+
+// ---------------------------------------------------------------------------
+// KNOB SYNC readers — how the acceptance cases' per-presentation LITERALS are
+// held to the page.
+//
+// The readers above cover the page's DATA: its `<String, num>` maps and its
+// palette swatches. They say nothing about the other half of what each
+// acceptance case copies out of the page — the pane radii, the angular span,
+// the axis paddings and label styling, the composition mode, the column
+// styling, the selection style and (for two presentations) the threshold,
+// target-marker and interval styling. Those are not declarations; they are
+// plain field assignments spread across `_applyAuthoredPresentationStyle` and
+// `_applyPresentation`, and a guard that stopped at the data let every one of
+// them drift silently. (Verified, not assumed: with only the data guard in
+// place, changing the page's `_outerRadius` for `standard` from 0.84 to 0.5
+// left the whole suite green while the `standard` acceptance case went on
+// mounting 0.84.)
+//
+// So these readers reconstruct, from the page's own source, the value a knob
+// RESOLVES to for one presentation — field initialisers first, then each
+// method's pre-switch statements, then that presentation's own case, in the
+// order the page itself applies them. [expectShowcaseKnobsMatchPage] then
+// compares the resolved values against the objects the acceptance case
+// actually MOUNTED. There is deliberately no second transcription table in
+// between: page source is compared to live config, so there is no third thing
+// for the two to drift apart from.
+//
+// The contract is narrow and worth stating: these readers know the page's
+// ASSIGNMENT SYNTAX, not its meaning. A knob the page computes instead of
+// assigning a literal cannot be followed, and every reader fails loudly naming
+// the knob it could not resolve rather than returning nothing.
+// ---------------------------------------------------------------------------
+
+/// The interior of the `{…}` block whose opening brace is at [openIndex].
+///
+/// Brace-matched over [blankStringLiterals] so a brace inside a string literal
+/// cannot close the block early.
+String blockBody(String source, int openIndex) {
+  final scan = blankStringLiterals(source);
+  var depth = 0;
+  for (var index = openIndex; index < scan.length; index++) {
+    if (scan[index] == '{') depth++;
+    if (scan[index] == '}') {
+      depth--;
+      if (depth == 0) return source.substring(openIndex + 1, index);
+    }
+  }
+  fail('unterminated block at offset $openIndex of the showcase page');
+}
+
+/// The body of the method whose declaration begins with [header].
+///
+/// The body opens at the first `) {` after the header rather than the first
+/// `{`: `_applyPresentation` takes a named parameter, so its first brace opens
+/// the PARAMETER group and a naive scan would return the parameter list.
+String pageMethodBody(String source, String header) {
+  final start = source.indexOf(header);
+  expect(start, isNonNegative, reason: 'no "$header" in the showcase page');
+  final open = source.indexOf(') {', start);
+  expect(open, isNonNegative, reason: 'no body for "$header"');
+  return blockBody(source, open + 2);
+}
+
+/// The statements [body] runs for [presentation], or its statements BEFORE the
+/// `switch (presentation)` when [presentation] is null.
+///
+/// Both presentation methods are a shared prelude followed by one case per
+/// presentation, and the prelude is load-bearing: five of the eight
+/// presentations never assign `_valueLabelColor`, so its resolved value IS the
+/// prelude's `null`.
+String presentationSection(String body, String? presentation) {
+  const header = 'switch (presentation) {';
+  final switchStart = body.indexOf(header);
+  expect(
+    switchStart,
+    isNonNegative,
+    reason: 'no "$header" in a showcase presentation method',
+  );
+  if (presentation == null) return body.substring(0, switchStart);
+  final cases = blockBody(body, switchStart + header.length - 1);
+  final marker = 'case _PolarPresentation.$presentation:';
+  final start = cases.indexOf(marker);
+  expect(start, isNonNegative, reason: 'no "$marker" in the showcase page');
+  final next = cases.indexOf('case _PolarPresentation.', start + marker.length);
+  return cases.substring(start + marker.length, next < 0 ? cases.length : next);
+}
+
+/// Every `_field = <expression>;` statement in [section], later assignments
+/// winning, with each expression whitespace-collapsed and `const ` stripped.
+///
+/// `=(?!=)` keeps a comparison (`presentation == _PolarPresentation.stacked`)
+/// from being read as an assignment to its left operand.
+Map<String, String> pageAssignments(String section) => <String, String>{
+  for (final match in RegExp(
+    r'(_[A-Za-z0-9_]+)\s*=(?!=)\s*([^;]*);',
+  ).allMatches(blankStringLiterals(section)))
+    match.group(1)!: normalisedExpression(match.group(2)!),
+};
+
+/// Every `<Type> _field = <expression>;` FIELD declaration in [source].
+///
+/// Anchored at exactly two spaces of indent, which is where a class member
+/// sits and a statement inside a method body never does. These are the resting
+/// values for the knobs neither presentation method assigns — the selection
+/// style is entirely field initialisers.
+Map<String, String> pageFieldInitialisers(String source) => <String, String>{
+  for (final match in RegExp(
+    r'^  [A-Za-z][^\n=;]*?\b(_[A-Za-z0-9_]+) = ([^;]*);',
+    multiLine: true,
+  ).allMatches(blankStringLiterals(source)))
+    match.group(1)!: normalisedExpression(match.group(2)!),
+};
+
+/// [expression] on one line, with a leading `const ` removed.
+String normalisedExpression(String expression) {
+  final collapsed = expression.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return collapsed.startsWith('const ')
+      ? collapsed.substring('const '.length)
+      : collapsed;
+}
+
+/// Every knob [presentation] resolves to, in the order the page applies them.
+///
+/// `_applyPresentation` calls `_applyAuthoredPresentationStyle` first and then
+/// runs its own switch, so its assignments win — which is why the merge order
+/// below is not alphabetical or arbitrary but the page's own execution order.
+Map<String, String> showcaseAuthoredKnobs(String source, String presentation) {
+  final styling = pageMethodBody(
+    source,
+    'void _applyAuthoredPresentationStyle(',
+  );
+  final applying = pageMethodBody(source, 'void _applyPresentation(');
+  return <String, String>{
+    ...pageFieldInitialisers(source),
+    ...pageAssignments(presentationSection(styling, null)),
+    ...pageAssignments(presentationSection(styling, presentation)),
+    ...pageAssignments(presentationSection(applying, null)),
+    ...pageAssignments(presentationSection(applying, presentation)),
+  };
+}
+
+/// The resolved expression for [knob], failing when the page never assigns it.
+String pageKnob(Map<String, String> knobs, String knob) {
+  final value = knobs[knob];
+  expect(
+    value,
+    isNotNull,
+    reason:
+        'the showcase page no longer assigns `$knob` anywhere the knob guard '
+        'can follow — a field initialiser or one of the two presentation '
+        'methods. If the knob was RENAMED, rename it here; if the page now '
+        'COMPUTES it, the guard cannot follow it and the acceptance case that '
+        'transcribes it needs another way to stay honest. Deleting the check '
+        're-opens the drift it exists to stop.',
+  );
+  return value!;
+}
+
+/// [knob] as a double.
+double pageDouble(Map<String, String> knobs, String knob) {
+  final value = double.tryParse(pageKnob(knobs, knob));
+  expect(
+    value,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer a numeric literal '
+        '("${pageKnob(knobs, knob)}"), so the knob guard cannot compare it.',
+  );
+  return value!;
+}
+
+/// [knob] as an int.
+int pageInt(Map<String, String> knobs, String knob) {
+  final value = int.tryParse(pageKnob(knobs, knob));
+  expect(
+    value,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer an integer literal '
+        '("${pageKnob(knobs, knob)}"), so the knob guard cannot compare it.',
+  );
+  return value!;
+}
+
+/// [knob] as a bool.
+bool pageBool(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  expect(
+    value,
+    anyOf(equals('true'), equals('false')),
+    reason:
+        '`$knob` on the showcase page is no longer a boolean literal, so the '
+        'knob guard cannot compare it.',
+  );
+  return value == 'true';
+}
+
+/// [knob] as a bool, additionally resolving the page's
+/// `presentation == _PolarPresentation.x` form against [presentation].
+///
+/// The three reference-geometry flags are switched on in the shared prelude by
+/// comparing the presentation rather than by a literal, and each is then
+/// re-asserted as `true` in the case that owns it. Reading only the literal
+/// form would leave the guard unable to resolve them for the other six.
+bool pagePresentationFlag(
+  Map<String, String> knobs,
+  String knob,
+  String presentation,
+) {
+  final value = pageKnob(knobs, knob);
+  if (value == 'true' || value == 'false') return value == 'true';
+  final match = RegExp(
+    r'^presentation == _PolarPresentation\.([A-Za-z0-9_]+)$',
+  ).firstMatch(value);
+  expect(
+    match,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is neither a boolean literal nor a '
+        'comparison against one presentation ("$value"), so the knob guard '
+        'cannot resolve whether this presentation authors it.',
+  );
+  return match!.group(1) == presentation;
+}
+
+/// [knob] as a `Color`, or null where the page leaves it unset.
+Color? pageColor(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  if (value == 'null') return null;
+  final match = RegExp(r'^Color\(0x([0-9A-Fa-f]{8})\)$').firstMatch(value);
+  expect(
+    match,
+    isNotNull,
+    reason:
+        '`$knob` on the showcase page is no longer a `Color(0x…)` literal '
+        '("$value"), so the knob guard cannot compare it.',
+  );
+  return Color(int.parse(match!.group(1)!, radix: 16));
+}
+
+/// [knob] as a `Color` the page authors EXPLICITLY.
+///
+/// The page reads several colours through a `_effective…` getter that falls
+/// back to the live theme. Those getters are outside what this guard can
+/// resolve, so a knob that went null would silently compare a transcribed
+/// literal against a theme colour; this refuses instead.
+Color pageAuthoredColor(Map<String, String> knobs, String knob) {
+  final value = pageColor(knobs, knob);
+  expect(
+    value,
+    isNotNull,
+    reason:
+        'the showcase page no longer authors `$knob` for this presentation, so '
+        'the chart now takes that colour from the live theme. The acceptance '
+        'case still mounts a literal, which is drift the moment the theme '
+        'moves.',
+  );
+  return value!;
+}
+
+/// [knob] as a qualified enum-ish token, e.g. `FontWeight.w500`.
+///
+/// Compared against the mounted value's `toString()`, which is that same text
+/// for both Dart enums and `FontWeight`.
+String pageToken(Map<String, String> knobs, String knob) {
+  final value = pageKnob(knobs, knob);
+  expect(
+    value,
+    matches(r'^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z0-9_]+$'),
+    reason:
+        '`$knob` on the showcase page is no longer a `Type.value` token '
+        '("$value"), so the knob guard cannot compare it.',
+  );
+  return value;
+}
+
+/// The dash pattern `_PolarLinePattern.[name]` carries on the page.
+List<double> pageLinePattern(String source, String name) {
+  final header = '$name(';
+  final enumStart = source.indexOf('enum _PolarLinePattern {');
+  expect(
+    enumStart,
+    isNonNegative,
+    reason: 'no `_PolarLinePattern` on the page',
+  );
+  final start = source.indexOf(header, enumStart);
+  expect(start, isNonNegative, reason: 'no `_PolarLinePattern.$name` value');
+  final open = source.indexOf('<double>[', start);
+  final close = source.indexOf(']', open);
+  expect(
+    open,
+    isNonNegative,
+    reason: 'no pattern on `_PolarLinePattern.$name`',
+  );
+  return <double>[
+    for (final match in RegExp(
+      r'-?\d+(?:\.\d+)?',
+    ).allMatches(source.substring(open + '<double>['.length, close)))
+      double.parse(match.group(0)!),
+  ];
+}
+
+/// Why a knob mismatch matters, said once.
+String knobReason(String presentation, String knob) =>
+    'the "$presentation" acceptance case mounts a different `$knob` than the '
+    'showcase page authors for that presentation, so the gate is proving '
+    'emission for a chart the page does not build. Re-transcribe the case from '
+    'the page (or fix the page, if the case is the correct one) — do not relax '
+    'this comparison.';
+
+/// Asserts the chart just mounted for [presentation] carries the knob values
+/// `polar_column_page.dart` itself authors for it.
+///
+/// This is the half of the sync guard that covers the acceptance cases'
+/// LITERALS. It reads the page's source, resolves that presentation's knobs,
+/// and compares them to the live `PolarChartConfig` and `PolarColumnStyle` in
+/// the widget tree — so the only way to pass is for the case's hand copy to
+/// still say what the page says.
+void expectShowcaseKnobsMatchPage(WidgetTester tester, String presentation) {
+  final page = readRepoFile(showcasePolarPagePath);
+  final knobs = showcaseAuthoredKnobs(page, presentation);
+  final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+  final config = chart.polarChartConfig;
+  final seriesList = chart.series ?? const <ChartSeries>[];
+  expect(
+    seriesList,
+    isNotEmpty,
+    reason: 'the "$presentation" acceptance case mounted no series',
+  );
+  // The page builds ONE `PolarColumnStyle` and one `RadialSelectionStyle` and
+  // hands the same instance to every series it returns, with a single
+  // exception: `layered`'s reference layer takes a `copyWith`. That copy is the
+  // FIRST series there, so the LAST series carries the shared style in all
+  // eight presentations.
+  final series = seriesList.last as PolarColumnChartSeries;
+  final style = series.polarStyle;
+  final selection = series.selectionStyle;
+
+  for (final (knob, mounted) in <(String, double)>[
+    ('_startAngle', config.pane.startAngleDegrees),
+    ('_sweepAngle', config.pane.sweepAngleDegrees),
+    ('_innerRadius', config.pane.innerRadiusFactor),
+    ('_outerRadius', config.pane.outerRadiusFactor),
+    ('_innerPadding', config.angularAxis.innerPadding),
+    ('_outerPadding', config.angularAxis.outerPadding),
+    ('_categoryLabelOffset', config.angularAxis.labelOffset),
+    ('_categoryLabelSize', config.angularAxis.labelStyle.fontSize ?? -1),
+    ('_radialLabelOffset', config.radialAxis.labelOffset),
+    ('_radialLabelAngleOffset', config.radialAxis.labelAngleOffsetDegrees),
+    ('_radialLabelSize', config.radialAxis.labelStyle.fontSize ?? -1),
+    ('_groupInnerPadding', config.composition.groupInnerPadding),
+    ('_cornerRadius', style.cornerRadius),
+    ('_opacity', style.opacity),
+    ('_columnBorderWidth', style.borderWidth),
+    ('_valueLabelRadialPosition', style.dataLabelRadialPosition),
+    ('_valueLabelSize', style.dataLabelStyle.fontSize ?? -1),
+    ('_selectionScale', selection.liftScale),
+    ('_selectionOffset', selection.liftOffset),
+    ('_selectionBackdropBlur', selection.backdropBlur),
+  ]) {
+    expect(
+      mounted,
+      pageDouble(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, int)>[
+    ('_maximumAngularLabels', config.angularAxis.maximumVisibleLabels),
+    ('_maximumAngularGridLines', config.angularAxis.maximumVisibleGridLines),
+    ('_tickCount', config.radialAxis.tickCount),
+    ('_maximumDataLabels', style.maximumVisibleDataLabels),
+  ]) {
+    expect(
+      mounted,
+      pageInt(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, bool)>[
+    ('_clockwise', config.pane.clockwise),
+    ('_showAngularLabels', config.angularAxis.showLabels),
+    ('_showAngularGrid', config.angularAxis.showGridLines),
+    ('_showRadialLabels', config.radialAxis.showLabels),
+    ('_showRadialGrid', config.radialAxis.showGridLines),
+    ('_showValues', style.showDataLabels),
+  ]) {
+    expect(
+      mounted,
+      pageBool(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, Object)>[
+    ('_scaleMode', config.radialAxis.scaleMode as Object),
+    ('_radialLabelPosition', config.radialAxis.labelPosition),
+    ('_compositionMode', config.composition.mode),
+    ('_animationMode', style.animationMode),
+    ('_selectionEffect', selection.effect),
+    (
+      '_categoryLabelWeight',
+      config.angularAxis.labelStyle.fontWeight as Object,
+    ),
+    ('_radialLabelWeight', config.radialAxis.labelStyle.fontWeight as Object),
+    ('_valueLabelWeight', style.dataLabelStyle.fontWeight as Object),
+  ]) {
+    expect(
+      mounted.toString(),
+      pageToken(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+
+  for (final (knob, mounted) in <(String, Color?)>[
+    ('_categoryLabelColor', config.angularAxis.labelStyle.color),
+    ('_radialLabelColor', config.radialAxis.labelStyle.color),
+    ('_valueLabelColor', style.dataLabelStyle.color),
+  ]) {
+    expect(
+      mounted,
+      pageColor(knobs, knob),
+      reason: knobReason(presentation, knob),
+    );
+  }
+  expect(
+    style.borderColor,
+    pageAuthoredColor(knobs, '_columnBorderColor'),
+    reason: knobReason(presentation, '_columnBorderColor'),
+  );
+
+  // `_cornerRadiusMode` is the one knob the page COMPUTES rather than assigns
+  // per case, so the guard pins the RULE and derives the expected mode from it
+  // — otherwise a rewritten rule would silently stop being what the eight
+  // acceptance cases assume.
+  expect(
+    pageKnob(knobs, '_cornerRadiusMode'),
+    'presentation == _PolarPresentation.stacked '
+    '? PolarColumnCornerRadiusMode.stackExterior '
+    ': PolarColumnCornerRadiusMode.outerEnd',
+    reason:
+        'the showcase page no longer derives `_cornerRadiusMode` from the '
+        'stacked presentation alone, so the acceptance cases\' transcribed '
+        'corner-radius modes are no longer what the page builds.',
+  );
+  expect(
+    style.cornerRadiusMode,
+    presentation == 'stacked'
+        ? PolarColumnCornerRadiusMode.stackExterior
+        : PolarColumnCornerRadiusMode.outerEnd,
+    reason: knobReason(presentation, '_cornerRadiusMode'),
+  );
+
+  final showGradient = pageBool(knobs, '_showGradient');
+  expect(
+    style.gradient != null,
+    showGradient,
+    reason: knobReason(presentation, '_showGradient'),
+  );
+  if (style.gradient case final gradient?) {
+    expect(
+      gradient.startColor,
+      pageColor(knobs, '_gradientStartColor'),
+      reason: knobReason(presentation, '_gradientStartColor'),
+    );
+    expect(
+      gradient.endColor,
+      pageColor(knobs, '_gradientEndColor'),
+      reason: knobReason(presentation, '_gradientEndColor'),
+    );
+    expect(
+      gradient.startLightnessShift,
+      pageDouble(knobs, '_gradientStartLightness'),
+      reason: knobReason(presentation, '_gradientStartLightness'),
+    );
+    expect(
+      gradient.endLightnessShift,
+      pageDouble(knobs, '_gradientEndLightness'),
+      reason: knobReason(presentation, '_gradientEndLightness'),
+    );
+  }
+
+  final showShadow = pageBool(knobs, '_showColumnShadow');
+  expect(
+    style.shadow != const PolarColumnShadowStyle(),
+    showShadow,
+    reason: knobReason(presentation, '_showColumnShadow'),
+  );
+  if (showShadow) {
+    expect(
+      style.shadow.color,
+      pageColor(knobs, '_columnShadowColor'),
+      reason: knobReason(presentation, '_columnShadowColor'),
+    );
+    expect(
+      style.shadow.blurRadius,
+      pageDouble(knobs, '_columnShadowBlur'),
+      reason: knobReason(presentation, '_columnShadowBlur'),
+    );
+    expect(
+      style.shadow.spreadRadius,
+      pageDouble(knobs, '_columnShadowSpread'),
+      reason: knobReason(presentation, '_columnShadowSpread'),
+    );
+    expect(
+      style.shadow.offset,
+      Offset(
+        pageDouble(knobs, '_columnShadowOffsetX'),
+        pageDouble(knobs, '_columnShadowOffsetY'),
+      ),
+      reason: knobReason(presentation, '_columnShadowOffsetY'),
+    );
+    expect(
+      style.shadow.opacity,
+      pageDouble(knobs, '_columnShadowOpacity'),
+      reason: knobReason(presentation, '_columnShadowOpacity'),
+    );
+  }
+
+  // The two presentations that author reference geometry. Their marker and
+  // threshold literals are transcribed exactly like the rest, so they are held
+  // to the page exactly like the rest.
+  if (pagePresentationFlag(knobs, '_showThreshold', presentation)) {
+    expect(
+      config.thresholds.length,
+      1,
+      reason: knobReason(presentation, '_showThreshold'),
+    );
+    final threshold = config.thresholds.single;
+    expect(
+      threshold.value,
+      pageDouble(knobs, '_thresholdValue'),
+      reason: knobReason(presentation, '_thresholdValue'),
+    );
+    expect(
+      threshold.width,
+      pageDouble(knobs, '_thresholdWidth'),
+      reason: knobReason(presentation, '_thresholdWidth'),
+    );
+    expect(
+      threshold.color,
+      pageAuthoredColor(knobs, '_thresholdColor'),
+      reason: knobReason(presentation, '_thresholdColor'),
+    );
+    expect(
+      threshold.dashPattern,
+      pageLinePattern(
+        page,
+        pageToken(knobs, '_thresholdPattern').split('.').last,
+      ),
+      reason: knobReason(presentation, '_thresholdPattern'),
+    );
+  } else {
+    expect(
+      config.thresholds,
+      isEmpty,
+      reason: knobReason(presentation, '_showThreshold'),
+    );
+  }
+  if (pagePresentationFlag(knobs, '_showTargets', presentation)) {
+    expect(
+      series.targetMarkerStyle.color,
+      pageAuthoredColor(knobs, '_targetColor'),
+      reason: knobReason(presentation, '_targetColor'),
+    );
+    expect(
+      series.targetMarkerStyle.width,
+      pageDouble(knobs, '_targetMarkerWidth'),
+      reason: knobReason(presentation, '_targetMarkerWidth'),
+    );
+    expect(
+      series.targetMarkerStyle.lengthFactor,
+      pageDouble(knobs, '_targetMarkerLength'),
+      reason: knobReason(presentation, '_targetMarkerLength'),
+    );
+    expect(
+      series.targetMarkerStyle.opacity,
+      pageDouble(knobs, '_targetOpacity'),
+      reason: knobReason(presentation, '_targetOpacity'),
+    );
+  }
+  if (pagePresentationFlag(knobs, '_showIntervals', presentation)) {
+    expect(
+      series.intervalStyle.display.toString(),
+      pageToken(knobs, '_intervalDisplay'),
+      reason: knobReason(presentation, '_intervalDisplay'),
+    );
+    expect(
+      series.intervalStyle.color,
+      pageAuthoredColor(knobs, '_intervalColor'),
+      reason: knobReason(presentation, '_intervalColor'),
+    );
+    expect(
+      series.intervalStyle.width,
+      pageDouble(knobs, '_intervalWidth'),
+      reason: knobReason(presentation, '_intervalWidth'),
+    );
+    expect(
+      series.intervalStyle.capLengthFactor,
+      pageDouble(knobs, '_intervalCapLength'),
+      reason: knobReason(presentation, '_intervalCapLength'),
+    );
+    expect(
+      series.intervalStyle.bandLengthFactor,
+      pageDouble(knobs, '_intervalBandLength'),
+      reason: knobReason(presentation, '_intervalBandLength'),
+    );
+    expect(
+      series.intervalStyle.opacity,
+      pageDouble(knobs, '_intervalOpacity'),
+      reason: knobReason(presentation, '_intervalOpacity'),
+    );
+  }
+}
+
+/// The eight `_PolarPresentation` values, in the page's declaration order, that
+/// the acceptance gate below covers one `testWidgets` each.
+///
+/// This list is the join between the page and the gate: the guard asserts the
+/// page's enum equals it, and that each name appears as an acceptance case's
+/// `presentation:` label. A ninth presentation therefore cannot be added
+/// without either extending this list AND writing its case, or going red.
+const showcasePolarPresentations = <String>[
+  'standard',
+  'rose',
+  'partial',
+  'layered',
+  'grouped',
+  'stacked',
+  'references',
+  'intervals',
+];
+
+/// Every `<String, num>` map the page declares, against its transcription here.
+const showcaseTranscribedValueMaps = <String, Map<String, num>>{
+  '_standardValues': showcaseStandardValues,
+  '_roseValues': showcaseRoseValues,
+  '_partialValues': showcasePartialValues,
+  '_layeredObservedValues': showcaseLayeredObservedValues,
+  '_layeredCapacityValues': showcaseLayeredCapacityValues,
+  '_groupedNorthValues': showcaseGroupedNorthValues,
+  '_groupedSouthValues': showcaseGroupedSouthValues,
+  '_groupedWestValues': showcaseGroupedWestValues,
+  '_stackedNewValues': showcaseStackedNewValues,
+  '_stackedExpansionValues': showcaseStackedExpansionValues,
+  '_stackedChurnValues': showcaseStackedChurnValues,
+  '_referenceActualValues': showcaseReferenceActualValues,
+  '_referenceTargetValues': showcaseReferenceTargetValues,
+  '_uncertaintyValues': showcaseUncertaintyValues,
+  '_uncertaintyLowerValues': showcaseUncertaintyLowerValues,
+  '_uncertaintyUpperValues': showcaseUncertaintyUpperValues,
+};
+
+/// The three `_PolarPalette` swatches the acceptance cases author through.
+///
+/// `theme` is generated from the live `ChartTheme` (transcribed as
+/// [showcaseThemePalette], not a literal) and `monochrome` is not reached by
+/// any authored presentation, so neither has a literal to compare.
+const showcaseTranscribedPalettes = <String, List<Color>>{
+  'ocean': showcaseOceanPalette,
+  'sunset': showcaseSunsetPalette,
+  'earth': showcaseEarthPalette,
+};
+
 // ===========================================================================
 // Harness
 // ===========================================================================
@@ -421,6 +1927,100 @@ ChartDocumentSnapshot patchedSnapshot(
   );
 }
 
+/// Asserts one showcase chart reaches the Grammar pane as a real, COMPILING
+/// chain.
+///
+/// The acceptance question for this slice is not "does some polar chart emit"
+/// but "does the chart the showcase page actually mounts emit", so this mounts
+/// the chart and asserts on the generator's own verdict: a chain was written,
+/// nothing was blocked, and [ChartGeneratedSource.isComplete] is true.
+///
+/// The "the showcase page actually mounts" half of that question is not free —
+/// every caller's config and style literals are a hand copy of
+/// `polar_column_page.dart`. So for the eight polar presentations this first
+/// runs [expectShowcaseKnobsMatchPage], which resolves that presentation's
+/// knobs out of the page's own source and compares them to the widget in the
+/// tree. Without it a case could emit a flawless chain for a chart the page
+/// stopped building, which is the one thing this gate must not do.
+///
+/// The generator's internal proof carries part of the fidelity question and it
+/// is worth being exact about which part. It re-lowers the chain it is about to
+/// write, so the PLAN and the re-lowered SERIES are proven: a channel the mark
+/// fails to carry diverges and is refused. It does NOT prove the emitted CONFIG
+/// LITERALS — `PlotSpec.polar` and `DonutMark.concentric` are handed to the
+/// proof spec as the captured instances and lowering hands them back unchanged,
+/// so that comparison is an instance against itself. Nor does the proof read a
+/// character of the emitter's OUTPUT at all: a chain that names a parameter the
+/// builder does not have, or drops a closing paren, would still pass it.
+///
+/// So this harness supplies the two things the proof does not. [fragments] are
+/// the per-field assertions on the emitted TEXT — the only check that the
+/// config literals say what the chart says — and every caller is expected to
+/// pass the fields its presentation exercises. Then the emitted source goes
+/// through the same `dart format` + `dart analyze` gate [expectRoundTrip] uses.
+/// (The third guard on the literals lives outside this file: they are rendered
+/// by the config emitter's own shared seams, and `test/meta/source_emitter_drift_test.dart`
+/// fails on any field neither source form renders.)
+///
+/// What this does NOT do is [expectRoundTrip]'s rebuild step — see the group's
+/// own header for why.
+Future<ChartGeneratedSource> expectShowcaseEmits(
+  WidgetTester tester, {
+  required String presentation,
+  required Widget Function(BravenChartController) chart,
+  Iterable<String> fragments = const <String>[],
+}) async {
+  final snapshot = await snapshotOf(tester, chart);
+  // Before anything is asserted about the EMISSION, assert the thing that was
+  // mounted is the thing the showcase mounts. Every polar case's config and
+  // style literals are a hand copy of `polar_column_page.dart`, and an
+  // acceptance gate that emits beautifully for a chart the page stopped
+  // building proves nothing at all.
+  if (showcasePolarPresentations.contains(presentation)) {
+    expectShowcaseKnobsMatchPage(tester, presentation);
+  }
+  final generated = generateGrammar(snapshot);
+  expect(
+    emittedChain(generated),
+    isTrue,
+    reason:
+        'the "$presentation" showcase presentation must emit a grammar chain, '
+        'but it was blocked with: ${blockedReason(generated)}',
+  );
+  expect(
+    generated.warnings,
+    isEmpty,
+    reason:
+        'the "$presentation" showcase presentation must emit a CLEAN chain:\n'
+        '${generated.warnings.map((w) => w.message).join('\n')}',
+  );
+  expect(generated.isComplete, isTrue);
+  for (final fragment in fragments) {
+    expect(
+      generated.source,
+      contains(fragment),
+      reason: 'missing "$fragment" in:\n${generated.source}',
+    );
+  }
+  // Real subprocesses, so the same `runAsync` escape hatch `expectRoundTrip`
+  // documents applies here.
+  await tester.runAsync(
+    () => expectGeneratedSourceCompiles(
+      generated.source,
+      fixtureName: 'grammar_showcase_${fixtureSlug(presentation)}',
+    ),
+  );
+  return generated;
+}
+
+/// [text] reduced to a filesystem-safe scratch-file stem.
+///
+/// Presentation names are prose ("concentric donut", "a 240 degree sweep"), and
+/// [expectGeneratedSourceCompiles] turns its `fixtureName` into a real path
+/// under `.dart_tool/`.
+String fixtureSlug(String text) =>
+    text.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_');
+
 /// Whether a chain was actually emitted.
 ///
 /// Matched on the ASSIGNMENT, not on `BravenChart.of(` alone: several
@@ -433,6 +2033,31 @@ bool emittedChain(ChartGeneratedSource generated) =>
 String? blockedReason(ChartGeneratedSource generated) {
   if (emittedChain(generated)) return null;
   return generated.warnings.isEmpty ? '' : generated.warnings.first.message;
+}
+
+/// Every argument line INSIDE the literal that opens with [opening] in [source],
+/// trimmed and in emitted order.
+///
+/// A `contains('width: 3.0,')` per field can only notice the fields the list
+/// happens to name — a field DROPPED from the renderer is invisible to a
+/// fragment list that never mentioned it, which is exactly how an emitted-text
+/// seam rots. Returning the literal's complete argument list makes the
+/// expectation the whole block, so a dropped field, an extra field, a wrong
+/// value and a reordering all fail.
+///
+/// The literal is delimited by indentation: its closing `),` sits at the same
+/// column as the opening token, so a nested literal's deeper `),` cannot end it.
+List<String> literalArguments(String source, String opening) {
+  final start = source.indexOf(opening);
+  expect(start, isNonNegative, reason: 'missing "$opening" in:\n$source');
+  final indent = start - (source.lastIndexOf('\n', start) + 1);
+  final bodyStart = source.indexOf('\n', start) + 1;
+  final end = source.indexOf('\n${' ' * indent}),', start);
+  expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
+  return <String>[
+    for (final line in source.substring(bodyStart, end).split('\n'))
+      if (line.trim().isNotEmpty) line.trim(),
+  ];
 }
 
 void main() {
@@ -1209,7 +2834,7 @@ void main() {
 
     testWidgets('shape 14: a concentric donut emits geomDonut(ring:) and '
         'round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_donut',
         fragments: <String>[
@@ -1235,6 +2860,14 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // The BYTE-IDENTICAL half of the concentric passthrough: a DEFAULT
+      // composition must still write neither argument, exactly as it did before
+      // `concentric:` existed. `expectRoundTrip` cannot see this — it only
+      // proves the emitted text analyzes and that a HAND-WRITTEN equivalent
+      // rebuilds the same document — so a spurious `concentric:` would sail
+      // through every other assertion in this file.
+      expect(generated.source, isNot(contains('concentric:')));
+      expect(generated.source, isNot(contains('center: DonutCenterContent(')));
     });
 
     testWidgets('shape 15: a single-distinct-ring donut is captured as a plain '
@@ -1275,6 +2908,50 @@ void main() {
                 .build(bravenChartController: controller),
       );
       expect(generated.source, isNot(contains('ring:')));
+    });
+
+    testWidgets('shape 15b: a single-distinct-ring donut drops a NON-DEFAULT '
+        'concentric config with it', (tester) async {
+      // Whether `concentric:` survives depends on the DATA: two ring values
+      // stamp a concentricDonutConfig into the captured document (shape 28
+      // emits it), one ring value does not, because the render source only
+      // stamps it for MORE THAN ONE donut series. The emitted chain is still
+      // document-faithful — it rebuilds the captured chart exactly, which the
+      // round trip below proves — but it is NOT the chain the author wrote, so
+      // the drop is pinned here rather than left accidental.
+      const oneSeason = <Harvest>[
+        Harvest(fruit: 'Apple', count: 42, season: 'All year'),
+        Harvest(fruit: 'Pear', count: 31, season: 'All year'),
+      ];
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_single_ring_custom',
+        fragments: <String>['.geomDonut('],
+        original: (controller) => BravenChart.of(oneSeason)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              concentric: const ConcentricDonutConfig(ringGap: 12),
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) =>
+            BravenChart.of(radialGrammarRows.take(2).toList())
+                .geomDonut(
+                  id: 'seasons-All year',
+                  category: (row) => row.category,
+                  value: (row) => row.value,
+                  name: 'All year',
+                  center: const DonutCenterContent(),
+                )
+                .build(bravenChartController: controller),
+      );
+      expect(generated.source, isNot(contains('ring:')));
+      expect(generated.source, isNot(contains('concentric:')));
+      // What DOES survive: the collapsed ring carries the config's center on
+      // itself, so the center summary is reproduced.
+      expect(generated.source, contains('center: DonutCenterContent('));
     });
 
     testWidgets('shape 16: a default-config polar column round-trips', (
@@ -1382,7 +3059,7 @@ void main() {
 
     testWidgets('shape 19: a STYLED concentric donut emits style + '
         'dataLabels and round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_styled',
         fragments: <String>[
@@ -1413,6 +3090,9 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // Per-RING styling is not a COMPOSITION: the config stays default, so it
+      // must not be written (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('shape 20: a STYLED polar column emits style and round-trips', (
@@ -1445,6 +3125,525 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+    });
+
+    testWidgets('shape 21: a MULTI-SERIES polar emits one geomPolar per '
+        'series plus .polarConfig and round-trips', (tester) async {
+      // The polar family is the one radial family that may carry several geoms
+      // in a plot: a layered/grouped/stacked composition is N series over ONE
+      // category domain. Each series becomes its own geomPolar reading its own
+      // value field; the plot-level PolarChartConfig becomes .polarConfig(...).
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_multi_series',
+        fragments: <String>[
+          '.geomPolar(',
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'composition: PolarColumnCompositionConfig(',
+          'mode: PolarColumnCompositionMode.grouped',
+          'groupInnerPadding: 0.2',
+          'startAngleDegrees: -45',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: groupedPolarConfig,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              name: 'Capacity',
+              values: polarCapacity,
+              polarStyle: styledPolarStyle,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarGrammarRows)
+            .geomPolar(
+              id: 'capacity',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Capacity',
+              style: styledPolarStyle,
+            )
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Observed',
+            )
+            .polarConfig(groupedPolarConfig)
+            .build(bravenChartController: controller),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('shape 22: a SINGLE polar with a customised PolarChartConfig '
+        'emits .polarConfig and round-trips', (tester) async {
+      // Before the spec carried the config this was an honest refusal: lowering
+      // always produced `const PolarChartConfig()`, so the proof could not
+      // reproduce a customised pane/composition. `.polarConfig(...)` closes it.
+      await expectRoundTrip(
+        tester,
+        name: 'polar_single_config',
+        fragments: <String>[
+          '.geomPolar(',
+          '.polarConfig(',
+          'startAngleDegrees: -45',
+          'tickCount: 7',
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomPolar(
+              category: harvestFruit,
+              value: harvestCount,
+              name: 'Harvest',
+            )
+            .polarConfig(customPolarPaneConfig)
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(radialGrammarRows)
+            .geomPolar(
+              id: 'mark-0',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Harvest',
+            )
+            .polarConfig(customPolarPaneConfig)
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 23: EVERY PolarChartConfig field reaches the emitted '
+        '.polarConfig literal', (tester) async {
+      // The round-trip proof threads the CAPTURED PolarChartConfig onto the
+      // proof spec and lowering hands the same instance back, so that comparison
+      // can only prove lowering kept hold of the object — never that the emitted
+      // TEXT reproduces it. `_emitPolarChartConfigArgument` is the only thing
+      // between the config and the generated Dart, and
+      // `test/meta/source_emitter_drift_test.dart` catches a NEW field by name;
+      // this catches the other half — a field emitted against the wrong default,
+      // or dropped outright.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_exhaustive_config',
+        fragments: <String>['.polarConfig(', ...exhaustivePolarConfigFragments],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: exhaustivePolarConfig,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              name: 'Capacity',
+              values: polarCapacity,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarGrammarRows)
+            .geomPolar(
+              id: 'capacity',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Capacity',
+            )
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Observed',
+            )
+            .polarConfig(exhaustivePolarConfig)
+            .build(bravenChartController: controller),
+      );
+      expect(generated.source, contains('.polarConfig(\n'));
+      // Three fragments are shared by the angular and radial axes, so a plain
+      // `contains` would still pass if ONE of the pair were dropped. Count them.
+      for (final (fragment, count) in <(String, int)>[
+        ('showLabels: false,', 2),
+        ('showGridLines: false,', 2),
+        ('labelStyle: PolarLabelStyle(', 2),
+      ]) {
+        expect(
+          fragment.allMatches(generated.source).length,
+          count,
+          reason: 'expected $count × "$fragment" in:\n${generated.source}',
+        );
+      }
+    });
+
+    testWidgets('shape 24: a polar carrying per-category COLUMN COLORS and '
+        'TARGETS emits both channels and round-trips', (tester) async {
+      // The `references` presentation. Two of the four categories carry a
+      // column color and three of the four carry a target, so the synthesised
+      // fields must be NULLABLE: a category left at null keeps the series color
+      // / draws no marker, while a synthesised 0 would be a real radius.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_targets',
+        fragments: <String>[
+          '.geomPolar(',
+          'final Color? columnColor;',
+          'final double? target;',
+          'columnColor: (row) => row.columnColor,',
+          'target: (row) => row.target,',
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'color: Color(0xFF0F172A),',
+          'lengthFactor: 0.8,',
+          'columnColor: Color(0xFF16A34A),',
+          'columnColor: null,',
+          'target: null,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+              targets: polarTargets,
+              targetMarkerStyle: styledTargetMarker,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarReferenceRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              columnColor: (row) => row.columnColor,
+              target: (row) => row.target,
+              targetMarkerStyle: styledTargetMarker,
+            )
+            .build(bravenChartController: controller),
+      );
+      // Exactly one target is absent, and it is the LAST category — proof the
+      // reversal reproduces `_fromMap`'s category-ordered target list rather
+      // than a compacted one.
+      expect('target: null,'.allMatches(generated.source).length, 1);
+      expect('columnColor: null,'.allMatches(generated.source).length, 2);
+      // The round-trip proof is OBJECT-level: it hands the captured
+      // `PolarColumnTargetMarkerStyle` to the proof spec and lowering hands the
+      // same instance back, so it cannot see the emitted text at all. The
+      // drift gate only asks whether the emitter file knows each field's NAME,
+      // and every name here appears in a dozen other renderers. So this literal
+      // — asserted whole, not field by field — is the only thing standing
+      // between a dropped `width:` and an emitted chain that silently draws
+      // 2.5-wide default markers instead of the captured 3.0.
+      expect(
+        literalArguments(
+          generated.source,
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+        ),
+        <String>[
+          'color: Color(0xFF0F172A),',
+          'width: 3.0,',
+          'lengthFactor: 0.8,',
+          'opacity: 0.9,',
+        ],
+      );
+    });
+
+    testWidgets('shape 25: a polar carrying per-category INTERVALS emits both '
+        'bounds and round-trips', (tester) async {
+      // The `intervals` presentation. Both bounds ride their own nullable
+      // field; 'Fig' has neither, so the pair stays null for that row.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_intervals',
+        fragments: <String>[
+          '.geomPolar(',
+          'final double? intervalLow;',
+          'final double? intervalHigh;',
+          'intervalLow: (row) => row.intervalLow,',
+          'intervalHigh: (row) => row.intervalHigh,',
+          'intervalStyle: PolarColumnIntervalStyle(',
+          'display: PolarColumnIntervalDisplay.band,',
+          'capLengthFactor: 0.5,',
+          'bandLengthFactor: 0.7,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              intervals: polarIntervals,
+              intervalStyle: styledIntervalStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarIntervalRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              intervalLow: (row) => row.intervalLow,
+              intervalHigh: (row) => row.intervalHigh,
+              intervalStyle: styledIntervalStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+      expect('intervalLow: null,'.allMatches(generated.source).length, 1);
+      expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
+      // The same unguarded seam as shape 24's target marker: asserted whole so
+      // a field dropped from `_emitPolarIntervalStyleArgument` cannot hide
+      // behind a fragment list that never named it.
+      expect(
+        literalArguments(
+          generated.source,
+          'intervalStyle: PolarColumnIntervalStyle(',
+        ),
+        <String>[
+          'display: PolarColumnIntervalDisplay.band,',
+          'color: Color(0xFF334155),',
+          'width: 2.0,',
+          'capLengthFactor: 0.5,',
+          'bandLengthFactor: 0.7,',
+          'opacity: 0.8,',
+        ],
+      );
+    });
+
+    testWidgets('shape 26: a ROSE polar emits rose: true and round-trips', (
+      tester,
+    ) async {
+      await expectRoundTrip(
+        tester,
+        name: 'polar_rose',
+        fragments: <String>[
+          '.geomPolar(',
+          'rose: true,',
+          'columnColor: (row) => row.columnColor,',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.rose(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarRoseRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              rose: true,
+              columnColor: (row) => row.columnColor,
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 27: TWO polar series each carrying their OWN advanced '
+        'channels interleave their fields and round-trip', (tester) async {
+      // Shapes 24-26 are all SINGLE-series, so `seriesIndex` is always 0 there
+      // and nothing interleaves: `columnColors[seriesIndex]` and
+      // `columnColors[0]` are the same expression, and hoisting every advanced
+      // `_addField` into a second pass after all the value fields would not
+      // move a single slot. This is the shape that can tell those apart.
+      //
+      // Both series carry column colors AND targets — over DIFFERENT category
+      // subsets — and the second also carries intervals, so the reversal must
+      // allocate `columnColor2`/`target2` for the second series and bind each
+      // geom to its own fields.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'polar_pair_advanced',
+        fragments: <String>[
+          'final Color? columnColor;',
+          'final double? target;',
+          'final double value2;',
+          'final Color? columnColor2;',
+          'final double? target2;',
+          'final double? intervalLow;',
+          'final double? intervalHigh;',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              name: 'Observed',
+              values: polarObserved,
+              columnColors: polarColumnColors,
+              targets: polarTargets,
+              targetMarkerStyle: styledTargetMarker,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'forecast',
+              name: 'Forecast',
+              values: polarCapacity,
+              columnColors: polarForecastColumnColors,
+              targets: polarForecastTargets,
+              intervals: polarForecastIntervals,
+              intervalStyle: styledIntervalStyle,
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(polarPairRows)
+            .geomPolar(
+              id: 'observed',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              name: 'Observed',
+              columnColor: (row) => row.columnColor,
+              target: (row) => row.target,
+              targetMarkerStyle: styledTargetMarker,
+            )
+            .geomPolar(
+              id: 'forecast',
+              category: (row) => row.category,
+              value: (row) => row.value2,
+              name: 'Forecast',
+              columnColor: (row) => row.columnColor2,
+              target: (row) => row.target2,
+              intervalLow: (row) => row.intervalLow,
+              intervalHigh: (row) => row.intervalHigh,
+              intervalStyle: styledIntervalStyle,
+            )
+            .build(bravenChartController: controller),
+      );
+
+      // The row class's field ORDER is the interleaving, observable: series 1's
+      // advanced fields sit BETWEEN the two value fields. A second pass that
+      // allocated every advanced field after both values would emit the same
+      // set of names in a different order and pass a `contains` per name.
+      var cursor = 0;
+      for (final declaration in <String>[
+        'final String category;',
+        'final double value;',
+        'final Color? columnColor;',
+        'final double? target;',
+        'final double value2;',
+        'final Color? columnColor2;',
+        'final double? target2;',
+        'final double? intervalLow;',
+        'final double? intervalHigh;',
+      ]) {
+        final at = generated.source.indexOf(declaration, cursor);
+        expect(
+          at,
+          isNonNegative,
+          reason:
+              'expected "$declaration" after offset $cursor in:\n'
+              '${generated.source}',
+        );
+        cursor = at + declaration.length;
+      }
+
+      // And each geom reads ITS OWN slots. Split on the verb so an accessor
+      // cannot satisfy the assertion from the other mark's argument list.
+      final geoms = generated.source.split('.geomPolar(');
+      expect(geoms, hasLength(3));
+      expect(geoms[1], contains("id: 'observed',"));
+      expect(geoms[1], contains('value: (row) => row.value,'));
+      expect(geoms[1], contains('columnColor: (row) => row.columnColor,'));
+      expect(geoms[1], contains('target: (row) => row.target,'));
+      expect(geoms[1], contains('targetMarkerStyle: '));
+      expect(geoms[1], isNot(contains('intervalLow')));
+      expect(geoms[1], isNot(contains('intervalStyle')));
+      expect(geoms[2], contains("id: 'forecast',"));
+      expect(geoms[2], contains('value: (row) => row.value2,'));
+      expect(geoms[2], contains('columnColor: (row) => row.columnColor2,'));
+      expect(geoms[2], contains('target: (row) => row.target2,'));
+      expect(geoms[2], contains('intervalLow: (row) => row.intervalLow,'));
+      expect(geoms[2], contains('intervalHigh: (row) => row.intervalHigh,'));
+      // The second series left its target marker at the default, so the shared
+      // renderer must write nothing for it — proof the two marks' styles are
+      // read per series and not hoisted off the first.
+      expect(geoms[2], isNot(contains('targetMarkerStyle')));
+
+      // The two series' nulls land on DIFFERENT categories ('Fig' has no
+      // target on series 1, 'Apple' has none on series 2; 'Plum' has no
+      // interval), so a reversal that read one series' parallel array for both
+      // would misplace them. Four rows × the emitted `target:`/`target2:` slots.
+      expect('target: null,'.allMatches(generated.source).length, 1);
+      expect('target2: null,'.allMatches(generated.source).length, 1);
+      expect('columnColor: null,'.allMatches(generated.source).length, 2);
+      expect('columnColor2: null,'.allMatches(generated.source).length, 2);
+      expect('intervalLow: null,'.allMatches(generated.source).length, 1);
+      expect('intervalHigh: null,'.allMatches(generated.source).length, 1);
+    });
+
+    testWidgets('shape 28: a CUSTOMISED ConcentricDonutConfig emits '
+        'concentric: and round-trips', (tester) async {
+      // Before this slice the composition config was reconstructed from the
+      // mark's `center` alone, so a customised ring gap / order / weights /
+      // radii was honestly REFUSED. `geomDonut(concentric:)` now carries the
+      // whole config, and the emitter reverses it through the config emitter's
+      // own `ConcentricDonutConfig` renderer.
+      // EVERY field differs from its default, so a passthrough that quietly
+      // drops one cannot masquerade as success. `_firstRadialMismatch` cannot
+      // catch that for this family — the planner hands the captured config to
+      // `DonutMark.concentric` and lowering hands the same object back, so the
+      // comparison is tautological — which puts the whole guarantee on the
+      // emitted literal asserted below.
+      const custom = ConcentricDonutConfig(
+        innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.85,
+        ringGap: 12,
+        order: ConcentricRingOrder.innerToOuter,
+        // A ring weight is keyed by the SERIES id, which the concentric
+        // lowering names `<markId>-<ringKey>`.
+        ringWeights: <String, double>{'seasons-Winter': 2},
+        legendMode: ConcentricDonutLegendMode.flat,
+        centerContent: DonutCenterContent(label: 'Harvest'),
+      );
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'concentric_custom_config',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'concentric: ConcentricDonutConfig(',
+          'innerRadiusFactor: 0.2',
+          'outerRadiusFactor: 0.85',
+          'ringGap: 12',
+          'order: ConcentricRingOrder.innerToOuter',
+          "'seasons-Winter': 2",
+          'legendMode: ConcentricDonutLegendMode.flat',
+          "label: 'Harvest'",
+        ],
+        original: (controller) => BravenChart.of(harvest)
+            .geomDonut(
+              id: 'seasons',
+              category: harvestFruit,
+              value: harvestCount,
+              ring: harvestSeason,
+              concentric: custom,
+            )
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              concentric: custom,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The config owns the center, so the shorthand must NOT also be emitted:
+      // lowering refuses a mark that sets both.
+      expect(generated.source, isNot(contains('center: DonutCenterContent(')));
     });
   });
 
@@ -1531,7 +3730,7 @@ void main() {
 
     testWidgets('a fromMap concentric composition with a donutStyle emits and '
         'round-trips', (tester) async {
-      await expectRoundTrip(
+      final generated = await expectRoundTrip(
         tester,
         name: 'concentric_fromMap_styled',
         fragments: <String>[
@@ -1567,6 +3766,9 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+      // An explicit `const ConcentricDonutConfig()` is the DEFAULT composition,
+      // so the passthrough must write nothing (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('a fromMap polar column with a polarStyle emits and '
@@ -1875,6 +4077,9 @@ void main() {
             .build(bravenChartController: controller),
       );
       expect(generated.isComplete, isTrue);
+      // Per-RING series options are not a COMPOSITION: the config stays
+      // default, so it must not be written (see shape 14).
+      expect(generated.source, isNot(contains('concentric:')));
     });
 
     testWidgets('a polar column with unit + selectionStyle + polarStyle emits '
@@ -1922,6 +4127,1058 @@ void main() {
     });
   });
 
+  // =========================================================================
+  // SYNC GUARD (DECLARATIONS) — the acceptance gate's fixtures are a HAND
+  // TRANSCRIPTION.
+  //
+  // Everything the gate below claims is a claim about the SHOWCASE, and it is
+  // made through constants copied out of `polar_column_page.dart` by hand.
+  // Nothing in the gate itself would notice the page changing underneath it:
+  // add a ninth presentation, rename `references`, or edit a data map, and
+  // eight green tests keep asserting about a page that no longer exists.
+  //
+  // This group covers the page's DECLARATIONS — its presentation enum, its
+  // `<String, num>` maps and its palette swatches. It does NOT cover the
+  // per-presentation knob values, which are not declarations but assignments
+  // inside two switch statements; those are held to the page by
+  // [expectShowcaseKnobsMatchPage], which runs inside every acceptance case
+  // below. Read the two together: neither alone makes the gate honest, and an
+  // earlier revision of this group claimed the whole job while enforcing only
+  // this half.
+  //
+  // It is a TEXT parse, not an import: the page's declarations are all
+  // library-private and the example is a separate package. That buys less than
+  // an import would (it knows the page's syntax, not its behaviour), and it is
+  // sufficient for the one job here — noticing that a copied constant stopped
+  // matching its original.
+  // =========================================================================
+
+  group('showcase transcription sync guard', () {
+    test('the page declares exactly the eight presentations the acceptance '
+        'gate covers, in order', () {
+      expect(
+        enumValueNames(
+          readRepoFile(showcasePolarPagePath),
+          '_PolarPresentation',
+        ),
+        showcasePolarPresentations,
+        reason:
+            'the showcase page\'s `_PolarPresentation` no longer matches the '
+            'presentations the acceptance gate below covers. A value was '
+            'ADDED, REMOVED, RENAMED or REORDERED. The gate claims EVERY polar '
+            'presentation emits, so restore the parity: add (or delete) the '
+            'matching `testWidgets` case in "showcase acceptance", update '
+            '`showcasePolarPresentations`, and transcribe its authored values '
+            'into the fixtures above. Do NOT edit this expectation on its own '
+            '— that is exactly the silent drift this test exists to catch.',
+      );
+    });
+
+    test('every presentation has an acceptance case', () {
+      final tests = readRepoFile(grammarGeneratorTestPath);
+      for (final presentation in showcasePolarPresentations) {
+        // Asserted on the BOOLEAN, not with `contains` on the file: a failed
+        // string matcher prints the whole haystack, and the haystack here is
+        // this file.
+        expect(
+          tests.contains("presentation: '$presentation',"),
+          isTrue,
+          reason:
+              'no acceptance case passes `presentation: \'$presentation\'`, so '
+              'the gate does not actually cover it. Naming a presentation in '
+              '`showcasePolarPresentations` is not the same as testing it.',
+        );
+      }
+    });
+
+    test('every value map the page declares is transcribed, contents and key '
+        'order', () {
+      final page = readRepoFile(showcasePolarPagePath);
+      expect(
+        showcaseNumMapNames(page),
+        showcaseTranscribedValueMaps.keys.toSet(),
+        reason:
+            'the showcase page gained or lost a `<String, num>` value map. An '
+            'ADDED one is data no acceptance case mounts; a REMOVED one leaves '
+            'a fixture above describing a chart the page no longer builds.',
+      );
+      for (final entry in showcaseTranscribedValueMaps.entries) {
+        final authored = showcaseNumMap(page, entry.key);
+        expect(
+          authored,
+          entry.value,
+          reason:
+              '`${entry.key}` on the showcase page no longer matches its '
+              'transcription above, so the acceptance gate mounts different '
+              'numbers than the page does.',
+        );
+        // Key ORDER as well as contents: `showcaseColumnColors` cycles the
+        // palette over the map's key order, so a reordering repaints every
+        // column while leaving the map "equal".
+        expect(
+          authored.keys,
+          orderedEquals(entry.value.keys),
+          reason:
+              '`${entry.key}` still holds the same entries but in a different '
+              'ORDER, which re-assigns every per-category column color.',
+        );
+      }
+    });
+
+    test('every palette swatch the acceptance cases author through is the '
+        'page\'s own', () {
+      final page = readRepoFile(showcasePolarPagePath);
+      expect(
+        enumValueNames(page, '_PolarPalette'),
+        <String>['theme', 'ocean', 'sunset', 'earth', 'monochrome'],
+        reason:
+            'the showcase page\'s `_PolarPalette` changed. `theme` is generated '
+            'from the live ChartTheme and `monochrome` is unreached by the '
+            'authored presentations, but a rename or removal of any of these '
+            'still invalidates the swatch transcriptions below.',
+      );
+      for (final entry in showcaseTranscribedPalettes.entries) {
+        expect(
+          showcasePaletteSwatch(page, entry.key),
+          entry.value,
+          reason:
+              'the `_PolarPalette.${entry.key}` swatch on the showcase page no '
+              'longer matches its transcription above, so the acceptance cases '
+              'color their columns differently than the page does.',
+        );
+      }
+    });
+  });
+
+  // =========================================================================
+  // ACCEPTANCE GATE — every POLAR workbench Grammar pane emits, plus a
+  // non-default `ConcentricDonutConfig` authored through the grammar.
+  //
+  // Read that title literally, because it is narrower than "every radial pane
+  // emits" and deliberately so:
+  //
+  //   * POLAR is proven against the real page. All eight `_PolarPresentation`
+  //     values are mounted below from `polar_column_page.dart`'s own
+  //     construction, and all eight emit.
+  //   * The CONCENTRIC case is NOT the showcase page. It is a non-default
+  //     `ConcentricDonutConfig` authored the way the grammar's own concentric
+  //     lowering produces one, which is a claim about the CONFIG PASSTHROUGH,
+  //     not about `concentric_donut_page.dart`. That page does not emit — see
+  //     the KNOWN GAP group below, which pins each blocker.
+  //
+  // The unit tests above each isolate ONE mechanism (a config field, a channel,
+  // a composition). This group asks the question the slice exists to answer:
+  // does the chart the showcase page ACTUALLY MOUNTS reach the Grammar pane as
+  // a real chain? Each polar case is `polar_column_page.dart`'s own construction
+  // — `_buildSeriesList` for the series and `_buildPolarConfig` for the plot
+  // config, at that presentation's authored knob values — so a regression that
+  // only shows up on a real showcase chart fails here.
+  //
+  // Those values are a hand transcription, kept honest by two guards with
+  // different reach. `group('showcase transcription sync guard')` above holds
+  // the page's DECLARATIONS — the presentation enum, the data maps, the
+  // palette swatches. [expectShowcaseKnobsMatchPage], which each case below
+  // runs before it looks at any emitted text, holds the KNOBS: it resolves the
+  // presentation's pane, axis, composition, column-style, selection, threshold,
+  // target-marker and interval values out of the page's own two presentation
+  // methods and compares them to the objects the case just mounted. What
+  // remains a bare hand copy is listed at the fixtures above — chiefly which
+  // data map feeds which series and channel, and the series ids, names and
+  // units.
+  //
+  // Emission plus COMPILATION plus the per-case literal assertions is the
+  // assertion set, and each covers a different thing. The generator re-lowers
+  // the chain it is about to write and compares the result to the hydrated
+  // document, so "a chain was emitted" carries "this chain's SERIES rebuild
+  // this chart" — but NOT "this chain's config literals are right": the
+  // captured `PolarChartConfig` / `ConcentricDonutConfig` ride the proof spec
+  // verbatim and lowering hands the same instances back, so that comparison is
+  // an instance against itself. `expectShowcaseEmits` therefore runs the
+  // emitted TEXT through `dart format` + `dart analyze` (the proof inspects the
+  // reconstructed spec object and never reads a character of what the emitter
+  // writes), and every case below pins the config fields it exercises with
+  // whole-literal `fragments` — which is what would actually fail if the
+  // `.polarConfig(...)` emission regressed.
+  //
+  // What this group deliberately does NOT do is `expectRoundTrip`'s rebuild.
+  // A Flutter test cannot execute generated Dart — `dart analyze` runs over a
+  // scratch file and never loads it — so "rebuilt" always means a SECOND,
+  // hand-transcribed chain in this file. That transcription is worth writing
+  // once per SHAPE, and it already is: shapes 20-28 above hand-rebuild a
+  // styled polar, a multi-series polar, a customised `PolarChartConfig`, every
+  // config field, per-category column colors and targets, intervals, the rose
+  // preset, two series with independent advanced fields, and a customised
+  // `ConcentricDonutConfig` — the complete mechanism set these presentations
+  // are assembled from. Re-transcribing it per PRESENTATION would add ~9 more
+  // copies of chains whose only new content is the showcase's literal knob
+  // values, and those values are what the whole-literal assertions below pin
+  // directly. So the compile gate is the floor here, and the per-case
+  // `literalArguments` blocks — not a ninth transcription — are what stop an
+  // emitted literal from drifting.
+  // =========================================================================
+
+  group('showcase acceptance: every polar presentation emits, plus a '
+      'non-default ConcentricDonutConfig', () {
+    testWidgets('standard: per-category column colors over eight categories', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseStandardValues,
+        showcaseOceanPalette,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'standard',
+        fragments: <String>[
+          '.geomPolar(',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'outerRadiusFactor: 0.84,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0,
+            outerRadiusFactor: 0.84,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1E293B),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-column',
+              name: 'Category volume',
+              values: showcaseStandardValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 4,
+                opacity: 0.97,
+                borderColor: const Color(0xFF1E3A5F),
+                animationMode: PolarColumnAnimationMode.grow,
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+    });
+
+    testWidgets('rose: the area-correct preset with a gradient and a shadow', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseRoseValues,
+        showcaseSunsetPalette,
+      );
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'rose',
+        fragments: <String>[
+          '.geomPolar(',
+          'rose: true,',
+          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          'gradient: PolarColumnGradientStyle(',
+          'shadow: PolarColumnShadowStyle(',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.08,
+            outerRadiusFactor: 0.86,
+            innerPadding: 0.08,
+            outerPadding: 0,
+            categoryLabelColor: const Color(0xFFF8FAFC),
+            radialLabelColor: const Color(0xFFFDE68A),
+            scaleMode: PolarRadialScaleMode.areaCorrect,
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.rose(
+              id: 'showcase-polar-column',
+              name: 'Monthly volume',
+              values: showcaseRoseValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 6,
+                opacity: 0.98,
+                borderColor: const Color(0xFFF59E0B),
+                valueLabelColor: const Color(0xFFFFF7ED),
+                animationMode: PolarColumnAnimationMode.sweep,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.24,
+                  endLightnessShift: -0.18,
+                ),
+                shadow: const PolarColumnShadowStyle(
+                  color: Color(0xFF000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 5),
+                  opacity: 0.38,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+    });
+
+    testWidgets('partial: a 240 degree sweep from 150 degrees over an open '
+        'center', (tester) async {
+      // The eighth presentation. Every other one leaves the pane's angular
+      // span at the class defaults, so this is the ONLY acceptance case in
+      // which a reversal that rebuilt the pane from its defaults — a full 360
+      // starting at -90 — would draw a visibly different chart while still
+      // reproducing every series. The pane literals below are therefore the
+      // load-bearing part of this test, not decoration.
+      final colors = showcaseColumnColors(
+        showcasePartialValues,
+        showcaseEarthPalette,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'partial',
+        fragments: <String>[
+          '.geomPolar(',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'pane: PolarPaneConfig(',
+          'startAngleDegrees: 150.0,',
+          'sweepAngleDegrees: 240.0,',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.9,',
+          'innerPadding: 0.14,',
+          'outerPadding: 0.08,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            startAngleDegrees: 150,
+            sweepAngleDegrees: 240,
+            innerRadiusFactor: 0.28,
+            outerRadiusFactor: 0.9,
+            innerPadding: 0.14,
+            outerPadding: 0.08,
+            categoryLabelColor: const Color(0xFF7C2D12),
+            radialLabelColor: const Color(0xFF9A3412),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-column',
+              name: 'Category volume',
+              values: showcasePartialValues,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 8,
+                opacity: 0.86,
+                borderColor: const Color(0xFF7C2D12),
+                valueLabelColor: const Color(0xFF431407),
+                animationMode: PolarColumnAnimationMode.fade,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.28,
+                  endLightnessShift: -0.08,
+                ),
+                shadow: const PolarColumnShadowStyle(
+                  color: Color(0xFF9A3412),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                  opacity: 0.18,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+      // Asserted WHOLE: a fragment list can only notice the pane fields it
+      // happens to name, and the whole point of this presentation is the pane.
+      // `clockwise` and `clipMarks` are the showcase's own resting values, so
+      // they are correctly elided.
+      expect(
+        literalArguments(generated.source, 'pane: PolarPaneConfig('),
+        <String>[
+          'startAngleDegrees: 150.0,',
+          'sweepAngleDegrees: 240.0,',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.9,',
+        ],
+      );
+    });
+
+    testWidgets('layered: two series whose per-series styles DIFFER', (
+      tester,
+    ) async {
+      // The reference layer is the same style at a third of the opacity with
+      // its data labels off — the case that forced one mark PER SERIES rather
+      // than one mark with N value channels.
+      final style = showcasePolarStyle(
+        cornerRadius: 5,
+        opacity: 0.92,
+        borderColor: const Color(0xFF1E40AF),
+        animationMode: PolarColumnAnimationMode.grow,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'layered',
+        fragments: <String>[
+          '.geomPolar(',
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          'opacity: 0.32,',
+          'showDataLabels: false,',
+          // `layered` IS the composition default, so the mode itself is
+          // correctly elided; the pane/axis knobs are what prove the plot
+          // config reached the chain.
+          '.polarConfig(',
+          'innerPadding: 0.16,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.86,
+            innerPadding: 0.16,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1E3A8A),
+            radialLabelColor: const Color(0xFF1D4ED8),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-capacity',
+              name: 'Capacity',
+              values: showcaseLayeredCapacityValues,
+              color: showcaseOceanPalette[1],
+              unit: 'orders',
+              polarStyle: style.copyWith(
+                opacity: math.min(0.92, 0.32),
+                showDataLabels: false,
+              ),
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-observed',
+              name: 'Observed',
+              values: showcaseLayeredObservedValues,
+              color: showcaseOceanPalette.first,
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+    });
+
+    testWidgets('grouped: three series and a grouped composition', (
+      tester,
+    ) async {
+      final style = showcasePolarStyle(
+        cornerRadius: 4,
+        opacity: 0.92,
+        borderColor: const Color(0xFF7C2D12),
+        animationMode: PolarColumnAnimationMode.grow,
+        gradient: const PolarColumnGradientStyle(
+          startLightnessShift: 0.18,
+          endLightnessShift: -0.16,
+        ),
+        shadow: const PolarColumnShadowStyle(
+          color: Color(0xFF92400E),
+          blurRadius: 7,
+          offset: Offset(0, 2),
+          opacity: 0.16,
+        ),
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'grouped',
+        fragments: <String>[
+          'value: (row) => row.value,',
+          'value: (row) => row.value2,',
+          'value: (row) => row.value3,',
+          'mode: PolarColumnCompositionMode.grouped,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.1,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF78350F),
+            radialLabelColor: const Color(0xFF92400E),
+            compositionMode: PolarColumnCompositionMode.grouped,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-north',
+              name: 'North',
+              values: showcaseGroupedNorthValues,
+              color: showcaseSunsetPalette[0],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-south',
+              name: 'South',
+              values: showcaseGroupedSouthValues,
+              color: showcaseSunsetPalette[1],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-west',
+              name: 'West',
+              values: showcaseGroupedWestValues,
+              color: showcaseSunsetPalette[2],
+              unit: 'orders',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 3);
+    });
+
+    testWidgets('stacked: three series, one of them negative at every '
+        'category', (tester) async {
+      final style = showcasePolarStyle(
+        cornerRadius: 4,
+        cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
+        opacity: 0.97,
+        borderColor: const Color(0xFF7DD3FC),
+        valueLabelColor: const Color(0xFFF8FAFC),
+        animationMode: PolarColumnAnimationMode.sweep,
+        gradient: const PolarColumnGradientStyle(
+          startLightnessShift: 0.2,
+          endLightnessShift: -0.2,
+        ),
+        shadow: const PolarColumnShadowStyle(
+          color: Color(0xFF000000),
+          blurRadius: 10,
+          offset: Offset(0, 4),
+          opacity: 0.42,
+        ),
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'stacked',
+        fragments: <String>[
+          'mode: PolarColumnCompositionMode.stacked,',
+          'cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,',
+          // The third series' own value field, negative and unclamped.
+          'value3: -13.0,',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.14,
+            outerRadiusFactor: 0.9,
+            innerPadding: 0.12,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFFE0F2FE),
+            radialLabelColor: const Color(0xFFBAE6FD),
+            compositionMode: PolarColumnCompositionMode.stacked,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-new',
+              name: 'New accounts',
+              values: showcaseStackedNewValues,
+              color: showcaseOceanPalette[0],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-expansion',
+              name: 'Expansion',
+              values: showcaseStackedExpansionValues,
+              color: showcaseOceanPalette[1],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-churn',
+              name: 'Churn',
+              values: showcaseStackedChurnValues,
+              color: showcaseOceanPalette[2],
+              unit: 'accounts',
+              polarStyle: style,
+              selectionStyle: showcasePolarSelection,
+            ),
+          ],
+        ),
+      );
+      expect('.geomPolar('.allMatches(generated.source).length, 3);
+    });
+
+    testWidgets('references: targets, a target marker style and a threshold', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseReferenceActualValues,
+        showcaseThemePalette(
+          ChartTheme.colorblindFriendly,
+          showcaseReferenceActualValues.length,
+        ),
+      );
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'references',
+        fragments: <String>[
+          'target: (row) => row.target,',
+          'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'lengthFactor: 0.68,',
+          'thresholds: [',
+          "label: 'Capacity',",
+          'dashPattern: <double>[7.0, 4.0],',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.14,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF1F2937),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+            thresholds: const <PolarThreshold>[
+              PolarThreshold(
+                value: 80,
+                label: 'Capacity',
+                color: Color(0xFFDC2626),
+                width: 2,
+                dashPattern: <double>[7, 4],
+              ),
+            ],
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-actual-targets',
+              name: 'Actual versus plan',
+              values: showcaseReferenceActualValues,
+              targets: showcaseReferenceTargetValues,
+              columnColors: colors,
+              unit: 'orders',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 5,
+                opacity: 0.9,
+                borderColor: const Color(0xFF334155),
+                animationMode: PolarColumnAnimationMode.grow,
+              ),
+              selectionStyle: showcasePolarSelection,
+              targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+                color: Color(0xFFF59E0B),
+                width: 3,
+                lengthFactor: 0.68,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+
+    testWidgets('intervals: both interval bounds and an interval style', (
+      tester,
+    ) async {
+      final colors = showcaseColumnColors(
+        showcaseUncertaintyValues,
+        showcaseOceanPalette,
+      );
+      final generated = await expectShowcaseEmits(
+        tester,
+        presentation: 'intervals',
+        fragments: <String>[
+          'intervalLow: (row) => row.intervalLow,',
+          'intervalHigh: (row) => row.intervalHigh,',
+          // The showcase's authored interval knobs are the class defaults
+          // apart from the color and the width, so those two are what prove
+          // the style reached the chain.
+          'intervalStyle: PolarColumnIntervalStyle(',
+          'color: Color(0xFF0F172A),',
+          'width: 2.0,',
+          // The plot-level config: the fragment list above named only
+          // per-SERIES text, so the whole `.polarConfig(...)` verb could be
+          // dropped from the chain and this case would still have passed.
+          // (The round-trip proof cannot see it either — it re-lowers the
+          // captured `PolarChartConfig` OBJECT, not the emitted literal.)
+          '.polarConfig(',
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: showcasePolarConfig(
+            innerRadiusFactor: 0.12,
+            outerRadiusFactor: 0.88,
+            innerPadding: 0.16,
+            outerPadding: 0.04,
+            categoryLabelColor: const Color(0xFF334155),
+            radialLabelColor: const Color(0xFF475569),
+            compositionMode: PolarColumnCompositionMode.layered,
+          ),
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-forecast-intervals',
+              name: 'Forecast',
+              values: showcaseUncertaintyValues,
+              intervals: <String, PolarColumnInterval>{
+                for (final category in showcaseUncertaintyValues.keys)
+                  if (showcaseUncertaintyLowerValues[category] case final lower?)
+                    if (showcaseUncertaintyUpperValues[category]
+                        case final upper?)
+                      category: PolarColumnInterval(
+                        lower: lower.toDouble(),
+                        upper: upper.toDouble(),
+                      ),
+              },
+              columnColors: colors,
+              unit: 'orders',
+              polarStyle: showcasePolarStyle(
+                cornerRadius: 5,
+                opacity: 0.78,
+                borderColor: const Color(0xFF1E3A8A),
+                animationMode: PolarColumnAnimationMode.fade,
+                gradient: const PolarColumnGradientStyle(
+                  startLightnessShift: 0.22,
+                  endLightnessShift: -0.14,
+                ),
+              ),
+              selectionStyle: showcasePolarSelection,
+              intervalStyle: const PolarColumnIntervalStyle(
+                color: Color(0xFF0F172A),
+                width: 2,
+                capLengthFactor: 0.62,
+                bandLengthFactor: 0.58,
+                opacity: 0.92,
+              ),
+            ),
+          ],
+        ),
+      );
+      // The plot-level config asserted WHOLE. Before this, `intervals` named
+      // only per-series text, so deleting the entire `.polarConfig(...)` verb
+      // from `_emitPolarChartBody` left this acceptance case green while the
+      // emitted chain rebuilt a DEFAULT pane, default paddings and default
+      // label styling — a visibly different chart. Every line below is a knob
+      // the showcase authors away from its class default; the ones it leaves
+      // alone (`outerRadiusFactor`, `outerPadding`, the visible-label caps,
+      // the radial `labelOffset`, the layered composition) are correctly
+      // elided, and this list fails if any of that flips.
+      expect(literalArguments(generated.source, 'PolarChartConfig('), <String>[
+        'pane: PolarPaneConfig(',
+        'innerRadiusFactor: 0.12,',
+        '),',
+        'angularAxis: PolarCategoryAxisConfig(',
+        'innerPadding: 0.16,',
+        'labelOffset: 4.0,',
+        'labelStyle: PolarLabelStyle(',
+        'color: Color(0xFF334155),',
+        'fontSize: 12.0,',
+        'fontWeight: FontWeight.w500,',
+        '),',
+        '),',
+        'radialAxis: PolarNumericAxisConfig(',
+        'scaleMode: PolarRadialScaleMode.linear,',
+        'labelStyle: PolarLabelStyle(',
+        'color: Color(0xFF475569),',
+        'fontSize: 10.0,',
+        'fontWeight: FontWeight.w500,',
+        '),',
+        '),',
+      ]);
+    });
+
+    testWidgets('a non-default ConcentricDonutConfig authored through the '
+        'grammar emits — NOT the ConcentricDonutPage', (tester) async {
+      // SCOPE, stated exactly, because the name of the group around this test
+      // would otherwise over-claim it.
+      //
+      // What this proves: a customised `ConcentricDonutConfig` — radii, a ring
+      // gap, an order, a legend mode, per-ring weights and a center — survives
+      // to `geomDonut(concentric:)`. Every one of those was refused before the
+      // mark carried the whole config, because lowering rebuilt the
+      // composition from the center alone. That is the CONFIG PASSTHROUGH.
+      //
+      // What it does NOT prove: that `concentric_donut_page.dart` emits. It
+      // does not. The chart below is authored the way the grammar's own
+      // concentric lowering emits one — ring series ids following the
+      // `<markId>-<ring>` pattern, no per-slice colours, one `dataLabels` for
+      // the whole composition — and the showcase page does none of those three
+      // things. The KNOWN GAP group after this one mounts each blocker and
+      // pins its refusal, so the difference stays visible instead of being
+      // implied by this test's neighbours.
+      await expectShowcaseEmits(
+        tester,
+        presentation: 'grammar-authored concentric config',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring,',
+          'concentric: ConcentricDonutConfig(',
+          'innerRadiusFactor: 0.28,',
+          'outerRadiusFactor: 0.94,',
+          'ringGap: 6.0,',
+          // `outerToInner` and `groupedByRing` are the class defaults the
+          // showcase leaves alone, so they are correctly elided.
+          "'revenue-Current period': 1.25,",
+          "label: 'Revenue mix',",
+        ],
+        chart: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(
+            innerRadiusFactor: 0.28,
+            outerRadiusFactor: 0.94,
+            ringGap: 6,
+            order: ConcentricRingOrder.outerToInner,
+            legendMode: ConcentricDonutLegendMode.groupedByRing,
+            ringWeights: <String, double>{'revenue-Current period': 1.25},
+            centerContent: DonutCenterContent(label: 'Revenue mix'),
+          ),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'revenue-Current period',
+              name: 'Current period',
+              unit: 'USD',
+              values: const <String, num>{
+                'Subscriptions': 48,
+                'Services': 27,
+                'Hardware': 25,
+              },
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Previous period',
+              name: 'Previous period',
+              unit: 'USD',
+              values: const <String, num>{
+                'Subscriptions': 41,
+                'Services': 33,
+                'Hardware': 26,
+              },
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
+  // =========================================================================
+  // KNOWN GAP — the two DONUT showcase pages do not emit.
+  //
+  // The acceptance gate above is about POLAR. `concentric_donut_page.dart` and
+  // `donut_charts_page.dart` are the radial workbench pages it does NOT cover,
+  // and both are blocked today. Recording that in a comment alone would decay,
+  // so each blocker below is mounted and its refusal pinned. Every test here
+  // asserts a REFUSAL: closing the gap turns them red, and the fix is to move
+  // the case into the acceptance gate and update the wording in
+  // `doc/chart_grammar.md`, the design spec and the plan — not to delete the
+  // test.
+  //
+  // The three blockers, each independent (fixing one leaves the page blocked
+  // on the other two):
+  //
+  //   1. RING IDS. `concentric_donut_page.dart` names its ring series from its
+  //      own descriptors (`current`, `previous`, …), not the `<markId>-<ring>`
+  //      pattern the ring channel reproduces.
+  //   2. PER-SLICE COLOURS. Both pages pass `sliceColors`
+  //      (`donut_charts_page.dart:487`), and `PieMark`/`DonutMark` have no
+  //      per-point colour channel — only `PolarMark` does, via `columnColor`.
+  //   3. PER-RING DATA LABELS. The concentric page's `hierarchy` label layout
+  //      gives the outer and inner rings DIFFERENT `PieDataLabelConfig`s, and
+  //      one `DonutMark` carries one `dataLabels` for every ring.
+  //
+  // Closing (2) means a per-point colour channel on `PieMark`/`DonutMark`,
+  // which is an owner-scoped feature, not a repair to this file.
+  // =========================================================================
+
+  group('KNOWN GAP: the donut showcase pages do not emit', () {
+    testWidgets('blocker 1: ring ids that are not "<markId>-<ring>" are '
+        'refused — ConcentricDonutPage names its rings itself', (tester) async {
+      // `concentric_donut_page.dart` builds one series per `_ringDescriptor`,
+      // ids and all (`current`, `previous`, `forecast`, …). The ring channel
+      // reproduces each ring's series id by joining the mark id to the ring
+      // key, so ids that do not follow that shape cannot be reversed.
+      //
+      // The CONTROL for this one is the acceptance case immediately above:
+      // the same two-ring composition, the same non-default config, ids
+      // following `'<markId>-<ring>'` — and it emits. Only the ids differ.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(
+              innerRadiusFactor: 0.28,
+              outerRadiusFactor: 0.94,
+              ringGap: 6,
+            ),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'current',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+              ),
+              DonutChartSeries.fromMap(
+                id: 'previous',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(generated.isComplete, isFalse);
+      expect(
+        blockedReason(generated),
+        contains(
+          'the donut series ids do not follow the concentric ring pattern',
+        ),
+      );
+    });
+
+    testWidgets('blocker 2: per-slice colours are refused — both donut pages '
+        'pass sliceColors and no pie/donut mark carries them', (tester) async {
+      // The one blocker BOTH pages share, and the reason `DonutChartsPage` is
+      // blocked on its own (it is a single-ring donut, so blockers 1 and 3
+      // never arise there). `PolarMark.columnColor` is the per-point colour
+      // channel; `PieMark`/`DonutMark` have no equivalent, so a per-point
+      // `PointStyle.color` diverges on re-lowering and is honestly refused.
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, Color> sliceColors,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'donut-audience',
+                name: 'Audience',
+                unit: 'USD',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+                sliceColors: sliceColors,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final refused = await generateFor(const <String, Color>{
+        'Apple': Color(0xFF2563EB),
+        'Pear': Color(0xFF0D9488),
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "donut-audience" exactly'),
+          contains('a per-point style beyond a colour override'),
+        ),
+      );
+
+      // CONTROL: the SAME donut without `sliceColors` emits, so the refusal is
+      // attributable to the missing channel and to nothing else about the page.
+      final emitted = await generateFor(const <String, Color>{});
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('.geomDonut('));
+    });
+
+    testWidgets('blocker 3: rings with DIFFERENT dataLabels are refused — one '
+        'DonutMark carries one label config', (tester) async {
+      // `concentric_donut_page.dart`'s `hierarchy` label layout gives the
+      // outer ring `outside`/`categoryAndPercentage` and every inner ring
+      // `inside`/`category` (`_buildDataLabels`). The ring channel splits ONE
+      // mark into N series, so all N get the mark's single `dataLabels`, and
+      // the ring that disagrees is named.
+      Future<ChartGeneratedSource> generateFor({
+        required PieDataLabelConfig outer,
+        required PieDataLabelConfig inner,
+      }) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'revenue-Current period',
+                name: 'Current period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 48,
+                  'Services': 27,
+                },
+                dataLabels: outer,
+              ),
+              DonutChartSeries.fromMap(
+                id: 'revenue-Previous period',
+                name: 'Previous period',
+                unit: 'USD',
+                values: const <String, num>{
+                  'Subscriptions': 41,
+                  'Services': 33,
+                },
+                dataLabels: inner,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      const hierarchyOuter = PieDataLabelConfig(
+        position: PieDataLabelPosition.outside,
+        content: PieDataLabelContent.categoryAndPercentage,
+      );
+      const hierarchyInner = PieDataLabelConfig(
+        position: PieDataLabelPosition.inside,
+        content: PieDataLabelContent.category,
+      );
+
+      final refused = await generateFor(
+        outer: hierarchyOuter,
+        inner: hierarchyInner,
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(
+        blockedReason(refused),
+        contains('does not reproduce series "revenue-Previous period" exactly'),
+      );
+
+      // CONTROL: the same two rings sharing ONE label config emit, so the
+      // refusal is about the rings DISAGREEING, not about `dataLabels` itself.
+      final emitted = await generateFor(
+        outer: hierarchyOuter,
+        inner: hierarchyOuter,
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('ring: (row) => row.ring,'));
+    });
+  });
+
   group('fidelity matrix diagnostics', () {
     testWidgets('a family with no grammar mark (radial-bar) is named, and no '
         'chain is emitted', (tester) async {
@@ -1956,14 +5213,24 @@ void main() {
       expect(generated.source, isNot(contains('Cartesian-only in V1')));
     });
 
-    testWidgets('a customised ConcentricDonutConfig is refused with a named '
-        'reason, not the stale copy', (tester) async {
-      // The grammar carries only a concentric donut's shared center, so a
-      // custom ringGap cannot round-trip. The proof must refuse it with an
-      // accurate reason, NOT emit a chain that silently drops the config.
-      final snapshot = await snapshotOf(
+    testWidgets('a customised ConcentricDonutConfig EMITS, and the reason it '
+        'used to be refused is gone', (tester) async {
+      // This row of the matrix flipped: the grammar used to carry only a
+      // concentric donut's shared center, so a custom ringGap could not
+      // round-trip and was honestly refused. `geomDonut(concentric: ...)` now
+      // carries the whole composition, so the same CONFIG-FORM chart emits a
+      // chain — and the round trip below proves the emitted chain rebuilds the
+      // captured chart rather than silently dropping the config.
+      final generated = await expectRoundTrip(
         tester,
-        (controller) => BravenChartPlus(
+        name: 'concentric_config_form_custom',
+        fragments: <String>[
+          '.geomDonut(',
+          'ring: (row) => row.ring',
+          'concentric: ConcentricDonutConfig(',
+          'ringGap: 12',
+        ],
+        original: (controller) => BravenChartPlus(
           bravenChartController: controller,
           concentricDonutConfig: const ConcentricDonutConfig(ringGap: 12),
           series: <ChartSeries>[
@@ -1979,47 +5246,98 @@ void main() {
             ),
           ],
         ),
+        rebuilt: (controller) => BravenChart.of(concentricGrammarRows)
+            .geomDonut(
+              id: 'seasons',
+              category: (row) => row.category,
+              value: (row) => row.value,
+              ring: (row) => row.ring,
+              concentric: const ConcentricDonutConfig(ringGap: 12),
+            )
+            .build(bravenChartController: controller),
       );
-      final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('concentric-donut composition'),
-          contains('ConcentricDonutConfig'),
-        ),
-      );
-      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+      expect(generated.isComplete, isTrue);
+      expect(generated.source, isNot(contains('Cartesian-only')));
     });
 
-    testWidgets('a customised PolarChartConfig is refused with a named reason', (
-      tester,
-    ) async {
+    testWidgets('polar series whose category domains differ are refused by '
+        'HYDRATION, before the emitter runs', (tester) async {
+      // N geomPolar marks share ONE row list, so every polar series must have a
+      // value at every category of the shared domain, in the same order — which
+      // is exactly the contract `PolarColumnComposition.validate` already
+      // enforces at mount, at hydration AND (since the composition diagnostics
+      // landed) at grammar lowering. `ChartGrammarSourceGenerator.generate`
+      // hydrates first and returns that failure, so this shape never reaches the
+      // planner: the assertions below deliberately pin the HYDRATOR's diagnostic
+      // (its code, its path and its wording), not the planner's, which reads
+      // '"<id>" sets the domain; these series do not match it'. The planner's
+      // own `misaligned` guard is unreachable defence in depth and is documented
+      // as such at `_planPolarChart`; nothing here claims to cover it.
+      final plain = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            PolarColumnChartSeries.fromMap(
+              id: 'capacity',
+              values: const <String, num>{'A': 3, 'B': 5},
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              values: const <String, num>{'A': 4, 'B': 8},
+            ),
+          ],
+        ),
+      );
+      // The mounted chart is a legal composition; break the SECOND series'
+      // second category in the document so the domains no longer align.
+      final snapshot = patchedSnapshot(plain, (json) {
+        final series = json['series']! as List<Object?>;
+        final data =
+            (series[1]! as Map<String, Object?>)['data']!
+                as Map<String, Object?>;
+        final points = data['points']! as List<Object?>;
+        (points[1]! as Map<String, Object?>)['label'] = 'C';
+      });
+      final result = ChartGrammarSourceGenerator.generate(snapshot);
+      expect(result, isA<ChartArtifactFailure<ChartGeneratedSource>>());
+      final error = (result as ChartArtifactFailure<ChartGeneratedSource>).error;
+      expect(error.code, ChartArtifactDiagnosticCodes.invalidArtifact);
+      expect(error.path, r'$.document.configuration.polarChart');
+      expect(
+        error.message,
+        allOf(
+          contains('Invalid Polar Column composition'),
+          contains('same categories in the same order'),
+        ),
+      );
+    });
+
+    testWidgets('a multi-series polar composition emits when the domains do '
+        'align', (tester) async {
+      // The positive control for the test above: the SAME two series, unpatched,
+      // reverse to two geomPolar marks over one shared category field.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
-          polarChartConfig: const PolarChartConfig(
-            pane: PolarPaneConfig(startAngleDegrees: 45),
-          ),
           series: <ChartSeries>[
             PolarColumnChartSeries.fromMap(
-              id: 'polar',
-              values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+              id: 'capacity',
+              values: const <String, num>{'A': 3, 'B': 5},
+            ),
+            PolarColumnChartSeries.fromMap(
+              id: 'observed',
+              values: const <String, num>{'A': 4, 'B': 8},
             ),
           ],
         ),
       );
       final generated = generateGrammar(snapshot);
-      expect(emittedChain(generated), isFalse);
-      expect(
-        blockedReason(generated),
-        allOf(
-          contains('polar chart configuration'),
-          contains('PolarChartConfig'),
-        ),
-      );
-      expect(blockedReason(generated), isNot(contains('Cartesian-only')));
+      expect(emittedChain(generated), isTrue);
+      expect('.geomPolar('.allMatches(generated.source).length, 2);
+      // A DEFAULT plot config stays implicit — the chain emits no .polarConfig.
+      expect(generated.source, isNot(contains('.polarConfig(')));
     });
 
     testWidgets('misaligned x domains name the offending series', (
@@ -2412,6 +5730,324 @@ void main() {
         contains('Runtime interaction bindings omitted'),
       );
       expect(generated.source, contains('// Runtime interaction bindings'));
+    });
+  });
+
+  // =========================================================================
+  // THE RADIAL ROUND-TRIP PROOF — the guard that makes "emitted == faithful"
+  // true for pie, donut, concentric and polar.
+  //
+  // Every emitted radial chain rests on ONE claim: before writing anything the
+  // generator re-lowers the chain it is about to write and compares the
+  // re-lowered series to the captured ones, refusing by name anything they do
+  // not reproduce (`_firstRadialMismatch`). Nothing else stands between a
+  // series option no radial mark carries and a chain that silently drops it —
+  // the family gates let these shapes through, and the emitters happily write
+  // them. So DELETING that comparison must break something here.
+  //
+  // Each test is therefore a PAIR: a shape carrying an option the marks do not
+  // carry, which must be refused with no chain and a named reason, and a
+  // near-identical CONTROL differing only in that option, which must emit a
+  // clean chain. The control is what makes the refusal attributable to the
+  // option rather than to the family, and what stops the refusal assertions
+  // from being satisfiable by a generator that has simply stopped emitting.
+  //
+  // Both call sites are covered: `_tryEmitPolarChain` (the polar cases) and
+  // `_tryEmitRadialChain` (the concentric and pie cases).
+  // =========================================================================
+  group('the radial round-trip proof refuses what the marks do not carry', () {
+    testWidgets('a polar series carrying metadata is refused, naming the '
+        'series and the metadata; without it the same chart emits', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, dynamic>? metadata,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PolarColumnChartSeries.fromMap(
+                id: 'capacity',
+                values: const <String, num>{'A': 3, 'B': 5, 'C': 8},
+                metadata: metadata,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // `PolarMark` has no metadata channel, so the re-lowered series comes
+      // back without it. Emitting anyway would hand back a chart whose series
+      // has lost its metadata, with nothing said about it.
+      final refused = await generateFor(const <String, dynamic>{
+        'sport': 'cycling',
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('would hand back a different chart'),
+          contains('series metadata'),
+        ),
+      );
+
+      // CONTROL: the SAME chart with the metadata removed emits a clean chain,
+      // so the refusal above is attributable to the metadata — not to polar.
+      final emitted = await generateFor(null);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.isComplete, isTrue);
+      expect(emitted.source, contains('.geomPolar('));
+    });
+
+    testWidgets('a polar interval pair that is all-null is refused; the same '
+        'series with one real interval emits it as a row channel', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        List<double?> lower,
+        List<double?> upper,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PolarColumnChartSeries(
+                id: 'capacity',
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 3, label: 'A'),
+                  ChartDataPoint(x: 1, y: 5, label: 'B'),
+                  ChartDataPoint(x: 2, y: 8, label: 'C'),
+                ],
+                intervalLowerValues: lower,
+                intervalUpperValues: upper,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // A present-but-all-null pair is NOT the same series as no pair at all:
+      // `PolarMark.intervalLow/High` reverse an all-null column to EMPTY lists,
+      // so the re-lowered series differs from the captured one in a way no
+      // rendered pixel shows and no other check notices.
+      final refused = await generateFor(
+        const <double?>[null, null, null],
+        const <double?>[null, null, null],
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('all-null polar interval list'),
+        ),
+      );
+
+      // CONTROL: one real interval in the SAME lists emits, and the nulls ride
+      // the row channel — so an all-null pair is refused for being all-null,
+      // not for containing nulls.
+      final emitted = await generateFor(
+        const <double?>[2, null, null],
+        const <double?>[4, null, null],
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(
+        emitted.source,
+        contains('intervalLow: (row) => row.intervalLow,'),
+      );
+      expect(emitted.source, contains('intervalLow: 2.0,'));
+      expect('intervalLow: null,'.allMatches(emitted.source).length, 2);
+    });
+
+    testWidgets('a polar point whose pointStyle goes beyond a colour override '
+        'is refused; the colour-only override emits as a row channel', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(PointStyle style) async =>
+          generateGrammar(
+            await snapshotOf(
+              tester,
+              (controller) => BravenChartPlus(
+                bravenChartController: controller,
+                series: <ChartSeries>[
+                  PolarColumnChartSeries(
+                    id: 'capacity',
+                    points: <ChartDataPoint>[
+                      const ChartDataPoint(x: 0, y: 3, label: 'A'),
+                      ChartDataPoint(x: 1, y: 5, label: 'B', pointStyle: style),
+                      const ChartDataPoint(x: 2, y: 8, label: 'C'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+
+      // The ONLY per-point channel a polar mark carries is the column colour
+      // (`columnColor`), which lowering writes back as `PointStyle.color(...)`.
+      // A point that also sets `size` re-lowers to a colour-only style, so the
+      // size is gone — silently, because a polar column ignores it when it
+      // paints.
+      final refused = await generateFor(
+        const PointStyle(color: Color(0xFF16A34A), size: 4),
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPolar(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "capacity" exactly'),
+          contains('a per-point style beyond a colour override'),
+        ),
+      );
+
+      // CONTROL: drop the `size` and the very same point emits as a column
+      // colour, so the refusal is attributable to the extra override alone.
+      final emitted = await generateFor(
+        const PointStyle.color(Color(0xFF16A34A)),
+      );
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(
+        emitted.source,
+        contains('columnColor: (row) => row.columnColor,'),
+      );
+    });
+
+    testWidgets('a concentric composition whose ring centers disagree is '
+        'refused, naming the OFFENDING ring; matching rings emit', (
+      tester,
+    ) async {
+      Future<ChartGeneratedSource> generateFor(
+        DonutCenterContent summerCenter,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            concentricDonutConfig: const ConcentricDonutConfig(),
+            series: <ChartSeries>[
+              DonutChartSeries.fromMap(
+                id: 'seasons-Winter',
+                name: 'Winter',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+              ),
+              DonutChartSeries.fromMap(
+                id: 'seasons-Summer',
+                name: 'Summer',
+                values: const <String, num>{'Plum': 17, 'Fig': 10},
+                centerContent: summerCenter,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // ONE `geomDonut(ring:)` mark lowers to EVERY ring, so the rings of an
+      // emittable composition all carry the same center. Here only the second
+      // ring carries one, which the mark cannot express: it would re-lower to
+      // two centre-less rings. Naming "seasons-Summer" — the second series —
+      // is the part that proves the check walks the whole ring list and
+      // reports the ring that actually diverges, not simply the first one.
+      final refused = await generateFor(
+        const DonutCenterContent(label: 'Summer'),
+      );
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomDonut(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "seasons-Summer" exactly'),
+          contains('would hand back a different chart'),
+        ),
+      );
+      expect(blockedReason(refused), isNot(contains('seasons-Winter')));
+
+      // CONTROL: give the second ring the same hidden center as the first and
+      // the composition emits, so the refusal is attributable to the ring whose
+      // center diverges — not to concentric donuts.
+      final emitted = await generateFor(DonutCenterContent.hidden);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.isComplete, isTrue);
+      expect(emitted.source, contains('.geomDonut('));
+      expect(emitted.source, contains('ring: (row) => row.ring'));
+    });
+
+    testWidgets('a pie series carrying metadata is refused too — the proof '
+        'guards the non-polar radial path as well', (tester) async {
+      // The polar cases above reach the proof through `_tryEmitPolarChain`;
+      // pie reaches it through `_tryEmitRadialChain`. Both call sites must
+      // refuse, or half the radial families keep an unguarded emitter.
+      Future<ChartGeneratedSource> generateFor(
+        Map<String, dynamic>? metadata,
+      ) async => generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              PieChartSeries.fromMap(
+                id: 'harvest',
+                values: const <String, num>{'Apple': 42, 'Pear': 31},
+                metadata: metadata,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final refused = await generateFor(const <String, dynamic>{
+        'sport': 'cycling',
+      });
+      expect(emittedChain(refused), isFalse);
+      expect(refused.isComplete, isFalse);
+      expect(refused.source, isNot(contains('.geomPie(')));
+      expect(
+        refused.warnings.single.code,
+        ChartGrammarSourceWarningCodes.unsupportedShape,
+      );
+      expect(
+        blockedReason(refused),
+        allOf(
+          contains('does not reproduce series "harvest" exactly'),
+          contains('series metadata'),
+        ),
+      );
+
+      // CONTROL: the same pie without metadata emits.
+      final emitted = await generateFor(null);
+      expect(emittedChain(emitted), isTrue);
+      expect(emitted.warnings, isEmpty);
+      expect(emitted.source, contains('.geomPie('));
     });
   });
 
