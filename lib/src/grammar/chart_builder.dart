@@ -502,7 +502,11 @@ final class BravenChart<T> {
   /// [dataLabelsByRing] overrides [dataLabels] for named rings. It is keyed by
   /// the BARE ring key — the value [ring] returns, which becomes the ring
   /// series' name — not by the `'<markId>-<ringKey>'` series id `concentric`'s
-  /// `ringWeights` uses. A ring with no entry keeps [dataLabels].
+  /// `ringWeights` uses. A ring with no entry keeps [dataLabels]. Like
+  /// [concentric] it requires [ring]: a non-empty map on a ring-less donut has
+  /// no rings to key against and raises
+  /// `GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`. A key naming a
+  /// ring the rows never produce raises `GrammarDiagnosticCode.unknownRingKey`.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,

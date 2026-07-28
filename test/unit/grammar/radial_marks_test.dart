@@ -195,6 +195,41 @@ void main() {
       expect(forwards == swapped, isFalse);
     });
 
+    test('an EMPTY dataLabelsByRing equals an absent one', () {
+      // Both mean "every ring shares dataLabels": they lower to identical
+      // series (the resolution reads `?[key] ??`, which an empty map misses
+      // exactly as null does) and emit identical text (the planner normalises
+      // an empty projection to null). Two marks describing the same chart must
+      // therefore compare equal and hash alike — `mapEquals(null, {})` is
+      // false, so the comparison cannot be left to it.
+      const empty = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{},
+      );
+      const absent = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+      );
+      expect(empty, absent);
+      expect(empty.hashCode, absent.hashCode);
+      // The field itself still reports what the author wrote — the
+      // normalisation is in the comparison, not in the storage.
+      expect(empty.dataLabelsByRing, isEmpty);
+      expect(absent.dataLabelsByRing, isNull);
+      // And a populated map is still a different mark than either.
+      const populated = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: {'outer': PieDataLabelConfig(isVisible: false)},
+      );
+      expect(populated == empty, isFalse);
+      expect(populated == absent, isFalse);
+    });
+
     test('PolarMark holds a polar style', () {
       const mark = PolarMark<Fruit>(
         category: fruitName,

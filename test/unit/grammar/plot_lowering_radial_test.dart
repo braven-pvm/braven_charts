@@ -968,6 +968,111 @@ void main() {
       },
     );
 
+    test('a ring-less donut refuses dataLabelsByRing by name', () {
+      // The exact mistake the unknownRingKey guard exists to catch, in its most
+      // inert form: with no `ring` channel there are no rings AT ALL, so the
+      // whole map applies to nothing. The ringed guard cannot see this shape —
+      // it lives inside the ring loop — so without a check here a real override
+      // (and any typo inside it) vanishes silently. Mirrors
+      // concentricConfigOnRinglessDonut, the sibling refusal for the sibling
+      // field.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
+      );
+    });
+
+    test(
+      'the ring-less dataLabelsByRing refusal names the map and the fix',
+      () {
+        Object? thrown;
+        try {
+          (const PlotSpec<Fruit>(
+            data: fruits,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                id: 'fruit',
+                dataLabelsByRing: <String, PieDataLabelConfig>{
+                  'A': hiddenLabels,
+                  'B': insideLabels,
+                },
+              ),
+            ],
+          )).lower();
+        } catch (error) {
+          thrown = error;
+        }
+        expect(thrown, isA<GrammarSpecException>());
+        final failure = thrown! as GrammarSpecException;
+        expect(failure.message, contains('fruit'));
+        expect(failure.message, contains('dataLabelsByRing'));
+        // Both dead keys are named, and so is the one-word fix.
+        expect(failure.message, contains('"A"'));
+        expect(failure.message, contains('"B"'));
+        expect(failure.message, contains('ring:'));
+        expect(failure.message, contains('dataLabels:'));
+      },
+    );
+
+    test(
+      'a ring-less dataLabelsByRing is refused before the empty-data guard',
+      () {
+        // Decidable from the mark's shape alone, so it belongs above the
+        // emptyData guard with the other shape checks — a chain must not lower
+        // clean over an empty data set and only report once rows arrive.
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                id: 'fruit',
+                dataLabelsByRing: <String, PieDataLabelConfig>{
+                  'A': hiddenLabels,
+                },
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(
+            GrammarDiagnosticCode.perRingOverrideOnRinglessDonut,
+          ),
+        );
+      },
+    );
+
+    test('a ring-less donut with an EMPTY dataLabelsByRing lowers clean', () {
+      // An empty map carries no override, so it is a no-op here for exactly the
+      // reason it is a no-op on the ringed path. Refusing it would fork the two
+      // paths apart on a map that means nothing either way.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+    });
+
     test('a ring-less donut with no concentric keeps its center hidden', () {
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
@@ -1103,8 +1208,30 @@ void main() {
     });
 
     test('every dataLabelsByRing key naming a real ring lowers clean', () {
-      // The guard must not fire on the legitimate shape, and an empty override
-      // map must stay a no-op rather than a refusal.
+      // The FULL map: every ring the `fruits` fixture produces is named, so the
+      // guard has the largest legitimate surface to over-fire on. Pinning it on
+      // a populated map is the point — an empty map is vacuously unknown-free
+      // and would pass even a guard rewritten to reject valid keys.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{
+                'A': hiddenLabels,
+                'B': insideLabels,
+              },
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+
+      // And an empty override map stays a no-op rather than a refusal.
       expect(
         () => (const PlotSpec<Fruit>(
           data: fruits,

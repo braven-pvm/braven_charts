@@ -118,6 +118,11 @@ enum GrammarDiagnosticCode {
   /// be silently inert.
   unknownRingKey,
 
+  /// A per-ring override map (such as `dataLabelsByRing`) was set on a donut
+  /// geom that declares no `ring` channel, so it composes no rings for the map
+  /// to key against and every entry would be silently inert.
+  perRingOverrideOnRinglessDonut,
+
   /// A Cartesian axis/grid option (grid, xAxis, yAxis, transposed) was set on
   /// a radial spec.
   axisOptionOnRadialSpec,
@@ -475,6 +480,26 @@ final class GrammarSpecException implements Exception {
     'nothing and change nothing. This composition\'s rings are '
     '${_list(ringKeys)}; $parameter is keyed by that bare ring value, not by '
     'the "<markId>-<ringKey>" series id ringWeights is keyed by.',
+  );
+
+  /// A per-ring override map was set on a donut geom with no `ring` channel.
+  ///
+  /// [markId] names the geomDonut mark, [parameter] the map that has nothing to
+  /// key against (`dataLabelsByRing`) and [keys] its entries. This is the same
+  /// mistake [unknownRingKey] reports, in its most inert form: with no ring
+  /// channel there are no rings AT ALL, so the whole map applies to nothing
+  /// rather than just one bad entry — and the ring loop that raises
+  /// [unknownRingKey] never runs to say so.
+  factory GrammarSpecException.perRingOverrideOnRinglessDonut(
+    String markId,
+    String parameter,
+    Iterable<String> keys,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.perRingOverrideOnRinglessDonut,
+    'The donut mark "$markId" keyed $parameter to ${_list(keys)} but declares '
+    'no ring channel, so it composes no rings for those entries to override: '
+    'every one of them would apply to nothing and change nothing. Add ring: to '
+    'compose a concentric donut, or set dataLabels: for this single donut.',
   );
 
   /// A Cartesian axis/grid option was set on a radial spec.

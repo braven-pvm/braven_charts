@@ -492,7 +492,10 @@ A **radial** spec continues instead:
 10. `concentric:` with no `ring:` → `concentricConfigOnRinglessDonut`; then the
     config-only half of the concentric contract (pane radii, ring gap, ring
     weight magnitudes) → `invalidConcentricComposition`
-11. the shape-decidable half of the polar composition contract, in this fixed
+11. a non-empty `dataLabelsByRing:` with no `ring:` →
+    `perRingOverrideOnRinglessDonut` (an EMPTY map is a no-op, here and on the
+    ringed path)
+12. the shape-decidable half of the polar composition contract, in this fixed
     order: the config-only half — everything `PolarChartConfig.validate()`
     enforces, i.e. pane geometry, radial-axis bounds, the grouped sub-band
     padding, per-threshold finiteness and dash-pair parity, and the stacked
@@ -501,10 +504,12 @@ A **radial** spec continues instead:
     `geomPolar` marks → `invalidPolarComposition`; exactly one of
     `intervalLow`/`intervalHigh` → `incompletePolarInterval`; clashing `rose`
     presets → `invalidPolarComposition`
-12. empty `data` → `emptyData`
-13. materialization → `emptyRadialCategories`, `duplicateRadialCategory`; then
+13. empty `data` → `emptyData`
+14. materialization → `emptyRadialCategories`, `duplicateRadialCategory`; then
     the row-dependent half of the polar contract → `invalidPolarComposition`,
-    and of the concentric contract → `invalidConcentricComposition`
+    and of the concentric contract → `invalidConcentricComposition`; and a
+    `dataLabelsByRing:` key naming a ring the rows never produce →
+    `unknownRingKey`
 
 `facetedRadialUnsupported` is raised earlier still, by `BravenFacetPlot`: a
 radial spec cannot be faceted at all.
@@ -684,13 +689,13 @@ runtime-only bindings.
 
 | Case | Outcome |
 | --- | --- |
-| A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the three **Blocked** radial rows that follow — read them together with *Known gap* below before reading this row as "every radial chart emits". |
+| A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the two **Blocked** radial rows that follow — read them together with *Known gap* below before reading this row as "every radial chart emits". |
 | A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
 | A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **Blocked**: the ring channel names each ring's series from its ring key, so ids that do not follow that pattern cannot be reproduced. |
 | A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
 | A donut **centre** setting `labelStyle` or `valueStyle` | **EMITTED** *(V2.0)* as `center: DonutCenterContent(...)`. `DonutMark.center` carries the captured centre VERBATIM, and the argument is written by the same renderer the config form's `centerContent:` uses, so both styles survive. |
 | A donut **centre** setting `valueFormatter` | **Emitted with a `// valueFormatter:` placeholder and a warning** (`isComplete == false`), exactly as every other runtime callback is — a live closure has no literal form. |
-| A concentric composition whose rings carry **different `dataLabels`** | **Blocked**, naming the ring that disagrees: one `DonutMark` splits into N ring series and hands all of them its single `dataLabels`. See *Known gap* below. |
+| A concentric composition whose rings carry **different `dataLabels`** | **EMITTED** *(V2.0)* as `geomDonut(dataLabelsByRing: {...})`. Ring 0's config is the base the mark's `dataLabels:` carries, and only the rings that DIFFER from it are projected into the override map — so a uniform composition emits exactly what it did before. Inside the map an entry equal to the family default is a real override and IS written, unlike the single `dataLabels:` argument which elides one. The map is keyed by the BARE ring key; a key naming no ring raises `unknownRingKey`, and a non-empty map with no `ring:` raises `perRingOverrideOnRinglessDonut`. A per-ring `valueFormatter` emits a `// valueFormatter:` placeholder and a warning naming the ring (`isComplete == false`). |
 | Polar series whose category domains differ | **Blocked**, naming the series that disagree: N `geomPolar` marks read ONE row list, so every polar series needs one value at every category of the shared domain, in the same order. |
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
 | A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
@@ -752,8 +757,9 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     legend mode, per-ring weights and center all survive to
     `geomDonut(concentric: ...)` — *when the composition is authored the way
     the grammar's own concentric lowering produces one*: ring series ids
-    following `'<markId>-<ring>'`, one `dataLabels` for the whole composition,
-    and no ring carrying a centre of its own.
+    following `'<markId>-<ring>'`, and no ring carrying a centre of its own.
+    Rings that carry DIFFERENT `dataLabels` are no longer a precondition — they
+    emit as `dataLabelsByRing:`.
 
 #### Known gap: `concentric_donut_page.dart` does not emit
 
@@ -772,9 +778,14 @@ others):
    `sliceColor` channel of their own, mirroring `PolarMark.columnColor`, and
    the emitter reverses it — so `sliceColors` no longer blocks either page. Its
    pinned refusal test was *converted* into a round-trip acceptance test.
-3. **Per-ring data labels.** The concentric page's `hierarchy` label layout gives
-   the outer and inner rings *different* `PieDataLabelConfig`s, and one
-   `DonutMark` carries one `dataLabels` for every ring it splits into.
+3. ~~**Per-ring data labels.**~~ **CLOSED.** The concentric page's `hierarchy`
+   label layout gives the outer and inner rings *different*
+   `PieDataLabelConfig`s, and one `DonutMark` used to carry one `dataLabels` for
+   every ring it splits into. `DonutMark` now also carries a `dataLabelsByRing`
+   override map beside that base, the emitter projects the rings that differ
+   from it, and an unconditional map renderer writes them (inside an override
+   map an entry equal to the family default is meaningful). Its pinned refusal
+   test was *converted* into a round-trip acceptance test.
 4. ~~**The donut centre.**~~ **CLOSED.** The chain used to rebuild a centre from
    four of its seven fields and drop `labelStyle`, `valueStyle` and
    `valueFormatter`; `DonutMark.center` now carries the captured centre VERBATIM
@@ -788,10 +799,13 @@ others):
 known-limitation warning (`isComplete == false`) for the radial label formatter
 callbacks a literal cannot carry.
 
-Each open blocker is mounted and its refusal pinned in
+Each still-OPEN blocker is mounted and its refusal pinned in
 `group('KNOWN GAP: the donut showcase pages do not emit')` in
-`test/unit/source/chart_grammar_source_generator_test.dart`, so closing one
-turns that test red and brings you back to this paragraph.
+`test/unit/source/chart_grammar_source_generator_test.dart`, so closing it turns
+that test red and brings you back to this paragraph. Only blocker 1 is left, so
+only blocker 1 still has a pin — the pins for 2, 3 and 4 were *converted* into
+round-trip acceptance tests as each closed, and the closing edit to this list is
+part of that conversion rather than something a red test will remind you of.
 
 ## Not in V1 (still deferred)
 

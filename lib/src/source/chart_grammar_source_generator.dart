@@ -41,7 +41,7 @@
 /// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
 /// | a donut center setting `labelStyle` or `valueStyle` | emitted as `center: DonutCenterContent(...)` — the captured center rides the mark VERBATIM and is written by the config emitter's own center renderer, so both styles survive |
 /// | a donut center setting `valueFormatter` | emitted with a `// valueFormatter:` placeholder and a runtime-value-omitted warning, exactly as the config form does — the chain is real but not complete |
-/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
+/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | emitted as `geomDonut(dataLabelsByRing: {...})` — the mark carries ring 0's config as the base `dataLabels:` and only the rings that DIFFER from it are projected, so a uniform composition emits unchanged; inside the map an entry equal to the family default is a real override and is written |
 /// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |

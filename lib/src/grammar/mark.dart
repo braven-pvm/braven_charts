@@ -1052,9 +1052,21 @@ final class DonutMark<T> extends RadialMark<T> {
   /// uses.
   ///
   /// A ring with no entry uses [dataLabels]; [dataLabels] itself stays the base
-  /// for every ring. Null means every ring shares [dataLabels]. The override is
+  /// for every ring. Null means every ring shares [dataLabels] — and so does an
+  /// EMPTY map, which is why the two compare equal here. The override is
   /// honored on the single-ring collapse too, so a one-ring composition is not
   /// a special case.
+  ///
+  /// Requires [ring], exactly as [concentric] does: a ring-less donut composes
+  /// no rings for the map to key against, so every entry would be discarded
+  /// silently. A non-empty map without [ring] raises
+  /// `GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`; an empty one is
+  /// the same no-op it is on the ringed path.
+  ///
+  /// A key naming a ring the rows never produce raises
+  /// `GrammarDiagnosticCode.unknownRingKey` — unlike `ringWeights`, at ANY ring
+  /// count, because this map is resolved by the grammar's own lowering rather
+  /// than delegated to the render pipeline's composition validator.
   final Map<String, PieDataLabelConfig>? dataLabelsByRing;
 
   /// Variable slice-radius encoding for the [radius] second metric. Null keeps
@@ -1083,7 +1095,7 @@ final class DonutMark<T> extends RadialMark<T> {
           other.center == center &&
           other.concentric == concentric &&
           other.dataLabels == dataLabels &&
-          mapEquals(other.dataLabelsByRing, dataLabelsByRing) &&
+          _sameRingOverrides(other.dataLabelsByRing, dataLabelsByRing) &&
           other.sliceRadiusConfig == sliceRadiusConfig &&
           other.sliceGroupingConfig == sliceGroupingConfig;
 
@@ -1103,9 +1115,10 @@ final class DonutMark<T> extends RadialMark<T> {
     center,
     concentric,
     dataLabels,
-    // Order-independent, matching the `mapEquals` above: two override maps with
-    // the same entries in a different insertion order are the same mark.
-    dataLabelsByRing == null
+    // Order-independent, matching [_sameRingOverrides] above: two override maps
+    // with the same entries in a different insertion order are the same mark,
+    // and an empty map hashes as the absent one it means the same thing as.
+    dataLabelsByRing == null || dataLabelsByRing!.isEmpty
         ? null
         : Object.hashAllUnordered(
             dataLabelsByRing!.entries.map((e) => Object.hash(e.key, e.value)),
@@ -1113,6 +1126,19 @@ final class DonutMark<T> extends RadialMark<T> {
     sliceRadiusConfig,
     sliceGroupingConfig,
   );
+
+  /// Compares two [dataLabelsByRing] maps by ENTRY, treating null and an empty
+  /// map as the same thing.
+  ///
+  /// They mean the same thing everywhere else — both lower every ring onto
+  /// [dataLabels] and both emit no `dataLabelsByRing:` argument — so leaving
+  /// them unequal here would make two marks describing byte-identically the
+  /// same chart compare different. `mapEquals(null, {})` is false, hence the
+  /// explicit empty check.
+  static bool _sameRingOverrides(
+    Map<String, PieDataLabelConfig>? a,
+    Map<String, PieDataLabelConfig>? b,
+  ) => ((a?.isEmpty ?? true) && (b?.isEmpty ?? true)) || mapEquals(a, b);
 
   @override
   String toString() => 'DonutMark(id: $id, name: $name)';

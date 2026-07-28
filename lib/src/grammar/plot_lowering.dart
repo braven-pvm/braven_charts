@@ -1052,6 +1052,28 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     );
   }
 
+  // The same refusal, for the same reason, for the per-ring override map. Its
+  // key-existence half is checked against the ACTUAL ring keys down in
+  // [_lowerConcentricRings] — but that function only runs for a mark WITH a
+  // ring channel, so the ring-less shape would escape every check and drop the
+  // whole map. That is the most inert form of the mistake, not the least: with
+  // no rings at all there is nothing any entry could ever apply to.
+  //
+  // Decidable from the mark's shape alone, so it sits here, above the emptyData
+  // guard, with the other shape checks. An EMPTY map is exempt: it carries no
+  // override, so it is the same no-op here that it is on the ringed path, and
+  // refusing it would fork the two paths apart over a map that means nothing
+  // either way.
+  if (mark is DonutMark<T> &&
+      mark.ring == null &&
+      (mark.dataLabelsByRing?.isNotEmpty ?? false)) {
+    throw GrammarSpecException.perRingOverrideOnRinglessDonut(
+      markId,
+      'dataLabelsByRing',
+      mark.dataLabelsByRing!.keys,
+    );
+  }
+
   // The polar composition contract that is decidable from the spec's SHAPE.
   if (allPolar) {
     _validatePolarMarkComposition<T>(spec, radialIndices, markIds);

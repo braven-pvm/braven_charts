@@ -4416,6 +4416,67 @@ void main() {
       expect(generated.source, isNot(contains('dataLabelsByRing')));
     });
 
+    testWidgets('a per-ring label override carrying a FORMATTER emits a '
+        'placeholder and a warning that names the ring', (tester) async {
+      // The override map's own runtime-omission branch. The single `dataLabels:`
+      // renderer reports against a series path; inside the map there is no one
+      // series to point at — every ring of the composition shares the mark — so
+      // the map form names the RING instead. Nothing asserted that until now,
+      // which left a live branch of the seam unpinned.
+      final snapshot = await sourceSnapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          concentricDonutConfig: const ConcentricDonutConfig(),
+          series: <ChartSeries>[
+            DonutChartSeries.fromMap(
+              id: 'revenue-Outer',
+              name: 'Outer',
+              values: const <String, num>{'Subscriptions': 48, 'Services': 27},
+            ),
+            DonutChartSeries.fromMap(
+              id: 'revenue-Inner',
+              name: 'Inner',
+              values: const <String, num>{'Subscriptions': 41, 'Services': 33},
+              dataLabels: PieDataLabelConfig(
+                valueFormatter: (value) => '${value.toStringAsFixed(0)}u',
+              ),
+            ),
+          ],
+        ),
+      );
+      final generated = generateGrammar(snapshot);
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      // Only the Inner ring differs from the base, so only it is projected —
+      // and its entry carries the honest placeholder rather than a closure.
+      expect(generated.source, contains('dataLabelsByRing: {'));
+      expect(generated.source, contains("'Inner': PieDataLabelConfig("));
+      expect(generated.source, contains('// valueFormatter:'));
+      expect(generated.isComplete, isFalse);
+      final warning = generated.warnings.singleWhere(
+        (item) => item.code == ChartSourceWarningCodes.runtimeValueOmitted,
+      );
+      expect(
+        warning.message,
+        'Radial label formatter callbacks were omitted for ring "Inner". '
+        'Provide them from your application.',
+      );
+      expect(warning.path, r'$.series[*].style.dataLabels');
+      // A deliberately incomplete chain can never go through `expectRoundTrip`,
+      // so its text is compiled here instead — the placeholder must still be
+      // valid Dart.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_concentric_formatted_ring_labels',
+        ),
+      );
+    });
+
     testWidgets('the showcase concentric composition that used to be BLOCKER 3 '
         'now emits and round-trips', (tester) async {
       // CONVERTED from the pinned known-gap test
