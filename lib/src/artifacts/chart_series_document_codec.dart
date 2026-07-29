@@ -370,6 +370,11 @@ abstract final class ChartSeriesDocumentCodec {
         'showTrackingAxisLabel',
         fallback: true,
       );
+      final showInTrackingTooltip = _bool(
+        style,
+        'showInTrackingTooltip',
+        fallback: true,
+      );
 
       final series = switch (document.type) {
         'base' => ChartSeries(
@@ -386,6 +391,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
         ),
         'line' => LineChartSeries(
           id: document.id,
@@ -401,6 +407,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           interpolation: _enum(
             style,
             'interpolation',
@@ -440,6 +447,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           markerRadius: _double(style, 'markerRadius'),
           markerShape:
               _optionalEnum(
@@ -499,6 +507,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           interpolation: _enum(
             style,
             'interpolation',
@@ -549,6 +558,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           interpolation: _enum(
             style,
             'interpolation',
@@ -591,6 +601,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           barWidthPercent: _optionalDouble(style['barWidthPercent']),
           barWidthPixels: _optionalDouble(style['barWidthPixels']),
           minWidth: _double(style, 'minWidth'),
@@ -672,6 +683,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           candlestickStyle: _decodeCandlestickStyle(
             _optionalMap(style, 'candlestickStyle'),
           ),
@@ -691,6 +703,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
               ? const RadialSelectionStyle()
@@ -722,6 +735,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           donutStyle: _decodeDonutStyle(_map(style, 'donutStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
               ? const RadialSelectionStyle()
@@ -759,6 +773,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           preset: _enum(style, 'preset', PolarColumnPreset.values),
           polarStyle: _decodePolarColumnStyle(_map(style, 'polarStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
@@ -796,6 +811,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           minimum: _double(style, 'radialBarMinimum'),
           maximum: _double(style, 'radialBarMaximum'),
           baseline: _double(style, 'radialBarBaseline'),
@@ -811,6 +827,7 @@ abstract final class ChartSeriesDocumentCodec {
           metadata: metadata,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
         ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
@@ -1108,6 +1125,7 @@ Map<String, Object?> _encodeSeriesStyle(
     'isXOrdered': series.isXOrdered,
     if (!series.showInLegend) 'showInLegend': false,
     if (!series.showTrackingAxisLabel) 'showTrackingAxisLabel': false,
+    if (!series.showInTrackingTooltip) 'showInTrackingTooltip': false,
   };
   switch (series) {
     case LineChartSeries():
@@ -3097,6 +3115,7 @@ GaugeChartSeries _decodeGaugeSeries({
   required Map<String, dynamic>? metadata,
   required bool showInLegend,
   required bool showTrackingAxisLabel,
+  required bool showInTrackingTooltip,
 }) {
   if (points.length != 1) {
     throw const _UnsupportedModelException(
@@ -3135,6 +3154,7 @@ GaugeChartSeries _decodeGaugeSeries({
     unit: common.unit,
     showInLegend: showInLegend,
     showTrackingAxisLabel: showTrackingAxisLabel,
+    showInTrackingTooltip: showInTrackingTooltip,
     target: common.target,
     zones: common.zones,
     thresholds: common.thresholds,

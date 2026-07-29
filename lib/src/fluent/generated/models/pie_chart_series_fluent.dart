@@ -45,6 +45,10 @@ extension PieChartSeriesFluent on PieChartSeries {
   PieChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [PieChartSeries.showInTrackingTooltip] with [value].
+  PieChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [PieChartSeries.pieStyle] with [value].
   PieChartSeries withPieStyle(PieChartStyle value) => copyWith(pieStyle: value);
 

@@ -61,6 +61,7 @@ final class RangeAreaChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.interpolation = LineInterpolation.linear,
     this.tension = 0.25,
     this.fillOpacity = 0.28,
@@ -194,6 +195,7 @@ final class RangeAreaChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     LineInterpolation? interpolation,
     double? tension,
     double? fillOpacity,
@@ -246,6 +248,8 @@ final class RangeAreaChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       interpolation: interpolation ?? this.interpolation,
       tension: tension ?? this.tension,
       fillOpacity: fillOpacity ?? this.fillOpacity,

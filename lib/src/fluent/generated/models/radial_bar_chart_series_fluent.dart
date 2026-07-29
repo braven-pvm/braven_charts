@@ -182,6 +182,10 @@ extension RadialBarChartSeriesFluent on RadialBarChartSeries {
   RadialBarChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [RadialBarChartSeries.showInTrackingTooltip] with [value].
+  RadialBarChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [RadialBarChartSeries.minimum] with [value].
   RadialBarChartSeries withMinimum(double value) => copyWith(minimum: value);
 

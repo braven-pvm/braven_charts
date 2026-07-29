@@ -59,6 +59,10 @@ extension RangeAreaChartSeriesFluent on RangeAreaChartSeries {
   RangeAreaChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [RangeAreaChartSeries.showInTrackingTooltip] with [value].
+  RangeAreaChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [RangeAreaChartSeries.interpolation] with [value].
   RangeAreaChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);

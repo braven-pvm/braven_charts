@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 
 import '../../axis/series_axis_resolver.dart';
@@ -538,15 +539,21 @@ class CrosshairRenderer {
       );
     }
 
+    final trackingTooltipValues = resolveTrackingTooltipValues(
+      values: trackedValues,
+      series: seriesElements.map((element) => element.series),
+    );
+
     // Draw tracking tooltip
-    if (crosshairConfig.showTrackingTooltip && trackedValues.isNotEmpty) {
+    if (crosshairConfig.showTrackingTooltip &&
+        trackingTooltipValues.isNotEmpty) {
       _paintTrackingTooltip(
         canvas: canvas,
         cursorPosition: cursorPosition,
         plotArea: plotArea,
         theme: theme,
         interactionConfig: interactionConfig,
-        values: trackedValues,
+        values: trackingTooltipValues,
       );
     }
 
@@ -1437,6 +1444,28 @@ class CrosshairRenderer {
 
     // Priority 3 — library defaults
     return const TooltipStyle();
+  }
+
+  /// Filters only the rows displayed in the tracking tooltip.
+  ///
+  /// The resolved snapshot remains complete so intersection markers, axis
+  /// labels, selection, synchronization, and external snapshot consumers keep
+  /// the full tracking state.
+  @visibleForTesting
+  List<CartesianTrackedSeriesValue> resolveTrackingTooltipValues({
+    required Iterable<CartesianTrackedSeriesValue> values,
+    required Iterable<ChartSeries> series,
+  }) {
+    final visibilityBySeriesId = <String, bool>{
+      for (final candidate in series)
+        candidate.id: candidate.showInTrackingTooltip,
+    };
+    return values
+        .where(
+          (value) =>
+              value.isTrend || (visibilityBySeriesId[value.seriesId] ?? true),
+        )
+        .toList(growable: false);
   }
 
   /// Paints the tracking tooltip that follows the cursor.

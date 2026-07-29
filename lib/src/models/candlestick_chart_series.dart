@@ -57,6 +57,7 @@ final class CandlestickChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.candlestickStyle = const CandlestickChartStyle(),
     this.animation = const CandlestickAnimationStyle(),
     this.densityGrouping = const CandlestickDensityGrouping(),
@@ -135,6 +136,7 @@ final class CandlestickChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     CandlestickChartStyle? candlestickStyle,
     CandlestickAnimationStyle? animation,
     CandlestickDensityGrouping? densityGrouping,
@@ -176,6 +178,8 @@ final class CandlestickChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       candlestickStyle: candlestickStyle ?? this.candlestickStyle,
       animation: animation ?? this.animation,
       densityGrouping: densityGrouping ?? this.densityGrouping,

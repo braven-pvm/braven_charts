@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1827 verbs total; 10 of them have an argument type with no
+// 1838 verbs total; 10 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -678,7 +678,7 @@ void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
   );
 }
 
-/// Smoke coverage for [CandlestickChartSeries]'s 21 executable verb(s).
+/// Smoke coverage for [CandlestickChartSeries]'s 22 executable verb(s).
 void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
   verb('CandlestickChartSeriesFluent.withName', () => subject.withName('y'));
   verb('CandlestickChartSeriesFluent.clearName', () => subject.clearName());
@@ -726,6 +726,10 @@ void _smokeCandlestickChartSeries(_Verb verb, CandlestickChartSeries subject) {
   verb(
     'CandlestickChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'CandlestickChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'CandlestickChartSeriesFluent.withCandlestickStyle',
@@ -1941,7 +1945,7 @@ void _smokeChartOverlayPlacement(_Verb verb, ChartOverlayPlacement subject) {
   );
 }
 
-/// Smoke coverage for [LineChartSeries]'s 34 executable verb(s).
+/// Smoke coverage for [LineChartSeries]'s 35 executable verb(s).
 void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   verb('LineChartSeriesFluent.withName', () => subject.withName('y'));
   verb('LineChartSeriesFluent.clearName', () => subject.clearName());
@@ -1990,6 +1994,10 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   verb(
     'LineChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'LineChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'LineChartSeriesFluent.withInterpolation',
@@ -2047,7 +2055,7 @@ void _smokeLineChartSeries(_Verb verb, LineChartSeries subject) {
   );
 }
 
-/// Smoke coverage for [ScatterChartSeries]'s 39 executable verb(s).
+/// Smoke coverage for [ScatterChartSeries]'s 40 executable verb(s).
 void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
   verb('ScatterChartSeriesFluent.withName', () => subject.withName('y'));
   verb('ScatterChartSeriesFluent.clearName', () => subject.clearName());
@@ -2099,6 +2107,10 @@ void _smokeScatterChartSeries(_Verb verb, ScatterChartSeries subject) {
   verb(
     'ScatterChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'ScatterChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'ScatterChartSeriesFluent.withMarkerRadius',
@@ -2197,7 +2209,7 @@ void _compileScatterChartSeries(
   subject.withCategoryEncoding(a3);
 }
 
-/// Smoke coverage for [AreaChartSeries]'s 42 executable verb(s).
+/// Smoke coverage for [AreaChartSeries]'s 43 executable verb(s).
 void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
   verb('AreaChartSeriesFluent.withName', () => subject.withName('y'));
   verb('AreaChartSeriesFluent.clearName', () => subject.clearName());
@@ -2246,6 +2258,10 @@ void _smokeAreaChartSeries(_Verb verb, AreaChartSeries subject) {
   verb(
     'AreaChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'AreaChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'AreaChartSeriesFluent.withInterpolation',
@@ -2341,7 +2357,7 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 53 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 54 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
   verb('BarChartSeriesFluent.clearName', () => subject.clearName());
@@ -2390,6 +2406,10 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb(
     'BarChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'BarChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb('BarChartSeriesFluent.withBarGap', () => subject.withBarGap(2.0));
   verb(
@@ -3060,7 +3080,7 @@ void _smokeDonutChartStyle(_Verb verb, DonutChartStyle subject) {
   );
 }
 
-/// Smoke coverage for [DonutChartSeries]'s 21 executable verb(s).
+/// Smoke coverage for [DonutChartSeries]'s 22 executable verb(s).
 void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
   verb('DonutChartSeriesFluent.withName', () => subject.withName('y'));
   verb('DonutChartSeriesFluent.clearName', () => subject.clearName());
@@ -3087,6 +3107,10 @@ void _smokeDonutChartSeries(_Verb verb, DonutChartSeries subject) {
   verb(
     'DonutChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'DonutChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'DonutChartSeriesFluent.withDonutStyle',
@@ -3578,7 +3602,7 @@ void _smokeSolidGaugeStyle(_Verb verb, SolidGaugeStyle subject) {
   verb('SolidGaugeStyleFluent.clearGradient', () => subject.clearGradient());
 }
 
-/// Smoke coverage for [GaugeChartSeries]'s 18 executable verb(s).
+/// Smoke coverage for [GaugeChartSeries]'s 19 executable verb(s).
 void _smokeGaugeChartSeries(_Verb verb, GaugeChartSeries subject) {
   verb('GaugeChartSeriesFluent.withName', () => subject.withName('y'));
   verb('GaugeChartSeriesFluent.clearName', () => subject.clearName());
@@ -3605,6 +3629,10 @@ void _smokeGaugeChartSeries(_Verb verb, GaugeChartSeries subject) {
   verb(
     'GaugeChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'GaugeChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'GaugeChartSeriesFluent.withTarget',
@@ -4779,7 +4807,7 @@ void _smokePieDataLabelConfig(_Verb verb, PieDataLabelConfig subject) {
   );
 }
 
-/// Smoke coverage for [PieChartSeries]'s 19 executable verb(s).
+/// Smoke coverage for [PieChartSeries]'s 20 executable verb(s).
 void _smokePieChartSeries(_Verb verb, PieChartSeries subject) {
   verb('PieChartSeriesFluent.withName', () => subject.withName('y'));
   verb('PieChartSeriesFluent.clearName', () => subject.clearName());
@@ -4806,6 +4834,10 @@ void _smokePieChartSeries(_Verb verb, PieChartSeries subject) {
   verb(
     'PieChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'PieChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'PieChartSeriesFluent.withPieStyle',
@@ -5244,7 +5276,7 @@ void _smokePolarColumnStyle(_Verb verb, PolarColumnStyle subject) {
   );
 }
 
-/// Smoke coverage for [PolarColumnChartSeries]'s 19 executable verb(s).
+/// Smoke coverage for [PolarColumnChartSeries]'s 20 executable verb(s).
 void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
   verb('PolarColumnChartSeriesFluent.withName', () => subject.withName('y'));
   verb('PolarColumnChartSeriesFluent.clearName', () => subject.clearName());
@@ -5270,6 +5302,10 @@ void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
   verb(
     'PolarColumnChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'PolarColumnChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'PolarColumnChartSeriesFluent.withPreset',
@@ -5591,7 +5627,7 @@ void _smokeRadialBarStyle(_Verb verb, RadialBarStyle subject) {
   );
 }
 
-/// Smoke coverage for [RadialBarChartSeries]'s 17 executable verb(s).
+/// Smoke coverage for [RadialBarChartSeries]'s 18 executable verb(s).
 void _smokeRadialBarChartSeries(_Verb verb, RadialBarChartSeries subject) {
   verb('RadialBarChartSeriesFluent.withName', () => subject.withName('y'));
   verb('RadialBarChartSeriesFluent.clearName', () => subject.clearName());
@@ -5617,6 +5653,10 @@ void _smokeRadialBarChartSeries(_Verb verb, RadialBarChartSeries subject) {
   verb(
     'RadialBarChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'RadialBarChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb('RadialBarChartSeriesFluent.withMinimum', () => subject.withMinimum(0));
   verb(
@@ -5702,7 +5742,7 @@ void _smokeRadialSelectionStyle(_Verb verb, RadialSelectionStyle subject) {
   );
 }
 
-/// Smoke coverage for [RangeAreaChartSeries]'s 32 executable verb(s).
+/// Smoke coverage for [RangeAreaChartSeries]'s 33 executable verb(s).
 void _smokeRangeAreaChartSeries(_Verb verb, RangeAreaChartSeries subject) {
   verb('RangeAreaChartSeriesFluent.withName', () => subject.withName('y'));
   verb('RangeAreaChartSeriesFluent.clearName', () => subject.clearName());
@@ -5747,6 +5787,10 @@ void _smokeRangeAreaChartSeries(_Verb verb, RangeAreaChartSeries subject) {
   verb(
     'RangeAreaChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'RangeAreaChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'RangeAreaChartSeriesFluent.withInterpolation',

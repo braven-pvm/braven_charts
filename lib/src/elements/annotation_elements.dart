@@ -4148,6 +4148,14 @@ class LegendAnnotationElement extends ChartElement {
   final LegendAnnotation annotation;
   Size _chartSize;
 
+  List<ChartSeries> get _legendSeries => annotation.series
+      .where((series) => series.showInLegend)
+      .toList(growable: false);
+
+  @visibleForTesting
+  List<String> get debugSeriesIds =>
+      _legendSeries.map((series) => series.id).toList(growable: false);
+
   Rect? _bounds;
   bool _isSelected;
   bool _isHovered;
@@ -4243,7 +4251,7 @@ class LegendAnnotationElement extends ChartElement {
     double maxSeriesTextWidth = 0;
     double totalSeriesTextHeight = 0;
 
-    for (final series in annotation.series) {
+    for (final series in _legendSeries) {
       final painter = TextPainter(
         text: TextSpan(text: series.displayName, style: style.textStyle),
         textDirection: TextDirection.ltr,
@@ -4315,7 +4323,7 @@ class LegendAnnotationElement extends ChartElement {
     }
 
     // Calculate legend size
-    final itemCount = annotation.series.length;
+    final itemCount = _legendSeries.length;
     final markerItemWidth = style.markerSize + style.markerLabelSpacing;
     final halfSpacing = style.itemSpacing / 2;
     double legendWidth;
@@ -4756,7 +4764,7 @@ class LegendAnnotationElement extends ChartElement {
   @override
   void paint(Canvas canvas, Size size) {
     if (_bounds == null ||
-        (annotation.series.isEmpty &&
+        (_legendSeries.isEmpty &&
             annotation.trendAnnotations.isEmpty &&
             annotation.errorBarAnnotations.isEmpty &&
             annotation.sizeScale == null &&
@@ -4868,8 +4876,9 @@ class LegendAnnotationElement extends ChartElement {
       currentY += trendHeaderHeight + halfSpacing;
     }
 
-    for (int i = 0; i < annotation.series.length; i++) {
-      final series = annotation.series[i];
+    final legendSeries = _legendSeries;
+    for (int i = 0; i < legendSeries.length; i++) {
+      final series = legendSeries[i];
       final textPainter = _textPainters[i];
       final isHidden = annotation.hiddenSeriesIds.contains(series.id);
 

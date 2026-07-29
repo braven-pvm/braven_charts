@@ -585,6 +585,12 @@ class ChartConfigDartEmitter {
         series.showTrackingAxisLabel,
         defaultValue: true,
       );
+      _valueIf(
+        writer,
+        'showInTrackingTooltip',
+        series.showInTrackingTooltip,
+        defaultValue: true,
+      );
       switch (series) {
         case CandlestickChartSeries():
           _emitCandlestickOptions(writer, series);
@@ -3107,6 +3113,12 @@ class ChartConfigDartEmitter {
         writer,
         'showTrackingAxisLabel',
         series.showTrackingAxisLabel,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'showInTrackingTooltip',
+        series.showInTrackingTooltip,
         defaultValue: true,
       );
       if (series.target case final target?) {

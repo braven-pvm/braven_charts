@@ -2181,6 +2181,7 @@ void main() {
               points: [RangeAreaDataPoint(x: 0, low: 10, high: 20)],
               showInLegend: false,
               showTrackingAxisLabel: false,
+              showInTrackingTooltip: false,
             ),
           ),
         ),
@@ -2188,6 +2189,7 @@ void main() {
 
       expect(generated.source, contains('showInLegend: false,'));
       expect(generated.source, contains('showTrackingAxisLabel: false,'));
+      expect(generated.source, contains('showInTrackingTooltip: false,'));
     });
 
     // The line/area SERIES emitters dropped fields that only
