@@ -59,6 +59,8 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
   bool _showCoordinateLabels = true;
+  bool _showIntervalInLegend = true;
+  bool _showIntervalAxisValues = true;
   bool _showIntersectionMarkers = true;
   bool _interpolateTracking = true;
   bool _showValueSummary = true;
@@ -119,6 +121,8 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       _trackingEnabled = true;
       _showTrackingTooltip = true;
       _showCoordinateLabels = true;
+      _showIntervalInLegend = true;
+      _showIntervalAxisValues = true;
       _showIntersectionMarkers = true;
       _interpolateTracking = true;
       _showValueSummary = true;
@@ -421,6 +425,8 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       points: bandPoints,
       color: color,
       unit: _unit,
+      showInLegend: _showIntervalInLegend,
+      showTrackingAxisLabel: _showIntervalAxisValues,
       interpolation: _interpolation,
       fillOpacity: (_fillOpacity * opacityScale).clamp(0.02, 0.82).toDouble(),
       fillGradient: _useGradient
@@ -608,6 +614,19 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
           label: 'Show observed line',
           value: _showObservedLine,
           onChanged: (value) => setState(() => _showObservedLine = value),
+        ),
+        BoolOption(
+          label: 'Show interval in legend',
+          subtitle: 'Exclude the interval without hiding the rendered band',
+          value: _showIntervalInLegend,
+          onChanged: (value) => setState(() => _showIntervalInLegend = value),
+        ),
+        BoolOption(
+          label: 'Show interval axis values',
+          subtitle:
+              'Keep tracking active while suppressing paired low/high labels',
+          value: _showIntervalAxisValues,
+          onChanged: (value) => setState(() => _showIntervalAxisValues = value),
         ),
         BoolOption(
           label: 'Connect gaps',

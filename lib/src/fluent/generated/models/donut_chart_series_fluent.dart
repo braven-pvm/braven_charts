@@ -38,6 +38,14 @@ extension DonutChartSeriesFluent on DonutChartSeries {
   /// Clears [DonutChartSeries.unit] to `null`.
   DonutChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [DonutChartSeries.showInLegend] with [value].
+  DonutChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [DonutChartSeries.showTrackingAxisLabel] with [value].
+  DonutChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [DonutChartSeries.donutStyle] with [value].
   DonutChartSeries withDonutStyle(DonutChartStyle value) =>
       copyWith(donutStyle: value);

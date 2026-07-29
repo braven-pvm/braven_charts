@@ -64,6 +64,13 @@ extension LineChartSeriesFluent on LineChartSeries {
   /// Clears [LineChartSeries.unit] to `null`.
   LineChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [LineChartSeries.showInLegend] with [value].
+  LineChartSeries withShowInLegend(bool value) => copyWith(showInLegend: value);
+
+  /// Replaces [LineChartSeries.showTrackingAxisLabel] with [value].
+  LineChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [LineChartSeries.interpolation] with [value].
   LineChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);
@@ -181,6 +188,14 @@ extension ScatterChartSeriesFluent on ScatterChartSeries {
 
   /// Clears [ScatterChartSeries.unit] to `null`.
   ScatterChartSeries clearUnit() => copyWith(clearUnit: true);
+
+  /// Replaces [ScatterChartSeries.showInLegend] with [value].
+  ScatterChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [ScatterChartSeries.showTrackingAxisLabel] with [value].
+  ScatterChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
 
   /// Replaces [ScatterChartSeries.markerRadius] with [value].
   ScatterChartSeries withMarkerRadius(double value) =>
@@ -349,6 +364,13 @@ extension AreaChartSeriesFluent on AreaChartSeries {
   /// Clears [AreaChartSeries.unit] to `null`.
   AreaChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [AreaChartSeries.showInLegend] with [value].
+  AreaChartSeries withShowInLegend(bool value) => copyWith(showInLegend: value);
+
+  /// Replaces [AreaChartSeries.showTrackingAxisLabel] with [value].
+  AreaChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [AreaChartSeries.interpolation] with [value].
   AreaChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);
@@ -499,6 +521,13 @@ extension BarChartSeriesFluent on BarChartSeries {
 
   /// Clears [BarChartSeries.unit] to `null`.
   BarChartSeries clearUnit() => copyWith(clearUnit: true);
+
+  /// Replaces [BarChartSeries.showInLegend] with [value].
+  BarChartSeries withShowInLegend(bool value) => copyWith(showInLegend: value);
+
+  /// Replaces [BarChartSeries.showTrackingAxisLabel] with [value].
+  BarChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
 
   /// Replaces [BarChartSeries.barGap] with [value].
   BarChartSeries withBarGap(double value) => copyWith(barGap: value);

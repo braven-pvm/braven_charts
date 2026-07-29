@@ -51,6 +51,14 @@ extension RangeAreaChartSeriesFluent on RangeAreaChartSeries {
   /// Clears [RangeAreaChartSeries.unit] to `null`.
   RangeAreaChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [RangeAreaChartSeries.showInLegend] with [value].
+  RangeAreaChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [RangeAreaChartSeries.showTrackingAxisLabel] with [value].
+  RangeAreaChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [RangeAreaChartSeries.interpolation] with [value].
   RangeAreaChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);

@@ -38,6 +38,13 @@ extension PieChartSeriesFluent on PieChartSeries {
   /// Clears [PieChartSeries.unit] to `null`.
   PieChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [PieChartSeries.showInLegend] with [value].
+  PieChartSeries withShowInLegend(bool value) => copyWith(showInLegend: value);
+
+  /// Replaces [PieChartSeries.showTrackingAxisLabel] with [value].
+  PieChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [PieChartSeries.pieStyle] with [value].
   PieChartSeries withPieStyle(PieChartStyle value) => copyWith(pieStyle: value);
 

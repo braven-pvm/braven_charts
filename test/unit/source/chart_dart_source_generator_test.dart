@@ -2172,6 +2172,24 @@ void main() {
   });
 
   group('Series-emitter drift-gap fixes (Convergence slice 3e)', () {
+    test('emits non-default series presentation visibility', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            RangeAreaChartSeries(
+              id: 'forecast',
+              points: [RangeAreaDataPoint(x: 0, low: 10, high: 20)],
+              showInLegend: false,
+              showTrackingAxisLabel: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('showInLegend: false,'));
+      expect(generated.source, contains('showTrackingAxisLabel: false,'));
+    });
+
     // The line/area SERIES emitters dropped fields that only
     // _emitRangeAreaOptions emitted. Each was round-tripped by the codec, so
     // the source generator silently lost it. Non-default values force emission.

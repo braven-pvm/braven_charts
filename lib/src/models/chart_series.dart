@@ -70,6 +70,8 @@ class ChartSeries {
     this.yAxisId,
     this.yAxisConfig,
     this.unit,
+    this.showInLegend = true,
+    this.showTrackingAxisLabel = true,
   });
 
   final String id;
@@ -139,6 +141,17 @@ class ChartSeries {
   /// ```
   final String? unit;
 
+  /// Whether automatic legends include this series.
+  ///
+  /// Manual [LegendAnnotation] instances remain fully host-controlled.
+  final bool showInLegend;
+
+  /// Whether tracking mode may expose this series' value on its Y-axis.
+  ///
+  /// This does not remove the series from tracking tooltips or point
+  /// selection. It only controls series-specific axis value labels.
+  final bool showTrackingAxisLabel;
+
   int get length => points.length;
   bool get isEmpty => points.isEmpty;
   bool get isNotEmpty => points.isNotEmpty;
@@ -160,6 +173,8 @@ class ChartSeries {
     String? yAxisId,
     YAxisConfig? yAxisConfig,
     String? unit,
+    bool? showInLegend,
+    bool? showTrackingAxisLabel,
   }) {
     return ChartSeries(
       id: id ?? this.id,
@@ -173,6 +188,9 @@ class ChartSeries {
       yAxisId: yAxisId ?? this.yAxisId,
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
+      showInLegend: showInLegend ?? this.showInLegend,
+      showTrackingAxisLabel:
+          showTrackingAxisLabel ?? this.showTrackingAxisLabel,
     );
   }
 
@@ -190,7 +208,9 @@ class ChartSeries {
         _listEquals(other.annotations, annotations) &&
         other.yAxisId == yAxisId &&
         other.yAxisConfig == yAxisConfig &&
-        other.unit == unit;
+        other.unit == unit &&
+        other.showInLegend == showInLegend &&
+        other.showTrackingAxisLabel == showTrackingAxisLabel;
   }
 
   @override
@@ -206,6 +226,8 @@ class ChartSeries {
     yAxisId,
     yAxisConfig,
     unit,
+    showInLegend,
+    showTrackingAxisLabel,
   );
 
   /// Helper for list equality comparison.
@@ -254,6 +276,8 @@ class ChartSeries {
       if (color != null) 'color': color!.toARGB32(),
       if (style != null) 'style': style!.name,
       'isXOrdered': isXOrdered,
+      if (!showInLegend) 'showInLegend': false,
+      if (!showTrackingAxisLabel) 'showTrackingAxisLabel': false,
       if (metadata != null) 'metadata': metadata,
       if (yAxisId != null) 'yAxisId': yAxisId,
       if (yAxisConfig != null)
@@ -307,6 +331,8 @@ class ChartSeries {
       yAxisConfig: yAxisConfig,
       unit: json['unit'] as String?,
       isXOrdered: json['isXOrdered'] as bool? ?? false,
+      showInLegend: json['showInLegend'] as bool? ?? true,
+      showTrackingAxisLabel: json['showTrackingAxisLabel'] as bool? ?? true,
     );
   }
 }
@@ -331,6 +357,8 @@ class LineChartSeries extends ChartSeries {
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
+    super.showInLegend,
+    super.showTrackingAxisLabel,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.25,
@@ -387,6 +415,8 @@ class LineChartSeries extends ChartSeries {
     bool clearYAxisConfig = false,
     String? unit,
     bool clearUnit = false,
+    bool? showInLegend,
+    bool? showTrackingAxisLabel,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -414,6 +444,9 @@ class LineChartSeries extends ChartSeries {
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
       yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
+      showInLegend: showInLegend ?? this.showInLegend,
+      showTrackingAxisLabel:
+          showTrackingAxisLabel ?? this.showTrackingAxisLabel,
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -494,6 +527,8 @@ class ScatterChartSeries extends ChartSeries {
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
+    super.showInLegend,
+    super.showTrackingAxisLabel,
     this.markerRadius = 5.0,
     this.markerShape = SeriesMarkerShape.circle,
     this.markerStyle,
@@ -545,6 +580,8 @@ class ScatterChartSeries extends ChartSeries {
     bool clearYAxisConfig = false,
     String? unit,
     bool clearUnit = false,
+    bool? showInLegend,
+    bool? showTrackingAxisLabel,
     double? markerRadius,
     SeriesMarkerShape? markerShape,
     ScatterMarkerStyle? markerStyle,
@@ -578,6 +615,9 @@ class ScatterChartSeries extends ChartSeries {
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
       yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
+      showInLegend: showInLegend ?? this.showInLegend,
+      showTrackingAxisLabel:
+          showTrackingAxisLabel ?? this.showTrackingAxisLabel,
       markerRadius: markerRadius ?? this.markerRadius,
       markerShape: markerShape ?? this.markerShape,
       markerStyle: clearMarkerStyle ? null : (markerStyle ?? this.markerStyle),
@@ -722,6 +762,8 @@ class AreaChartSeries extends ChartSeries {
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
+    super.showInLegend,
+    super.showTrackingAxisLabel,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.25,
@@ -792,6 +834,8 @@ class AreaChartSeries extends ChartSeries {
     bool clearYAxisConfig = false,
     String? unit,
     bool clearUnit = false,
+    bool? showInLegend,
+    bool? showTrackingAxisLabel,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -828,6 +872,9 @@ class AreaChartSeries extends ChartSeries {
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
       yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
+      showInLegend: showInLegend ?? this.showInLegend,
+      showTrackingAxisLabel:
+          showTrackingAxisLabel ?? this.showTrackingAxisLabel,
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -948,6 +995,8 @@ class BarChartSeries extends ChartSeries {
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
+    super.showInLegend,
+    super.showTrackingAxisLabel,
     this.barWidthPercent,
     this.barWidthPixels,
     this.minWidth = 4.0,
@@ -1345,6 +1394,8 @@ class BarChartSeries extends ChartSeries {
     bool clearYAxisConfig = false,
     String? unit,
     bool clearUnit = false,
+    bool? showInLegend,
+    bool? showTrackingAxisLabel,
     double? barWidthPercent,
     double? barWidthPixels,
     double? minWidth,
@@ -1393,6 +1444,9 @@ class BarChartSeries extends ChartSeries {
       yAxisId: clearYAxisId ? null : (yAxisId ?? this.yAxisId),
       yAxisConfig: clearYAxisConfig ? null : (yAxisConfig ?? this.yAxisConfig),
       unit: clearUnit ? null : (unit ?? this.unit),
+      showInLegend: showInLegend ?? this.showInLegend,
+      showTrackingAxisLabel:
+          showTrackingAxisLabel ?? this.showTrackingAxisLabel,
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       minWidth: minWidth ?? this.minWidth,

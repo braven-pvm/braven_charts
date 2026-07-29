@@ -174,6 +174,14 @@ extension RadialBarChartSeriesFluent on RadialBarChartSeries {
   /// Clears [RadialBarChartSeries.unit] to `null`.
   RadialBarChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [RadialBarChartSeries.showInLegend] with [value].
+  RadialBarChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [RadialBarChartSeries.showTrackingAxisLabel] with [value].
+  RadialBarChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [RadialBarChartSeries.minimum] with [value].
   RadialBarChartSeries withMinimum(double value) => copyWith(minimum: value);
 

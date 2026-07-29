@@ -232,6 +232,14 @@ extension GaugeChartSeriesFluent on GaugeChartSeries {
   /// Clears [GaugeChartSeries.unit] to `null`.
   GaugeChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [GaugeChartSeries.showInLegend] with [value].
+  GaugeChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [GaugeChartSeries.showTrackingAxisLabel] with [value].
+  GaugeChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [GaugeChartSeries.indicatorStyle] with [value].
   GaugeChartSeries withIndicatorStyle(GaugeIndicatorStyle value) =>
       copyWith(indicatorStyle: value);
