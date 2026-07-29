@@ -3,7 +3,7 @@
 **Date:** 2026-07-28  
 **Register:** `BC-0037`  
 **Branch:** `feature/BC-0037-heatmaps`  
-**Status:** Slices 0–4 complete locally; Slices 5–6 in progress  
+**Status:** Phase 1 Slices 0–6 complete locally; maintainer review pending
 **Design:** `docs/superpowers/specs/2026-07-28-heatmap-chart-family-design.md`
 
 ## Product outcome
@@ -32,8 +32,8 @@ first-class through the complete Braven Charts vertical contract.
 | 2 | Geometry, bounds, culling, hit index, and renderer | Complete locally |
 | 3 | Interaction, accessibility, labels, legend, and motion | Complete locally |
 | 4 | Artifacts, Data/CSV, Source, grammar, and Workbench | Complete locally |
-| 5 | Complete showcase, Gallery, mobile, docs, and examples | In progress |
-| 6 | Performance, regression hardening, and release readiness | In progress |
+| 5 | Complete showcase, Gallery, mobile, docs, and examples | Complete locally |
+| 6 | Performance, regression hardening, and release readiness | Complete locally; review pending |
 
 ## Slice 0 — Architecture and scope
 
@@ -215,7 +215,7 @@ evidence remains in Slice 6
 
 ## Slice 5 — Showcase breadth
 
-**Status:** In progress
+**Status:** Complete locally
 
 ### Required examples
 
@@ -243,7 +243,7 @@ evidence remains in Slice 6
 - Gallery cards;
 - README/pub.dev native captures when release-ready.
 
-### Current local checkpoint
+### Delivered local checkpoint
 
 - The desktop Heatmap guide offers activity, day/hour temperature,
   service-health threshold, calendar/month, diverging correlation, and dense
@@ -252,13 +252,16 @@ evidence remains in Slice 6
   midpoint, missing-cell colour, labels, gap, radius, and legend controls.
 - Calendar Source emits explicit missing cells and preset changes refresh
   Source without stale-state warnings.
-- Compact/mobile examples, Chart Types catalogue, Gallery cards, public docs,
-  and release captures remain open.
+- Four purpose-shaped compact/mobile examples cover sequential, diverging,
+  threshold, and missing-cell stories.
+- Heatmap participates in the Chart Types catalogue, Gallery, central route
+  resolver, hosted guide catalogue, README, API reference, and feature matrix.
+- Native chart captures cover the chart-type strip, calendar composition, and
+  paired Heatmap family examples without browser chrome.
 
 ## Slice 6 — Hardening and release
 
-**Status:** Performance checkpoint complete locally; broad hardening and
-release work remain
+**Status:** Complete locally; maintainer review and CI remain
 
 ### Performance
 
@@ -302,10 +305,34 @@ release work remain
 - pub.dev dry run;
 - explicit visual and interaction approval before PR/release promotion.
 
+### Final local Phase 1 evidence
+
+- The complete Heatmap-related package matrix passes 467 tests with 9 expected
+  skips, including model, scale, geometry, rendering, interaction,
+  accessibility, animation, artifacts, tables, Source, grammar, fluent,
+  Workbench, goldens, and public completeness gates.
+- The standalone showcase passes all 485 tests; package and example analysis
+  are clean; the 148-file changed-format gate and public-documentation catalog
+  check pass.
+- The permanent Heatmap benchmark passes in isolation: 1,000 labelled cells
+  at 1.711 ms p95, 10,000 dense cells at 11.700 ms p95, a 250,000-cell source
+  culled to 1,134 visible cells at 3.548 ms p95, cached hits at 0.010 ms p95,
+  and hover overlays at 0.007 ms p95.
+- A broad 4,243-test package run completed 4,233 passes and 9 expected skips;
+  the only failure was the same 10,000-cell benchmark at 18.518 ms while
+  competing with the full benchmark suite. Its immediate isolated rerun passed
+  at 11.700 ms p95, so the contention-sensitive aggregate result remains
+  recorded rather than weakening the frame budget.
+- `flutter build web --release` succeeds and the direct Heatmap route is served
+  from that build. `dart pub publish --dry-run` reports zero warnings.
+- `dart doc` fails inside dartdoc 9.0.4
+  `DocumentationComment._stripDocImports`; an untouched `origin/master`
+  baseline fails with the identical range and stack, proving this is not a
+  Heatmap regression.
+
 ## Phase 2 backlog
 
-Phase 2 remains attached to BC-0037 until implementation planning determines
-whether any item needs its own register entry:
+Phase 2 is tracked separately by `BC-0043`:
 
 - 2D histogram aggregation transforms;
 - KDE/raster density and contours;
@@ -321,6 +348,5 @@ geographic Heatmap.
 
 ## Immediate next action
 
-Complete accessibility and motion hardening, public documentation and native
-captures, then run the broad package/showcase/release-readiness matrix before
-PR promotion.
+Complete maintainer review against the release build, then promote the two
+local Phase 1 commits through a PR when requested.
