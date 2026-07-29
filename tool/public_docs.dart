@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dart_style/dart_style.dart';
+
 import 'public_docs_support.dart';
 
 const _catalogPath = 'doc/public_catalog.json';
@@ -1026,7 +1028,9 @@ String _generateDartCatalog(Directory root, Map<String, dynamic> catalog) {
       ..writeln('  ),');
   }
   buffer.writeln('];');
-  return buffer.toString();
+  return DartFormatter(
+    languageVersion: DartFormatter.latestLanguageVersion,
+  ).format(buffer.toString());
 }
 
 String _dartExample(Object? value) {
