@@ -7,8 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.16.0 - 2026-07-29
+
 ### Added
 
+- Per-series `showInLegend` and `showTrackingAxisLabel` controls. Authors can
+  independently omit a rendered series from automatic legends or suppress its
+  tracking-axis value labels without removing it from tracking snapshots,
+  tooltips, selection, or the chart. Both flags default to `true` and
+  round-trip through every concrete family, `copyWith`, JSON, artifacts,
+  generated Dart source, fluent APIs, and AI surface definitions.
+- Gauge scale and instrument styling with independent major/minor ticks,
+  inside/centered/outside tick placement, inside/outside scale labels,
+  segmented zone gaps, corners and borders, plus tapered needle and pivot
+  controls.
+- Persistent resize handles on standard showcase chart panels, including
+  pointer, keyboard, reset, focus, and semantics support. Desktop and compact
+  heights are stored separately in browser local storage.
 - A per-slice colour channel on the radial marks: `PieMark.sliceColor` and
   `DonutMark.sliceColor`, with `sliceColor:` on `BravenChart.geomPie()` and
   `geomDonut()`, mirroring `PolarMark.columnColor`. A null return leaves that
@@ -34,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Gauge center values remain readable in constrained and large-text layouts,
+  accessibility pane reservation stays stable as live values change, and
+  active needle and solid indicators receive a high-contrast outline.
 - Generated Dart source that sets a non-default tooltip trigger mode now
   compiles. Both the Config and the Grammar form open with
   `import 'package:braven_charts/braven_charts.dart';` and

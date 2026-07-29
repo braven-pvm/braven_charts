@@ -2,7 +2,7 @@ name: braven_charts
 description: >-
   Native Flutter charts with twelve families, typed grammar, interaction,
   live data, generated source, and portable artifacts.
-version: 0.15.0
+version: 0.16.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -80,6 +80,7 @@ dev_dependencies:
   mockito: ^5.6.4
   markdown: ^7.3.1
   html: ^0.15.6
+  dart_style: ^3.1.8
   build_runner: ^2.4.5
   source_gen: ^4.0.0
   surface_gen:
