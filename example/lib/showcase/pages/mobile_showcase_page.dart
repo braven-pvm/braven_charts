@@ -510,6 +510,33 @@ class _MobileChartBackdropPainter extends CustomPainter {
       return;
     }
 
+    if (chartType.isHeatmap) {
+      const values = <List<double>>[
+        [0.20, 0.34, 0.46, 0.62, 0.78, 0.91],
+        [0.14, 0.28, 0.52, 0.74, 0.88, 0.68],
+        [0.10, 0.24, 0.41, 0.66, 0.82, 0.73],
+        [0.18, 0.31, 0.48, 0.58, 0.76, 0.86],
+      ];
+      final cellWidth = size.width / values.first.length;
+      final cellHeight = size.height / values.length;
+      for (var row = 0; row < values.length; row++) {
+        for (var column = 0; column < values[row].length; column++) {
+          final value = values[row][column];
+          final rect = Rect.fromLTWH(
+            column * cellWidth + 1.5,
+            row * cellHeight + 1.5,
+            cellWidth - 3,
+            cellHeight - 3,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+            fill..color = color.withValues(alpha: 0.12 + value * 0.74),
+          );
+        }
+      }
+      return;
+    }
+
     switch (chartType.type) {
       case ChartType.line:
         canvas.drawPath(
@@ -650,6 +677,8 @@ class _MobileChartBackdropPainter extends CustomPainter {
           }
           start += sweep;
         }
+        break;
+      case null:
         break;
     }
   }
@@ -2100,6 +2129,24 @@ const _mobileExampleCopy = <String, List<(String, String)>>{
       'Dense ticks, threshold, status text, and units remain phone-readable.',
     ),
   ],
+  'heatmap-charts': [
+    (
+      'Weekly activity',
+      'Day and time reveal the strongest recurring engagement windows.',
+    ),
+    (
+      'Temperature rhythm',
+      'A diverging scale separates cool and warm periods around comfort.',
+    ),
+    (
+      'Service health',
+      'Named operational bands make degraded cells immediately visible.',
+    ),
+    (
+      'Metric correlation',
+      'A compact symmetric matrix exposes positive and negative relationships.',
+    ),
+  ],
 };
 
 List<_MobileChartExample> _mobileExamples(
@@ -2151,6 +2198,7 @@ List<_MobileChartExample> _mobileExamples(
           ('bar-charts', 3) => 310,
           ('scatter-charts', 3) => 310,
           ('candlestick-charts', 3) => 330,
+          ('heatmap-charts', _) => 300,
           ('pie-charts', 1) => 330,
           ('concentric-donut', _) => 310,
           ('polar-column', _) => 310,
@@ -2241,6 +2289,24 @@ XAxisConfig? _mobileXAxis(String slug, int index) => switch (slug) {
     tickCount: 5,
     showMinorTicks: false,
   ),
+  'heatmap-charts' => XAxisConfig(
+    label: switch (index) {
+      0 => 'Time',
+      1 => 'Hour',
+      2 => 'Check',
+      _ => 'Metric',
+    },
+    categoryAxis: CategoryAxisConfig(
+      categories: switch (index) {
+        0 => const ['06', '09', '12', '15', '18', '21', '24'],
+        1 => const ['00', '03', '06', '09', '12', '15', '18', '21'],
+        2 => const ['Login', 'Search', 'Pay', 'Sync', 'API', 'Jobs'],
+        _ => const ['Load', 'Use', 'Time', 'NPS', 'Errors', 'Cost'],
+      },
+      minimumCategoryExtent: 34,
+      maximumLabelExtent: 48,
+    ),
+  ),
   _ => null,
 };
 
@@ -2272,6 +2338,25 @@ YAxisConfig? _mobileYAxis(String slug, int index) => switch (slug) {
     max: 100,
     tickCount: 4,
     maxWidth: 48,
+  ),
+  'heatmap-charts' => YAxisConfig(
+    position: YAxisPosition.left,
+    label: switch (index) {
+      0 => 'Day',
+      1 => 'Day',
+      2 => 'Service',
+      _ => 'Metric',
+    },
+    maxWidth: 62,
+    categoryAxis: CategoryAxisConfig(
+      categories: switch (index) {
+        0 || 1 => const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        2 => const ['Web', 'API', 'Jobs', 'Store'],
+        _ => const ['Load', 'Use', 'Time', 'NPS', 'Errors', 'Cost'],
+      },
+      minimumCategoryExtent: 32,
+      maximumLabelExtent: 54,
+    ),
   ),
   _ => null,
 };
@@ -2359,6 +2444,18 @@ List<String> _mobileBadges(String slug, int index) => switch ((slug, index)) {
     'Close average',
     'Staggered motion',
   ],
+  ('heatmap-charts', 0) => const ['Sequential', 'Categories', 'Cell values'],
+  ('heatmap-charts', 1) => const [
+    'Diverging',
+    'Comfort midpoint',
+    'Time matrix',
+  ],
+  ('heatmap-charts', 2) => const [
+    'Threshold bands',
+    'Missing cells',
+    'Status labels',
+  ],
+  ('heatmap-charts', 3) => const ['Correlation', 'Diverging', 'Symmetric'],
   ('pie-charts', 3) => const ['7 sources', 'Grouped Other', 'Outside labels'],
   ('donut-charts', 3) => const [
     'Outside callouts',
@@ -2883,14 +2980,137 @@ List<ChartSeries> _mobileSeries(
   ],
   'radial-bar' => [_mobileRadialBarSeries(0, presentation)],
   'gauge-charts' => [_mobileGaugeSeries(0, presentation)],
+  'heatmap-charts' => [_mobileHeatmapSeries(0, presentation)],
   _ => const <ChartSeries>[],
 };
+
+HeatmapChartSeries _mobileHeatmapSeries(
+  int variant,
+  _MobileStylePresentation presentation,
+) {
+  final values = switch (variant) {
+    0 => const <List<double?>>[
+      [18, 27, 42, 61, 78, 66, 31],
+      [14, 23, 36, 55, 83, 72, 28],
+      [11, 19, 31, 48, 69, 63, 25],
+      [16, 25, 39, 58, 76, 70, 34],
+      [21, 32, 47, 67, 88, 79, 40],
+    ],
+    1 => const <List<double?>>[
+      [14, 13, 12, 16, 22, 25, 21, 17],
+      [15, 14, 13, 17, 24, 27, 23, 18],
+      [13, 12, 11, 16, 23, 26, 22, 16],
+      [16, 15, 14, 18, 25, 29, 24, 19],
+      [17, 16, 15, 20, 27, 30, 26, 21],
+    ],
+    2 => const <List<double?>>[
+      [99.9, 99.8, 98.9, 99.7, 99.9, 99.6],
+      [99.7, 98.4, 97.8, 99.2, 99.8, 99.4],
+      [99.8, 99.6, null, 98.8, 99.7, 99.5],
+      [99.9, 99.9, 99.6, 99.8, 98.6, 99.7],
+    ],
+    _ => const <List<double?>>[
+      [1, 0.82, 0.44, -0.28, -0.61, 0.18],
+      [0.82, 1, 0.56, -0.12, -0.48, 0.34],
+      [0.44, 0.56, 1, 0.26, -0.22, 0.71],
+      [-0.28, -0.12, 0.26, 1, 0.63, 0.39],
+      [-0.61, -0.48, -0.22, 0.63, 1, 0.11],
+      [0.18, 0.34, 0.71, 0.39, 0.11, 1],
+    ],
+  };
+  final scale = switch (variant) {
+    0 => HeatmapColorScale.sequential(
+      colors: [
+        presentation.surface,
+        presentation.palette[1].withValues(alpha: 0.48),
+        presentation.palette[0],
+        presentation.palette[3],
+      ],
+      minimumValue: 0,
+      maximumValue: 100,
+      missingColor: presentation.border.withValues(alpha: 0.45),
+      label: 'Activity',
+      unit: '%',
+      showLegend: false,
+    ),
+    1 => HeatmapColorScale.diverging(
+      lowColor: presentation.palette[1],
+      midpointColor: presentation.surface,
+      highColor: presentation.palette[2],
+      midpoint: 20,
+      minimumValue: 10,
+      maximumValue: 30,
+      missingColor: presentation.border.withValues(alpha: 0.45),
+      label: 'Temperature',
+      unit: '°C',
+      showLegend: false,
+    ),
+    2 => HeatmapColorScale.threshold(
+      thresholds: const [98, 99.5],
+      colors: [
+        presentation.palette[2],
+        presentation.palette[3],
+        presentation.palette[4],
+      ],
+      bandLabels: const ['Degraded', 'Watch', 'Healthy'],
+      missingColor: presentation.border.withValues(alpha: 0.45),
+      label: 'Availability',
+      unit: '%',
+      showLegend: false,
+    ),
+    _ => HeatmapColorScale.diverging(
+      lowColor: presentation.palette[2],
+      midpointColor: presentation.surface,
+      highColor: presentation.palette[0],
+      midpoint: 0,
+      minimumValue: -1,
+      maximumValue: 1,
+      missingColor: presentation.border.withValues(alpha: 0.45),
+      label: 'Correlation',
+      showLegend: false,
+    ),
+  };
+  return HeatmapChartSeries(
+    id: 'mobile-heatmap-$variant',
+    name: switch (variant) {
+      0 => 'Activity',
+      1 => 'Temperature',
+      2 => 'Availability',
+      _ => 'Correlation',
+    },
+    points: [
+      for (var row = 0; row < values.length; row++)
+        for (var column = 0; column < values[row].length; column++)
+          if (values[row][column] == null)
+            HeatmapDataPoint.missing(
+              x: column.toDouble(),
+              y: row.toDouble(),
+              pointKey: 'mobile-heatmap-$variant-$row-$column',
+            )
+          else
+            HeatmapDataPoint(
+              x: column.toDouble(),
+              y: row.toDouble(),
+              value: values[row][column]!,
+              pointKey: 'mobile-heatmap-$variant-$row-$column',
+            ),
+    ],
+    colorScale: scale,
+    showCellLabels: variant != 1,
+    cellLabelFontSize: variant == 3 ? 8.5 : 9,
+    gapFraction: variant == 3 ? 0.08 : 0.10,
+    cornerRadius: variant == 2 ? 4 : 2,
+    borderColor: presentation.border.withValues(alpha: 0.7),
+    borderWidth: 0.6,
+  );
+}
 
 List<ChartSeries> _mobileVariantSeries(
   String slug,
   int variant,
   _MobileStylePresentation presentation,
 ) => switch (slug) {
+  'heatmap-charts' => [_mobileHeatmapSeries(variant, presentation)],
   'line-charts' => [
     if (variant == 1) ...[
       _mobileLine(

@@ -23,6 +23,7 @@ import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
 import '../../models/braven_chart_controller.dart'
     show ChartSelectionBrushState;
+import '../../models/heatmap_chart_series.dart';
 import '../../models/interaction_config.dart';
 import '../../models/radial_bar_chart_series.dart';
 import '../../models/range_area_chart_series.dart';
@@ -2889,7 +2890,8 @@ class EventHandlerManager {
     for (final element in _delegate.elements.whereType<SeriesElement>()) {
       if (element.id == marker.seriesId) {
         return element.series is! BarChartSeries &&
-            element.series is! RangeAreaChartSeries;
+            element.series is! RangeAreaChartSeries &&
+            element.series is! HeatmapChartSeries;
       }
     }
     return false;

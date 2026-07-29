@@ -188,6 +188,7 @@ const Map<String, List<String>> _seriesEmitMethods = <String, List<String>>{
   'LineChartSeries': <String>['_emitLineOptions'],
   'AreaChartSeries': <String>['_emitAreaOptions', '_emitLineLikeAreaOptions'],
   'RangeAreaChartSeries': <String>['_emitRangeAreaOptions'],
+  'HeatmapChartSeries': <String>['emitHeatmapOptions'],
   'CandlestickChartSeries': <String>['_emitCandlestickOptions'],
   'BarChartSeries': <String>['_emitBarOptions'],
   'PieChartSeries': <String>['_emitPieOptions', '_emitAdvancedRadial'],
@@ -665,12 +666,14 @@ void main() {
       final className = entry.key;
       if (_classAwareResidualClasses.containsKey(className)) continue;
       final names = attributed.mentions[className];
-      if (names == null)
+      if (names == null) {
         continue; // no in-scope block: the flat-union gate owns it.
+      }
       for (final property in entry.value) {
         if (names.contains(property)) continue;
-        if (_classAwareExpectedGaps.containsKey('$className.$property'))
+        if (_classAwareExpectedGaps.containsKey('$className.$property')) {
           continue;
+        }
         gaps.add('$className.$property');
       }
     }

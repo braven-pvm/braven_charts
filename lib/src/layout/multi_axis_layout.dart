@@ -68,8 +68,16 @@ class MultiAxisLayoutDelegate {
       if (bounds != null) {
         // Generate representative tick values (nice round numbers) for width measurement.
         // This ensures we measure what will actually be displayed, not raw bounds.
-        final representativeTicks =
-            _generateRepresentativeTicks(bounds.min, bounds.max);
+        final representativeTicks = axis.isCategorical
+            ? <double>[
+                for (
+                  var index = 0;
+                  index < axis.categoryAxis!.categories.length;
+                  index++
+                )
+                  index.toDouble(),
+              ]
+            : _generateRepresentativeTicks(bounds.min, bounds.max);
 
         double maxLabelWidth = 0.0;
         for (final tickValue in representativeTicks) {
@@ -118,10 +126,7 @@ class MultiAxisLayoutDelegate {
   ///
   /// Returns the sum of widths for axes at [YAxisPosition.leftOuter]
   /// and [YAxisPosition.left] positions. Invisible axes are excluded.
-  double getTotalLeftWidth(
-    List<YAxisConfig> axes,
-    Map<String, double> widths,
-  ) {
+  double getTotalLeftWidth(List<YAxisConfig> axes, Map<String, double> widths) {
     var total = 0.0;
 
     for (final axis in axes) {
@@ -171,6 +176,9 @@ class MultiAxisLayoutDelegate {
   /// Respects [YAxisConfig.shouldShowTickUnit] to determine if unit suffix
   /// should be included in the formatted string.
   String _formatValue(double value, YAxisConfig axis) {
+    final categoryLabel = axis.categoryLabelFor(value);
+    if (categoryLabel != null) return categoryLabel;
+
     if (axis.labelFormatter != null) {
       return axis.labelFormatter!(value);
     }
@@ -328,10 +336,7 @@ class MultiAxisLayoutDelegate {
     final textPainter = TextPainter(
       text: TextSpan(
         text: labelText,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

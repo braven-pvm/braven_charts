@@ -439,6 +439,110 @@ void main() {
       expect(first.completeness, ChartGeneratedSourceCompleteness.complete);
     });
 
+    test(
+      'generates deterministic Heatmap cells, missing values, and scale',
+      () {
+        final snapshot = _snapshot(
+          HeatmapChartSeries(
+            id: 'availability',
+            name: 'Availability',
+            unit: '%',
+            points: [
+              HeatmapDataPoint(
+                x: 0,
+                y: 0,
+                value: 99.9,
+                pointKey: 'api-morning',
+                label: 'API · morning',
+              ),
+              HeatmapDataPoint.missing(
+                x: 1,
+                y: 0,
+                pointKey: 'api-evening',
+                label: 'API · evening',
+              ),
+            ],
+            colorScale: HeatmapColorScale.threshold(
+              thresholds: const [98, 99.5],
+              colors: const [
+                Color(0xFFDC2626),
+                Color(0xFFF59E0B),
+                Color(0xFF16A34A),
+              ],
+              bandLabels: const ['Degraded', 'Watch', 'Healthy'],
+              missingColor: const Color(0xFFCBD5E1),
+              label: 'Availability',
+              unit: '%',
+            ),
+            gapFraction: 0.12,
+            borderColor: const Color(0xFF334155),
+            borderWidth: 1.5,
+            cornerRadius: 4,
+            showCellLabels: true,
+            cellLabelColor: const Color(0xFFFFFFFF),
+            cellLabelFontSize: 12,
+            animation: const HeatmapAnimationStyle(
+              entranceMode: HeatmapEntranceMode.scale,
+              entranceOrder: HeatmapEntranceOrder.radial,
+              entranceScale: 0.7,
+              staggerFraction: 0.8,
+              animateDataUpdates: false,
+              entranceTiming: PathAnimationTiming(
+                delay: Duration(milliseconds: 20),
+                duration: Duration(milliseconds: 480),
+              ),
+            ),
+          ),
+        );
+
+        final first = _success(ChartDartSourceGenerator.generate(snapshot));
+        final second = _success(ChartDartSourceGenerator.generate(snapshot));
+
+        expect(second.source, first.source);
+        expect(first.source, contains('HeatmapChartSeries('));
+        expect(first.source, contains('HeatmapDataPoint('));
+        expect(first.source, contains('value: 99.9,'));
+        expect(first.source, contains("pointKey: 'api-morning',"));
+        expect(first.source, contains('HeatmapDataPoint.missing('));
+        expect(first.source, contains("pointKey: 'api-evening',"));
+        expect(
+          first.source,
+          contains('colorScale: HeatmapColorScale.threshold('),
+        );
+        expect(first.source, contains('thresholds: [98.0, 99.5],'));
+        expect(
+          first.source,
+          contains("bandLabels: ['Degraded', 'Watch', 'Healthy'],"),
+        );
+        expect(first.source, contains('missingColor: Color(0xFFCBD5E1),'));
+        expect(first.source, contains('gapFraction: 0.12,'));
+        expect(first.source, contains('borderWidth: 1.5,'));
+        expect(first.source, contains('cornerRadius: 4.0,'));
+        expect(first.source, contains('showCellLabels: true,'));
+        expect(first.source, contains('cellLabelColor: Color(0xFFFFFFFF),'));
+        expect(first.source, contains('cellLabelFontSize: 12.0,'));
+        expect(first.source, contains('animation: HeatmapAnimationStyle('));
+        expect(
+          first.source,
+          contains('entranceMode: HeatmapEntranceMode.scale,'),
+        );
+        expect(
+          first.source,
+          contains('entranceOrder: HeatmapEntranceOrder.radial,'),
+        );
+        expect(first.source, contains('entranceScale: 0.7,'));
+        expect(first.source, contains('staggerFraction: 0.8,'));
+        expect(first.source, contains('animateDataUpdates: false,'));
+        expect(first.source, contains('delay: Duration(microseconds: 20000),'));
+        expect(
+          first.source,
+          contains('duration: Duration(microseconds: 480000),'),
+        );
+        expect(first.source, isNot(contains('isXOrdered:')));
+        expect(first.completeness, ChartGeneratedSourceCompleteness.complete);
+      },
+    );
+
     test('omits all data explicitly when the inline ceiling is exceeded', () {
       final generated = _success(
         ChartDartSourceGenerator.generate(
@@ -2261,7 +2365,13 @@ void main() {
 ChartGeneratedSource _success(
   ChartArtifactResult<ChartGeneratedSource> result,
 ) {
-  expect(result, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+  expect(
+    result,
+    isA<ChartArtifactSuccess<ChartGeneratedSource>>(),
+    reason: result is ChartArtifactFailure<ChartGeneratedSource>
+        ? '${result.error.code}: ${result.error.message}'
+        : null,
+  );
   return (result as ChartArtifactSuccess<ChartGeneratedSource>).value;
 }
 

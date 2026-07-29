@@ -2,6 +2,7 @@ import '../models/chart_series.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/donut_chart_series.dart';
 import '../models/gauge_chart_series.dart';
+import '../models/heatmap_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
@@ -45,6 +46,7 @@ class ChartLayoutResolver {
         SeriesStyle.gauge => candidate is! GaugeChartSeries,
         SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
         SeriesStyle.rangeArea => candidate is! RangeAreaChartSeries,
+        SeriesStyle.heatmap => candidate is! HeatmapChartSeries,
         _ => false,
       },
     );
@@ -66,6 +68,8 @@ class ChartLayoutResolver {
             'SeriesStyle.candlestick requires a CandlestickChartSeries',
           SeriesStyle.rangeArea =>
             'SeriesStyle.rangeArea requires a RangeAreaChartSeries',
+          SeriesStyle.heatmap =>
+            'SeriesStyle.heatmap requires a HeatmapChartSeries',
           _ => 'Series style does not match its concrete series type',
         },
       );
@@ -168,6 +172,21 @@ class ChartLayoutResolver {
         allSeries.length,
         'series',
         'Candlestick and Bar series cannot share one plot in v1',
+      );
+    }
+    final heatmapSeries = allSeries.whereType<HeatmapChartSeries>().toList();
+    if (heatmapSeries.isNotEmpty && heatmapSeries.length != allSeries.length) {
+      throw ArgumentError.value(
+        allSeries.length,
+        'series',
+        'Heatmap cannot be mixed with other Cartesian series in v1',
+      );
+    }
+    if (heatmapSeries.length > 1) {
+      throw ArgumentError.value(
+        heatmapSeries.length,
+        'series',
+        'A Heatmap chart accepts exactly one HeatmapChartSeries in v1',
       );
     }
     return radialSeries.isEmpty

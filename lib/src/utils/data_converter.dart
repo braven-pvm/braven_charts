@@ -17,6 +17,7 @@ import '../models/chart_series.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/chart_selection_expression.dart';
 import '../models/chart_theme.dart';
+import '../models/heatmap_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../rendering/bar_composition.dart';
 import '../theming/components/candlestick_theme.dart';
@@ -181,6 +182,13 @@ class DataConverter {
           if (interval.isGap) continue;
           if (interval.low! < yMin) yMin = interval.low!;
           if (interval.high! > yMax) yMax = interval.high!;
+        } else if (s is HeatmapChartSeries) {
+          final halfWidth = s.cellWidth / 2;
+          final halfHeight = s.cellHeight / 2;
+          if (point.x - halfWidth < xMin) xMin = point.x - halfWidth;
+          if (point.x + halfWidth > xMax) xMax = point.x + halfWidth;
+          if (point.y - halfHeight < yMin) yMin = point.y - halfHeight;
+          if (point.y + halfHeight > yMax) yMax = point.y + halfHeight;
         } else if (s is BarChartSeries) {
           final info = barComposition[s.id];
           final rangeStart = s.rangeStartValueFor(pointIndex);
@@ -302,6 +310,15 @@ class DataConverter {
       }
     }
 
+    final heatmapSeries = series.whereType<HeatmapChartSeries>();
+    if (heatmapSeries.isNotEmpty) {
+      // Cell extents already supply the breathing room required at the plot
+      // edge. Extra percentage padding would visually detach a matrix from
+      // its axes.
+      xPadding = 0;
+      yPadding = 0;
+    }
+
     // Linear padding (byte-identical to the original behavior). A log axis
     // overrides its own bound below with log-space padding so the domain stays
     // strictly positive; a linear axis is untouched.
@@ -338,7 +355,11 @@ class DataConverter {
   /// five percent of the log span so the domain stays strictly positive (a
   /// linear pad could push the min <= 0), flooring a non-positive/degenerate
   /// extent to a small positive value with a one-decade span.
-  static (double, double) _paddedLogBounds(double min, double max, double base) {
+  static (double, double) _paddedLogBounds(
+    double min,
+    double max,
+    double base,
+  ) {
     final safeBase = base > 1 ? base : 10.0;
     final lo = (min.isFinite && min > 0) ? min : _minimumPositiveLogFloor;
     final hi = (max.isFinite && max > lo) ? max : lo * safeBase;

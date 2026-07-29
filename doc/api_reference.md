@@ -42,7 +42,8 @@ round-trip boundaries, diagnostics, and integration guidance.
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
 - `LineChartSeries`, `AreaChartSeries`, `RangeAreaChartSeries`, `BarChartSeries`,
-  `ScatterChartSeries`, `CandlestickChartSeries`, `PieChartSeries`,
+  `ScatterChartSeries`, `CandlestickChartSeries`, `HeatmapChartSeries`,
+  `PieChartSeries`,
   `DonutChartSeries`, and `PolarColumnChartSeries` — concrete renderable
   series.
 - `ChartDataPoint`, `DataRange`, `ChartType` — core data types.
@@ -85,6 +86,37 @@ One Candlestick series can share a plot with Line, Area, and Scatter overlays.
 The family uses the common axes, annotations, navigator, interaction group,
 Workbench, data table, artifact, and generated-source contracts. See
 [Candlestick charts](candlestick_charts.md).
+
+### Heatmap charts
+
+- `HeatmapDataPoint` keeps X position, Y position, and the independently
+  measured colour value in one typed cell. `HeatmapDataPoint.missing` retains
+  an explicit matrix position without inventing a numeric value.
+- `HeatmapColorScale` provides validated sequential, diverging, and threshold
+  scales with fixed or automatic domains, palette reversal, clamping, a
+  semantic midpoint, missing-cell colour, and portable formatter descriptors.
+- `HeatmapChartSeries` controls cell dimensions, gaps, borders, corners,
+  contrast-aware labels, and `HeatmapAnimationStyle`.
+- `HeatmapColorLegend` renders the same continuous ramp or discrete threshold
+  bands used by the chart.
+
+Heatmap is a native Cartesian family and uses the ordinary numeric or
+categorical X/Y axes, annotations, zoom, pan, scrollbars, tracking, tooltip,
+selection, keyboard, and Workbench contracts. Exactly one Heatmap series is
+allowed in a V1 chart and it cannot mix with another Cartesian family.
+
+The renderer indexes the complete matrix while materializing and painting only
+the visible window. Interactive semantics are capped for dense matrices while
+the focused and selected cells remain prioritized and fully announced.
+Entrance motion supports fade or scale with row, column, radial, or
+simultaneous order; compatible value updates interpolate by stable cell
+identity and reduced motion resolves immediately.
+
+Artifacts preserve inline or columnar cells, explicit missing state,
+categorical axes, colour scale, styling, and animation. Native Data mode offers
+matrix and long projections, and generated Dart, Grammar, fluent modifiers,
+and tool configuration reconstruct the same family. See
+[Heatmap charts](heatmap_charts.md).
 
 ### Line and Area charts
 

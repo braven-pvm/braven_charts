@@ -41,6 +41,7 @@ enum SeriesStyle {
   polarColumn,
   radialBar,
   gauge,
+  heatmap,
 }
 
 /// Base class for chart series.

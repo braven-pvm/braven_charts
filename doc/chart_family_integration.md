@@ -172,3 +172,21 @@ This evidence does not create a public renderer plug-in API. It demonstrates
 that a built-in family can satisfy the existing explicit seams without making
 the Workbench family-specific.
 
+## Heatmap integration checkpoint
+
+Heatmap satisfies the complete Phase 1 built-in family contract:
+
+| Contract seam | Heatmap evidence |
+| --- | --- |
+| Public model | `HeatmapDataPoint`, explicit missing cells, stable cell identity, sequential/diverging/threshold colour scales, categorical axes, and `HeatmapChartSeries` are exported from the package entrypoint. |
+| Rendering and interaction | The retained Cartesian element owns viewport-bounded cell geometry, indexed hit lookup, labels, selection, focus, semantics, zoom, pan, and categorical or numeric coordinates. |
+| Portable document | Inline and columnar documents preserve cell identity, measured values, explicit missing state, colour scale, cell appearance, and categorical X/Y metadata through extraction and hydration. |
+| Native data | The default matrix projection preserves the visual row/column model; the long projection exposes X, Y, measured value, identity, and missing state. Both distinguish zero, explicit missing cells, and absent matrix positions. |
+| Generated Dart | Direct Dart emits typed Heatmap cells, missing cells, all three colour-scale forms, geometry, borders, labels, and categorical axes; representative generated source formats, parses, and analyzes. |
+| Workbench and showcase | The dedicated Heatmap route uses the supplied mounted controller and supports Chart, Data, Split, and Source. Preset changes revise the effective document and regenerate Source without stale state. |
+| Regression and readiness | Focused model, scale, geometry, interaction, accessibility, animation, artifact, table, source-generation, source-compilation, benchmark, golden, compact, and desktop tests run alongside package/showcase analysis, the changed-file formatter gate, and a release web build. |
+
+Phase 2 analysis transforms and very-large-data transport remain intentionally
+separate from this family contract. Heatmap is not a public renderer plug-in
+seam and cannot mix with other Cartesian series in V1.
+

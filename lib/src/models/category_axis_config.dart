@@ -21,10 +21,10 @@ enum CategoryLabelOverflow {
   ellipsis,
 }
 
-/// First-class category metadata for a Cartesian X axis.
+/// First-class category metadata for a Cartesian axis.
 ///
 /// Category identity remains stable and serializable while chart geometry keeps
-/// using numeric X coordinates. Category at index `i` maps to data X value `i`.
+/// using numeric coordinates. Category at index `i` maps to data value `i`.
 /// This lets existing zoom, pan, selection, annotations, and table linking keep
 /// one coordinate contract without requiring hosts to write label formatters.
 @chartSurface
@@ -43,7 +43,7 @@ class CategoryAxisConfig {
        assert(maxLabelLines > 0),
        assert(labelRotationDegrees >= -90 && labelRotationDegrees <= 90);
 
-  /// Labels in the same stable order as integer data X values.
+  /// Labels in the same stable order as integer axis values.
   final List<String> categories;
 
   /// Label-density policy used independently for every visible viewport.
@@ -90,6 +90,32 @@ class CategoryAxisConfig {
       return null;
     }
     return categories[index];
+  }
+
+  /// Validates category identity and ordering for a live axis.
+  ///
+  /// An empty list is valid and means the axis remains numeric. Once categories
+  /// are present, every label must be non-empty and unique so integer
+  /// coordinates resolve to one durable semantic identity.
+  void validate({String parameterName = 'categoryAxis'}) {
+    final identities = <String>{};
+    for (var index = 0; index < categories.length; index++) {
+      final category = categories[index];
+      if (category.trim().isEmpty) {
+        throw ArgumentError.value(
+          category,
+          '$parameterName.categories[$index]',
+          'must not be empty or whitespace',
+        );
+      }
+      if (!identities.add(category)) {
+        throw ArgumentError.value(
+          category,
+          '$parameterName.categories[$index]',
+          'duplicates an earlier category',
+        );
+      }
+    }
   }
 
   CategoryAxisConfig copyWith({

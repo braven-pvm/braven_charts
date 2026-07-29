@@ -49,6 +49,7 @@ import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/grid_config.dart';
+import '../models/heatmap_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/range_area_chart_series.dart';
@@ -1371,9 +1372,16 @@ class ChartRenderBox extends RenderBox {
         ? coordinator.hoveredElement!.id
         : null;
 
+    final retainHeatmapBasePicture = _hasSameHeatmapBasePicture(
+      _elements,
+      elements,
+    );
+
     // Replace elements
     _elements = elements;
-    _seriesCacheManager.invalidate(); // Invalidate cache - data changed
+    if (!retainHeatmapBasePicture) {
+      _seriesCacheManager.invalidate(); // Invalidate cache - data changed
+    }
     _restoreHoveredSeriesElement(hoveredSeriesId);
 
     // Restore selection state on new elements that match by ID
@@ -1431,7 +1439,6 @@ class ChartRenderBox extends RenderBox {
       // We must sync the new axis to the current zoomed viewport so tick labels
       // reflect the zoomed range, not the full range.
       _xAxis!.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
-      _seriesCacheManager.invalidate();
       markNeedsLayout();
       return;
     }
@@ -1501,7 +1508,6 @@ class ChartRenderBox extends RenderBox {
 
       if (_transform != null && _yAxis != null) {
         _yAxis!.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-        _seriesCacheManager.invalidate();
       }
 
       markNeedsLayout();
@@ -1519,7 +1525,6 @@ class ChartRenderBox extends RenderBox {
       // tracking which may skip the update if values haven't changed (but we have
       // a NEW axis object that needs its ticks regenerated for the zoomed range).
       _yAxis!.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-      _seriesCacheManager.invalidate();
       markNeedsLayout();
       return;
     }
@@ -1785,6 +1790,36 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
+  bool _hasSameHeatmapBasePicture(
+    List<ChartElement> previous,
+    List<ChartElement> next,
+  ) {
+    final previousSeries = previous.whereType<DataSeriesElement>().toList();
+    final nextSeries = next.whereType<DataSeriesElement>().toList();
+    if (previousSeries.isEmpty ||
+        previousSeries.length != nextSeries.length ||
+        previousSeries.any(
+          (element) =>
+              element is! SeriesElement ||
+              element.heatmapBasePaintCacheKey == null,
+        ) ||
+        nextSeries.any(
+          (element) =>
+              element is! SeriesElement ||
+              element.heatmapBasePaintCacheKey == null,
+        )) {
+      return false;
+    }
+    for (var index = 0; index < previousSeries.length; index++) {
+      final before = previousSeries[index] as SeriesElement;
+      final after = nextSeries[index] as SeriesElement;
+      if (before.heatmapBasePaintCacheKey != after.heatmapBasePaintCacheKey) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Sets the data series for multi-axis color resolution.
   ///
   /// Delegates to [MultiAxisManager.setSeries].
@@ -2024,9 +2059,6 @@ class ChartRenderBox extends RenderBox {
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
       _rebuildElementsWithTransform();
-
-      // Invalidate cache - element generator changed (new data/theme)
-      _seriesCacheManager.invalidate();
     }
   }
 
@@ -2516,8 +2548,18 @@ class ChartRenderBox extends RenderBox {
         ? coordinator.hoveredElement!.id
         : null;
 
-    // Generate new elements using current transform
-    _elements = generator(transform);
+    // Generate new elements using current transform. Heatmap point interaction
+    // state lives in a live overlay, so selection/focus rebuilds can retain the
+    // stable cell picture when its semantic base-paint key is unchanged.
+    final nextElements = generator(transform);
+    final retainHeatmapBasePicture = _hasSameHeatmapBasePicture(
+      _elements,
+      nextElements,
+    );
+    _elements = nextElements;
+    if (!retainHeatmapBasePicture) {
+      _seriesCacheManager.invalidate();
+    }
     _restoreHoveredSeriesElement(hoveredSeriesId);
 
     // Restore selection state on new elements that match by ID
@@ -4101,7 +4143,10 @@ class ChartRenderBox extends RenderBox {
         _isScatterMarker(hoveredMarker) ||
         _isScatterMarker(pressedMarker) ||
         _isRangeAreaMarker(hoveredMarker) ||
-        _isRangeAreaMarker(pressedMarker)) {
+        _isRangeAreaMarker(pressedMarker) ||
+        _isHeatmapMarker(hoveredMarker) ||
+        _isHeatmapMarker(pressedMarker) ||
+        _hasHeatmapInteractionState()) {
       return true;
     }
 
@@ -4162,6 +4207,7 @@ class ChartRenderBox extends RenderBox {
     _paintBarInteractionOverlays(canvas);
     _paintScatterInteractionOverlays(canvas);
     _paintRangeAreaInteractionOverlays(canvas);
+    _paintHeatmapInteractionOverlays(canvas);
 
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
@@ -4549,6 +4595,28 @@ class ChartRenderBox extends RenderBox {
     return false;
   }
 
+  bool _isHeatmapMarker(HoveredMarkerInfo? marker) {
+    if (marker == null) return false;
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.id == marker.seriesId) {
+        return element.series is HeatmapChartSeries;
+      }
+    }
+    return false;
+  }
+
+  bool _hasHeatmapInteractionState() {
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.series is HeatmapChartSeries &&
+          (element.focusedPointIndices.isNotEmpty ||
+              element.selectedPointIndices.isNotEmpty ||
+              element.selectionExpression.isNotEmpty)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _paintBarInteractionOverlays(Canvas canvas) {
     final hoveredMarker = coordinator.hoveredMarker;
     final pressedMarker = coordinator.pressedMarker;
@@ -4623,6 +4691,33 @@ class ChartRenderBox extends RenderBox {
           : null;
       if (hoveredPointIndex == null && pressedPointIndex == null) continue;
       element.paintRangeAreaInteractionOverlay(
+        canvas,
+        hoveredPointIndex: hoveredPointIndex,
+        pressedPointIndex: pressedPointIndex,
+      );
+    }
+    canvas.restore();
+  }
+
+  void _paintHeatmapInteractionOverlays(Canvas canvas) {
+    final hoveredMarker = coordinator.hoveredMarker;
+    final pressedMarker = coordinator.pressedMarker;
+    final hasMarker =
+        _isHeatmapMarker(hoveredMarker) || _isHeatmapMarker(pressedMarker);
+    if (!hasMarker && !_hasHeatmapInteractionState()) return;
+
+    canvas.save();
+    canvas.translate(_plotArea.left, _plotArea.top);
+    canvas.clipRect(Offset.zero & _plotArea.size);
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.series is! HeatmapChartSeries) continue;
+      final hoveredPointIndex = hoveredMarker?.seriesId == element.id
+          ? hoveredMarker!.markerIndex
+          : null;
+      final pressedPointIndex = pressedMarker?.seriesId == element.id
+          ? pressedMarker!.markerIndex
+          : null;
+      element.paintHeatmapInteractionOverlay(
         canvas,
         hoveredPointIndex: hoveredPointIndex,
         pressedPointIndex: pressedPointIndex,

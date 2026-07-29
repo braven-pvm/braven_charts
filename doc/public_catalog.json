@@ -8,7 +8,7 @@
   "features": [
     {
       "id": "chart-families",
-      "title": "Twelve chart families",
+      "title": "Thirteen chart families",
       "summary": "Build Cartesian, financial, radial, and polar charts in one native renderer.",
       "page": "chart-types"
     },
@@ -181,6 +181,29 @@
       }
     },
     {
+      "id": "heatmap",
+      "label": "Heatmap",
+      "group": "Cartesian",
+      "summary": "Measured values across a matrix",
+      "bestFor": "Activity patterns, calendars, correlation matrices, and dense measured fields",
+      "page": "heatmap-charts",
+      "guideId": "heatmap",
+      "apiSymbols": ["HeatmapChartSeries", "HeatmapDataPoint", "HeatmapColorScale"],
+      "pairAsset": "doc/screenshots/family_heatmap_pair.png",
+      "primaryExample": {
+        "title": "Heatmap chart family",
+        "alt": "Diverging Heatmap showing measured activity across a matrix",
+        "asset": "doc/screenshots/chart_type_heatmap.png",
+        "page": "heatmap-charts"
+      },
+      "secondaryExample": {
+        "title": "Calendar temperature matrix",
+        "asset": "doc/screenshots/heatmap_calendar.png",
+        "page": "heatmap-charts",
+        "preset": "calendar"
+      }
+    },
+    {
       "id": "pie",
       "label": "Pie",
       "group": "Partition radial",
@@ -340,6 +363,14 @@
       "summary": "Plot typed open-high-low-close observations with financial overlays and interaction.",
       "sourcePath": "doc/candlestick_charts.md",
       "path": "chart-families/candlestick/"
+    },
+    {
+      "id": "heatmap",
+      "title": "Heatmap charts",
+      "group": "Chart families",
+      "summary": "Encode a third measured value across categorical or numeric Cartesian matrices.",
+      "sourcePath": "doc/heatmap_charts.md",
+      "path": "chart-families/heatmap/"
     },
     {
       "id": "pie",

@@ -19,6 +19,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Range Area Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=range-area-charts)
 
+[**Open Heatmap Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=heatmap-charts)
+
 [**Open Tracking & Value Display directly →**](https://braven-pvm.github.io/braven_charts/?page=value-summary)
 
 [**Open Donut Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
@@ -47,8 +49,8 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Start with a native-rendered ten-family sampler, then compare a readable multi-axis session profile, three native Range Area compositions, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
-| Chart Types | Choose between line, area, Range Area, bar, scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
+| Gallery | Start with a native-rendered thirteen-family sampler, then compare a readable multi-axis session profile, native Range Area and Heatmap compositions, a synchronized Line/Area composition with a reusable full-domain navigator, a dense analytical composition, and production-shaped Cartesian, partition-radial, and polar examples |
+| Chart Types | Choose between line, area, Range Area, bar, scatter, Candlestick, Heatmap, Pie, Donut, Concentric Donut, Polar Column, Radial Bar, and Gauge from a concise visual overview; each family links to its own runnable guide |
 | Documentation | Start with tested direct and Grammar examples, browse six evergreen capability groups, choose a chart family, follow task-grouped guides, or open generated member-level API reference |
 | Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; use Synchronized's full-distance navigator across three independent plots; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; use Forecast's full-time-domain navigator; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
@@ -57,6 +59,7 @@ flutter build web --release --base-href /braven_charts/
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source; use Categories' snapped navigator across a dense categorical domain |
 | Scatter Charts | Compare fixed and point-styled marks, unsorted and stress datasets, interaction states, area-correct bubbles, continuous and piecewise colour scales, and opacity encodings; use Correlation's binned-distribution navigator without reordering its raw points; inspect the same values in Chart/Data/Split/Source modes |
 | Candlestick Charts | Explore typed OHLC rendering, elapsed and ordinal spacing, mixed analytical overlays, live latest-candle revision, dense-data grouping, and synchronized price/volume panes controlled by the public Cartesian navigator |
+| Heatmap Charts | Compare labelled activity, day/hour temperature, service thresholds, a calendar month with explicit missing cells, a diverging correlation matrix, and a dense sparse viewport; configure colour scales, cells, axes, legend, motion, scrolling, annotations, and Chart/Data/Split/Source views |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; inspect generated source; and capture or restore a portable artifact |
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
@@ -119,19 +122,20 @@ baseline fills, nested intervals, diverging bars, bubble encodings, financial
 overlays, and radial compositions—without carrying desktop labs or large
 datasets into a narrow viewport. A compact Vivid, Midnight, and Calm selector
 demonstrates complete chart treatments, and every example uses
-reduced-motion-aware entrance animation. The phone surface covers Line, Area,
-Range Area, Bar, Scatter, Candlestick, Pie, Donut, Concentric Donut, and Polar
-Column. Direct chart-family links select the matching phone example.
+reduced-motion-aware entrance animation. The phone surface covers every
+built-in family, including Heatmap. Direct chart-family links select the
+matching phone example.
 
 ## Screenshot routes
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
 also be captured from Line Charts, Area Charts, Bar Charts, Scatter Charts,
-Range Area Charts, Candlestick Charts, Pie Charts, Donut Charts, Concentric
-Donut, Polar Column, Chart Grammar, Tracking & Value Display, Multi-Axis, Live
-Stream, Annotations, and Loading States to show path motion, workbench
-composition, radial rendering, categorical composition, the interaction engine,
-and application states in more detail.
+Range Area Charts, Candlestick Charts, Heatmap Charts, Pie Charts, Donut
+Charts, Concentric Donut, Polar Column, Radial Bar, Gauge, Chart Grammar,
+Tracking & Value Display, Multi-Axis, Live Stream, Annotations, and Loading
+States to show motion, workbench composition, matrix and radial rendering,
+categorical composition, the interaction engine, and application states in
+more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the

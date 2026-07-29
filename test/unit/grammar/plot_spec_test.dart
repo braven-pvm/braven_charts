@@ -52,6 +52,7 @@ String geomOf(Mark<Sample> mark) => switch (mark) {
   AreaMark<Sample>() => 'area',
   BarMark<Sample>() => 'bar',
   ScatterMark<Sample>() => 'scatter',
+  HeatmapMark<Sample>() => 'heatmap',
   CandlestickMark<Sample>() => 'candlestick',
   TrendMark<Sample>() => 'trend',
   ThresholdMark<Sample>() => 'threshold',
@@ -64,6 +65,14 @@ const _line = LineMark<Sample>(x: sampleTime, y: samplePower);
 const _area = AreaMark<Sample>(x: sampleTime, y: samplePower);
 const _bar = BarMark<Sample>(x: sampleTime, y: samplePower);
 const _scatter = ScatterMark<Sample>(x: sampleTime, y: samplePower);
+final _heatmap = HeatmapMark<Sample>(
+  x: sampleTime,
+  y: sampleHeartRate,
+  value: samplePower,
+  colorScale: HeatmapColorScale.sequential(
+    colors: const [Color(0xFFDBEAFE), Color(0xFF1D4ED8)],
+  ),
+);
 const _candle = CandlestickMark<Sample>(
   x: sampleTime,
   open: sampleOpen,
@@ -171,6 +180,7 @@ void main() {
       expect(geomOf(_area), 'area');
       expect(geomOf(_bar), 'bar');
       expect(geomOf(_scatter), 'scatter');
+      expect(geomOf(_heatmap), 'heatmap');
       expect(geomOf(_candle), 'candlestick');
       expect(geomOf(_trend), 'trend');
       expect(geomOf(_threshold), 'threshold');
@@ -445,11 +455,14 @@ void main() {
       expect(cleared.facet, isNull);
       expect(cleared.marks, faceted.marks);
       expect(cleared.xAxis, faceted.xAxis);
-      expect(cleared, const PlotSpec<Sample>(
-        data: <Sample>[],
-        marks: <Mark<Sample>>[_line],
-        xAxis: XAxisConfig(label: 'Time'),
-      ));
+      expect(
+        cleared,
+        const PlotSpec<Sample>(
+          data: <Sample>[],
+          marks: <Mark<Sample>>[_line],
+          xAxis: XAxisConfig(label: 'Time'),
+        ),
+      );
     });
   });
 

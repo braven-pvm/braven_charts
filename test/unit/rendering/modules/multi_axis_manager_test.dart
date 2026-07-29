@@ -54,6 +54,19 @@ void main() {
         expect(manager.setSeries(series), isFalse);
       });
 
+      test('setSeries returns false for a structurally equal list', () {
+        manager.setSeries([
+          const ChartSeries(id: 's1', name: 'Series 1', points: []),
+        ]);
+
+        expect(
+          manager.setSeries([
+            const ChartSeries(id: 's1', name: 'Series 1', points: []),
+          ]),
+          isFalse,
+        );
+      });
+
       test('setSeries with null converts to empty list', () {
         manager.setSeries([
           const ChartSeries(id: 's1', name: 'Series 1', points: []),

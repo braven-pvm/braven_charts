@@ -31,6 +31,7 @@
 ///
 /// | case | outcome |
 /// |------|---------|
+/// | a Heatmap family | emitted as geomHeatmap, carrying missing cells, stable keys, labels, colour scale and cell styling |
 /// | a pie, donut, concentric-donut or polar-column family | emitted as geomPie / geomDonut(ring:) / geomPolar, carrying the series style, unit, selection and slice configs |
 /// | a layered/grouped/stacked polar composition | emitted as ONE geomPolar per series over a shared category field |
 /// | a customised PolarChartConfig | emitted as .polarConfig(...) |
@@ -122,6 +123,7 @@ import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
+import '../models/heatmap_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
@@ -254,6 +256,8 @@ class _SourceRow {
     this.stamps,
     this.optionalNumbers,
     this.colors,
+    this.booleans,
+    this.optionalStrings,
   );
 
   final List<double> numbers;
@@ -268,9 +272,23 @@ class _SourceRow {
 
   /// Slots for per-row colour overrides (a polar column's `columnColors`).
   final List<Color?> colors;
+
+  /// Slots for total boolean channels such as explicit Heatmap missing cells.
+  final List<bool> booleans;
+
+  /// Slots for channels where null and an empty string have different meaning.
+  final List<String?> optionalStrings;
 }
 
-enum _FieldKind { number, string, timestamp, optionalNumber, color }
+enum _FieldKind {
+  number,
+  string,
+  timestamp,
+  optionalNumber,
+  color,
+  boolean,
+  optionalString,
+}
 
 /// One synthesised field: its emitted name, its Dart type and its slot.
 class _Field {
@@ -286,6 +304,8 @@ class _Field {
     _FieldKind.timestamp => 'DateTime',
     _FieldKind.optionalNumber => 'double?',
     _FieldKind.color => 'Color?',
+    _FieldKind.boolean => 'bool',
+    _FieldKind.optionalString => 'String?',
   };
 
   /// The closure the chain passes for this field.
@@ -476,6 +496,8 @@ class _GrammarChainEmitter {
   var _stampSlots = 0;
   var _optionalNumberSlots = 0;
   var _colorSlots = 0;
+  var _booleanSlots = 0;
+  var _optionalStringSlots = 0;
 
   late final bool _omitData =
       snapshot.document.pointCount > options.maxInlinePoints;
@@ -577,7 +599,8 @@ class _GrammarChainEmitter {
     if (unsupportedFamilies.isNotEmpty) {
       block(
         'Grammar chain not emitted: the grammar layer has geometries for line, '
-        'area, bar, scatter, candlestick, pie, donut and polar-column series, '
+        'area, bar, scatter, candlestick, heatmap, pie, donut and polar-column '
+        'series, '
         'but not for these — a radial-bar, gauge or range-area family has no '
         'mark to reverse it: ${unsupportedFamilies.join(', ')}.',
         path: r'$.series[*].type',
@@ -1466,6 +1489,8 @@ class _GrammarChainEmitter {
         List<DateTime?>.filled(_stampSlots, null),
         List<double?>.filled(_optionalNumberSlots, null),
         List<Color?>.filled(_colorSlots, null),
+        List<bool>.filled(_booleanSlots, false),
+        List<String?>.filled(_optionalStringSlots, null),
       ),
   ];
 
@@ -1702,15 +1727,16 @@ class _GrammarChainEmitter {
   // =========================================================================
 
   /// Whether a grammar geometry exists that reverses [series]. Widens the old
-  /// Cartesian-only gate to the radial families the grammar now lowers (pie,
-  /// donut, polar-column). Radial-bar, gauge and range-area stay refused — they
-  /// have no `geom*` verb and no `Mark` subtype.
+  /// Cartesian-only gate to Heatmap and the radial families the grammar now
+  /// lowers (pie, donut, polar-column). Radial-bar, gauge and range-area stay
+  /// refused — they have no `geom*` verb and no `Mark` subtype.
   bool _isEmittableFamily(ChartSeries series) => switch (series) {
     CandlestickChartSeries() => true,
     LineChartSeries() => true,
     ScatterChartSeries() => true,
     AreaChartSeries() => true,
     BarChartSeries() => true,
+    HeatmapChartSeries() => true,
     PieChartSeries() => true,
     DonutChartSeries() => true,
     PolarColumnChartSeries() => true,
@@ -2062,6 +2088,7 @@ class _GrammarChainEmitter {
     BarChartSeries() => 'bar',
     ScatterChartSeries() => 'scatter',
     CandlestickChartSeries() => 'candlestick',
+    HeatmapChartSeries() => 'heatmap',
     _ => 'V1',
   };
 
@@ -2150,6 +2177,10 @@ class _GrammarChainEmitter {
       case CandlestickChartSeries():
         // Open/high/low/close and the timestamp are carried in full; any
         // remaining styling difference falls through to the generic tail.
+        break;
+      case HeatmapChartSeries():
+        // Every Heatmap field, including explicit missing cells and stable
+        // identities, is carried by HeatmapMark.
         break;
     }
     return null;
@@ -2362,6 +2393,8 @@ class _GrammarChainEmitter {
       _FieldKind.timestamp => _stampSlots++,
       _FieldKind.optionalNumber => _optionalNumberSlots++,
       _FieldKind.color => _colorSlots++,
+      _FieldKind.boolean => _booleanSlots++,
+      _FieldKind.optionalString => _optionalStringSlots++,
     };
     final field = _Field(name, kind, slot);
     _fields.add(field);
@@ -2459,6 +2492,12 @@ class _GrammarChainEmitter {
 
   Color? Function(_SourceRow) _color(_Field field) =>
       (row) => row.colors[field.slot];
+
+  bool Function(_SourceRow) _boolean(_Field field) =>
+      (row) => row.booleans[field.slot];
+
+  String? Function(_SourceRow) _nullableString(_Field field) =>
+      (row) => row.optionalStrings[field.slot];
 
   _GeometryPlan _planGeometry(ChartSeries series, _Field xField) {
     final base = _identifier(_baseNameFor(series));
@@ -2702,6 +2741,64 @@ class _GrammarChainEmitter {
           ),
         );
 
+      case HeatmapChartSeries():
+        final y = _addField(_suffixed(base, 'y'), _FieldKind.number);
+        final value = _addField(_suffixed(base, 'value'), _FieldKind.number);
+        accessors
+          ..['y'] = y
+          ..['value'] = value;
+
+        _Field? missing;
+        if (series.cells.any((cell) => cell.isMissing)) {
+          missing = _addField(_suffixed(base, 'missing'), _FieldKind.boolean);
+          accessors['missing'] = missing;
+        }
+
+        _Field? pointKey;
+        if (series.cells.any((cell) => cell.pointKey != null)) {
+          pointKey = _addField(
+            _suffixed(base, 'pointKey'),
+            _FieldKind.optionalString,
+          );
+          accessors['pointKey'] = pointKey;
+        }
+
+        _Field? label;
+        if (series.cells.any((cell) => cell.label != null)) {
+          label = _addField(
+            _suffixed(base, 'label'),
+            _FieldKind.optionalString,
+          );
+          accessors['label'] = label;
+        }
+
+        return _GeometryPlan(
+          series: series,
+          accessors: accessors,
+          mark: HeatmapMark<_SourceRow>(
+            id: id,
+            name: name,
+            yAxisId: yAxisId,
+            x: x,
+            y: _number(y),
+            value: _number(value),
+            missing: missing == null ? null : _boolean(missing),
+            pointKey: pointKey == null ? null : _nullableString(pointKey),
+            label: label == null ? null : _nullableString(label),
+            colorScale: series.colorScale,
+            unit: series.unit,
+            cellWidth: series.cellWidth,
+            cellHeight: series.cellHeight,
+            gapFraction: series.gapFraction,
+            borderColor: series.borderColor,
+            borderWidth: series.borderWidth,
+            cornerRadius: series.cornerRadius,
+            showCellLabels: series.showCellLabels,
+            cellLabelColor: series.cellLabelColor,
+            cellLabelFontSize: series.cellLabelFontSize,
+          ),
+        );
+
       case ChartSeries():
         throw StateError('unreachable: the family gate rejected ${series.id}');
     }
@@ -2800,6 +2897,8 @@ class _GrammarChainEmitter {
           stamps,
           List<double?>.filled(_optionalNumberSlots, null),
           List<Color?>.filled(_colorSlots, null),
+          List<bool>.filled(_booleanSlots, false),
+          List<String?>.filled(_optionalStringSlots, null),
         ),
       );
     }
@@ -2835,6 +2934,22 @@ class _GrammarChainEmitter {
             final category = plan.accessors['category'];
             if (category != null) {
               row.strings[category.slot] = point.categoryValue ?? '';
+            }
+          case HeatmapChartSeries():
+            final point = series.cells[index];
+            row.numbers[plan.accessors['y']!.slot] = point.y;
+            row.numbers[plan.accessors['value']!.slot] = point.value ?? 0;
+            final missing = plan.accessors['missing'];
+            if (missing != null) {
+              row.booleans[missing.slot] = point.isMissing;
+            }
+            final pointKey = plan.accessors['pointKey'];
+            if (pointKey != null) {
+              row.optionalStrings[pointKey.slot] = point.pointKey;
+            }
+            final label = plan.accessors['label'];
+            if (label != null) {
+              row.optionalStrings[label.slot] = point.label;
             }
           case ChartSeries():
             row.numbers[plan.accessors['y']!.slot] = series.points[index].y;
@@ -3220,6 +3335,11 @@ class _GrammarChainEmitter {
       final value? => DartSourceWriter.colorLiteral(value),
       _ => 'null',
     },
+    _FieldKind.boolean => row.booleans[field.slot] ? 'true' : 'false',
+    _FieldKind.optionalString => switch (row.optionalStrings[field.slot]) {
+      final value? => DartSourceWriter.stringLiteral(value),
+      _ => 'null',
+    },
   };
 
   /// Writes a `DateTime.parse(...)` literal for a timestamp slot.
@@ -3342,6 +3462,7 @@ class _GrammarChainEmitter {
       BarMark<_SourceRow>() => 'geomBar',
       ScatterMark<_SourceRow>() => 'geomPoint',
       CandlestickMark<_SourceRow>() => 'geomCandlestick',
+      HeatmapMark<_SourceRow>() => 'geomHeatmap',
       TrendMark<_SourceRow>() => 'trend',
       // Reference marks lower to annotations and are emitted as their own chain
       // verbs, never through _emitGeometry, which only ever sees a geometry plan.
@@ -3367,6 +3488,21 @@ class _GrammarChainEmitter {
           final stamp = plan.accessors['timestamp'];
           if (stamp != null) {
             writer.namedArgument('timestamp', stamp.accessor());
+          }
+        case HeatmapMark<_SourceRow>():
+          writer.namedArgument('y', plan.accessors['y']!.accessor());
+          writer.namedArgument('value', plan.accessors['value']!.accessor());
+          final missing = plan.accessors['missing'];
+          if (missing != null) {
+            writer.namedArgument('missing', missing.accessor());
+          }
+          final pointKey = plan.accessors['pointKey'];
+          if (pointKey != null) {
+            writer.namedArgument('pointKey', pointKey.accessor());
+          }
+          final label = plan.accessors['label'];
+          if (label != null) {
+            writer.namedArgument('label', label.accessor());
           }
         case _:
           writer.namedArgument('y', plan.accessors['y']!.accessor());
@@ -3464,6 +3600,10 @@ class _GrammarChainEmitter {
           _emitScatterChannels(writer, plan, mark);
         case CandlestickMark<_SourceRow>():
           break;
+        case HeatmapMark<_SourceRow>():
+          _config.emitHeatmapOptions(writer, plan.series as HeatmapChartSeries);
+          _absorbConfigWarnings();
+          _optionalString(writer, 'unit', mark.unit);
         case TrendMark<_SourceRow>():
           break;
         case ThresholdMark<_SourceRow>() ||

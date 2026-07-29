@@ -1156,12 +1156,17 @@ class CrosshairRenderer {
       final axisColor = multiAxisInfo.resolveAxisColor(axis);
 
       // Format value with unit if configured
-      final displayValue = axis.shouldShowTickUnit
-          ? MultiAxisValueFormatter.formatFixed(
-              value: displayY,
-              unit: axis.unit,
-            )
-          : MultiAxisValueFormatter.formatFixed(value: displayY, unit: null);
+      final displayValue =
+          axis.categoryLabelFor(displayY) ??
+          (axis.shouldShowTickUnit
+              ? MultiAxisValueFormatter.formatFixed(
+                  value: displayY,
+                  unit: axis.unit,
+                )
+              : MultiAxisValueFormatter.formatFixed(
+                  value: displayY,
+                  unit: null,
+                ));
 
       final textPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle),

@@ -201,6 +201,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   built-in legend path, including reusable `ChartLegend` widgets and explicit
   canvas `LegendAnnotation`s, rather than only affecting automatically
   generated legends.
+### Heatmaps
+
+- A complete native Cartesian Heatmap family. `HeatmapDataPoint` keeps X, Y,
+  and the independently measured colour value in one typed cell, while
+  `HeatmapDataPoint.missing` preserves explicit matrix positions without
+  encoding absence as zero or NaN.
+- `HeatmapColorScale` with validated sequential, diverging, and threshold
+  mappings, automatic or explicit domains, semantic midpoint, palette
+  reversal, clamping, missing-cell colour, formatter descriptors, and a
+  reusable `HeatmapColorLegend`.
+- `HeatmapChartSeries` cell geometry, gaps, borders, corners, density-aware
+  contrast labels, typed hit identity, hover/tap selection, keyboard
+  row/column traversal, bounded dense-matrix semantics, Cartesian zoom/pan,
+  X/Y scrollbars, and ordinary chart annotations.
+- Reduced-motion-aware Heatmap entrance animation with fade or scale and
+  simultaneous, row, column, or radial ordering. Compatible mounted updates
+  interpolate measured values by stable cell identity.
+- Complete portable Heatmap surfaces: inline and columnar artifacts,
+  hydration, matrix and long Data projections, CSV, deterministic generated
+  Dart, Chart Grammar, fluent modifiers, strict tool-driven configuration,
+  and Chart/Data/Split/Source Workbench support.
+- A dedicated Heatmap showcase and hosted guide with labelled activity,
+  day/hour temperature, service thresholds, calendar missing cells, diverging
+  correlation, and dense sparse viewport examples, plus Chart Types, Gallery,
+  mobile, and native pub.dev capture integration.
+- Permanent Heatmap rendering benchmarks and focused model, scale, geometry,
+  interaction, accessibility, animation, artifact, table, source, Workbench,
+  compact, desktop, and golden regression coverage.
+
+### Changed
+
+- Public catalog, generated README, hosted documentation, feature matrix, API
+  overview, package description, and native chart-family media now describe
+  thirteen built-in chart families.
+
+### Notes
+
+- Heatmap V1 accepts exactly one Heatmap series per chart and does not mix with
+  another Cartesian family. Aggregation, clustering, tiled/streamed matrices,
+  multiple colour axes, irregular cells, and treemap/mosaic/vector/geographic
+  families remain explicitly scoped to later work.
 
 ## 0.16.0 - 2026-07-29
 

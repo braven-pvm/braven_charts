@@ -89,6 +89,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Heatmap route mounts the native matrix renderer', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'heatmap-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Heatmap Charts'), findsWidgets);
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('heatmap-chart-activity')),
+    );
+    expect(chart.series.single, isA<HeatmapChartSeries>());
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('direct Gauge route attaches the native Workbench', (
     tester,
   ) async {
@@ -940,6 +962,48 @@ void main() {
     }
   });
 
+  testWidgets('phone Heatmaps preserve four distinct colour-scale stories', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 2600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MobileShowcasePage(initialChartSlug: 'heatmap-charts'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final scaleTypes = <HeatmapColorScaleType>[];
+    for (var index = 0; index < 4; index++) {
+      final card = find.byKey(
+        ValueKey('mobile-chart-card-heatmap-charts-$index'),
+      );
+      await tester.scrollUntilVisible(
+        card,
+        420,
+        scrollable: _verticalMobileScroll(),
+      );
+      await tester.pump(const Duration(milliseconds: 80));
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(of: card, matching: find.byType(BravenChartPlus)),
+      );
+      final series = chart.series.single as HeatmapChartSeries;
+      scaleTypes.add(series.colorScale.type);
+      expect(series.cells, isNotEmpty);
+    }
+
+    expect(scaleTypes, [
+      HeatmapColorScaleType.sequential,
+      HeatmapColorScaleType.diverging,
+      HeatmapColorScaleType.threshold,
+      HeatmapColorScaleType.diverging,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final chartType in showcaseChartTypes) {
     testWidgets('phone renders the ${chartType.label} family example', (
       tester,
@@ -1026,6 +1090,7 @@ void main() {
     expect(selectedDecoration.boxShadow, isNull);
     expect(selectedDecoration.color, Colors.transparent);
 
+    await tester.ensureVisible(find.text('Candlestick Charts'));
     await tester.tap(find.text('Candlestick Charts'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);

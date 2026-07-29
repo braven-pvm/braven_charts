@@ -31,6 +31,8 @@ import '../models/scatter_marker_style.dart'
     show ScatterCategoryStyle, ScatterJitterConfig;
 import '../models/scatter_render_config.dart';
 import '../models/data_point_label_config.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_data_point.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_interaction_details.dart';
 import '../models/range_area_style.dart';
@@ -41,6 +43,7 @@ import '../rendering/bar_label_layout.dart';
 import '../rendering/bar_pattern_painter.dart';
 import '../rendering/candlestick_geometry.dart';
 import '../rendering/data_point_label_layout.dart';
+import '../rendering/heatmap_geometry.dart';
 import '../rendering/range_area_geometry.dart';
 import '../rendering/scatter_binning.dart';
 import '../rendering/scatter_geometry.dart';
@@ -309,6 +312,23 @@ class SeriesElement implements DataHitElement {
 
   @override
   int get pointCount => pathPointMap?.targetPointCount ?? series.points.length;
+
+  /// Stable identity for the cached Heatmap base picture.
+  ///
+  /// Heatmap focus, selection, hover, and press feedback paint in the live
+  /// overlay layer and are intentionally excluded. A replacement series or a
+  /// presentation change produces a different key and therefore invalidates
+  /// the retained picture.
+  Object? get heatmapBasePaintCacheKey {
+    if (series is! HeatmapChartSeries) return null;
+    return Object.hash(
+      series,
+      fontFamily,
+      textDirection,
+      series is HeatmapChartSeries ? _effectiveRevealProgress : 1,
+    );
+  }
+
   final ChartInteractionCoordinator? coordinator;
 
   /// Point indices receiving transient linked focus from another surface.
@@ -357,6 +377,7 @@ class SeriesElement implements DataHitElement {
       series is LineChartSeries ||
       series is AreaChartSeries ||
       series is RangeAreaChartSeries ||
+      series is HeatmapChartSeries ||
       series is CandlestickChartSeries;
 
   double get _effectiveRevealProgress =>
@@ -394,6 +415,7 @@ class SeriesElement implements DataHitElement {
       ScatterChartSeries() => visibleScatterPointIndices,
       CandlestickChartSeries() => visibleCandlestickPointIndices,
       RangeAreaChartSeries() => visibleRangeAreaPointIndices,
+      HeatmapChartSeries() => visibleHeatmapPointIndices,
       _ => _visibleOrderedPointIndices(),
     };
     for (final pointIndex in candidates) {
@@ -593,6 +615,8 @@ class SeriesElement implements DataHitElement {
       _clearResolvedScatterGeometry();
       _clearResolvedCandlestickGeometry();
       _clearResolvedRangeAreaGeometry();
+      _visibleHeatmapPointIndicesCache = null;
+      _lastHeatmapViewportQuery = null;
       _computeBounds();
     }
   }
@@ -621,6 +645,9 @@ class SeriesElement implements DataHitElement {
     _scatterViewportIndex = null;
     _candlestickViewportIndex = null;
     _rangeAreaViewportIndex = null;
+    _heatmapViewportIndex = null;
+    _visibleHeatmapPointIndicesCache = null;
+    _lastHeatmapViewportQuery = null;
     _clearResolvedBarGeometry();
     _clearResolvedScatterGeometry();
     _clearResolvedCandlestickGeometry();
@@ -660,6 +687,9 @@ class SeriesElement implements DataHitElement {
     _clearResolvedCandlestickGeometry();
     _rangeAreaViewportIndex = null;
     _clearResolvedRangeAreaGeometry();
+    _heatmapViewportIndex = null;
+    _visibleHeatmapPointIndicesCache = null;
+    _lastHeatmapViewportQuery = null;
     _labelPainterCache.clear();
   }
 
@@ -735,6 +765,9 @@ class SeriesElement implements DataHitElement {
   List<RangeAreaGeometryRun>? _rangeAreaGeometryRuns;
   Map<int, RangeAreaScreenPoint> _rangeAreaPointBySourceIndex = const {};
   int _rangeAreaHitComparisonCount = 0;
+  HeatmapViewportIndex? _heatmapViewportIndex;
+  List<int>? _visibleHeatmapPointIndicesCache;
+  HeatmapViewportQuery? _lastHeatmapViewportQuery;
   int _selectionCandidateCount = 0;
   DataPointLabelLayoutCoordinator? _dataPointLabelLayoutCoordinator;
   List<Rect> _visibleScatterLabelBounds = const [];
@@ -813,6 +846,46 @@ class SeriesElement implements DataHitElement {
 
   /// Exact run/point comparisons made by the latest Range Area hit query.
   int get rangeAreaHitComparisonCount => _rangeAreaHitComparisonCount;
+
+  /// Original source indices represented by the current Heatmap viewport.
+  List<int> get visibleHeatmapPointIndices {
+    final cached = _visibleHeatmapPointIndicesCache;
+    if (cached != null) return cached;
+    final viewportIndex = _resolveHeatmapViewportIndex();
+    if (viewportIndex == null) return const [];
+    final query = viewportIndex.queryViewport(
+      minX: _currentTransform.dataXMin,
+      maxX: _currentTransform.dataXMax,
+      minY: _currentTransform.dataYMin,
+      maxY: _currentTransform.dataYMax,
+    );
+    _lastHeatmapViewportQuery = query;
+    return _visibleHeatmapPointIndicesCache = query.pointIndices;
+  }
+
+  HeatmapViewportIndex? _resolveHeatmapViewportIndex() {
+    final heatmap = series;
+    if (heatmap is! HeatmapChartSeries) return null;
+    var viewportIndex = _heatmapViewportIndex;
+    viewportIndex ??= HeatmapViewportIndex(
+      heatmap.cells,
+      cellWidth: heatmap.cellWidth,
+      cellHeight: heatmap.cellHeight,
+    );
+    return _heatmapViewportIndex = viewportIndex;
+  }
+
+  /// Source cells visited by the latest Heatmap viewport query.
+  int get heatmapVisitedCellCount {
+    visibleHeatmapPointIndices;
+    return _lastHeatmapViewportQuery?.visitedCellCount ?? 0;
+  }
+
+  /// Rows visited by the latest Heatmap viewport query.
+  int get heatmapVisitedRowCount {
+    visibleHeatmapPointIndices;
+    return _lastHeatmapViewportQuery?.visitedRowCount ?? 0;
+  }
 
   /// Source candidates examined by the latest rectangle or lasso query.
   int get selectionCandidateCount => _selectionCandidateCount;
@@ -1349,7 +1422,8 @@ class SeriesElement implements DataHitElement {
 
     if (series is BarChartSeries ||
         series is CandlestickChartSeries ||
-        series is RangeAreaChartSeries) {
+        series is RangeAreaChartSeries ||
+        series is HeatmapChartSeries) {
       // Bar points are virtualized by category viewport. Keep the series
       // eligible for plot-level hit routing without materializing every bar
       // merely to compute one aggregate element rectangle.
@@ -1472,6 +1546,10 @@ class SeriesElement implements DataHitElement {
       return barGeometryAt(position) != null;
     }
 
+    if (series is HeatmapChartSeries) {
+      return _heatmapCellIndexAt(position) != null;
+    }
+
     if (series is CandlestickChartSeries) {
       return candlestickGeometryAt(position) != null;
     }
@@ -1508,6 +1586,10 @@ class SeriesElement implements DataHitElement {
     if (source is BarChartSeries) {
       final geometry = barGeometryAt(position);
       return geometry == null ? null : _barDataHit(geometry);
+    }
+    if (source is HeatmapChartSeries) {
+      final pointIndex = _heatmapCellIndexAt(position);
+      return pointIndex == null ? null : _heatmapDataHit(pointIndex);
     }
     if (source is CandlestickChartSeries) {
       final geometry = candlestickGeometryAt(
@@ -2299,6 +2381,9 @@ class SeriesElement implements DataHitElement {
       if (geometry != null) return _rangeAreaDataHit(geometry);
       return null;
     }
+    if (series is HeatmapChartSeries) {
+      return _heatmapDataHit(pointIndex);
+    }
     final renderIndex = _renderIndexForTargetIndex(pointIndex);
     if (renderIndex == null) return null;
     final currentSeries = series;
@@ -2748,6 +2833,25 @@ class SeriesElement implements DataHitElement {
       }
       return;
     }
+    if (series is HeatmapChartSeries) {
+      const semanticCellLimit = 200;
+      final visible = visibleHeatmapPointIndices;
+      final priority = <int>{...focusedPointIndices, ...selectedPointIndices};
+      final emitted = <int>{};
+      for (final index in priority) {
+        if (emitted.length >= semanticCellLimit) break;
+        if (!visible.contains(index) || !emitted.add(index)) continue;
+        final hit = _heatmapDataHit(index);
+        if (hit != null) yield hit;
+      }
+      for (final index in visible) {
+        if (emitted.length >= semanticCellLimit) break;
+        if (!emitted.add(index)) continue;
+        final hit = _heatmapDataHit(index);
+        if (hit != null) yield hit;
+      }
+      return;
+    }
     if (series is RangeAreaChartSeries) {
       _resolveRangeAreaGeometry();
       for (final geometry in _rangeAreaPointBySourceIndex.values) {
@@ -2788,7 +2892,8 @@ class SeriesElement implements DataHitElement {
 
     final reveal = _effectiveRevealProgress;
     if (reveal <= 0) return;
-    if (reveal < 1) {
+    final clipReveal = reveal < 1 && series is! HeatmapChartSeries;
+    if (clipReveal) {
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(0, 0, size.width * reveal, size.height));
     }
@@ -2817,12 +2922,15 @@ class SeriesElement implements DataHitElement {
           baseColor,
         );
         break;
+      case HeatmapChartSeries():
+        _paintHeatmapSeries(canvas, series as HeatmapChartSeries);
+        break;
       case CandlestickChartSeries():
         _paintCandlestickSeries(canvas, series as CandlestickChartSeries);
         break;
     }
     _paintLinkedPoints(canvas, baseColor);
-    if (reveal < 1) canvas.restore();
+    if (clipReveal) canvas.restore();
   }
 
   void _paintLinkedPoints(Canvas canvas, Color baseColor) {
@@ -2845,6 +2953,9 @@ class SeriesElement implements DataHitElement {
     }
     if (series is RangeAreaChartSeries) {
       _paintLinkedRangeArea(canvas);
+      return;
+    }
+    if (series is HeatmapChartSeries) {
       return;
     }
     final focusPaint = Paint()
@@ -2887,6 +2998,348 @@ class SeriesElement implements DataHitElement {
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 7, focusPaint);
     }
+  }
+
+  Rect _heatmapCellRect(HeatmapChartSeries heatmap, int pointIndex) {
+    final cell = heatmap.cellAt(pointIndex);
+    final first = _currentTransform.dataToPlot(
+      cell.x - heatmap.cellWidth / 2,
+      cell.y - heatmap.cellHeight / 2,
+    );
+    final second = _currentTransform.dataToPlot(
+      cell.x + heatmap.cellWidth / 2,
+      cell.y + heatmap.cellHeight / 2,
+    );
+    var rect = Rect.fromPoints(first, second);
+    final horizontalInset = rect.width * heatmap.gapFraction / 2;
+    final verticalInset = rect.height * heatmap.gapFraction / 2;
+    rect = Rect.fromLTRB(
+      rect.left + horizontalInset,
+      rect.top + verticalInset,
+      rect.right - horizontalInset,
+      rect.bottom - verticalInset,
+    );
+    return rect;
+  }
+
+  int? _heatmapCellIndexAt(Offset position) {
+    final heatmap = series;
+    if (heatmap is! HeatmapChartSeries) return null;
+    final viewportIndex = _resolveHeatmapViewportIndex();
+    if (viewportIndex == null) return null;
+    final dataPosition = _currentTransform.plotToData(position.dx, position.dy);
+    for (final index in viewportIndex.pointIndicesAt(dataPosition).reversed) {
+      // The data index excludes most candidates; the exact plot rectangle
+      // retains visual gap semantics and topmost source paint order.
+      if (_heatmapCellRect(heatmap, index).contains(position)) {
+        return index;
+      }
+    }
+    return null;
+  }
+
+  ChartDataHit? _heatmapDataHit(int pointIndex) {
+    final heatmap = series;
+    if (heatmap is! HeatmapChartSeries ||
+        pointIndex < 0 ||
+        pointIndex >= heatmap.cells.length) {
+      return null;
+    }
+    final cell = heatmap.cellAt(pointIndex);
+    final rect = _heatmapCellRect(heatmap, pointIndex);
+    final suffix = heatmap.unit == null || heatmap.unit!.isEmpty
+        ? ''
+        : ' ${heatmap.unit}';
+    return ChartDataHit(
+      seriesId: heatmap.id,
+      pointIndex: pointIndex,
+      plotPosition: rect.center,
+      semanticBounds: rect,
+      selectionBounds: rect,
+      point: cell,
+      formattedValue: cell.isMissing
+          ? 'Missing'
+          : '${cell.value!.toStringAsFixed(2)}$suffix',
+      formattedXValue: cell.x.toStringAsFixed(2),
+      category: cell.label,
+      colorValue: cell.value,
+      formattedColorValue: cell.isMissing
+          ? 'Missing'
+          : '${cell.value!.toStringAsFixed(2)}$suffix',
+      colorLabel: heatmap.colorScale.label,
+      markerColor: heatmap.colorScale.colorFor(
+        cell.value,
+        resolvedMinimumValue: heatmap.resolvedMinimumValue,
+        resolvedMaximumValue: heatmap.resolvedMaximumValue,
+        isMissing: cell.isMissing,
+      ),
+      ordinal: pointIndex + 1,
+      count: heatmap.cells.length,
+      isSelected: _isPointSelected(pointIndex),
+      isFocused: focusedPointIndices.contains(pointIndex),
+      semanticLabelOverride:
+          '${heatmap.displayName}, ${cell.label ?? 'heatmap cell'}, '
+          'column ${cell.x}, row ${cell.y}, '
+          '${cell.isMissing ? 'missing value' : '${cell.value}$suffix'}, '
+          'cell ${pointIndex + 1} of ${heatmap.cells.length}, '
+          '${_isPointSelected(pointIndex) ? 'selected' : 'not selected'}',
+    );
+  }
+
+  void _paintHeatmapSeries(Canvas canvas, HeatmapChartSeries heatmap) {
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    canvas.save();
+    canvas.clipRect(plotBounds);
+    final fill = Paint()..style = PaintingStyle.fill;
+    final border = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = heatmap.borderColor
+      ..strokeWidth = heatmap.borderWidth;
+    final coordinateBounds = _heatmapCoordinateBounds(heatmap);
+    for (final index in visibleHeatmapPointIndices) {
+      final cell = heatmap.cellAt(index);
+      var rect = _heatmapCellRect(heatmap, index);
+      if (!rect.overlaps(plotBounds) || rect.isEmpty) continue;
+      var color = heatmap.colorScale.colorFor(
+        cell.value,
+        resolvedMinimumValue: heatmap.resolvedMinimumValue,
+        resolvedMaximumValue: heatmap.resolvedMaximumValue,
+        isMissing: cell.isMissing,
+      );
+      if (color == null || color.a == 0) continue;
+      final cellProgress = _heatmapCellRevealProgress(
+        heatmap,
+        cell,
+        coordinateBounds,
+      );
+      if (cellProgress <= 0) continue;
+      if (heatmap.animation.entranceMode == HeatmapEntranceMode.scale &&
+          cellProgress < 1) {
+        final scale =
+            heatmap.animation.entranceScale +
+            (1 - heatmap.animation.entranceScale) * cellProgress;
+        rect = Rect.fromCenter(
+          center: rect.center,
+          width: rect.width * scale,
+          height: rect.height * scale,
+        );
+      }
+      if (cellProgress < 1) {
+        color = color.withValues(alpha: color.a * cellProgress);
+      }
+      fill.color = color;
+      final radius = Radius.circular(
+        math.min(heatmap.cornerRadius, math.min(rect.width, rect.height) / 2),
+      );
+      final rounded = RRect.fromRectAndRadius(rect, radius);
+      canvas.drawRRect(rounded, fill);
+      if (heatmap.borderWidth > 0) canvas.drawRRect(rounded, border);
+      if (heatmap.showCellLabels && !cell.isMissing && cellProgress >= 0.72) {
+        _paintHeatmapCellLabel(canvas, heatmap, cell, rect, color);
+      }
+    }
+    canvas.restore();
+  }
+
+  double _heatmapCellRevealProgress(
+    HeatmapChartSeries heatmap,
+    HeatmapDataPoint cell,
+    (double, double, double, double) coordinateBounds,
+  ) {
+    final progress = _effectiveRevealProgress;
+    final animation = heatmap.animation;
+    if (animation.entranceMode == HeatmapEntranceMode.none || progress >= 1) {
+      return 1;
+    }
+    if (progress <= 0) return 0;
+    if (animation.entranceOrder == HeatmapEntranceOrder.simultaneous ||
+        animation.staggerFraction == 0) {
+      return progress;
+    }
+
+    final x = _normalizedCoordinate(
+      cell.x,
+      coordinateBounds.$1,
+      coordinateBounds.$2,
+    );
+    final y = _normalizedCoordinate(
+      cell.y,
+      coordinateBounds.$3,
+      coordinateBounds.$4,
+    );
+    final order = switch (animation.entranceOrder) {
+      HeatmapEntranceOrder.simultaneous => 0.0,
+      HeatmapEntranceOrder.row => y,
+      HeatmapEntranceOrder.column => x,
+      HeatmapEntranceOrder.radial =>
+        math.sqrt((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)) /
+            math.sqrt(0.5),
+    };
+    final delay = order.clamp(0.0, 1.0) * animation.staggerFraction;
+    return ((progress - delay) / (1 - animation.staggerFraction)).clamp(
+      0.0,
+      1.0,
+    );
+  }
+
+  (double, double, double, double) _heatmapCoordinateBounds(
+    HeatmapChartSeries heatmap,
+  ) {
+    var xMin = double.infinity;
+    var xMax = double.negativeInfinity;
+    var yMin = double.infinity;
+    var yMax = double.negativeInfinity;
+    for (final cell in heatmap.cells) {
+      xMin = math.min(xMin, cell.x);
+      xMax = math.max(xMax, cell.x);
+      yMin = math.min(yMin, cell.y);
+      yMax = math.max(yMax, cell.y);
+    }
+    return (xMin, xMax, yMin, yMax);
+  }
+
+  double _normalizedCoordinate(double value, double minimum, double maximum) {
+    if (!minimum.isFinite || !maximum.isFinite || maximum <= minimum) return 0;
+    return ((value - minimum) / (maximum - minimum)).clamp(0.0, 1.0);
+  }
+
+  void _paintHeatmapCellLabel(
+    Canvas canvas,
+    HeatmapChartSeries heatmap,
+    HeatmapDataPoint cell,
+    Rect rect,
+    Color fillColor,
+  ) {
+    if (rect.width < heatmap.cellLabelFontSize + 4 ||
+        rect.height < heatmap.cellLabelFontSize + 4) {
+      return;
+    }
+    final brightness =
+        (fillColor.r * 0.299 + fillColor.g * 0.587 + fillColor.b * 0.114);
+    final labelColor =
+        heatmap.cellLabelColor ??
+        (brightness > 0.58 ? const Color(0xFF172033) : const Color(0xFFFFFFFF));
+    final text = cell.value!.toStringAsFixed(
+      cell.value! == cell.value!.roundToDouble() ? 0 : 1,
+    );
+    final painterKey =
+        'heatmap:$text:${labelColor.toARGB32()}:'
+        '${heatmap.cellLabelFontSize}:${textDirection.name}';
+    final painter = _labelPainterCache.putIfAbsent(painterKey, () {
+      final result = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: labelColor,
+            fontSize: heatmap.cellLabelFontSize,
+            fontWeight: FontWeight.w600,
+            fontFamily: fontFamily,
+          ),
+        ),
+        textDirection: textDirection,
+        maxLines: 1,
+      );
+      result.layout();
+      return result;
+    });
+    if (painter.width > rect.width - 4 || painter.height > rect.height - 2) {
+      return;
+    }
+    painter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - painter.width / 2,
+        rect.center.dy - painter.height / 2,
+      ),
+    );
+  }
+
+  /// Paints Heatmap focus, selection, hover, and press feedback.
+  ///
+  /// This method is called from the uncached overlay layer. The stable cells,
+  /// borders, and labels therefore remain in the retained series picture while
+  /// pointer and linked-selection state can update independently.
+  void paintHeatmapInteractionOverlay(
+    Canvas canvas, {
+    int? hoveredPointIndex,
+    int? pressedPointIndex,
+  }) {
+    final heatmap = series;
+    if (heatmap is! HeatmapChartSeries) return;
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    final selectionFill = Paint()
+      ..style = PaintingStyle.fill
+      ..color = pointSelectionColor ?? const Color(0x332196F3);
+    final selectionBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..color = pointSelectionColor ?? const Color(0xFF2196F3);
+    final focusBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = pointFocusColor ?? const Color(0xFF111827);
+    for (final index in _selectedPointIndicesForPaint()) {
+      if (index < 0 || index >= heatmap.cells.length) continue;
+      final rect = _heatmapCellRect(heatmap, index);
+      if (!rect.overlaps(plotBounds)) continue;
+      canvas
+        ..drawRect(rect, selectionFill)
+        ..drawRect(rect.deflate(1.25), selectionBorder);
+    }
+    for (final index in focusedPointIndices) {
+      if (index < 0 || index >= heatmap.cells.length) continue;
+      final rect = _heatmapCellRect(heatmap, index);
+      if (!rect.overlaps(plotBounds)) continue;
+      canvas.drawRect(rect.deflate(1), focusBorder);
+    }
+
+    final activeIndex = pressedPointIndex ?? hoveredPointIndex;
+    if (activeIndex == null ||
+        activeIndex < 0 ||
+        activeIndex >= heatmap.cells.length) {
+      return;
+    }
+    final rect = _heatmapCellRect(heatmap, activeIndex);
+    if (!rect.overlaps(plotBounds) || rect.isEmpty) return;
+    final cell = heatmap.cellAt(activeIndex);
+    final cellColor = heatmap.colorScale.colorFor(
+      cell.value,
+      resolvedMinimumValue: heatmap.resolvedMinimumValue,
+      resolvedMaximumValue: heatmap.resolvedMaximumValue,
+      isMissing: cell.isMissing,
+    );
+    final feedbackColor =
+        pointFocusColor ??
+        (cellColor != null && cellColor.computeLuminance() > 0.45
+            ? const Color(0xFF111827)
+            : const Color(0xFFFFFFFF));
+    if (pressedPointIndex != null) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = (pointSelectionColor ?? feedbackColor).withValues(
+            alpha: 0.24,
+          ),
+      );
+    }
+    canvas.drawRect(
+      rect.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = pressedPointIndex != null ? 3 : 2
+        ..color = feedbackColor.withValues(alpha: 0.9),
+    );
   }
 
   void _paintRangeAreaSeries(

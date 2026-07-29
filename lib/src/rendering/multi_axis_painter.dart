@@ -10,6 +10,7 @@ import '../axis/time_ticks.dart';
 import '../layout/axis_layout_manager.dart';
 import '../layout/multi_axis_layout.dart';
 import '../models/axis_scale_type.dart';
+import '../models/category_axis_config.dart';
 import '../models/chart_series.dart';
 import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
@@ -209,7 +210,8 @@ class MultiAxisPainter {
       ..style = PaintingStyle.stroke;
 
     // Determine if this is a left-side or right-side axis
-    final isLeftSide = axis.position == YAxisPosition.left ||
+    final isLeftSide =
+        axis.position == YAxisPosition.left ||
         axis.position == YAxisPosition.leftOuter;
 
     // Paint axis line
@@ -234,12 +236,14 @@ class MultiAxisPainter {
     // Uses shouldShowTickLabels helper to check labelDisplay mode
     if (axis.showTicks || axis.shouldShowTickLabels) {
       final maxTicks = axis.tickCount ?? _computeMaxTicks(plotArea.height);
-      final ticks = generateTicks(
-        bounds,
-        maxTicks: maxTicks,
-        scaleType: axis.scaleType,
-        logBase: axis.logBase,
-      );
+      final ticks = axis.isCategorical
+          ? _generateCategoryTicks(axis, bounds, pixelExtent: plotArea.height)
+          : generateTicks(
+              bounds,
+              maxTicks: maxTicks,
+              scaleType: axis.scaleType,
+              logBase: axis.logBase,
+            );
 
       final effectiveRenderMin = axis.renderMin ?? bounds.min;
       final effectiveRenderMax = axis.renderMax ?? bounds.max;
@@ -269,13 +273,22 @@ class MultiAxisPainter {
 
           if (axis.shouldShowTickLabels) {
             _paintTickLabel(
-                canvas, axis, axisRect, screenY, tickValue, isLeftSide);
+              canvas,
+              axis,
+              axisRect,
+              screenY,
+              tickValue,
+              isLeftSide,
+            );
           }
         }
       }
 
       // Minor ticks — shorter unlabelled marks between major ticks
-      if (axis.showMinorTicks && axis.minorTickCount > 0 && ticks.length >= 2) {
+      if (!axis.isCategorical &&
+          axis.showMinorTicks &&
+          axis.minorTickCount > 0 &&
+          ticks.length >= 2) {
         for (int i = 0; i < ticks.length - 1; i++) {
           final a = ticks[i];
           final b = ticks[i + 1];
@@ -292,7 +305,13 @@ class MultiAxisPainter {
             final screenY = plotArea.bottom - (normalizedY * plotArea.height);
             if (screenY >= plotArea.top && screenY <= plotArea.bottom) {
               _paintMinorTickMark(
-                  canvas, axis, axisRect, screenY, isLeftSide, paint);
+                canvas,
+                axis,
+                axisRect,
+                screenY,
+                isLeftSide,
+                paint,
+              );
             }
           }
         }
@@ -412,7 +431,11 @@ class MultiAxisPainter {
     final len = axis.minorTickLength;
     final tickStart = isLeftSide ? axisRect.right : axisRect.left;
     final tickEnd = isLeftSide ? axisRect.right - len : axisRect.left + len;
-    canvas.drawLine(Offset(tickStart, screenY), Offset(tickEnd, screenY), paint);
+    canvas.drawLine(
+      Offset(tickStart, screenY),
+      Offset(tickEnd, screenY),
+      paint,
+    );
   }
 
   /// Paints a tick label at the specified Y position.
@@ -456,7 +479,8 @@ class MultiAxisPainter {
     if (isLeftSide) {
       // Right-align labels on left-side axes, positioned from axis line inward
       // Layout: [margin][axisLabel][axisLabelPadding][tickLabels][tickLabelPadding][tickMark][axisLine]
-      labelX = axisRect.right -
+      labelX =
+          axisRect.right -
           _tickLength -
           axis.tickLabelPadding -
           textPainter.width;
@@ -541,6 +565,9 @@ class MultiAxisPainter {
   /// [value] is the tick value to format.
   /// [axis] is the axis configuration containing formatting options.
   String formatTickLabel(double value, YAxisConfig axis) {
+    final categoryLabel = axis.categoryLabelFor(value);
+    if (categoryLabel != null) return categoryLabel;
+
     if (axis.labelFormatter != null) {
       return axis.labelFormatter!(value);
     }
@@ -586,6 +613,45 @@ class MultiAxisPainter {
     }
 
     return formatted;
+  }
+
+  List<double> _generateCategoryTicks(
+    YAxisConfig axis,
+    DataRange bounds, {
+    required double pixelExtent,
+  }) {
+    final categoryAxis = axis.categoryAxis;
+    if (categoryAxis == null || categoryAxis.categories.isEmpty) {
+      return const [];
+    }
+    final first = math.max(0, bounds.min.ceil());
+    final last = math.min(
+      categoryAxis.categories.length - 1,
+      bounds.max.floor(),
+    );
+    if (last < first) return const [];
+
+    final candidates = <double>[
+      for (var index = first; index <= last; index++) index.toDouble(),
+    ];
+    if (categoryAxis.labelDensity == CategoryLabelDensity.showAll ||
+        candidates.length <= 2) {
+      return candidates;
+    }
+
+    final capacity = math.max(
+      2,
+      (pixelExtent / categoryAxis.minimumCategoryExtent).floor(),
+    );
+    if (candidates.length <= capacity) return candidates;
+
+    final stride = ((candidates.length - 1) / (capacity - 1)).ceil();
+    final retained = <double>[candidates.first];
+    for (var index = stride; index < candidates.length - 1; index += stride) {
+      retained.add(candidates[index]);
+    }
+    if (retained.last != candidates.last) retained.add(candidates.last);
+    return retained;
   }
 
   /// Computes maximum ticks based on available height.

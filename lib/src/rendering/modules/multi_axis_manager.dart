@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/painting.dart';
 
 import '../../axis/log_ticks.dart';
@@ -125,7 +126,7 @@ class MultiAxisManager {
   /// Returns true if the series changed, false otherwise.
   bool setSeries(List<ChartSeries>? series) {
     final newSeries = series ?? const [];
-    if (_series == newSeries) return false;
+    if (listEquals(_series, newSeries)) return false;
     _series = newSeries;
     invalidateCache();
     return true;
@@ -717,6 +718,29 @@ class MultiAxisManager {
       // and the crosshair uses the same transform for coordinate conversion
       if (useTransformYBounds) {
         bounds[axis.id] = DataRange(min: t.dataYMin, max: t.dataYMax);
+        continue;
+      }
+
+      final categoryAxis = axis.categoryAxis;
+      if (categoryAxis != null && categoryAxis.categories.isNotEmpty) {
+        final fullMin = axis.min ?? categoryAxis.domainMin;
+        final fullMax = axis.max ?? categoryAxis.domainMax;
+        if (usePaintingBounds) {
+          final originalRange = ot.dataYMax - ot.dataYMin;
+          if (originalRange.isFinite && originalRange > 0) {
+            final viewportRatioMin = (t.dataYMin - ot.dataYMin) / originalRange;
+            final viewportRatioMax = (t.dataYMax - ot.dataYMin) / originalRange;
+            final categoryRange = fullMax - fullMin;
+            bounds[axis.id] = DataRange(
+              min: fullMin + (viewportRatioMin * categoryRange),
+              max: fullMin + (viewportRatioMax * categoryRange),
+            );
+          } else {
+            bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+          }
+        } else {
+          bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+        }
         continue;
       }
 

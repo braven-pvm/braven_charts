@@ -18,6 +18,7 @@ import '../models/concentric_donut_config.dart' show ConcentricDonutConfig;
 import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
+import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
@@ -497,6 +498,57 @@ final class BravenChart<T> {
       markerShape: markerShape,
       markerStyle: markerStyle,
       yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends one Heatmap cell per row.
+  ///
+  /// [value] is independent from the X/Y position and is resolved through the
+  /// required [colorScale]. When [missing] returns true the row retains its
+  /// cell identity but [value] is not read.
+  BravenChart<T> geomHeatmap({
+    required FieldAccessor<T, num> value,
+    required HeatmapColorScale colorScale,
+    FieldAccessor<T, num>? x,
+    FieldAccessor<T, num>? y,
+    FieldAccessor<T, bool>? missing,
+    FieldAccessor<T, String?>? pointKey,
+    FieldAccessor<T, String?>? label,
+    String? id,
+    String? name,
+    String? yAxisId,
+    String? unit,
+    double? cellWidth,
+    double? cellHeight,
+    double? gapFraction,
+    Color? borderColor,
+    double? borderWidth,
+    double? cornerRadius,
+    bool? showCellLabels,
+    Color? cellLabelColor,
+    double? cellLabelFontSize,
+  }) => _append(
+    HeatmapMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomHeatmap', x),
+      y: _resolveY('geomHeatmap', y),
+      value: value,
+      missing: missing,
+      pointKey: pointKey,
+      label: label,
+      colorScale: colorScale,
+      name: name,
+      yAxisId: yAxisId,
+      unit: unit,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+      gapFraction: gapFraction,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      cornerRadius: cornerRadius,
+      showCellLabels: showCellLabels,
+      cellLabelColor: cellLabelColor,
+      cellLabelFontSize: cellLabelFontSize,
     ),
   );
 
