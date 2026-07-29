@@ -37,16 +37,21 @@
 /// | a polar series carrying per-category column colors, targets or intervals, or the rose preset | emitted as geomPolar row-channels + `rose: true` |
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
 /// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
-/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | blocked — the ring key names each ring's series, so other ids cannot be reproduced |
-/// | a pie or donut carrying per-slice colors (`sliceColors`) | blocked, naming the series — `PolarMark` has a per-point color channel (`columnColor`), `PieMark`/`DonutMark` do not |
-/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | blocked, naming the ring series that disagrees — one `DonutMark` splits into N ring series and hands all of them its single `dataLabels` |
+/// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | emitted as `geomDonut(ringIds: {...})` — `DonutMark` carries an explicit ring-key→series-id map, consulted ONLY when the id pattern fails to recover a markId, so a conforming composition emits unchanged |
+/// | a concentric composition whose rings are unnamed or share a name | blocked — the ring key IS the series name, so no `ring:` channel could bucket those rows apart |
+/// | a concentric composition whose rings DIVERGE in `donutStyle`, `selectionStyle`, `unit`, `sliceRadiusConfig` or `sliceGroupingConfig`, or in which ANY ring carries a series `color` | blocked — `DonutMark` holds ONE of each for the whole composition and `_lowerConcentricRings` stamps it onto every ring, and unlike the single-donut `_lowerDonut` beside it never passes `mark.color` at all. Sharing a NON-DEFAULT value is fine; divergence is not, and no ring may carry a series colour even when every ring carries the same one. These reach the author through the catch-all row below rather than a reason of their own — a gap, since an author can hit them from ordinary config-form Dart |
+/// | a pie or donut carrying per-slice colors (`sliceColors`) | emitted as a `sliceColor:` row channel — `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`, and a concentric composition resolves it per ring bucket |
+/// | a pie or donut point whose `PointStyle` carries MORE than a color and a size | blocked, naming the family's reversible set — `scatterMarkerShape` / `scatterMarkerStyle` have no radial channel, and a bare `const PointStyle()` reverses to null, so both stay honest refusals rather than silent drops |
+/// | a donut center setting `labelStyle` or `valueStyle` | emitted as `center: DonutCenterContent(...)` — the captured center rides the mark VERBATIM and is written by the config emitter's own center renderer, so both styles survive |
+/// | a donut center setting `valueFormatter` | emitted with a `// valueFormatter:` placeholder and a runtime-value-omitted warning, exactly as the config form does — the chain is real but not complete |
+/// | a concentric composition whose rings carry DIFFERENT `dataLabels` | emitted as `geomDonut(dataLabelsByRing: {...})` — the mark carries ring 0's config as the base `dataLabels:` and only the rings that DIFFER from it are projected, so a uniform composition emits unchanged; inside the map an entry equal to the family default is a real override and is written |
 /// | polar series whose category domains differ | blocked — N geomPolar marks read ONE row list |
 /// | series whose x domains differ | blocked — one row list plus TOTAL accessors cannot express them |
 /// | a partially populated scatter channel | blocked — a `Channel` accessor is `num Function(T)`, so it cannot return "no value" |
 /// | mixed bar orientations | blocked — `.transposed()` is a whole-chart operation |
 /// | a chart-level trend, threshold, range or point annotation | emitted as .trend/.threshold/.band/.pointAt |
 /// | any other annotation (text, pin, chord, error-bar, legend, a 2-D/half-open range, or ANY series-level annotation) | blocked and LISTED, never dropped |
-/// | a chart-level option `BravenPlot` does not forward (title, legend, grid, size, …) | blocked and named |
+/// | a chart-level option `BravenPlot` does not forward — `showToolbar`, `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization knobs, width/height, background, `legendStyle`, `radialBarChartConfig`, or a subtitle with no title | blocked and named. The title, subtitle, grid and legend toggle ARE forwarded and emit as `.title(...)` / `.grid(...)` / `.legend(...)` |
 /// | anything else the reconstructed chain would not reproduce | blocked by the round-trip proof below |
 /// | a runtime interaction binding | emitted with a warning, exactly as the config form does |
 /// | data above `maxInlinePoints` | emitted with a placeholder row list and a warning, exactly as the config form does |
@@ -117,6 +122,7 @@ import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
@@ -299,6 +305,44 @@ class _GeometryPlan {
   final Map<String, _Field> accessors;
 }
 
+/// A planned donut center together with the document site it was CAPTURED
+/// from.
+///
+/// The two travel as one because the site is not decorative: when a center's
+/// `valueFormatter` is a live callback the emitter writes a placeholder and a
+/// `runtimeValueOmitted` warning, and that warning quotes this path. The two
+/// donut shapes capture their center from genuinely different places — a plain
+/// donut and a single-ring collapse from the series' own
+/// `style.centerContent`, a MULTI-RING concentric composition from the
+/// plot-level `configuration.concentricDonut.centerContent`, which no series
+/// carries at all. Letting the emitter guess produced a warning that pointed
+/// the workbench at a field the document did not have, and disagreed with what
+/// the config form calls the very same object.
+class _PlannedCenter {
+  const _PlannedCenter(this.content, this.message, this.path);
+
+  /// The center a plain donut, or a concentric composition that collapsed to a
+  /// single ring, carries on series [seriesIndex] itself.
+  factory _PlannedCenter.onSeries(DonutCenterContent content, int seriesIndex) {
+    final site = ChartConfigDartEmitter.donutCenterWarningSite(seriesIndex);
+    return _PlannedCenter(content, site.message, site.path);
+  }
+
+  /// The shared center a multi-ring concentric composition carries on its
+  /// plot-level [ConcentricDonutConfig].
+  factory _PlannedCenter.onConcentricConfig(DonutCenterContent content) {
+    const site = ChartConfigDartEmitter.concentricCenterWarningSite;
+    return _PlannedCenter(content, site.message, site.path);
+  }
+
+  final DonutCenterContent content;
+
+  /// The wording and document path the omitted-formatter warning quotes — the
+  /// same pair the config form reports for this object.
+  final String message;
+  final String path;
+}
+
 /// Which radial geometry a captured chart reverses to.
 ///
 /// The polar family is NOT here: it is the one radial family whose plot may
@@ -320,6 +364,7 @@ class _RadialPlan {
     required this.value,
     this.radius,
     this.ring,
+    this.sliceColor,
     this.center,
   });
 
@@ -339,8 +384,13 @@ class _RadialPlan {
   /// Concentric-ring grouping field, present only for a `geomDonut(ring:)`.
   final _Field? ring;
 
-  /// The donut center summary to emit, or null when there is none.
-  final DonutCenterContent? center;
+  /// Optional per-slice colour-override field, present only when some captured
+  /// point carries a colour. A row whose category has no override writes null.
+  final _Field? sliceColor;
+
+  /// The donut center summary to emit — with the site its formatter warning
+  /// names — or null when there is none.
+  final _PlannedCenter? center;
 }
 
 /// One polar series of a polar plan: the mark the proof lowers plus the value
@@ -446,10 +496,12 @@ class _GrammarChainEmitter {
     final blocked = <String>[];
     final body = _tryEmitChain(blocked);
 
+    // The header is built after the chain, so the material import can hide the
+    // names the chain actually made ambiguous.
     final writer = DartSourceWriter();
     if (body != null && options.includeImports) {
       writer.writeLine("import 'package:braven_charts/braven_charts.dart';");
-      writer.writeLine("import 'package:flutter/material.dart';");
+      writer.writeLine(DartSourceWriter.materialImport(body));
       writer.writeLine();
     }
     if (body == null) {
@@ -912,11 +964,23 @@ class _GrammarChainEmitter {
   }
 
   _RadialPlan _planPie(PieChartSeries series) {
+    // EVERY field is allocated before the rows are synthesised: a row is sized
+    // from the slot counts at the moment it is built, so a field added after
+    // this point would index past the end of its slot list.
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField([series]);
+    final sliceColor = _radialSliceColorField([series]);
     final rows = _synthesiseRadialRows(series.points.length);
-    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    _fillRadialRows(
+      rows,
+      series.points,
+      category,
+      value,
+      radius,
+      ring: null,
+      sliceColor: sliceColor,
+    );
     return _RadialPlan(
       kind: _RadialKind.pie,
       verb: 'geomPie',
@@ -924,6 +988,7 @@ class _GrammarChainEmitter {
       category: category,
       value: value,
       radius: radius,
+      sliceColor: sliceColor,
       mark: PieMark<_SourceRow>(
         id: series.id,
         name: series.name,
@@ -932,6 +997,7 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         // Carry the series' unit, slice styling, selection, data labels and the
         // slice-radius / grouping configs onto the mark so the round-trip proof
         // reproduces the whole pie (the lowering maps PieMark.style →
@@ -950,12 +1016,24 @@ class _GrammarChainEmitter {
   }
 
   _RadialPlan _planDonut(DonutChartSeries series) {
+    // As for pie: every field is allocated BEFORE the rows are synthesised.
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField([series]);
+    final sliceColor = _radialSliceColorField([series]);
     final rows = _synthesiseRadialRows(series.points.length);
-    _fillRadialRows(rows, series.points, category, value, radius, ring: null);
+    _fillRadialRows(
+      rows,
+      series.points,
+      category,
+      value,
+      radius,
+      ring: null,
+      sliceColor: sliceColor,
+    );
     final center = _markCenter(series.centerContent, DonutCenterContent.hidden);
+    // `_planRadial` reaches here only for a chart of exactly ONE donut series,
+    // so this center really is `$.series[0].style.centerContent`.
     return _RadialPlan(
       kind: _RadialKind.donut,
       verb: 'geomDonut',
@@ -963,7 +1041,8 @@ class _GrammarChainEmitter {
       category: category,
       value: value,
       radius: radius,
-      center: center,
+      sliceColor: sliceColor,
+      center: center == null ? null : _PlannedCenter.onSeries(center, 0),
       mark: DonutMark<_SourceRow>(
         id: series.id,
         name: series.name,
@@ -972,6 +1051,7 @@ class _GrammarChainEmitter {
         category: _string(category),
         value: _number(value),
         radius: radius == null ? null : _number(radius),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         // As for pie: carry the donut unit, styling, selection, data labels and
         // slice-radius / grouping configs so the whole donut round-trips
         // (DonutMark.style → DonutChartSeries.donutStyle, .selectionStyle →
@@ -993,24 +1073,59 @@ class _GrammarChainEmitter {
   ) {
     // The forward path ids each ring `'<markId>-<ringKey>'` and names it
     // `<ringKey>`. Recover that shared markId so the re-lowered ring ids
-    // reproduce the captured ones; if the ids do not follow that pattern the
-    // chart was not authored as a concentric composition and cannot round-trip.
-    final markId = _concentricMarkId(donuts);
-    if (markId == null) {
-      block(
-        'Grammar chain not emitted: the donut series ids do not follow the '
-        "concentric ring pattern '<markId>-<ring>', so the composition cannot "
-        'be reversed to a geomDonut(ring:) chain.',
-        path: r'$.series',
-      );
-      return null;
+    // reproduce the captured ones.
+    //
+    // When the ids do NOT follow that pattern the chart is still a concentric
+    // composition — it just chose its ids independently of its ring names,
+    // which is what a config-authored chart usually does. The chain then names
+    // every ring explicitly through `geomDonut(ringIds:)` and the markId is
+    // synthesised, because with a full map it no longer reaches any series id.
+    //
+    // This branch is entered ONLY when the pattern fails, so a conforming
+    // composition takes the original path untouched and its emitted text is
+    // byte-identical to what it was before this channel existed.
+    final recovered = _concentricMarkId(donuts);
+    final Map<String, String>? explicitRingIds;
+    if (recovered == null) {
+      // The ring KEY is the series NAME — that is the value the `ring:` channel
+      // returns and the map is keyed by — so a composition whose rings are
+      // unnamed, or share a name, cannot be reversed to a ring channel at all:
+      // its rows would bucket together into one ring. Refused by name, as
+      // before, rather than renamed into something that emits.
+      final keys = <String>[for (final donut in donuts) donut.name ?? ''];
+      if (keys.any((key) => key.isEmpty) ||
+          keys.toSet().length != keys.length) {
+        block(
+          'Grammar chain not emitted: a geomDonut(ring:) chain builds each ring '
+          'from the value its ring channel returns and names the ring series '
+          'after it, so every donut series in the composition needs a distinct, '
+          'non-empty name. These do not: '
+          '${donuts.map((donut) => '"${donut.id}" (name '
+              '${donut.name == null ? 'unset' : '"${donut.name}"'})').join(', ')}.',
+          path: r'$.series',
+        );
+        return null;
+      }
+      explicitRingIds = <String, String>{
+        for (final donut in donuts) donut.name!: donut.id,
+      };
+    } else {
+      explicitRingIds = null;
     }
+    final markId = recovered ?? _synthesisedConcentricMarkId;
+    // EVERY field must be allocated here, BEFORE `_synthesiseRadialRows`: the
+    // rows below are sized from the current slot counts, so a field added
+    // afterwards would throw a `RangeError` on the first row write.
     final ring = _addField('ring', _FieldKind.string);
     final category = _addField('category', _FieldKind.string);
     final value = _addField('value', _FieldKind.number);
     final radius = _radialRadiusField(donuts);
+    final sliceColor = _radialSliceColorField(donuts);
     final totalRows = donuts.fold<int>(0, (sum, d) => sum + d.points.length);
     final rows = _synthesiseRadialRows(totalRows);
+    // This loop is the concentric equivalent of `_fillRadialRows` — it walks
+    // the ring list rather than one point list — so every channel that path
+    // writes must be written here too.
     var index = 0;
     for (final donut in donuts) {
       final key = donut.name ?? '';
@@ -1020,6 +1135,9 @@ class _GrammarChainEmitter {
         rows[index].numbers[value.slot] = point.y;
         if (radius != null) {
           rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+        }
+        if (sliceColor != null) {
+          rows[index].colors[sliceColor.slot] = point.pointStyle?.color;
         }
         index += 1;
       }
@@ -1033,17 +1151,42 @@ class _GrammarChainEmitter {
     final center = donuts.length == 1
         ? _markCenter(donuts.single.centerContent, DonutCenterContent.hidden)
         : _markCenter(captured.centerContent, const DonutCenterContent());
+    // …and the two shapes therefore report an omitted formatter at DIFFERENT
+    // document sites. The collapse's center is series[0]'s own; the multi-ring
+    // composition's belongs to the plot-level config, where the config form
+    // reports it too — and where, unlike any series path, it actually exists.
+    final plannedCenter = center == null
+        ? null
+        : donuts.length == 1
+        ? _PlannedCenter.onSeries(center, 0)
+        : _PlannedCenter.onConcentricConfig(center);
     // What lowering REBUILDS from `center` alone — the shape every concentric
     // chart emitted before `concentric:` existed. When it already reproduces the
     // captured composition the mark keeps carrying just the center, so those
     // charts emit exactly the text they emitted before; only a composition the
-    // center cannot express (a ring gap, order, weights, radii, legend mode, or
-    // a center with runtime styling `_markCenter` drops) carries the whole
-    // config — which is precisely the set that used to be REFUSED.
+    // center cannot express (a ring gap, order, weights, radii or legend mode)
+    // carries the whole config — which is precisely the set that used to be
+    // REFUSED. The center itself is carried verbatim by `_markCenter`, so a
+    // styled or formatted center no longer forces the config onto the mark.
     final fromCenter = donuts.length == 1 || center == null
         ? const ConcentricDonutConfig()
         : ConcentricDonutConfig(centerContent: center);
     final carriesConfig = fromCenter != captured;
+    // ONE mark splits into N ring series, so the label config is carried as a
+    // base plus overrides: ring 0 fixes `dataLabels`, and only the rings whose
+    // config DIFFERS from it are projected into `dataLabelsByRing`. A uniform
+    // composition therefore builds an EMPTY map, which is kept as null below so
+    // it emits exactly the text it emitted before this channel existed.
+    //
+    // An override that happens to EQUAL the family default is still projected:
+    // "same as the default" and "same as the base" are different facts, and
+    // only the second one means the ring needs no entry.
+    final baseLabels = donuts.first.dataLabels;
+    final labelsByRing = <String, PieDataLabelConfig>{
+      for (final donut in donuts)
+        if (donut.dataLabels != baseLabels)
+          (donut.name ?? ''): donut.dataLabels,
+    };
     return _RadialPlan(
       kind: _RadialKind.concentric,
       verb: 'geomDonut',
@@ -1052,17 +1195,19 @@ class _GrammarChainEmitter {
       value: value,
       radius: radius,
       ring: ring,
+      sliceColor: sliceColor,
       // The config owns the center when it rides the mark: lowering reads
       // `concentric.centerContent` and REFUSES a mark that sets both, so the
       // plan's `center` (what `geomDonut` emits as `center:`) drops out too.
-      center: carriesConfig ? null : center,
+      center: carriesConfig ? null : plannedCenter,
       // A concentric ring donut lowers per ring with no per-mark name/color —
       // the ring key supplies each series' name — so those inherited fields are
       // deliberately left null here. The mark carries ONE unit / style /
-      // selection / dataLabels / slice-config set applied to EVERY ring (that is
-      // how `_lowerConcentricRings` lowers), so the first ring's config is used;
+      // selection / slice-config set applied to EVERY ring (that is how
+      // `_lowerConcentricRings` lowers), so the first ring's config is used;
       // rings whose config differs are caught by the round-trip proof (each
-      // lowered ring must match), never silently flattened.
+      // lowered ring must match), never silently flattened. `dataLabels` is the
+      // exception: it has a per-ring override channel, projected above.
       mark: DonutMark<_SourceRow>(
         id: markId,
         unit: donuts.first.unit,
@@ -1070,11 +1215,16 @@ class _GrammarChainEmitter {
         value: _number(value),
         radius: radius == null ? null : _number(radius),
         ring: _string(ring),
+        sliceColor: sliceColor == null ? null : _color(sliceColor),
         style: donuts.first.donutStyle,
         selectionStyle: donuts.first.selectionStyle,
         center: carriesConfig ? null : center,
         concentric: carriesConfig ? captured : null,
-        dataLabels: donuts.first.dataLabels,
+        // Null whenever the captured ids follow the pattern, which is what
+        // keeps a conforming composition's emitted text unchanged.
+        ringIds: explicitRingIds,
+        dataLabels: baseLabels,
+        dataLabelsByRing: labelsByRing.isEmpty ? null : labelsByRing,
         sliceRadiusConfig: donuts.first.sliceRadiusConfig,
         sliceGroupingConfig: donuts.first.sliceGroupingConfig,
       ),
@@ -1265,6 +1415,23 @@ class _GrammarChainEmitter {
     return hasRadius ? _addField('radius', _FieldKind.number) : null;
   }
 
+  /// A slice-colour field when ANY point across [seriesList] carries a colour
+  /// override, or null otherwise.
+  ///
+  /// Allocated on ANY point, not on every point: `PieChartSeries.fromMap` /
+  /// `DonutChartSeries.fromMap` build `sliceColors` from the entries that HAVE
+  /// a colour, so a partially-coloured chart reverses to a field whose
+  /// uncoloured rows are null, which the lowering helper skips again.
+  ///
+  /// MUST be called before [_synthesiseRadialRows] — a row is sized from the
+  /// slot counts at the moment it is built.
+  _Field? _radialSliceColorField(List<ChartSeries> seriesList) {
+    final hasColor = seriesList.any(
+      (series) => series.points.any((point) => point.pointStyle?.color != null),
+    );
+    return hasColor ? _addField('sliceColor', _FieldKind.color) : null;
+  }
+
   /// Fills one row per point with the reversed radial channels.
   void _fillRadialRows(
     List<_SourceRow> rows,
@@ -1273,6 +1440,7 @@ class _GrammarChainEmitter {
     _Field value,
     _Field? radius, {
     required _Field? ring,
+    required _Field? sliceColor,
   }) {
     for (var index = 0; index < points.length; index++) {
       final point = points[index];
@@ -1280,6 +1448,11 @@ class _GrammarChainEmitter {
       rows[index].numbers[value.slot] = point.y;
       if (radius != null) {
         rows[index].numbers[radius.slot] = point.pointStyle?.size ?? 0;
+      }
+      // Null is written through deliberately: a category with no override is a
+      // real state the lowering reproduces by leaving it out of `sliceColors`.
+      if (sliceColor != null) {
+        rows[index].colors[sliceColor.slot] = point.pointStyle?.color;
       }
     }
   }
@@ -1295,9 +1468,23 @@ class _GrammarChainEmitter {
       ),
   ];
 
+  /// The mark id a concentric composition takes when its captured ring ids do
+  /// NOT follow the `'<markId>-<ringKey>'` pattern.
+  ///
+  /// In that case `ringIds` names every ring explicitly — the map is all or
+  /// nothing — so the mark id no longer contributes to any series id and only
+  /// has to be stable and readable. A fixed word is both, and it cannot collide
+  /// with anything: the chain carries exactly one radial mark.
+  static const String _synthesisedConcentricMarkId = 'donut';
+
   /// The shared markId of a concentric composition, recovered from the
   /// `'<markId>-<ringKey>'` id pattern the forward lowering writes, or null when
   /// the ids do not match it.
+  ///
+  /// Null is not a refusal on its own any more: `_planConcentric` falls back to
+  /// naming every ring explicitly through `DonutMark.ringIds`. It IS still the
+  /// discriminator, though — the fallback runs only when this returns null, so
+  /// a conforming composition keeps emitting exactly what it emitted before.
   String? _concentricMarkId(List<DonutChartSeries> donuts) {
     final first = donuts.first;
     final firstKey = first.name ?? '';
@@ -1319,22 +1506,18 @@ class _GrammarChainEmitter {
   /// `geomDonut` emits no `center:` for it. The two donut shapes have DIFFERENT
   /// no-op centers: a plain/collapsed donut restores `DonutCenterContent.hidden`
   /// (`mark.center ?? hidden`), while a concentric composition restores the
-  /// config's default `const DonutCenterContent()` (visible). The reconstruction
-  /// drops the runtime-only label/value styles and formatter, so a center that
-  /// sets one is refused by the round-trip proof rather than emitted as a center
-  /// that silently drops it.
+  /// config's default `const DonutCenterContent()` (visible).
+  ///
+  /// The captured object is carried VERBATIM — `labelStyle`, `valueStyle` and
+  /// `valueFormatter` included — exactly as `dataLabels` and the slice configs
+  /// already are, so the round-trip proof compares like with like instead of
+  /// refusing every styled or formatted center. A `valueFormatter` is a live
+  /// callback with no literal form; it degrades to an honest placeholder at
+  /// EMISSION (with a `runtimeValueOmitted` warning), not by being dropped here.
   DonutCenterContent? _markCenter(
     DonutCenterContent captured,
     DonutCenterContent noOp,
-  ) {
-    if (captured == noOp) return null;
-    return DonutCenterContent(
-      isVisible: captured.isVisible,
-      label: captured.label,
-      valueMode: captured.valueMode,
-      customValue: captured.customValue,
-    );
-  }
+  ) => captured == noOp ? null : captured;
 
   /// The first part of a radial lowered plot that does not match the captured
   /// chart, or null when everything matches.
@@ -1432,22 +1615,85 @@ class _GrammarChainEmitter {
 
   /// Explains why a captured radial series is not reproduced by the lowered one.
   ///
-  /// The radial marks now carry the unit, selection style, data labels, series
-  /// style, (pie/donut) the slice-radius and grouping configs and (polar) the
-  /// preset, per-category column colours, targets and intervals with their two
-  /// styles, so those all round-trip. What remains un-carried is series
-  /// metadata, a per-point style that is not a plain colour override, and a
-  /// polar interval list whose every entry is null (which reverses to "no
-  /// intervals" rather than to a list of nulls); a series that sets one of
-  /// those is what reaches here.
+  /// Two causes are DIAGNOSED by name before the catch-all sentence runs,
+  /// because the catch-all describes neither of them and a reader who trusts it
+  /// goes hunting for something that is not there:
+  ///
+  ///  1. a donut center the reversal cannot carry ([_radialCenterLossDetail]);
+  ///  2. a point whose `PointStyle` sets no override at all
+  ///     ([_radialBareStyleLossDetail]) — which the catch-all would call a
+  ///     style "beyond" a colour and size override when it falls short of both.
+  ///
+  /// What the catch-all then covers is series metadata, a per-point style
+  /// beyond what the family reverses, and a polar interval list whose every
+  /// entry is null (which reverses to "no intervals" rather than to a list of
+  /// nulls). Its round-trip list is accurate at that point and only there: a
+  /// series that reaches it has a matching center, so naming the center among
+  /// the things that round-tripped is true of the series being described.
+  ///
+  /// The per-point sentence is FAMILY-AWARE because the two radial families
+  /// reverse different amounts of a `PointStyle`. Pie and donut reverse both
+  /// `color` (as `sliceColor:`) and `size` (as `radius:`), because their
+  /// `fromMap` builds the general `PointStyle(color:, size:)`. Polar reverses
+  /// `color` only — `PolarColumnChartSeries._fromMap` writes the narrowing
+  /// `PointStyle.color(...)` and a polar column ignores `size` when it paints.
+  /// Telling a pie author that `size` is un-carried would be false.
   String _radialSeriesLossDetail(ChartSeries expected, ChartSeries lowered) {
+    final center = _radialCenterLossDetail(expected, lowered);
+    if (center != null) return center;
+    final bareStyle = _radialBareStyleLossDetail(expected);
+    if (bareStyle != null) return bareStyle;
+    final perPoint = expected is PolarColumnChartSeries
+        ? 'a per-point style beyond a colour override'
+        : 'a per-point style beyond a colour and size override';
     return 'It carries a series option the radial marks do not carry — the '
         'category, value, optional radius, concentric ring, donut center, '
         'unit, series style, selection style, data labels, (pie/donut) the '
-        'slice-radius and grouping configs and (polar) the preset, per-category '
-        'column colours, targets and intervals round-trip, but series metadata, '
-        'a per-point style beyond a colour override, and an all-null polar '
-        'interval list do not.';
+        'per-slice colours and the slice-radius and grouping configs and '
+        '(polar) the preset, per-category column colours, targets and '
+        'intervals round-trip, but series metadata, $perPoint, and an all-null '
+        'polar interval list do not.';
+  }
+
+  /// Names the DONUT CENTER as the cause when it is, or null when the captured
+  /// and rebuilt centers match.
+  ///
+  /// [_markCenter] now carries the captured center VERBATIM, so a center's own
+  /// fields — styles and formatter included — no longer diverge on their own.
+  /// The one remaining way a center differs is that it is replaced wholesale,
+  /// which is what a concentric composition does to a ring that carries a
+  /// center of its own: the mark holds ONE shared center and every ring
+  /// re-lowers hidden.
+  String? _radialCenterLossDetail(ChartSeries expected, ChartSeries lowered) {
+    if (expected is! DonutChartSeries || lowered is! DonutChartSeries) {
+      return null;
+    }
+    if (expected.centerContent == lowered.centerContent) return null;
+    return 'Its donut center is not the one the chain would rebuild. A '
+        'concentric composition carries ONE shared donut center on '
+        'geomDonut(concentric: ...) and re-lowers every ring with a hidden '
+        'center, so a ring carrying a center of its own cannot be reproduced.';
+  }
+
+  /// Names an OVERRIDE-LESS `PointStyle` as the cause when the series carries
+  /// one, or null when every point style either sets an override or is absent.
+  ///
+  /// The reversal builds a point style out of the row channels it allocated, so
+  /// a style with nothing to allocate reverses to `pointStyle: null`. The
+  /// document codec disagrees — it writes the style as `{}` and decodes it back
+  /// to a non-null `const PointStyle()` — and `PointStyle.==` separates the
+  /// two. The asymmetry is real, so it stays an honest refusal; it just is not
+  /// the refusal the catch-all sentence describes.
+  String? _radialBareStyleLossDetail(ChartSeries expected) {
+    final hasBareStyle = expected.points.any(
+      (point) => point.pointStyle != null && !point.pointStyle!.hasOverrides,
+    );
+    if (!hasBareStyle) return null;
+    return 'It carries a point whose PointStyle sets NO override at all. The '
+        'reversal builds a point style out of the row channels it allocated, '
+        'so an override-less style reverses to no style — which is not what '
+        'the captured document holds. The asymmetry is real, so it is refused '
+        'rather than emitted as a chain that quietly rewrites the document.';
   }
 
   // =========================================================================
@@ -2505,6 +2751,12 @@ class _GrammarChainEmitter {
       if (plan.ring != null) {
         writer.namedArgument('ring', plan.ring!.accessor());
       }
+      // `sliceColor:` sits after `radius:` / `ring:` in the geomPie/geomDonut
+      // signatures, so it is written here to keep the emitted argument order
+      // the same as the API's.
+      if (plan.sliceColor != null) {
+        writer.namedArgument('sliceColor', plan.sliceColor!.accessor());
+      }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);
       // `unit` is a shared RadialMark field carried by every family; the config
@@ -2522,7 +2774,12 @@ class _GrammarChainEmitter {
       switch (mark) {
         case PieMark<_SourceRow>():
           if (mark.style != null) {
-            _config.emitRadialStyle(writer, 'style', 'PieChartStyle', mark.style!);
+            _config.emitRadialStyle(
+              writer,
+              'style',
+              'PieChartStyle',
+              mark.style!,
+            );
           }
           if (mark.selectionStyle != null) {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
@@ -2550,7 +2807,21 @@ class _GrammarChainEmitter {
           if (mark.selectionStyle != null) {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
           }
-          if (plan.center != null) _emitDonutCenter(writer, plan.center!);
+          // Written by the config emitter's OWN centre renderer — the one the
+          // config form's `centerContent:` and the concentric config both use —
+          // so `center:` carries the styles and the formatter placeholder
+          // instead of a four-field rebuild the proof would have to refuse.
+          // The planner also decided WHERE the centre came from, so an omitted
+          // formatter is reported at the site that actually holds it.
+          if (plan.center case final planned?) {
+            _config.emitDonutCenterContent(
+              writer,
+              'center',
+              planned.content,
+              warningMessage: planned.message,
+              warningPath: planned.path,
+            );
+          }
           // `concentric:` and `center:` are mutually exclusive by lowering's
           // precedence rule, and the planner only carries a config the center
           // could not express — so a concentric chart whose composition IS the
@@ -2559,8 +2830,24 @@ class _GrammarChainEmitter {
               when concentric != const ConcentricDonutConfig()) {
             _config.emitConcentricDonutConfig(writer, 'concentric', concentric);
           }
+          // Present only for a composition whose captured ids do not follow the
+          // `'<markId>-<ringKey>'` pattern, so a conforming chart writes nothing
+          // here and its emitted text is unchanged.
+          if (mark.ringIds case final ringIds?) {
+            _emitRingIds(writer, ringIds);
+          }
           if (mark.dataLabels != null) {
             _config.emitRadialLabels(writer, mark.dataLabels!, 0);
+          }
+          // The per-ring overrides ride straight after their base, in the
+          // `geomDonut` signature's order. The planner only builds this map for
+          // rings that DIFFER from the base and keeps an empty one as null, so
+          // a uniform-label composition reaches here with nothing to write and
+          // emits exactly the text it emitted before. The seam itself is
+          // UNCONDITIONAL: an entry equal to the family default is a real
+          // override against a non-default base.
+          if (mark.dataLabelsByRing case final byRing?) {
+            _config.emitRadialLabelsByRing(writer, byRing);
           }
           if (mark.sliceRadiusConfig != null) {
             _config.emitSliceRadiusConfig(writer, mark.sliceRadiusConfig!, 0);
@@ -2582,26 +2869,6 @@ class _GrammarChainEmitter {
       _absorbConfigWarnings();
     });
     writer.writeLine(')');
-  }
-
-  /// Emits `center: DonutCenterContent(...)` with the portable text fields only.
-  /// A center that carried a label/value style or a formatter would already have
-  /// been refused by the round-trip proof (`_radialCenter` drops them), so only
-  /// the reproducible fields reach here.
-  void _emitDonutCenter(DartSourceWriter writer, DonutCenterContent center) {
-    writer.writeLine('center: DonutCenterContent(');
-    writer.indented(() {
-      if (!center.isVisible) writer.namedArgument('isVisible', 'false');
-      _optionalString(writer, 'label', center.label);
-      if (center.valueMode != DonutCenterValueMode.total) {
-        writer.namedArgument(
-          'valueMode',
-          'DonutCenterValueMode.${center.valueMode.name}',
-        );
-      }
-      _optionalString(writer, 'customValue', center.customValue);
-    });
-    writer.writeLine('),');
   }
 
   void _emitRowClass(DartSourceWriter writer) {
@@ -3162,6 +3429,19 @@ class _GrammarChainEmitter {
   void _optionalString(DartSourceWriter writer, String name, String? value) {
     if (value == null) return;
     writer.namedArgument(name, DartSourceWriter.stringLiteral(value));
+  }
+
+  /// Emits `ringIds: {'<ringKey>': '<seriesId>', …}` for a concentric
+  /// composition whose captured ids do not follow `'<markId>-<ringKey>'`.
+  ///
+  /// `ringIds` is a `geomDonut` argument with no config-form counterpart, but
+  /// its LITERAL rendering — sorted string keys, string values, the same map
+  /// framing `ringWeights:` and `dataLabelsByRing:` use — is not grammar-only,
+  /// so it goes through the config emitter's shared map seam rather than
+  /// growing a third private copy of that framing here. Every other literal
+  /// this chain writes is delegated the same way.
+  void _emitRingIds(DartSourceWriter writer, Map<String, String> ringIds) {
+    _config.emitStringMapArgument(writer, 'ringIds', ringIds);
   }
 
   void _optionalNumber(DartSourceWriter writer, String name, num? value) {

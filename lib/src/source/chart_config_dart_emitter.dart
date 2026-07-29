@@ -109,6 +109,34 @@ class ChartConfigDartEmitter {
   /// Warnings raised while emitting sub-expressions through this seam.
   List<ChartSourceWarning> get emittedWarnings => List.unmodifiable(_warnings);
 
+  /// Where a donut centre carried by SERIES [seriesIndex] is reported from when
+  /// its `valueFormatter` cannot be written as a literal.
+  ///
+  /// A plain donut, and a concentric composition that collapsed to one ring,
+  /// both take their centre from `series[i].style.centerContent`, so this is
+  /// the site for both — in either source form.
+  static ({String message, String path}) donutCenterWarningSite(
+    int seriesIndex,
+  ) => (
+    message:
+        'A Donut center formatter callback was omitted. Provide it from your '
+        'application.',
+    path: '\$.series[$seriesIndex].style.centerContent.valueFormatter',
+  );
+
+  /// Where the SHARED centre of a multi-ring concentric composition is reported
+  /// from when its `valueFormatter` cannot be written as a literal.
+  ///
+  /// That centre lives on the plot-level configuration and no series carries
+  /// it, so reporting it at a series path would name a field the document does
+  /// not have.
+  static const ({String message, String path}) concentricCenterWarningSite = (
+    message:
+        'A Concentric Donut center formatter callback was omitted. Provide it '
+        'from your application.',
+    path: r'$.configuration.concentricDonut.centerContent.valueFormatter',
+  );
+
   /// Writes the constructor arguments of an [XAxisConfig], without the
   /// enclosing `XAxisConfig(` / `)` .
   void emitXAxisFields(DartSourceWriter writer, XAxisConfig axis) =>
@@ -207,6 +235,24 @@ class ChartConfigDartEmitter {
     int seriesIndex,
   ) => _emitRadialLabels(writer, labels, seriesIndex);
 
+  /// Writes `dataLabelsByRing: {...}` for the grammar's per-ring override map.
+  ///
+  /// UNCONDITIONAL, unlike [emitRadialLabels]: it writes EVERY entry it is
+  /// given, including one that equals the family default. In a map keyed
+  /// against a base config, "equal to the default" is a meaningful override —
+  /// the ring is asking NOT to inherit the base — so eliding it would emit a
+  /// different chart. Only an empty map writes nothing, and the caller is
+  /// expected to pass null rather than an empty map anyway.
+  ///
+  /// Every entry is rendered by the SAME `PieDataLabelConfig(...)` renderer
+  /// [emitRadialLabels] uses, so the two forms cannot disagree about a field,
+  /// its order or its default. Keys are sorted so the emitted source does not
+  /// depend on ring order.
+  void emitRadialLabelsByRing(
+    DartSourceWriter writer,
+    Map<String, PieDataLabelConfig> byRing,
+  ) => _emitRadialLabelsByRing(writer, byRing);
+
   /// Writes `<argument>: PolarColumnStyle(...)`, the field body the polar
   /// geometry verb (`geomPolar`) hands to its `style:` argument. Writes nothing
   /// for a default style (unless `includeDefaultValues`).
@@ -255,6 +301,39 @@ class ChartConfigDartEmitter {
     String argument,
     ConcentricDonutConfig config,
   ) => _emitConcentricDonutConfigArgument(writer, argument, config);
+
+  /// Writes `<argument>: DonutCenterContent(...)` — the literal the grammar
+  /// chain hands to `geomDonut(center: ...)`, rendered by the same code the
+  /// config form's `centerContent:` uses, so the two cannot disagree about a
+  /// centre's styles or its formatter. Unconditional: the caller decides when a
+  /// centre is worth emitting.
+  ///
+  /// A live `valueFormatter` has no literal form and is written as an honest
+  /// placeholder with a runtime-value-omitted warning. [warningMessage] and
+  /// [warningPath] name the site the centre was CAPTURED from and are the
+  /// caller's to supply: a `geomDonut(center:)` may reverse a series' own
+  /// `style.centerContent` OR a multi-ring composition's plot-level
+  /// `configuration.concentricDonut.centerContent`, which no series carries.
+  /// Guessing one of them would point the workbench at a field that does not
+  /// exist, so the seam takes them rather than deriving them.
+  ///
+  /// The two sites are defined once, as [donutCenterWarningSite] and
+  /// [concentricCenterWarningSite], and the config form reports the very same
+  /// records — so neither form can drift into naming an object the other calls
+  /// something else.
+  void emitDonutCenterContent(
+    DartSourceWriter writer,
+    String argument,
+    DonutCenterContent center, {
+    required String warningMessage,
+    required String warningPath,
+  }) => _emitCenterContentArgument(
+    writer,
+    argument,
+    center,
+    warningMessage: warningMessage,
+    warningPath: warningPath,
+  );
 
   /// Writes `selectionStyle: RadialSelectionStyle(...)`, the argument name the
   /// radial geometry verbs (`geomPie`/`geomDonut`/`geomPolar`) use too. Writes
@@ -378,11 +457,13 @@ class ChartConfigDartEmitter {
     }
 
     // Build the header after the body so warnings discovered while emitting a
-    // nested option are visible both in the result metadata and in copied code.
+    // nested option are visible both in the result metadata and in copied code,
+    // and so the material import can hide the names the body actually made
+    // ambiguous.
     final writer = DartSourceWriter();
     if (options.includeImports) {
       writer.writeLine("import 'package:braven_charts/braven_charts.dart';");
-      writer.writeLine("import 'package:flutter/material.dart';");
+      writer.writeLine(DartSourceWriter.materialImport(body.toString()));
       writer.writeLine();
     }
     if (_warnings.isNotEmpty) {
@@ -3196,37 +3277,14 @@ class ChartConfigDartEmitter {
     _emitRadialSelectionStyle(writer, series.selectionStyle);
     final center = series.centerContent;
     if (center != DonutCenterContent.hidden) {
-      writer.writeLine('centerContent: DonutCenterContent(');
-      writer.indented(() {
-        _valueIf(writer, 'isVisible', center.isVisible, defaultValue: true);
-        _optionalString(writer, 'label', center.label);
-        _enumIf(
-          writer,
-          'valueMode',
-          'DonutCenterValueMode',
-          center.valueMode.name,
-          defaultName: 'total',
-        );
-        _optionalString(writer, 'customValue', center.customValue);
-        if (center.labelStyle != null) {
-          _emitLabelStyle(writer, 'labelStyle', center.labelStyle!);
-        }
-        if (center.valueStyle != null) {
-          _emitLabelStyle(writer, 'valueStyle', center.valueStyle!);
-        }
-        if (center.valueFormatter != null) {
-          writer.writeLine(
-            '// valueFormatter: (value) => ..., // Supply application formatting.',
-          );
-          _warn(
-            code: ChartSourceWarningCodes.runtimeValueOmitted,
-            message:
-                'A Donut center formatter callback was omitted. Provide it from your application.',
-            path: '\$.series[$seriesIndex].style.centerContent.valueFormatter',
-          );
-        }
-      });
-      writer.writeLine('),');
+      final site = donutCenterWarningSite(seriesIndex);
+      _emitCenterContentArgument(
+        writer,
+        'centerContent',
+        center,
+        warningMessage: site.message,
+        warningPath: site.path,
+      );
     }
     _emitRadialLabels(writer, series.dataLabels, seriesIndex);
     _emitAdvancedRadial(writer, series, seriesIndex);
@@ -3256,20 +3314,15 @@ class ChartConfigDartEmitter {
         config.order.name,
         defaultName: 'outerToInner',
       );
-      if (config.ringWeights.isNotEmpty) {
-        final entries = config.ringWeights.entries.toList()
-          ..sort((a, b) => a.key.compareTo(b.key));
-        writer.writeLine('ringWeights: {');
-        writer.indented(() {
-          for (final entry in entries) {
-            writer.writeLine(
-              '${DartSourceWriter.stringLiteral(entry.key)}: '
-              '${DartSourceWriter.numberLiteral(entry.value)},',
-            );
-          }
-        });
-        writer.writeLine('},');
-      }
+      _emitSortedMapArgument(
+        writer,
+        'ringWeights',
+        config.ringWeights,
+        (key, weight) => writer.writeLine(
+          '${DartSourceWriter.stringLiteral(key)}: '
+          '${DartSourceWriter.numberLiteral(weight)},',
+        ),
+      );
       _enumIf(
         writer,
         'legendMode',
@@ -3279,7 +3332,13 @@ class ChartConfigDartEmitter {
       );
       if (options.includeDefaultValues ||
           config.centerContent != const DonutCenterContent()) {
-        _emitConcentricCenterContent(writer, config.centerContent);
+        _emitCenterContentArgument(
+          writer,
+          'centerContent',
+          config.centerContent,
+          warningMessage: concentricCenterWarningSite.message,
+          warningPath: concentricCenterWarningSite.path,
+        );
       }
     });
     writer.writeLine('),');
@@ -3821,11 +3880,27 @@ class ChartConfigDartEmitter {
     writer.writeLine('),');
   }
 
-  void _emitConcentricCenterContent(
+  /// Writes `<argument>: DonutCenterContent(...)` for [center].
+  ///
+  /// The ONE renderer for a donut centre. Shared by the config form's series
+  /// `centerContent:`, the concentric config's `centerContent:` and the grammar
+  /// form's `geomDonut(center: ...)` (through [emitDonutCenterContent]), so no
+  /// two forms can disagree about how a centre is written — a field added to
+  /// `DonutCenterContent` is either emitted by all three or by none.
+  /// Unconditional: the caller decides when a centre is worth emitting.
+  ///
+  /// `valueFormatter` is a live callback with no literal form, so it degrades
+  /// to a placeholder comment plus a runtime-value-omitted warning carrying
+  /// [warningMessage] and [warningPath] — the caller names the site because the
+  /// three forms hold the centre in three different places.
+  void _emitCenterContentArgument(
     DartSourceWriter writer,
-    DonutCenterContent center,
-  ) {
-    writer.writeLine('centerContent: DonutCenterContent(');
+    String argument,
+    DonutCenterContent center, {
+    required String warningMessage,
+    required String warningPath,
+  }) {
+    writer.writeLine('$argument: DonutCenterContent(');
     writer.indented(() {
       _valueIf(writer, 'isVisible', center.isVisible, defaultValue: true);
       _optionalString(writer, 'label', center.label);
@@ -3849,9 +3924,8 @@ class ChartConfigDartEmitter {
         );
         _warn(
           code: ChartSourceWarningCodes.runtimeValueOmitted,
-          message:
-              'A Concentric Donut center formatter callback was omitted. Provide it from your application.',
-          path: r'$.configuration.concentricDonut.centerContent.valueFormatter',
+          message: warningMessage,
+          path: warningPath,
         );
       }
     });
@@ -3953,7 +4027,41 @@ class ChartConfigDartEmitter {
     if (!options.includeDefaultValues && labels == const PieDataLabelConfig()) {
       return;
     }
-    writer.writeLine('dataLabels: PieDataLabelConfig(');
+    _emitRadialLabelConfig(writer, 'dataLabels', labels);
+    if (labels.valueFormatter != null || labels.percentageFormatter != null) {
+      _warn(
+        code: ChartSourceWarningCodes.runtimeValueOmitted,
+        message:
+            'Radial label formatter callbacks were omitted. Provide them from your application.',
+        path: '\$.series[$seriesIndex].style.dataLabels',
+      );
+    }
+  }
+
+  /// Writes one `<argument>: PieDataLabelConfig(...)` literal in full — opener,
+  /// every field, and the closing `),`.
+  ///
+  /// UNCONDITIONAL: the caller decides whether a config is worth writing at all
+  /// and records any formatter-omission warning, because the two callers differ
+  /// on both counts. [_emitRadialLabels] elides a default config and reports
+  /// against a series path; [_emitRadialLabelsByRing] writes every entry it is
+  /// given (inside an override map a default-valued entry is meaningful) and
+  /// names the ring.
+  ///
+  /// [argument] is written verbatim before the colon, so it is either a plain
+  /// name (`dataLabels`) or an already-quoted map key (`'Previous period'`).
+  ///
+  /// Extracted so the two forms share ONE field list and cannot drift apart on
+  /// a field, its order or its default — and deliberately extracted WHOLE
+  /// rather than as a bare field body, so `test/meta/source_emitter_drift_test`
+  /// still sees a `PieDataLabelConfig(` … `),` construction block to attribute
+  /// the class's 16 properties to.
+  void _emitRadialLabelConfig(
+    DartSourceWriter writer,
+    String argument,
+    PieDataLabelConfig labels,
+  ) {
+    writer.writeLine('$argument: PieDataLabelConfig(');
     writer.indented(() {
       _valueIf(writer, 'isVisible', labels.isVisible, defaultValue: true);
       _enumIf(
@@ -4017,14 +4125,81 @@ class ChartConfigDartEmitter {
       }
     });
     writer.writeLine('),');
-    if (labels.valueFormatter != null || labels.percentageFormatter != null) {
-      _warn(
-        code: ChartSourceWarningCodes.runtimeValueOmitted,
-        message:
-            'Radial label formatter callbacks were omitted. Provide them from your application.',
-        path: '\$.series[$seriesIndex].style.dataLabels',
+  }
+
+  void _emitRadialLabelsByRing(
+    DartSourceWriter writer,
+    Map<String, PieDataLabelConfig> byRing,
+  ) {
+    _emitSortedMapArgument(writer, 'dataLabelsByRing', byRing, (key, labels) {
+      _emitRadialLabelConfig(
+        writer,
+        DartSourceWriter.stringLiteral(key),
+        labels,
       );
-    }
+      if (labels.valueFormatter != null || labels.percentageFormatter != null) {
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'Radial label formatter callbacks were omitted for ring "$key". '
+              'Provide them from your application.',
+          path: r'$.series[*].style.dataLabels',
+        );
+      }
+    });
+  }
+
+  /// Emits `<argument>: {'key': …, …}` — a string-keyed map literal — writing
+  /// each entry through [writeEntry] in sorted-key order.
+  ///
+  /// The ONE place that decides how a map argument is framed and how its keys
+  /// are ordered. Three renderers had grown the same six lines independently
+  /// (`ringWeights:`, `dataLabelsByRing:` and the grammar form's `ringIds:`),
+  /// which is three chances for the config and grammar source forms to disagree
+  /// about entry order over the same chart. Sorting by key is what makes the
+  /// emitted source stable across runs, so it belongs here rather than at each
+  /// call site.
+  ///
+  /// An EMPTY map writes nothing: for every argument that reaches here, `{}`
+  /// and "absent" describe the same chart. That is NOT the exemption
+  /// [_emitRadialLabels]' conditional wrapper makes — an entry equal to the
+  /// family default is still written, because inside an override map it is a
+  /// real override.
+  void _emitSortedMapArgument<V>(
+    DartSourceWriter writer,
+    String argument,
+    Map<String, V> entries,
+    void Function(String key, V value) writeEntry,
+  ) {
+    if (entries.isEmpty) return;
+    final keys = entries.keys.toList()..sort();
+    writer.writeLine('$argument: {');
+    writer.indented(() {
+      for (final key in keys) {
+        writeEntry(key, entries[key] as V);
+      }
+    });
+    writer.writeLine('},');
+  }
+
+  /// Emits `<argument>: {'key': 'value', …}` for a string-to-string map.
+  ///
+  /// The seam the grammar generator's `ringIds:` goes through. `ringIds` has no
+  /// config-form counterpart — it is a `geomDonut` argument — but its literal
+  /// rendering is the same rendering `ringWeights:` uses, and routing it here
+  /// is what keeps one map framing and one key order across both source forms
+  /// instead of a second copy living in the generator.
+  void emitStringMapArgument(
+    DartSourceWriter writer,
+    String argument,
+    Map<String, String> entries,
+  ) {
+    _emitSortedMapArgument(writer, argument, entries, (key, value) {
+      writer.writeLine(
+        '${DartSourceWriter.stringLiteral(key)}: '
+        '${DartSourceWriter.stringLiteral(value)},',
+      );
+    });
   }
 
   void _emitPieGradient(DartSourceWriter writer, PieGradientStyle style) {

@@ -492,7 +492,10 @@ A **radial** spec continues instead:
 10. `concentric:` with no `ring:` → `concentricConfigOnRinglessDonut`; then the
     config-only half of the concentric contract (pane radii, ring gap, ring
     weight magnitudes) → `invalidConcentricComposition`
-11. the shape-decidable half of the polar composition contract, in this fixed
+11. a non-empty `dataLabelsByRing:` with no `ring:`, then a non-empty
+    `ringIds:` with no `ring:` → `perRingOverrideOnRinglessDonut` (an EMPTY map
+    is a no-op, here and on the ringed path)
+12. the shape-decidable half of the polar composition contract, in this fixed
     order: the config-only half — everything `PolarChartConfig.validate()`
     enforces, i.e. pane geometry, radial-axis bounds, the grouped sub-band
     padding, per-threshold finiteness and dash-pair parity, and the stacked
@@ -501,10 +504,22 @@ A **radial** spec continues instead:
     `geomPolar` marks → `invalidPolarComposition`; exactly one of
     `intervalLow`/`intervalHigh` → `incompletePolarInterval`; clashing `rose`
     presets → `invalidPolarComposition`
-12. empty `data` → `emptyData`
-13. materialization → `emptyRadialCategories`, `duplicateRadialCategory`; then
-    the row-dependent half of the polar contract → `invalidPolarComposition`,
-    and of the concentric contract → `invalidConcentricComposition`
+13. empty `data` → `emptyData`
+14. every radial mark whose rows carry no visible category →
+    `emptyRadialCategories`
+15. then, per family. The ring-map guards read the BUCKET KEYS, so they run as
+    soon as the rows are partitioned and BEFORE any ring series is built — a
+    chart that is wrong both ways reports the mis-keyed map, not the rows:
+    - **concentric donut** (`geomDonut` with `ring:`): bucket the rows by ring;
+      a `dataLabelsByRing:` and then a `ringIds:` key naming a ring the rows
+      never produce → `unknownRingKey`; a `ringIds:` that names only SOME of
+      the rings the rows produce → `partialRingIds`; then ring materialization
+      → `duplicateRadialCategory`; then the row-dependent half of the
+      concentric contract (ring weights and ids against the ids the rings
+      actually lowered to) → `invalidConcentricComposition`
+    - **polar**: column materialization → `duplicateRadialCategory`; then the
+      row-dependent half of the polar contract → `invalidPolarComposition`
+    - **pie / ring-less donut**: materialization → `duplicateRadialCategory`
 
 `facetedRadialUnsupported` is raised earlier still, by `BravenFacetPlot`: a
 radial spec cannot be faceted at all.
@@ -684,11 +699,14 @@ runtime-only bindings.
 
 | Case | Outcome |
 | --- | --- |
-| A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the three **Blocked** radial rows that follow — read them together with *Known gap* below before reading this row as "every radial chart emits". |
+| A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the **Blocked** radial rows that follow — read them together before reading this row as "every radial chart emits". |
 | A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
-| A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **Blocked**: the ring channel names each ring's series from its ring key, so ids that do not follow that pattern cannot be reproduced. |
-| A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **Blocked**, naming the series: `PolarMark` has a per-point colour channel (`columnColor`), `PieMark`/`DonutMark` do **not**. See *Known gap* below. |
-| A concentric composition whose rings carry **different `dataLabels`** | **Blocked**, naming the ring that disagrees: one `DonutMark` splits into N ring series and hands all of them its single `dataLabels`. See *Known gap* below. |
+| A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **EMITTED** *(V2.0)* as `geomDonut(ringIds: {...})` — an explicit ring-key→series-id map, so a composition that chose its ids independently of its ring names keeps them. The emitter consults it **only when the `'<markId>-<ring>'` pattern fails** to recover a markId, so a conforming composition takes the original path and emits exactly the text it emitted before. The map is keyed by the BARE ring key and is ALL OR NOTHING: naming some rings and not others raises `partialRingIds`, a key naming no ring raises `unknownRingKey`, and a non-empty map with no `ring:` raises `perRingOverrideOnRinglessDonut`. |
+| A concentric composition whose rings are **unnamed or share a name** | **Blocked**, naming each series and its name: the ring key *is* the series name, so no `ring:` channel could bucket those rows apart — every row would fall into one ring. |
+| A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
+| A donut **centre** setting `labelStyle` or `valueStyle` | **EMITTED** *(V2.0)* as `center: DonutCenterContent(...)`. `DonutMark.center` carries the captured centre VERBATIM, and the argument is written by the same renderer the config form's `centerContent:` uses, so both styles survive. |
+| A donut **centre** setting `valueFormatter` | **Emitted with a `// valueFormatter:` placeholder and a warning** (`isComplete == false`), exactly as every other runtime callback is — a live closure has no literal form. |
+| A concentric composition whose rings carry **different `dataLabels`** | **EMITTED** *(V2.0)* as `geomDonut(dataLabelsByRing: {...})`. Ring 0's config is the base the mark's `dataLabels:` carries, and only the rings that DIFFER from it are projected into the override map — so a uniform composition emits exactly what it did before. Inside the map an entry equal to the family default is a real override and IS written, unlike the single `dataLabels:` argument which elides one. The map is keyed by the BARE ring key; a key naming no ring raises `unknownRingKey`, and a non-empty map with no `ring:` raises `perRingOverrideOnRinglessDonut`. A per-ring `valueFormatter` emits a `// valueFormatter:` placeholder and a warning naming the ring (`isComplete == false`). |
 | Polar series whose category domains differ | **Blocked**, naming the series that disagree: N `geomPolar` marks read ONE row list, so every polar series needs one value at every category of the shared domain, in the same order. |
 | Series whose x domains differ | **Blocked**, naming the series that set the domain and the ones that disagree. |
 | A partially populated scatter channel | **Blocked**, naming the channel and the populated/total counts: a `Channel` accessor is total. |
@@ -739,48 +757,109 @@ config the pipeline already understood (details under *V2.0 verbs* above):
   compositions and customised `PolarChartConfig` / `ConcentricDonutConfig`
   round-trip.
 
-  Stated precisely, because the showcase is the evidence and it is uneven:
+  Stated precisely, because the showcase is the evidence:
 
-  - **Every Polar Column Workbench Grammar pane emits a real chain** instead of
-    a diagnostic — all eight showcase presentations (standard, rose, partial,
+  - **Every radial Workbench Grammar pane whose family HAS a geometry emits a
+    real chain** instead of a diagnostic — pie, donut, concentric donut and
+    polar column. (Radial bar, gauge and range area have no `geom*` verb at
+    all; their panes still show a named diagnostic.)
+  - **Polar: all eight showcase presentations** (standard, rose, partial,
     layered, grouped, stacked, references, intervals), each verified against
     `polar_column_page.dart`'s own `_buildSeriesList` / `_buildPolarConfig`
     construction at that presentation's authored knob values.
+  - **Pie, donut and concentric: verified on the MOUNTED page.** Each test
+    pumps the real page, reads the live document off the chart's own controller
+    and runs the generator on it, so there is no fixture to drift —
+    `pie_charts_page_grammar_test.dart`, `donut_charts_page_grammar_test.dart`,
+    `concentric_donut_page_grammar_test.dart` and
+    `selection_showcase_concentric_grammar_test.dart`, all under
+    `example/test/showcase/`. `concentric_donut_page.dart` and the selection
+    lab's concentric family emit **complete, warning-free** chains;
+    `pie_charts_page.dart` and `donut_charts_page.dart` emit with
+    `isComplete == false`, because of live formatter callbacks that have no
+    literal form — the established contract for runtime values, not a
+    degradation. The counts differ and each gate pins its own whole warning
+    set: the pie carries **one** `runtimeValueOmitted`, covering the two
+    radial label formatters it binds; the donut carries **two** — one for the
+    `valueFormatter` on its centre and one covering the two radial label
+    formatters — leaving three placeholder comments in the chain.
+  - **All four mounted-page gates COMPILE the chain they assert on**, through
+    the same `dart format` + `dart analyze` harness
+    (`test/helpers/generated_source_compile.dart`) the polar gate uses. That is
+    the floor, not a nicety: every other assertion in those tests reads the
+    emitted *text*, and `contains` cannot tell a chain that would compile from
+    one that only looks right. It caught a real defect the text assertions had
+    all passed over — the emitted preamble imports
+    `package:braven_charts/braven_charts.dart` and
+    `package:flutter/material.dart` unprefixed, and `TooltipTriggerMode` is
+    declared in both, so every chain that emitted a non-default tooltip trigger
+    mode was `ambiguous_import`. The material import now carries `hide` for the
+    ambiguous names the body actually uses, in **both** source forms;
+    `test/unit/source/generated_import_ambiguity_test.dart` re-derives that
+    list from the analyzer so a future collision fails a test instead of
+    reaching a user as unpasteable source.
   - **A non-default `ConcentricDonutConfig` emits** — radii, ring gap, order,
     legend mode, per-ring weights and center all survive to
-    `geomDonut(concentric: ...)` — *when the composition is authored the way
-    the grammar's own concentric lowering produces one*: ring series ids
-    following `'<markId>-<ring>'`, no per-slice colours, one `dataLabels` for
-    the whole composition.
+    `geomDonut(concentric: ...)`. Ring series ids following
+    `'<markId>-<ring>'` are no longer required — a composition that ids its
+    rings independently emits `ringIds:` instead — and rings that carry
+    DIFFERENT `dataLabels` emit as `dataLabelsByRing:`.
+  - **The concentric preconditions are a SET, not one.** This paragraph used to
+    say the one remaining precondition was that no ring carry a centre of its
+    own. That was false. `DonutMark` holds ONE `style`, ONE `selectionStyle`,
+    ONE `unit`, ONE `sliceRadiusConfig` and ONE `sliceGroupingConfig` for the
+    WHOLE composition, and `_lowerConcentricRings`
+    (`lib/src/grammar/plot_lowering.dart:1524`) stamps each of them onto every
+    ring — and, unlike the single-donut `_lowerDonut` beside it, never passes
+    `mark.color` at all. So a concentric composition emits only when every
+    ring:
+    - shares one `donutStyle`,
+    - shares one `selectionStyle`,
+    - shares one `unit`,
+    - shares one `sliceRadiusConfig`,
+    - shares one `sliceGroupingConfig`,
+    - carries **no** series `color` of its own,
+    - carries no centre of its own, and
+    - has a distinct, non-empty name.
 
-#### Known gap: the two donut showcase pages do not emit
+    Two clarifications the list alone would not give. On the five shared
+    configs it is DIVERGENCE that is refused, not a non-default value: rings
+    that all carry the same non-default `donutStyle` emit, and the style is
+    carried through. The series `color` is different in kind — no ring may
+    carry one *even when every ring carries the same one*, because the ring
+    path never reads `mark.color`; a single, non-concentric donut's series
+    colour DOES emit.
 
-`concentric_donut_page.dart` and `donut_charts_page.dart` are the radial
-workbench pages that still show a diagnostic rather than a chain. Three
-**independent** blockers stand behind that (fixing one leaves the page blocked
-on the others):
+    Only the ring centre and the ring name are refused BY NAME. The five
+    config divergences and the ring colour arrive as the round-trip proof's
+    catch-all sentence, whose own round-trip list states that `unit`, the
+    series style, the selection style and the slice-radius and grouping
+    configs round-trip — true of a conforming composition, and actively
+    misleading to the author who just tripped one of them. That is a gap worth
+    closing: a precondition a user can reach deserves a reason of its own.
 
-1. **Ring ids.** `concentric_donut_page.dart` names its ring series from its own
-   descriptors (`current`, `previous`, …), not the `'<markId>-<ring>'` pattern
-   the `ring:` channel reproduces.
-2. **Per-slice colours.** Both pages pass `sliceColors`
-   (`donut_charts_page.dart:487`), and `PieMark`/`DonutMark` have no per-point
-   colour channel — only `PolarMark` does, via `columnColor`. This is the
-   blocker `donut_charts_page.dart` hits on its own, being a single-ring donut.
-3. **Per-ring data labels.** The concentric page's `hierarchy` label layout gives
-   the outer and inner rings *different* `PieDataLabelConfig`s, and one
-   `DonutMark` carries one `dataLabels` for every ring it splits into.
+    Pinned matched-pair style in the `fidelity matrix diagnostics` group of
+    `test/unit/source/chart_grammar_source_generator_test.dart` — the
+    divergent-`donutStyle` refusal sits beside a control proving the SHARED
+    non-default style emits and is carried, the other four divergences are
+    refused together, and the ring-colour refusal sits beside the
+    single-donut control that emits.
 
-Closing (2) means a per-point colour channel on `PieMark`/`DonutMark` — a
-grammar-surface addition, not an emitter repair, and not in this release.
-`PieChartsPage` is the third radial page and it *does* emit, with an honest
-known-limitation warning (`isComplete == false`) for the radial label formatter
-callbacks a literal cannot carry.
-
-Each blocker is mounted and its refusal pinned in
-`group('KNOWN GAP: the donut showcase pages do not emit')` in
-`test/unit/source/chart_grammar_source_generator_test.dart`, so closing one
-turns that test red and brings you back to this paragraph.
+  What stays refused in the radial families is narrow, and mostly named: a
+  radial-bar, gauge or range-area chart (no grammar geometry at all), a
+  concentric composition whose rings are unnamed or share a name (the ring key
+  *is* the series name), a concentric composition whose rings disagree on
+  `donutStyle` / `selectionStyle` / `unit` / `sliceRadiusConfig` /
+  `sliceGroupingConfig` or in which any ring carries a series `color` or a
+  centre of its own, and a per-point `PointStyle` carrying more than a colour
+  and a size. Of those, everything except the five ring-config divergences and
+  the ring colour is refused with a reason of its own; those six are the
+  catch-all cases described above.
+  `concentric_donut_page.dart`'s live `donutCenterBuilder` is a widget
+  builder the capture layer does not model at all; the emitted chain carries
+  the portable `ConcentricDonutConfig.centerContent` that builder's own doc
+  names as the artifact fallback — a capture-layer limitation shared with the
+  config form, not a grammar one, and pinned in that page's test.
 
 ## Not in V1 (still deferred)
 
@@ -803,10 +882,6 @@ Deferred deliberately, so the V1 mark list stays closed:
   the top *edge*, not the fill) and `geomBar` carries a linear `sizeBy` width
   multiplier; opacity on non-scatter families and value-driven area *fill*
   remain deferred.
-- **A per-point colour channel on `PieMark` / `DonutMark`.** `PolarMark` has
-  `columnColor`; pie and donut do not, so a series carrying `sliceColors` is
-  refused rather than degraded. This is blocker (2) of the donut *Known gap*
-  above and the reason both donut showcase pages still show a diagnostic.
 - **The remaining chart-level options.** `legendStyle`, the toolbar toggle,
   `interactiveAnnotations`, `maxAxesPerSide`, the axis-swap / normalization
   knobs, width/height and background live on `BravenChartPlus`, not on

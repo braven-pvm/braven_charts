@@ -38,11 +38,47 @@ num? fruitSparseTarget(Fruit row) => row.basket == 'A' ? row.mass : null;
 Color? fruitColumnColor(Fruit row) =>
     row.basket == 'A' ? const Color(0xFF112233) : null;
 
+// Pie/donut per-slice colour. Top-level so the marks stay const.
+Color? fruitSliceColor(Fruit row) =>
+    row.basket == 'A' ? const Color(0xFF112233) : null;
+Color? fruitSolidSliceColor(Fruit row) => const Color(0xFF445566);
+Color? fruitNoSliceColor(Fruit row) => null;
+
 const fruits = <Fruit>[
   Fruit(name: 'Apple', count: 30, mass: 5, basket: 'A'),
   Fruit(name: 'Pear', count: 20, mass: 3, basket: 'A'),
   Fruit(name: 'Plum', count: 10, mass: 2, basket: 'B'),
 ];
+
+// A CROSS-RING fixture: the same two categories appear in BOTH baskets, and
+// `Apple` takes a DIFFERENT colour in each. `fruits` cannot express that —
+// every fruit there belongs to exactly one basket, and `fromMap` reads
+// `sliceColors[category]` only for the categories present in `values`, so a
+// colour map resolved across the WHOLE data set would produce byte-identical
+// rings and leave the per-bucket resolution unproven.
+const crossRingFruits = <Fruit>[
+  Fruit(name: 'Apple', count: 30, mass: 5, basket: 'A'),
+  Fruit(name: 'Pear', count: 20, mass: 3, basket: 'A'),
+  Fruit(name: 'Apple', count: 12, mass: 4, basket: 'B'),
+  Fruit(name: 'Pear', count: 8, mass: 1, basket: 'B'),
+];
+
+/// Basket A colours `Apple` only; basket B colours BOTH, and gives `Apple` a
+/// different colour. Resolved over the whole list the map collapses to
+/// `{Apple: 0xFFDC2626, Pear: 0xFF0D9488}` (last non-null wins), which is wrong
+/// for basket A on both keys.
+Color? crossRingSliceColor(Fruit row) => switch ((row.basket, row.name)) {
+  ('A', 'Apple') => const Color(0xFF2563EB),
+  ('B', 'Apple') => const Color(0xFFDC2626),
+  ('B', 'Pear') => const Color(0xFF0D9488),
+  _ => null,
+};
+
+// Per-ring data-label fixtures. Top-level so the marks stay const. The BASE is
+// itself non-default, so a resolution that fell back to the family default
+// (rather than to `dataLabels`) fails on the unlisted ring too.
+const insideLabels = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+const hiddenLabels = PieDataLabelConfig(isVisible: false);
 
 /// A ConcentricDonutConfig whose every field differs from the default, so a
 /// passthrough that quietly drops one cannot masquerade as success.
@@ -59,19 +95,35 @@ const customConcentric = ConcentricDonutConfig(
 Matcher throwsGrammarCode(GrammarDiagnosticCode code) =>
     throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
 
+/// The [GrammarSpecException] [action] raises, for tests that pin its SENTENCE
+/// rather than just its code.
+///
+/// A refusal's wording is the only thing the author who hit it ever reads, so
+/// where the sentence prescribes a remedy it is asserted, not assumed.
+GrammarSpecException _refusalOf(void Function() action) {
+  try {
+    action();
+  } on GrammarSpecException catch (error) {
+    return error;
+  }
+  fail('expected a GrammarSpecException, but nothing was thrown');
+}
+
 void main() {
   group('lowering plumbing', () {
-    test('a Cartesian spec is not radial and lowers with null radial configs',
-        () {
-      const spec = PlotSpec<Fruit>(
-        data: fruits,
-        marks: <Mark<Fruit>>[LineMark<Fruit>(x: sampleX, y: sampleY)],
-      );
-      expect(spec.isRadial, isFalse);
-      final lowered = spec.lower();
-      expect(lowered.concentricDonutConfig, isNull);
-      expect(lowered.polarChartConfig, isNull);
-    });
+    test(
+      'a Cartesian spec is not radial and lowers with null radial configs',
+      () {
+        const spec = PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[LineMark<Fruit>(x: sampleX, y: sampleY)],
+        );
+        expect(spec.isRadial, isFalse);
+        final lowered = spec.lower();
+        expect(lowered.concentricDonutConfig, isNull);
+        expect(lowered.polarChartConfig, isNull);
+      },
+    );
 
     test('a spec with a radial mark reports isRadial', () {
       const spec = PlotSpec<Fruit>(
@@ -125,10 +177,7 @@ void main() {
       final conflict = GrammarSpecException.conflictingConcentricCenter(
         'rings',
       );
-      expect(
-        conflict.code,
-        GrammarDiagnosticCode.conflictingConcentricCenter,
-      );
+      expect(conflict.code, GrammarDiagnosticCode.conflictingConcentricCenter);
       expect(conflict.toString(), contains('conflictingConcentricCenter'));
       expect(conflict.message, contains('rings'));
       expect(conflict.message, contains('center'));
@@ -141,10 +190,7 @@ void main() {
         ringless.code,
         GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
       );
-      expect(
-        ringless.toString(),
-        contains('concentricConfigOnRinglessDonut'),
-      );
+      expect(ringless.toString(), contains('concentricConfigOnRinglessDonut'));
       expect(ringless.message, contains('plain'));
       expect(ringless.message, contains('ring:'));
       expect(ringless.message, contains('center:'));
@@ -157,10 +203,7 @@ void main() {
         composition.code,
         GrammarDiagnosticCode.invalidConcentricComposition,
       );
-      expect(
-        composition.toString(),
-        contains('invalidConcentricComposition'),
-      );
+      expect(composition.toString(), contains('invalidConcentricComposition'));
       expect(composition.message, contains('Ring gap'));
       expect(composition.message, contains('fruit-A'));
       expect(composition.message, contains(r"'<markId>-<ringKey>'"));
@@ -256,6 +299,56 @@ void main() {
       expect(series.sliceRadiusConfig, isNotNull);
       expect(series.points.map((p) => p.pointStyle?.size), [5, 3, 2]);
     });
+
+    test('a sliceColor accessor lowers to per-point PointStyle colors, '
+        'skipping nulls', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          PieMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as PieChartSeries;
+      expect(series.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF112233),
+        const Color(0xFF112233),
+        null,
+      ]);
+      // A skipped category carries no PointStyle at all, so it stays on the
+      // series colour exactly as an unset accessor leaves it.
+      expect(series.points.last.pointStyle, isNull);
+    });
+
+    test(
+      'an all-null sliceColor accessor lowers identically to an unset one',
+      () {
+        final allNull = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(
+              id: 'fruit',
+              category: fruitName,
+              value: fruitCount,
+              sliceColor: fruitNoSliceColor,
+            ),
+          ],
+        )).lower();
+        final unset = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(id: 'fruit', category: fruitName, value: fruitCount),
+          ],
+        )).lower();
+
+        expect(allNull.series.single, unset.series.single);
+      },
+    );
   });
 
   group('pie config parity', () {
@@ -400,18 +493,20 @@ void main() {
       );
     });
 
-    test('empty radial data raises emptyData (so BravenPlot can swallow it)',
-        () {
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: <Fruit>[],
-          marks: <Mark<Fruit>>[
-            PieMark<Fruit>(category: fruitName, value: fruitCount),
-          ],
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
-      );
-    });
+    test(
+      'empty radial data raises emptyData (so BravenPlot can swallow it)',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              PieMark<Fruit>(category: fruitName, value: fruitCount),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+        );
+      },
+    );
 
     test('a structural radial error beats the empty-data guard', () {
       // axisOptionOnRadialSpec must fire even against empty data, so BravenPlot
@@ -430,23 +525,29 @@ void main() {
   });
 
   group('donut channel to series mapping and parity', () {
-    test('a single donut lowers to one DonutChartSeries, no concentric config',
-        () {
-      final lowered = (const PlotSpec<Fruit>(
-        data: fruits,
-        marks: <Mark<Fruit>>[
-          DonutMark<Fruit>(category: fruitName, value: fruitCount, id: 'fruit'),
-        ],
-      )).lower();
+    test(
+      'a single donut lowers to one DonutChartSeries, no concentric config',
+      () {
+        final lowered = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+            ),
+          ],
+        )).lower();
 
-      expect(lowered.series, hasLength(1));
-      final series = lowered.series.single as DonutChartSeries;
-      expect(series.id, 'fruit');
-      expect(series.points.map((p) => p.label), ['Apple', 'Pear', 'Plum']);
-      expect(series.points.map((p) => p.y), [30, 20, 10]);
-      expect(lowered.concentricDonutConfig, isNull);
-      expect(lowered.polarChartConfig, isNull);
-    });
+        expect(lowered.series, hasLength(1));
+        final series = lowered.series.single as DonutChartSeries;
+        expect(series.id, 'fruit');
+        expect(series.points.map((p) => p.label), ['Apple', 'Pear', 'Plum']);
+        expect(series.points.map((p) => p.y), [30, 20, 10]);
+        expect(lowered.concentricDonutConfig, isNull);
+        expect(lowered.polarChartConfig, isNull);
+      },
+    );
 
     test('a lowered donut equals the hand-built DonutChartSeries.fromMap', () {
       final lowered = (const PlotSpec<Fruit>(
@@ -470,11 +571,82 @@ void main() {
         ),
       );
     });
+
+    test('sliceColor and radius compose on one donut point', () {
+      // `fromMap` builds the GENERAL `PointStyle(color:, size:)`, so the two
+      // channels must land on the same point rather than one overwriting the
+      // other.
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            id: 'fruit',
+            category: fruitName,
+            value: fruitCount,
+            radius: fruitMass,
+            sliceColor: fruitSolidSliceColor,
+          ),
+        ],
+      )).lower();
+
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF445566),
+        const Color(0xFF445566),
+        const Color(0xFF445566),
+      ]);
+      expect(series.points.map((p) => p.pointStyle?.size), [5, 3, 2]);
+      expect(
+        series,
+        DonutChartSeries.fromMap(
+          id: 'fruit',
+          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
+          sliceColors: const {
+            'Apple': Color(0xFF445566),
+            'Pear': Color(0xFF445566),
+            'Plum': Color(0xFF445566),
+          },
+          radiusValues: const {'Apple': 5, 'Pear': 3, 'Plum': 2},
+        ),
+      );
+    });
   });
 
   group('concentric donut (ring channel)', () {
-    test('rings partition rows in first-seen order with a ConcentricDonutConfig',
-        () {
+    test(
+      'rings partition rows in first-seen order with a ConcentricDonutConfig',
+      () {
+        final lowered = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+            ),
+          ],
+        )).lower();
+
+        // baskets in first-seen order: A (Apple, Pear), B (Plum).
+        expect(lowered.series, hasLength(2));
+        expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
+        final ringA = lowered.series.first as DonutChartSeries;
+        final ringB = lowered.series.last as DonutChartSeries;
+        expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
+        expect(ringA.points.map((p) => p.y), [30, 20]);
+        expect(ringB.points.map((p) => p.label), ['Plum']);
+        expect(ringB.points.map((p) => p.y), [10]);
+        expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+        expect(lowered.polarChartConfig, isNull);
+      },
+    );
+
+    test('a ring the accessor does not colour keeps the series colour', () {
+      // Ring A takes the override and ring B's sole row is skipped back onto
+      // the series colour. NOTE what this does NOT prove: every category here
+      // lives in exactly one bucket, so it cannot distinguish a per-bucket
+      // resolution from a whole-data-set one. That is the next test's job.
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
@@ -483,21 +655,67 @@ void main() {
             value: fruitCount,
             ring: fruitBasket,
             id: 'fruit',
+            sliceColor: fruitSliceColor,
           ),
         ],
       )).lower();
 
-      // baskets in first-seen order: A (Apple, Pear), B (Plum).
-      expect(lowered.series, hasLength(2));
+      final ringA = lowered.series.first as DonutChartSeries;
+      final ringB = lowered.series.last as DonutChartSeries;
+      expect(ringA.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF112233),
+        const Color(0xFF112233),
+      ]);
+      expect(ringB.points.single.pointStyle, isNull);
+      expect(
+        ringA,
+        DonutChartSeries.fromMap(
+          id: 'fruit-A',
+          name: 'A',
+          values: const {'Apple': 30, 'Pear': 20},
+          sliceColors: const {
+            'Apple': Color(0xFF112233),
+            'Pear': Color(0xFF112233),
+          },
+          centerContent: DonutCenterContent.hidden,
+        ),
+      );
+    });
+
+    test('sliceColor is resolved per ring bucket: the SAME category takes a '
+        'DIFFERENT colour in each ring', () {
+      // The discriminating shape. `Apple` and `Pear` are in BOTH baskets;
+      // `Apple` is blue in A and red in B, and `Pear` is uncoloured in A but
+      // teal in B. Resolving the accessor over the whole data set instead of
+      // over `buckets[key]` collapses to one map per category (last non-null
+      // wins), so ring A would come back red/teal. Both assertions below fail
+      // under that mutation, which is what makes them worth having.
+      final lowered = (const PlotSpec<Fruit>(
+        data: crossRingFruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            sliceColor: crossRingSliceColor,
+          ),
+        ],
+      )).lower();
+
       expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
       final ringA = lowered.series.first as DonutChartSeries;
       final ringB = lowered.series.last as DonutChartSeries;
       expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
-      expect(ringA.points.map((p) => p.y), [30, 20]);
-      expect(ringB.points.map((p) => p.label), ['Plum']);
-      expect(ringB.points.map((p) => p.y), [10]);
-      expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
-      expect(lowered.polarChartConfig, isNull);
+      expect(ringA.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFF2563EB),
+        isNull,
+      ]);
+      expect(ringB.points.map((p) => p.label), ['Apple', 'Pear']);
+      expect(ringB.points.map((p) => p.pointStyle?.color), [
+        const Color(0xFFDC2626),
+        const Color(0xFF0D9488),
+      ]);
     });
 
     test('each ring donut parity + shared center goes to the config', () {
@@ -581,8 +799,35 @@ void main() {
       expect(series.centerContent, const DonutCenterContent(label: 'Total'));
     });
 
-    test('a genuine multi-value ring keeps center on the config (no regression)',
-        () {
+    test('a single-ring collapse still honours its per-ring label override', () {
+      // One distinct ring key only, so the composition collapses to a single
+      // donut. That branch does not build its series the way the multi-ring
+      // branch does, so it is a separate regression risk and gets its own test.
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      final series = lowered.series.single as DonutChartSeries;
+      expect(series.dataLabels.isVisible, isFalse);
+      expect(series.dataLabels, hiddenLabels);
+    });
+
+    test('per-ring label overrides reach each ring; unlisted rings take the '
+        'mark base', () {
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
@@ -591,24 +836,416 @@ void main() {
             value: fruitCount,
             ring: fruitBasket,
             id: 'fruit',
-            center: DonutCenterContent(label: 'Total'),
+            dataLabels: insideLabels,
+            dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
           ),
         ],
       )).lower();
 
-      // Two distinct rings → N series + a ConcentricDonutConfig; each ring's own
-      // center stays hidden and the shared center lives on the config.
-      expect(lowered.series, hasLength(2));
-      for (final ring in lowered.series.cast<DonutChartSeries>()) {
-        expect(ring.centerContent, DonutCenterContent.hidden);
+      // Ring A is overridden; ring B is unlisted and must take `dataLabels` —
+      // NOT the family default, which `insideLabels` is deliberately not.
+      final rings = lowered.series.cast<DonutChartSeries>();
+      expect(rings.map((r) => r.name), ['A', 'B']);
+      expect(rings.first.dataLabels.isVisible, isFalse);
+      expect(rings.first.dataLabels, hiddenLabels);
+      expect(rings.last.dataLabels.position, PieDataLabelPosition.inside);
+      expect(rings.last.dataLabels, insideLabels);
+    });
+
+    test('ringIds supplies explicit per-ring series ids', () {
+      final lowered = (const PlotSpec<Fruit>(
+        data: fruits,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+          ),
+        ],
+      )).lower();
+
+      // The ids come from the map, NOT from '<markId>-<ringKey>'. Everything
+      // else about the ring is unchanged — the NAME still comes from the ring
+      // key, which is what every display surface renders.
+      final rings = lowered.series.cast<DonutChartSeries>();
+      expect(rings.map((r) => r.id), <String>['current', 'previous']);
+      expect(rings.map((r) => r.name), <String>['A', 'B']);
+    });
+
+    test('a ring with no ringIds entry cannot fall back — the map is all or '
+        'nothing', () {
+      // Half the rings named explicitly and half generated would put TWO id
+      // schemes in one composition, and `ringWeights` is keyed by the resulting
+      // id — so which scheme a given ring used would have to be worked out per
+      // ring. Refused by name instead.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
       }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.partialRingIds);
+      expect(failure.message, contains('fruit'));
+      expect(failure.message, contains('ringIds'));
+      // Both sides are named: the ring that was left out, and the one that was
+      // named — so the fix is readable off the message.
+      expect(failure.message, contains('"B"'));
+      expect(failure.message, contains('"A"'));
+    });
+
+    test('a ringIds key naming no ring is refused by name', () {
+      // The same mistake `dataLabelsByRing` reports, on the id map: keyed by the
+      // BARE ring value, so a series id names nothing.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{
+                'A': 'current',
+                'B': 'previous',
+                'fruit-C': 'forecast',
+              },
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.unknownRingKey);
+      expect(failure.message, contains('"fruit-C"'));
+      expect(failure.message, contains('ringIds'));
+      expect(failure.message, contains('"A"'));
+      expect(failure.message, contains('"B"'));
+    });
+
+    test('a ring-less donut refuses ringIds by name, above the empty-data '
+        'guard', () {
+      // Decidable from the mark's SHAPE alone — with no ring channel there are
+      // no rings at all for the map to name — so it sits with the other shape
+      // checks and must fire even over an empty data set. The `data: []` arm is
+      // the ordering assertion: `emptyData` must not win.
       expect(
-        lowered.concentricDonutConfig,
-        const ConcentricDonutConfig(
-          centerContent: DonutCenterContent(label: 'Total'),
-        ),
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
+      );
+
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: <Fruit>[],
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
       );
     });
+
+    test('a ring-less donut with an EMPTY ringIds lowers clean', () {
+      // Same exemption `dataLabelsByRing` has: an empty map carries no override,
+      // so it is the no-op here that it is on the ringed path.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              ringIds: <String, String>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+    });
+
+    test('a single-ring collapse honours its ringIds entry', () {
+      // The collapse branch rebuilds the lone donut from `_lowerConcentricRings`
+      // and only copyWiths the center onto it, so the explicit id must survive
+      // that path too.
+      const oneBasket = <Fruit>[
+        Fruit(name: 'Apple', count: 30, basket: 'A'),
+        Fruit(name: 'Pear', count: 20, basket: 'A'),
+      ];
+      final lowered = (const PlotSpec<Fruit>(
+        data: oneBasket,
+        marks: <Mark<Fruit>>[
+          DonutMark<Fruit>(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            id: 'fruit',
+            ringIds: <String, String>{'A': 'current'},
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(1));
+      expect(lowered.series.single.id, 'current');
+    });
+
+    test('ringWeights keys by the RESULTING ring id, whichever scheme named '
+        'it', () {
+      // One rule, not two: the composition validator is handed the ids the rings
+      // actually lowered to, so an explicit id is weighted by that explicit id.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'current': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+
+      // …and the GENERATED id is no longer a key once ringIds renamed the ring.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'fruit-A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+      );
+    });
+
+    test('the ringWeights refusal names the scheme that ACTUALLY ided the '
+        'rings', () {
+      // The remedy clause is the whole value of this diagnostic, and on a
+      // `ringIds` composition the '<markId>-<ringKey>' scheme is not the one in
+      // force — prescribing it would send the author back to the very key that
+      // just failed. The rings ARE listed by their real ids, so the sentence
+      // that explains where those ids came from has to agree with them.
+      final refusal = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'fruit-A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+      );
+      expect(refusal.code, GrammarDiagnosticCode.invalidConcentricComposition);
+      expect(refusal.message, contains('"current", "previous"'));
+      expect(refusal.message, contains('ringIds:'));
+      expect(refusal.message, isNot(contains(r"'<markId>-<ringKey>'")));
+
+      // The DEFAULT scheme keeps its own sentence, unchanged — this is a
+      // parameterisation, not a softening.
+      final generated = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'A': 2},
+              ),
+            ),
+          ],
+        )).lower(),
+      );
+      expect(generated.message, contains('"fruit-A", "fruit-B"'));
+      expect(generated.message, contains(r"'<markId>-<ringKey>'"));
+      expect(generated.message, isNot(contains('ringIds:')));
+    });
+
+    test('the duplicate-id refusal names the ringIds scheme too', () {
+      // The other route into `invalidConcentricComposition` on a `ringIds`
+      // composition: two rings pointed at ONE id. The rings the sentence lists
+      // are the authored ones, so the scheme it names must be too.
+      final refusal = _refusalOf(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'same', 'B': 'same'},
+            ),
+          ],
+        )).lower(),
+      );
+      expect(refusal.code, GrammarDiagnosticCode.invalidConcentricComposition);
+      expect(refusal.message, contains('must be unique'));
+      expect(refusal.message, contains('ringIds:'));
+      expect(refusal.message, isNot(contains(r"'<markId>-<ringKey>'")));
+    });
+
+    test('ringIds participates in DonutMark equality AND hashCode', () {
+      const base = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+      );
+      const named = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'current'},
+      );
+      expect(named == base, isFalse);
+      // The hash half, asserted separately because `operator==` alone does not
+      // imply it: `hashCode` is a hand-maintained argument list, so a field can
+      // be carried by equality and silently left out of the hash — which is
+      // exactly what makes two unequal marks collide in a Set or a Map key.
+      // Deleting `_ringOverrideHash(ringIds)` from `DonutMark.hashCode` must
+      // turn this red, the way the same line does for `dataLabelsByRing`.
+      expect(named.hashCode == base.hashCode, isFalse);
+      expect(base.ringIds, isNull);
+      // Null and an empty map mean the same thing everywhere else, so they
+      // compare equal here — exactly as `dataLabelsByRing` does. And "equal"
+      // has to include the hash: an empty map that hashed as itself rather than
+      // as the absent one would break the equal-implies-same-hash contract that
+      // the comparison above establishes.
+      const empty = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{},
+      );
+      expect(empty == base, isTrue);
+      expect(empty.hashCode, base.hashCode);
+      // Order-independent, matching the comparison: two marks that name the
+      // same rings in a different insertion order are one mark and must hash
+      // alike.
+      //
+      // Deliberately `final`, not `const`, despite what prefer_const_constructors
+      // says — the same choice the `dataLabelsByRing` pair makes. Const
+      // canonicalisation could collapse these into ONE object, at which point
+      // `identical(this, other)` satisfies the comparison and neither
+      // `_sameRingOverrides` nor `_ringOverrideHash` is ever reached.
+      final forwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'current', 'B': 'previous'},
+      );
+      final backwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'B': 'previous', 'A': 'current'},
+      );
+      expect(forwards, backwards);
+      expect(forwards.hashCode, backwards.hashCode);
+      // A different VALUE for the same key is a different mark, in both halves.
+      final swapped = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        id: 'fruit',
+        ringIds: <String, String>{'A': 'previous', 'B': 'current'},
+      );
+      expect(forwards == swapped, isFalse);
+      expect(forwards.hashCode == swapped.hashCode, isFalse);
+    });
+
+    test(
+      'a genuine multi-value ring keeps center on the config (no regression)',
+      () {
+        final lowered = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              center: DonutCenterContent(label: 'Total'),
+            ),
+          ],
+        )).lower();
+
+        // Two distinct rings → N series + a ConcentricDonutConfig; each ring's own
+        // center stays hidden and the shared center lives on the config.
+        expect(lowered.series, hasLength(2));
+        for (final ring in lowered.series.cast<DonutChartSeries>()) {
+          expect(ring.centerContent, DonutCenterContent.hidden);
+        }
+        expect(
+          lowered.concentricDonutConfig,
+          const ConcentricDonutConfig(
+            centerContent: DonutCenterContent(label: 'Total'),
+          ),
+        );
+      },
+    );
 
     test('a concentric config lowers carrying every one of its fields', () {
       final lowered = (const PlotSpec<Fruit>(
@@ -687,23 +1324,130 @@ void main() {
       );
     });
 
-    test('a ring-less concentric config is refused before the empty-data guard',
-        () {
+    test(
+      'a ring-less concentric config is refused before the empty-data guard',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                id: 'fruit',
+                concentric: customConcentric,
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(
+            GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
+          ),
+        );
+      },
+    );
+
+    test('a ring-less donut refuses dataLabelsByRing by name', () {
+      // The exact mistake the unknownRingKey guard exists to catch, in its most
+      // inert form: with no `ring` channel there are no rings AT ALL, so the
+      // whole map applies to nothing. The ringed guard cannot see this shape —
+      // it lives inside the ring loop — so without a check here a real override
+      // (and any typo inside it) vanishes silently. Mirrors
+      // concentricConfigOnRinglessDonut, the sibling refusal for the sibling
+      // field.
       expect(
         () => (const PlotSpec<Fruit>(
-          data: <Fruit>[],
+          data: fruits,
           marks: <Mark<Fruit>>[
             DonutMark<Fruit>(
               category: fruitName,
               value: fruitCount,
               id: 'fruit',
-              concentric: customConcentric,
+              dataLabelsByRing: <String, PieDataLabelConfig>{'A': hiddenLabels},
             ),
           ],
         )).lower(),
-        throwsGrammarCode(
-          GrammarDiagnosticCode.concentricConfigOnRinglessDonut,
-        ),
+        throwsGrammarCode(GrammarDiagnosticCode.perRingOverrideOnRinglessDonut),
+      );
+    });
+
+    test(
+      'the ring-less dataLabelsByRing refusal names the map and the fix',
+      () {
+        Object? thrown;
+        try {
+          (const PlotSpec<Fruit>(
+            data: fruits,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                id: 'fruit',
+                dataLabelsByRing: <String, PieDataLabelConfig>{
+                  'A': hiddenLabels,
+                  'B': insideLabels,
+                },
+              ),
+            ],
+          )).lower();
+        } catch (error) {
+          thrown = error;
+        }
+        expect(thrown, isA<GrammarSpecException>());
+        final failure = thrown! as GrammarSpecException;
+        expect(failure.message, contains('fruit'));
+        expect(failure.message, contains('dataLabelsByRing'));
+        // Both dead keys are named, and so is the one-word fix.
+        expect(failure.message, contains('"A"'));
+        expect(failure.message, contains('"B"'));
+        expect(failure.message, contains('ring:'));
+        expect(failure.message, contains('dataLabels:'));
+      },
+    );
+
+    test(
+      'a ring-less dataLabelsByRing is refused before the empty-data guard',
+      () {
+        // Decidable from the mark's shape alone, so it belongs above the
+        // emptyData guard with the other shape checks — a chain must not lower
+        // clean over an empty data set and only report once rows arrive.
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                id: 'fruit',
+                dataLabelsByRing: <String, PieDataLabelConfig>{
+                  'A': hiddenLabels,
+                },
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(
+            GrammarDiagnosticCode.perRingOverrideOnRinglessDonut,
+          ),
+        );
+      },
+    );
+
+    test('a ring-less donut with an EMPTY dataLabelsByRing lowers clean', () {
+      // An empty map carries no override, so it is a no-op here for exactly the
+      // reason it is a no-op on the ringed path. Refusing it would fork the two
+      // paths apart on a map that means nothing either way.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
       );
     });
 
@@ -711,11 +1455,7 @@ void main() {
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
-          DonutMark<Fruit>(
-            category: fruitName,
-            value: fruitCount,
-            id: 'fruit',
-          ),
+          DonutMark<Fruit>(category: fruitName, value: fruitCount, id: 'fruit'),
         ],
       )).lower();
 
@@ -727,53 +1467,57 @@ void main() {
       expect(lowered.concentricDonutConfig, isNull);
     });
 
-    test('an invalid concentric config is refused above the empty-data guard',
-        () {
-      // Inverted radii are decidable from the CONFIG alone, so they must not
-      // hide behind an empty (or single-ring) dataset and resurface as a raw
-      // ArgumentError from ConcentricDonutLayoutCalculator at widget mount.
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: <Fruit>[],
-          marks: <Mark<Fruit>>[
-            DonutMark<Fruit>(
-              category: fruitName,
-              value: fruitCount,
-              ring: fruitBasket,
-              id: 'fruit',
-              concentric: ConcentricDonutConfig(
-                innerRadiusFactor: 0.9,
-                outerRadiusFactor: 0.5,
+    test(
+      'an invalid concentric config is refused above the empty-data guard',
+      () {
+        // Inverted radii are decidable from the CONFIG alone, so they must not
+        // hide behind an empty (or single-ring) dataset and resurface as a raw
+        // ArgumentError from ConcentricDonutLayoutCalculator at widget mount.
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                ring: fruitBasket,
+                id: 'fruit',
+                concentric: ConcentricDonutConfig(
+                  innerRadiusFactor: 0.9,
+                  outerRadiusFactor: 0.5,
+                ),
               ),
-            ),
-          ],
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
-      );
-    });
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+        );
+      },
+    );
 
-    test('an invalid concentric config cannot hide behind single-ring data',
-        () {
-      const oneBasket = <Fruit>[
-        Fruit(name: 'Apple', count: 30, basket: 'A'),
-        Fruit(name: 'Pear', count: 20, basket: 'A'),
-      ];
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: oneBasket,
-          marks: <Mark<Fruit>>[
-            DonutMark<Fruit>(
-              category: fruitName,
-              value: fruitCount,
-              ring: fruitBasket,
-              id: 'fruit',
-              concentric: ConcentricDonutConfig(ringGap: -4),
-            ),
-          ],
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
-      );
-    });
+    test(
+      'an invalid concentric config cannot hide behind single-ring data',
+      () {
+        const oneBasket = <Fruit>[
+          Fruit(name: 'Apple', count: 30, basket: 'A'),
+          Fruit(name: 'Pear', count: 20, basket: 'A'),
+        ];
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: oneBasket,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                ring: fruitBasket,
+                id: 'fruit',
+                concentric: ConcentricDonutConfig(ringGap: -4),
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.invalidConcentricComposition),
+        );
+      },
+    );
 
     test('a ring weight keyed by the ring value rather than the series id is '
         'refused by name', () {
@@ -801,12 +1545,86 @@ void main() {
       }
       expect(thrown, isA<GrammarSpecException>());
       final failure = thrown! as GrammarSpecException;
-      expect(
-        failure.code,
-        GrammarDiagnosticCode.invalidConcentricComposition,
-      );
+      expect(failure.code, GrammarDiagnosticCode.invalidConcentricComposition);
       expect(failure.message, contains('"A"'));
       expect(failure.message, contains('fruit-A'));
+    });
+
+    test('a dataLabelsByRing key naming no ring is refused by name', () {
+      // The mirror of the ringWeights mistake, in the other direction: the
+      // override map is keyed by the BARE ring value, so the series id
+      // 'fruit-A' names nothing. Left unchecked the entry is simply inert — it
+      // applies to no ring and reports nothing — so the typo would survive into
+      // the rendered chart.
+      Object? thrown;
+      try {
+        (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{
+                'fruit-A': hiddenLabels,
+              },
+            ),
+          ],
+        )).lower();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, isA<GrammarSpecException>());
+      final failure = thrown! as GrammarSpecException;
+      expect(failure.code, GrammarDiagnosticCode.unknownRingKey);
+      expect(failure.message, contains('"fruit-A"'));
+      expect(failure.message, contains('dataLabelsByRing'));
+      // The real ring keys are named, so the fix is readable off the message.
+      expect(failure.message, contains('"A"'));
+      expect(failure.message, contains('"B"'));
+    });
+
+    test('every dataLabelsByRing key naming a real ring lowers clean', () {
+      // The FULL map: every ring the `fruits` fixture produces is named, so the
+      // guard has the largest legitimate surface to over-fire on. Pinning it on
+      // a populated map is the point — an empty map is vacuously unknown-free
+      // and would pass even a guard rewritten to reject valid keys.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{
+                'A': hiddenLabels,
+                'B': insideLabels,
+              },
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
+
+      // And an empty override map stays a no-op rather than a refusal.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              dataLabelsByRing: <String, PieDataLabelConfig>{},
+            ),
+          ],
+        )).lower(),
+        returnsNormally,
+      );
     });
 
     test('concentric plus center raises conflictingConcentricCenter', () {
@@ -889,29 +1707,31 @@ void main() {
       expect(lowered.concentricDonutConfig, isNull);
     });
 
-    test('a lowered polar equals the hand-built PolarColumnChartSeries.fromMap',
-        () {
-      final lowered = (const PlotSpec<Fruit>(
-        data: fruits,
-        marks: <Mark<Fruit>>[
-          PolarMark<Fruit>(
-            category: fruitName,
-            value: fruitCount,
+    test(
+      'a lowered polar equals the hand-built PolarColumnChartSeries.fromMap',
+      () {
+        final lowered = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              id: 'fruit',
+              name: 'Fruit',
+            ),
+          ],
+        )).lower();
+
+        expect(
+          lowered.series.single,
+          PolarColumnChartSeries.fromMap(
             id: 'fruit',
             name: 'Fruit',
+            values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
           ),
-        ],
-      )).lower();
-
-      expect(
-        lowered.series.single,
-        PolarColumnChartSeries.fromMap(
-          id: 'fruit',
-          name: 'Fruit',
-          values: const {'Apple': 30, 'Pear': 20, 'Plum': 10},
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 
   group('polar advanced per-series channels', () {
@@ -939,11 +1759,7 @@ void main() {
       final lowered = (const PlotSpec<Fruit>(
         data: fruits,
         marks: <Mark<Fruit>>[
-          PolarMark<Fruit>(
-            id: 'fruit',
-            category: fruitName,
-            value: fruitCount,
-          ),
+          PolarMark<Fruit>(id: 'fruit', category: fruitName, value: fruitCount),
         ],
       )).lower();
 
@@ -1230,41 +2046,46 @@ void main() {
       radialAxis: PolarNumericAxisConfig(tickCount: 7),
     );
 
-    test('two polar marks lower to two PolarColumnChartSeries with the config',
-        () {
-      final lowered = (const PlotSpec<Fruit>(
-        data: fruits,
-        marks: <Mark<Fruit>>[
-          PolarMark<Fruit>(
-            id: 'cap',
-            name: 'Capacity',
-            category: fruitName,
-            value: fruitCount,
-          ),
-          PolarMark<Fruit>(
-            id: 'obs',
-            name: 'Observed',
-            category: fruitName,
-            value: fruitMass,
-          ),
-        ],
-        polar: groupedPolar,
-      )).lower();
+    test(
+      'two polar marks lower to two PolarColumnChartSeries with the config',
+      () {
+        final lowered = (const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PolarMark<Fruit>(
+              id: 'cap',
+              name: 'Capacity',
+              category: fruitName,
+              value: fruitCount,
+            ),
+            PolarMark<Fruit>(
+              id: 'obs',
+              name: 'Observed',
+              category: fruitName,
+              value: fruitMass,
+            ),
+          ],
+          polar: groupedPolar,
+        )).lower();
 
-      expect(lowered.series, hasLength(2));
-      expect(lowered.series.every((s) => s is PolarColumnChartSeries), isTrue);
-      expect(lowered.series.map((s) => s.id), ['cap', 'obs']);
-      final cap = lowered.series.first as PolarColumnChartSeries;
-      final obs = lowered.series.last as PolarColumnChartSeries;
-      expect(cap.name, 'Capacity');
-      expect(cap.categories, ['Apple', 'Pear', 'Plum']);
-      expect(cap.points.map((p) => p.y), [30, 20, 10]);
-      expect(obs.name, 'Observed');
-      expect(obs.points.map((p) => p.y), [5, 3, 2]);
-      expect(lowered.polarChartConfig, groupedPolar);
-      expect(lowered.polarChartConfig, isNot(const PolarChartConfig()));
-      expect(lowered.concentricDonutConfig, isNull);
-    });
+        expect(lowered.series, hasLength(2));
+        expect(
+          lowered.series.every((s) => s is PolarColumnChartSeries),
+          isTrue,
+        );
+        expect(lowered.series.map((s) => s.id), ['cap', 'obs']);
+        final cap = lowered.series.first as PolarColumnChartSeries;
+        final obs = lowered.series.last as PolarColumnChartSeries;
+        expect(cap.name, 'Capacity');
+        expect(cap.categories, ['Apple', 'Pear', 'Plum']);
+        expect(cap.points.map((p) => p.y), [30, 20, 10]);
+        expect(obs.name, 'Observed');
+        expect(obs.points.map((p) => p.y), [5, 3, 2]);
+        expect(lowered.polarChartConfig, groupedPolar);
+        expect(lowered.polarChartConfig, isNot(const PolarChartConfig()));
+        expect(lowered.concentricDonutConfig, isNull);
+      },
+    );
 
     test('a single polar mark still carries the spec-level config', () {
       final lowered = (const PlotSpec<Fruit>(
@@ -1335,24 +2156,26 @@ void main() {
       );
     });
 
-    test('polarConfig on a concentric donut raises polarConfigOnNonPolarSpec',
-        () {
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: fruits,
-          marks: <Mark<Fruit>>[
-            DonutMark<Fruit>(
-              id: 'rings',
-              category: fruitName,
-              value: fruitCount,
-              ring: fruitBasket,
-            ),
-          ],
-          polar: groupedPolar,
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
-      );
-    });
+    test(
+      'polarConfig on a concentric donut raises polarConfigOnNonPolarSpec',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: fruits,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                id: 'rings',
+                category: fruitName,
+                value: fruitCount,
+                ring: fruitBasket,
+              ),
+            ],
+            polar: groupedPolar,
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+        );
+      },
+    );
 
     test('the misplaced-polarConfig guard beats the empty-data guard', () {
       // A structural placement error must fire even against empty data, so
@@ -1386,18 +2209,21 @@ void main() {
     // chain, so the most likely way to misplace it is on a Cartesian one. The
     // placement guard used to live inside the radial branch, which a Cartesian
     // spec never enters — the config was silently dropped instead of named.
-    test('polarConfig on a Cartesian spec raises polarConfigOnNonPolarSpec', () {
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: fruits,
-          marks: <Mark<Fruit>>[
-            LineMark<Fruit>(id: 'power', x: sampleX, y: sampleY),
-          ],
-          polar: PolarChartConfig(),
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
-      );
-    });
+    test(
+      'polarConfig on a Cartesian spec raises polarConfigOnNonPolarSpec',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: fruits,
+            marks: <Mark<Fruit>>[
+              LineMark<Fruit>(id: 'power', x: sampleX, y: sampleY),
+            ],
+            polar: PolarChartConfig(),
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.polarConfigOnNonPolarSpec),
+        );
+      },
+    );
 
     test('the Cartesian polarConfig diagnostic names the offending mark', () {
       GrammarSpecException? thrown;
@@ -1535,7 +2361,11 @@ void main() {
         () => (const PlotSpec<Fruit>(
           data: fruits,
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: PolarChartConfig(
             composition: PolarColumnCompositionConfig(
@@ -1553,7 +2383,11 @@ void main() {
         () => (const PlotSpec<Fruit>(
           data: <Fruit>[],
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: PolarChartConfig(
             composition: PolarColumnCompositionConfig(
@@ -1565,32 +2399,33 @@ void main() {
       );
     });
 
-    test('polar marks whose categories diverge raise invalidPolarComposition',
-        () {
-      // Two marks over ONE row list may still read DIFFERENT categories, which
-      // no polar chart can draw: the two series would need two angular axes.
-      expect(
-        () => (PlotSpec<Fruit>(
-          data: fruits,
-          marks: <Mark<Fruit>>[
-            const PolarMark<Fruit>(
-              id: 'a',
-              category: fruitName,
-              value: fruitCount,
-            ),
-            PolarMark<Fruit>(
-              id: 'b',
-              category: (row) => 'x${row.name}',
-              value: fruitMass,
-            ),
-          ],
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
-      );
-    });
+    test(
+      'polar marks whose categories diverge raise invalidPolarComposition',
+      () {
+        // Two marks over ONE row list may still read DIFFERENT categories, which
+        // no polar chart can draw: the two series would need two angular axes.
+        expect(
+          () => (PlotSpec<Fruit>(
+            data: fruits,
+            marks: <Mark<Fruit>>[
+              const PolarMark<Fruit>(
+                id: 'a',
+                category: fruitName,
+                value: fruitCount,
+              ),
+              PolarMark<Fruit>(
+                id: 'b',
+                category: (row) => 'x${row.name}',
+                value: fruitMass,
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+        );
+      },
+    );
 
-    test('polar marks with different presets raise invalidPolarComposition',
-        () {
+    test('polar marks with different presets raise invalidPolarComposition', () {
       // `PolarMark.preset` is what the builder's `rose:` flag sets, so
       // `.geomPolar(rose: true).geomPolar()` became expressible the moment the
       // advanced per-series fields landed. A rose series divides the circle
@@ -1774,9 +2609,9 @@ void main() {
       )).lower();
       expect(lowered.series, hasLength(2));
       expect(
-        lowered.series
-            .cast<PolarColumnChartSeries>()
-            .every((series) => series.preset == PolarColumnPreset.rose),
+        lowered.series.cast<PolarColumnChartSeries>().every(
+          (series) => series.preset == PolarColumnPreset.rose,
+        ),
         isTrue,
       );
     });
@@ -1789,19 +2624,27 @@ void main() {
     // at mount, so without a hoist a chain lowers CLEAN over an empty dataset
     // and then throws a raw ArgumentError once real rows arrive: exactly the
     // failure the concentric half was hoisted to prevent.
-    test('an invalid polar pane radius is refused above the empty-data guard',
-        () {
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: <Fruit>[],
-          marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
-          ],
-          polar: PolarChartConfig(pane: PolarPaneConfig(innerRadiusFactor: 2)),
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
-      );
-    });
+    test(
+      'an invalid polar pane radius is refused above the empty-data guard',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: <Fruit>[],
+            marks: <Mark<Fruit>>[
+              PolarMark<Fruit>(
+                id: 'only',
+                category: fruitName,
+                value: fruitCount,
+              ),
+            ],
+            polar: PolarChartConfig(
+              pane: PolarPaneConfig(innerRadiusFactor: 2),
+            ),
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.invalidPolarComposition),
+        );
+      },
+    );
 
     test('a threshold with an odd dash pattern is refused above the empty-data '
         'guard', () {
@@ -1811,7 +2654,11 @@ void main() {
         () => (const PlotSpec<Fruit>(
           data: <Fruit>[],
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: PolarChartConfig(
             thresholds: <PolarThreshold>[
@@ -1831,7 +2678,11 @@ void main() {
         () => (const PlotSpec<Fruit>(
           data: <Fruit>[],
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: PolarChartConfig(
             composition: PolarColumnCompositionConfig(groupInnerPadding: 1.5),
@@ -1880,7 +2731,11 @@ void main() {
         (const PlotSpec<Fruit>(
           data: <Fruit>[],
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: invalidConfig,
         )).lower();
@@ -1970,7 +2825,11 @@ void main() {
         () => (const PlotSpec<Fruit>(
           data: <Fruit>[],
           marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(id: 'only', category: fruitName, value: fruitCount),
+            PolarMark<Fruit>(
+              id: 'only',
+              category: fruitName,
+              value: fruitCount,
+            ),
           ],
           polar: PolarChartConfig(
             pane: PolarPaneConfig(innerRadiusFactor: 0.2),
@@ -1981,15 +2840,17 @@ void main() {
       );
     });
 
-    test('the composition diagnostic names its code and the offending mark',
-        () {
-      final invalid = GrammarSpecException.invalidPolarComposition(
-        'The mark "b" reads in "bpm".',
-      );
-      expect(invalid.code, GrammarDiagnosticCode.invalidPolarComposition);
-      expect(invalid.toString(), contains('invalidPolarComposition'));
-      expect(invalid.message, contains('bpm'));
-    });
+    test(
+      'the composition diagnostic names its code and the offending mark',
+      () {
+        final invalid = GrammarSpecException.invalidPolarComposition(
+          'The mark "b" reads in "bpm".',
+        );
+        expect(invalid.code, GrammarDiagnosticCode.invalidPolarComposition);
+        expect(invalid.toString(), contains('invalidPolarComposition'));
+        expect(invalid.message, contains('bpm'));
+      },
+    );
   });
 
   group('radial duplicate-category diagnostics', () {
@@ -2015,18 +2876,20 @@ void main() {
       );
     });
 
-    test('a polar with duplicate categories raises duplicateRadialCategory',
-        () {
-      expect(
-        () => (const PlotSpec<Fruit>(
-          data: dupCategories,
-          marks: <Mark<Fruit>>[
-            PolarMark<Fruit>(category: fruitName, value: fruitCount),
-          ],
-        )).lower(),
-        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
-      );
-    });
+    test(
+      'a polar with duplicate categories raises duplicateRadialCategory',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: dupCategories,
+            marks: <Mark<Fruit>>[
+              PolarMark<Fruit>(category: fruitName, value: fruitCount),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+        );
+      },
+    );
 
     test('a donut WITHOUT a ring and duplicate categories raises '
         'duplicateRadialCategory', () {
@@ -2061,35 +2924,37 @@ void main() {
     // REGRESSION (the trap): the SAME categories legitimately repeat across
     // DIFFERENT rings. Uniqueness is per-ring, so this is the expected
     // concentric shape and must NOT throw.
-    test('the same categories across DIFFERENT rings lower without throwing',
-        () {
-      const crossRing = <Fruit>[
-        Fruit(name: 'Apple', count: 30, basket: 'A'),
-        Fruit(name: 'Pear', count: 20, basket: 'A'),
-        Fruit(name: 'Apple', count: 10, basket: 'B'),
-        Fruit(name: 'Pear', count: 5, basket: 'B'),
-      ];
-      final lowered = (const PlotSpec<Fruit>(
-        data: crossRing,
-        marks: <Mark<Fruit>>[
-          DonutMark<Fruit>(
-            category: fruitName,
-            value: fruitCount,
-            ring: fruitBasket,
-            id: 'fruit',
-          ),
-        ],
-      )).lower();
+    test(
+      'the same categories across DIFFERENT rings lower without throwing',
+      () {
+        const crossRing = <Fruit>[
+          Fruit(name: 'Apple', count: 30, basket: 'A'),
+          Fruit(name: 'Pear', count: 20, basket: 'A'),
+          Fruit(name: 'Apple', count: 10, basket: 'B'),
+          Fruit(name: 'Pear', count: 5, basket: 'B'),
+        ];
+        final lowered = (const PlotSpec<Fruit>(
+          data: crossRing,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+            ),
+          ],
+        )).lower();
 
-      // Two rings, each with the same two categories → N series + config.
-      expect(lowered.series, hasLength(2));
-      expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
-      expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
-      final ringA = lowered.series.first as DonutChartSeries;
-      final ringB = lowered.series.last as DonutChartSeries;
-      expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
-      expect(ringB.points.map((p) => p.label), ['Apple', 'Pear']);
-    });
+        // Two rings, each with the same two categories → N series + config.
+        expect(lowered.series, hasLength(2));
+        expect(lowered.series.map((s) => s.id), ['fruit-A', 'fruit-B']);
+        expect(lowered.concentricDonutConfig, const ConcentricDonutConfig());
+        final ringA = lowered.series.first as DonutChartSeries;
+        final ringB = lowered.series.last as DonutChartSeries;
+        expect(ringA.points.map((p) => p.label), ['Apple', 'Pear']);
+        expect(ringB.points.map((p) => p.label), ['Apple', 'Pear']);
+      },
+    );
 
     test('a category duplicated WITHIN one ring raises '
         'duplicateRadialCategory', () {
@@ -2107,6 +2972,82 @@ void main() {
               value: fruitCount,
               ring: fruitBasket,
               id: 'fruit',
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicateRadialCategory),
+      );
+    });
+
+    // ORDERING, pinned because `doc/chart_grammar.md`'s numbered radial list is
+    // read as a contract and had these two the wrong way round. The ring-map
+    // guards run on the BUCKET KEYS, immediately after bucketing and before any
+    // ring series is materialized, so a mis-keyed map is reported as the
+    // authoring mistake it is rather than behind whatever the rows happen to do
+    // — and a chart that is wrong BOTH ways reports the map first. Do not
+    // "correct" the code to the old prose: correct the prose.
+    const dupInsideRingA = <Fruit>[
+      Fruit(name: 'Apple', count: 30, basket: 'A'),
+      Fruit(name: 'Apple', count: 12, basket: 'A'),
+      Fruit(name: 'Pear', count: 20, basket: 'B'),
+    ];
+
+    test('a ringIds key naming no ring outranks a duplicate category inside a '
+        'ring', () {
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupInsideRingA,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              ringIds: <String, String>{'A': 'a', 'B': 'b', 'Z': 'z'},
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unknownRingKey),
+      );
+    });
+
+    test(
+      'a PARTIAL ringIds map outranks a duplicate category inside a ring',
+      () {
+        expect(
+          () => (const PlotSpec<Fruit>(
+            data: dupInsideRingA,
+            marks: <Mark<Fruit>>[
+              DonutMark<Fruit>(
+                category: fruitName,
+                value: fruitCount,
+                ring: fruitBasket,
+                id: 'fruit',
+                ringIds: <String, String>{'A': 'a'},
+              ),
+            ],
+          )).lower(),
+          throwsGrammarCode(GrammarDiagnosticCode.partialRingIds),
+        );
+      },
+    );
+
+    test('a duplicate category outranks a misdirected ringWeights key', () {
+      // The other side of the same ordering: `invalidConcentricComposition` is
+      // raised by the series-half guard, which runs only once every ring is
+      // materialized — so materialization's own diagnostic gets there first.
+      expect(
+        () => (const PlotSpec<Fruit>(
+          data: dupInsideRingA,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              id: 'fruit',
+              concentric: ConcentricDonutConfig(
+                ringWeights: <String, double>{'nope': 2},
+              ),
             ),
           ],
         )).lower(),

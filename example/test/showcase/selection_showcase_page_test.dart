@@ -1185,4 +1185,40 @@ void main() {
     });
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('ids the concentric family for the Grammar contract', (
+    tester,
+  ) async {
+    // The Grammar reverses a concentric composition only when every ring id is
+    // '<markId>-<ring name>', so the selection lab's rings carry conforming
+    // ids. Nothing user-visible keys off the id — legend, tooltip, table and
+    // semantics all render the ring NAME.
+    await pumpSelectionLab(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('selection-family-concentricDonut')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('selection-chart-concentricDonut')),
+    );
+    final rings = chart.series.cast<DonutChartSeries>().toList();
+    expect(rings, hasLength(3));
+
+    final markIds = <String>{};
+    for (final ring in rings) {
+      expect(ring.name, isNotNull);
+      final suffix = '-${ring.name}';
+      expect(
+        ring.id,
+        endsWith(suffix),
+        reason: "'${ring.id}' must be '<markId>$suffix'",
+      );
+      expect(ring.id.length, greaterThan(suffix.length));
+      markIds.add(ring.id.substring(0, ring.id.length - suffix.length));
+    }
+    expect(markIds, hasLength(1), reason: 'every ring shares one mark id');
+    expect(tester.takeException(), isNull);
+  });
 }

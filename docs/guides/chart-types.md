@@ -583,7 +583,10 @@ BravenChartPlus(
     innerRadiusFactor: 0.28,
     outerRadiusFactor: 0.92,
     ringGap: 6,
-    ringWeights: {'current': 1.25},
+    // Keyed by the stable series id. Ring ids follow the Grammar's
+    // '<markId>-<ring name>' contract, so the composition also round-trips
+    // through geomDonut(ring:).
+    ringWeights: {'revenue-Current quarter': 1.25},
     legendMode: ConcentricDonutLegendMode.groupedByRing,
     centerContent: DonutCenterContent(
       label: 'Comparison',

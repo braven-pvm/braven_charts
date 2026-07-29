@@ -9,7 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class Fruit {
-  const Fruit({required this.name, required this.count, this.mass = 0, this.basket = ''});
+  const Fruit({
+    required this.name,
+    required this.count,
+    this.mass = 0,
+    this.basket = '',
+  });
   final String name;
   final double count;
   final double mass;
@@ -21,6 +26,7 @@ double fruitCount(Fruit row) => row.count;
 double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
+Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -62,6 +68,86 @@ void main() {
           ],
         ),
       );
+    });
+
+    test('geomPie and geomDonut forward sliceColor onto the mark', () {
+      final pie = BravenChart.of(fruits)
+          .geomPie(
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          )
+          .toSpec();
+      expect(
+        pie,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            PieMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              sliceColor: fruitSliceColor,
+            ),
+          ],
+        ),
+      );
+      expect((pie.marks.single as PieMark<Fruit>).sliceColor, isNotNull);
+
+      final donut = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            sliceColor: fruitSliceColor,
+          )
+          .toSpec();
+      expect(
+        donut,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              sliceColor: fruitSliceColor,
+            ),
+          ],
+        ),
+      );
+      expect((donut.marks.single as DonutMark<Fruit>).sliceColor, isNotNull);
+    });
+
+    test('geomDonut forwards dataLabelsByRing onto the mark', () {
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      final donut = BravenChart.of(fruits)
+          .geomDonut(
+            category: fruitName,
+            value: fruitCount,
+            ring: fruitBasket,
+            dataLabels: const PieDataLabelConfig(isVisible: false),
+            dataLabelsByRing: const {'A': outer},
+          )
+          .toSpec();
+      expect(
+        donut,
+        const PlotSpec<Fruit>(
+          data: fruits,
+          marks: <Mark<Fruit>>[
+            DonutMark<Fruit>(
+              id: 'mark-0',
+              category: fruitName,
+              value: fruitCount,
+              ring: fruitBasket,
+              dataLabels: PieDataLabelConfig(isVisible: false),
+              dataLabelsByRing: {'A': outer},
+            ),
+          ],
+        ),
+      );
+      expect((donut.marks.single as DonutMark<Fruit>).dataLabelsByRing, const {
+        'A': outer,
+      });
     });
   });
 
@@ -160,17 +246,17 @@ void main() {
     });
 
     test('geomPolar rose: true selects the rose preset', () {
-      final spec = BravenChart.of(fruits)
-          .geomPolar(category: fruitName, value: fruitCount, rose: true)
-          .toSpec();
+      final spec = BravenChart.of(
+        fruits,
+      ).geomPolar(category: fruitName, value: fruitCount, rose: true).toSpec();
       final mark = spec.marks.single as PolarMark<Fruit>;
       expect(mark.preset, PolarColumnPreset.rose);
     });
 
     test('geomPolar defaults to the standard preset', () {
-      final spec = BravenChart.of(fruits)
-          .geomPolar(category: fruitName, value: fruitCount)
-          .toSpec();
+      final spec = BravenChart.of(
+        fruits,
+      ).geomPolar(category: fruitName, value: fruitCount).toSpec();
       final mark = spec.marks.single as PolarMark<Fruit>;
       expect(mark.preset, PolarColumnPreset.standard);
     });

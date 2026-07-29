@@ -387,10 +387,20 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     switch (mark) {
       case LineMark<T>():
         series.add(_lowerLine(mark, markId, axis!, spec.data));
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case AreaMark<T>():
         series.add(_lowerArea(mark, markId, axis!, spec.data));
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case BarMark<T>():
         series.add(
           _lowerBar(
@@ -401,7 +411,12 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
             transposed: spec.transposed,
           ),
         );
-        _addColorLegend(annotations, mark.colorBy, mark.colorEncoding, spec.data);
+        _addColorLegend(
+          annotations,
+          mark.colorBy,
+          mark.colorEncoding,
+          spec.data,
+        );
       case ScatterMark<T>():
         series.add(_lowerScatter(mark, markId, axis!, spec.data));
       case CandlestickMark<T>():
@@ -679,7 +694,13 @@ LineChartSeries _lowerLine<T>(
   name: mark.name,
   points: mark.colorBy == null
       ? _xyPoints(data, mark.x, mark.y)
-      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
+      : _xyColorPoints(
+          data,
+          mark.x,
+          mark.y,
+          mark.colorBy!,
+          mark.colorEncoding!,
+        ),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,
@@ -701,7 +722,13 @@ AreaChartSeries _lowerArea<T>(
   name: mark.name,
   points: mark.colorBy == null
       ? _xyPoints(data, mark.x, mark.y)
-      : _xyColorPoints(data, mark.x, mark.y, mark.colorBy!, mark.colorEncoding!),
+      : _xyColorPoints(
+          data,
+          mark.x,
+          mark.y,
+          mark.colorBy!,
+          mark.colorEncoding!,
+        ),
   color: mark.color,
   yAxisId: axis.id,
   yAxisConfig: axis,
@@ -1025,6 +1052,43 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     );
   }
 
+  // The same refusal, for the same reason, for the per-ring override map. Its
+  // key-existence half is checked against the ACTUAL ring keys down in
+  // [_lowerConcentricRings] — but that function only runs for a mark WITH a
+  // ring channel, so the ring-less shape would escape every check and drop the
+  // whole map. That is the most inert form of the mistake, not the least: with
+  // no rings at all there is nothing any entry could ever apply to.
+  //
+  // Decidable from the mark's shape alone, so it sits here, above the emptyData
+  // guard, with the other shape checks. An EMPTY map is exempt: it carries no
+  // override, so it is the same no-op here that it is on the ringed path, and
+  // refusing it would fork the two paths apart over a map that means nothing
+  // either way.
+  if (mark is DonutMark<T> &&
+      mark.ring == null &&
+      (mark.dataLabelsByRing?.isNotEmpty ?? false)) {
+    throw GrammarSpecException.perRingOverrideOnRinglessDonut(
+      markId,
+      'dataLabelsByRing',
+      mark.dataLabelsByRing!.keys,
+    );
+  }
+
+  // …and for the ring-ID map, for the identical reason: with no ring channel
+  // there are no ring series for it to name, so every entry would be dropped.
+  // The remedy differs — a ring-less donut's series id is the MARK id — so the
+  // diagnostic names `id:` rather than `dataLabels:`.
+  if (mark is DonutMark<T> &&
+      mark.ring == null &&
+      (mark.ringIds?.isNotEmpty ?? false)) {
+    throw GrammarSpecException.perRingOverrideOnRinglessDonut(
+      markId,
+      'ringIds',
+      mark.ringIds!.keys,
+      singleDonutParameter: 'id:',
+    );
+  }
+
   // The polar composition contract that is decidable from the spec's SHAPE.
   if (allPolar) {
     _validatePolarMarkComposition<T>(spec, radialIndices, markIds);
@@ -1102,6 +1166,11 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // series is present, so the lone ring must carry the mark's center on
         // itself — exactly like the ring-less donut path — or the center is
         // silently hidden.
+        //
+        // The center is the ONLY thing this branch overrides. Everything else,
+        // per-ring data labels included, is already resolved for this ring key
+        // by [_lowerConcentricRings]; re-stating any of it here would fork the
+        // collapse away from the composition it collapsed from.
         series.add(
           rings.single.copyWith(
             centerContent: center ?? DonutCenterContent.hidden,
@@ -1121,14 +1190,18 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
         // pipeline validates: below two donut series the widget nulls the
         // config and lays a plain donut out, so refusing here would reject a
         // chart that renders. A ring weight naming no ring — the natural
-        // mistake, because the rings are ided `<markId>-<ringKey>` — is caught
-        // here instead of as a raw ArgumentError at widget mount.
+        // mistake, because the rings are ided `<markId>-<ringKey>` unless
+        // `ringIds` names them — is caught here instead of as a raw
+        // ArgumentError at widget mount. WHICH scheme ided them is passed
+        // along: the diagnostic's remedy clause has to prescribe the one in
+        // force, not the one that just failed.
         _guardConcentric(
           () => ConcentricDonutLayoutCalculator.validateSeries(
             rings,
             concentric!,
           ),
           ringIds: <String>[for (final ring in rings) ring.id],
+          explicitRingIds: mark.ringIds?.isNotEmpty ?? false,
         );
       }
     }
@@ -1175,10 +1248,13 @@ String _authorityDetail(ArgumentError error) {
 /// delegates to it and translates the raw `ArgumentError` into a named
 /// diagnostic, rather than restating (and eventually contradicting) its rules.
 /// [ringIds] is supplied for the series half, where naming the real ring ids is
-/// what makes a misdirected `ringWeights` key actionable.
+/// what makes a misdirected `ringWeights` key actionable, and
+/// [explicitRingIds] says which scheme produced them so the remedy clause
+/// prescribes the scheme this composition actually uses.
 void _guardConcentric(
   void Function() check, {
   Iterable<String> ringIds = const <String>[],
+  bool explicitRingIds = false,
 }) {
   try {
     check();
@@ -1186,6 +1262,7 @@ void _guardConcentric(
     throw GrammarSpecException.invalidConcentricComposition(
       _authorityDetail(error),
       ringIds: ringIds,
+      explicitRingIds: explicitRingIds,
     );
   }
 }
@@ -1365,6 +1442,26 @@ Map<String, num> _radiusValues<T>(
   return result;
 }
 
+/// Builds the per-category slice-color map for a pie/donut geom.
+///
+/// A null return SKIPS the category, leaving it on the series color — exactly
+/// what an unset accessor does for every row, so an unset accessor and an
+/// all-null accessor produce the same series. The families' `fromMap` builds
+/// the GENERAL `PointStyle(color:, size:)`, so a color and a radius on the same
+/// category compose rather than one displacing the other.
+Map<String, Color> _sliceColors<T>(
+  List<T> data,
+  FieldAccessor<T, Object?> category,
+  FieldAccessor<T, Color?> sliceColor,
+) {
+  final result = <String, Color>{};
+  for (final row in data) {
+    final color = sliceColor(row);
+    if (color != null) result[category(row).toString()] = color;
+  }
+  return result;
+}
+
 PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
     PieChartSeries.fromMap(
       id: id,
@@ -1372,6 +1469,9 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       color: mark.color,
       unit: mark.unit,
       values: _radialValues(data, mark.category, mark.value),
+      sliceColors: mark.sliceColor == null
+          ? const <String, Color>{}
+          : _sliceColors(data, mark.category, mark.sliceColor!),
       radiusValues: mark.radius == null
           ? const <String, num>{}
           : _radiusValues(data, mark.category, mark.radius!),
@@ -1391,26 +1491,36 @@ DonutChartSeries _lowerDonut<T>(
   List<T> data,
   DonutCenterContent? center,
 ) => DonutChartSeries.fromMap(
-      id: id,
-      name: mark.name,
-      color: mark.color,
-      unit: mark.unit,
-      values: _radialValues(data, mark.category, mark.value),
-      radiusValues: mark.radius == null
-          ? const <String, num>{}
-          : _radiusValues(data, mark.category, mark.radius!),
-      sliceRadiusConfig: mark.sliceRadiusConfig,
-      sliceGroupingConfig: mark.sliceGroupingConfig,
-      donutStyle: mark.style ?? const DonutChartStyle(),
-      selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
-      centerContent: center ?? DonutCenterContent.hidden,
-      dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
-    );
+  id: id,
+  name: mark.name,
+  color: mark.color,
+  unit: mark.unit,
+  values: _radialValues(data, mark.category, mark.value),
+  sliceColors: mark.sliceColor == null
+      ? const <String, Color>{}
+      : _sliceColors(data, mark.category, mark.sliceColor!),
+  radiusValues: mark.radius == null
+      ? const <String, num>{}
+      : _radiusValues(data, mark.category, mark.radius!),
+  sliceRadiusConfig: mark.sliceRadiusConfig,
+  sliceGroupingConfig: mark.sliceGroupingConfig,
+  donutStyle: mark.style ?? const DonutChartStyle(),
+  selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
+  centerContent: center ?? DonutCenterContent.hidden,
+  dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+);
 
 /// Partitions [data] by the donut mark's ring accessor (first-seen order) and
 /// builds one `DonutChartSeries` per ring. The shared center is carried by the
 /// composition's `ConcentricDonutConfig`, so each ring donut's own center is
 /// hidden.
+///
+/// Per-ring data labels resolve here, which is what makes the single-ring
+/// COLLAPSE honor an override too: `_lowerRadial` builds that lone donut from
+/// this function's output and only `copyWith`s the center onto it, so the
+/// resolution below is the one authority for both concentric paths. Keep it
+/// that way — resolving at the call site instead would leave the collapse
+/// branch on the base config.
 List<DonutChartSeries> _lowerConcentricRings<T>(
   DonutMark<T> mark,
   String markId,
@@ -1420,18 +1530,76 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
   final buckets = <String, List<T>>{};
   for (final row in data) {
     final key = mark.ring!(row).toString();
-    buckets.putIfAbsent(key, () {
-      order.add(key);
-      return <T>[];
-    }).add(row);
+    buckets
+        .putIfAbsent(key, () {
+          order.add(key);
+          return <T>[];
+        })
+        .add(row);
+  }
+  // An override keyed to a ring this data never produces is INERT: it applies
+  // to nothing and reports nothing, so the typo survives into the rendered
+  // chart. It is checked against the ACTUAL ring keys, which is why it lives
+  // here — below the emptyData guard — instead of with the shape-decidable
+  // checks in [_lowerRadial].
+  final unknownRings = <String>[
+    for (final key in mark.dataLabelsByRing?.keys ?? const <String>[])
+      if (!buckets.containsKey(key)) key,
+  ];
+  if (unknownRings.isNotEmpty) {
+    throw GrammarSpecException.unknownRingKey(
+      markId,
+      'dataLabelsByRing',
+      unknownRings,
+      order,
+    );
+  }
+  // The same check for the ring-ID map, which is keyed the same way and goes
+  // just as silently inert.
+  final unknownIdRings = <String>[
+    for (final key in mark.ringIds?.keys ?? const <String>[])
+      if (!buckets.containsKey(key)) key,
+  ];
+  if (unknownIdRings.isNotEmpty) {
+    throw GrammarSpecException.unknownRingKey(
+      markId,
+      'ringIds',
+      unknownIdRings,
+      order,
+    );
+  }
+  // ALL OR NOTHING. Naming half the rings leaves the rest on the generated
+  // '<markId>-<ringKey>' id, so one composition would carry two id schemes and
+  // `ringWeights` — keyed by the RESULTING id — would take a different scheme
+  // per ring. Checked AFTER the unknown-key guard so a typo is reported as the
+  // typo it is rather than as the hole it leaves.
+  if (mark.ringIds?.isNotEmpty ?? false) {
+    final unnamed = <String>[
+      for (final key in order)
+        if (!mark.ringIds!.containsKey(key)) key,
+    ];
+    if (unnamed.isNotEmpty) {
+      throw GrammarSpecException.partialRingIds(
+        markId,
+        mark.ringIds!.keys,
+        unnamed,
+      );
+    }
   }
   return <DonutChartSeries>[
     for (final key in order)
       DonutChartSeries.fromMap(
-        id: '$markId-$key',
+        // The explicit id when `ringIds` names this ring, else the generated
+        // '<markId>-<ringKey>' that is the family's convention. Whichever one
+        // wins, THIS is the id `ConcentricDonutConfig.ringWeights` keys by —
+        // the validator below is handed these very ids.
+        id: mark.ringIds?[key] ?? '$markId-$key',
         name: key,
         unit: mark.unit,
         values: _radialValues(buckets[key]!, mark.category, mark.value),
+        sliceColors: mark.sliceColor == null
+            ? const <String, Color>{}
+            : _sliceColors(buckets[key]!, mark.category, mark.sliceColor!),
         radiusValues: mark.radius == null
             ? const <String, num>{}
             : _radiusValues(buckets[key]!, mark.category, mark.radius!),
@@ -1440,7 +1608,10 @@ List<DonutChartSeries> _lowerConcentricRings<T>(
         donutStyle: mark.style ?? const DonutChartStyle(),
         selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
         centerContent: DonutCenterContent.hidden,
-        dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+        dataLabels:
+            mark.dataLabelsByRing?[key] ??
+            mark.dataLabels ??
+            const PieDataLabelConfig(),
       ),
   ];
 }

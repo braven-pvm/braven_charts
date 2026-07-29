@@ -1655,6 +1655,16 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
   }) {
     final radial = _family.isRadial;
     final options = _chartOptionsController.options;
+    // The projection overlays this lab draws are read-only illustrations, so
+    // annotation interaction stays off WHILE THEY EXIST. When there are none —
+    // every radial family, and every family until the projection toggle is
+    // switched on — the flag governs nothing, and authoring a non-default value
+    // for it would still write it into the captured document. The Grammar pane
+    // then has to refuse the whole chart: `BravenPlot` has no way to express
+    // the flag, so carrying the chain would silently lose it.
+    final annotations = _showProjectionAnnotations && !radial
+        ? _selectionAnnotations(options)
+        : const <ChartAnnotation>[];
     return BravenChartPlus(
       key:
           key ??
@@ -1677,10 +1687,10 @@ class _SelectionShowcasePageState extends State<SelectionShowcasePage> {
       normalizationMode: _multiAxisLineData && _family == _SelectionFamily.line
           ? NormalizationMode.perSeries
           : NormalizationMode.none,
-      annotations: _showProjectionAnnotations && !radial
-          ? _selectionAnnotations(options)
-          : const [],
-      interactiveAnnotations: false,
+      annotations: annotations,
+      // `false` only while an annotation exists for it to govern — see the note
+      // above `annotations`.
+      interactiveAnnotations: annotations.isEmpty,
       title: showTitles ? _family.chartTitle : null,
       subtitle: showTitles ? _family.chartSubtitle : null,
       theme: options.theme ?? ChartTheme.light,
@@ -2716,9 +2726,12 @@ final _donutSeries = <ChartSeries>[
   ),
 ];
 
+// The Grammar ids a lowered concentric ring '<markId>-<ring name>' and the
+// source generator reverses exactly that shape, so these rings share one mark
+// id and spell the ring NAME verbatim. Nothing user-visible keys off the id.
 final _concentricSeries = <ChartSeries>[
   DonutChartSeries.fromMap(
-    id: 'current',
+    id: 'revenue-Current',
     name: 'Current',
     values: _radialValues,
     donutStyle: const DonutChartStyle(sliceGap: 2, cornerRadius: 4),
@@ -2727,7 +2740,7 @@ final _concentricSeries = <ChartSeries>[
     ),
   ),
   DonutChartSeries.fromMap(
-    id: 'previous',
+    id: 'revenue-Previous',
     name: 'Previous',
     values: const {
       'Subscriptions': 36,
@@ -2742,7 +2755,7 @@ final _concentricSeries = <ChartSeries>[
     ),
   ),
   DonutChartSeries.fromMap(
-    id: 'forecast',
+    id: 'revenue-Forecast',
     name: 'Forecast',
     values: const {
       'Subscriptions': 48,

@@ -62,12 +62,56 @@ void main() {
         contains('final concentricDonutChart = BravenChartPlus('),
         contains('concentricDonutConfig: ConcentricDonutConfig('),
         contains("ringWeights: {"),
-        contains("'current': 1"),
+        contains("'revenue-Current period': 1"),
         contains('DonutChartSeries('),
         contains('selectionStyle: RadialSelectionStyle('),
       ),
     );
     expect(find.byType(ChartSourceView), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ids every ring for the Grammar concentric contract', (
+    tester,
+  ) async {
+    // The Grammar reverses a concentric composition only when every ring id is
+    // '<markId>-<ring name>' — the generator's `_concentricMarkId` is the exact
+    // inverse of the lowering, not a heuristic — and
+    // `ConcentricDonutConfig.ringWeights` is keyed by that same series id, so
+    // the ids and the weight keys are one decision rather than two.
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ConcentricDonutPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('concentric-donut-chart')),
+    );
+    final rings = chart.series.cast<DonutChartSeries>().toList();
+    expect(rings, hasLength(3));
+
+    final markIds = <String>{};
+    for (final ring in rings) {
+      expect(ring.name, isNotNull);
+      final suffix = '-${ring.name}';
+      expect(
+        ring.id,
+        endsWith(suffix),
+        reason: "'${ring.id}' must be '<markId>$suffix'",
+      );
+      expect(ring.id.length, greaterThan(suffix.length));
+      markIds.add(ring.id.substring(0, ring.id.length - suffix.length));
+    }
+    expect(markIds, hasLength(1), reason: 'every ring shares one mark id');
+
+    expect(
+      chart.concentricDonutConfig.ringWeights.keys,
+      containsAll(rings.map((series) => series.id)),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -185,8 +229,14 @@ void main() {
     expect(chart.concentricDonutConfig.innerRadiusFactor, 0.36);
     expect(chart.concentricDonutConfig.outerRadiusFactor, 0.88);
     expect(chart.concentricDonutConfig.ringGap, 12);
-    expect(chart.concentricDonutConfig.ringWeights['current'], 1);
-    expect(chart.concentricDonutConfig.ringWeights['forecast'], 0.9);
+    expect(
+      chart.concentricDonutConfig.ringWeights['revenue-Current period'],
+      1,
+    );
+    expect(
+      chart.concentricDonutConfig.ringWeights['revenue-Forecast period'],
+      0.9,
+    );
     expect(chart.concentricDonutConfig.centerContent.isVisible, isTrue);
     expect(chart.donutCenterBuilder, isNotNull);
     expect(
@@ -222,7 +272,7 @@ void main() {
       Colors.transparent,
     );
 
-    final groupedRow = find.byKey(const ValueKey('current:3'));
+    final groupedRow = find.byKey(const ValueKey('revenue-Current%20period:3'));
     await tester.ensureVisible(groupedRow);
     await tester.pumpAndSettle();
     await tester.tap(groupedRow);
@@ -234,14 +284,18 @@ void main() {
     for (final index in <int>[3, 4]) {
       expect(
         tester
-            .getSemantics(find.byKey(ValueKey<String>('current:$index')))
+            .getSemantics(
+              find.byKey(ValueKey<String>('revenue-Current%20period:$index')),
+            )
             .flagsCollection
             .isSelected,
         Tristate.isTrue,
       );
       expect(
         tester
-            .getSemantics(find.byKey(ValueKey<String>('previous:$index')))
+            .getSemantics(
+              find.byKey(ValueKey<String>('revenue-Previous%20period:$index')),
+            )
             .flagsCollection
             .isSelected,
         isNot(Tristate.isTrue),
@@ -279,7 +333,7 @@ void main() {
     tester.view.physicalSize = const Size(820, 760);
     await tester.pumpAndSettle();
 
-    final groupedRow = find.byKey(const ValueKey('current:3'));
+    final groupedRow = find.byKey(const ValueKey('revenue-Current%20period:3'));
     await tester.ensureVisible(groupedRow);
     await tester.pumpAndSettle();
     await tester.tap(groupedRow);
@@ -331,7 +385,12 @@ void main() {
     var radialSeries = chart().series.cast<DonutChartSeries>().toList();
     expect(
       radialSeries.map((series) => series.id),
-      orderedEquals(['current', 'previous', 'forecast', 'plan']),
+      orderedEquals([
+        'revenue-Current period',
+        'revenue-Previous period',
+        'revenue-Forecast period',
+        'revenue-Plan period',
+      ]),
     );
     expect(
       radialSeries.map((series) => series.name),
@@ -347,10 +406,10 @@ void main() {
       orderedEquals([100, 200, 300, 400]),
     );
     expect(chart().concentricDonutConfig.ringWeights, {
-      'current': 1,
-      'previous': 1,
-      'forecast': 0.9,
-      'plan': 1,
+      'revenue-Current period': 1,
+      'revenue-Previous period': 1,
+      'revenue-Forecast period': 0.9,
+      'revenue-Plan period': 1,
     });
     expect(find.text('Outer · Current · 100 USD'), findsOneWidget);
     expect(find.text('Ring 2 · Previous · 200 USD'), findsOneWidget);
@@ -363,11 +422,16 @@ void main() {
 
     tester
         .widget<SliderOption>(
-          find.byKey(const ValueKey('concentric-ring-weight-forecast')),
+          find.byKey(
+            const ValueKey('concentric-ring-weight-revenue-Forecast period'),
+          ),
         )
         .onChanged(1.5);
     await tester.pumpAndSettle();
-    expect(chart().concentricDonutConfig.ringWeights['forecast'], 1.5);
+    expect(
+      chart().concentricDonutConfig.ringWeights['revenue-Forecast period'],
+      1.5,
+    );
 
     final firstDistributions = [
       for (final series in radialSeries)
@@ -400,9 +464,9 @@ void main() {
     expect(source, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
     final generated =
         (source as ChartArtifactSuccess<ChartGeneratedSource>).value.source;
-    expect(generated, contains("id: 'forecast'"));
-    expect(generated, contains("id: 'plan'"));
-    expect(generated, contains("'forecast': 1.5"));
+    expect(generated, contains("id: 'revenue-Forecast period'"));
+    expect(generated, contains("id: 'revenue-Plan period'"));
+    expect(generated, contains("'revenue-Forecast period': 1.5"));
 
     await tester.tap(
       find.byKey(const ValueKey('concentric-preset-highContrast')),
@@ -483,8 +547,8 @@ void main() {
     expect(chart.concentricDonutConfig.outerRadiusFactor, 0.94);
     expect(chart.concentricDonutConfig.ringGap, 10);
     expect(chart.concentricDonutConfig.ringWeights, {
-      'current': 1.25,
-      'previous': 1,
+      'revenue-Current period': 1.25,
+      'revenue-Previous period': 1,
     });
     expect(
       chart.concentricDonutConfig.centerContent.valueMode,
@@ -596,8 +660,8 @@ void main() {
     expect(chart.concentricDonutConfig.outerRadiusFactor, 1);
     expect(chart.concentricDonutConfig.ringGap, 0);
     expect(chart.concentricDonutConfig.ringWeights, {
-      'current': 1,
-      'previous': 1,
+      'revenue-Current period': 1,
+      'revenue-Previous period': 1,
     });
     expect(
       chart.concentricDonutConfig.centerContent.valueMode,
@@ -722,8 +786,8 @@ void main() {
     expect(chart.concentricDonutConfig.ringGap, 9);
     expect(chart.concentricDonutConfig.order, ConcentricRingOrder.innerToOuter);
     expect(chart.concentricDonutConfig.ringWeights, {
-      'current': 1,
-      'previous': 1,
+      'revenue-Current period': 1,
+      'revenue-Previous period': 1,
     });
     expect(chart.donutCenterBuilder, isNull);
     expect(
@@ -1139,7 +1203,10 @@ void main() {
     expect(chart.concentricDonutConfig.innerRadiusFactor, 0.38);
     expect(chart.concentricDonutConfig.outerRadiusFactor, 0.94);
     expect(chart.concentricDonutConfig.ringGap, 10);
-    expect(chart.concentricDonutConfig.ringWeights['current'], 1.25);
+    expect(
+      chart.concentricDonutConfig.ringWeights['revenue-Current period'],
+      1.25,
+    );
     expect(chart.radialLegendItemBuilder, isNull);
     expect(chart.theme?.legendStyle.markerSize, 9);
     expect(chart.theme?.legendStyle.textStyle.fontSize, 10);

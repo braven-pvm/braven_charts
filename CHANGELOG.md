@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- A per-slice colour channel on the radial marks: `PieMark.sliceColor` and
+  `DonutMark.sliceColor`, with `sliceColor:` on `BravenChart.geomPie()` and
+  `geomDonut()`, mirroring `PolarMark.columnColor`. A null return leaves that
+  category on the series colour, and a concentric composition resolves the
+  channel per ring bucket.
+- Per-ring overrides on `DonutMark`: `dataLabelsByRing`, keyed by the bare ring
+  key, with `dataLabels` as the base, and `ringIds`, giving each ring an
+  explicit series id so a composition whose ids are decoupled from its ring
+  names round-trips. Both are exposed on `BravenChart.geomDonut()`.
+- Three Grammar diagnostics for the per-ring surface above: `unknownRingKey`,
+  `partialRingIds`, and `perRingOverrideOnRinglessDonut`.
+
+### Changed
+
+- Generated Dart source now also reverses per-slice colours, per-ring data
+  labels and non-conforming concentric ring ids, and carries a donut's captured
+  `DonutCenterContent` verbatim — `labelStyle` and `valueStyle` included — so a
+  styled centre emits rather than being refused, and a live `valueFormatter`
+  emits as a `// valueFormatter:` placeholder with a runtime-value-omitted
+  warning. Output is byte-identical for every shape that already emitted a
+  chain: Cartesian, polar, and pie/donut/concentric charts with no per-slice
+  colours, uniform ring labels, conforming ring ids and a default centre.
+
+### Fixed
+
+- Generated Dart source that sets a non-default tooltip trigger mode now
+  compiles. Both the Config and the Grammar form open with
+  `import 'package:braven_charts/braven_charts.dart';` and
+  `import 'package:flutter/material.dart';`, and `TooltipTriggerMode` is
+  declared in both libraries, so `triggerMode: TooltipTriggerMode.<mode>` was
+  `ambiguous_import` — the copied source parsed, read correctly and did not
+  compile. The material import is now written as
+  `import 'package:flutter/material.dart' hide TooltipTriggerMode;` whenever
+  the emitted body uses that name. Charts that do not emit an ambiguous name
+  are byte-identical; for those that do, the only change is that one import
+  line.
+
+### Breaking Changes
+
+- `GrammarDiagnosticCode` gained three further enum values (listed under
+  Added), on top of the six added in 0.15.0. They are declared beside the
+  radial codes they belong with rather than appended, so the ordinals of the
+  values after them shifted again. The breakage is confined to compile time: an
+  exhaustive `switch` over `GrammarDiagnosticCode` with no default or wildcard
+  case will stop compiling until the new codes are handled. Nothing serialises
+  the enum, and chart artifacts and documents encode every enum by NAME rather
+  than by ordinal, so persisted documents still load unchanged and the runtime
+  behavior of existing code is unaffected.
+
+### Notes
+
+- Every radial Workbench Grammar pane now emits a chain — pie, donut,
+  concentric donut and polar column. This supersedes the known limitation
+  recorded under 0.15.0: per-slice colours and divergent per-ring data labels
+  are no longer refused. What stays refused in the radial families is narrow: a
+  radial-bar, gauge or range-area chart (no grammar geometry), a per-point
+  `PointStyle` carrying more than a colour and a size, and a concentric
+  composition that breaks one of the ring preconditions. A concentric
+  composition emits only when every ring shares one `donutStyle`, one
+  `selectionStyle`, one `unit`, one `sliceRadiusConfig` and one
+  `sliceGroupingConfig`, carries no series `color` of its own, carries no
+  centre of its own, and has a distinct, non-empty name — `DonutMark` holds one
+  of each for the whole composition, and the ring lowering never carries a
+  per-ring `color`. Sharing a NON-DEFAULT value is fine; it is divergence that
+  is refused. Of these, the ring name and the ring centre are refused with a
+  reason of their own; the five config divergences and the ring colour are
+  refused by the round-trip proof's catch-all and are not yet named. The pie
+  and donut showcase pages emit with `isComplete == false`, for live formatter
+  callbacks that have no literal form — the pie with ONE runtime-value-omitted
+  warning covering its two radial label formatters, the donut with TWO, one for
+  its centre `valueFormatter` and one for its two radial label formatters. Full
+  detail is in `doc/chart_grammar.md`.
+
 ## 0.15.0 - 2026-07-28
 
 ### Added

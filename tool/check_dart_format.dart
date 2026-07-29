@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 const _baselinePath = 'tool/dart_format_baseline.txt';
-const _formatScopes = <String>['lib', 'example/lib', 'test'];
+const _formatScopes = <String>['lib', 'example/lib', 'test', 'example/test'];
 const _chunkSize = 100;
 
 Future<void> main(List<String> arguments) async {

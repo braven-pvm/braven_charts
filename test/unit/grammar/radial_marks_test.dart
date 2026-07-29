@@ -23,6 +23,7 @@ double fruitCount(Fruit row) => row.count;
 double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
+Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -46,6 +47,46 @@ void main() {
       );
       const without = PieMark<Fruit>(category: fruitName, value: fruitCount);
       expect(withRadius == without, isFalse);
+    });
+
+    test('sliceColor participates in PieMark and DonutMark equality', () {
+      const pieA = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        sliceColor: fruitSliceColor,
+      );
+      const pieB = PieMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(pieA == pieB, isFalse);
+      expect(pieA.hashCode == pieB.hashCode, isFalse);
+      expect(pieA.sliceColor, same(fruitSliceColor));
+      expect(pieB.sliceColor, isNull);
+      expect(
+        pieA,
+        const PieMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          sliceColor: fruitSliceColor,
+        ),
+      );
+
+      const donutA = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        sliceColor: fruitSliceColor,
+      );
+      const donutB = DonutMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(donutA == donutB, isFalse);
+      expect(donutA.hashCode == donutB.hashCode, isFalse);
+      expect(donutA.sliceColor, same(fruitSliceColor));
+      expect(donutB.sliceColor, isNull);
+      expect(
+        donutA,
+        const DonutMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          sliceColor: fruitSliceColor,
+        ),
+      );
     });
 
     test('DonutMark carries a ring accessor and center content', () {
@@ -85,6 +126,108 @@ void main() {
           concentric: ConcentricDonutConfig(ringGap: 12),
         ),
       );
+    });
+
+    test('dataLabelsByRing participates in DonutMark equality', () {
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      const withOverrides = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: {'outer': outer},
+      );
+      const without = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+      );
+      expect(withOverrides == without, isFalse);
+      expect(withOverrides.hashCode == without.hashCode, isFalse);
+      expect(withOverrides.dataLabelsByRing, const {'outer': outer});
+      expect(without.dataLabelsByRing, isNull);
+      expect(
+        withOverrides,
+        const DonutMark<Fruit>(
+          category: fruitName,
+          value: fruitCount,
+          ring: fruitBasket,
+          dataLabelsByRing: {'outer': outer},
+        ),
+      );
+    });
+
+    test('dataLabelsByRing equality compares entries, not map order', () {
+      // Two maps with the same entries in a different insertion order are the
+      // same override set, so the marks must be equal AND hash alike.
+      const outer = PieDataLabelConfig(position: PieDataLabelPosition.inside);
+      const inner = PieDataLabelConfig(isVisible: false);
+      final forwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'outer': outer,
+          'inner': inner,
+        },
+      );
+      final backwards = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'inner': inner,
+          'outer': outer,
+        },
+      );
+      expect(forwards, backwards);
+      expect(forwards.hashCode, backwards.hashCode);
+
+      // A different VALUE for the same key is a different mark.
+      final swapped = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{
+          'outer': inner,
+          'inner': outer,
+        },
+      );
+      expect(forwards == swapped, isFalse);
+    });
+
+    test('an EMPTY dataLabelsByRing equals an absent one', () {
+      // Both mean "every ring shares dataLabels": they lower to identical
+      // series (the resolution reads `?[key] ??`, which an empty map misses
+      // exactly as null does) and emit identical text (the planner normalises
+      // an empty projection to null). Two marks describing the same chart must
+      // therefore compare equal and hash alike — `mapEquals(null, {})` is
+      // false, so the comparison cannot be left to it.
+      const empty = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: <String, PieDataLabelConfig>{},
+      );
+      const absent = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+      );
+      expect(empty, absent);
+      expect(empty.hashCode, absent.hashCode);
+      // The field itself still reports what the author wrote — the
+      // normalisation is in the comparison, not in the storage.
+      expect(empty.dataLabelsByRing, isEmpty);
+      expect(absent.dataLabelsByRing, isNull);
+      // And a populated map is still a different mark than either.
+      const populated = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        ring: fruitBasket,
+        dataLabelsByRing: {'outer': PieDataLabelConfig(isVisible: false)},
+      );
+      expect(populated == empty, isFalse);
+      expect(populated == absent, isFalse);
     });
 
     test('PolarMark holds a polar style', () {

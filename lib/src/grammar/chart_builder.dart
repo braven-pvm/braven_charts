@@ -446,10 +446,14 @@ final class BravenChart<T> {
   /// Cartesian axis/grid option. [radius] encodes an optional second metric as
   /// a variable slice radius. Rich styling is deferred to [style]/[dataLabels],
   /// the real config objects, exactly as the Cartesian geoms defer to config.
+  ///
+  /// [sliceColor] overrides the slice color per row; returning null for a row
+  /// leaves that slice on the series color.
   BravenChart<T> geomPie({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
     FieldAccessor<T, num>? radius,
+    FieldAccessor<T, Color?>? sliceColor,
     String? id,
     String? name,
     Color? color,
@@ -465,6 +469,7 @@ final class BravenChart<T> {
       category: category,
       value: value,
       radius: radius,
+      sliceColor: sliceColor,
       name: name,
       color: color,
       unit: unit,
@@ -486,14 +491,38 @@ final class BravenChart<T> {
   /// through its `centerContent`; [center] is the shorthand for that same slot
   /// and may only be used when [concentric] is omitted. [concentric] requires
   /// [ring] — a ring-less donut composes nothing for it to describe — and its
-  /// `ringWeights` is keyed by the lowered ring SERIES id `'<markId>-<ringKey>'`
-  /// (a mark ided `'seasons'` weights its `'Winter'` ring as
-  /// `{'seasons-Winter': 2}`), not by the bare ring value.
+  /// `ringWeights` is keyed by the RESULTING ring SERIES id, not by the bare
+  /// ring value: `'<markId>-<ringKey>'` (a mark ided `'seasons'` weights its
+  /// `'Winter'` ring as `{'seasons-Winter': 2}`), or the [ringIds] entry when
+  /// that map names the ring.
+  ///
+  /// [ringIds] names each ring's series id explicitly, keyed by the BARE ring
+  /// key, for a composition whose ids were chosen independently of its ring
+  /// names. Omit it and every ring takes the generated `'<markId>-<ringKey>'`
+  /// id, which stays the convention. It is ALL OR NOTHING — naming some rings
+  /// and not others raises `GrammarDiagnosticCode.partialRingIds` — and, like
+  /// [concentric], it requires [ring]
+  /// (`GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`); a key naming a
+  /// ring the rows never produce raises `GrammarDiagnosticCode.unknownRingKey`.
+  ///
+  /// [sliceColor] overrides the slice color per row; returning null for a row
+  /// leaves that slice on the series color. With [ring] set it is resolved per
+  /// ring, so one category may take a different color in each ring.
+  ///
+  /// [dataLabelsByRing] overrides [dataLabels] for named rings. It is keyed by
+  /// the BARE ring key — the value [ring] returns, which becomes the ring
+  /// series' name — not by the `'<markId>-<ringKey>'` series id `concentric`'s
+  /// `ringWeights` uses. A ring with no entry keeps [dataLabels]. Like
+  /// [concentric] it requires [ring]: a non-empty map on a ring-less donut has
+  /// no rings to key against and raises
+  /// `GrammarDiagnosticCode.perRingOverrideOnRinglessDonut`. A key naming a
+  /// ring the rows never produce raises `GrammarDiagnosticCode.unknownRingKey`.
   BravenChart<T> geomDonut({
     required FieldAccessor<T, Object?> category,
     required FieldAccessor<T, num> value,
     FieldAccessor<T, num>? radius,
     FieldAccessor<T, Object?>? ring,
+    FieldAccessor<T, Color?>? sliceColor,
     String? id,
     String? name,
     Color? color,
@@ -502,7 +531,9 @@ final class BravenChart<T> {
     RadialSelectionStyle? selectionStyle,
     DonutCenterContent? center,
     ConcentricDonutConfig? concentric,
+    Map<String, String>? ringIds,
     PieDataLabelConfig? dataLabels,
+    Map<String, PieDataLabelConfig>? dataLabelsByRing,
     RadialSliceRadiusConfig? sliceRadiusConfig,
     RadialSliceGroupingConfig? sliceGroupingConfig,
   }) => _append(
@@ -512,6 +543,7 @@ final class BravenChart<T> {
       value: value,
       radius: radius,
       ring: ring,
+      sliceColor: sliceColor,
       name: name,
       color: color,
       unit: unit,
@@ -519,7 +551,9 @@ final class BravenChart<T> {
       selectionStyle: selectionStyle,
       center: center,
       concentric: concentric,
+      ringIds: ringIds,
       dataLabels: dataLabels,
+      dataLabelsByRing: dataLabelsByRing,
       sliceRadiusConfig: sliceRadiusConfig,
       sliceGroupingConfig: sliceGroupingConfig,
     ),
@@ -768,12 +802,7 @@ final class BravenChart<T> {
     FacetScales scales = FacetScales.fixed,
     String? label,
   }) => _copy(
-    facet: FacetSpec<T>(
-      by: by,
-      columns: columns,
-      scales: scales,
-      label: label,
-    ),
+    facet: FacetSpec<T>(by: by, columns: columns, scales: scales, label: label),
   );
 
   /// The specification this chain describes.
@@ -802,8 +831,10 @@ final class BravenChart<T> {
   XAxisConfig? _specXAxis(String? xLabel) {
     final base = _xAxis ?? (xLabel == null ? null : XAxisConfig(label: xLabel));
     if (_xScaleType == AxisScaleType.linear) return base;
-    return (base ?? const XAxisConfig())
-        .copyWith(scaleType: _xScaleType, logBase: _xLogBase);
+    return (base ?? const XAxisConfig()).copyWith(
+      scaleType: _xScaleType,
+      logBase: _xLogBase,
+    );
   }
 
   /// The Y axes for the spec, folding in any `.yLog()` scale intent.
