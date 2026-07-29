@@ -44,6 +44,8 @@ void main() {
       borderColor: const Color(0xFF334155),
       borderWidth: 1.5,
       cornerRadius: 3,
+      showInLegend: false,
+      showTrackingAxisLabel: false,
       showCellLabels: true,
       cellLabelColor: const Color(0xFF0F172A),
       cellLabelFontSize: 12,
@@ -82,6 +84,8 @@ void main() {
         }),
       );
       expect(decoded.value, source);
+      expect(decoded.value.showInLegend, isFalse);
+      expect(decoded.value.showTrackingAxisLabel, isFalse);
       expect(
         (decoded.value as HeatmapChartSeries).animation.entranceOrder,
         HeatmapEntranceOrder.radial,

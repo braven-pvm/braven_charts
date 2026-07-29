@@ -139,6 +139,12 @@ void main() {
     );
 
     expect(series.copyWith(showCellLabels: true).showCellLabels, isTrue);
+    final hiddenPresentation = series.copyWith(
+      showInLegend: false,
+      showTrackingAxisLabel: false,
+    );
+    expect(hiddenPresentation.showInLegend, isFalse);
+    expect(hiddenPresentation.showTrackingAxisLabel, isFalse);
     expect(
       () => series.copyWith(style: SeriesStyle.scatter),
       throwsArgumentError,

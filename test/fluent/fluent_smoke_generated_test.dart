@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1885 verbs total; 11 of them have an argument type with no
+// 1887 verbs total; 11 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -3725,7 +3725,7 @@ void _smokeHeatmapAnimationStyle(_Verb verb, HeatmapAnimationStyle subject) {
   );
 }
 
-/// Smoke coverage for [HeatmapChartSeries]'s 23 executable verb(s).
+/// Smoke coverage for [HeatmapChartSeries]'s 25 executable verb(s).
 void _smokeHeatmapChartSeries(_Verb verb, HeatmapChartSeries subject) {
   verb('HeatmapChartSeriesFluent.withName', () => subject.withName('y'));
   verb('HeatmapChartSeriesFluent.clearName', () => subject.clearName());
@@ -3752,6 +3752,14 @@ void _smokeHeatmapChartSeries(_Verb verb, HeatmapChartSeries subject) {
   );
   verb('HeatmapChartSeriesFluent.withUnit', () => subject.withUnit('y'));
   verb('HeatmapChartSeriesFluent.clearUnit', () => subject.clearUnit());
+  verb(
+    'HeatmapChartSeriesFluent.withShowInLegend',
+    () => subject.withShowInLegend(true),
+  );
+  verb(
+    'HeatmapChartSeriesFluent.withShowTrackingAxisLabel',
+    () => subject.withShowTrackingAxisLabel(true),
+  );
   verb(
     'HeatmapChartSeriesFluent.withCellWidth',
     () => subject.withCellWidth(1),

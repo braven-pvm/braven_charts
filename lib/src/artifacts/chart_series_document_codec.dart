@@ -605,6 +605,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           cellWidth: _double(style, 'heatmapCellWidth'),
           cellHeight: _double(style, 'heatmapCellHeight'),
           gapFraction: _double(style, 'heatmapGapFraction'),

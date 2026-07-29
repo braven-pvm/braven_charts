@@ -96,6 +96,14 @@ extension HeatmapChartSeriesFluent on HeatmapChartSeries {
   /// Clears [HeatmapChartSeries.unit] to `null`.
   HeatmapChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [HeatmapChartSeries.showInLegend] with [value].
+  HeatmapChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [HeatmapChartSeries.showTrackingAxisLabel] with [value].
+  HeatmapChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [HeatmapChartSeries.cellWidth] with [value].
   HeatmapChartSeries withCellWidth(double value) => copyWith(cellWidth: value);
 
