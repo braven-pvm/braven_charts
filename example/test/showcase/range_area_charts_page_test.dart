@@ -153,6 +153,37 @@ void main() {
     expect(find.text('Hit test mode'), findsOneWidget);
     expect(range.connectGaps, isFalse);
     expect(chart.interactionConfig!.crosshair.interpolateValues, isTrue);
+    expect(find.text('Show interval in legend'), findsOneWidget);
+    expect(find.text('Show interval axis values'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toggles interval legend and tracking-axis visibility', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: RangeAreaChartsPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('Show interval in legend'));
+    await tester.tap(find.text('Show interval axis values'));
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('range-area-chart-temperature')),
+    );
+    final interval = chart.series.first as RangeAreaChartSeries;
+    final observed = chart.series.last as LineChartSeries;
+
+    expect(interval.showInLegend, isFalse);
+    expect(interval.showTrackingAxisLabel, isFalse);
+    expect(observed.showInLegend, isTrue);
+    expect(observed.showTrackingAxisLabel, isTrue);
     expect(tester.takeException(), isNull);
   });
 

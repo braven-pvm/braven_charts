@@ -3442,21 +3442,28 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             .whereType<ErrorBarAnnotation>()
             .where((error) => error.label != null && error.label!.isNotEmpty)
             .toList();
+        final legendSeries = _effectiveRenderSeries
+            .where((series) => series.showInLegend)
+            .toList(growable: false);
 
-        final legendAnnotation = LegendAnnotation(
-          id: '__internal_legend__', // Special ID for internal legend
-          series: _effectiveRenderSeries,
-          trendAnnotations: trendAnnotations,
-          errorBarAnnotations: errorBarAnnotations,
-          legendStyle: effectiveLegendStyle,
-          customPosition: _legendCustomPosition,
-        );
-        elements.add(
-          LegendAnnotationElement(
-            annotation: legendAnnotation,
-            chartSize: Size(transform.plotWidth, transform.plotHeight),
-          ),
-        );
+        if (legendSeries.isNotEmpty ||
+            trendAnnotations.isNotEmpty ||
+            errorBarAnnotations.isNotEmpty) {
+          final legendAnnotation = LegendAnnotation(
+            id: '__internal_legend__', // Special ID for internal legend
+            series: legendSeries,
+            trendAnnotations: trendAnnotations,
+            errorBarAnnotations: errorBarAnnotations,
+            legendStyle: effectiveLegendStyle,
+            customPosition: _legendCustomPosition,
+          );
+          elements.add(
+            LegendAnnotationElement(
+              annotation: legendAnnotation,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+          );
+        }
 
         for (final sizeLegend in _buildAutomaticSizeLegends(
           effectiveLegendStyle,
@@ -3920,7 +3927,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final groups = <ScatterSizeEncoding, List<(ScatterChartSeries, int)>>{};
     for (var index = 0; index < _effectiveRenderSeries.length; index++) {
       final series = _effectiveRenderSeries[index];
-      if (series is! ScatterChartSeries) continue;
+      if (series is! ScatterChartSeries || !series.showInLegend) continue;
       final encoding = series.sizeEncoding;
       if (encoding == null || !encoding.showLegend) continue;
       groups.putIfAbsent(encoding, () => []).add((series, index));
@@ -3997,7 +4004,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   List<LegendAnnotation> _buildAutomaticColorLegends(LegendStyle baseStyle) {
     final groups = <ScatterColorEncoding, List<ScatterChartSeries>>{};
     for (final series in _effectiveRenderSeries) {
-      if (series is! ScatterChartSeries) continue;
+      if (series is! ScatterChartSeries || !series.showInLegend) continue;
       final encoding = series.colorEncoding;
       if (encoding == null || !encoding.showLegend) continue;
       groups.putIfAbsent(encoding, () => []).add(series);
@@ -4066,7 +4073,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final groups = <ScatterOpacityEncoding, List<(ScatterChartSeries, int)>>{};
     for (var index = 0; index < _effectiveRenderSeries.length; index++) {
       final series = _effectiveRenderSeries[index];
-      if (series is! ScatterChartSeries) continue;
+      if (series is! ScatterChartSeries || !series.showInLegend) continue;
       final encoding = series.opacityEncoding;
       if (encoding == null || !encoding.showLegend) continue;
       groups.putIfAbsent(encoding, () => []).add((series, index));
@@ -4132,7 +4139,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   List<LegendAnnotation> _buildAutomaticCategoryLegends(LegendStyle baseStyle) {
     final groups = <ScatterCategoryEncoding, List<ScatterChartSeries>>{};
     for (final series in _effectiveRenderSeries) {
-      if (series is! ScatterChartSeries) continue;
+      if (series is! ScatterChartSeries || !series.showInLegend) continue;
       final encoding = series.categoryEncoding;
       if (encoding == null ||
           !encoding.showLegend ||
@@ -11628,21 +11635,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               growable: false,
             )
           : const <GaugeChartSeries>[];
+      final legendRadialSeries = radialSeries
+          .where((series) => series.showInLegend)
+          .toList(growable: false);
+      final legendRadialBarSeries = radialBarSeries
+          .where((series) => series.showInLegend)
+          .toList(growable: false);
+      final legendGaugeSeries = gaugeSeries
+          .where((series) => series.showInLegend)
+          .toList(growable: false);
       if (widget.showLegend &&
-          (radialSeries.isNotEmpty ||
-              radialBarSeries.isNotEmpty ||
-              gaugeSeries.isNotEmpty)) {
+          (legendRadialSeries.isNotEmpty ||
+              legendRadialBarSeries.isNotEmpty ||
+              legendGaugeSeries.isNotEmpty)) {
         final theme = chartTheme;
         final Widget legend;
-        if (gaugeSeries.isNotEmpty) {
+        if (legendGaugeSeries.isNotEmpty) {
           legend = GaugeLegend(
             key: const ValueKey('gauge-legend'),
-            series: gaugeSeries.single,
+            series: legendGaugeSeries.single,
             config: widget.gaugeChartConfig,
             chartTheme: theme,
           );
-        } else if (radialBarSeries.isNotEmpty) {
-          final series = radialBarSeries.single;
+        } else if (legendRadialBarSeries.isNotEmpty) {
+          final series = legendRadialBarSeries.single;
           legend = RadialBarLegend(
             key: const ValueKey('radial-bar-legend'),
             series: series,
@@ -11658,11 +11674,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           );
         } else if (radialSeries.length == 1) {
           legend = PieChartLegend(
-            series: radialSeries.single,
+            series: legendRadialSeries.single,
             chartTheme: theme,
             selectedPointIndices: {
               for (final ref in _selectedPointRefs)
-                if (ref.seriesId == radialSeries.single.id) ref.pointIndex,
+                if (ref.seriesId == legendRadialSeries.single.id)
+                  ref.pointIndex,
             },
             onSliceTap: _activateRadialPointIndex,
             itemBuilder: widget.radialLegendItemBuilder,
@@ -11671,7 +11688,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         } else {
           legend = ConcentricDonutLegend(
             key: const ValueKey('concentric-donut-legend'),
-            series: radialSeries.cast<DonutChartSeries>(),
+            series: legendRadialSeries.cast<DonutChartSeries>(),
             config: widget.concentricDonutConfig,
             chartTheme: theme,
             selectedPointRefs: _selectedPointRefs,

@@ -364,6 +364,12 @@ abstract final class ChartSeriesDocumentCodec {
         SeriesStyle.values,
         r'$.style.seriesStyle',
       );
+      final showInLegend = _bool(style, 'showInLegend', fallback: true);
+      final showTrackingAxisLabel = _bool(
+        style,
+        'showTrackingAxisLabel',
+        fallback: true,
+      );
 
       final series = switch (document.type) {
         'base' => ChartSeries(
@@ -378,6 +384,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
         ),
         'line' => LineChartSeries(
           id: document.id,
@@ -391,6 +399,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           interpolation: _enum(
             style,
             'interpolation',
@@ -428,6 +438,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           markerRadius: _double(style, 'markerRadius'),
           markerShape:
               _optionalEnum(
@@ -485,6 +497,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           interpolation: _enum(
             style,
             'interpolation',
@@ -533,6 +547,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           interpolation: _enum(
             style,
             'interpolation',
@@ -573,6 +589,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           barWidthPercent: _optionalDouble(style['barWidthPercent']),
           barWidthPixels: _optionalDouble(style['barWidthPixels']),
           minWidth: _double(style, 'minWidth'),
@@ -652,6 +670,8 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           candlestickStyle: _decodeCandlestickStyle(
             _optionalMap(style, 'candlestickStyle'),
           ),
@@ -669,6 +689,8 @@ abstract final class ChartSeriesDocumentCodec {
           color: _optionalColor(style['color'], r'$.style.color'),
           metadata: metadata,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
               ? const RadialSelectionStyle()
@@ -698,6 +720,8 @@ abstract final class ChartSeriesDocumentCodec {
           color: _optionalColor(style['color'], r'$.style.color'),
           metadata: metadata,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           donutStyle: _decodeDonutStyle(_map(style, 'donutStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
               ? const RadialSelectionStyle()
@@ -733,6 +757,8 @@ abstract final class ChartSeriesDocumentCodec {
           color: _optionalColor(style['color'], r'$.style.color'),
           metadata: metadata,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           preset: _enum(style, 'preset', PolarColumnPreset.values),
           polarStyle: _decodePolarColumnStyle(_map(style, 'polarStyle')),
           selectionStyle: _optionalMap(style, 'selectionStyle') == null
@@ -768,6 +794,8 @@ abstract final class ChartSeriesDocumentCodec {
           color: _optionalColor(style['color'], r'$.style.color'),
           metadata: metadata,
           unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
           minimum: _double(style, 'radialBarMinimum'),
           maximum: _double(style, 'radialBarMaximum'),
           baseline: _double(style, 'radialBarBaseline'),
@@ -781,6 +809,8 @@ abstract final class ChartSeriesDocumentCodec {
           points: points,
           style: style,
           metadata: metadata,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
         ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
@@ -1076,6 +1106,8 @@ Map<String, Object?> _encodeSeriesStyle(
     if (series.color != null) 'color': series.color!.toARGB32(),
     if (series.style != null) 'seriesStyle': series.style!.name,
     'isXOrdered': series.isXOrdered,
+    if (!series.showInLegend) 'showInLegend': false,
+    if (!series.showTrackingAxisLabel) 'showTrackingAxisLabel': false,
   };
   switch (series) {
     case LineChartSeries():
@@ -3063,6 +3095,8 @@ GaugeChartSeries _decodeGaugeSeries({
   required List<ChartDataPoint> points,
   required Map<String, Object?> style,
   required Map<String, dynamic>? metadata,
+  required bool showInLegend,
+  required bool showTrackingAxisLabel,
 }) {
   if (points.length != 1) {
     throw const _UnsupportedModelException(
@@ -3099,6 +3133,8 @@ GaugeChartSeries _decodeGaugeSeries({
     color: common.color,
     metadata: common.metadata,
     unit: common.unit,
+    showInLegend: showInLegend,
+    showTrackingAxisLabel: showTrackingAxisLabel,
     target: common.target,
     zones: common.zones,
     thresholds: common.thresholds,

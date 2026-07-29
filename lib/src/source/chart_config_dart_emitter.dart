@@ -578,6 +578,13 @@ class ChartConfigDartEmitter {
         _emitYAxis(writer, 'yAxisConfig', series.yAxisConfig!);
       }
       _optionalString(writer, 'unit', series.unit);
+      _valueIf(writer, 'showInLegend', series.showInLegend, defaultValue: true);
+      _valueIf(
+        writer,
+        'showTrackingAxisLabel',
+        series.showTrackingAxisLabel,
+        defaultValue: true,
+      );
       switch (series) {
         case CandlestickChartSeries():
           _emitCandlestickOptions(writer, series);
@@ -3095,6 +3102,13 @@ class ChartConfigDartEmitter {
         writer.namedArgument('metadata', _dynamicLiteral(series.metadata!));
       }
       _optionalString(writer, 'unit', series.unit);
+      _valueIf(writer, 'showInLegend', series.showInLegend, defaultValue: true);
+      _valueIf(
+        writer,
+        'showTrackingAxisLabel',
+        series.showTrackingAxisLabel,
+        defaultValue: true,
+      );
       if (series.target case final target?) {
         writer.writeLine('target: GaugeTarget(');
         writer.indented(() {

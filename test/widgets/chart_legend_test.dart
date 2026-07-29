@@ -1,8 +1,73 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/annotation_elements.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
+import 'package:braven_charts/src/widgets/pie_chart_legend.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('automatic legend omits opted-out series only', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 700,
+          height: 420,
+          child: BravenChartPlus(
+            series: [
+              LineChartSeries(
+                id: 'observed',
+                name: 'Observed',
+                points: [ChartDataPoint(x: 0, y: 42)],
+              ),
+              RangeAreaChartSeries(
+                id: 'interval',
+                name: 'Forecast interval',
+                points: [RangeAreaDataPoint(x: 0, low: 35, high: 48)],
+                showInLegend: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final legend = renderBox.debugElements
+        .whereType<LegendAnnotationElement>()
+        .single;
+
+    expect(legend.annotation.series.map((series) => series.id), ['observed']);
+  });
+
+  testWidgets('radial legend omits an opted-out pie series', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 700,
+          height: 420,
+          child: BravenChartPlus(
+            showLegend: true,
+            series: [
+              PieChartSeries.fromMap(
+                id: 'private-breakdown',
+                values: const {'A': 4, 'B': 3, 'C': 2},
+                showInLegend: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PieChartLegend), findsNothing);
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('legend renders bar and path-aware series swatches', (
     tester,
   ) async {

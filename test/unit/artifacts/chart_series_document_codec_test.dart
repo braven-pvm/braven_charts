@@ -27,6 +27,8 @@ void main() {
         color: const Color(0xFF123456),
         style: SeriesStyle.line,
         isXOrdered: true,
+        showInLegend: false,
+        showTrackingAxisLabel: false,
         metadata: const {'source': 'erg', 'channel': 2},
         yAxisId: 'shared-power',
         yAxisConfig: YAxisConfig(
@@ -112,6 +114,8 @@ void main() {
       expect(decoded.color, source.color);
       expect(decoded.style, source.style);
       expect(decoded.isXOrdered, isTrue);
+      expect(decoded.showInLegend, isFalse);
+      expect(decoded.showTrackingAxisLabel, isFalse);
       expect(decoded.metadata, source.metadata);
       expect(decoded.yAxisId, source.yAxisId);
       expect(decoded.yAxisConfig, source.yAxisConfig);

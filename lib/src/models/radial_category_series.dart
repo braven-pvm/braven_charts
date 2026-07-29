@@ -143,6 +143,8 @@ abstract class RadialCategorySeries extends ChartSeries {
     super.color,
     super.metadata,
     super.unit,
+    super.showInLegend,
+    super.showTrackingAxisLabel,
     required SeriesStyle style,
     required this.radialStyle,
     this.selectionStyle = const RadialSelectionStyle(),

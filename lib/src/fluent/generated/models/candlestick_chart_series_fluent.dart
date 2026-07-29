@@ -51,6 +51,14 @@ extension CandlestickChartSeriesFluent on CandlestickChartSeries {
   /// Clears [CandlestickChartSeries.unit] to `null`.
   CandlestickChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [CandlestickChartSeries.showInLegend] with [value].
+  CandlestickChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [CandlestickChartSeries.showTrackingAxisLabel] with [value].
+  CandlestickChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [CandlestickChartSeries.candlestickStyle] with [value].
   CandlestickChartSeries withCandlestickStyle(CandlestickChartStyle value) =>
       copyWith(candlestickStyle: value);

@@ -11,6 +11,10 @@ import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_theme.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
+import 'package:braven_charts/src/models/range_area_chart_series.dart';
+import 'package:braven_charts/src/models/range_area_data_point.dart';
+import 'package:braven_charts/src/models/range_area_interaction_details.dart';
+import 'package:braven_charts/src/models/series_axis_binding.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
@@ -294,6 +298,89 @@ void main() {
         ),
         returnsNormally,
       );
+    });
+
+    test('Range Area can suppress its tracking axis labels without leaving the '
+        'tracking snapshot', () {
+      int paintRangeAxisLabels({required bool showTrackingAxisLabel}) {
+        final canvas = MockCanvas();
+        final series = RangeAreaChartSeries(
+          id: 'forecast-interval',
+          name: 'Forecast interval',
+          points: [RangeAreaDataPoint(x: 5, low: 20, high: 80)],
+          showTrackingAxisLabel: showTrackingAxisLabel,
+        );
+        final snapshot = CartesianTrackingSnapshot(
+          dataX: 5,
+          plotX: 200,
+          origin: CartesianTrackingOrigin.pointer,
+          values: [
+            CartesianTrackedSeriesValue(
+              seriesId: series.id,
+              seriesName: series.name!,
+              seriesColor: const Color(0xFF6750A4),
+              x: 5,
+              y: 50,
+              dataPointIndex: 0,
+              isInterpolated: false,
+              rangeArea: RangeAreaInteractionDetails.fromValues(
+                low: 20,
+                high: 80,
+              ),
+              formattedX: '5.00',
+              formattedY: '50.00',
+            ),
+          ],
+        );
+        final axisInfo = MultiAxisInfo(
+          effectiveAxes: [
+            YAxisConfig.withId(
+              id: 'default',
+              position: YAxisPosition.left,
+              showCrosshairLabel: true,
+            ),
+          ],
+          axisBounds: const {'default': DataRange(min: 0, max: 100)},
+          axisWidths: const {'default': 50.0},
+          effectiveBindings: const [
+            SeriesAxisBinding(
+              seriesId: 'forecast-interval',
+              yAxisId: 'default',
+            ),
+          ],
+          normalizationMode: null,
+          series: [series],
+        );
+
+        renderer.paint(
+          canvas: canvas,
+          size: const Size(500, 400),
+          cursorPosition: const Offset(250, 200),
+          plotArea: plotArea,
+          transform: transform,
+          theme: ChartTheme.light,
+          crosshairConfig: const CrosshairConfig(
+            mode: CrosshairMode.vertical,
+            displayMode: CrosshairDisplayMode.tracking,
+            showCoordinateLabels: true,
+            showTrackingTooltip: false,
+            showIntersectionMarkers: false,
+          ),
+          multiAxisInfo: axisInfo,
+          seriesElements: [SeriesElement(series: series, transform: transform)],
+          isRangeCreationMode: false,
+          xAxisConfig: const XAxisConfig(showCrosshairLabel: false),
+          trackingSnapshot: snapshot,
+        );
+
+        expect(snapshot.values.single.rangeArea, isNotNull);
+        return canvas.operations
+            .where((operation) => operation.type == 'drawRRect')
+            .length;
+      }
+
+      expect(paintRangeAxisLabels(showTrackingAxisLabel: true), 4);
+      expect(paintRangeAxisLabels(showTrackingAxisLabel: false), 0);
     });
 
     test(

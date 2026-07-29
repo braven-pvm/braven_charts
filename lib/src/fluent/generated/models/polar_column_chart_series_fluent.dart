@@ -205,6 +205,14 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
   /// Clears [PolarColumnChartSeries.unit] to `null`.
   PolarColumnChartSeries clearUnit() => copyWith(clearUnit: true);
 
+  /// Replaces [PolarColumnChartSeries.showInLegend] with [value].
+  PolarColumnChartSeries withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [PolarColumnChartSeries.showTrackingAxisLabel] with [value].
+  PolarColumnChartSeries withShowTrackingAxisLabel(bool value) =>
+      copyWith(showTrackingAxisLabel: value);
+
   /// Replaces [PolarColumnChartSeries.preset] with [value].
   PolarColumnChartSeries withPreset(PolarColumnPreset value) =>
       copyWith(preset: value);

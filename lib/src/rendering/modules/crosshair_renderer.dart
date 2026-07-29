@@ -709,6 +709,7 @@ class CrosshairRenderer {
       }
       if (element == null) continue;
       final rangeSeries = element.series as RangeAreaChartSeries;
+      if (!rangeSeries.showTrackingAxisLabel) continue;
       final range = crosshairConfig.interpolateValues
           ? CrosshairTracker.interpolatedRangeAt(
                   series: rangeSeries,
