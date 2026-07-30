@@ -415,6 +415,92 @@ void main() {
     });
   });
 
+  group('parity: unit', () {
+    test('unit lowers onto every Cartesian series family', () {
+      for (final (mark, family) in const <(Mark<Sample>, String)>[
+        (LineMark<Sample>(x: sampleTime, y: samplePower, unit: 'W'), 'line'),
+        (AreaMark<Sample>(x: sampleTime, y: samplePower, unit: 'W'), 'area'),
+        (BarMark<Sample>(x: sampleTime, y: samplePower, unit: 'W'), 'bar'),
+        (
+          ScatterMark<Sample>(x: sampleTime, y: samplePower, unit: 'W'),
+          'scatter',
+        ),
+        (
+          CandlestickMark<Sample>(
+            x: sampleTime,
+            open: sampleOpen,
+            high: sampleHigh,
+            low: sampleLow,
+            close: sampleClose,
+            unit: 'W',
+          ),
+          'candlestick',
+        ),
+      ]) {
+        final lowered = (PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[mark],
+        )).lower();
+        expect(lowered.series.single.unit, 'W', reason: family);
+      }
+    });
+
+    test('a mark that declares no unit lowers to a series with none', () {
+      // The control for the test above: without this, a hard-coded literal in
+      // the passthrough would satisfy every family assertion.
+      for (final (mark, family) in const <(Mark<Sample>, String)>[
+        (LineMark<Sample>(x: sampleTime, y: samplePower), 'line'),
+        (AreaMark<Sample>(x: sampleTime, y: samplePower), 'area'),
+        (BarMark<Sample>(x: sampleTime, y: samplePower), 'bar'),
+        (ScatterMark<Sample>(x: sampleTime, y: samplePower), 'scatter'),
+        (
+          CandlestickMark<Sample>(
+            x: sampleTime,
+            open: sampleOpen,
+            high: sampleHigh,
+            low: sampleLow,
+            close: sampleClose,
+          ),
+          'candlestick',
+        ),
+      ]) {
+        final lowered = (PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[mark],
+        )).lower();
+        expect(lowered.series.single.unit, isNull, reason: family);
+      }
+    });
+
+    test('a unit-bearing line mark reaches config parity', () {
+      // `unit` participates in `ChartSeries ==` through the base class, so the
+      // parity assertion this file is built on is load-bearing for it.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'power',
+            unit: 'W',
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        LineChartSeries(
+          id: 'power',
+          points: xyPoints(),
+          unit: 'W',
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+        ),
+      );
+    });
+  });
+
   group('parity: composition', () {
     test('multi-mark specs number unlabelled marks mark-<index>', () {
       final lowered = (PlotSpec<Sample>(
@@ -1419,7 +1505,9 @@ void main() {
       expect(
         () => (const PlotSpec<Sample>(
           data: rows,
-          marks: <Mark<Sample>>[LineMark<Sample>(x: sampleTime, y: samplePower)],
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(x: sampleTime, y: samplePower),
+          ],
           facet: FacetSpec<Sample>(by: sampleZone),
         )).lower(),
         throwsGrammarCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
