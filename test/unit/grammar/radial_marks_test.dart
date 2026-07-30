@@ -448,6 +448,46 @@ void main() {
       );
       expect(candleWithUnit == candleWithout, isFalse);
       expect(candleWithUnit.hashCode == candleWithout.hashCode, isFalse);
+
+      // The three radial families are SeriesMarks too, and this slice moved
+      // their `unit` off their own declaration onto the shared base — so they
+      // belong in a test that says "every series mark". They are not decoration
+      // here: measured by mutation, with these three pairs absent, deleting
+      // `other.unit == unit` and the `unit` hash entry from PieMark passed the
+      // ENTIRE suite (4148 tests), so the radial half of the carry had no
+      // equality guard anywhere.
+      const pieWithUnit = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const pieWithout = PieMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(pieWithUnit == pieWithout, isFalse);
+      expect(pieWithUnit.hashCode == pieWithout.hashCode, isFalse);
+
+      const donutWithUnit = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const donutWithout = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+      );
+      expect(donutWithUnit == donutWithout, isFalse);
+      expect(donutWithUnit.hashCode == donutWithout.hashCode, isFalse);
+
+      const polarWithUnit = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const polarWithout = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+      );
+      expect(polarWithUnit == polarWithout, isFalse);
+      expect(polarWithUnit.hashCode == polarWithout.hashCode, isFalse);
     });
 
     test('annotation marks are NOT SeriesMarks and cannot carry a unit', () {

@@ -49,6 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   names round-trips. Both are exposed on `BravenChart.geomDonut()`.
 - Three Grammar diagnostics for the per-ring surface above: `unknownRingKey`,
   `partialRingIds`, and `perRingOverrideOnRinglessDonut`.
+- A measure unit on the Cartesian grammar marks: `unit:` on
+  `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
+  `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed
+  back into generated Dart source. A config-authored Cartesian chart whose
+  series declares a unit is no longer refused for it.
+- `SeriesMark<T>`, a sealed intermediate between `Mark<T>` and the six mark
+  families that lower to a series — the five Cartesian ones plus `RadialMark` —
+  declaring `unit` once for all of them. `TrendMark`, `ThresholdMark`,
+  `BandMark` and `PointMark` stay on `Mark<T>`: they lower to annotations,
+  which have no unit, so they structurally cannot carry one. Existing code is
+  unaffected; `unit` remains readable on every radial mark exactly as before.
 
 ### Changed
 

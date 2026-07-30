@@ -720,5 +720,7 @@ git commit -m "test(showcase): gate Line and Area emission on the mounted pages"
 - [ ] **Over-broad-normalisation check:** widen the axis gate to drop the all-unbound condition and confirm the mixed-binding guard test FAILS; revert; confirm clean.
 - [ ] Radial emission byte-identical; no pre-existing test expectation removed or loosened (`git diff origin/master..HEAD -- test/ example/test/`, every removal classified).
 - [ ] Every carried field has an **emitted-text** assertion — the proof cannot see the text.
-- [ ] Rebase onto latest `origin/master`; re-run the suites.
+- [ ] Every emitted-text assertion is **scoped to the call it is about** — `unit:` is a `YAxisConfig` field as well as a mark field, so a whole-file `contains('unit:')` (or its negation) can be satisfied by text that says nothing about the field under test. Read the verb's own argument list (`literalArguments(source, '.geomLine(')`).
+- [ ] `CHANGELOG.md` **Unreleased** records this item's public surface: `unit:` on the five Cartesian geom verbs (Slice 1), `label:`/`pointKey:`/`isXOrdered:` and the named `segmentStyle` refusal (Slice 3), plus the `SeriesMark<T>` intermediate. Slice 1 opened the entry; each later slice extends it.
+- [ ] Rebase onto latest `origin/master`; re-run the suites. **Note:** `CHANGELOG.md` now overlaps master's release commit (0.16.0 moved the Unreleased body into a version section), so expect one trivial conflict there — keep this item's bullets under Unreleased.
 - [ ] BC-0040 updated with the re-measured census before any status change.

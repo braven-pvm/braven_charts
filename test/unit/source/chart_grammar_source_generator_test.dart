@@ -2282,14 +2282,18 @@ String? blockedReason(ChartGeneratedSource generated) {
 /// expectation the whole block, so a dropped field, an extra field, a wrong
 /// value and a reordering all fail.
 ///
-/// The literal is delimited by indentation: its closing `),` sits at the same
-/// column as the opening token, so a nested literal's deeper `),` cannot end it.
+/// The literal is delimited by indentation: its closing paren sits at the same
+/// column as the opening token, so a nested literal's deeper one cannot end it.
+/// The closing comma is OPTIONAL because a chain verb — `.geomLine(` — closes
+/// on a bare `)` so the next `.verb(` can follow, while a nested config literal
+/// closes on `),`. Matching the paren alone reads both; it cannot end a literal
+/// early, because every line inside one is indented further than its opening.
 List<String> literalArguments(String source, String opening) {
   final start = source.indexOf(opening);
   expect(start, isNonNegative, reason: 'missing "$opening" in:\n$source');
   final indent = start - (source.lastIndexOf('\n', start) + 1);
   final bodyStart = source.indexOf('\n', start) + 1;
-  final end = source.indexOf('\n${' ' * indent}),', start);
+  final end = source.indexOf('\n${' ' * indent})', start);
   expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
   return <String>[
     for (final line in source.substring(bodyStart, end).split('\n'))
@@ -2824,6 +2828,15 @@ void main() {
       // that silently drops the unit. Each family is generated on its own and
       // its EMITTED TEXT asserted — the proof would catch a missing plan line,
       // but nothing except this assertion catches a missing writer line.
+      //
+      // The text assertion is scoped to the family's own geom call rather than
+      // to the whole source: `unit:` is a `YAxisConfig` field too, so a bare
+      // `contains("unit: 'W'")` would be satisfied by an AXIS unit that says
+      // nothing about the mark. And because a text match cannot tell a real
+      // parameter from an invented one, each of the three families
+      // `expectRoundTrip` does not already compile (shape 29 covers area and
+      // line) goes through the same `dart format` + `dart analyze` floor the
+      // file's other harnesses use.
       final charts = <String, Widget Function(BravenChartController)>{
         'geomLine': (controller) => BravenChart.of(rows)
             .x(sampleT)
@@ -2870,42 +2883,104 @@ void main() {
       };
       final emitted = <String, bool>{};
       final blocked = <String, String?>{};
+      final clean = <String, bool>{};
+      final complete = <String, bool>{};
+      final sources = <String, String>{};
       for (final entry in charts.entries) {
         final generated = generateGrammar(
           await snapshotOf(tester, entry.value),
         );
-        emitted[entry.key] = generated.source.contains("unit: 'W'");
+        sources[entry.key] = generated.source;
         blocked[entry.key] = blockedReason(generated);
+        clean[entry.key] = generated.warnings.isEmpty;
+        complete[entry.key] = generated.isComplete;
+        // The map key IS the emitted verb, so the unit is read out of that
+        // family's own argument list — not found anywhere in the file.
+        final opening = '.${entry.key}(';
+        emitted[entry.key] =
+            generated.source.contains(opening) &&
+            literalArguments(generated.source, opening).contains("unit: 'W',");
       }
       // Compared as WHOLE MAPS so one missing family cannot hide behind an
       // earlier failure.
       expect(blocked, <String, String?>{
         for (final verb in charts.keys) verb: null,
       });
+      expect(clean, <String, bool>{for (final verb in charts.keys) verb: true});
+      expect(complete, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
       expect(emitted, <String, bool>{
         for (final verb in charts.keys) verb: true,
       });
+      // `dart format` + `dart analyze` on the emitted chain, for the families
+      // no round-trip shape compiles. A fragment match proves a parameter NAME
+      // was written; only this proves the verb actually has it. Real
+      // subprocesses, so the `runAsync` escape hatch applies.
+      for (final verb in const <String>[
+        'geomBar',
+        'geomPoint',
+        'geomCandlestick',
+      ]) {
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            sources[verb]!,
+            fixtureName: 'grammar_unit_$verb',
+          ),
+        );
+      }
     });
 
     testWidgets('shape 29c: a unit-less Cartesian series emits NO unit '
         'argument', (tester) async {
       // The control for the two above: `unit` is optional on the mark and on
       // the verb, so a chart that sets none must stay byte-identical to what it
-      // emitted before this slice — no `unit:` argument at all.
+      // emitted before this slice — no `unit:` argument in the geom call.
+      //
+      // The AXIS deliberately declares a unit while the mark declares none.
+      // `unit:` is a `YAxisConfig` field as well as a mark field
+      // (`chart_config_dart_emitter` writes it inside the axis literal), so a
+      // whole-file `isNot(contains('unit:'))` is satisfiable — and breakable —
+      // by text that says nothing about the field under test. This fixture
+      // makes that token present on purpose, so the control can only pass by
+      // reading the geom call itself.
+      //
+      // And it reads the WHOLE argument list rather than searching it for one
+      // token: an extra argument, a dropped one, a changed value and a
+      // reordering then all fail, which is the same bar shapes 24 and 25 hold
+      // their unguarded literals to.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
           (controller) => BravenChart.of(rows)
               .x(sampleT)
               .yAxis(
-                YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+                YAxisConfig.withId(
+                  id: 'axis-0',
+                  position: YAxisPosition.left,
+                  unit: 'W',
+                ),
               )
               .geomLine(y: samplePower, yAxisId: 'axis-0')
               .build(bravenChartController: controller),
         ),
       );
       expect(emittedChain(generated), isTrue);
-      expect(generated.source, isNot(contains('unit:')));
+      expect(
+        generated.source,
+        contains("unit: 'W',"),
+        reason:
+            'the axis unit must reach the source, or this control is '
+            'vacuous and a whole-file token search would have passed it',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.mark0,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+        "yAxisId: 'axis-0',",
+      ]);
     });
 
     testWidgets('shape 29d: a CONFIG-authored series carrying a unit is no '
@@ -2945,7 +3020,13 @@ void main() {
         isTrue,
         reason: 'blocked with: ${blockedReason(generated)}',
       );
-      expect(generated.source, contains("unit: 'W'"));
+      // Read out of the geom call, not out of the file: the same `unit:` token
+      // is a `YAxisConfig` field, and this fixture emits an axis literal right
+      // beside the mark.
+      expect(
+        literalArguments(generated.source, '.geomLine('),
+        contains("unit: 'W',"),
+      );
     });
 
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
