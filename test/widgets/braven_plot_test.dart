@@ -321,6 +321,101 @@ void main() {
     });
   });
 
+  group('legacy single-axis mount', () {
+    testWidgets('a single-axis chain mounts the legacy shape', (tester) async {
+      // The chain declares one axis and no mark binds explicitly, so BravenPlot
+      // should mount it the way a config author would — widget-level yAxis,
+      // series unbound — otherwise the emitted chain produces a DIFFERENT
+      // document from the chart it was reversed from.
+      final chart = BravenChart.of(rows)
+          .x(rowT)
+          .yAxis(YAxisConfig.withId(id: 'y', position: YAxisPosition.left))
+          .geomLine(y: rowPower)
+          .build();
+      await tester.pumpWidget(host(chart));
+      await tester.pumpAndSettle();
+
+      final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(plus.yAxis?.id, 'y');
+      expect(plus.series.single.yAxisId, isNull);
+      expect(plus.series.single.yAxisConfig, isNull);
+    });
+
+    testWidgets('the mounted document carries the legacy axis shape', (
+      tester,
+    ) async {
+      // The document is what the round-trip proof compares, so assert the
+      // legacy shape where it actually matters: one axis, no per-series
+      // axisId, no inlineAxis.
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+
+      final chart = BravenChart.of(rows)
+          .x(rowT)
+          .yAxis(
+            YAxisConfig.withId(
+              id: 'y',
+              position: YAxisPosition.left,
+              label: 'Power',
+            ),
+          )
+          .geomLine(y: rowPower, id: 'power')
+          .build(bravenChartController: controller);
+      await tester.pumpWidget(host(chart));
+      await tester.pumpAndSettle();
+
+      final snapshot = success(controller.extractDocument());
+      expect(snapshot.document.axes.map((axis) => axis.id), <String>['y']);
+      expect(snapshot.document.series.single.axisId, isNull);
+      expect(snapshot.document.series.single.inlineAxis, isNull);
+    });
+
+    testWidgets('a multi-axis chain still binds per series', (tester) async {
+      // Two declared axes, each carrying an EXPLICIT per-mark binding. This is
+      // the control: the legacy mount must not touch it.
+      final chart = BravenChart.of(rows)
+          .x(rowT)
+          .yAxis(YAxisConfig.withId(id: 'left', position: YAxisPosition.left))
+          .yAxis(YAxisConfig.withId(id: 'right', position: YAxisPosition.right))
+          .geomLine(y: rowPower, yAxisId: 'left')
+          .geomLine(y: rowHeartRate, yAxisId: 'right')
+          .build();
+      await tester.pumpWidget(host(chart));
+      await tester.pumpAndSettle();
+
+      final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(plus.yAxis, isNull);
+      expect(plus.series.map((series) => series.yAxisId), <String>[
+        'left',
+        'right',
+      ]);
+      expect(plus.series.map((series) => series.yAxisConfig?.id), <String>[
+        'left',
+        'right',
+      ]);
+    });
+
+    testWidgets('one axis with an EXPLICIT binding is not the legacy shape', (
+      tester,
+    ) async {
+      // Guards the second half of the gate on its own. One axis is declared,
+      // but the mark names it, so the author asked for the multi-axis path and
+      // must keep getting it.
+      final chart = BravenChart.of(rows)
+          .x(rowT)
+          .yAxis(YAxisConfig.withId(id: 'y', position: YAxisPosition.left))
+          .geomLine(y: rowPower, yAxisId: 'y')
+          .build();
+      await tester.pumpWidget(host(chart));
+      await tester.pumpAndSettle();
+
+      final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(plus.yAxis, isNull);
+      expect(plus.series.single.yAxisId, 'y');
+      expect(plus.series.single.yAxisConfig?.id, 'y');
+    });
+  });
+
   group('controller pass-through', () {
     testWidgets('bravenChartController drives and observes the plot', (
       tester,
@@ -501,7 +596,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        tester
+            .widget<BravenChartPlus>(find.byType(BravenChartPlus))
             .polarChartConfig,
         const PolarChartConfig(),
       );

@@ -738,6 +738,12 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
   /// numbers the id-less axis `axis-0`. Verified by
   /// `test/unit/grammar/chart_builder_test.dart`
   /// ("the .y label survives lowering onto the synthesized axis").
+  ///
+  /// It is passed as the widget-level `yAxis:` with the series left UNBOUND,
+  /// because that is what a chain declaring one axis that no mark names
+  /// mounts as — the legacy single-axis shape (see `braven_plot.dart`). The
+  /// multi-axis and candlestick presets bind per series instead: their marks
+  /// name their axes, so they are genuinely multi-axis.
   YAxisConfig _defaultAxis(String label) => YAxisConfig(
     position: YAxisPosition.left,
     label: label,
@@ -758,6 +764,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         theme: _theme,
         interactionConfig: _interaction,
         xAxisConfig: const XAxisConfig(label: 'Elapsed (min)'),
+        yAxis: _defaultAxis('Power'),
         series: <ChartSeries>[
           LineChartSeries(
             id: 'mark-0',
@@ -766,8 +773,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             color: const Color(0xFF2563EB),
             strokeWidth: 2.4,
             interpolation: LineInterpolation.monotone,
-            yAxisId: 'axis-0',
-            yAxisConfig: _defaultAxis('Power'),
           ),
         ],
         annotations: <ChartAnnotation>[
@@ -830,6 +835,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     theme: _theme,
     interactionConfig: _interaction,
     xAxisConfig: const XAxisConfig(label: 'Power (W)'),
+    yAxis: _defaultAxis('Heart rate (bpm)'),
     series: <ChartSeries>[
       ScatterChartSeries(
         id: 'mark-0',
@@ -843,8 +849,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               categoryValue: _categoryChannel ? row.zone : null,
             ),
         ],
-        yAxisId: 'axis-0',
-        yAxisConfig: _defaultAxis('Heart rate (bpm)'),
         // The channel's label is authoritative, so the lowering rebuilds the
         // size template with it — hand-writing it means spelling it out.
         sizeEncoding: ScatterSizeEncoding(
@@ -901,6 +905,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     theme: _theme,
     interactionConfig: _interaction,
     xAxisConfig: const XAxisConfig(label: 'Zone'),
+    yAxis: _defaultAxis('Minutes'),
     series: <ChartSeries>[
       BarChartSeries(
         id: 'mark-0',
@@ -911,8 +916,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         orientation: _transposed
             ? BarOrientation.horizontal
             : BarOrientation.vertical,
-        yAxisId: 'axis-0',
-        yAxisConfig: _defaultAxis('Minutes'),
       ),
     ],
   );
@@ -928,6 +931,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         grid: const GridConfig(vertical: false),
         title: 'Ride power',
         subtitle: 'Fill, sampled line and an FTP reference',
+        yAxis: _defaultAxis('Power (W)'),
         series: <ChartSeries>[
           AreaChartSeries(
             id: 'mark-0',
@@ -935,8 +939,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             points: _points(rideRows, sampleMinute, samplePower),
             color: const Color(0xFF2563EB),
             fillOpacity: 0.14,
-            yAxisId: 'axis-0',
-            yAxisConfig: _defaultAxis('Power (W)'),
           ),
           LineChartSeries(
             id: 'mark-1',
@@ -946,8 +948,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             strokeWidth: 2.4,
             interpolation: LineInterpolation.monotone,
             showDataPointMarkers: _showDataPointMarkers,
-            yAxisId: 'axis-0',
-            yAxisConfig: _defaultAxis('Power (W)'),
           ),
         ],
         annotations: <ChartAnnotation>[
@@ -1108,6 +1108,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
 
   Widget _channelsScaffold(
     BravenChartController controller, {
+    required YAxisConfig yAxis,
     required List<ChartSeries> series,
     List<ChartAnnotation> annotations = const <ChartAnnotation>[],
   }) => BravenChartPlus(
@@ -1116,6 +1117,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
     theme: _theme,
     interactionConfig: _interaction,
     xAxisConfig: const XAxisConfig(label: 'Interval'),
+    yAxis: yAxis,
     series: series,
     annotations: annotations,
   );
@@ -1127,6 +1129,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         final colours = _channelColours();
         return _channelsScaffold(
           controller,
+          yAxis: axis,
           series: <ChartSeries>[
             BarChartSeries(
               id: 'mark-0',
@@ -1142,8 +1145,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
                   ),
               ],
               barWidthPercent: 0.8,
-              yAxisId: 'axis-0',
-              yAxisConfig: axis,
             ),
           ],
           annotations: <ChartAnnotation>[_channelColourLegend()],
@@ -1152,6 +1153,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         final colours = _channelColours();
         return _channelsScaffold(
           controller,
+          yAxis: axis,
           series: <ChartSeries>[
             LineChartSeries(
               id: 'mark-0',
@@ -1167,8 +1169,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
                   ),
               ],
               strokeWidth: 3,
-              yAxisId: 'axis-0',
-              yAxisConfig: axis,
             ),
           ],
           annotations: <ChartAnnotation>[_channelColourLegend()],
@@ -1177,6 +1177,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         final colours = _channelColours();
         return _channelsScaffold(
           controller,
+          yAxis: axis,
           series: <ChartSeries>[
             AreaChartSeries(
               id: 'mark-0',
@@ -1193,8 +1194,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               ],
               color: const Color(0xFF2563EB),
               fillOpacity: 0.16,
-              yAxisId: 'axis-0',
-              yAxisConfig: axis,
             ),
           ],
           annotations: <ChartAnnotation>[_channelColourLegend()],
@@ -1203,6 +1202,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
         final widths = _channelWidths();
         return _channelsScaffold(
           controller,
+          yAxis: axis,
           series: <ChartSeries>[
             BarChartSeries(
               id: 'mark-0',
@@ -1219,8 +1219,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               ],
               color: const Color(0xFF7C3AED),
               barWidthPercent: 0.8,
-              yAxisId: 'axis-0',
-              yAxisConfig: axis,
             ),
           ],
         );
@@ -1244,6 +1242,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
           theme: _theme,
           interactionConfig: _interaction,
           xAxisConfig: const XAxisConfig(label: 'Interval'),
+          yAxis: axis,
           series: <ChartSeries>[
             LineChartSeries(
               id: 'mark-0',
@@ -1253,8 +1252,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               strokeWidth: 2.4,
               interpolation: LineInterpolation.monotone,
               showDataPointMarkers: true,
-              yAxisId: 'axis-0',
-              yAxisConfig: axis,
             ),
           ],
         );
@@ -1268,6 +1265,7 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
             label: 'Date',
             scaleType: AxisScaleType.time,
           ),
+          yAxis: _defaultAxis('Power (W)'),
           series: <ChartSeries>[
             LineChartSeries(
               id: 'mark-0',
@@ -1283,8 +1281,6 @@ class _ChartGrammarPageState extends State<ChartGrammarPage> {
               strokeWidth: 2.4,
               interpolation: LineInterpolation.monotone,
               showDataPointMarkers: true,
-              yAxisId: 'axis-0',
-              yAxisConfig: _defaultAxis('Power (W)'),
             ),
           ],
         );

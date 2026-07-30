@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../braven_chart_plus.dart';
 import '../controllers/chart_interaction_group_controller.dart';
 import '../models/braven_chart_controller.dart';
+import '../models/candlestick_chart_series.dart';
 import '../models/chart_series.dart';
 import '../models/chart_state_config.dart';
 import '../models/concentric_donut_config.dart';
@@ -36,13 +37,22 @@ import 'plot_spec.dart';
 /// )
 /// ```
 ///
-/// ## Why no widget-level `yAxis`
+/// ## How the Y axis is mounted
 ///
 /// The lowering attaches both `yAxisId` and `yAxisConfig` to every series,
-/// which is what selects `BravenChartPlus`'s multi-axis path. Passing a
-/// widget-level `yAxis` would re-enter the legacy single-axis path and silently
-/// change how the chart scales, so this widget deliberately does not expose it.
-/// `LoweredPlot.yAxes` is informational.
+/// which is what selects `BravenChartPlus`'s multi-axis path. That stays the
+/// mount for every chart that genuinely has axes to tell apart — several
+/// declared axes, or a mark that names the one it wants.
+///
+/// The one exception is the shape a config author spells with a widget-level
+/// `yAxis`: exactly one declared axis, and no mark binding to it explicitly.
+/// That chain IS the legacy single-axis chart, so it is mounted as one —
+/// `yAxis:` set, series unbound — and the chart a chain produces is then the
+/// same DOCUMENT as the config chart the chain was reversed from, not merely
+/// one that renders the same. Without it every reversed single-axis chart
+/// differs by `series[*].axisId` plus `inlineAxis` and cannot be gated by
+/// document equality. This widget still does not EXPOSE a `yAxis` parameter:
+/// the axis comes from the spec either way.
 ///
 /// ## Empty data
 ///
@@ -85,8 +95,17 @@ class BravenPlot<T> extends StatelessWidget {
       if (error.code != GrammarDiagnosticCode.emptyData) rethrow;
     }
 
+    // A chain declaring exactly one axis that no mark binds to explicitly is
+    // the grammar's spelling of the legacy single-axis chart. Non-null here
+    // means "mount it that way"; null keeps today's multi-axis mount verbatim.
+    final legacySeries = _legacySingleAxisSeries<T>(spec, lowered);
+
     return BravenChartPlus(
-      series: lowered?.series ?? const <ChartSeries>[],
+      series: legacySeries ?? lowered?.series ?? const <ChartSeries>[],
+      // Set ONLY on the legacy shape. `BravenChartPlus` ignores a widget-level
+      // yAxis as soon as any series carries an inline config, so passing it
+      // alongside bound series would be a lie the render path quietly drops.
+      yAxis: legacySeries == null ? null : lowered!.yAxes.single,
       annotations: lowered?.annotations ?? const [],
       xAxisConfig: spec.xAxis,
       interactionConfig: lowered?.interaction ?? spec.interaction,
@@ -116,3 +135,65 @@ class BravenPlot<T> extends StatelessWidget {
     );
   }
 }
+
+/// [LoweredPlot.series] re-mounted the way a config author writes a single-axis
+/// chart — every binding stripped — or null when this plot is not that shape
+/// and must keep the multi-axis mount.
+///
+/// The gate reads the SPEC's marks, not the lowered series: lowering always
+/// binds (`_bindAxis` resolves `mark.yAxisId ?? axes.first.id`), so by the time
+/// a series exists the author's own intent has been overwritten. A mark that
+/// names its axis asked for the multi-axis path and keeps it, even when only
+/// one axis is declared.
+///
+/// Radial charts lower to no Y axes at all, so they can never reach this shape
+/// and their mount is untouched.
+List<ChartSeries>? _legacySingleAxisSeries<T>(
+  PlotSpec<T> spec,
+  LoweredPlot? lowered,
+) {
+  if (lowered == null || lowered.yAxes.length != 1) return null;
+  if (spec.marks.any((mark) => mark.yAxisId != null)) return null;
+  final unbound = <ChartSeries>[];
+  for (final series in lowered.series) {
+    final stripped = _withoutAxisBinding(series);
+    // A family that cannot express an unbound series must not be mounted
+    // half-legacy — a widget-level axis beside a still-bound series is a third
+    // shape, neither the legacy chart nor the multi-axis one. Fall back to the
+    // multi-axis mount for the whole plot instead.
+    if (stripped == null) return null;
+    unbound.add(stripped);
+  }
+  return unbound;
+}
+
+/// [series] without its Y-axis binding, or null when its family's `copyWith`
+/// cannot clear one.
+///
+/// `ChartSeries.copyWith` merges with `??` and so cannot null a field out; the
+/// concrete families carry the `clearYAxisId`/`clearYAxisConfig` flags that
+/// can. Rebuilding here rather than adding a base-class clear keeps this fix
+/// out of the config surface entirely.
+ChartSeries? _withoutAxisBinding(ChartSeries series) => switch (series) {
+  LineChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  AreaChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  BarChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  ScatterChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  CandlestickChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  _ => null,
+};

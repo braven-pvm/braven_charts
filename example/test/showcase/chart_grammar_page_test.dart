@@ -193,10 +193,20 @@ void main() {
 
       // Line + trend: the default axis id, the mark-<index> series id, and
       // the trend lowered to an annotation bound to the source series.
+      //
+      // CONVERTED (item 1c', task 2.1): this used to pin
+      // `series.yAxisId == 'axis-0'` + an inline `yAxisConfig`. A chain that
+      // declares one axis and binds no mark to it now mounts the LEGACY
+      // single-axis shape, so the hand-built twin does too. The assertions
+      // below are strictly stronger than the ones they replace: they pin the
+      // axis reaching the chart AND its label AND the absence of the per-series
+      // binding, where the old pair pinned only the binding.
       var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
       expect(chart.series.single.id, 'mark-0');
-      expect(chart.series.single.yAxisId, 'axis-0');
-      expect(chart.series.single.yAxisConfig?.id, 'axis-0');
+      expect(chart.yAxis?.id, 'axis-0');
+      expect(chart.yAxis?.label, 'Power');
+      expect(chart.series.single.yAxisId, isNull);
+      expect(chart.series.single.yAxisConfig, isNull);
       expect(chart.annotations, hasLength(1));
       expect((chart.annotations.single as TrendAnnotation).seriesId, 'mark-0');
 
@@ -522,7 +532,11 @@ void main() {
         isTrue,
         reason: 'the per-mark marker flag is a V2.0 addition',
       );
-      expect(spec.grid, isNotNull, reason: '.grid() is a V2.0 chart-level verb');
+      expect(
+        spec.grid,
+        isNotNull,
+        reason: '.grid() is a V2.0 chart-level verb',
+      );
       expect(spec.title, 'Ride power');
 
       // The compare toggle swaps the BravenPlot for the hand-built
