@@ -228,6 +228,34 @@ YAxisConfig _asAuthoredWidgetAxis(YAxisConfig axis) =>
 ///
 /// Radial charts lower to no Y axes at all, so they can never reach this shape
 /// and their mount is untouched.
+///
+/// ## An axis carrying min/max is NOT declined here, and that was measured
+///
+/// The two mounts really do disagree about `min`/`max` — a widget-level axis
+/// applies it to the Y domain and an inline one does not, which is why
+/// `FacetPanelScope` gates the seam off for panels. Declining the legacy mount
+/// here for the same reason looks symmetric and is wrong, in both directions:
+///
+///  * It removes nothing. Adding the decline HERE and the matching clause to
+///    `_firstMismatch`'s `legacySingleAxis` normalisation leaves the whole
+///    suite's emitter corpus untouched — not one round-trip or showcase state
+///    stops emitting. A document can only reach this shape with every series
+///    unbound, and extraction produces that only for a chart that had a
+///    widget-level (or no) axis, which is exactly the path that DOES apply
+///    min/max. The inline chart that would be harmed is refused a layer
+///    earlier, by name, for leaving `yAxisId` unset.
+///  * It costs the reversal. The config chart the chain came from applied the
+///    range; a declined mount would not. Measured at 25,885 of 240,000 pixels,
+///    20,770 of them in the plot area — the plot area moves — and the extracted
+///    documents diverge too, on `series[*].axisId` and `inlineAxis`.
+///
+/// The faceting case is different in the one way that matters: `FacetScales`
+/// injects its shared range as an INLINE axis on each series, so a panel's
+/// chart genuinely never applied it. The gate belongs where it is.
+///
+/// Both measurements live in `test/widgets/braven_plot_pixel_parity_test.dart`
+/// — shape (c) and the mount control — and in the facet seam's own control,
+/// `braven_facet_plot_test.dart`'s "the gate is the panel, not the spec".
 List<ChartSeries>? _legacySingleAxisSeries<T>(
   PlotSpec<T> spec,
   LoweredPlot? lowered,

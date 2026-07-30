@@ -47,8 +47,8 @@
 ///
 /// A golden cannot do this job: every grammar golden runs at a 3.5%
 /// cross-platform antialiasing tolerance, and both defects this file pins sat
-/// under it — the axis recolour is ~1.7% of the frame and confined to the
-/// Y-label gutter. Two images produced in the same test at the same size are
+/// under it — the axis recolour measures 1.5% to 2.2% of the frame and is
+/// confined to the Y-label gutter. Two images produced in the same test at the same size are
 /// exactly comparable, so equality is asserted on the bytes.
 library;
 
@@ -492,8 +492,10 @@ void main() {
     // observable. Same axis, same series, delivered as an INLINE
     // `yAxisConfig` instead of a widget-level `yAxis`: the inline path never
     // applies `min`/`max` to the Y domain, so the whole plot area moves.
-    // Measured at 25,368 of 240,000 pixels — the divergence a mount that
-    // guessed wrong would ship silently.
+    // Measured at 25,885 of 240,000 pixels, 20,770 of them OUTSIDE the label
+    // gutter — the divergence a mount that guessed wrong would ship silently,
+    // and the exact cost of declining the legacy mount for a min/max axis
+    // (see `_legacySingleAxisSeries`).
     final widgetLevel = await renderBytes(
       tester,
       'mount-widget-level',
