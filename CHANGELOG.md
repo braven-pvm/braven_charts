@@ -61,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which have no unit, so they structurally cannot carry one. Existing code is
   unaffected; `unit` remains readable on every radial mark exactly as before.
 
+- Per-point metadata on the four Cartesian geometry marks: `label:` and
+  `pointKey:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`. Both are accessors (`String? Function(T)`) carried onto
+  `ChartDataPoint.label` and `ChartDataPoint.pointKey`, and both are reversed
+  back into generated Dart source. An empty string means "this point has none",
+  which is what lets a partially labelled or partially keyed series round-trip.
+- A `duplicatePointKey` Grammar diagnostic: a `pointKey` accessor that yields
+  the same key for two rows of one mark is refused by name rather than lowering
+  to a series whose selection identity is ambiguous. The Cartesian counterpart
+  of `duplicateRadialCategory`.
+
 - Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
   `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
   per-series binding — emits a `BravenChart` chain instead of being refused

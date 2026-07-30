@@ -2342,6 +2342,36 @@ class _GrammarChainEmitter {
   Object Function(_SourceRow) _string(_Field field) =>
       (row) => row.strings[field.slot];
 
+  /// [_string]'s `String`-typed sibling, for the per-point text accessors.
+  ///
+  /// The radial category channel is `FieldAccessor<T, Object?>` and takes
+  /// [_string]; `label`/`pointKey` are `FieldAccessor<T, String?>`, and a
+  /// closure typed `Object Function(_SourceRow)` is not assignable to that.
+  String Function(_SourceRow) _text(_Field field) =>
+      (row) => row.strings[field.slot];
+
+  /// Plans one per-point text accessor (`label` or `pointKey`) for [series],
+  /// or returns null when no point carries one.
+  ///
+  /// The row slot is a NON-NULLABLE `String`, so a point that carried nothing
+  /// is written as `''`. That is not a lossy shortcut: lowering reads `''` back
+  /// as "no value" (see `_pointText` in `plot_lowering.dart`), so a partially
+  /// labelled or partially keyed series reproduces exactly. It also matters for
+  /// `pointKey` specifically — `ChartDataPoint` ASSERTS a non-empty key, so
+  /// there is no other string a bare point could travel as.
+  FieldAccessor<_SourceRow, String?>? _planPointText(
+    ChartSeries series,
+    String base,
+    String role,
+    Map<String, _Field> accessors,
+    String? Function(ChartDataPoint) read,
+  ) {
+    if (series.points.every((point) => read(point) == null)) return null;
+    final field = _addField(_suffixed(base, role), _FieldKind.string);
+    accessors[role] = field;
+    return _text(field);
+  }
+
   DateTime Function(_SourceRow) _stamp(_Field field) =>
       (row) => row.stamps[field.slot]!;
 
@@ -2400,6 +2430,20 @@ class _GrammarChainEmitter {
       case LineChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2408,6 +2452,8 @@ class _GrammarChainEmitter {
             name: name,
             color: color,
             unit: unit,
+            label: label,
+            pointKey: pointKey,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2422,6 +2468,20 @@ class _GrammarChainEmitter {
       case ScatterChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         Channel<_SourceRow>? quantitative(
           String role,
           double? Function(ChartDataPoint) read,
@@ -2458,6 +2518,8 @@ class _GrammarChainEmitter {
             name: name,
             color: color,
             unit: unit,
+            label: label,
+            pointKey: pointKey,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2480,6 +2542,20 @@ class _GrammarChainEmitter {
       case AreaChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2488,6 +2564,8 @@ class _GrammarChainEmitter {
             name: name,
             color: color,
             unit: unit,
+            label: label,
+            pointKey: pointKey,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2504,6 +2582,20 @@ class _GrammarChainEmitter {
       case BarChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2512,6 +2604,8 @@ class _GrammarChainEmitter {
             name: name,
             color: color,
             unit: unit,
+            label: label,
+            pointKey: pointKey,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2661,6 +2755,25 @@ class _GrammarChainEmitter {
             }
           case ChartSeries():
             row.numbers[plan.accessors['y']!.slot] = series.points[index].y;
+        }
+        // Per-point text is family-independent, so it is written once here
+        // rather than in each arm. Only the four Cartesian geometry families
+        // plan these fields, so a candlestick plan simply has neither key and
+        // this reads nothing.
+        //
+        // A point that carried nothing is written as '' — the empty string is
+        // how "no label / no key" travels through a non-nullable row slot, and
+        // lowering reads it back as null.
+        final labelField = plan.accessors['label'];
+        final keyField = plan.accessors['pointKey'];
+        if (labelField != null || keyField != null) {
+          final point = series.points[index];
+          if (labelField != null) {
+            row.strings[labelField.slot] = point.label ?? '';
+          }
+          if (keyField != null) {
+            row.strings[keyField.slot] = point.pointKey ?? '';
+          }
         }
       }
     }
@@ -3185,6 +3298,18 @@ class _GrammarChainEmitter {
       // the only non-series mark this switch can reach.
       if (mark is SeriesMark<_SourceRow>) {
         _optionalString(writer, 'unit', mark.unit);
+      }
+      // Per-point text, read out of the PLAN rather than off the mark: the four
+      // geometry marks that carry `label`/`pointKey` share no intermediate, and
+      // `plan.accessors` is already how every other synthesised accessor
+      // (open/high/low/close, the scatter channels) reaches this writer. A plan
+      // holds an entry only when some point carried a value, so a chart with no
+      // per-point text emits neither argument.
+      final label = plan.accessors['label'];
+      if (label != null) writer.namedArgument('label', label.accessor());
+      final pointKey = plan.accessors['pointKey'];
+      if (pointKey != null) {
+        writer.namedArgument('pointKey', pointKey.accessor());
       }
       switch (mark) {
         case LineMark<_SourceRow>():

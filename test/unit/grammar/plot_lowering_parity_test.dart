@@ -53,6 +53,13 @@ double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
 DateTime sampleStamp(Sample row) => row.stamp!;
 
+/// Per-point text accessors. Tear-offs, not closures: marks compare by value
+/// and a closure written twice is two different marks.
+String? sampleZoneLabel(Sample row) => row.zone;
+String? samplePointKey(Sample row) => 'key-${row.time}';
+String? sampleBlankText(Sample row) => '';
+String? sampleCollidingKey(Sample row) => 'same';
+
 const rows = <Sample>[
   Sample(
     time: 0,
@@ -497,6 +504,306 @@ void main() {
           yAxisId: 'axis-0',
           yAxisConfig: axis,
         ),
+      );
+    });
+  });
+
+  group('parity: per-point label and pointKey', () {
+    test('label and pointKey lower onto the points', () {
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            label: sampleZoneLabel,
+            pointKey: samplePointKey,
+          ),
+        ],
+      )).lower();
+
+      // Read as a WHOLE list of pairs rather than a per-point expect, so a
+      // dropped field, a wrong row and an off-by-one all fail the same way.
+      expect(
+        lowered.series.single.points
+            .map((point) => <String?>[point.label, point.pointKey])
+            .toList(),
+        <List<String?>>[
+          <String?>['easy', 'key-0.0'],
+          <String?>['hard', 'key-1.0'],
+          <String?>['easy', 'key-2.0'],
+        ],
+      );
+    });
+
+    test('a mark that declares neither leaves every point bare', () {
+      // The control for the test above: without it a hard-coded literal in the
+      // point builders would satisfy it.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single.points
+            .map((point) => <String?>[point.label, point.pointKey])
+            .toList(),
+        <List<String?>>[
+          <String?>[null, null],
+          <String?>[null, null],
+          <String?>[null, null],
+        ],
+      );
+    });
+
+    test('an empty pointKey lowers to null rather than throwing', () {
+      // `ChartDataPoint`'s constructor asserts a non-empty pointKey, so the
+      // accessor must normalise '' to null instead of letting the assert fire.
+      // This is not a convenience: the source emitter reverses a pointKey
+      // through a NON-NULLABLE row slot and writes '' for a point that had
+      // none, so an emitted chain feeds '' back through this path for every
+      // key-less point in a partially-keyed series.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            pointKey: sampleBlankText,
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single.points.map((point) => point.pointKey),
+        everyElement(isNull),
+      );
+    });
+
+    test('an empty label lowers to null too', () {
+      // Same equivalence, for the same reason: `label` shares the non-nullable
+      // string row slot, so '' is how "this point has no label" travels. An
+      // author who genuinely wants an empty label is not silently served a
+      // different chart — the emitter's round-trip proof compares points and
+      // refuses that chart rather than emitting one that drops it.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            label: sampleBlankText,
+          ),
+        ],
+      )).lower();
+
+      expect(
+        lowered.series.single.points.map((point) => point.label),
+        everyElement(isNull),
+      );
+    });
+
+    test('every family that carries them lowers both', () {
+      // Whole-map comparison so one missing family cannot hide behind an
+      // earlier family's failure short-circuiting the loop.
+      final marks = <String, Mark<Sample>>{
+        'line': const LineMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          label: sampleZoneLabel,
+          pointKey: samplePointKey,
+        ),
+        'area': const AreaMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          label: sampleZoneLabel,
+          pointKey: samplePointKey,
+        ),
+        'bar': const BarMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          label: sampleZoneLabel,
+          pointKey: samplePointKey,
+        ),
+        'scatter': const ScatterMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          label: sampleZoneLabel,
+          pointKey: samplePointKey,
+        ),
+      };
+      final firstPoints = <String, List<String?>>{
+        for (final entry in marks.entries)
+          entry.key: () {
+            final point = (PlotSpec<Sample>(
+              data: rows,
+              marks: <Mark<Sample>>[entry.value],
+            )).lower().series.single.points.first;
+            return <String?>[point.label, point.pointKey];
+          }(),
+      };
+
+      expect(firstPoints, <String, List<String?>>{
+        for (final family in marks.keys) family: <String?>['easy', 'key-0.0'],
+      });
+    });
+
+    test(
+      'a channel-styled mark keeps its baked style AND its per-point text',
+      () {
+        // Line/area with `colorBy`, and bar with `colorBy`/`sizeBy`, build their
+        // points through a DIFFERENT builder from the plain path. A field added
+        // to one builder and forgotten in the other is exactly the silent drop
+        // this suite exists to catch.
+        final lowered = (PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'line',
+              x: sampleTime,
+              y: samplePower,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              colorBy: Channel<Sample>(sampleEffort),
+              colorEncoding: const ScatterColorEncoding(
+                colors: <Color>[Colors.blue, Colors.red],
+              ),
+            ),
+            BarMark<Sample>(
+              id: 'bar',
+              x: sampleTime,
+              y: sampleHeartRate,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              colorBy: Channel<Sample>(sampleEffort),
+              colorEncoding: const ScatterColorEncoding(
+                colors: <Color>[Colors.blue, Colors.red],
+              ),
+            ),
+          ],
+        )).lower();
+
+        final line = lowered.series[0].points.first;
+        final bar = lowered.series[1].points.first;
+        expect(
+          <String?>[line.label, line.pointKey],
+          <String?>['easy', 'key-0.0'],
+        );
+        expect(line.segmentStyle, isNotNull);
+        expect(
+          <String?>[bar.label, bar.pointKey],
+          <String?>['easy', 'key-0.0'],
+        );
+        expect(bar.pointStyle, isNotNull);
+      },
+    );
+
+    test('duplicate pointKeys within one series are refused by name', () {
+      // A pointKey is the STABLE SELECTION IDENTITY, so two rows yielding the
+      // same key make selection ambiguous. The radial side already refuses the
+      // equivalent collision (`duplicateRadialCategory`); this is the Cartesian
+      // one, and it is named rather than left to fail obscurely downstream.
+      expect(
+        () => (PlotSpec<Sample>(
+          data: rows,
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              pointKey: sampleCollidingKey,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.duplicatePointKey),
+      );
+    });
+
+    test('the same key on two DIFFERENT series is accepted', () {
+      // Scoping is per SERIES, exactly as `ChartDataPoint.pointKey` documents
+      // ("unique among the keyed points in one series"). Two marks that key
+      // their rows the same way are the ordinary shared-x chart.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            id: 'power',
+            x: sampleTime,
+            y: samplePower,
+            pointKey: samplePointKey,
+          ),
+          LineMark<Sample>(
+            id: 'heart-rate',
+            x: sampleTime,
+            y: sampleHeartRate,
+            pointKey: samplePointKey,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series, hasLength(2));
+      expect(lowered.series[1].points.first.pointKey, 'key-0.0');
+    });
+
+    test('key-less points do not collide with each other', () {
+      // Every row yields '' here, which normalises to null. Null is "no
+      // identity", not "the same identity", so this must lower cleanly — the
+      // partially-keyed series an emitted chain produces depends on it.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            pointKey: sampleBlankText,
+          ),
+        ],
+      )).lower();
+
+      expect(lowered.series.single.points, hasLength(3));
+    });
+
+    test('an empty dataset still reports emptyData, not the key collision', () {
+      // The module's ordering contract: `BravenPlot` swallows ONLY emptyData,
+      // so emptyData must stay reachable for a spec that is otherwise well
+      // formed. A key collision cannot be decided without rows, so on an empty
+      // dataset the collision check finds nothing and emptyData wins.
+      expect(
+        () => (PlotSpec<Sample>(
+          data: const <Sample>[],
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              pointKey: sampleCollidingKey,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.emptyData),
+      );
+    });
+
+    test('a structural error still outranks the key collision', () {
+      // The collision check reads rows but sits with the shape-decidable
+      // validations, so an authoring error the spec's SHAPE already condemns —
+      // here an unknown axis id — is still what gets reported.
+      expect(
+        () => (PlotSpec<Sample>(
+          data: rows,
+          yAxes: <YAxisConfig>[
+            YAxisConfig.withId(id: 'left', position: YAxisPosition.left),
+          ],
+          marks: const <Mark<Sample>>[
+            LineMark<Sample>(
+              x: sampleTime,
+              y: samplePower,
+              yAxisId: 'nope',
+              pointKey: sampleCollidingKey,
+            ),
+          ],
+        )).lower(),
+        throwsGrammarCode(GrammarDiagnosticCode.unknownAxisId),
       );
     });
   });

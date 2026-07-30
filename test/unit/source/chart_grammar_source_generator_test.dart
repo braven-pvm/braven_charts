@@ -164,6 +164,31 @@ final List<GrammarRow> grammarRows = <GrammarRow>[
     ),
 ];
 
+/// The row shape the emitter synthesises for a series carrying per-point text:
+/// one non-nullable `String` slot per accessor, `''` where the captured point
+/// had none. The field NAMES are the ones the emitter derives from the series
+/// name ('Power' -> `powerLabel`, `powerPointKey`), so a rebuilt twin written
+/// against this class is written against the emitter's own naming.
+class KeyedRow {
+  const KeyedRow({
+    required this.x,
+    required this.power,
+    this.powerLabel = '',
+    this.powerPointKey = '',
+  });
+
+  final double x;
+  final double power;
+  final String powerLabel;
+  final String powerPointKey;
+}
+
+const keyedRows = <KeyedRow>[
+  KeyedRow(x: 0, power: 168, powerLabel: 'Warm-up', powerPointKey: 'p0'),
+  KeyedRow(x: 1, power: 204, powerLabel: 'Threshold', powerPointKey: 'p1'),
+  KeyedRow(x: 2, power: 268, powerLabel: 'VO2', powerPointKey: 'p2'),
+];
+
 /// Scatter rows are keyed on power, so the synthesised x is power there.
 final List<GrammarRow> scatterRows = <GrammarRow>[
   for (final row in rows)
@@ -3025,6 +3050,228 @@ void main() {
         literalArguments(generated.source, '.geomLine('),
         contains("unit: 'W',"),
       );
+    });
+
+    testWidgets('shape 30: per-point labels and keys round-trip AND are '
+        'emitted', (tester) async {
+      // The config direction again: a chart authored with `ChartDataPoint`s
+      // that carry a `label` and a `pointKey`. Before this slice the captured
+      // and re-lowered points differed, so the whole chart was refused with the
+      // generic loss sentence.
+      //
+      // The emitted-text assertion below is the load-bearing half. The proof
+      // re-lowers the reconstructed spec and never reads a CHARACTER of the
+      // emitted chain, so a missing `label:`/`pointKey:` writer line would ship
+      // a chain that silently drops per-point identity while every other
+      // assertion here — including the rebuilt-document comparison, whose twin
+      // is hand-written rather than compiled from this text — still passed.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'point_label_and_key',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168, label: 'Warm-up', pointKey: 'p0'),
+                ChartDataPoint(
+                  x: 1,
+                  y: 204,
+                  label: 'Threshold',
+                  pointKey: 'p1',
+                ),
+                ChartDataPoint(x: 2, y: 268, label: 'VO2', pointKey: 'p2'),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(keyedRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              label: (row) => row.powerLabel,
+              pointKey: (row) => row.powerPointKey,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The WHOLE argument list of the geom call, not two fragments: a dropped
+      // field, an extra field, a wrong accessor and a reordering then all fail.
+      // Scoped to the call because `label:` is also an axis field and this
+      // chart puts one on the axis right beside the mark.
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'label: (row) => row.powerLabel,',
+        'pointKey: (row) => row.powerPointKey,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+      // The row class has to carry both, or the accessors above name fields
+      // that do not exist. (`expectRoundTrip` compiles the emitted source, so
+      // this is belt and braces — but it names WHICH field went missing.)
+      expect(generated.source, contains('final String powerLabel;'));
+      expect(generated.source, contains('final String powerPointKey;'));
+      expect(generated.source, contains("powerLabel: 'Warm-up',"));
+      expect(generated.source, contains("powerPointKey: 'p0',"));
+    });
+
+    testWidgets('shape 30b: a series with no per-point text emits neither '
+        'accessor', (tester) async {
+      // The control for shape 30. Both accessors are optional, so a chart that
+      // sets neither must emit exactly what it emitted before this slice — no
+      // `label:` and no `pointKey:` in the geom call.
+      //
+      // The AXIS deliberately carries a label, because `label:` is a
+      // `YAxisConfig` field too: a whole-file `isNot(contains('label:'))` would
+      // be satisfiable by text that says nothing about the mark. Reading the
+      // geom's own argument list is the only assertion that can fail for the
+      // right reason.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(
+        generated.source,
+        contains("label: 'Power',"),
+        reason:
+            'the axis label must reach the source, or this control is vacuous '
+            'and a whole-file token search would have passed it',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+    });
+
+    testWidgets('shape 30c: a PARTIALLY labelled series round-trips', (
+      tester,
+    ) async {
+      // Per-point text travels through a NON-NULLABLE row slot, so a point
+      // that had no label is written as `''` and has to come back as null.
+      // Without the empty-string normalisation in lowering this chart cannot
+      // round-trip at all — and a `pointKey` would not merely differ, it would
+      // trip `ChartDataPoint`'s own assert.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'point_label_partial',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168, label: 'Warm-up', pointKey: 'p0'),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268, label: 'VO2', pointKey: 'p2'),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) =>
+            BravenChart.of(<KeyedRow>[
+                  const KeyedRow(
+                    x: 0,
+                    power: 168,
+                    powerLabel: 'Warm-up',
+                    powerPointKey: 'p0',
+                  ),
+                  const KeyedRow(x: 1, power: 204),
+                  const KeyedRow(
+                    x: 2,
+                    power: 268,
+                    powerLabel: 'VO2',
+                    powerPointKey: 'p2',
+                  ),
+                ])
+                .x((row) => row.x)
+                .yAxis(
+                  YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+                )
+                .geomLine(
+                  id: 'power',
+                  y: (row) => row.power,
+                  name: 'Power',
+                  label: (row) => row.powerLabel,
+                  pointKey: (row) => row.powerPointKey,
+                )
+                .build(bravenChartController: controller),
+      );
+      // The unlabelled row is written as the empty literal, which is what the
+      // normalisation on the other side has to read.
+      expect(generated.source, contains("powerLabel: '',"));
+      expect(generated.source, contains("powerPointKey: '',"));
+    });
+
+    testWidgets('shape 30d: colliding point keys are refused by NAME', (
+      tester,
+    ) async {
+      // A `pointKey` is the stable selection identity, so a captured chart that
+      // repeats one inside a series cannot be expressed as a chain that means
+      // the same thing. The grammar's own `duplicatePointKey` diagnostic fires
+      // while the proof re-lowers, and the generator quotes it — a named
+      // boundary rather than the generic "does not reproduce exactly".
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168, pointKey: 'dup'),
+                  ChartDataPoint(x: 1, y: 204, pointKey: 'dup'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(blockedReason(generated), contains('dup'));
+      expect(blockedReason(generated), contains('pointKey'));
     });
 
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (

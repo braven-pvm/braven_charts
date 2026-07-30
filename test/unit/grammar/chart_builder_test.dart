@@ -50,6 +50,8 @@ double sampleOpen(Sample row) => row.open;
 double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
+String? sampleZoneLabel(Sample row) => row.zone;
+String? samplePointKey(Sample row) => 'key-${row.time}';
 
 const rows = <Sample>[
   Sample(
@@ -473,6 +475,131 @@ void main() {
               name: 'Power',
               strokeWidth: 3,
               unit: 'W',
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
+  group('per-point label and pointKey reach the four geometry marks', () {
+    // Candlestick is deliberately absent: its points are
+    // `CandlestickDataPoint`s built by their own lowering path, and no censused
+    // chart carries per-candle text. The four verbs below are the ones whose
+    // series lower to plain `ChartDataPoint`s.
+    Map<String, PlotSpec<Sample>> specsWith({
+      FieldAccessor<Sample, String?>? label,
+      FieldAccessor<Sample, String?>? pointKey,
+    }) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': base.geomLine(label: label, pointKey: pointKey).toSpec(),
+        'geomArea': base.geomArea(label: label, pointKey: pointKey).toSpec(),
+        'geomBar': base.geomBar(label: label, pointKey: pointKey).toSpec(),
+        'geomPoint': base.geomPoint(label: label, pointKey: pointKey).toSpec(),
+      };
+    }
+
+    // Whole-map comparisons, so one missing forward cannot hide behind an
+    // earlier family's failure.
+    Map<String, Object?> accessorsOf(
+      Map<String, PlotSpec<Sample>> specs,
+      Object? Function(Mark<Sample>) read,
+    ) => <String, Object?>{
+      for (final entry in specs.entries)
+        entry.key: read(entry.value.marks.single),
+    };
+
+    test('the four verbs forward label to their marks', () {
+      expect(
+        accessorsOf(
+          specsWith(label: sampleZoneLabel),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => mark.label,
+            AreaMark<Sample>() => mark.label,
+            BarMark<Sample>() => mark.label,
+            ScatterMark<Sample>() => mark.label,
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': sampleZoneLabel,
+          'geomArea': sampleZoneLabel,
+          'geomBar': sampleZoneLabel,
+          'geomPoint': sampleZoneLabel,
+        },
+      );
+    });
+
+    test('the four verbs forward pointKey to their marks', () {
+      expect(
+        accessorsOf(
+          specsWith(pointKey: samplePointKey),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => mark.pointKey,
+            AreaMark<Sample>() => mark.pointKey,
+            BarMark<Sample>() => mark.pointKey,
+            ScatterMark<Sample>() => mark.pointKey,
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': samplePointKey,
+          'geomArea': samplePointKey,
+          'geomBar': samplePointKey,
+          'geomPoint': samplePointKey,
+        },
+      );
+    });
+
+    test('omitting both leaves every mark without per-point text', () {
+      // The control: a defaulted accessor would put text on points the author
+      // never asked to label, and would key points that have no identity.
+      expect(
+        accessorsOf(
+          specsWith(),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            AreaMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            BarMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            ScatterMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': <Object?>[null, null],
+          'geomArea': <Object?>[null, null],
+          'geomBar': <Object?>[null, null],
+          'geomPoint': <Object?>[null, null],
+        },
+      );
+    });
+
+    test('geomLine with both equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the two new
+      // arguments displaced no other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(
+            name: 'Power',
+            label: sampleZoneLabel,
+            pointKey: samplePointKey,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
             ),
           ],
         ),

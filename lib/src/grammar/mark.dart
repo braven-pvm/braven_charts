@@ -118,6 +118,8 @@ final class LineMark<T> extends SeriesMark<T> {
     super.color,
     super.yAxisId,
     super.unit,
+    this.label,
+    this.pointKey,
     this.colorBy,
     this.colorEncoding,
     this.strokeWidth,
@@ -132,6 +134,22 @@ final class LineMark<T> extends SeriesMark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every point unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one point unlabelled.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// This is the identity selection is expressed against, so it must be unique
+  /// among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that point unkeyed, and unkeyed points never collide with each
+  /// other.
+  final FieldAccessor<T, String?>? pointKey;
 
   /// Optional colour channel: each segment's stroke is the ramp colour of the
   /// leading point's value over the data's finite domain, baked at lowering
@@ -170,6 +188,8 @@ final class LineMark<T> extends SeriesMark<T> {
           other.color == color &&
           other.yAxisId == yAxisId &&
           other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
@@ -187,6 +207,8 @@ final class LineMark<T> extends SeriesMark<T> {
     color,
     yAxisId,
     unit,
+    label,
+    pointKey,
     colorBy,
     colorEncoding,
     strokeWidth,
@@ -211,6 +233,8 @@ final class AreaMark<T> extends SeriesMark<T> {
     super.color,
     super.yAxisId,
     super.unit,
+    this.label,
+    this.pointKey,
     this.colorBy,
     this.colorEncoding,
     this.baseline,
@@ -227,6 +251,20 @@ final class AreaMark<T> extends SeriesMark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every point unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one point unlabelled.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that point unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
 
   /// Optional colour channel. Colours the area's TOP EDGE per segment (the
   /// leading-point rule), NOT the fill — value-driven fill is not yet
@@ -271,6 +309,8 @@ final class AreaMark<T> extends SeriesMark<T> {
           other.color == color &&
           other.yAxisId == yAxisId &&
           other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
@@ -290,6 +330,8 @@ final class AreaMark<T> extends SeriesMark<T> {
     color,
     yAxisId,
     unit,
+    label,
+    pointKey,
     colorBy,
     colorEncoding,
     baseline,
@@ -319,6 +361,8 @@ final class BarMark<T> extends SeriesMark<T> {
     super.color,
     super.yAxisId,
     super.unit,
+    this.label,
+    this.pointKey,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barGap,
@@ -337,6 +381,23 @@ final class BarMark<T> extends SeriesMark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// bar labels. Null leaves every bar unlabelled; an accessor that returns
+  /// null — or `''`, which is treated as the same thing — leaves that one bar
+  /// unlabelled.
+  ///
+  /// This is the per-POINT text. [labelStyle] is the series-wide configuration
+  /// that decides how such a label is drawn; the two compose.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that bar unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
 
   /// Optional colour channel: each bar's fill is the ramp colour of this
   /// field's value over the data's finite domain, baked at lowering into
@@ -395,6 +456,8 @@ final class BarMark<T> extends SeriesMark<T> {
           other.color == color &&
           other.yAxisId == yAxisId &&
           other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
           other.barWidthPercent == barWidthPercent &&
           other.barWidthPixels == barWidthPixels &&
           other.barGap == barGap &&
@@ -407,8 +470,12 @@ final class BarMark<T> extends SeriesMark<T> {
           other.sizeBy == sizeBy &&
           other.sizeEncoding == sizeEncoding;
 
+  // `Object.hashAll`, not `Object.hash`: this mark's field list is the longest
+  // in the file and `Object.hash` stops at 20 positional arguments, which the
+  // list below now reaches exactly. The list form has no such ceiling, so the
+  // next field added here fails on its merits rather than on an arity limit.
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
     x,
     y,
     id,
@@ -416,6 +483,8 @@ final class BarMark<T> extends SeriesMark<T> {
     color,
     yAxisId,
     unit,
+    label,
+    pointKey,
     barWidthPercent,
     barWidthPixels,
     barGap,
@@ -427,7 +496,7 @@ final class BarMark<T> extends SeriesMark<T> {
     colorEncoding,
     sizeBy,
     sizeEncoding,
-  );
+  ]);
 
   @override
   String toString() => 'BarMark(id: $id, name: $name)';
@@ -462,6 +531,8 @@ final class ScatterMark<T> extends SeriesMark<T> {
     super.color,
     super.yAxisId,
     super.unit,
+    this.label,
+    this.pointKey,
     this.size,
     this.sizeEncoding,
     this.colorBy,
@@ -480,6 +551,24 @@ final class ScatterMark<T> extends SeriesMark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every marker unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one marker unlabelled.
+  ///
+  /// Distinct from [categoryBy]: a label identifies ONE point, while several
+  /// points share a category value — which is why a category drives the
+  /// categorical scale and a label does not.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that marker unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
 
   /// Marker-area channel. Lowers to `ChartDataPoint.magnitude`.
   final Channel<T>? size;
@@ -525,6 +614,8 @@ final class ScatterMark<T> extends SeriesMark<T> {
           other.color == color &&
           other.yAxisId == yAxisId &&
           other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
           other.size == size &&
           other.sizeEncoding == sizeEncoding &&
           other.colorBy == colorBy &&
@@ -546,6 +637,8 @@ final class ScatterMark<T> extends SeriesMark<T> {
     color,
     yAxisId,
     unit,
+    label,
+    pointKey,
     size,
     sizeEncoding,
     colorBy,

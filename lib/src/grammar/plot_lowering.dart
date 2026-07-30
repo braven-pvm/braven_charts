@@ -217,9 +217,16 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 /// dataset (which is what lets `BravenPlot` swallow ONLY emptyData): empty
 /// marks, mark ids, misplaced `.polarConfig(...)`, axis ids, transposition,
 /// then each mark's structural checks in spec order (axis binding, scatter
-/// channel/encoding pairing, trend source), then unbound axes. Only then comes
-/// empty data, followed by the DATA-DEPENDENT materialization — the per-row
-/// candlestick validation that cannot run on an empty dataset.
+/// channel/encoding pairing, trend source, per-point key collisions), then
+/// unbound axes. Only then comes empty data, followed by the DATA-DEPENDENT
+/// materialization — the per-row candlestick validation that cannot run on an
+/// empty dataset.
+///
+/// The point-key collision check is the one member of that list that reads
+/// ROWS. It sits there anyway because it condemns the AUTHORING — one accessor
+/// that cannot distinguish two observations — and because nothing is lost by
+/// the placement: an empty dataset has no keys to collide, so `emptyData` is
+/// still what surfaces for it. See [_validatePointKeys].
 ///
 /// The radial branch follows the same rule: coordinate-system and radial-family
 /// checks, Cartesian-option checks, the `.polarConfig(...)` placement check and
@@ -329,6 +336,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateScatterChannels(mark, markId);
+        _validatePointKeys(mark.pointKey, markId, spec.data);
       case LineMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
@@ -338,6 +346,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
+        _validatePointKeys(mark.pointKey, markId, spec.data);
       case AreaMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
@@ -347,6 +356,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           boundAxisIds,
         );
         _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
+        _validatePointKeys(mark.pointKey, markId, spec.data);
       case CandlestickMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
@@ -365,6 +375,7 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         );
         _validateColorChannel(mark.colorBy, mark.colorEncoding, markId);
         _validateBarSizeChannel(mark.sizeBy, mark.sizeEncoding, markId);
+        _validatePointKeys(mark.pointKey, markId, spec.data);
       case ThresholdMark<T>() || BandMark<T>() || PointMark<T>():
         // Reference marks bind no Y axis and carry no data-independent
         // structural invariant beyond what their annotation asserts on
@@ -611,6 +622,43 @@ void _validateScatterChannels<T>(ScatterMark<T> mark, String markId) {
   }
 }
 
+/// Rejects a [pointKey] accessor that yields the same key for two rows of one
+/// mark.
+///
+/// A `pointKey` is the STABLE IDENTITY of one observation within its series —
+/// what selection, hit-testing and bounded-stream eviction are expressed
+/// against — so a repeat makes every such expression ambiguous. The radial side
+/// already refuses the equivalent collision (`duplicateRadialCategory`, raised
+/// by `_radialValues`); this is the Cartesian one.
+///
+/// Scoping is per MARK, matching `ChartDataPoint.pointKey`'s own contract
+/// ("unique among the keyed points in one series"): two marks that key their
+/// rows the same way are the ordinary shared-x chart and are accepted.
+///
+/// Placement: this sits with the SHAPE-decidable validations, above the
+/// emptyData guard, so a key collision outranks the row-dependent
+/// materialization checks below it. It does read rows — unlike its neighbours —
+/// but nothing is lost by that: on an empty dataset there are no keys to
+/// collide, so the loop finds nothing and `emptyData` is still what surfaces,
+/// which is what keeps `BravenPlot`'s swallow-only-emptyData contract intact.
+void _validatePointKeys<T>(
+  FieldAccessor<T, String?>? pointKey,
+  String markId,
+  List<T> data,
+) {
+  if (pointKey == null) return;
+  final seen = <String>{};
+  for (final row in data) {
+    // Unkeyed points are not "the same identity", they have none — so an empty
+    // or absent key never collides. The normalisation matches _pointText's.
+    final key = pointKey(row);
+    if (key == null || key.isEmpty) continue;
+    if (!seen.add(key)) {
+      throw GrammarSpecException.duplicatePointKey(markId, key);
+    }
+  }
+}
+
 /// Validates a trend mark against the geometry ids in the plot, without rows.
 void _validateTrend<T>(
   TrendMark<T> mark,
@@ -668,13 +716,37 @@ List<YAxisConfig> _resolveAxes(List<YAxisConfig> declared) {
   return resolved;
 }
 
+/// Normalises a per-point text accessor's result.
+///
+/// An empty string means "this point has no label / no key", for two reasons
+/// that point the same way. `ChartDataPoint` ASSERTS a non-empty `pointKey`, so
+/// `''` is not a value that path can hold at all; and the source emitter
+/// reverses both fields through a NON-NULLABLE `String` row slot, writing `''`
+/// for a point that carried none — so a chain emitted from a partially labelled
+/// series feeds `''` straight back through here for every bare point.
+///
+/// An author who genuinely wants an empty label is not silently served a
+/// different chart: the emitter's round-trip proof compares points field for
+/// field, so such a chart is REFUSED rather than emitted as one that drops it.
+String? _pointText<T>(FieldAccessor<T, String?>? accessor, T row) {
+  final text = accessor?.call(row);
+  return (text == null || text.isEmpty) ? null : text;
+}
+
 List<ChartDataPoint> _xyPoints<T>(
   List<T> data,
   FieldAccessor<T, num> x,
   FieldAccessor<T, num> y,
+  FieldAccessor<T, String?>? label,
+  FieldAccessor<T, String?>? pointKey,
 ) => <ChartDataPoint>[
   for (final row in data)
-    ChartDataPoint(x: x(row).toDouble(), y: y(row).toDouble()),
+    ChartDataPoint(
+      x: x(row).toDouble(),
+      y: y(row).toDouble(),
+      label: _pointText(label, row),
+      pointKey: _pointText(pointKey, row),
+    ),
 ];
 
 /// Builds points whose OUTGOING segment carries a baked colour: point i's
@@ -687,6 +759,8 @@ List<ChartDataPoint> _xyColorPoints<T>(
   FieldAccessor<T, num> y,
   Channel<T> colorBy,
   ScatterColorEncoding encoding,
+  FieldAccessor<T, String?>? label,
+  FieldAccessor<T, String?>? pointKey,
 ) {
   final colors = _bakeChannelColors(colorBy, encoding, data);
   return <ChartDataPoint>[
@@ -694,6 +768,8 @@ List<ChartDataPoint> _xyColorPoints<T>(
       ChartDataPoint(
         x: x(data[i]).toDouble(),
         y: y(data[i]).toDouble(),
+        label: _pointText(label, data[i]),
+        pointKey: _pointText(pointKey, data[i]),
         segmentStyle: colors[i] == null ? null : SegmentStyle.color(colors[i]!),
       ),
   ];
@@ -708,13 +784,15 @@ LineChartSeries _lowerLine<T>(
   id: id,
   name: mark.name,
   points: mark.colorBy == null
-      ? _xyPoints(data, mark.x, mark.y)
+      ? _xyPoints(data, mark.x, mark.y, mark.label, mark.pointKey)
       : _xyColorPoints(
           data,
           mark.x,
           mark.y,
           mark.colorBy!,
           mark.colorEncoding!,
+          mark.label,
+          mark.pointKey,
         ),
   color: mark.color,
   unit: mark.unit,
@@ -737,13 +815,15 @@ AreaChartSeries _lowerArea<T>(
   id: id,
   name: mark.name,
   points: mark.colorBy == null
-      ? _xyPoints(data, mark.x, mark.y)
+      ? _xyPoints(data, mark.x, mark.y, mark.label, mark.pointKey)
       : _xyColorPoints(
           data,
           mark.x,
           mark.y,
           mark.colorBy!,
           mark.colorEncoding!,
+          mark.label,
+          mark.pointKey,
         ),
   color: mark.color,
   unit: mark.unit,
@@ -774,7 +854,7 @@ BarChartSeries _lowerBar<T>(
     id: id,
     name: mark.name,
     points: (mark.colorBy == null && mark.sizeBy == null)
-        ? _xyPoints(data, mark.x, mark.y)
+        ? _xyPoints(data, mark.x, mark.y, mark.label, mark.pointKey)
         : _barStyledPoints(
             data,
             mark.x,
@@ -783,6 +863,8 @@ BarChartSeries _lowerBar<T>(
             mark.colorEncoding,
             mark.sizeBy,
             mark.sizeEncoding,
+            mark.label,
+            mark.pointKey,
           ),
     color: mark.color,
     unit: mark.unit,
@@ -825,6 +907,8 @@ ScatterChartSeries _lowerScatter<T>(
         ChartDataPoint(
           x: mark.x(row).toDouble(),
           y: mark.y(row).toDouble(),
+          label: _pointText(mark.label, row),
+          pointKey: _pointText(mark.pointKey, row),
           magnitude: size == null ? null : size.accessor(row).toDouble(),
           colorValue: colorBy == null ? null : colorBy.accessor(row).toDouble(),
           opacityValue: opacityBy == null
@@ -1888,6 +1972,8 @@ List<ChartDataPoint> _barStyledPoints<T>(
   ScatterColorEncoding? colorEncoding,
   Channel<T>? sizeBy,
   ScatterSizeEncoding? sizeEncoding,
+  FieldAccessor<T, String?>? label,
+  FieldAccessor<T, String?>? pointKey,
 ) {
   final colors = colorBy == null
       ? null
@@ -1904,6 +1990,8 @@ List<ChartDataPoint> _barStyledPoints<T>(
       ChartDataPoint(
         x: x(data[i]).toDouble(),
         y: y(data[i]).toDouble(),
+        label: _pointText(label, data[i]),
+        pointKey: _pointText(pointKey, data[i]),
         pointStyle: (colors?[i] == null && widths?[i] == null)
             ? null
             : PointStyle(color: colors?[i], size: widths?[i]),

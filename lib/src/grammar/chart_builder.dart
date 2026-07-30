@@ -254,6 +254,11 @@ final class BravenChart<T> {
   /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
   /// used when formatting them in tooltips and labels. It is the series' own
   /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each POINT (`ChartDataPoint.label`); [pointKey] gives each
+  /// point a stable identity for selection. Both are per-point accessors that
+  /// may return null — or `''`, which means the same thing — for a row that has
+  /// neither. Keys must be unique among one mark's keyed rows.
   BravenChart<T> geomLine({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -261,6 +266,8 @@ final class BravenChart<T> {
     String? name,
     Color? color,
     String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? strokeWidth,
@@ -277,6 +284,8 @@ final class BravenChart<T> {
       name: name,
       color: color,
       unit: unit,
+      label: label,
+      pointKey: pointKey,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       strokeWidth: strokeWidth,
@@ -297,6 +306,11 @@ final class BravenChart<T> {
   /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
   /// used when formatting them in tooltips and labels. It is the series' own
   /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each POINT (`ChartDataPoint.label`); [pointKey] gives each
+  /// point a stable identity for selection. Both are per-point accessors that
+  /// may return null — or `''`, which means the same thing — for a row that has
+  /// neither. Keys must be unique among one mark's keyed rows.
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -304,6 +318,8 @@ final class BravenChart<T> {
     String? name,
     Color? color,
     String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? baseline,
@@ -322,6 +338,8 @@ final class BravenChart<T> {
       name: name,
       color: color,
       unit: unit,
+      label: label,
+      pointKey: pointKey,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       baseline: baseline,
@@ -343,6 +361,13 @@ final class BravenChart<T> {
   /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
   /// used when formatting them in tooltips and labels. It is the series' own
   /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each BAR (`ChartDataPoint.label`) — the per-point text, as
+  /// opposed to [labelStyle], which is the series-wide configuration deciding
+  /// how such a label is drawn. [pointKey] gives each bar a stable identity for
+  /// selection. Both may return null — or `''`, which means the same thing —
+  /// for a row that has neither. Keys must be unique among one mark's keyed
+  /// rows.
   BravenChart<T> geomBar({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -350,6 +375,8 @@ final class BravenChart<T> {
     String? name,
     Color? color,
     String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barGap,
@@ -370,6 +397,8 @@ final class BravenChart<T> {
       name: name,
       color: color,
       unit: unit,
+      label: label,
+      pointKey: pointKey,
       barWidthPercent: barWidthPercent,
       barWidthPixels: barWidthPixels,
       barGap: barGap,
@@ -395,6 +424,12 @@ final class BravenChart<T> {
   /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
   /// used when formatting them in tooltips and labels. It is the series' own
   /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each MARKER (`ChartDataPoint.label`), which is distinct from
+  /// [categoryBy]: a label identifies one point, while several points share a
+  /// category. [pointKey] gives each marker a stable identity for selection.
+  /// Both may return null — or `''`, which means the same thing — for a row
+  /// that has neither. Keys must be unique among one mark's keyed rows.
   BravenChart<T> geomPoint({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -402,6 +437,8 @@ final class BravenChart<T> {
     String? name,
     Color? color,
     String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
     Channel<T>? size,
     ScatterSizeEncoding? sizeEncoding,
     Channel<T>? colorBy,
@@ -422,6 +459,8 @@ final class BravenChart<T> {
       name: name,
       color: color,
       unit: unit,
+      label: label,
+      pointKey: pointKey,
       size: size,
       sizeEncoding: sizeEncoding,
       colorBy: colorBy,
