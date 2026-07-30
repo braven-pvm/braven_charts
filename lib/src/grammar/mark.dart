@@ -79,8 +79,36 @@ sealed class Mark<T> {
   final String? yAxisId;
 }
 
+/// A mark that lowers to a `ChartSeries`.
+///
+/// Split out from [Mark] so that [unit] — which every lowered series carries
+/// (`ChartSeries.unit`) — reaches the geometry marks and CANNOT reach
+/// [TrendMark]/[ThresholdMark]/[BandMark]/[PointMark], which lower to
+/// `ChartAnnotation`s. No annotation type in this package has a unit, and the
+/// round-trip proof compares annotations with a helper that never reads one, so
+/// a unit on those marks would be accepted and silently discarded with nothing
+/// able to catch it.
+///
+/// [yAxisId] stays optional here rather than required: [RadialMark] extends
+/// this class and deliberately does not forward it, because a radial series
+/// measures against no Y axis.
+sealed class SeriesMark<T> extends Mark<T> {
+  /// Shared identity fields plus the measure unit.
+  const SeriesMark({
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.unit,
+  });
+
+  /// Measure unit carried onto the lowered series (`ChartSeries.unit`). Null
+  /// lowers to a series with no unit.
+  final String? unit;
+}
+
 /// A connected line through `(x, y)`.
-final class LineMark<T> extends Mark<T> {
+final class LineMark<T> extends SeriesMark<T> {
   /// Creates a line geometry.
   const LineMark({
     required this.x,
@@ -89,6 +117,7 @@ final class LineMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.colorBy,
     this.colorEncoding,
     this.strokeWidth,
@@ -140,6 +169,7 @@ final class LineMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
@@ -156,6 +186,7 @@ final class LineMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     colorBy,
     colorEncoding,
     strokeWidth,
@@ -170,7 +201,7 @@ final class LineMark<T> extends Mark<T> {
 }
 
 /// A filled band between `y` and a baseline.
-final class AreaMark<T> extends Mark<T> {
+final class AreaMark<T> extends SeriesMark<T> {
   /// Creates an area geometry.
   const AreaMark({
     required this.x,
@@ -179,6 +210,7 @@ final class AreaMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.colorBy,
     this.colorEncoding,
     this.baseline,
@@ -238,6 +270,7 @@ final class AreaMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
@@ -256,6 +289,7 @@ final class AreaMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     colorBy,
     colorEncoding,
     baseline,
@@ -275,7 +309,7 @@ final class AreaMark<T> extends Mark<T> {
 ///
 /// Orientation is NOT a per-mark property: transposing a Cartesian chart is a
 /// whole-chart operation in this package, expressed by [PlotSpec.transposed].
-final class BarMark<T> extends Mark<T> {
+final class BarMark<T> extends SeriesMark<T> {
   /// Creates a bar geometry.
   const BarMark({
     required this.x,
@@ -284,6 +318,7 @@ final class BarMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barGap,
@@ -359,6 +394,7 @@ final class BarMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.barWidthPercent == barWidthPercent &&
           other.barWidthPixels == barWidthPixels &&
           other.barGap == barGap &&
@@ -379,6 +415,7 @@ final class BarMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     barWidthPercent,
     barWidthPixels,
     barGap,
@@ -415,7 +452,7 @@ final class BarMark<T> extends Mark<T> {
 /// `GrammarDiagnosticCode.missingChannelEncoding`. The package ships no
 /// categorical palette and no default color ramp, and inventing one here would
 /// mint design surface the rest of the library does not have.
-final class ScatterMark<T> extends Mark<T> {
+final class ScatterMark<T> extends SeriesMark<T> {
   /// Creates a scatter geometry.
   const ScatterMark({
     required this.x,
@@ -424,6 +461,7 @@ final class ScatterMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.size,
     this.sizeEncoding,
     this.colorBy,
@@ -486,6 +524,7 @@ final class ScatterMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.size == size &&
           other.sizeEncoding == sizeEncoding &&
           other.colorBy == colorBy &&
@@ -506,6 +545,7 @@ final class ScatterMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     size,
     sizeEncoding,
     colorBy,
@@ -524,7 +564,7 @@ final class ScatterMark<T> extends Mark<T> {
 }
 
 /// An open-high-low-close candle per row.
-final class CandlestickMark<T> extends Mark<T> {
+final class CandlestickMark<T> extends SeriesMark<T> {
   /// Creates a candlestick geometry.
   const CandlestickMark({
     required this.x,
@@ -536,6 +576,7 @@ final class CandlestickMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.timestamp,
   });
 
@@ -571,6 +612,7 @@ final class CandlestickMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.timestamp == timestamp;
 
   @override
@@ -584,6 +626,7 @@ final class CandlestickMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     timestamp,
   );
 
@@ -850,15 +893,18 @@ final class PointMark<T> extends Mark<T> {
 /// radial branch of `spec.lower()`, may contain no other mark, and honors no
 /// Cartesian axis/grid option. Like the Cartesian marks these hold functions,
 /// so they carry no `copyWith` and no `@chartSurface`.
-sealed class RadialMark<T> extends Mark<T> {
+sealed class RadialMark<T> extends SeriesMark<T> {
   /// Shared radial channels plus the inherited identity fields.
+  ///
+  /// [Mark.yAxisId] is deliberately NOT forwarded: a radial series measures
+  /// against no Y axis, so binding one would be accepted and discarded.
   const RadialMark({
     required this.category,
     required this.value,
     super.id,
     super.name,
     super.color,
-    this.unit,
+    super.unit,
   });
 
   /// Slice/column identity accessor. Stringified into the category label.
@@ -866,10 +912,6 @@ sealed class RadialMark<T> extends Mark<T> {
 
   /// Magnitude accessor: angle-share for pie/donut, radius for polar.
   final FieldAccessor<T, num> value;
-
-  /// Measure unit carried by every radial series (`ChartSeries.unit`). Null
-  /// lowers to a series with no unit. Shared by pie/donut/concentric/polar.
-  final String? unit;
 }
 
 /// A pie: each row is a slice, [RadialMark.value] is the angle-share.

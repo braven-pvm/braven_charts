@@ -325,4 +325,149 @@ void main() {
       expect(standard.toString() == rose.toString(), isFalse);
     });
   });
+
+  group('SeriesMark carries unit for every series family', () {
+    test('unit lives on SeriesMark and reaches every series mark', () {
+      const line = LineMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const area = AreaMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const bar = BarMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const scatter = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const candle = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+        unit: 'kg',
+      );
+      const pie = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+
+      expect(line.unit, 'kg');
+      expect(area.unit, 'kg');
+      expect(bar.unit, 'kg');
+      expect(scatter.unit, 'kg');
+      expect(candle.unit, 'kg');
+      expect(pie.unit, 'kg');
+
+      expect(line, isA<SeriesMark<Fruit>>());
+      expect(area, isA<SeriesMark<Fruit>>());
+      expect(bar, isA<SeriesMark<Fruit>>());
+      expect(scatter, isA<SeriesMark<Fruit>>());
+      expect(candle, isA<SeriesMark<Fruit>>());
+      expect(pie, isA<SeriesMark<Fruit>>());
+    });
+
+    // RadialMark declared its own `final String? unit;` before the intermediate
+    // existed; re-parenting deleted it in favour of `super.unit`. This pins
+    // that the forwarding survives — a radial unit still arrives, and arrives
+    // through the base declaration.
+    //
+    // It is NOT a guard against the field being left behind: measured by
+    // probe, re-adding `final String? unit;` to RadialMark passes this test and
+    // every other one, because Dart getter dispatch is virtual and the subclass
+    // getter wins whatever the static type. The only thing that catches that
+    // shadow is the analyzer's `overridden_fields` lint, which `flutter analyze
+    // lib` reports — so the guard for the deletion is the analyzer, not a test,
+    // and it is recorded here so nobody mistakes this test for one.
+    test('a radial unit is readable through the SeriesMark base', () {
+      const SeriesMark<Fruit> pie = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const SeriesMark<Fruit> donut = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const SeriesMark<Fruit> polar = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      expect(pie.unit, 'kg');
+      expect(donut.unit, 'kg');
+      expect(polar.unit, 'kg');
+    });
+
+    test('unit participates in equality for every series mark', () {
+      const withUnit = AreaMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const without = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(withUnit == without, isFalse);
+      expect(withUnit.hashCode == without.hashCode, isFalse);
+
+      const lineWithUnit = LineMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const lineWithout = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(lineWithUnit == lineWithout, isFalse);
+      expect(lineWithUnit.hashCode == lineWithout.hashCode, isFalse);
+
+      const barWithUnit = BarMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const barWithout = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(barWithUnit == barWithout, isFalse);
+      expect(barWithUnit.hashCode == barWithout.hashCode, isFalse);
+
+      const scatterWithUnit = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const scatterWithout = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(scatterWithUnit == scatterWithout, isFalse);
+      expect(scatterWithUnit.hashCode == scatterWithout.hashCode, isFalse);
+
+      const candleWithUnit = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+        unit: 'kg',
+      );
+      const candleWithout = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+      );
+      expect(candleWithUnit == candleWithout, isFalse);
+      expect(candleWithUnit.hashCode == candleWithout.hashCode, isFalse);
+    });
+
+    test('annotation marks are NOT SeriesMarks and cannot carry a unit', () {
+      // TrendMark/ThresholdMark/BandMark/PointMark lower to ChartAnnotations,
+      // and no annotation type in this package has a unit. Keeping them off
+      // SeriesMark makes "accepted then silently discarded" unrepresentable —
+      // the proof could not catch it, because _sameAnnotation never reads a
+      // unit.
+      const trend = TrendMark<Fruit>(sourceMarkId: 'a');
+      const threshold = ThresholdMark<Fruit>(value: 3);
+      const band = BandMark<Fruit>(start: 1, end: 2);
+      const point = PointMark<Fruit>(seriesId: 'a', dataPointIndex: 0);
+      expect(trend, isNot(isA<SeriesMark<Fruit>>()));
+      expect(threshold, isNot(isA<SeriesMark<Fruit>>()));
+      expect(band, isNot(isA<SeriesMark<Fruit>>()));
+      expect(point, isNot(isA<SeriesMark<Fruit>>()));
+      expect(trend, isA<Mark<Fruit>>());
+      expect(threshold, isA<Mark<Fruit>>());
+      expect(band, isA<Mark<Fruit>>());
+      expect(point, isA<Mark<Fruit>>());
+    });
+  });
 }
