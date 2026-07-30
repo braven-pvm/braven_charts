@@ -111,6 +111,7 @@ import '../grammar/grammar_diagnostics.dart';
 import '../grammar/mark.dart';
 import '../grammar/plot_lowering.dart';
 import '../grammar/plot_spec.dart';
+import '../grammar/series_axis_unbinding.dart';
 import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/chart_annotation.dart';
@@ -1895,20 +1896,32 @@ class _GrammarChainEmitter {
     // normalizationMode.perSeries). Hence: every captured series unbound, and
     // exactly one declared axis.
     //
-    // Both clauses are DEFENCE IN DEPTH, not the only thing holding the line,
-    // and saying which is which is the honest framing. Verified by mutation:
-    //  - Dropping the all-unbound clause changes NOTHING, because the
-    //    comparison below normalises only the lowered side, so a captured
-    //    binding still has to be met whatever the gate lets through.
-    //  - Dropping the `axes.length == 1` clause changes nothing either: a
-    //    document declaring two axes with no series bound is rejected a layer
-    //    earlier, by the grammar's own unboundAxis diagnostic, because
-    //    lowering binds every unbound mark to `axes.first` and leaves the
-    //    second axis with nothing measuring against it.
-    //  - Normalising BOTH sides instead — which is the "null means axes.first"
-    //    shape — makes the mixed-binding document emit, and the guard test
-    //    "a MIXED binding is still refused" fails. That is the mutation this
-    //    gate exists to make impossible, and the one a test does catch.
+    // The two clauses are NOT equally load-bearing and are NOT equally
+    // guarded, and saying which is which is the honest framing. Each of these
+    // was measured by mutation, applied and reverted inside one invocation:
+    //
+    //  - Dropping the all-unbound clause FAILS four tests — round-trip shapes
+    //    5, 29b, 29c and 29d, plus the named guard below. The clause is
+    //    load-bearing in the opposite direction from the obvious one: it is
+    //    what keeps a single-axis chart whose captured series ARE bound
+    //    EMITTING. Without it the lowered side is stripped while the captured
+    //    side keeps its binding, so the comparison can never be met and a
+    //    perfectly reproducible chart is wrongly REFUSED. "a single-axis chart
+    //    with an EXPLICIT binding still emits" states that coupling by name.
+    //  - Dropping the `axes.length == 1` clause on its own changes nothing any
+    //    test can see: a document declaring two axes with no series bound is
+    //    rejected a layer earlier, by the grammar's own unboundAxis
+    //    diagnostic, because lowering binds every unbound mark to `axes.first`
+    //    and leaves the second axis with nothing measuring against it. That
+    //    half really is defence in depth, and no test attributes a refusal to
+    //    it. Dropping BOTH clauses together DOES fail (shape 3, multi-axis),
+    //    so the pair is guarded even though this half alone is not.
+    //  - Normalising BOTH sides instead — the "null means axes.first" shape —
+    //    makes the mixed-binding document emit and fails "a MIXED binding is
+    //    still refused". That guard pins the ASYMMETRY of the comparison
+    //    below, NOT this gate: it stays green under every widening of the gate,
+    //    up to and including deleting it outright, because the captured side is
+    //    never stripped and its binding always has to be met.
     final legacySingleAxis =
         configuration.axes.length == 1 &&
         configuration.series.every(
@@ -2035,36 +2048,14 @@ class _GrammarChainEmitter {
   /// [series] with its Y-axis binding removed, for the legacy single-axis
   /// comparison in [_firstMismatch].
   ///
-  /// `ChartSeries.copyWith` merges every field with `??` and so cannot null one
-  /// out; the concrete families carry the `clearYAxisId`/`clearYAxisConfig`
-  /// flags that can. The family gate above guarantees only these five reach the
-  /// Cartesian path, so the fallback is unreachable — and it returns [series]
-  /// UNCHANGED, which leaves the binding in place and makes an unknown family
-  /// fail the comparison rather than slip through it.
+  /// The family list is [seriesWithoutAxisBinding]'s, shared with `BravenPlot`
+  /// so the mount and this comparison can never disagree about which families
+  /// can be unbound — see that function's docstring for what drift would cost.
+  /// The fallback is this side's, and it is the OPPOSITE one: a family the
+  /// helper cannot unbind is returned UNCHANGED, so it keeps its binding and
+  /// FAILS the comparison rather than slipping through it.
   static ChartSeries _withoutAxisBinding(ChartSeries series) =>
-      switch (series) {
-        LineChartSeries() => series.copyWith(
-          clearYAxisId: true,
-          clearYAxisConfig: true,
-        ),
-        AreaChartSeries() => series.copyWith(
-          clearYAxisId: true,
-          clearYAxisConfig: true,
-        ),
-        BarChartSeries() => series.copyWith(
-          clearYAxisId: true,
-          clearYAxisConfig: true,
-        ),
-        ScatterChartSeries() => series.copyWith(
-          clearYAxisId: true,
-          clearYAxisConfig: true,
-        ),
-        CandlestickChartSeries() => series.copyWith(
-          clearYAxisId: true,
-          clearYAxisConfig: true,
-        ),
-        _ => series,
-      };
+      seriesWithoutAxisBinding(series) ?? series;
 
   /// The first option set on [expected] that the [lowered] series does not
   /// carry, phrased for a diagnostic, or null when the two differ only in

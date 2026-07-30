@@ -40,13 +40,24 @@ import 'plot_spec.dart';
 /// exactly the objects they already understand, and none of them knows the
 /// grammar layer exists.
 ///
-/// Note for the `BravenPlot` widget (Task 11): [yAxes] is the RESOLVED axis
-/// list, and every entry is also attached to at least one series through
-/// `ChartSeries.yAxisConfig`, which is what activates the multi-axis path.
-/// The widget passes [series], [annotations], [xAxis], [interaction] and
-/// [theme] to `BravenChartPlus` and must NOT pass a widget-level `yAxis`:
-/// doing so would re-enter the legacy single-axis path this lowering
-/// deliberately avoids.
+/// Note for the `BravenPlot` widget: [yAxes] is the RESOLVED axis list, and
+/// every entry is also attached to at least one series through
+/// `ChartSeries.yAxisConfig`, which is what activates the multi-axis path. The
+/// widget passes [series], [annotations], [xAxis], [interaction] and [theme] to
+/// `BravenChartPlus`.
+///
+/// It passes a widget-level `yAxis` in exactly ONE shape, and that is
+/// deliberate — this note previously forbade it outright. When the lowered plot
+/// declares one axis and no mark names it, the widget re-mounts the plot the
+/// way a config author writes it: `yAxis:` set and the series' bindings
+/// stripped. That is not "re-entering" a path the lowering avoids, it is
+/// reproducing the chart the chain was reversed FROM. Without it every
+/// single-axis chain hands back a document carrying `series[*].axisId` plus
+/// `inlineAxis` that the equivalent config chart does not have, and the
+/// grammar's round trip cannot be gated on document equality. Every other
+/// shape — several axes, or a mark naming its axis — still gets no widget-level
+/// `yAxis` at all, and a `BravenFacetPlot` panel is held to the multi-axis
+/// mount explicitly. See `braven_plot.dart` and `FacetPanelScope`.
 class LoweredPlot {
   /// Bundles one lowering result.
   const LoweredPlot({
@@ -165,10 +176,14 @@ final PointAnnotation _pointDefaults = PointAnnotation(
 ///
 /// ## Guarantees
 ///
-/// * Every chart takes the MULTI-AXIS path. [PlotSpec.yAxes] defaults to a
+/// * Every LOWERING takes the multi-axis path. [PlotSpec.yAxes] defaults to a
 ///   single left axis, each axis gets a resolved id (`axis-<index>` when the
 ///   caller left it empty), and every series carries both `yAxisId` and the
-///   matching `yAxisConfig`.
+///   matching `yAxisConfig`. This is a guarantee about what [LoweredPlot]
+///   holds, NOT about how the chart is mounted: `BravenPlot` re-mounts the
+///   one-axis-no-explicit-binding shape as the legacy single-axis chart (see
+///   [LoweredPlot]'s own note). Lowering itself never produces an unbound
+///   series.
 /// * A mark without an `id` becomes `mark-<index>`, counting trend marks, so
 ///   ids are stable against restyling and unaffected by which marks are
 ///   geometries.

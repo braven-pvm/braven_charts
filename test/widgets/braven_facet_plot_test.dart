@@ -38,7 +38,9 @@ Widget host(Widget child) => MaterialApp(
 );
 
 void main() {
-  testWidgets('renders one BravenPlot per distinct facet value', (tester) async {
+  testWidgets('renders one BravenPlot per distinct facet value', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         const BravenFacetPlot<Row>(
@@ -152,8 +154,9 @@ void main() {
   });
 
   group('synchronized interaction', () {
-    List<BravenPlot<Row>> panelPlots(WidgetTester tester) =>
-        tester.widgetList<BravenPlot<Row>>(find.byType(BravenPlot<Row>)).toList();
+    List<BravenPlot<Row>> panelPlots(WidgetTester tester) => tester
+        .widgetList<BravenPlot<Row>>(find.byType(BravenPlot<Row>))
+        .toList();
 
     testWidgets('fixed scales wire every panel to ONE shared controller', (
       tester,
@@ -171,8 +174,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final controllers =
-          panelPlots(tester).map((p) => p.interactionGroupController).toSet();
+      final controllers = panelPlots(
+        tester,
+      ).map((p) => p.interactionGroupController).toSet();
       expect(controllers, hasLength(1));
       expect(controllers.single, isNotNull);
     });
@@ -238,6 +242,85 @@ void main() {
       await tester.pump();
 
       expect(controller.cursorX, closeTo(dataX, 0.0001));
+    });
+  });
+
+  group('panel mount', () {
+    testWidgets('a facet panel keeps the multi-axis mount', (tester) async {
+      // A facet panel's spec is exactly the shape the legacy single-axis mount
+      // in `braven_plot.dart` claims — one declared (or synthesized) axis, no
+      // mark naming it — so without a gate it would be re-mounted with a
+      // widget-level `yAxis` and unbound series.
+      //
+      // It must NOT be. The two mounts do not render the same chart: the
+      // widget-level axis honours `min`/`max` while an inline `yAxisConfig`
+      // does not, so re-mounting a panel changes what every faceted chart
+      // draws — measured at 11.94% of the `grammar_faceting_fixed` golden.
+      // That difference is a SEPARATE defect (`FacetScales.fixed` never
+      // reaching the render through the multi-axis path) and fixing it is not
+      // this seam's job, so the seam is gated off inside a panel and the
+      // faceted render is left exactly as it was.
+      await tester.pumpWidget(
+        host(
+          const BravenFacetPlot<Row>(
+            PlotSpec<Row>(
+              data: rows,
+              marks: <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+              facet: FacetSpec<Row>(by: rowZone),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final charts = tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList();
+      expect(charts, hasLength(3));
+      for (final chart in charts) {
+        expect(chart.yAxis, isNull);
+        expect(chart.series.single.yAxisId, isNotNull);
+        // The shared range `FacetScales.fixed` injects still reaches the chart
+        // the only way it ever has — through the inline axis config.
+        expect(chart.series.single.yAxisConfig?.min, 180);
+        expect(chart.series.single.yAxisConfig?.max, 300);
+      }
+    });
+
+    testWidgets('a plain BravenPlot of the SAME spec still mounts the legacy '
+        'shape — the gate is the panel, not the spec', (tester) async {
+      // The control for the test above: identical single-axis spec, mounted
+      // outside a facet grid, keeps the legacy mount this slice introduced.
+      // Without this, "facet panels keep the multi-axis mount" could be
+      // satisfied by the seam being broken everywhere.
+      await tester.pumpWidget(
+        host(
+          BravenPlot<Row>(
+            PlotSpec<Row>(
+              data: rows,
+              marks: const <Mark<Row>>[LineMark<Row>(x: rowT, y: rowPower)],
+              yAxes: <YAxisConfig>[
+                YAxisConfig.withId(
+                  id: 'y',
+                  position: YAxisPosition.left,
+                  min: 180,
+                  max: 300,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      expect(chart.yAxis?.id, 'y');
+      expect(chart.series.single.yAxisId, isNull);
+      expect(chart.series.single.yAxisConfig, isNull);
     });
   });
 }

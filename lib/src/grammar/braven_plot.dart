@@ -6,14 +6,15 @@ import 'package:flutter/widgets.dart';
 import '../braven_chart_plus.dart';
 import '../controllers/chart_interaction_group_controller.dart';
 import '../models/braven_chart_controller.dart';
-import '../models/candlestick_chart_series.dart';
 import '../models/chart_series.dart';
 import '../models/chart_state_config.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/polar_chart_config.dart';
+import 'facet_panel_scope.dart';
 import 'grammar_diagnostics.dart';
 import 'plot_lowering.dart';
 import 'plot_spec.dart';
+import 'series_axis_unbinding.dart';
 
 /// Renders a [PlotSpec] as an ordinary Braven chart.
 ///
@@ -53,6 +54,18 @@ import 'plot_spec.dart';
 /// differs by `series[*].axisId` plus `inlineAxis` and cannot be gated by
 /// document equality. This widget still does not EXPOSE a `yAxis` parameter:
 /// the axis comes from the spec either way.
+///
+/// The visible consequence, and it is intended: a one-axis chain now renders
+/// AS the legacy chart, Y-axis labels included. `AxisColorResolver` tints an
+/// axis from the first series BOUND to it, and the legacy chart binds none, so
+/// the tick and axis labels take the default grey instead of the series colour
+/// — exactly what the config chart this chain reverses to has always drawn.
+///
+/// One exception to the exception: a panel of a [BravenFacetPlot] keeps the
+/// multi-axis mount. Its spec has the legacy shape, but faceting delivers the
+/// shared range `FacetScales.fixed` computes through the inline axis config,
+/// and switching mounts would start applying a range the chart has never
+/// applied. See `FacetPanelScope`.
 ///
 /// ## Empty data
 ///
@@ -98,7 +111,15 @@ class BravenPlot<T> extends StatelessWidget {
     // A chain declaring exactly one axis that no mark binds to explicitly is
     // the grammar's spelling of the legacy single-axis chart. Non-null here
     // means "mount it that way"; null keeps today's multi-axis mount verbatim.
-    final legacySeries = _legacySingleAxisSeries<T>(spec, lowered);
+    //
+    // A FACET PANEL is excluded: its spec has that same shape, but the shared
+    // range `FacetScales.fixed` injects reaches the chart only through the
+    // inline axis config, and a widget-level axis honours `min`/`max` where an
+    // inline one does not — so re-mounting a panel would change what every
+    // faceted chart draws. See `FacetPanelScope`.
+    final legacySeries = FacetPanelScope.isPanel(context)
+        ? null
+        : _legacySingleAxisSeries<T>(spec, lowered);
 
     return BravenChartPlus(
       series: legacySeries ?? lowered?.series ?? const <ChartSeries>[],
@@ -156,7 +177,7 @@ List<ChartSeries>? _legacySingleAxisSeries<T>(
   if (spec.marks.any((mark) => mark.yAxisId != null)) return null;
   final unbound = <ChartSeries>[];
   for (final series in lowered.series) {
-    final stripped = _withoutAxisBinding(series);
+    final stripped = seriesWithoutAxisBinding(series);
     // A family that cannot express an unbound series must not be mounted
     // half-legacy — a widget-level axis beside a still-bound series is a third
     // shape, neither the legacy chart nor the multi-axis one. Fall back to the
@@ -166,34 +187,3 @@ List<ChartSeries>? _legacySingleAxisSeries<T>(
   }
   return unbound;
 }
-
-/// [series] without its Y-axis binding, or null when its family's `copyWith`
-/// cannot clear one.
-///
-/// `ChartSeries.copyWith` merges with `??` and so cannot null a field out; the
-/// concrete families carry the `clearYAxisId`/`clearYAxisConfig` flags that
-/// can. Rebuilding here rather than adding a base-class clear keeps this fix
-/// out of the config surface entirely.
-ChartSeries? _withoutAxisBinding(ChartSeries series) => switch (series) {
-  LineChartSeries() => series.copyWith(
-    clearYAxisId: true,
-    clearYAxisConfig: true,
-  ),
-  AreaChartSeries() => series.copyWith(
-    clearYAxisId: true,
-    clearYAxisConfig: true,
-  ),
-  BarChartSeries() => series.copyWith(
-    clearYAxisId: true,
-    clearYAxisConfig: true,
-  ),
-  ScatterChartSeries() => series.copyWith(
-    clearYAxisId: true,
-    clearYAxisConfig: true,
-  ),
-  CandlestickChartSeries() => series.copyWith(
-    clearYAxisId: true,
-    clearYAxisConfig: true,
-  ),
-  _ => null,
-};

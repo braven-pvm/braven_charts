@@ -10,6 +10,11 @@
 /// the one taken, and that the empty-data contract holds.
 library;
 
+import 'dart:typed_data';
+import 'dart:ui' show ImageByteFormat;
+
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/annotation_elements.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
@@ -106,6 +111,34 @@ ChartRenderBox renderBoxOf(WidgetTester tester) =>
 
 Iterable<SeriesElement> seriesElements(WidgetTester tester) =>
     renderBoxOf(tester).debugElements.whereType<SeriesElement>();
+
+/// The raw RGBA of [chart] rendered at the fixed [host] size.
+///
+/// Used to compare two MOUNTS of the same chart. A golden cannot do this job:
+/// every grammar golden runs at a 3.5% cross-platform antialiasing tolerance,
+/// and the difference between the mounts is a gutter-sized recolour well under
+/// it. Two images produced in the same test at the same size are exactly
+/// comparable, so equality is asserted on the bytes.
+Future<Uint8List> _renderBytes(
+  WidgetTester tester,
+  String probe,
+  Widget chart,
+) async {
+  final key = ValueKey<String>(probe);
+  await tester.pumpWidget(host(RepaintBoundary(key: key, child: chart)));
+  await tester.pumpAndSettle();
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  // `toImage` is REAL async — it never completes inside a widget test's
+  // fake-async zone — so it has to run through `runAsync`, the same escape
+  // hatch `matchesGoldenFile` uses.
+  final bytes = await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+    image.dispose();
+    return data!.buffer.asUint8List();
+  });
+  return bytes!;
+}
 
 void main() {
   group('every mark family pumps and paints', () {
@@ -393,6 +426,79 @@ void main() {
         'left',
         'right',
       ]);
+    });
+
+    testWidgets('a single-axis chain renders the SAME pixels as the config '
+        'chart it reverses to', (tester) async {
+      // The mount change is not document-only: it changes what a chain-built
+      // single-axis chart DRAWS, and this is the contract that replaces the old
+      // appearance. `AxisColorResolver` tints an axis from the first series
+      // BOUND to it (`y_axis_config.dart`: "If null, uses the color of the
+      // first bound series"), and the legacy chart binds none, so the Y tick
+      // and axis labels take the resolver's default grey instead of the series
+      // colour. That is not a regression to be hidden — it is the point: the
+      // chain now renders the very chart it reverses to, label colours
+      // included.
+      //
+      // Nothing else pinned this. The grammar goldens are exactly this shape
+      // and they tolerate 3.5%, while the recolour is confined to the Y-label
+      // gutter and measures ~1.4%, so it passed straight through them.
+      final chain = await _renderBytes(
+        tester,
+        'chain',
+        BravenChart.of(rows)
+            .x(rowT)
+            .yAxis(YAxisConfig.withId(id: 'y', position: YAxisPosition.left))
+            .geomLine(y: rowPower, id: 'power', color: const Color(0xFF2563EB))
+            .build(),
+      );
+      final config = await _renderBytes(
+        tester,
+        'config',
+        BravenChartPlus(
+          yAxis: YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 180),
+                ChartDataPoint(x: 1, y: 220),
+                ChartDataPoint(x: 2, y: 260),
+              ],
+              color: Color(0xFF2563EB),
+            ),
+          ],
+        ),
+      );
+      expect(chain, config);
+
+      // The control, and the reason the assertion above is not vacuous: the
+      // mount this chain used to take renders a DIFFERENT chart. Same axis,
+      // same series, delivered as an inline `yAxisConfig` — the axis is now
+      // tinted by its bound series and the two images diverge.
+      final multiAxis = await _renderBytes(
+        tester,
+        'multi',
+        BravenChartPlus(
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              points: const <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 180),
+                ChartDataPoint(x: 1, y: 220),
+                ChartDataPoint(x: 2, y: 260),
+              ],
+              color: const Color(0xFF2563EB),
+              yAxisId: 'y',
+              yAxisConfig: YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+              ),
+            ),
+          ],
+        ),
+      );
+      expect(multiAxis, isNot(chain));
     });
 
     testWidgets('one axis with an EXPLICIT binding is not the legacy shape', (

@@ -7234,9 +7234,6 @@ void main() {
         fragments: <String>[
           'BravenChart.of(rows)',
           'YAxisConfig.withId(',
-          "id: 'y'",
-          "label: 'Power'",
-          "unit: 'W'",
           '.geomLine(',
         ],
         original: (controller) => BravenChartPlus(
@@ -7285,10 +7282,26 @@ void main() {
       // passed, because the rebuilt twin is hand-written, not compiled from
       // this text.
       expect(generated.source, isNot(contains('yAxisId')));
+      // The AXIS is asserted as a whole literal, not as fragments. `unit:` is a
+      // field of both `YAxisConfig` and the geom verb, and this chart carries
+      // 'W' on both, so a bare `contains("unit: 'W'")` is satisfied by the geom
+      // alone and says nothing about the axis — proven by mutation: emitting
+      // `null` for `axis.unit` left that fragment green. The complete argument
+      // list fails on a dropped field, an extra field, a wrong value and a
+      // reordering alike.
+      expect(
+        literalArguments(generated.source, 'YAxisConfig.withId('),
+        <String>[
+          "id: 'y',",
+          'position: YAxisPosition.left,',
+          "label: 'Power',",
+          "unit: 'W',",
+        ],
+      );
     });
 
     testWidgets(
-      'a MIXED binding is still refused — the normalisation is narrow',
+      'a MIXED binding is still refused — only the LOWERED side is normalised',
       (tester) async {
         // One series bound through an inline axis config, one left unbound. The
         // captured document keeps that difference — `getEffectiveYAxes` returns
@@ -7296,8 +7309,15 @@ void main() {
         // series to a synthetic 'primary_axis' rather than to the inline one — so
         // treating the unbound series as bound to the other's axis renders a
         // DIFFERENT chart (measured: 4265 of 960000 pixels differ under
-        // normalizationMode.perSeries). This shape must therefore stay refused,
-        // and it is what fails if the legacy normalisation is ever widened.
+        // normalizationMode.perSeries). This shape must therefore stay refused.
+        //
+        // What this pins is the ASYMMETRY of `_firstMismatch`'s comparison, not
+        // the gate in front of it. Measured by mutation: normalising BOTH sides
+        // — the "a null yAxisId means axes.first" shape — fails this test,
+        // while widening the gate, up to deleting it outright, leaves it green,
+        // because the captured side is never stripped and its binding always
+        // has to be met. The gate's own coupling is stated by "a single-axis
+        // chart with an EXPLICIT binding still emits" below.
         final snapshot = await snapshotOf(
           tester,
           (controller) => BravenChartPlus(
@@ -7335,21 +7355,82 @@ void main() {
       },
     );
 
+    testWidgets('a single-axis chart with an EXPLICIT binding still emits', (
+      tester,
+    ) async {
+      // The gate's positive half, stated by name so the coupling is visible
+      // instead of incidental. ONE declared axis, and the captured series is
+      // bound to it — the multi-axis mount, which `BravenPlot` keeps whenever a
+      // mark names its axis.
+      //
+      // This chart emits ONLY because the gate carries its all-unbound clause.
+      // Drop that clause and `legacySingleAxis` is true here too, the LOWERED
+      // series is stripped of the binding the CAPTURED one still carries, the
+      // comparison can never be met, and this reproducible chart is refused
+      // with the axis sentence. Measured: that mutation fails this test and
+      // round-trip shapes 5, 29b, 29c and 29d, and NOTHING else.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'explicitly_bound_single_axis',
+        fragments: <String>['BravenChart.of(rows)', '.geomLine('],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              yAxisId: 'power-axis',
+              yAxisConfig: YAxisConfig.withId(
+                id: 'power-axis',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+              points: const <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'power-axis',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(id: 'power', y: (row) => row.power, yAxisId: 'power-axis')
+            .build(bravenChartController: controller),
+      );
+      // The proof never reads the emitted text, and the twin above is
+      // hand-written, so the binding that makes this the multi-axis shape has
+      // to be asserted on the text itself: without it the emitted chain would
+      // mount the LEGACY shape and hand back a document with no `axisId` and no
+      // `inlineAxis`, while every assertion above still passed.
+      expect(generated.source, contains("yAxisId: 'power-axis'"));
+    });
+
     testWidgets('TWO declared axes with every series unbound is still refused', (
       tester,
     ) async {
-      // The `axes.length == 1` half of the legacy gate, stated as a boundary.
-      // `BravenPlot` mounts the legacy shape only when the chain declares
-      // EXACTLY ONE axis, so a document that declares two while binding no
-      // series must not be normalised into an unbound chain: that chain would
-      // take the multi-axis mount and hand back `series[*].axisId` plus
-      // `inlineAxis` the captured document does not have.
+      // The boundary the `axes.length == 1` half of the gate describes, stated
+      // as an outcome. `BravenPlot` mounts the legacy shape only when the chain
+      // declares EXACTLY ONE axis, so a document that declares two while
+      // binding no series must not be normalised into an unbound chain: that
+      // chain would take the multi-axis mount and hand back `series[*].axisId`
+      // plus `inlineAxis` the captured document does not have.
       //
-      // It is refused a layer EARLIER than the gate, and the assertion says so
-      // rather than pretending the gate is what catches it: lowering binds
-      // every unbound mark to `axes.first`, which leaves the second axis with
-      // nothing measuring against it, and the grammar layer's own unboundAxis
-      // diagnostic rejects the reconstructed spec before `_firstMismatch` runs.
+      // This test does NOT guard that clause, and the assertion says so rather
+      // than pretending otherwise: the refusal comes a layer EARLIER, because
+      // lowering binds every unbound mark to `axes.first`, which leaves the
+      // second axis with nothing measuring against it, and the grammar layer's
+      // own unboundAxis diagnostic rejects the reconstructed spec before
+      // `_firstMismatch` runs. Measured by mutation: dropping the
+      // `axes.length == 1` clause leaves this test — and every other test in
+      // this file — green. That clause is defence in depth; the outcome below
+      // is what actually has to hold.
       //
       // The render pipeline never builds this shape — `getEffectiveYAxes`
       // returns the widget-level axis alone while no series carries an inline

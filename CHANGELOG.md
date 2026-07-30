@@ -61,8 +61,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which have no unit, so they structurally cannot carry one. Existing code is
   unaffected; `unit` remains readable on every radial mark exactly as before.
 
+- Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
+  `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
+  per-series binding — emits a `BravenChart` chain instead of being refused
+  with the axis sentence. Only a chart that binds SOME series and not others
+  still reaches that refusal.
+
 ### Changed
 
+- **`BravenPlot` mounts a single-axis chain as the legacy single-axis chart.**
+  When a spec declares exactly one Y axis and no mark names it, the axis now
+  reaches `BravenChartPlus` as a widget-level `yAxis` with the series left
+  unbound, instead of as an inline `yAxisConfig` on every series. Two
+  user-visible consequences, both intended — this is what makes a chain and the
+  config chart it reverses to the SAME chart rather than merely similar ones:
+  - **Rendering.** The Y-axis tick and axis labels are no longer tinted with
+    the series colour. An axis takes its colour from the first series BOUND to
+    it, and the legacy chart binds none, so the labels render in the default
+    grey — exactly as they always have for the hand-written `BravenChartPlus`
+    this shape mirrors. The plot area, gridlines, legend and X axis are
+    unchanged.
+  - **Extracted documents.** `BravenChartController.extractDocument()` on a
+    single-axis chain no longer sets `series[*].axisId` or
+    `series[*].inlineAxis`; the axis appears once, in `axes`. Hosts that
+    persist or diff these documents will see the shape change. It is a fix, not
+    a new capability: the document now matches the config chart's.
+
+  Charts with several declared axes, and one-axis charts whose mark names its
+  axis, keep the multi-axis mount verbatim. A `BravenFacetPlot` panel also
+  keeps it: faceting delivers the shared range `FacetScales.fixed` computes
+  through the inline axis config, so switching a panel's mount would change
+  what every faceted chart draws.
 - Generated Dart source now also reverses per-slice colours, per-ring data
   labels and non-conforming concentric ring ids, and carries a donut's captured
   `DonutCenterContent` verbatim — `labelStyle` and `valueStyle` included — so a
