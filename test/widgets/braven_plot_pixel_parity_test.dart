@@ -31,6 +31,29 @@
 /// mounts genuinely draw different charts and the chain has to pick the right
 /// one.
 ///
+/// ## Two questions this file keeps apart
+///
+/// Everything above answers only the FIRST of these, and the two have
+/// different answers:
+///
+///  * **Grammar-vs-config parity** — does a chart the grammar mounts render
+///    like the config chart it claims to be? Shapes (a)-(h) and the `authored
+///    == config` half of the divergence table: **0 differing pixels, every
+///    shape** — including all six that changed appearance. That is the claim
+///    the Source pane sells, and it is true.
+///  * **Before-vs-after** — does an AUTHORED `PlotSpec`/`BravenChart` render
+///    like it did BEFORE `BravenPlot` began mounting the single-axis shape as
+///    the legacy chart? For six shapes it does NOT, and those are the pixels
+///    an upgrading user actually sees.
+///
+/// Answering the first and citing it for the second is the exact mistake the
+/// divergence table exists to prevent. The table asserts BOTH halves for every
+/// shape — the parity zero, and the size of the before/after change with the
+/// measured number beside it — so "which shapes change appearance" is
+/// something this file OWNS rather than something a reader discovers by
+/// reverting the branch. [previousMount] is what makes that possible in
+/// process.
+///
 /// ## Why every config fixture spells its theme out
 ///
 /// Every fixture below passes `theme: ChartTheme.light` because the emitter
@@ -562,6 +585,215 @@ Widget shapeEChain(BravenChartController? controller) => BravenChart.of(rows)
     .theme(ChartTheme.light)
     .build(bravenChartController: controller);
 
+// ===========================================================================
+// The mount divergence table
+//
+// Shapes (a)-(h) compare two charts that both exist NOW. This table compares
+// the same authored spec against the chart it drew BEFORE `BravenPlot` began
+// mounting the single-axis shape as the legacy chart — the only comparison
+// that answers "what changes when I upgrade".
+// ===========================================================================
+
+/// The authored spec every row of the table is built from: one line mark, and
+/// at most one Y axis that no mark binds to — the shape
+/// `_legacySingleAxisSeries` re-mounts.
+PlotSpec<Row> singleAxisSpec(YAxisConfig? axis, {GridConfig? grid}) =>
+    PlotSpec<Row>(
+      data: rows,
+      theme: ChartTheme.light,
+      grid: grid,
+      yAxes: axis == null ? const <YAxisConfig>[] : <YAxisConfig>[axis],
+      marks: const <Mark<Row>>[
+        LineMark<Row>(
+          x: rowT,
+          y: rowPower,
+          id: 'power',
+          name: 'Power',
+          color: powerColor,
+        ),
+      ],
+    );
+
+/// The config chart [singleAxisSpec] claims to be: the same axis mounted at the
+/// WIDGET level, with the series left unbound.
+Widget configChart(YAxisConfig? axis) => BravenChartPlus(
+  theme: ChartTheme.light,
+  yAxis: axis,
+  series: const <ChartSeries>[
+    LineChartSeries(
+      id: 'power',
+      name: 'Power',
+      points: powerPoints,
+      color: powerColor,
+    ),
+  ],
+);
+
+/// [spec] mounted the way `BravenPlot` mounted it BEFORE the legacy
+/// single-axis mount landed: every lowered series carrying its own inline
+/// `yAxisConfig`, and no widget-level `yAxis` at all.
+///
+/// This is `BravenPlot.build`'s previous body for every field these fixtures
+/// set — series and annotations off the lowering, everything else off the spec
+/// — which makes the OLD picture reproducible in process. The series come from
+/// `spec.lower()` rather than being written out by hand, so this tracks the
+/// lowering instead of a transcription of it that could rot.
+///
+/// Verified, not assumed: `lib/src/grammar/braven_plot.dart` and
+/// `lib/src/rendering/modules/multi_axis_manager.dart` were reverted to
+/// `origin/master`, all nine shapes captured at this host, and every frame
+/// compared against this helper's — **0 of 240,000 differing pixels on all
+/// nine**, and the same divergence table this file asserts below. If that
+/// equivalence ever breaks, this helper is the thing to re-derive.
+Widget previousMount(PlotSpec<Row> spec) {
+  final lowered = spec.lower();
+  return BravenChartPlus(
+    series: lowered.series,
+    annotations: lowered.annotations,
+    xAxisConfig: spec.xAxis,
+    interactionConfig: lowered.interaction,
+    theme: spec.theme,
+    grid: spec.grid,
+    title: spec.title,
+    subtitle: spec.subtitle,
+    showLegend: spec.showLegend ?? true,
+  );
+}
+
+/// One row of the divergence table.
+typedef MountShape = ({
+  /// How the row is named in the CHANGELOG and in test output.
+  String name,
+
+  /// The single axis the authored spec declares, or null for a spec that
+  /// declares no `yAxes` at all.
+  YAxisConfig? axis,
+
+  /// Differing pixels of 240,000 MEASURED for this row against
+  /// [previousMount], and the part of that landing outside the 80-column
+  /// Y-label gutter. Recorded so a reader sees the size of the change without
+  /// running anything. The assertions use the floors, so a renderer that
+  /// shifts an antialiased edge does not turn this file red.
+  int measuredTotal,
+  int measuredPlotArea,
+
+  /// Floors, set a little under the measured values. A [floorTotal] of 0 means
+  /// this shape is asserted UNCHANGED — exactly 0, not a floor.
+  int floorTotal,
+  int floorPlotArea,
+
+  /// What the old mount did with the field, in one clause. Each is pinned by a
+  /// mechanism test below.
+  String cause,
+});
+
+YAxisConfig plainAxis() =>
+    YAxisConfig(position: YAxisPosition.left, label: 'Power');
+
+/// Every shape whose appearance the mount decides, measured at this file's
+/// 600x400 host. The three zero rows are as load-bearing as the six non-zero
+/// ones: they are the "unchanged" half of the published claim.
+final mountShapes = <MountShape>[
+  (
+    name: 'no axis declared',
+    axis: null,
+    measuredTotal: 0,
+    measuredPlotArea: 0,
+    floorTotal: 0,
+    floorPlotArea: 0,
+    cause: 'nothing to apply either way',
+  ),
+  (
+    name: 'a plain labelled axis',
+    axis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+    measuredTotal: 0,
+    measuredPlotArea: 0,
+    floorTotal: 0,
+    floorPlotArea: 0,
+    cause: 'nothing to apply either way',
+  ),
+  (
+    name: 'an axis the author NAMED',
+    axis: YAxisConfig.withId(
+      id: 'watts',
+      position: YAxisPosition.left,
+      label: 'Power',
+    ),
+    measuredTotal: 0,
+    measuredPlotArea: 0,
+    floorTotal: 0,
+    floorPlotArea: 0,
+    cause: 'nothing to apply either way',
+  ),
+  (
+    name: 'min AND max',
+    axis: YAxisConfig(
+      position: YAxisPosition.left,
+      label: 'Power',
+      min: 100,
+      max: 300,
+    ),
+    measuredTotal: 25885,
+    measuredPlotArea: 20770,
+    floorTotal: 25000,
+    floorPlotArea: 20000,
+    cause: 'the old mount applied no range at all',
+  ),
+  (
+    name: 'min only',
+    axis: YAxisConfig(position: YAxisPosition.left, label: 'Power', min: 100),
+    measuredTotal: 25126,
+    measuredPlotArea: 20284,
+    floorTotal: 24000,
+    floorPlotArea: 19500,
+    cause: 'the old mount applied no range at all',
+  ),
+  (
+    name: 'max only',
+    axis: YAxisConfig(position: YAxisPosition.left, label: 'Power', max: 300),
+    measuredTotal: 23196,
+    measuredPlotArea: 17854,
+    floorTotal: 22000,
+    floorPlotArea: 17000,
+    cause: 'the old mount applied no range at all',
+  ),
+  (
+    name: 'scaleType: AxisScaleType.log',
+    axis: YAxisConfig(
+      position: YAxisPosition.left,
+      label: 'Power',
+      scaleType: AxisScaleType.log,
+    ),
+    measuredTotal: 11948,
+    measuredPlotArea: 11745,
+    floorTotal: 11000,
+    floorPlotArea: 11000,
+    cause: 'the old mount drew log tick labels over a LINEAR plot',
+  ),
+  (
+    name: 'position: YAxisPosition.hidden',
+    axis: YAxisConfig(position: YAxisPosition.hidden, label: 'Power'),
+    measuredTotal: 9721,
+    measuredPlotArea: 8532,
+    floorTotal: 9000,
+    floorPlotArea: 8000,
+    cause: 'the old mount kept the hidden axis\' horizontal grid lines',
+  ),
+  (
+    name: 'visible: false',
+    axis: YAxisConfig(
+      position: YAxisPosition.left,
+      label: 'Power',
+      visible: false,
+    ),
+    measuredTotal: 9721,
+    measuredPlotArea: 8532,
+    floorTotal: 9000,
+    floorPlotArea: 8000,
+    cause: 'the old mount kept the hidden axis\' horizontal grid lines',
+  ),
+];
+
 void main() {
   testWidgets('control: the instrument reads 0 on the same widget twice', (
     tester,
@@ -593,13 +825,18 @@ void main() {
     tester,
   ) async {
     // The zeroes below are only meaningful if the mount decision is
-    // observable. Same axis, same series, delivered as an INLINE
+    // observable. Same axis, same series, same theme, delivered as an INLINE
     // `yAxisConfig` instead of a widget-level `yAxis`: the inline path never
     // applies `min`/`max` to the Y domain, so the whole plot area moves.
     // Measured at 25,885 of 240,000 pixels, 20,770 of them OUTSIDE the label
-    // gutter — the divergence a mount that guessed wrong would ship silently,
-    // and the exact cost of declining the legacy mount for a min/max axis
-    // (see `_legacySingleAxisSeries`).
+    // gutter — the divergence a mount that guessed wrong would ship silently.
+    //
+    // The `theme:` on the inline chart is load-bearing and was once missing.
+    // Without it this control compared a themed chart against an UNTHEMED one
+    // and measured 26,903 / 20,951 — the mount divergence plus 2,359 pixels of
+    // the unset-theme legend gap pinned in the last test — while quoting the
+    // 25,885 that belongs to the both-themed pair. Theming both sides isolates
+    // the mount, which is what this control is for.
     final widgetLevel = await renderBytes(
       tester,
       'mount-widget-level',
@@ -609,6 +846,7 @@ void main() {
       tester,
       'mount-inline',
       BravenChartPlus(
+        theme: ChartTheme.light,
         series: <ChartSeries>[
           LineChartSeries(
             id: 'power',
@@ -630,7 +868,7 @@ void main() {
     final diff = pixelDiff(widgetLevel, inline);
     expect(
       diff.total,
-      greaterThan(20000),
+      greaterThan(25000),
       reason:
           'the two mounts are supposed to render different charts; if they '
           'no longer do, every parity assertion in this file has stopped '
@@ -638,7 +876,7 @@ void main() {
     );
     expect(
       diff.total - diff.gutter,
-      greaterThan(15000),
+      greaterThan(20000),
       reason:
           'the min/max divergence must land in the PLOT AREA, not just the '
           'label gutter: ${describeDiff(diff, widgetLevel.length)}',
@@ -791,6 +1029,229 @@ void main() {
           'a dangling binding is supposed to be visible; if it is not, the '
           'authored-path zeroes above have stopped discriminating: '
           '${describeDiff(diff, bound.length)}',
+    );
+  });
+
+  // =========================================================================
+  // The mount divergence table
+  //
+  // Two assertions per shape, because there are two questions:
+  //
+  //  1. the authored spec draws the config chart it claims to be (0 pixels,
+  //     every shape) — the parity claim; and
+  //  2. how much it changed against `previousMount` — the before/after claim,
+  //     which is what an upgrading user sees and what the CHANGELOG publishes.
+  //
+  // Shape (2) is a floor, not an equality, so an antialiasing change does not
+  // turn the file red; the measured value travels in the failure message so
+  // drift is legible when it does.
+  // =========================================================================
+
+  for (final shape in mountShapes) {
+    testWidgets('mount table: ${shape.name}', (tester) async {
+      final spec = singleAxisSpec(shape.axis);
+      final now = await renderBytes(
+        tester,
+        'table-${shape.name}-now',
+        BravenPlot<Row>(spec),
+      );
+      final config = await renderBytes(
+        tester,
+        'table-${shape.name}-config',
+        configChart(shape.axis),
+      );
+      final before = await renderBytes(
+        tester,
+        'table-${shape.name}-before',
+        previousMount(spec),
+      );
+
+      final parity = pixelDiff(now, config);
+      expect(
+        parity.total,
+        0,
+        reason:
+            '"${shape.name}": the authored spec must draw the config chart it '
+            'claims to be — ${describeDiff(parity, config.length)}',
+      );
+
+      final change = pixelDiff(before, now);
+      if (shape.floorTotal == 0) {
+        expect(
+          change.total,
+          0,
+          reason:
+              '"${shape.name}" is published as UNCHANGED by the mount, and it '
+              'is not: ${describeDiff(change, before.length)}. Correct the '
+              'CHANGELOG before touching this expectation.',
+        );
+        return;
+      }
+      expect(
+        change.total,
+        greaterThanOrEqualTo(shape.floorTotal),
+        reason:
+            '"${shape.name}" is published as CHANGED by the mount — measured '
+            '${shape.measuredTotal} of 240,000, ${shape.measuredPlotArea} in '
+            'the plot area, because ${shape.cause}. It no longer changes that '
+            'much: ${describeDiff(change, before.length)}. If the divergence '
+            'has genuinely gone, the CHANGELOG entry goes with it.',
+      );
+      expect(
+        change.total - change.gutter,
+        greaterThanOrEqualTo(shape.floorPlotArea),
+        reason:
+            '"${shape.name}" is published as moving the PLOT AREA, not just '
+            'the label gutter — measured ${shape.measuredPlotArea} of the '
+            '${shape.measuredTotal} differing pixels. It no longer does: '
+            '${describeDiff(change, before.length)}',
+      );
+    });
+  }
+
+  testWidgets('mechanism: the previous mount ignored min/max ENTIRELY', (
+    tester,
+  ) async {
+    // Why the three range rows are published under Fixed and not merely as a
+    // behaviour change: the old mount did not apply a DIFFERENT range, it
+    // applied none. Each ranged axis drew the byte-identical frame to the same
+    // axis carrying no range at all, so an author who wrote `min`/`max` on a
+    // single-axis spec got a chart that silently ignored it.
+    final plain = await renderBytes(
+      tester,
+      'range-none',
+      previousMount(singleAxisSpec(plainAxis())),
+    );
+    for (final ranged in <YAxisConfig>[
+      YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Power',
+        min: 100,
+        max: 300,
+      ),
+      YAxisConfig(position: YAxisPosition.left, label: 'Power', min: 100),
+      YAxisConfig(position: YAxisPosition.left, label: 'Power', max: 300),
+    ]) {
+      final bytes = await renderBytes(
+        tester,
+        'range-${ranged.min}-${ranged.max}',
+        previousMount(singleAxisSpec(ranged)),
+      );
+      final diff = pixelDiff(bytes, plain);
+      expect(
+        diff.total,
+        0,
+        reason:
+            'the old mount is published as ignoring min/max outright '
+            '(min: ${ranged.min}, max: ${ranged.max}), which is what makes '
+            'this a fix rather than a change of degree: '
+            '${describeDiff(diff, plain.length)}',
+      );
+    }
+  });
+
+  testWidgets('mechanism: the previous mount drew LOG ticks over a LINEAR '
+      'plot', (tester) async {
+    // The log row is published under Fixed for a stronger reason than "the
+    // setting was ignored": the chart was MISLABELLED. `BravenChartPlus` reads
+    // the Y scale type off `widget.yAxis` (`braven_chart_plus.dart`), which the
+    // old mount never set, so the data was mapped linearly — while the axis
+    // renderer read the inline config and drew LOG tick labels beside it.
+    //
+    // Measured here as: the old log chart's plot area is byte-identical to a
+    // plain LINEAR chart's, and the only thing that differs is the gutter.
+    final logBefore = await renderBytes(
+      tester,
+      'log-before',
+      previousMount(
+        singleAxisSpec(
+          YAxisConfig(
+            position: YAxisPosition.left,
+            label: 'Power',
+            scaleType: AxisScaleType.log,
+          ),
+        ),
+      ),
+    );
+    final linear = await renderBytes(
+      tester,
+      'log-linear-config',
+      configChart(plainAxis()),
+    );
+    final diff = pixelDiff(logBefore, linear);
+    expect(
+      diff.total - diff.gutter,
+      0,
+      reason:
+          'the old mount is published as leaving the DATA linear for a log '
+          'axis; if the plot area now differs from a linear chart it did '
+          'something to the domain after all: '
+          '${describeDiff(diff, linear.length)}',
+    );
+    expect(
+      diff.gutter,
+      greaterThanOrEqualTo(3000),
+      reason:
+          'and as relabelling the GUTTER with log ticks anyway, which is what '
+          'made the old chart mislabelled rather than merely linear '
+          '(measured 3,996): ${describeDiff(diff, linear.length)}',
+    );
+  });
+
+  testWidgets('mechanism: a hidden axis changed by its HORIZONTAL GRID and '
+      'nothing else', (tester) async {
+    // The hidden/invisible rows are published as a behaviour CHANGE, not a
+    // fix: both mounts hide the axis and both lay the plot area out
+    // identically. What differs is that the old mount kept drawing the hidden
+    // axis' horizontal grid lines and the legacy chart does not.
+    //
+    // Measured by removing the only thing claimed to be at issue: with
+    // `GridConfig(horizontal: false)` the entire divergence is 0.
+    final hidden = YAxisConfig(position: YAxisPosition.hidden, label: 'Power');
+    final withGrid = singleAxisSpec(hidden);
+    final withoutGrid = singleAxisSpec(
+      hidden,
+      grid: const GridConfig(horizontal: false),
+    );
+
+    final gridNow = await renderBytes(
+      tester,
+      'hidden-grid-now',
+      BravenPlot<Row>(withGrid),
+    );
+    final gridBefore = await renderBytes(
+      tester,
+      'hidden-grid-before',
+      previousMount(withGrid),
+    );
+    final gridDiff = pixelDiff(gridBefore, gridNow);
+    expect(
+      gridDiff.total,
+      greaterThanOrEqualTo(9000),
+      reason:
+          'a hidden axis is published as changing appearance (measured 9,721 '
+          'of 240,000): ${describeDiff(gridDiff, gridNow.length)}',
+    );
+
+    final bareNow = await renderBytes(
+      tester,
+      'hidden-nogrid-now',
+      BravenPlot<Row>(withoutGrid),
+    );
+    final bareBefore = await renderBytes(
+      tester,
+      'hidden-nogrid-before',
+      previousMount(withoutGrid),
+    );
+    final bareDiff = pixelDiff(bareBefore, bareNow);
+    expect(
+      bareDiff.total,
+      0,
+      reason:
+          'and that change is published as being ENTIRELY the horizontal '
+          'grid: with the horizontal grid off the two mounts must draw the '
+          'identical frame, so nothing else about a hidden axis moved. '
+          '${describeDiff(bareDiff, bareNow.length)}',
     );
   });
 

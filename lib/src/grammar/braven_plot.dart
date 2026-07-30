@@ -64,6 +64,41 @@ import 'series_axis_unbinding.dart';
 /// the legacy chart's axis IS bound and IS tinted with the series colour —
 /// measured `#2563EB` tick labels for a `#2563EB` line.
 ///
+/// ## Two questions, and only one of them is answered by parity
+///
+/// "A chain reversed from a config chart renders like that chart" is measured
+/// at 0 of 240,000 pixels across eight shapes, and it stays true. It is NOT an
+/// answer to "does an authored spec render like it did before this mount
+/// landed", and quoting it as one is the specific mistake to avoid here.
+///
+/// It does not, for six shapes, because the legacy chart honours axis settings
+/// the inline mount dropped. Measured against the previous mount at a 600x400
+/// host, of 240,000 pixels (the second figure is outside the Y-label gutter):
+///
+/// | authored single-axis shape | changed | in plot area |
+/// |---|---|---|
+/// | `min` AND `max` | 25,885 | 20,770 |
+/// | `min` only | 25,126 | 20,284 |
+/// | `max` only | 23,196 | 17,854 |
+/// | `scaleType: AxisScaleType.log` | 11,948 | 11,745 |
+/// | `position: YAxisPosition.hidden` | 9,721 | 8,532 |
+/// | `visible: false` | 9,721 | 8,532 |
+/// | no axis / a plain labelled axis / a named axis | 0 | 0 |
+///
+/// Three of those are settings the previous mount ignored OUTRIGHT, which is
+/// why they are published as fixes: a ranged axis drew the byte-identical
+/// frame to the same axis carrying no range, and a `log` axis drew log tick
+/// labels over a plot whose data was mapped linearly — `BravenChartPlus` reads
+/// `widget.yAxis?.scaleType ?? AxisScaleType.linear`, and the previous mount
+/// set no `widget.yAxis`. The hidden pair is a behaviour change rather than a
+/// fix: both mounts hide the axis and lay the plot area out identically, and
+/// the whole difference is that the previous mount kept drawing the hidden
+/// axis' horizontal grid.
+///
+/// Every row is asserted, both halves, by the mount divergence table in
+/// `test/widgets/braven_plot_pixel_parity_test.dart`, which rebuilds the
+/// previous mount in process so the comparison needs no revert.
+///
 /// That was true only for an ANONYMOUS widget-level axis until the binding
 /// itself was fixed. `MultiAxisManager.getEffectiveBindings` used to name the
 /// synthetic `'primary_axis'` literally, and that is the id
@@ -258,6 +293,14 @@ YAxisConfig _asAuthoredWidgetAxis(YAxisConfig axis) =>
 ///    range; a declined mount would not. Measured at 25,885 of 240,000 pixels,
 ///    20,770 of them in the plot area — the plot area moves — and the extracted
 ///    documents diverge too, on `series[*].axisId` and `inlineAxis`.
+///
+/// Note what that 25,885 is NOT. It is the distance between the two MOUNTS, so
+/// it is equally the amount an AUTHORED min/max spec changed by when this mount
+/// landed — a user-visible change, published under **Fixed** in `CHANGELOG.md`
+/// because the previous mount applied no range at all. It is not merely the
+/// price tag on an alternative nobody shipped, and citing it only that way is
+/// how the release note came to under-report six changed shapes. The min/max
+/// row is one of those six; the table is on [BravenPlot].
 ///
 /// The faceting case is different in the one way that matters: `FacetScales`
 /// injects its shared range as an INLINE axis on each series, so a panel's

@@ -345,6 +345,20 @@ Unblocks 4 states. **Both halves are required**: the proof normalisation alone l
 > axis that declares `min`/`max`. It removes no refusal anywhere in the suite
 > and costs 25,885 of 240,000 pixels, 20,770 of them in the plot area. The
 > reasoning is committed in `_legacySingleAxisSeries`'s doc.
+>
+> 3. **The pixel zeroes answer PARITY, not before-vs-after.** A chain reversed
+>    from a config chart renders like that chart, 0 of 240,000. An AUTHORED
+>    spec does not render like it did before the mount changed, for six shapes:
+>    `min`+`max` 25,885, `min` only 25,126, `max` only 23,196, `log` 11,948,
+>    `hidden` 9,721, `visible: false` 9,721 (a spec with no axis, a plain
+>    labelled axis and a named axis are 0). The first four are settings the old
+>    mount ignored outright — including a `log` axis that drew log tick labels
+>    over linearly-mapped data — and ship under **Fixed**; the hidden pair is
+>    the hidden axis' horizontal grid and ships under **Changed**. That 25,885
+>    above is the same number seen from the other side: it is the gap between
+>    the mounts, so it is also what an upgrading min/max chart changes by, not
+>    only the cost of the rejected decline. The mount divergence table in
+>    `braven_plot_pixel_parity_test.dart` asserts every row.
 
 ### Task 2.1: `BravenPlot` mounts the legacy single-axis shape
 

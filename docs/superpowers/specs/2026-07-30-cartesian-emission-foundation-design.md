@@ -71,6 +71,22 @@ With both, the emitted chain reproduces the captured document **exactly**, and `
 
 **The invariant is now gated in pixels.** `test/widgets/braven_plot_pixel_parity_test.dart` renders eight shapes at a fixed 600x400 host and compares raw RGBA against the config chart each claims to be, with a determinism control and a discrimination control so the zeroes cannot be vacuous. Document equality stays; it is no longer the whole claim.
 
+**Those zeroes answer parity, NOT before-vs-after — keep the two apart.** "A chain reversed from a config chart renders like that chart" is true at 0 of 240,000 pixels. It says nothing about whether an AUTHORED spec renders like it did *before* the mount changed, and for six shapes it does not, because the legacy chart honours axis settings the inline mount dropped. Measured by reverting `braven_plot.dart` and `multi_axis_manager.dart` to `origin/master` and re-capturing at the same host:
+
+| authored single-axis shape | changed (of 240,000) | in plot area | filed under |
+|---|---|---|---|
+| `min` AND `max` | 25,885 | 20,770 | Fixed |
+| `min` only | 25,126 | 20,284 | Fixed |
+| `max` only | 23,196 | 17,854 | Fixed |
+| `scaleType: AxisScaleType.log` | 11,948 | 11,745 | Fixed |
+| `position: YAxisPosition.hidden` | 9,721 | 8,532 | Changed |
+| `visible: false` | 9,721 | 8,532 | Changed |
+| no axis / plain labelled axis / named axis | 0 | 0 | unchanged |
+
+The four `Fixed` rows are settings the previous mount ignored outright: a ranged axis drew the byte-identical frame to the same axis carrying *no* range, and a `log` axis drew log tick labels over linearly-mapped data (`BravenChartPlus` reads `widget.yAxis?.scaleType ?? AxisScaleType.linear`, and the previous mount set no `widget.yAxis`) — a mislabelled chart, not merely a linear one. The hidden pair is a plain behaviour change: both mounts hide the axis and lay the plot area out identically, and the entire difference is the hidden axis' horizontal grid, which the previous mount kept drawing. Confirmed by removing it — with `GridConfig(horizontal: false)` the two mounts draw the identical frame.
+
+The pixel-parity file now owns this as a **mount divergence table**: every shape asserts both the parity zero and the size of its before/after change, against a `previousMount` helper that rebuilds the old mount in process from `spec.lower()`. That helper was validated against an actual revert — 0 differing pixels on all nine shapes — so "which shapes change appearance" is asserted rather than rediscovered.
+
 ### C. Per-point metadata
 
 | Field | States | Decision |
