@@ -86,30 +86,40 @@ Every showcase workbench page (all 15) shows a **faithful, round-tripping** gram
 
 **And measure EVERY page, not the ones the current slice touches.** Sampling is how the entry below stayed wrong for three slices: every acceptance gate built by 1a/1a′/1a″ is radial, and every round-trip test in `test/unit/source/` authors its original via `BravenChart.of(...)` — which always produces explicit axes — so nothing ever exercised a config-authored Cartesian chart.
 
-**Measured position (2026-07-29 census — 121 states across all 14 workbench-bearing pages, each mounted, its live document read off its own controller, and run through the generator):**
+**Measured position (2026-07-30 re-census, after 1c′ — same instrument and the same 128 probe states as the 2026-07-29 run, each page mounted, its live document read off its own controller, and run through the generator):**
 
-- **Radial: verified emitting.** Pie, Donut, Concentric Donut and Polar Column (8/8 presentations) all emit on the mounted pages, plus the selection lab's four radial families — config-authored, `isComplete: true`, zero warnings. **This half of the claim is real.**
-- **Cartesian: 0 of 117 states emit.** No config-authored Cartesian showcase page has ever emitted a grammar chain. The previous "✅ Cartesian" entry here was never measured and was false.
+- **Radial: verified emitting**, unchanged. Pie, Donut, Concentric Donut and Polar Column (8/8 presentations) all emit on the mounted pages, plus the selection lab's four radial families — config-authored, `isComplete: true`, zero warnings.
+- **Cartesian: 24 of 106 states emit, up from 0.** On the exact denominator 1c′ was sized against — 100 Cartesian states, `ValueSummaryPage` excluded — the number is **20 of 100 against a prediction of 21**. Every Line, Area and Scatter state the prediction named emits, `isComplete: true` and warning-free where the prediction said so.
+- **The one-state shortfall is `Selection|candlestick`.** Per-point `pointKey` was carried on the four Cartesian *geometry* marks (`LineMark`/`AreaMark`/`BarMark`/`ScatterMark`); `CandlestickMark` was out of the slice's scope, and the selection lab's candlestick family keys every candle. The 21 was measured by patching the PROOF only, which normalised that away too — so it was always an upper bound that assumed emission would follow. Filed with the other per-candle metadata below.
+- **`ValueSummaryPage` reaches the generator after all.** The 2026-07-29 note that "seven states never reach the generator" is an artefact of the census instrument extracting with default `ChartDocumentExtractOptions`. The page's own workbench supplies `interactionBindingDescriptors: {'valueSummary.onPlacementChanged': …}`, which is what its Grammar pane uses. Verified at 1c′ HEAD: default and bare options fail `runtime_binding_required`; the page's own options succeed. 6 of its 7 states then reach the generator and **4 emit** (incomplete, on a `runtimeValueOmitted`-style binding warning). Nothing in 1c′ touched that page. **BC-0044 needs re-stating, not closing** — see its register entry.
 
-Blocker distribution over the 117, in gate-firing order:
+Blocker distribution over the **82** Cartesian states still refusing:
 
 | Blocker | States | Home |
 |---|---|---|
-| `unit` — carried by no Cartesian mark | 31 | **1c′** |
-| shared-x alignment — series whose x domains differ | 23 | needs its own design (one row list + total accessors) |
-| bar style | 20 | 1c/1d |
-| legacy single-axis `yAxisId` binding | 17 | **1c′** — proven reconstructable |
-| no range-area mark | 9 | 1b |
-| fill gradient / path animation / render mode / glow / jitter | 8 | 1d |
-| annotations, chart-level options, unbound axis | 9 | mixed |
-| per-candle `candlestickStyle` | 2 | **unrecorded until 2026-07-30** — `CandlestickMark` carries no per-candle style; decide accessor vs named refusal with 1d |
+| bar style | 26 | 1c/1d |
+| shared-x alignment — series whose x domains differ | 21 | needs its own design (one row list + total accessors) |
+| no range-area mark | 8 | 1b |
+| fill gradient | 4 | 1d |
+| annotations with no chain verb (Range/Legend) | 4 | mixed |
+| per-candle metadata on `CandlestickMark` — `pointKey` (1), candle style (2) | 3 | 1d |
+| path animation | 2 | 1d |
+| data-point marker radius | 2 | 1d |
+| `normalizationMode: perSeries` | 2 | mixed |
+| an axis no mark measures against | 2 | mixed |
+| annotation option no V1 mark carries | 2 | mixed |
+| split baseline fill / line glow / marker style / jitter / render mode / `legendStyle` | 6 (1 each) | 1d, mixed |
 
-**After 1c′ lands, the next blockers are `bar style` (26) and shared-x alignment (21)** — together ~60% of everything still refusing. Everything the roadmap files under 1d totals 12. Shared-x needs its own design: one row list plus *total* accessors genuinely cannot express series with divergent x domains.
+**The next blockers are `bar style` (26) and shared-x alignment (21)** — together ~57% of everything still refusing, and unchanged in rank by 1c′ (which took `unit`, the legacy axis binding and the per-point metadata, all now at zero). Everything the roadmap files under 1d totals 19. Shared-x needs its own design: one row list plus *total* accessors genuinely cannot express series with divergent x domains.
 
-**Seven states never reach the generator at all** — the whole of `ValueSummaryPage` fails `extractSourceDocument()`, upstream of every grammar concern. Filed as register item **BC-0044**; excluded from the counts above.
+**Acceptance gates for the Cartesian half now exist**: `example/test/showcase/line_charts_page_grammar_test.dart` and `area_charts_page_grammar_test.dart` mount the real pages, choose presets through the real picker, read the live document off each chart's own controller, pin every emitted mark's WHOLE argument list, assert `unit:` inside the mark's own argument list (it is a `YAxisConfig` field too, so a whole-file `contains` proves nothing), and hold the `dart format` + `dart analyze` compile floor. Both mutations kill them: deleting the `unit` emission fails 3 of the 6, and disabling the legacy-axis normalisation fails all 6.
 
-### 1c′ — Cartesian emission foundation (BC-0040, inserted before 1b)
-Sequenced **ahead of the new marks**, because a new mark lands on a base where its own page still cannot emit: `geomRangeArea` would close 9 of 117 states, and those 9 would still refuse behind `unit`, `fillGradient`, `pathAnimation` and the axis binding. This item takes the widest-reach blockers instead — `unit` on the Cartesian marks, reconstruction of the legacy single-axis binding, and the per-point `pointKey`/`label`/`segmentStyle` metadata that a temporary axis patch exposed as the second-order blocker. Acceptance: at least the Line and Area pages emit on the **mounted page** with a `*_grammar_test.dart` gate matching the radial four, and the census is re-measured and recorded.
+**The 2026-07-29 entry this replaces**, for the record: 0 of 117 Cartesian states emitting, with `unit` (31), the legacy single-axis binding (17) and the per-point metadata as the top 1c′ blockers. The 117/121 counts came from a run that reported `ValueSummaryPage` as unreachable; the 106/100 denominators above are the same probe states counted with that page's own extraction options.
+
+### 1c′ — Cartesian emission foundation (BC-0040, inserted before 1b) — **delivered 2026-07-30**
+Sequenced **ahead of the new marks**, because a new mark lands on a base where its own page still cannot emit: `geomRangeArea` would close 8 of the Cartesian states, and those 8 would still have refused behind `unit`, `fillGradient`, `pathAnimation` and the axis binding. This item took the widest-reach blockers instead — `unit` on the Cartesian marks, reconstruction of the legacy single-axis binding, and the per-point `pointKey`/`label`/`isXOrdered` metadata that a temporary axis patch exposed as the second-order blocker.
+
+Delivered in four slices: a `SeriesMark<T>` sealed intermediate carrying `unit` (which structurally cannot reach the four annotation marks, so "accepted then silently discarded" is unrepresentable); the legacy single-axis binding reconciled on BOTH sides — a strictly-gated proof normalisation *and* a `BravenPlot` mount change — so the emitted chain reproduces the captured **document**, not merely the same pixels; `label`/`pointKey` accessors, an `isXOrdered` flag and an honest named refusal for per-point `segmentStyle`; and the two mounted-page acceptance gates. **Result: 0 → 20 of the 100 Cartesian states the item was sized against, against a prediction of 21** (see the measured position above for the one-state shortfall and its cause). `segmentStyle` was deliberately not carried: measured, it unblocks zero states.
 
 ## Theme 2 — Grammar Depth (deferred v1 backlog, sequenced after coverage)
 
@@ -141,6 +151,8 @@ Each is a v1 slice's explicit "Out of scope (future)":
 
 1. **Theme 1 first, in order 1a → 1a′ → 1a″ → 1c′ → 1b → 1c → 1d**, with the workbench parity gate as the running acceptance test. 1a shipped (PR #124, pie/donut/concentric); 1a′ shipped (multi-series polar + radial config passthrough — polar verified 8/8 against the real page); 1a″ shipped (PR #142 — per-slice colour, donut centre parity, per-ring labels and ring identity), closing Theme 1's whole **radial** set on the mounted pages.
 
-   **1c′ was inserted ahead of 1b on 2026-07-29**, after the emission census showed 0 of 117 Cartesian states emit. New marks were deferred because they would land on a base where their own pages still cannot emit — `geomRangeArea` closes 9 of 117, all 9 still refusing behind `unit`, `fillGradient`, `pathAnimation` and the axis binding. Widest-reach blockers first (1c′), then the new-mark (1b) and remaining advanced-field (1c/1d) slices.
+   **1c′ was inserted ahead of 1b on 2026-07-29**, after the emission census showed 0 of 117 Cartesian states emit. New marks were deferred because they would land on a base where their own pages still cannot emit — `geomRangeArea` closed 9 of 117 by that count, all 9 still refusing behind `unit`, `fillGradient`, `pathAnimation` and the axis binding. Widest-reach blockers first (1c′), then the new-mark (1b) and remaining advanced-field (1c/1d) slices.
+
+   **1c′ delivered on 2026-07-30**: the re-census puts the Cartesian half at 20 of 100 (prediction 21), and `geomRangeArea` is now the single largest *mark-shaped* gap left at 8 states — none of which still refuse behind `unit` or the axis binding. **1b is next.**
 2. **Theme 2** after coverage, most-requested first (opacity channels, area fill-by-value).
 3. **Theme 3** docs — sequenced after (or interleaved per-family if the owner later prefers).
