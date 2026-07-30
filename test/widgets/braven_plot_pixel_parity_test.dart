@@ -240,6 +240,32 @@ Future<void> expectPixelParity(
   );
 }
 
+/// Runs one AUTHORED shape: a hand-written spec against the config chart it
+/// claims to be. No emitter is involved, so there is no chain to prove and no
+/// document to compare — the claim is the image.
+Future<void> expectAuthoredParity(
+  WidgetTester tester, {
+  required String name,
+  required Widget Function(BravenChartController?) authored,
+  required Widget Function(BravenChartController?) config,
+}) async {
+  final authoredBytes = await renderBytes(
+    tester,
+    '$name-authored',
+    authored(null),
+  );
+  final configBytes = await renderBytes(tester, '$name-config', config(null));
+  final diff = pixelDiff(authoredBytes, configBytes);
+  expect(
+    diff.total,
+    0,
+    reason:
+        'shape "$name": the authored spec draws a DIFFERENT chart from the '
+        'config chart it lowers to — '
+        '${describeDiff(diff, configBytes.length)}',
+  );
+}
+
 // ===========================================================================
 // Shapes
 // ===========================================================================
@@ -437,6 +463,84 @@ Widget shapeEConfig(BravenChartController? controller) => BravenChartPlus(
   ],
 );
 
+// ---------------------------------------------------------------------------
+// The AUTHORED shapes: the plot a human writes, not one the emitter wrote.
+//
+// Shapes (a)-(e) all enter through the emitter, so every axis they mount
+// carries the id EXTRACTION stamps (`'y'`) or one the author named. A hand-
+// written `PlotSpec` carries neither: `PlotSpecLowering` stamps `'axis-$index'`
+// on an axis that declares no id — including the axis it invents for a spec
+// with no `yAxes` at all, which is what almost every grammar chart is. That id
+// is the third value the mount can see, and no round-trip fixture can produce
+// it.
+// ---------------------------------------------------------------------------
+
+/// (f) The plainest grammar chart there is: one mark, no axis declared.
+Widget authoredNoAxis(BravenChartController? controller) => BravenPlot<Row>(
+  PlotSpec<Row>(
+    data: rows,
+    theme: ChartTheme.light,
+    marks: <Mark<Row>>[
+      LineMark<Row>(
+        x: rowT,
+        y: rowPower,
+        id: 'power',
+        name: 'Power',
+        color: powerColor,
+      ),
+    ],
+  ),
+  bravenChartController: controller,
+);
+
+/// (g) The same chart with an ordinary `YAxisConfig` — the constructor that
+/// takes no id, which is what a spec author actually writes.
+Widget authoredOrdinaryAxis(BravenChartController? controller) =>
+    BravenPlot<Row>(
+      PlotSpec<Row>(
+        data: rows,
+        theme: ChartTheme.light,
+        yAxes: <YAxisConfig>[
+          YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+        ],
+        marks: <Mark<Row>>[
+          LineMark<Row>(
+            x: rowT,
+            y: rowPower,
+            id: 'power',
+            name: 'Power',
+            color: powerColor,
+          ),
+        ],
+      ),
+      bravenChartController: controller,
+    );
+
+/// (h) The same chart with an axis the author NAMED.
+Widget authoredNamedAxis(BravenChartController? controller) => BravenPlot<Row>(
+  PlotSpec<Row>(
+    data: rows,
+    theme: ChartTheme.light,
+    yAxes: <YAxisConfig>[
+      YAxisConfig.withId(
+        id: 'watts',
+        position: YAxisPosition.left,
+        label: 'Power',
+      ),
+    ],
+    marks: <Mark<Row>>[
+      LineMark<Row>(
+        x: rowT,
+        y: rowPower,
+        id: 'power',
+        name: 'Power',
+        color: powerColor,
+      ),
+    ],
+  ),
+  bravenChartController: controller,
+);
+
 Widget shapeEChain(BravenChartController? controller) => BravenChart.of(rows)
     .x(rowT)
     .yAxis(
@@ -598,6 +702,95 @@ void main() {
       config: shapeEConfig,
       chain: shapeEChain,
       fragments: const <String>["id: 'watts',", "label: 'Power',"],
+    );
+  });
+
+  // =========================================================================
+  // The authored path
+  //
+  // Same instrument, different claim: a hand-written `PlotSpec` must draw the
+  // chart a config author would have written by hand. Nothing above tests it —
+  // every chain in (a)-(e) came back from the emitter carrying the id
+  // extraction stamps, while lowering stamps `'axis-$index'` on a spec that
+  // names no axis, which is the shape almost every grammar chart really is.
+  //
+  // The pixels here are the axis TINT. The dangling binding also sent
+  // `computeAxisBounds` to its `0..100` no-data fallback for the chart's only
+  // axis, and that does NOT show up in these frames — at paint time the render
+  // box passes a non-null transform, whose Y range wins over the per-axis
+  // computation. That half is gated where it is observable, in
+  // `multi_axis_manager_test.dart`.
+  // =========================================================================
+
+  testWidgets('(f) an authored plot that declares no axis at all', (
+    tester,
+  ) async {
+    await expectAuthoredParity(
+      tester,
+      name: 'f',
+      authored: authoredNoAxis,
+      config: shapeAConfig,
+    );
+  });
+
+  testWidgets('(g) an authored plot with an ordinary YAxisConfig', (
+    tester,
+  ) async {
+    await expectAuthoredParity(
+      tester,
+      name: 'g',
+      authored: authoredOrdinaryAxis,
+      config: shapeBConfig,
+    );
+  });
+
+  testWidgets('(h) an authored plot with an axis the author NAMED', (
+    tester,
+  ) async {
+    await expectAuthoredParity(
+      tester,
+      name: 'h',
+      authored: authoredNamedAxis,
+      config: shapeEConfig,
+    );
+  });
+
+  testWidgets('control: an axis with NOTHING bound to it still draws grey', (
+    tester,
+  ) async {
+    // The three zeroes above are only meaningful if a dangling binding is
+    // visible at all. Same axis, same series, but the series names an axis
+    // that does not exist — so nothing is bound to the chart's only axis and
+    // `AxisColorResolver` falls back to its `#333333` grey instead of the
+    // series colour. This is the recolour shapes (f) and (g) used to exhibit,
+    // and it is still reachable: binding an unbound series to the widget-level
+    // axis does not rehome a series that named a different one.
+    final bound = await renderBytes(tester, 'bound-axis', shapeBConfig(null));
+    final dangling = await renderBytes(
+      tester,
+      'dangling-axis',
+      BravenChartPlus(
+        theme: ChartTheme.light,
+        yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+        series: const <ChartSeries>[
+          LineChartSeries(
+            id: 'power',
+            name: 'Power',
+            points: powerPoints,
+            color: powerColor,
+            yAxisId: 'an-axis-this-chart-does-not-have',
+          ),
+        ],
+      ),
+    );
+    final diff = pixelDiff(bound, dangling);
+    expect(
+      diff.total,
+      greaterThan(4000),
+      reason:
+          'a dangling binding is supposed to be visible; if it is not, the '
+          'authored-path zeroes above have stopped discriminating: '
+          '${describeDiff(diff, bound.length)}',
     );
   });
 

@@ -52,6 +52,15 @@ class MultiAxisManager {
 
   static const double _minimumDegenerateHalfSpan = 0.5;
 
+  /// The id [getEffectiveYAxes] invents when it has to supply the primary axis
+  /// itself — for a widget-level axis that carries no id of its own, and for
+  /// the default axis it creates when there is no widget-level axis at all.
+  ///
+  /// Named because [getEffectiveBindings] has to agree with it exactly: an
+  /// unbound series is bound to the primary axis BY ID, so the two must not be
+  /// allowed to drift apart.
+  static const String _syntheticPrimaryAxisId = 'primary_axis';
+
   /// Positive floor for a log axis whose data min is <= 0, non-finite, or only
   /// derived from the no-data `0.0` fallback. Keeps [logValue] finite.
   static const double _minimumPositiveLogFloor = 1e-6;
@@ -132,6 +141,11 @@ class MultiAxisManager {
   bool setPrimaryYAxisConfig(YAxisConfig? config) {
     if (_primaryYAxisConfig == config) return false;
     _primaryYAxisConfig = config;
+    // An unbound series is bound to the primary axis' id, so a binding list
+    // cached against the previous primary is stale. The widget pushes series
+    // BEFORE the primary axis (`_ChartRenderWidget.updateRenderObject`), so
+    // relying on `setSeries` to have invalidated it is relying on call order.
+    invalidateCache();
     return true;
   }
 
@@ -301,7 +315,7 @@ class MultiAxisManager {
       // Auto-generate ID if empty
       final primaryId = effectivePrimaryYAxis.id.isNotEmpty
           ? effectivePrimaryYAxis.id
-          : 'primary_axis';
+          : _syntheticPrimaryAxisId;
 
       final resolvedPrimary = effectivePrimaryYAxis.id.isEmpty
           ? effectivePrimaryYAxis.copyWith(id: primaryId)
@@ -316,7 +330,7 @@ class MultiAxisManager {
     if (effectiveAxes.isEmpty) {
       final defaultAxis = YAxisConfig(
         position: YAxisPosition.left,
-      ).copyWith(id: 'primary_axis');
+      ).copyWith(id: _syntheticPrimaryAxisId);
       effectiveAxes.add(defaultAxis);
     }
 
@@ -556,17 +570,43 @@ class MultiAxisManager {
       // Series without explicit axis config should use the default axis
       // to ensure axis bounds are computed from series data
       effectiveBindings.add(
-        SeriesAxisBinding(
-          seriesId: series.id,
-          yAxisId:
-              'primary_axis', // Matches the ID generated for widget-level yAxis
-        ),
+        SeriesAxisBinding(seriesId: series.id, yAxisId: _unboundSeriesAxisId()),
       );
     }
 
     // Cache and return
     _cachedEffectiveBindings = effectiveBindings;
     return effectiveBindings;
+  }
+
+  /// The id of the axis a series carrying no binding of its own belongs to.
+  ///
+  /// This has to be whatever [getEffectiveYAxes] ends up calling the PRIMARY
+  /// axis, because the binding names it by id and nothing reconciles the two
+  /// afterwards. Returning the literal [_syntheticPrimaryAxisId] unconditionally
+  /// was right only for the case that generates it — a widget-level axis with
+  /// no id — and wrong for a widget-level axis that HAS one: every series then
+  /// pointed at an axis that does not exist, leaving the chart's only axis with
+  /// nothing bound to it. [computeAxisBounds] found no data for it and fell
+  /// through to its `0..100` no-data fallback, and `AxisColorResolver` found no
+  /// series to take the axis colour from and used its default grey.
+  ///
+  /// The mixed chart is deliberately NOT rehomed. As soon as any series carries
+  /// an inline `yAxisConfig`, [getEffectiveYAxes] drops the widget-level axis
+  /// (step 2 is skipped), so there is no primary axis to join and the synthetic
+  /// id stands — an unbound series in that chart stays unbound rather than
+  /// silently adopting another series' axis and its scale.
+  ///
+  /// Reads the STORED primary — the one [setPrimaryYAxisConfig] receives, which
+  /// is the widget-level `yAxis` — not the optional `primaryYAxis` argument
+  /// [getEffectiveYAxes] also accepts; the render box passes the same config to
+  /// both.
+  String _unboundSeriesAxisId() {
+    if (_series.any((series) => series.yAxisConfig != null)) {
+      return _syntheticPrimaryAxisId;
+    }
+    final primaryId = _primaryYAxisConfig?.id ?? '';
+    return primaryId.isEmpty ? _syntheticPrimaryAxisId : primaryId;
   }
 
   // ============================================================================

@@ -1888,8 +1888,9 @@ class _GrammarChainEmitter {
     // The gate is deliberately narrow, and the narrowness is the whole point.
     // "A null yAxisId means axes.first" is WRONG: `getEffectiveYAxes` ignores
     // the widget-level yAxis as soon as any series carries an inline config,
-    // and `getEffectiveBindings` sends an unbound series to a synthetic
-    // 'primary_axis' rather than to the first declared axis. A document with
+    // and in exactly that case `getEffectiveBindings` still sends an unbound
+    // series to the synthetic 'primary_axis' — there is no primary axis left
+    // for it to join — and not to the first declared axis. A document with
     // one series bound inline and one unbound is reachable, and treating the
     // unbound one as bound to the other's axis renders a DIFFERENT chart
     // (measured: 4265 of 960000 pixels differ under

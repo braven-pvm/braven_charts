@@ -319,9 +319,11 @@ void main() {
         find.byType(BravenChartPlus),
       );
       // Mounted, and mounted ANONYMOUSLY: `'y'` is the id extraction stamps on
-      // a widget-level axis that carried none, so the mount unwinds it rather
-      // than handing the render an axis no series is bound to. See
-      // `_asAuthoredWidgetAxis` in `braven_plot.dart`. What this control cares
+      // a widget-level axis that carried none, so the mount unwinds it and the
+      // axis reaches the render under the same effective id a config chart's
+      // would. See `_asAuthoredWidgetAxis` in `braven_plot.dart` — including
+      // why that is now an identity claim and not an appearance one. What this
+      // control cares
       // about is unchanged — the widget-level axis is SET here and null in a
       // panel — and the min/max it carries is asserted below, because that is
       // the difference the panel gate exists to protect.

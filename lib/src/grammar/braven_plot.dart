@@ -59,14 +59,23 @@ import 'series_axis_unbinding.dart';
 /// The visible consequence, and it is intended: a one-axis chain now renders
 /// AS the legacy chart, Y-axis labels included. `AxisColorResolver` tints an
 /// axis from the first series BOUND to it, and "unbound" at the WIDGET level
-/// does not mean unbound at the RENDER level: `MultiAxisManager` sends every
-/// unbound series to a synthetic `'primary_axis'`, which is the id it also
-/// auto-generates for an anonymous widget-level axis. So the legacy chart's
-/// axis IS bound and IS tinted with the series colour — measured
-/// `#2563EB` tick labels for a `#2563EB` line — and a chain mounting the same
-/// axis under any OTHER id draws them in the resolver's default `#333333`
-/// grey. That is why the mount hands the axis back the way it was authored;
-/// see [_asAuthoredWidgetAxis].
+/// does not mean unbound at the RENDER level: `MultiAxisManager` binds a
+/// series that carries no binding of its own to the chart's primary axis. So
+/// the legacy chart's axis IS bound and IS tinted with the series colour —
+/// measured `#2563EB` tick labels for a `#2563EB` line.
+///
+/// That was true only for an ANONYMOUS widget-level axis until the binding
+/// itself was fixed. `MultiAxisManager.getEffectiveBindings` used to name the
+/// synthetic `'primary_axis'` literally, and that is the id
+/// `getEffectiveYAxes` invents only when the widget-level axis carries none —
+/// so a mounted axis with an id of its own was left DANGLING: nothing bound to
+/// it, grey labels, and a `computeAxisBounds` that fell through to its
+/// `0..100` no-data fallback for a chart that plainly has data. Every id this
+/// mount can produce hit that: the `'y'` extraction stamps, the `'axis-0'`
+/// `PlotSpecLowering` stamps on a spec that names no axis, and any name the
+/// author chose. The mount is no longer sensitive to the id; see
+/// [_asAuthoredWidgetAxis] for what is left of the id handling and why it
+/// stays.
 ///
 /// One exception to the exception: a panel of a [BravenFacetPlot] keeps the
 /// multi-axis mount. Its spec has the legacy shape, but faceting delivers the
@@ -177,40 +186,41 @@ const _anonymousAxisFallbackId = 'y';
 /// [axis] as the widget-level axis the chart this chain reverses to actually
 /// had.
 ///
-/// The axis id is read by TWO different consumers that want different values,
-/// and mounting the lowered axis verbatim served only one of them:
+/// Extraction keeps a non-empty axis id and stamps [_anonymousAxisFallbackId]
+/// on an empty one, so a chain reversed from a chart whose widget-level axis
+/// was ANONYMOUS always spells `id: 'y'`. Unwinding that back to the empty id
+/// mounts the axis under the same effective id the config chart's does
+/// (`getEffectiveYAxes` auto-generates `'primary_axis'` for both), so the two
+/// charts are the same chart in render-time axis IDENTITY and not merely in
+/// what they draw. The document is untouched either way: extraction re-stamps
+/// the fallback on the empty id it gets back.
 ///
-///  * DOCUMENT: extraction keeps a non-empty id and stamps
-///    [_anonymousAxisFallbackId] on an empty one, so the id decides what
-///    `axes[0].id` says.
-///  * RENDER: `MultiAxisManager.getEffectiveYAxes` auto-generates
-///    `'primary_axis'` for an EMPTY widget-level axis id, and
-///    `getEffectiveBindings` sends every unbound series to that same literal
-///    `'primary_axis'`. So an anonymous widget-level axis has the chart's
-///    series bound to it and is tinted by the first of them, while an axis
-///    carrying any other id has nothing bound to it and takes
-///    `AxisColorResolver`'s default grey.
+/// ## What this is no longer worth, stated plainly
 ///
-/// A reversed chain therefore carries `id: 'y'` — the fallback — for a chart
-/// whose axis was anonymous and TINTED, and mounting that id verbatim produced
-/// an UNTINTED axis: the same document, a different image, measured at 4,658
-/// (no widget axis), 5,378 (labelled axis) and 3,612 (min/max axis) of 240,000
-/// pixels, every one of them in the Y-label gutter. Handing the id back the
-/// way it was authored — anonymously — restores the tint, and because
-/// extraction re-stamps the fallback the document is bit-for-bit unchanged.
+/// This used to be the difference between a TINTED and an UNTINTED Y gutter —
+/// 4,658 (no widget axis), 5,378 (labelled axis) and 3,612 (min/max axis) of
+/// 240,000 pixels — because `MultiAxisManager.getEffectiveBindings` sent every
+/// unbound series to the literal `'primary_axis'` and so bound nothing to an
+/// axis carrying any other id. That was a defect in the BINDING, it was never
+/// confined to reversed chains (a hand-written spec mounts `'axis-0'` and was
+/// hit just as hard, and so was a plain `BravenChartPlus` with a named
+/// widget-level `yAxis`), and it is fixed in `MultiAxisManager`. With that
+/// fixed, mounting the axis verbatim draws the identical image: measured by
+/// disabling this function and re-running the whole pixel-parity file, which
+/// stayed green on every shape. It is kept for the identity above and because
+/// the mount tests pin it, NOT because the picture depends on it.
 ///
 /// Only the fallback id is unwound. An axis the author NAMED (`.yAxis(
 /// YAxisConfig.withId(id: 'watts', ...))`) keeps its name, because extraction
-/// preserves it and the config chart it reverses to is equally untinted — that
-/// pair already matched and still does.
+/// preserves it and the config chart it reverses to carries the same name.
 ///
 /// The one shape this cannot serve is a config chart that spells
-/// `YAxisConfig.withId(id: 'y', ...)` at the WIDGET level. Its document is
+/// `YAxisConfig.withId(id: 'y', ...)` at the WIDGET level: its document is
 /// byte-identical to the anonymous chart's — the fallback collides with a
 /// legal id — so exactly one of the two can be reproduced, and this reproduces
-/// the one every ordinary `YAxisConfig(...)` produces. The colliding form names
-/// an axis nothing can reference: a mark naming it would have taken the
-/// multi-axis mount instead.
+/// the one every ordinary `YAxisConfig(...)` produces. Since the binding fix
+/// the two render alike anyway, so the collision costs an axis id and nothing
+/// visible.
 ///
 /// Pinned by `test/widgets/braven_plot_pixel_parity_test.dart`.
 YAxisConfig _asAuthoredWidgetAxis(YAxisConfig axis) =>

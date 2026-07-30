@@ -371,10 +371,15 @@ void main() {
       final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
       // ANONYMOUS, not `'y'`. `'y'` is the id extraction stamps on a
       // widget-level axis that carried none, so a chain reversed from a config
-      // chart always spells it — and mounting it verbatim gives the axis an id
-      // no series is bound to, which recolours the whole Y gutter. The mount
-      // unwinds exactly that fallback (`_asAuthoredWidgetAxis`). The DOCUMENT
-      // still says `'y'`: the next test asserts it.
+      // chart always spells it, and unwinding it mounts the axis under the
+      // same effective id the config chart's gets (`'primary_axis'`). The
+      // DOCUMENT still says `'y'`: the next test asserts it.
+      //
+      // This is an identity claim, not an appearance one. It USED to be both —
+      // an axis mounted under any id no series was bound to lost its tint —
+      // but that was the dangling-binding defect in
+      // `MultiAxisManager.getEffectiveBindings`, and with it fixed both mounts
+      // draw the same picture.
       expect(plus.yAxis, isNotNull);
       expect(plus.yAxis?.id, '');
       expect(plus.series.single.yAxisId, isNull);
@@ -463,11 +468,20 @@ void main() {
       // appearance. `AxisColorResolver` tints an axis from the first series
       // BOUND to it (`y_axis_config.dart`: "If null, uses the color of the
       // first bound series"), and the legacy chart's series ARE bound at the
-      // render level — `MultiAxisManager` sends an unbound series to a
-      // synthetic `'primary_axis'`, the id it also generates for an ANONYMOUS
-      // widget-level axis — so the Y tick and axis labels take the series
-      // colour. The chain must reproduce that, which is why it hands the axis
-      // back anonymously (`_asAuthoredWidgetAxis`).
+      // render level — `MultiAxisManager.getEffectiveBindings` sends a series
+      // carrying no binding of its own to the chart's primary axis — so the Y
+      // tick and axis labels take the series colour, and the chain has to do
+      // the same.
+      //
+      // What makes that true is the BINDING, not the id the axis is mounted
+      // under. It used to be both: `getEffectiveBindings` hardcoded the
+      // synthetic `'primary_axis'`, which exists only when the widget-level
+      // axis is anonymous, so mounting the `'y'` fallback verbatim left the
+      // axis dangling and grey. That was the dangling-binding defect; the fix
+      // is in `MultiAxisManager`, and the mount now agrees with the config
+      // chart under either id. `_asAuthoredWidgetAxis` still unwinds the
+      // fallback — see its doc for what it is still worth — but this test no
+      // longer depends on it.
       //
       // The config twin is written with the ordinary `YAxisConfig(...)`
       // constructor DELIBERATELY: that constructor takes no id, so it is what
@@ -507,24 +521,27 @@ void main() {
       );
       expect(chain, config);
 
-      // The control, and the reason the assertion above is not vacuous: the
-      // axis id the chain used to mount VERBATIM renders a DIFFERENT chart.
-      // Same axis, same series, but under the `'y'` extraction stamps — an id
-      // `getEffectiveBindings` never sends a series to — so the Y tick and axis
-      // labels drop from the series colour to `AxisColorResolver`'s default
-      // grey. That recolour is what the assertion above now forbids; measured
-      // at 4,658 of 240,000 pixels in `braven_plot_pixel_parity_test.dart`.
+      // The control, and the reason the assertion above is not vacuous: an
+      // axis with NOTHING bound to it draws a DIFFERENT chart, and a raw byte
+      // comparison sees it. Same axis, same series, but the series names an
+      // axis this chart does not have, so `AxisColorResolver` finds no bound
+      // series and the Y tick and axis labels drop from the series colour to
+      // its `#333333` default. Measured at 4,658 of 240,000 pixels, all in the
+      // Y-label gutter, in `braven_plot_pixel_parity_test.dart`.
       //
-      // (The inline `yAxisConfig` mount is NOT the control any more: with no
-      // min/max on the axis the two mounts genuinely agree pixel for pixel,
-      // so asserting they differ would assert a defect. The mounts still
-      // diverge where it matters — an axis carrying min/max — and that
-      // divergence is the control in `braven_plot_pixel_parity_test.dart`.)
-      final verbatimAxisId = await _renderBytes(
+      // Two earlier controls stopped discriminating and neither may come back.
+      // The inline `yAxisConfig` mount: with no min/max on the axis the two
+      // mounts genuinely agree pixel for pixel (they still diverge on an axis
+      // that carries min/max, which is the control in the pixel-parity file).
+      // And the `id: 'y'` widget-level mount: it differed only because of the
+      // dangling-binding defect, which is now fixed — a control may not assert
+      // a defect, so it is replaced by this one, which reaches the same grey
+      // through a binding that is genuinely dangling.
+      final danglingBinding = await _renderBytes(
         tester,
-        'verbatim-axis-id',
+        'dangling-binding',
         BravenChartPlus(
-          yAxis: YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+          yAxis: YAxisConfig(position: YAxisPosition.left),
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -534,11 +551,12 @@ void main() {
                 ChartDataPoint(x: 2, y: 260),
               ],
               color: Color(0xFF2563EB),
+              yAxisId: 'an-axis-this-chart-does-not-have',
             ),
           ],
         ),
       );
-      expect(verbatimAxisId, isNot(chain));
+      expect(danglingBinding, isNot(chain));
     });
 
     testWidgets('one axis with an EXPLICIT binding is not the legacy shape', (
