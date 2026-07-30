@@ -319,6 +319,33 @@ git commit -m "feat(source): reverse and emit unit on the Cartesian families"
 
 Unblocks 4 states. **Both halves are required**: the proof normalisation alone leaves an `axisId` + `inlineAxis` delta in the document, because `BravenPlot` passes no Y axis at all and the declared axis reaches the chart *only* through each series' `yAxisConfig`.
 
+> **AS BUILT — read this before Task 2.1's steps.** Two things below are now
+> wrong on the page and right in the code.
+>
+> 1. **The mounted axis id.** Step 1's `expect(plus.yAxis?.id, 'y')` is not what
+>    ships. `'y'` is the id extraction stamps on a widget-level axis that
+>    carried none, so the mount unwinds it to the empty id
+>    (`_asAuthoredWidgetAxis`), which is what a config author's
+>    `YAxisConfig(...)` produces. The document is unaffected — extraction
+>    re-stamps the fallback — and an axis the author NAMED keeps its name.
+> 2. **Document equality was necessary and not sufficient.** Two charts with
+>    byte-identical documents were found drawing different pixels, so the slice
+>    is now gated in PIXELS as well:
+>    `test/widgets/braven_plot_pixel_parity_test.dart` renders eight shapes at a
+>    fixed 600x400 host and compares raw RGBA, each against the config chart it
+>    claims to be. The cause was a dangling binding in
+>    `MultiAxisManager.getEffectiveBindings`, which sent every unbound series to
+>    the literal `'primary_axis'` and so bound nothing to an axis carrying any
+>    other id — grey labels, and a `0..100` no-data axis range for a chart with
+>    data. Fixed at the root, in the manager, because it reached hand-written
+>    specs (`'axis-0'`) and plain `BravenChartPlus` charts alike, not just
+>    reversed chains.
+>
+> Also settled by measurement and NOT done: declining the legacy mount for an
+> axis that declares `min`/`max`. It removes no refusal anywhere in the suite
+> and costs 25,885 of 240,000 pixels, 20,770 of them in the plot area. The
+> reasoning is committed in `_legacySingleAxisSeries`'s doc.
+
 ### Task 2.1: `BravenPlot` mounts the legacy single-axis shape
 
 **Files:**

@@ -64,26 +64,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BravenPlot` mounts a single-axis chain as the legacy single-axis chart.**
   When a spec declares exactly one Y axis and no mark names it, the axis now
   reaches `BravenChartPlus` as a widget-level `yAxis` with the series left
-  unbound, instead of as an inline `yAxisConfig` on every series. Two
-  user-visible consequences, both intended — this is what makes a chain and the
-  config chart it reverses to the SAME chart rather than merely similar ones:
-  - **Rendering.** The Y-axis tick and axis labels are no longer tinted with
-    the series colour. An axis takes its colour from the first series BOUND to
-    it, and the legacy chart binds none, so the labels render in the default
-    grey — exactly as they always have for the hand-written `BravenChartPlus`
-    this shape mirrors. The plot area, gridlines, legend and X axis are
-    unchanged.
+  unbound, instead of as an inline `yAxisConfig` on every series. This is what
+  makes a chain and the config chart it reverses to the SAME chart rather than
+  merely similar ones.
+  - **Rendering: none, for the shapes that are mounted this way.** Both mounts
+    tint the Y-axis tick and axis labels with the series colour — an axis takes
+    its colour from the first series bound to it, and a widget-level axis has
+    the chart's unbound series bound to it at render time — so the change is
+    not visible. Verified in pixels rather than argued: eight chart shapes
+    rendered at a fixed 600x400 host and compared as raw RGBA, each against the
+    config chart it claims to be, all **0 of 240,000 pixels differing**
+    (`test/widgets/braven_plot_pixel_parity_test.dart`). The shapes are: no
+    widget-level axis; a labelled axis; an axis declaring `min` and `max`; an
+    axis the author named; a two-axis chart (the mount this must not touch);
+    and the three authored-spec forms of the same. Earlier releases of this
+    entry claimed the labels turned grey. That was wrong in both directions and
+    is retracted: the tinting is what the legacy mount preserves, and the grey
+    it described was a separate defect, now fixed (see below).
   - **Extracted documents.** `BravenChartController.extractDocument()` on a
     single-axis chain no longer sets `series[*].axisId` or
     `series[*].inlineAxis`; the axis appears once, in `axes`. Hosts that
     persist or diff these documents will see the shape change. It is a fix, not
     a new capability: the document now matches the config chart's.
 
-  Charts with several declared axes, and one-axis charts whose mark names its
-  axis, keep the multi-axis mount verbatim. A `BravenFacetPlot` panel also
-  keeps it: faceting delivers the shared range `FacetScales.fixed` computes
-  through the inline axis config, so switching a panel's mount would change
-  what every faceted chart draws.
+  Four shapes are DECLINED and keep the multi-axis mount verbatim: a chart with
+  several declared axes; a one-axis chart whose mark names its axis (the author
+  asked for the multi-axis path); a `BravenFacetPlot` panel, because faceting
+  delivers the shared range `FacetScales.fixed` computes through an inline axis
+  config and a widget-level axis applies `min`/`max` where an inline one does
+  not, so re-mounting a panel would change what every faceted chart draws; and
+  any chart carrying a series family that cannot express an unbound series
+  (everything outside the five Cartesian families), which keeps the multi-axis
+  mount for the whole plot rather than mounting half of it. A radial spec
+  lowers to no Y axis at all and never reaches this shape.
+
+  An axis carrying `min`/`max` is NOT declined, although the two mounts do
+  disagree about it — only a widget-level axis applies the range to the Y
+  domain. Declining it was measured and rejected: it changes no emitter
+  refusal anywhere in the suite, and it makes the reversed chart differ from
+  the chart it was reversed from by 25,885 of 240,000 pixels, 20,770 of them in
+  the plot area. The reasoning is recorded in `_legacySingleAxisSeries`.
+
+### Fixed
+
+- **A widget-level `yAxis` carrying an id of its own had nothing bound to it.**
+  A series that declares neither `yAxisId` nor an inline `yAxisConfig` is bound
+  to the chart's primary axis, but that binding named the auto-generated id
+  `'primary_axis'` literally — and that id exists only when the widget-level
+  axis carries none. Give the axis any id and every series pointed at an axis
+  the chart did not have, leaving the chart's only axis unbound: axis bounds
+  fell through to the `0..100` no-data fallback for a chart that plainly has
+  data, and the tick and axis labels dropped from the series colour to the
+  `#333333` default. Reachable three ways — a `BravenChartPlus` whose
+  widget-level `yAxis` was built with `YAxisConfig.withId`; every hand-written
+  `PlotSpec`, because lowering stamps `'axis-0'` on an axis that declares no id
+  (including the axis it invents for a spec with no `yAxes` at all); and a
+  generated chain, because extraction stamps `'y'`. The grammar shapes were
+  measured at 4,658 and 5,378 of 240,000 pixels against the config chart they
+  claim to be, all of it in the Y-label gutter; both are now 0. A chart whose
+  series carries an inline `yAxisConfig` is deliberately unchanged: the
+  widget-level axis is suppressed there, so an unbound series in that chart
+  stays unbound rather than silently adopting another series' axis and scale.
 
 ### Fixed
 
