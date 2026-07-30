@@ -10,6 +10,7 @@ import '../models/chart_series.dart';
 import '../models/chart_state_config.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/polar_chart_config.dart';
+import '../models/y_axis_config.dart' show YAxisConfig;
 import 'facet_panel_scope.dart';
 import 'grammar_diagnostics.dart';
 import 'plot_lowering.dart';
@@ -57,9 +58,15 @@ import 'series_axis_unbinding.dart';
 ///
 /// The visible consequence, and it is intended: a one-axis chain now renders
 /// AS the legacy chart, Y-axis labels included. `AxisColorResolver` tints an
-/// axis from the first series BOUND to it, and the legacy chart binds none, so
-/// the tick and axis labels take the default grey instead of the series colour
-/// — exactly what the config chart this chain reverses to has always drawn.
+/// axis from the first series BOUND to it, and "unbound" at the WIDGET level
+/// does not mean unbound at the RENDER level: `MultiAxisManager` sends every
+/// unbound series to a synthetic `'primary_axis'`, which is the id it also
+/// auto-generates for an anonymous widget-level axis. So the legacy chart's
+/// axis IS bound and IS tinted with the series colour — measured
+/// `#2563EB` tick labels for a `#2563EB` line — and a chain mounting the same
+/// axis under any OTHER id draws them in the resolver's default `#333333`
+/// grey. That is why the mount hands the axis back the way it was authored;
+/// see [_asAuthoredWidgetAxis].
 ///
 /// One exception to the exception: a panel of a [BravenFacetPlot] keeps the
 /// multi-axis mount. Its spec has the legacy shape, but faceting delivers the
@@ -126,7 +133,9 @@ class BravenPlot<T> extends StatelessWidget {
       // Set ONLY on the legacy shape. `BravenChartPlus` ignores a widget-level
       // yAxis as soon as any series carries an inline config, so passing it
       // alongside bound series would be a lie the render path quietly drops.
-      yAxis: legacySeries == null ? null : lowered!.yAxes.single,
+      yAxis: legacySeries == null
+          ? null
+          : _asAuthoredWidgetAxis(lowered!.yAxes.single),
       annotations: lowered?.annotations ?? const [],
       xAxisConfig: spec.xAxis,
       interactionConfig: lowered?.interaction ?? spec.interaction,
@@ -156,6 +165,56 @@ class BravenPlot<T> extends StatelessWidget {
     );
   }
 }
+
+/// The id extraction stamps on a widget-level axis that carried none.
+///
+/// `BravenChartPlus._buildDocumentExtractionSource` writes
+/// `addAxis(widget.yAxis!, 'y')`, so an axis id of `'y'` in a chart document
+/// means "the chart had an ANONYMOUS widget-level axis" — the ordinary
+/// `YAxisConfig(...)` constructor, which takes no id at all.
+const _anonymousAxisFallbackId = 'y';
+
+/// [axis] as the widget-level axis the chart this chain reverses to actually
+/// had.
+///
+/// The axis id is read by TWO different consumers that want different values,
+/// and mounting the lowered axis verbatim served only one of them:
+///
+///  * DOCUMENT: extraction keeps a non-empty id and stamps
+///    [_anonymousAxisFallbackId] on an empty one, so the id decides what
+///    `axes[0].id` says.
+///  * RENDER: `MultiAxisManager.getEffectiveYAxes` auto-generates
+///    `'primary_axis'` for an EMPTY widget-level axis id, and
+///    `getEffectiveBindings` sends every unbound series to that same literal
+///    `'primary_axis'`. So an anonymous widget-level axis has the chart's
+///    series bound to it and is tinted by the first of them, while an axis
+///    carrying any other id has nothing bound to it and takes
+///    `AxisColorResolver`'s default grey.
+///
+/// A reversed chain therefore carries `id: 'y'` — the fallback — for a chart
+/// whose axis was anonymous and TINTED, and mounting that id verbatim produced
+/// an UNTINTED axis: the same document, a different image, measured at 4,658
+/// (no widget axis), 5,378 (labelled axis) and 3,612 (min/max axis) of 240,000
+/// pixels, every one of them in the Y-label gutter. Handing the id back the
+/// way it was authored — anonymously — restores the tint, and because
+/// extraction re-stamps the fallback the document is bit-for-bit unchanged.
+///
+/// Only the fallback id is unwound. An axis the author NAMED (`.yAxis(
+/// YAxisConfig.withId(id: 'watts', ...))`) keeps its name, because extraction
+/// preserves it and the config chart it reverses to is equally untinted — that
+/// pair already matched and still does.
+///
+/// The one shape this cannot serve is a config chart that spells
+/// `YAxisConfig.withId(id: 'y', ...)` at the WIDGET level. Its document is
+/// byte-identical to the anonymous chart's — the fallback collides with a
+/// legal id — so exactly one of the two can be reproduced, and this reproduces
+/// the one every ordinary `YAxisConfig(...)` produces. The colliding form names
+/// an axis nothing can reference: a mark naming it would have taken the
+/// multi-axis mount instead.
+///
+/// Pinned by `test/widgets/braven_plot_pixel_parity_test.dart`.
+YAxisConfig _asAuthoredWidgetAxis(YAxisConfig axis) =>
+    axis.id == _anonymousAxisFallbackId ? axis.copyWith(id: '') : axis;
 
 /// [LoweredPlot.series] re-mounted the way a config author writes a single-axis
 /// chart — every binding stripped — or null when this plot is not that shape

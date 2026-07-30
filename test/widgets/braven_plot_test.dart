@@ -369,7 +369,35 @@ void main() {
       await tester.pumpAndSettle();
 
       final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
-      expect(plus.yAxis?.id, 'y');
+      // ANONYMOUS, not `'y'`. `'y'` is the id extraction stamps on a
+      // widget-level axis that carried none, so a chain reversed from a config
+      // chart always spells it — and mounting it verbatim gives the axis an id
+      // no series is bound to, which recolours the whole Y gutter. The mount
+      // unwinds exactly that fallback (`_asAuthoredWidgetAxis`). The DOCUMENT
+      // still says `'y'`: the next test asserts it.
+      expect(plus.yAxis, isNotNull);
+      expect(plus.yAxis?.id, '');
+      expect(plus.series.single.yAxisId, isNull);
+      expect(plus.series.single.yAxisConfig, isNull);
+    });
+
+    testWidgets('an axis the author NAMED keeps its name at the mount', (
+      tester,
+    ) async {
+      // The other half of `_asAuthoredWidgetAxis`: only the `'y'` fallback is
+      // unwound. A named axis survives extraction as its own id, and the config
+      // chart it reverses to is written with that same name, so the mount must
+      // not anonymise it.
+      final chart = BravenChart.of(rows)
+          .x(rowT)
+          .yAxis(YAxisConfig.withId(id: 'watts', position: YAxisPosition.left))
+          .geomLine(y: rowPower)
+          .build();
+      await tester.pumpWidget(host(chart));
+      await tester.pumpAndSettle();
+
+      final plus = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(plus.yAxis?.id, 'watts');
       expect(plus.series.single.yAxisId, isNull);
       expect(plus.series.single.yAxisConfig, isNull);
     });
@@ -434,15 +462,22 @@ void main() {
       // single-axis chart DRAWS, and this is the contract that replaces the old
       // appearance. `AxisColorResolver` tints an axis from the first series
       // BOUND to it (`y_axis_config.dart`: "If null, uses the color of the
-      // first bound series"), and the legacy chart binds none, so the Y tick
-      // and axis labels take the resolver's default grey instead of the series
-      // colour. That is not a regression to be hidden — it is the point: the
-      // chain now renders the very chart it reverses to, label colours
-      // included.
+      // first bound series"), and the legacy chart's series ARE bound at the
+      // render level — `MultiAxisManager` sends an unbound series to a
+      // synthetic `'primary_axis'`, the id it also generates for an ANONYMOUS
+      // widget-level axis — so the Y tick and axis labels take the series
+      // colour. The chain must reproduce that, which is why it hands the axis
+      // back anonymously (`_asAuthoredWidgetAxis`).
+      //
+      // The config twin is written with the ordinary `YAxisConfig(...)`
+      // constructor DELIBERATELY: that constructor takes no id, so it is what
+      // every config author actually writes, and it is the chart whose
+      // extraction produces the `id: 'y'` the chain below carries.
       //
       // Nothing else pinned this. The grammar goldens are exactly this shape
       // and they tolerate 3.5%, while the recolour is confined to the Y-label
       // gutter and measures ~1.4%, so it passed straight through them.
+      // `braven_plot_pixel_parity_test.dart` carries the wider shape census.
       final chain = await _renderBytes(
         tester,
         'chain',
@@ -456,7 +491,7 @@ void main() {
         tester,
         'config',
         BravenChartPlus(
-          yAxis: YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+          yAxis: YAxisConfig(position: YAxisPosition.left),
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -473,32 +508,37 @@ void main() {
       expect(chain, config);
 
       // The control, and the reason the assertion above is not vacuous: the
-      // mount this chain used to take renders a DIFFERENT chart. Same axis,
-      // same series, delivered as an inline `yAxisConfig` — the axis is now
-      // tinted by its bound series and the two images diverge.
-      final multiAxis = await _renderBytes(
+      // axis id the chain used to mount VERBATIM renders a DIFFERENT chart.
+      // Same axis, same series, but under the `'y'` extraction stamps — an id
+      // `getEffectiveBindings` never sends a series to — so the Y tick and axis
+      // labels drop from the series colour to `AxisColorResolver`'s default
+      // grey. That recolour is what the assertion above now forbids; measured
+      // at 4,658 of 240,000 pixels in `braven_plot_pixel_parity_test.dart`.
+      //
+      // (The inline `yAxisConfig` mount is NOT the control any more: with no
+      // min/max on the axis the two mounts genuinely agree pixel for pixel,
+      // so asserting they differ would assert a defect. The mounts still
+      // diverge where it matters — an axis carrying min/max — and that
+      // divergence is the control in `braven_plot_pixel_parity_test.dart`.)
+      final verbatimAxisId = await _renderBytes(
         tester,
-        'multi',
+        'verbatim-axis-id',
         BravenChartPlus(
-          series: <ChartSeries>[
+          yAxis: YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+          series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
-              points: const <ChartDataPoint>[
+              points: <ChartDataPoint>[
                 ChartDataPoint(x: 0, y: 180),
                 ChartDataPoint(x: 1, y: 220),
                 ChartDataPoint(x: 2, y: 260),
               ],
-              color: const Color(0xFF2563EB),
-              yAxisId: 'y',
-              yAxisConfig: YAxisConfig.withId(
-                id: 'y',
-                position: YAxisPosition.left,
-              ),
+              color: Color(0xFF2563EB),
             ),
           ],
         ),
       );
-      expect(multiAxis, isNot(chain));
+      expect(verbatimAxisId, isNot(chain));
     });
 
     testWidgets('one axis with an EXPLICIT binding is not the legacy shape', (

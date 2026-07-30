@@ -318,7 +318,17 @@ void main() {
       final chart = tester.widget<BravenChartPlus>(
         find.byType(BravenChartPlus),
       );
-      expect(chart.yAxis?.id, 'y');
+      // Mounted, and mounted ANONYMOUSLY: `'y'` is the id extraction stamps on
+      // a widget-level axis that carried none, so the mount unwinds it rather
+      // than handing the render an axis no series is bound to. See
+      // `_asAuthoredWidgetAxis` in `braven_plot.dart`. What this control cares
+      // about is unchanged — the widget-level axis is SET here and null in a
+      // panel — and the min/max it carries is asserted below, because that is
+      // the difference the panel gate exists to protect.
+      expect(chart.yAxis, isNotNull);
+      expect(chart.yAxis?.id, '');
+      expect(chart.yAxis?.min, 180);
+      expect(chart.yAxis?.max, 300);
       expect(chart.series.single.yAxisId, isNull);
       expect(chart.series.single.yAxisConfig, isNull);
     });
