@@ -24,6 +24,8 @@ double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
 Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
+String? fruitPointLabel(Fruit row) => row.name;
+String? fruitPointKey(Fruit row) => row.basket;
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -568,6 +570,147 @@ void main() {
         bar.isXOrdered,
         scatter.isXOrdered,
       ], everyElement(isFalse));
+    });
+  });
+
+  group('label and pointKey on the four Cartesian geometry marks', () {
+    // The same argument the `isXOrdered` group makes, for the two accessors
+    // that shipped one commit earlier without it. Measured by mutation:
+    // deleting all sixteen `==`/`hashCode` entries for `label` and `pointKey`
+    // left the entire root suite green, so nothing held these fields to
+    // participating in mark identity — and a plan that dropped an accessor
+    // would compare equal to one that kept it.
+    //
+    // Top-level tear-offs, so the marks stay const and the comparison is a
+    // comparison of the same function object rather than of two closures that
+    // can never be equal.
+    Map<String, List<bool>> distinctions(
+      Mark<Fruit> Function({
+        FieldAccessor<Fruit, String?>? label,
+        FieldAccessor<Fruit, String?>? pointKey,
+      })
+      build, {
+      required bool byLabel,
+    }) {
+      final bare = build();
+      final carrying = byLabel
+          ? build(label: fruitPointLabel)
+          : build(pointKey: fruitPointKey);
+      return <String, List<bool>>{
+        'equal': <bool>[carrying == bare],
+        'sameHash': <bool>[carrying.hashCode == bare.hashCode],
+      };
+    }
+
+    Mark<Fruit> line({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => LineMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> area({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => AreaMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> bar({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => BarMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> scatter({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => ScatterMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+
+    final families =
+        <
+          String,
+          Mark<Fruit> Function({
+            FieldAccessor<Fruit, String?>? label,
+            FieldAccessor<Fruit, String?>? pointKey,
+          })
+        >{
+          'LineMark': line,
+          'AreaMark': area,
+          'BarMark': bar,
+          'ScatterMark': scatter,
+        };
+
+    test('label participates in equality on every family that carries it', () {
+      // Whole-map comparison, so one family missed in `==` or in `hashCode`
+      // cannot hide behind another family's failure.
+      expect(
+        <String, Map<String, List<bool>>>{
+          for (final entry in families.entries)
+            entry.key: distinctions(entry.value, byLabel: true),
+        },
+        <String, Map<String, List<bool>>>{
+          for (final family in families.keys)
+            family: <String, List<bool>>{
+              'equal': <bool>[false],
+              'sameHash': <bool>[false],
+            },
+        },
+      );
+    });
+
+    test(
+      'pointKey participates in equality on every family that carries it',
+      () {
+        expect(
+          <String, Map<String, List<bool>>>{
+            for (final entry in families.entries)
+              entry.key: distinctions(entry.value, byLabel: false),
+          },
+          <String, Map<String, List<bool>>>{
+            for (final family in families.keys)
+              family: <String, List<bool>>{
+                'equal': <bool>[false],
+                'sameHash': <bool>[false],
+              },
+          },
+        );
+      },
+    );
+
+    test('two marks declaring the SAME accessors stay equal', () {
+      // The control: without it the assertions above would pass for marks that
+      // compare unequal to everything, which proves nothing about the fields.
+      expect(
+        <String, List<bool>>{
+          for (final entry in families.entries)
+            entry.key: <bool>[
+              entry.value(label: fruitPointLabel, pointKey: fruitPointKey) ==
+                  entry.value(label: fruitPointLabel, pointKey: fruitPointKey),
+              entry
+                      .value(label: fruitPointLabel, pointKey: fruitPointKey)
+                      .hashCode ==
+                  entry
+                      .value(label: fruitPointLabel, pointKey: fruitPointKey)
+                      .hashCode,
+            ],
+        },
+        <String, List<bool>>{
+          for (final family in families.keys) family: <bool>[true, true],
+        },
+      );
     });
   });
 }

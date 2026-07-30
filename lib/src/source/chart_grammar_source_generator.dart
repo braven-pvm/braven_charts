@@ -1936,9 +1936,17 @@ class _GrammarChainEmitter {
           ? _withoutAxisBinding(lowered.series[index])
           : lowered.series[index];
       if (actual != expected) {
+        // The NORMALISED series, deliberately: the detail has to explain the
+        // comparison that actually failed. Handing the un-normalised one over
+        // makes the axis sentence reachable for a chart whose binding this
+        // loop already normalised away — a legacy single-axis chart refused
+        // for a per-point field would then be told to "bind every series
+        // explicitly — or none", which it already satisfies. When the gate did
+        // NOT apply, or the family cannot be unbound, `actual` IS the lowered
+        // series and the axis sentence stays exactly as reachable as before.
         return (
           subject: 'series "${expected.id}"',
-          detail: _seriesLossDetail(expected, lowered.series[index]),
+          detail: _seriesLossDetail(expected, actual),
         );
       }
     }
@@ -2013,28 +2021,25 @@ class _GrammarChainEmitter {
   /// supports and defaulting the rest, so the fields that differ are precisely
   /// the options no V1 mark carries. Naming the first such field turns "does
   /// not reproduce exactly" into an actionable boundary. When the only
-  /// difference is the axis binding, that is called out specifically — but
-  /// only the MIXED case reaches it now: a chart that leaves EVERY series
-  /// unbound is the legacy single-axis chart, which [_firstMismatch]
-  /// normalises and which round-trips.
+  /// difference is the axis binding, that is called out specifically — and
+  /// only the MIXED case can reach it, because [_firstMismatch] passes the
+  /// series it actually compared: for a legacy single-axis chart the binding
+  /// has already been normalised off the [lowered] side, so it cannot differ
+  /// here and the sentence cannot fire. (Stated as a contract, not as an
+  /// argument about argument order: an all-unbound chart refused for a
+  /// per-point field used to be told to bind every series "explicitly — or
+  /// none", advice it already satisfied.)
   String _seriesLossDetail(ChartSeries expected, ChartSeries lowered) {
     final field = _firstUncarriedField(expected, lowered);
     if (field != null) {
       return 'It carries $field, which no V1 ${_familyWord(expected)} mark '
           'carries.';
     }
-    // Per-POINT options are named before the axis binding below, and the order
-    // matters. [_firstMismatch] hands this method the UN-normalised lowered
-    // series, so for a legacy single-axis chart — whose binding that comparison
-    // normalises away before deciding there is a mismatch at all — the axis
-    // sentence is reachable even though the binding is not what refused it.
-    // Naming the point field first means the author is told about the
-    // difference that actually exists.
-    final pointField = _firstUncarriedPointField(expected, lowered);
-    if (pointField != null) {
-      return 'It carries $pointField, which no V1 ${_familyWord(expected)} '
-          'mark carries.';
-    }
+    // Per-POINT options are named before the axis binding below. For a MIXED
+    // binding — the one shape that still reaches the axis sentence — both are
+    // true at once, and the per-point field is the more specific of the two.
+    final pointDetail = _pointLossDetail(expected, lowered);
+    if (pointDetail != null) return pointDetail;
     if (expected.yAxisId != lowered.yAxisId ||
         (expected.yAxisConfig == null) != (lowered.yAxisConfig == null)) {
       return 'The captured chart leaves this series\' yAxisId unset while the '
@@ -2147,9 +2152,9 @@ class _GrammarChainEmitter {
     return null;
   }
 
-  /// The first PER-POINT option set on [expected] that the [lowered] points do
-  /// not reproduce, phrased for [_seriesLossDetail]'s sentence, or null when
-  /// the points differ in some other way — or not at all.
+  /// The sentence naming the PER-POINT option set on [expected] that the
+  /// [lowered] points do not reproduce, or null when the points differ in some
+  /// other way — or not at all.
   ///
   /// Only `segmentStyle` is named, and it is named because it is deliberately
   /// NOT carried:
@@ -2165,20 +2170,45 @@ class _GrammarChainEmitter {
   /// Dropping it silently would change the dashes and colours the chart draws,
   /// so the honest outcome is a NAMED boundary rather than the generic tail.
   /// Revisit with roadmap item 1d.
-  static String? _firstUncarriedPointField(
-    ChartSeries expected,
-    ChartSeries lowered,
-  ) {
+  ///
+  /// That last collision is why there are TWO sentences rather than one. A
+  /// style setting `strokeWidth` or `dashPattern` is one no V1 mark can produce
+  /// at all. A COLOUR-ONLY style is the exact shape `_xyColorPoints` bakes for
+  /// a line or area mark carrying `colorBy` + `colorEncoding` — the showcase
+  /// ships such charts — so "no V1 line mark carries it" would be false there:
+  /// the chain paints those colours, and it is the REVERSE direction that
+  /// fails, since the channel and its encoding cannot be recovered from the
+  /// baked result. Bar and scatter are deliberately not in that branch: a bar's
+  /// colour channel bakes into `pointStyle` and a scatter's into `colorValue`,
+  /// so a `segmentStyle` on either really is uncarried.
+  static String? _pointLossDetail(ChartSeries expected, ChartSeries lowered) {
     // A length difference is not a per-point OPTION loss — it is a different
     // dataset — so it is left to the generic tail rather than misnamed here.
     if (expected.points.length != lowered.points.length) return null;
+    var differs = false;
+    var everyDifferenceIsColourOnly = true;
     for (var index = 0; index < expected.points.length; index++) {
-      if (expected.points[index].segmentStyle !=
-          lowered.points[index].segmentStyle) {
-        return 'a per-point segment style';
+      final captured = expected.points[index].segmentStyle;
+      if (captured == lowered.points[index].segmentStyle) continue;
+      differs = true;
+      if (captured == null ||
+          captured.color == null ||
+          captured.strokeWidth != null ||
+          captured.dashPattern != null) {
+        everyDifferenceIsColourOnly = false;
       }
     }
-    return null;
+    if (!differs) return null;
+    final bakesSegmentColour =
+        expected is LineChartSeries || expected is AreaChartSeries;
+    if (everyDifferenceIsColourOnly && bakesSegmentColour) {
+      return 'It carries a per-point segment colour. A chain paints those from '
+          'a colorBy channel plus a colorEncoding, and the reverser cannot '
+          'recover that channel from the baked colours, so declare colorBy and '
+          'colorEncoding on the geom verb to express it.';
+    }
+    return 'It carries a per-point segment style, which no V1 '
+        '${_familyWord(expected)} mark carries.';
   }
 
   /// Structural equality for two annotations of the SAME expressible type.

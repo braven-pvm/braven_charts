@@ -78,18 +78,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   arrive sorted, so nearest-point behaviour cannot change underneath an
   existing chart. `geomCandlestick()` does not take it —
   `CandlestickChartSeries` is ordered by its own contract.
-- A named refusal for a per-point `segmentStyle`. Generated source explains
-  that the series "carries a per-point segment style, which no V1 … mark
-  carries" instead of falling into the generic "does not reproduce exactly"
-  sentence. The style is deliberately not carried yet: it needs a row-field
-  kind the synthesised rows do not have, and it shares its slot with
-  `LineMark.colorBy`, which already bakes `segmentStyle.color` per point.
+- A named refusal for a per-point `segmentStyle`, in two sentences because it is
+  two boundaries. A style setting `strokeWidth` or `dashPattern` is reported as
+  one "no V1 … mark carries"; a COLOUR-ONLY style is reported as a per-point
+  segment colour that a chain paints from `colorBy` + `colorEncoding`, which the
+  reverser cannot recover from the baked colours. Either way it beats falling
+  into the generic "does not reproduce exactly" sentence. The style is
+  deliberately not carried yet: it needs a row-field kind the synthesised rows
+  do not have, and it shares its slot with `LineMark.colorBy`, which already
+  bakes `segmentStyle.color` per point.
 
 - Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
   `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
   per-series binding — emits a `BravenChart` chain instead of being refused
   with the axis sentence. Only a chart that binds SOME series and not others
-  still reaches that refusal.
+  still reaches that refusal — an all-unbound chart refused for some OTHER
+  reason is no longer told to change a binding that was never the problem.
 
 ### Changed
 
