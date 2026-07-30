@@ -397,6 +397,89 @@ void main() {
     });
   });
 
+  group('unit reaches every Cartesian mark', () {
+    // The five Cartesian geom verbs build `SeriesMark`s, the only marks that
+    // can hold a unit. The annotation verbs (trend/threshold/band/point) build
+    // marks that structurally cannot, so there is nothing to forward there.
+    //
+    // Both assertions below compare a WHOLE MAP rather than looping with a
+    // per-family `expect`, so one missing forward cannot hide behind an
+    // earlier family's failure short-circuiting the rest.
+    Map<String, PlotSpec<Sample>> specsWith({String? unit}) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': base.geomLine(unit: unit).toSpec(),
+        'geomArea': base.geomArea(unit: unit).toSpec(),
+        'geomBar': base.geomBar(unit: unit).toSpec(),
+        'geomPoint': base.geomPoint(unit: unit).toSpec(),
+        'geomCandlestick': base
+            .geomCandlestick(
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+              unit: unit,
+            )
+            .toSpec(),
+      };
+    }
+
+    Map<String, String?> unitsOf(Map<String, PlotSpec<Sample>> specs) => {
+      for (final entry in specs.entries)
+        entry.key: (entry.value.marks.single as SeriesMark<Sample>).unit,
+    };
+
+    test('the Cartesian geom verbs forward unit to their marks', () {
+      expect(unitsOf(specsWith(unit: 'W')), <String, String?>{
+        'geomLine': 'W',
+        'geomArea': 'W',
+        'geomBar': 'W',
+        'geomPoint': 'W',
+        'geomCandlestick': 'W',
+      });
+    });
+
+    test('omitting unit leaves every Cartesian mark unitless', () {
+      // A default of `''` or the axis unit would be silently wrong: the
+      // lowered series must stay unitless so nothing appears in a tooltip
+      // that the author never asked for.
+      expect(unitsOf(specsWith()), <String, String?>{
+        'geomLine': null,
+        'geomArea': null,
+        'geomBar': null,
+        'geomPoint': null,
+        'geomCandlestick': null,
+      });
+    });
+
+    test('geomLine with a unit equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the unit
+      // did not displace or disturb any other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power', strokeWidth: 3, unit: 'W')
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              strokeWidth: 3,
+              unit: 'W',
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
   group('reference marks', () {
     test('threshold appends a ThresholdMark with an explicit id', () {
       final spec = BravenChart.of(rows)
@@ -846,11 +929,9 @@ void main() {
           mode: PolarColumnCompositionMode.grouped,
         ),
       );
-      final chart = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine(id: 'power')
-          .polarConfig(polar);
+      final chart = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine(id: 'power').polarConfig(polar);
 
       expect(chart.toSpec().polar, same(polar));
       expect(
@@ -998,12 +1079,9 @@ void main() {
 
   group('.facet sets PlotSpec.facet', () {
     test('facet with defaults lands on the spec', () {
-      final spec = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .facet(sampleZone)
-          .toSpec();
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().facet(sampleZone).toSpec();
 
       expect(spec.facet, const FacetSpec<Sample>(by: sampleZone));
       expect(spec.facet!.scales, FacetScales.fixed);
@@ -1014,7 +1092,12 @@ void main() {
           .x(sampleTime)
           .y(samplePower)
           .geomLine()
-          .facet(sampleZone, columns: 3, scales: FacetScales.freeY, label: 'Zone')
+          .facet(
+            sampleZone,
+            columns: 3,
+            scales: FacetScales.freeY,
+            label: 'Zone',
+          )
           .toSpec();
 
       expect(
@@ -1029,38 +1112,32 @@ void main() {
     });
 
     test('a chain without .facet leaves the spec unfaceted', () {
-      final spec = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .toSpec();
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().toSpec();
       expect(spec.facet, isNull);
     });
   });
 
   group('faceted terminals', () {
-    Matcher throwsCode(GrammarDiagnosticCode code) =>
-        throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
+    Matcher throwsCode(GrammarDiagnosticCode code) => throwsA(
+      isA<GrammarSpecException>().having((e) => e.code, 'code', code),
+    );
 
     test('.build() on a faceted chain throws, directing to buildFaceted', () {
       expect(
-        () => BravenChart.of(rows)
-            .x(sampleTime)
-            .y(samplePower)
-            .geomLine()
-            .facet(sampleZone)
-            .build(),
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).geomLine().facet(sampleZone).build(),
         throwsCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
       );
     });
 
     test('.buildFaceted() on a non-faceted chain throws', () {
       expect(
-        () => BravenChart.of(rows)
-            .x(sampleTime)
-            .y(samplePower)
-            .geomLine()
-            .buildFaceted(),
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).geomLine().buildFaceted(),
         throwsCode(GrammarDiagnosticCode.notFaceted),
       );
     });
@@ -1078,11 +1155,9 @@ void main() {
     });
 
     test('.build() on a non-faceted chain still returns a BravenPlot', () {
-      final widget = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .build();
+      final widget = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().build();
       expect(widget, isA<BravenPlot<Sample>>());
     });
   });

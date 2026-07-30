@@ -250,12 +250,17 @@ final class BravenChart<T> {
       _copy(defaultY: accessor, yLabel: label);
 
   /// Appends a connected line through `(x, y)`.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomLine({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? strokeWidth,
@@ -271,6 +276,7 @@ final class BravenChart<T> {
       y: _resolveY('geomLine', y),
       name: name,
       color: color,
+      unit: unit,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       strokeWidth: strokeWidth,
@@ -287,12 +293,17 @@ final class BravenChart<T> {
   /// [colorBy] colours the area's TOP EDGE per segment (the leading-point
   /// rule), NOT the fill — value-driven fill is not yet supported. It requires
   /// [colorEncoding]; the package ships no default colour ramp.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? baseline,
@@ -310,6 +321,7 @@ final class BravenChart<T> {
       y: _resolveY('geomArea', y),
       name: name,
       color: color,
+      unit: unit,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       baseline: baseline,
@@ -327,12 +339,17 @@ final class BravenChart<T> {
   ///
   /// Bars have no orientation of their own: transposing the plane is a
   /// whole-chart operation, expressed by [transposed].
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomBar({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barGap,
@@ -352,6 +369,7 @@ final class BravenChart<T> {
       y: _resolveY('geomBar', y),
       name: name,
       color: color,
+      unit: unit,
       barWidthPercent: barWidthPercent,
       barWidthPixels: barWidthPixels,
       barGap: barGap,
@@ -373,12 +391,17 @@ final class BravenChart<T> {
   /// [categories]; the package ships neither a default color ramp nor a
   /// categorical palette, so a channel without its template is rejected when
   /// the spec is lowered.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomPoint({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
     Channel<T>? size,
     ScatterSizeEncoding? sizeEncoding,
     Channel<T>? colorBy,
@@ -398,6 +421,7 @@ final class BravenChart<T> {
       y: _resolveY('geomPoint', y),
       name: name,
       color: color,
+      unit: unit,
       size: size,
       sizeEncoding: sizeEncoding,
       colorBy: colorBy,
@@ -414,6 +438,10 @@ final class BravenChart<T> {
   );
 
   /// Appends one open-high-low-close candle per row.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomCandlestick({
     required FieldAccessor<T, num> open,
     required FieldAccessor<T, num> high,
@@ -424,6 +452,7 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     String? yAxisId,
   }) => _append(
     CandlestickMark<T>(
@@ -436,6 +465,7 @@ final class BravenChart<T> {
       timestamp: timestamp,
       name: name,
       color: color,
+      unit: unit,
       yAxisId: yAxisId,
     ),
   );
