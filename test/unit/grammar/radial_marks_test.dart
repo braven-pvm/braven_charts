@@ -510,4 +510,64 @@ void main() {
       expect(point, isA<Mark<Fruit>>());
     });
   });
+
+  group('isXOrdered on the four Cartesian geometry marks', () {
+    test('it participates in equality on every family that carries it', () {
+      // The emitter's round-trip proof compares MARKS as well as series, so a
+      // flag left out of `==`/`hashCode` would let a plan that dropped it look
+      // identical to one that kept it.
+      const lineOrdered = LineMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const lineDefault = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(lineOrdered == lineDefault, isFalse);
+      expect(lineOrdered.hashCode == lineDefault.hashCode, isFalse);
+
+      const areaOrdered = AreaMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const areaDefault = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(areaOrdered == areaDefault, isFalse);
+      expect(areaOrdered.hashCode == areaDefault.hashCode, isFalse);
+
+      const barOrdered = BarMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const barDefault = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(barOrdered == barDefault, isFalse);
+      expect(barOrdered.hashCode == barDefault.hashCode, isFalse);
+
+      const scatterOrdered = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const scatterDefault = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(scatterOrdered == scatterDefault, isFalse);
+      expect(scatterOrdered.hashCode == scatterDefault.hashCode, isFalse);
+    });
+
+    test('it defaults to false — the same default ChartSeries has', () {
+      // Not `bool?`: the lowered field is a non-nullable bool defaulting to
+      // false, so a nullable mark field would only add a second spelling of
+      // the same "no" — and a default of TRUE would change nearest-point
+      // behaviour for every chart authored through the chain.
+      const line = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      const area = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      const bar = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      const scatter = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(<bool>[
+        line.isXOrdered,
+        area.isXOrdered,
+        bar.isXOrdered,
+        scatter.isXOrdered,
+      ], everyElement(isFalse));
+    });
+  });
 }

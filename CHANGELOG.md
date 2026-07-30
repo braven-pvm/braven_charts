@@ -71,6 +71,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same key for two rows of one mark is refused by name rather than lowering
   to a series whose selection identity is ambiguous. The Cartesian counterpart
   of `duplicateRadialCategory`.
+- `isXOrdered:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`, carried onto `ChartSeries.isXOrdered` and reversed back into
+  generated Dart source. It is a DECLARATION, never inferred from the data:
+  a chart that does not declare it stays unordered even when its rows happen to
+  arrive sorted, so nearest-point behaviour cannot change underneath an
+  existing chart. `geomCandlestick()` does not take it —
+  `CandlestickChartSeries` is ordered by its own contract.
+- A named refusal for a per-point `segmentStyle`. Generated source explains
+  that the series "carries a per-point segment style, which no V1 … mark
+  carries" instead of falling into the generic "does not reproduce exactly"
+  sentence. The style is deliberately not carried yet: it needs a row-field
+  kind the synthesised rows do not have, and it shares its slot with
+  `LineMark.colorBy`, which already bakes `segmentStyle.color` per point.
 
 - Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
   `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no

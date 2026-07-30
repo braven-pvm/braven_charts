@@ -259,6 +259,10 @@ final class BravenChart<T> {
   /// point a stable identity for selection. Both are per-point accessors that
   /// may return null — or `''`, which means the same thing — for a row that has
   /// neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomLine({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -268,6 +272,7 @@ final class BravenChart<T> {
     String? unit,
     FieldAccessor<T, String?>? label,
     FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? strokeWidth,
@@ -286,6 +291,7 @@ final class BravenChart<T> {
       unit: unit,
       label: label,
       pointKey: pointKey,
+      isXOrdered: isXOrdered,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       strokeWidth: strokeWidth,
@@ -311,6 +317,10 @@ final class BravenChart<T> {
   /// point a stable identity for selection. Both are per-point accessors that
   /// may return null — or `''`, which means the same thing — for a row that has
   /// neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -320,6 +330,7 @@ final class BravenChart<T> {
     String? unit,
     FieldAccessor<T, String?>? label,
     FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? baseline,
@@ -340,6 +351,7 @@ final class BravenChart<T> {
       unit: unit,
       label: label,
       pointKey: pointKey,
+      isXOrdered: isXOrdered,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       baseline: baseline,
@@ -368,6 +380,10 @@ final class BravenChart<T> {
   /// selection. Both may return null — or `''`, which means the same thing —
   /// for a row that has neither. Keys must be unique among one mark's keyed
   /// rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomBar({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -377,6 +393,7 @@ final class BravenChart<T> {
     String? unit,
     FieldAccessor<T, String?>? label,
     FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barGap,
@@ -399,6 +416,7 @@ final class BravenChart<T> {
       unit: unit,
       label: label,
       pointKey: pointKey,
+      isXOrdered: isXOrdered,
       barWidthPercent: barWidthPercent,
       barWidthPixels: barWidthPixels,
       barGap: barGap,
@@ -430,6 +448,10 @@ final class BravenChart<T> {
   /// category. [pointKey] gives each marker a stable identity for selection.
   /// Both may return null — or `''`, which means the same thing — for a row
   /// that has neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomPoint({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -439,6 +461,7 @@ final class BravenChart<T> {
     String? unit,
     FieldAccessor<T, String?>? label,
     FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? size,
     ScatterSizeEncoding? sizeEncoding,
     Channel<T>? colorBy,
@@ -461,6 +484,7 @@ final class BravenChart<T> {
       unit: unit,
       label: label,
       pointKey: pointKey,
+      isXOrdered: isXOrdered,
       size: size,
       sizeEncoding: sizeEncoding,
       colorBy: colorBy,

@@ -2023,6 +2023,18 @@ class _GrammarChainEmitter {
       return 'It carries $field, which no V1 ${_familyWord(expected)} mark '
           'carries.';
     }
+    // Per-POINT options are named before the axis binding below, and the order
+    // matters. [_firstMismatch] hands this method the UN-normalised lowered
+    // series, so for a legacy single-axis chart — whose binding that comparison
+    // normalises away before deciding there is a mismatch at all — the axis
+    // sentence is reachable even though the binding is not what refused it.
+    // Naming the point field first means the author is told about the
+    // difference that actually exists.
+    final pointField = _firstUncarriedPointField(expected, lowered);
+    if (pointField != null) {
+      return 'It carries $pointField, which no V1 ${_familyWord(expected)} '
+          'mark carries.';
+    }
     if (expected.yAxisId != lowered.yAxisId ||
         (expected.yAxisConfig == null) != (lowered.yAxisConfig == null)) {
       return 'The captured chart leaves this series\' yAxisId unset while the '
@@ -2131,6 +2143,40 @@ class _GrammarChainEmitter {
         // Open/high/low/close and the timestamp are carried in full; any
         // remaining styling difference falls through to the generic tail.
         break;
+    }
+    return null;
+  }
+
+  /// The first PER-POINT option set on [expected] that the [lowered] points do
+  /// not reproduce, phrased for [_seriesLossDetail]'s sentence, or null when
+  /// the points differ in some other way — or not at all.
+  ///
+  /// Only `segmentStyle` is named, and it is named because it is deliberately
+  /// NOT carried:
+  ///
+  ///  - measured, carrying it unblocks ZERO states — the one censused chart
+  ///    using it still refuses on a marker field behind it;
+  ///  - it would need a new row-field kind, since a synthesised row has slots
+  ///    for numbers, strings, stamps and colours only; and
+  ///  - it collides with `LineMark.colorBy`, which already bakes
+  ///    `segmentStyle.color` into each point at lowering, so the same slot has
+  ///    two owners.
+  ///
+  /// Dropping it silently would change the dashes and colours the chart draws,
+  /// so the honest outcome is a NAMED boundary rather than the generic tail.
+  /// Revisit with roadmap item 1d.
+  static String? _firstUncarriedPointField(
+    ChartSeries expected,
+    ChartSeries lowered,
+  ) {
+    // A length difference is not a per-point OPTION loss — it is a different
+    // dataset — so it is left to the generic tail rather than misnamed here.
+    if (expected.points.length != lowered.points.length) return null;
+    for (var index = 0; index < expected.points.length; index++) {
+      if (expected.points[index].segmentStyle !=
+          lowered.points[index].segmentStyle) {
+        return 'a per-point segment style';
+      }
     }
     return null;
   }
@@ -2454,6 +2500,7 @@ class _GrammarChainEmitter {
             unit: unit,
             label: label,
             pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2520,6 +2567,7 @@ class _GrammarChainEmitter {
             unit: unit,
             label: label,
             pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2566,6 +2614,7 @@ class _GrammarChainEmitter {
             unit: unit,
             label: label,
             pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2606,6 +2655,7 @@ class _GrammarChainEmitter {
             unit: unit,
             label: label,
             pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -3311,6 +3361,24 @@ class _GrammarChainEmitter {
       if (pointKey != null) {
         writer.namedArgument('pointKey', pointKey.accessor());
       }
+      // `isXOrdered` is read off the MARK, unlike the two accessors above: it
+      // is a plain declared flag, not a synthesised row accessor, so there is
+      // nothing in the plan to read. The four families that carry it share no
+      // intermediate — `CandlestickMark` is a `SeriesMark` too, but its series
+      // hard-codes the flag — so this is a switch rather than a base-class
+      // read, and the default arm is what keeps candlestick and trend silent.
+      //
+      // Written ONLY when true. False is the default on the mark, on the verb
+      // and on `ChartSeries`, so a chart that declares nothing must emit
+      // exactly the text it emitted before this slice.
+      final isXOrdered = switch (mark) {
+        LineMark<_SourceRow>() => mark.isXOrdered,
+        AreaMark<_SourceRow>() => mark.isXOrdered,
+        BarMark<_SourceRow>() => mark.isXOrdered,
+        ScatterMark<_SourceRow>() => mark.isXOrdered,
+        _ => false,
+      };
+      if (isXOrdered) writer.namedArgument('isXOrdered', 'true');
       switch (mark) {
         case LineMark<_SourceRow>():
           _optionalNumber(writer, 'strokeWidth', mark.strokeWidth);

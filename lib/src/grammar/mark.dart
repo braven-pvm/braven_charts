@@ -120,6 +120,7 @@ final class LineMark<T> extends SeriesMark<T> {
     super.unit,
     this.label,
     this.pointKey,
+    this.isXOrdered = false,
     this.colorBy,
     this.colorEncoding,
     this.strokeWidth,
@@ -150,6 +151,17 @@ final class LineMark<T> extends SeriesMark<T> {
   /// leaves that point unkeyed, and unkeyed points never collide with each
   /// other.
   final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing and selection binary-
+  /// search instead of scanning.
+  ///
+  /// DECLARED, never derived. The lowering does not inspect the data to decide
+  /// this: a sorted-looking dataset is not a promise that the next one will be,
+  /// and inferring it would silently change nearest-point behaviour for every
+  /// chart whose rows happen to arrive in order. Defaults to false, the same
+  /// default `ChartSeries` has.
+  final bool isXOrdered;
 
   /// Optional colour channel: each segment's stroke is the ramp colour of the
   /// leading point's value over the data's finite domain, baked at lowering
@@ -190,6 +202,7 @@ final class LineMark<T> extends SeriesMark<T> {
           other.unit == unit &&
           other.label == label &&
           other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
@@ -209,6 +222,7 @@ final class LineMark<T> extends SeriesMark<T> {
     unit,
     label,
     pointKey,
+    isXOrdered,
     colorBy,
     colorEncoding,
     strokeWidth,
@@ -235,6 +249,7 @@ final class AreaMark<T> extends SeriesMark<T> {
     super.unit,
     this.label,
     this.pointKey,
+    this.isXOrdered = false,
     this.colorBy,
     this.colorEncoding,
     this.baseline,
@@ -265,6 +280,12 @@ final class AreaMark<T> extends SeriesMark<T> {
   /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
   /// leaves that point unkeyed, and unkeyed points never collide.
   final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Optional colour channel. Colours the area's TOP EDGE per segment (the
   /// leading-point rule), NOT the fill — value-driven fill is not yet
@@ -311,6 +332,7 @@ final class AreaMark<T> extends SeriesMark<T> {
           other.unit == unit &&
           other.label == label &&
           other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
@@ -332,6 +354,7 @@ final class AreaMark<T> extends SeriesMark<T> {
     unit,
     label,
     pointKey,
+    isXOrdered,
     colorBy,
     colorEncoding,
     baseline,
@@ -363,6 +386,7 @@ final class BarMark<T> extends SeriesMark<T> {
     super.unit,
     this.label,
     this.pointKey,
+    this.isXOrdered = false,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barGap,
@@ -398,6 +422,12 @@ final class BarMark<T> extends SeriesMark<T> {
   /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
   /// leaves that bar unkeyed, and unkeyed points never collide.
   final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Optional colour channel: each bar's fill is the ramp colour of this
   /// field's value over the data's finite domain, baked at lowering into
@@ -458,6 +488,7 @@ final class BarMark<T> extends SeriesMark<T> {
           other.unit == unit &&
           other.label == label &&
           other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.barWidthPercent == barWidthPercent &&
           other.barWidthPixels == barWidthPixels &&
           other.barGap == barGap &&
@@ -472,8 +503,8 @@ final class BarMark<T> extends SeriesMark<T> {
 
   // `Object.hashAll`, not `Object.hash`: this mark's field list is the longest
   // in the file and `Object.hash` stops at 20 positional arguments, which the
-  // list below now reaches exactly. The list form has no such ceiling, so the
-  // next field added here fails on its merits rather than on an arity limit.
+  // list below has already passed. The list form has no such ceiling, so a
+  // field added here fails on its merits rather than on an arity limit.
   @override
   int get hashCode => Object.hashAll(<Object?>[
     x,
@@ -485,6 +516,7 @@ final class BarMark<T> extends SeriesMark<T> {
     unit,
     label,
     pointKey,
+    isXOrdered,
     barWidthPercent,
     barWidthPixels,
     barGap,
@@ -533,6 +565,7 @@ final class ScatterMark<T> extends SeriesMark<T> {
     super.unit,
     this.label,
     this.pointKey,
+    this.isXOrdered = false,
     this.size,
     this.sizeEncoding,
     this.colorBy,
@@ -569,6 +602,12 @@ final class ScatterMark<T> extends SeriesMark<T> {
   /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
   /// leaves that marker unkeyed, and unkeyed points never collide.
   final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Marker-area channel. Lowers to `ChartDataPoint.magnitude`.
   final Channel<T>? size;
@@ -616,6 +655,7 @@ final class ScatterMark<T> extends SeriesMark<T> {
           other.unit == unit &&
           other.label == label &&
           other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.size == size &&
           other.sizeEncoding == sizeEncoding &&
           other.colorBy == colorBy &&
@@ -639,6 +679,7 @@ final class ScatterMark<T> extends SeriesMark<T> {
     unit,
     label,
     pointKey,
+    isXOrdered,
     size,
     sizeEncoding,
     colorBy,

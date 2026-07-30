@@ -3274,6 +3274,263 @@ void main() {
       expect(blockedReason(generated), contains('pointKey'));
     });
 
+    testWidgets('shape 31: isXOrdered round-trips AND is emitted', (
+      tester,
+    ) async {
+      // `isXOrdered` is a series-level data-shape hint that changes NEAREST-
+      // POINT behaviour (see `chart_selection_expression.dart`), so a chart
+      // that declares it must come back declaring it. It is carried
+      // EXPLICITLY: the generator never infers it from the synthesised rows,
+      // which are sorted here and would read as ordered if it did.
+      //
+      // The emitted-text assertion below is the load-bearing half. The proof
+      // re-lowers the reconstructed spec and never reads a CHARACTER of the
+      // emitted chain, so a missing writer line would ship a chain that
+      // silently dropped the flag while the rebuilt-document comparison — whose
+      // twin is hand-written rather than compiled from this text — still
+      // passed.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'series_is_x_ordered',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              isXOrdered: true,
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              isXOrdered: true,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The WHOLE argument list of the geom call, not one fragment: a dropped
+      // field, an extra field, a wrong value and a reordering then all fail.
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'isXOrdered: true,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+    });
+
+    testWidgets('shape 31b: EVERY family that carries isXOrdered emits it', (
+      tester,
+    ) async {
+      // The emission is a single switch with one arm per carrying family, and
+      // the reversal is one `isXOrdered: series.isXOrdered` per family in
+      // `_planGeometry`. A family missed in either place is a family that
+      // silently drops the flag, and shape 31 only compiles `geomLine`.
+      //
+      // Each flag is read out of that family's OWN argument list rather than
+      // found anywhere in the file, and the three families no round-trip shape
+      // compiles go through the same `dart format` + `dart analyze` floor —
+      // a text match proves a parameter NAME was written, only the floor proves
+      // the verb actually has it.
+      final charts = <String, Widget Function(BravenChartController)>{
+        'geomLine': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomLine(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomArea': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomArea(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomBar': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomBar(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomPoint': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomPoint(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+      };
+      final emitted = <String, bool>{};
+      final blocked = <String, String?>{};
+      final clean = <String, bool>{};
+      final complete = <String, bool>{};
+      final sources = <String, String>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(tester, entry.value),
+        );
+        sources[entry.key] = generated.source;
+        blocked[entry.key] = blockedReason(generated);
+        clean[entry.key] = generated.warnings.isEmpty;
+        complete[entry.key] = generated.isComplete;
+        final opening = '.${entry.key}(';
+        emitted[entry.key] =
+            generated.source.contains(opening) &&
+            literalArguments(
+              generated.source,
+              opening,
+            ).contains('isXOrdered: true,');
+      }
+      // Compared as WHOLE MAPS so one missing family cannot hide behind an
+      // earlier failure.
+      expect(blocked, <String, String?>{
+        for (final verb in charts.keys) verb: null,
+      });
+      expect(clean, <String, bool>{for (final verb in charts.keys) verb: true});
+      expect(complete, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      expect(emitted, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      for (final verb in const <String>['geomArea', 'geomBar', 'geomPoint']) {
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            sources[verb]!,
+            fixtureName: 'grammar_is_x_ordered_$verb',
+          ),
+        );
+      }
+    });
+
+    testWidgets('shape 31c: a chart at the false default emits NO isXOrdered '
+        'argument', (tester) async {
+      // The byte-identity control for the two above. `false` is the default on
+      // the mark, the verb and `ChartSeries`, so a chart that declares nothing
+      // must emit exactly what it emitted before this slice.
+      //
+      // Asserted twice, deliberately. The whole-argument-list expectation is
+      // the precise one — an `isXOrdered: false,` written unconditionally fails
+      // it. The whole-file expectation is the byte-identity claim itself: the
+      // grammar form writes this token nowhere else (only the CONFIG source
+      // form emits an `isXOrdered` on the series literal), so its complete
+      // absence is exactly what "unchanged output" means here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+      expect(generated.source, isNot(contains('isXOrdered')));
+    });
+
+    testWidgets('shape 31d: a per-point segment style is refused with a NAMED '
+        'reason', (tester) async {
+      // `segmentStyle` is deliberately NOT carried. Measured: carrying it
+      // unblocks zero states (the one censused chart using it still refuses on
+      // a marker field behind it), it would need a new row-field kind — rows
+      // have slots for numbers, strings, stamps and colours only — and it
+      // collides with `LineMark.colorBy`, which already bakes
+      // `segmentStyle.color` per point. So it gets an honest NAMED boundary
+      // instead of the generic "does not reproduce exactly" tail.
+      //
+      // The axis is bound explicitly on both halves, as shape 29d is, so the
+      // refusal cannot be attributed to the legacy single-axis binding.
+      final axis = YAxisConfig.withId(
+        id: 'axis-0',
+        position: YAxisPosition.left,
+      );
+      LineChartSeries forecast({SegmentStyle? style}) => LineChartSeries(
+        id: 'forecast',
+        yAxisId: 'axis-0',
+        yAxisConfig: axis,
+        points: <ChartDataPoint>[
+          const ChartDataPoint(x: 0, y: 1),
+          ChartDataPoint(x: 1, y: 2, segmentStyle: style),
+        ],
+      );
+
+      final styled = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              forecast(style: const SegmentStyle(dashPattern: <double>[2, 6])),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(styled), isFalse);
+      expect(blockedReason(styled), contains('segment style'));
+
+      // The control, and it is not decoration: without it the assertions above
+      // would pass for a fixture refused for some unrelated reason, and the
+      // reason string would be naming a boundary this chart never reached. The
+      // SAME chart with the style removed must emit.
+      final plain = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[forecast()],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(plain),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(plain)}',
+      );
+    });
+
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
       tester,
     ) async {

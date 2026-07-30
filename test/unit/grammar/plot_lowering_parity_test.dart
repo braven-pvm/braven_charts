@@ -808,6 +808,138 @@ void main() {
     });
   });
 
+  group('parity: isXOrdered', () {
+    test('isXOrdered is carried EXPLICITLY, never derived from the rows', () {
+      final ordered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower, isXOrdered: true),
+        ],
+      )).lower();
+      expect(ordered.series.single.isXOrdered, isTrue);
+
+      // `rows` is ALREADY sorted ascending by time, so a lowering that derived
+      // the flag from the synthesised data would flip this to true. It must
+      // not: `isXOrdered` changes nearest-point behaviour (see
+      // `chart_selection_expression.dart`), and deriving it would silently
+      // change every existing grammar chart whose rows happen to be sorted.
+      expect(
+        rows.map((row) => row.time).toList(),
+        <double>[0, 1, 2],
+        reason:
+            'the control is only meaningful while these rows ARE sorted; a '
+            'derived flag would read true off them',
+      );
+      final notDeclared = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(x: sampleTime, y: samplePower),
+        ],
+      )).lower();
+      expect(notDeclared.series.single.isXOrdered, isFalse);
+    });
+
+    test('every family that carries it lowers it', () {
+      // Whole-map comparison so one family missed in the passthrough cannot
+      // hide behind an earlier family's failure short-circuiting the loop.
+      final marks = <String, Mark<Sample>>{
+        'line': const LineMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          isXOrdered: true,
+        ),
+        'area': const AreaMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          isXOrdered: true,
+        ),
+        'bar': const BarMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          isXOrdered: true,
+        ),
+        'scatter': const ScatterMark<Sample>(
+          x: sampleTime,
+          y: samplePower,
+          isXOrdered: true,
+        ),
+      };
+      Map<String, bool> flagsOf(Map<String, Mark<Sample>> marks) =>
+          <String, bool>{
+            for (final entry in marks.entries)
+              entry.key: (PlotSpec<Sample>(
+                data: rows,
+                marks: <Mark<Sample>>[entry.value],
+              )).lower().series.single.isXOrdered,
+          };
+
+      expect(flagsOf(marks), <String, bool>{
+        for (final family in marks.keys) family: true,
+      });
+
+      // The control, in the same shape: a hard-coded `true` in any of the four
+      // passthroughs would satisfy the map above.
+      expect(
+        flagsOf(const <String, Mark<Sample>>{
+          'line': LineMark<Sample>(x: sampleTime, y: samplePower),
+          'area': AreaMark<Sample>(x: sampleTime, y: samplePower),
+          'bar': BarMark<Sample>(x: sampleTime, y: samplePower),
+          'scatter': ScatterMark<Sample>(x: sampleTime, y: samplePower),
+        }),
+        <String, bool>{for (final family in marks.keys) family: false},
+      );
+    });
+
+    test('a candlestick series stays ordered by its OWN contract', () {
+      // CandlestickMark deliberately has no `isXOrdered`: `CandlestickChartSeries`
+      // hard-codes `isXOrdered: true` and ASSERTS against false, so a flag on
+      // the mark could only ever be honoured in one position. This pins why the
+      // carry stops at four families rather than five.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          CandlestickMark<Sample>(
+            x: sampleTime,
+            open: sampleOpen,
+            high: sampleHigh,
+            low: sampleLow,
+            close: sampleClose,
+          ),
+        ],
+      )).lower();
+      expect(lowered.series.single.isXOrdered, isTrue);
+    });
+
+    test('an ordered line mark reaches config parity', () {
+      // `isXOrdered` participates in `ChartSeries ==` through the base class,
+      // so the whole-series parity this file is built on is load-bearing for
+      // it — and it is what the emitter's round-trip proof compares.
+      final lowered = (PlotSpec<Sample>(
+        data: rows,
+        marks: const <Mark<Sample>>[
+          LineMark<Sample>(
+            x: sampleTime,
+            y: samplePower,
+            id: 'power',
+            isXOrdered: true,
+          ),
+        ],
+      )).lower();
+
+      final axis = defaultAxis();
+      expect(
+        lowered.series.single,
+        LineChartSeries(
+          id: 'power',
+          points: xyPoints(),
+          isXOrdered: true,
+          yAxisId: 'axis-0',
+          yAxisConfig: axis,
+        ),
+      );
+    });
+  });
+
   group('parity: composition', () {
     test('multi-mark specs number unlabelled marks mark-<index>', () {
       final lowered = (PlotSpec<Sample>(

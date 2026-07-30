@@ -607,6 +607,92 @@ void main() {
     });
   });
 
+  group('isXOrdered reaches the four geometry marks', () {
+    // Candlestick is deliberately absent: `CandlestickChartSeries` hard-codes
+    // `isXOrdered: true` and asserts against false, so the flag has no meaning
+    // there. ONE NAME at all three layers — mark field, verb parameter and
+    // `ChartSeries.isXOrdered` — so nothing has to remember a rename.
+    Map<String, PlotSpec<Sample>> specsWith({bool? isXOrdered}) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': isXOrdered == null
+            ? base.geomLine().toSpec()
+            : base.geomLine(isXOrdered: isXOrdered).toSpec(),
+        'geomArea': isXOrdered == null
+            ? base.geomArea().toSpec()
+            : base.geomArea(isXOrdered: isXOrdered).toSpec(),
+        'geomBar': isXOrdered == null
+            ? base.geomBar().toSpec()
+            : base.geomBar(isXOrdered: isXOrdered).toSpec(),
+        'geomPoint': isXOrdered == null
+            ? base.geomPoint().toSpec()
+            : base.geomPoint(isXOrdered: isXOrdered).toSpec(),
+      };
+    }
+
+    // Whole-map comparisons, so one missing forward cannot hide behind an
+    // earlier family's failure.
+    Map<String, Object?> flagsOf(Map<String, PlotSpec<Sample>> specs) =>
+        <String, Object?>{
+          for (final entry in specs.entries)
+            entry.key: switch (entry.value.marks.single) {
+              LineMark<Sample>(:final isXOrdered) => isXOrdered,
+              AreaMark<Sample>(:final isXOrdered) => isXOrdered,
+              BarMark<Sample>(:final isXOrdered) => isXOrdered,
+              ScatterMark<Sample>(:final isXOrdered) => isXOrdered,
+              _ => 'not a geometry mark',
+            },
+        };
+
+    test('the four verbs forward isXOrdered to their marks', () {
+      expect(flagsOf(specsWith(isXOrdered: true)), <String, Object?>{
+        'geomLine': true,
+        'geomArea': true,
+        'geomBar': true,
+        'geomPoint': true,
+      });
+    });
+
+    test('omitting it leaves every mark unordered', () {
+      // The control. `false` is `ChartSeries.isXOrdered`'s own default, so a
+      // mark that defaulted to true would quietly change nearest-point
+      // behaviour for every chart authored through the chain.
+      expect(flagsOf(specsWith()), <String, Object?>{
+        'geomLine': false,
+        'geomArea': false,
+        'geomBar': false,
+        'geomPoint': false,
+      });
+    });
+
+    test('geomLine with isXOrdered equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the flag
+      // displaced no other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power', strokeWidth: 3, isXOrdered: true)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              strokeWidth: 3,
+              isXOrdered: true,
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
   group('reference marks', () {
     test('threshold appends a ThresholdMark with an explicit id', () {
       final spec = BravenChart.of(rows)
