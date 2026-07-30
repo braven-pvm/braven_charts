@@ -2304,7 +2304,13 @@ List<String> literalArguments(String source, String opening) {
 void main() {
   group('round trip', () {
     testWidgets('shape 1: a single line', (tester) async {
-      await expectRoundTrip(
+      // The twin declares the axis but does NOT bind the mark to it, because
+      // that is what the emitter writes: a chart with one axis and no explicit
+      // binding is mounted as the legacy single-axis chart, so its captured
+      // series carries no `yAxisId` for `_planGeometry` to reverse. Binding it
+      // here would mount the multi-axis shape instead and the rebuilt document
+      // would differ by `series[*].axisId` plus `inlineAxis`.
+      final generated = await expectRoundTrip(
         tester,
         name: 'single_line',
         fragments: <String>[
@@ -2333,10 +2339,16 @@ void main() {
               y: (row) => row.power,
               name: 'Power',
               strokeWidth: 2.4,
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
+      // The proof never reads the emitted text, and the twin above is
+      // HAND-WRITTEN — so nothing else in this test notices if the emitter
+      // starts writing `yAxisId:` again. It would still compile, still
+      // round-trip against the hand-written twin, and still hand a reader a
+      // chain that mounts a different document from the chart they copied it
+      // from. This assertion is the only thing that catches that.
+      expect(generated.source, isNot(contains('yAxisId')));
     });
 
     testWidgets('shape 2: multi-series on a shared x', (tester) async {
@@ -2369,13 +2381,11 @@ void main() {
               y: (row) => row.power,
               name: 'Power',
               fillOpacity: 0.18,
-              yAxisId: 'axis-0',
             )
             .geomLine(
               id: 'mark-1',
               y: (row) => row.heartRate,
               name: 'Heart rate',
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -2508,7 +2518,6 @@ void main() {
               id: 'mark-0',
               y: (row) => row.heartRate,
               name: 'Efforts',
-              yAxisId: 'axis-0',
               size: Channel<GrammarRow>((row) => row.efforts),
               sizeEncoding: const ScatterSizeEncoding(
                 minimumRadius: 4,
@@ -2606,7 +2615,6 @@ void main() {
               name: 'Time in zone',
               color: const Color(0xFF7C3AED),
               barWidthPercent: 0.7,
-              yAxisId: 'axis-0',
             )
             .transposed()
             .build(bravenChartController: controller),
@@ -2652,12 +2660,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .interaction(
               const InteractionConfig(
                 crosshair: CrosshairConfig(
@@ -2719,14 +2722,12 @@ void main() {
                 show: true,
                 position: DataPointLabelPosition.below,
               ),
-              yAxisId: 'axis-0',
             )
             .geomLine(
               id: 'mark-1',
               y: (row) => row.heartRate,
               name: 'Heart rate',
               showDataPointMarkers: true,
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -2768,7 +2769,6 @@ void main() {
               name: 'Time in zone',
               barWidthPercent: 0.7,
               labelStyle: const BarLabelStyle(show: true, showUnit: true),
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -2807,14 +2807,12 @@ void main() {
               y: (row) => row.power,
               name: 'Power',
               unit: 'W',
-              yAxisId: 'axis-0',
             )
             .geomLine(
               id: 'mark-1',
               y: (row) => row.heartRate,
               name: 'Heart rate',
               unit: 'bpm',
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -3051,12 +3049,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .trend(
               id: 'mark-1',
               of: 'mark-0',
@@ -3100,12 +3093,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .threshold(
               id: 'mark-1',
               value: 250,
@@ -3149,12 +3137,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .band(
               id: 'mark-1',
               start: 200,
@@ -3201,12 +3184,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .pointAt(
               id: 'mark-1',
               seriesId: 'mark-0',
@@ -3256,12 +3234,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
             .title('Session', subtitle: 'Power over time')
             .legend(false)
@@ -7245,17 +7218,150 @@ void main() {
       },
     );
 
-    testWidgets('a single-axis config chart explains the axis binding', (
+    testWidgets('a single-axis config chart emits and round-trips', (
       tester,
     ) async {
-      // A chart authored through the single-axis path (`BravenChartPlus` with
-      // no per-series yAxisId) cannot be reproduced by the grammar, which
-      // always binds each series to an explicit axis. The diagnostic explains
-      // that rather than leaving the reader guessing.
-      final snapshot = await snapshotOf(
+      // CONVERTED, not deleted, from "a single-axis config chart explains the
+      // axis binding". That test pinned the REFUSAL of a chart authored through
+      // the single-axis path (`BravenChartPlus` with a widget-level yAxis and
+      // no per-series binding) — the behaviour this slice deliberately removes.
+      // So it becomes the stronger claim: the same chart now emits AND the
+      // chain it emits reproduces the captured DOCUMENT, gated by
+      // `expectRoundTrip`'s document equality rather than by a message.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'legacy_single_axis',
+        fragments: <String>[
+          'BravenChart.of(rows)',
+          'YAxisConfig.withId(',
+          "id: 'y'",
+          "label: 'Power'",
+          "unit: 'W'",
+          '.geomLine(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            label: 'Power',
+            unit: 'W',
+          ),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              unit: 'W',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+                unit: 'W',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              unit: 'W',
+            )
+            .build(bravenChartController: controller),
+      );
+      // The proof NEVER READS THE EMITTED TEXT, so the one thing that makes
+      // this chain the legacy shape has to be asserted here: a `yAxisId:` on
+      // the geom would bind the mark, `BravenPlot` would mount the multi-axis
+      // shape, and the chain would hand back a DIFFERENT document from the
+      // chart it was reversed from — while every other assertion above still
+      // passed, because the rebuilt twin is hand-written, not compiled from
+      // this text.
+      expect(generated.source, isNot(contains('yAxisId')));
+    });
+
+    testWidgets(
+      'a MIXED binding is still refused — the normalisation is narrow',
+      (tester) async {
+        // One series bound through an inline axis config, one left unbound. The
+        // captured document keeps that difference — `getEffectiveYAxes` returns
+        // only the inline axis, and `getEffectiveBindings` sends the unbound
+        // series to a synthetic 'primary_axis' rather than to the inline one — so
+        // treating the unbound series as bound to the other's axis renders a
+        // DIFFERENT chart (measured: 4265 of 960000 pixels differ under
+        // normalizationMode.perSeries). This shape must therefore stay refused,
+        // and it is what fails if the legacy normalisation is ever widened.
+        final snapshot = await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              LineChartSeries(
+                id: 'a',
+                yAxisConfig: YAxisConfig.withId(
+                  id: 'a-axis',
+                  position: YAxisPosition.left,
+                  min: 0,
+                  max: 1000,
+                ),
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 1),
+                  ChartDataPoint(x: 1, y: 2),
+                ],
+              ),
+              const LineChartSeries(
+                id: 'b',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 900),
+                  ChartDataPoint(x: 1, y: 950),
+                ],
+              ),
+            ],
+          ),
+        );
+        final generated = generateGrammar(snapshot);
+        expect(emittedChain(generated), isFalse);
+        expect(
+          blockedReason(generated),
+          allOf(contains('does not reproduce'), contains('yAxisId')),
+        );
+      },
+    );
+
+    testWidgets('TWO declared axes with every series unbound is still refused', (
+      tester,
+    ) async {
+      // The `axes.length == 1` half of the legacy gate, stated as a boundary.
+      // `BravenPlot` mounts the legacy shape only when the chain declares
+      // EXACTLY ONE axis, so a document that declares two while binding no
+      // series must not be normalised into an unbound chain: that chain would
+      // take the multi-axis mount and hand back `series[*].axisId` plus
+      // `inlineAxis` the captured document does not have.
+      //
+      // It is refused a layer EARLIER than the gate, and the assertion says so
+      // rather than pretending the gate is what catches it: lowering binds
+      // every unbound mark to `axes.first`, which leaves the second axis with
+      // nothing measuring against it, and the grammar layer's own unboundAxis
+      // diagnostic rejects the reconstructed spec before `_firstMismatch` runs.
+      //
+      // The render pipeline never builds this shape — `getEffectiveYAxes`
+      // returns the widget-level axis alone while no series carries an inline
+      // config — but a ChartDocument is a PERSISTED artifact that can arrive
+      // from disk or from a host, so the generator still has to meet it.
+      // `patchedSnapshot` is how this file states rows the renderer will not
+      // produce.
+      final single = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -7267,15 +7373,21 @@ void main() {
           ],
         ),
       );
-      final generated = generateGrammar(snapshot);
+      final twoAxes = patchedSnapshot(single, (json) {
+        final axes = json['axes']! as List<Object?>;
+        axes.add(
+          Map<String, Object?>.of(axes.first! as Map<String, Object?>)
+            ..['id'] = 'second'
+            ..['position'] = 'right',
+        );
+      });
+      final generated = generateGrammar(twoAxes);
       expect(emittedChain(generated), isFalse);
       expect(
         blockedReason(generated),
         allOf(
-          contains('does not reproduce'),
-          contains('power'),
-          contains('single-axis'),
-          contains('yAxisId'),
+          contains('rejected by the grammar layer'),
+          contains('No mark measures against the axis "second"'),
         ),
       );
     });
@@ -7283,9 +7395,17 @@ void main() {
     testWidgets('grid and legend never trip the chart-option gate', (
       tester,
     ) async {
-      // Grid and legend are now carried by PlotSpec, so they must NOT appear in
-      // any chart-option block reason. These single-axis charts still block —
-      // on the single-axis path — but never for `grid` or `legend`.
+      // Grid and legend are carried by PlotSpec, so they must NOT appear in any
+      // chart-option block reason.
+      //
+      // This used to mount a single-axis chart and assert only that the reason
+      // named neither. That chart now EMITS, so `blockedReason` is null and
+      // `isNot(contains(...))` passes on nothing at all — the test would have
+      // gone on reporting success with the whole chart-option gate deleted. It
+      // now makes both halves real: the carrying chart must EMIT with its
+      // non-default grid and legend in the text, and a chart that still blocks
+      // for an unrelated reason must produce a reason that is genuinely there
+      // and still names neither.
       final nonDefaultGrid = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -7305,8 +7425,44 @@ void main() {
       );
       final gridResult = generateGrammar(nonDefaultGrid);
       expect(
-        blockedReason(gridResult),
-        allOf(isNot(contains('grid')), isNot(contains('legend'))),
+        emittedChain(gridResult),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(gridResult)}',
+      );
+      expect(gridResult.source, contains('.grid('));
+      expect(gridResult.source, contains('.legend(false)'));
+
+      // The same chart plus one option no V1 mark carries. It blocks — so
+      // `blockedReason` is a real sentence — and that sentence must still name
+      // the tension and neither the grid nor the legend.
+      final blockedForOtherReasons = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          grid: const GridConfig(horizontal: false),
+          showLegend: false,
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              tension: 0.6,
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final blockedResult = generateGrammar(blockedForOtherReasons);
+      expect(emittedChain(blockedResult), isFalse);
+      expect(
+        blockedReason(blockedResult),
+        allOf(
+          isNotNull,
+          contains('curve tension'),
+          isNot(contains('grid')),
+          isNot(contains('legend')),
+        ),
       );
     });
 

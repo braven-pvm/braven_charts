@@ -1842,10 +1842,13 @@ class _GrammarChainEmitter {
   ///   [_sameAnnotation] for annotations, which spells the comparison out
   ///   because `ChartAnnotation` declares no `operator ==`) genuinely proves
   ///   the reconstruction: a channel, value or option a mark fails to carry
-  ///   diverges here and is refused. The one caveat inside that proof is that a
-  ///   config object a mark carries VERBATIM (a data-label or style config)
+  ///   diverges here and is refused. Two caveats sit inside that proof. First,
+  ///   a config object a mark carries VERBATIM (a data-label or style config)
   ///   travels into the rebuilt series as the captured instance, so that field
-  ///   is a passthrough sitting inside an otherwise genuine comparison.
+  ///   is a passthrough sitting inside an otherwise genuine comparison. Second,
+  ///   the series comparison holds ONE normalisation — the legacy single-axis
+  ///   binding — which the comparison site below states, gates and explains;
+  ///   nothing else about a series is normalised away.
   /// - **Passthrough.** `xAxis`, `theme`, `interaction`, `grid`, `title`,
   ///   `subtitle` and `showLegend` are handed to the proof spec AS the captured
   ///   instances (see the spec built in `_tryEmitChain`) and `lowerPlotSpec`
@@ -1874,9 +1877,52 @@ class _GrammarChainEmitter {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
     }
+    // A chart authored through the single-axis path carries no per-series
+    // binding at all, while lowering ALWAYS binds — `_bindAxis` resolves
+    // `mark.yAxisId ?? axes.first.id` and stamps the resolved axis onto every
+    // series. `BravenPlot` now mounts that same legacy shape for a chain that
+    // declares one axis and binds no mark (see `braven_plot.dart`), so the two
+    // are the SAME chart and the binding lowering added is not a difference.
+    //
+    // The gate is deliberately narrow, and the narrowness is the whole point.
+    // "A null yAxisId means axes.first" is WRONG: `getEffectiveYAxes` ignores
+    // the widget-level yAxis as soon as any series carries an inline config,
+    // and `getEffectiveBindings` sends an unbound series to a synthetic
+    // 'primary_axis' rather than to the first declared axis. A document with
+    // one series bound inline and one unbound is reachable, and treating the
+    // unbound one as bound to the other's axis renders a DIFFERENT chart
+    // (measured: 4265 of 960000 pixels differ under
+    // normalizationMode.perSeries). Hence: every captured series unbound, and
+    // exactly one declared axis.
+    //
+    // Both clauses are DEFENCE IN DEPTH, not the only thing holding the line,
+    // and saying which is which is the honest framing. Verified by mutation:
+    //  - Dropping the all-unbound clause changes NOTHING, because the
+    //    comparison below normalises only the lowered side, so a captured
+    //    binding still has to be met whatever the gate lets through.
+    //  - Dropping the `axes.length == 1` clause changes nothing either: a
+    //    document declaring two axes with no series bound is rejected a layer
+    //    earlier, by the grammar's own unboundAxis diagnostic, because
+    //    lowering binds every unbound mark to `axes.first` and leaves the
+    //    second axis with nothing measuring against it.
+    //  - Normalising BOTH sides instead — which is the "null means axes.first"
+    //    shape — makes the mixed-binding document emit, and the guard test
+    //    "a MIXED binding is still refused" fails. That is the mutation this
+    //    gate exists to make impossible, and the one a test does catch.
+    final legacySingleAxis =
+        configuration.axes.length == 1 &&
+        configuration.series.every(
+          (series) => series.yAxisId == null && series.yAxisConfig == null,
+        );
     for (var index = 0; index < lowered.series.length; index++) {
       final expected = configuration.series[index];
-      if (lowered.series[index] != expected) {
+      // Only the LOWERED side is normalised. The captured side is left exactly
+      // as it was extracted, so a captured binding can never be normalised
+      // AWAY — the comparison still has to meet it, whatever the gate says.
+      final actual = legacySingleAxis
+          ? _withoutAxisBinding(lowered.series[index])
+          : lowered.series[index];
+      if (actual != expected) {
         return (
           subject: 'series "${expected.id}"',
           detail: _seriesLossDetail(expected, lowered.series[index]),
@@ -1954,10 +2000,10 @@ class _GrammarChainEmitter {
   /// supports and defaulting the rest, so the fields that differ are precisely
   /// the options no V1 mark carries. Naming the first such field turns "does
   /// not reproduce exactly" into an actionable boundary. When the only
-  /// difference is the axis binding — the captured chart used the single-axis
-  /// path and left `yAxisId` unset, while the grammar always binds every
-  /// series to an explicit axis — that is called out specifically, because it
-  /// is the usual reason a config-authored single-axis chart cannot round-trip.
+  /// difference is the axis binding, that is called out specifically — but
+  /// only the MIXED case reaches it now: a chart that leaves EVERY series
+  /// unbound is the legacy single-axis chart, which [_firstMismatch]
+  /// normalises and which round-trips.
   String _seriesLossDetail(ChartSeries expected, ChartSeries lowered) {
     final field = _firstUncarriedField(expected, lowered);
     if (field != null) {
@@ -1966,11 +2012,12 @@ class _GrammarChainEmitter {
     }
     if (expected.yAxisId != lowered.yAxisId ||
         (expected.yAxisConfig == null) != (lowered.yAxisConfig == null)) {
-      return 'The captured chart leaves this series\' yAxisId unset (the '
-          'single-axis path), while the grammar binds every series to an '
-          'explicit axis, so the reconstructed chain would render a different '
-          'chart document. Author the chart through the grammar, or with '
-          'explicit .yAxis(...) declarations, to express it as a chain.';
+      return 'The captured chart leaves this series\' yAxisId unset while the '
+          'grammar binds every series to an explicit axis, so the '
+          'reconstructed chain would render a different chart document. A '
+          'chart that leaves EVERY series unbound is reproduced as the '
+          'single-axis chart it is; this one does not, so bind every series '
+          'explicitly — or none — to express it as a chain.';
     }
     return _genericLossDetail;
   }
@@ -1984,6 +2031,40 @@ class _GrammarChainEmitter {
     CandlestickChartSeries() => 'candlestick',
     _ => 'V1',
   };
+
+  /// [series] with its Y-axis binding removed, for the legacy single-axis
+  /// comparison in [_firstMismatch].
+  ///
+  /// `ChartSeries.copyWith` merges every field with `??` and so cannot null one
+  /// out; the concrete families carry the `clearYAxisId`/`clearYAxisConfig`
+  /// flags that can. The family gate above guarantees only these five reach the
+  /// Cartesian path, so the fallback is unreachable — and it returns [series]
+  /// UNCHANGED, which leaves the binding in place and makes an unknown family
+  /// fail the comparison rather than slip through it.
+  static ChartSeries _withoutAxisBinding(ChartSeries series) =>
+      switch (series) {
+        LineChartSeries() => series.copyWith(
+          clearYAxisId: true,
+          clearYAxisConfig: true,
+        ),
+        AreaChartSeries() => series.copyWith(
+          clearYAxisId: true,
+          clearYAxisConfig: true,
+        ),
+        BarChartSeries() => series.copyWith(
+          clearYAxisId: true,
+          clearYAxisConfig: true,
+        ),
+        ScatterChartSeries() => series.copyWith(
+          clearYAxisId: true,
+          clearYAxisConfig: true,
+        ),
+        CandlestickChartSeries() => series.copyWith(
+          clearYAxisId: true,
+          clearYAxisConfig: true,
+        ),
+        _ => series,
+      };
 
   /// The first option set on [expected] that the [lowered] series does not
   /// carry, phrased for a diagnostic, or null when the two differ only in
