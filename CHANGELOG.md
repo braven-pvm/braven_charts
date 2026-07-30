@@ -14,6 +14,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered series, tracked snapshot, intersection markers, selection, and
   independently configured axis-side tracking labels.
 
+
+- A measure unit on the Cartesian grammar marks: `unit:` on
+  `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
+  `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed
+  back into generated Dart source. A config-authored Cartesian chart whose
+  series declares a unit is no longer refused for it.
+- `SeriesMark<T>`, a sealed intermediate between `Mark<T>` and the six mark
+  families that lower to a series — the five Cartesian ones plus `RadialMark` —
+  declaring `unit` once for all of them. `TrendMark`, `ThresholdMark`,
+  `BandMark` and `PointMark` stay on `Mark<T>`: they lower to annotations,
+  which have no unit, so they structurally cannot carry one. Existing code is
+  unaffected; `unit` remains readable on every radial mark exactly as before.
+- Per-point metadata on the four Cartesian geometry marks: `label:` and
+  `pointKey:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`. Both are accessors (`String? Function(T)`) carried onto
+  `ChartDataPoint.label` and `ChartDataPoint.pointKey`, and both are reversed
+  back into generated Dart source. An empty string means "this point has none",
+  which is what lets a partially labelled or partially keyed series round-trip.
+- A `duplicatePointKey` Grammar diagnostic: a `pointKey` accessor that yields
+  the same key for two rows of one mark is refused by name rather than lowering
+  to a series whose selection identity is ambiguous. The Cartesian counterpart
+  of `duplicateRadialCategory`.
+- `isXOrdered:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`, carried onto `ChartSeries.isXOrdered` and reversed back into
+  generated Dart source. It is a DECLARATION, never inferred from the data:
+  a chart that does not declare it stays unordered even when its rows happen to
+  arrive sorted, so nearest-point behaviour cannot change underneath an
+  existing chart. `geomCandlestick()` does not take it —
+  `CandlestickChartSeries` is ordered by its own contract.
+- A named refusal for a per-point `segmentStyle`, in two sentences because it is
+  two boundaries. A style setting `strokeWidth` or `dashPattern` is reported as
+  one "no V1 … mark carries"; a COLOUR-ONLY style is reported as a per-point
+  segment colour that a chain paints from `colorBy` + `colorEncoding`, which the
+  reverser cannot recover from the baked colours. Either way it beats falling
+  into the generic "does not reproduce exactly" sentence. The style is
+  deliberately not carried yet: it needs a row-field kind the synthesised rows
+  do not have, and it shares its slot with `LineMark.colorBy`, which already
+  bakes `segmentStyle.color` per point.
+- Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
+  `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
+  per-series binding — emits a `BravenChart` chain instead of being refused
+  with the axis sentence. Only a chart that binds SOME series and not others
+  still reaches that refusal — an all-unbound chart refused for some OTHER
+  reason is no longer told to change a binding that was never the problem.
+
+### Changed
+
+- **`BravenPlot` mounts a single-axis chain as the legacy single-axis chart.**
+  When a spec declares exactly one Y axis and no mark names it, the axis now
+  reaches `BravenChartPlus` as a widget-level `yAxis` with the series left
+  unbound, instead of as an inline `yAxisConfig` on every series. Two
+  user-visible consequences, both intended — this is what makes a chain and the
+  config chart it reverses to the SAME chart rather than merely similar ones:
+  - **Rendering.** The Y-axis tick and axis labels are no longer tinted with
+    the series colour. An axis takes its colour from the first series BOUND to
+    it, and the legacy chart binds none, so the labels render in the default
+    grey — exactly as they always have for the hand-written `BravenChartPlus`
+    this shape mirrors. The plot area, gridlines, legend and X axis are
+    unchanged.
+  - **Extracted documents.** `BravenChartController.extractDocument()` on a
+    single-axis chain no longer sets `series[*].axisId` or
+    `series[*].inlineAxis`; the axis appears once, in `axes`. Hosts that
+    persist or diff these documents will see the shape change. It is a fix, not
+    a new capability: the document now matches the config chart's.
+
+  Charts with several declared axes, and one-axis charts whose mark names its
+  axis, keep the multi-axis mount verbatim. A `BravenFacetPlot` panel also
+  keeps it: faceting delivers the shared range `FacetScales.fixed` computes
+  through the inline axis config, so switching a panel's mount would change
+  what every faceted chart draws.
+
 ### Fixed
 
 - `showInLegend: false` now removes the complete series entry from every
@@ -49,77 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   names round-trips. Both are exposed on `BravenChart.geomDonut()`.
 - Three Grammar diagnostics for the per-ring surface above: `unknownRingKey`,
   `partialRingIds`, and `perRingOverrideOnRinglessDonut`.
-- A measure unit on the Cartesian grammar marks: `unit:` on
-  `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
-  `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed
-  back into generated Dart source. A config-authored Cartesian chart whose
-  series declares a unit is no longer refused for it.
-- `SeriesMark<T>`, a sealed intermediate between `Mark<T>` and the six mark
-  families that lower to a series — the five Cartesian ones plus `RadialMark` —
-  declaring `unit` once for all of them. `TrendMark`, `ThresholdMark`,
-  `BandMark` and `PointMark` stay on `Mark<T>`: they lower to annotations,
-  which have no unit, so they structurally cannot carry one. Existing code is
-  unaffected; `unit` remains readable on every radial mark exactly as before.
-
-- Per-point metadata on the four Cartesian geometry marks: `label:` and
-  `pointKey:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
-  `geomPoint()`. Both are accessors (`String? Function(T)`) carried onto
-  `ChartDataPoint.label` and `ChartDataPoint.pointKey`, and both are reversed
-  back into generated Dart source. An empty string means "this point has none",
-  which is what lets a partially labelled or partially keyed series round-trip.
-- A `duplicatePointKey` Grammar diagnostic: a `pointKey` accessor that yields
-  the same key for two rows of one mark is refused by name rather than lowering
-  to a series whose selection identity is ambiguous. The Cartesian counterpart
-  of `duplicateRadialCategory`.
-- `isXOrdered:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
-  `geomPoint()`, carried onto `ChartSeries.isXOrdered` and reversed back into
-  generated Dart source. It is a DECLARATION, never inferred from the data:
-  a chart that does not declare it stays unordered even when its rows happen to
-  arrive sorted, so nearest-point behaviour cannot change underneath an
-  existing chart. `geomCandlestick()` does not take it —
-  `CandlestickChartSeries` is ordered by its own contract.
-- A named refusal for a per-point `segmentStyle`, in two sentences because it is
-  two boundaries. A style setting `strokeWidth` or `dashPattern` is reported as
-  one "no V1 … mark carries"; a COLOUR-ONLY style is reported as a per-point
-  segment colour that a chain paints from `colorBy` + `colorEncoding`, which the
-  reverser cannot recover from the baked colours. Either way it beats falling
-  into the generic "does not reproduce exactly" sentence. The style is
-  deliberately not carried yet: it needs a row-field kind the synthesised rows
-  do not have, and it shares its slot with `LineMark.colorBy`, which already
-  bakes `segmentStyle.color` per point.
-
-- Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
-  `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
-  per-series binding — emits a `BravenChart` chain instead of being refused
-  with the axis sentence. Only a chart that binds SOME series and not others
-  still reaches that refusal — an all-unbound chart refused for some OTHER
-  reason is no longer told to change a binding that was never the problem.
 
 ### Changed
 
-- **`BravenPlot` mounts a single-axis chain as the legacy single-axis chart.**
-  When a spec declares exactly one Y axis and no mark names it, the axis now
-  reaches `BravenChartPlus` as a widget-level `yAxis` with the series left
-  unbound, instead of as an inline `yAxisConfig` on every series. Two
-  user-visible consequences, both intended — this is what makes a chain and the
-  config chart it reverses to the SAME chart rather than merely similar ones:
-  - **Rendering.** The Y-axis tick and axis labels are no longer tinted with
-    the series colour. An axis takes its colour from the first series BOUND to
-    it, and the legacy chart binds none, so the labels render in the default
-    grey — exactly as they always have for the hand-written `BravenChartPlus`
-    this shape mirrors. The plot area, gridlines, legend and X axis are
-    unchanged.
-  - **Extracted documents.** `BravenChartController.extractDocument()` on a
-    single-axis chain no longer sets `series[*].axisId` or
-    `series[*].inlineAxis`; the axis appears once, in `axes`. Hosts that
-    persist or diff these documents will see the shape change. It is a fix, not
-    a new capability: the document now matches the config chart's.
-
-  Charts with several declared axes, and one-axis charts whose mark names its
-  axis, keep the multi-axis mount verbatim. A `BravenFacetPlot` panel also
-  keeps it: faceting delivers the shared range `FacetScales.fixed` computes
-  through the inline axis config, so switching a panel's mount would change
-  what every faceted chart draws.
 - Generated Dart source now also reverses per-slice colours, per-ring data
   labels and non-conforming concentric ring ids, and carries a donut's captured
   `DonutCenterContent` verbatim — `labelStyle` and `valueStyle` included — so a
