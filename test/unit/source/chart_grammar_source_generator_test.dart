@@ -2770,6 +2770,184 @@ void main() {
       );
     });
 
+    testWidgets('shape 29: a Cartesian series unit round-trips AND is emitted', (
+      tester,
+    ) async {
+      // `unit` is a SeriesMark field the five Cartesian families now carry, so
+      // a chart that sets one must come back carrying it. The `fragments` half
+      // is the load-bearing half: the generator's internal proof re-lowers the
+      // reconstructed spec and never reads a CHARACTER of the emitted text (see
+      // `_firstMismatch`'s doc), so a missing writer line would ship a chain
+      // that silently drops the unit while the proof still passed.
+      await expectRoundTrip(
+        tester,
+        name: 'series_unit',
+        fragments: <String>["unit: 'W'", "unit: 'bpm'"],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomArea(name: 'Power', unit: 'W')
+            .geomLine(y: sampleHeartRate, name: 'Heart rate', unit: 'bpm')
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomArea(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              unit: 'W',
+              yAxisId: 'axis-0',
+            )
+            .geomLine(
+              id: 'mark-1',
+              y: (row) => row.heartRate,
+              name: 'Heart rate',
+              unit: 'bpm',
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 29b: EVERY Cartesian family emits its unit', (
+      tester,
+    ) async {
+      // The reversal is five separate `unit: series.unit` lines in
+      // `_planGeometry`, one per family, so a family missed there is a family
+      // that silently drops the unit. Each family is generated on its own and
+      // its EMITTED TEXT asserted — the proof would catch a missing plan line,
+      // but nothing except this assertion catches a missing writer line.
+      final charts = <String, Widget Function(BravenChartController)>{
+        'geomLine': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomLine(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomArea': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomArea(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomBar': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomBar(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomPoint': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomPoint(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomCandlestick': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomCandlestick(
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+              unit: 'W',
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      };
+      final emitted = <String, bool>{};
+      final blocked = <String, String?>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(tester, entry.value),
+        );
+        emitted[entry.key] = generated.source.contains("unit: 'W'");
+        blocked[entry.key] = blockedReason(generated);
+      }
+      // Compared as WHOLE MAPS so one missing family cannot hide behind an
+      // earlier failure.
+      expect(blocked, <String, String?>{
+        for (final verb in charts.keys) verb: null,
+      });
+      expect(emitted, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+    });
+
+    testWidgets('shape 29c: a unit-less Cartesian series emits NO unit '
+        'argument', (tester) async {
+      // The control for the two above: `unit` is optional on the mark and on
+      // the verb, so a chart that sets none must stay byte-identical to what it
+      // emitted before this slice — no `unit:` argument at all.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .yAxis(
+                YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+              )
+              .geomLine(y: samplePower, yAxisId: 'axis-0')
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(emittedChain(generated), isTrue);
+      expect(generated.source, isNot(contains('unit:')));
+    });
+
+    testWidgets('shape 29d: a CONFIG-authored series carrying a unit is no '
+        'longer refused for it', (tester) async {
+      // The config direction, which is what item 1c' exists for: a chart
+      // authored with `LineChartSeries(unit: 'W')` rather than through the
+      // chain. It binds its axis explicitly on both sides — `yAxisId` plus the
+      // inline `yAxisConfig`, the shape lowering itself produces — because the
+      // LEGACY single-axis binding is Slice 2's job, and this test must isolate
+      // what Slice 1 changes.
+      final axis = YAxisConfig.withId(
+        id: 'axis-0',
+        position: YAxisPosition.left,
+      );
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                unit: 'W',
+                yAxisId: 'axis-0',
+                yAxisConfig: axis,
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 1),
+                  ChartDataPoint(x: 1, y: 2),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.source, contains("unit: 'W'"));
+    });
+
     testWidgets('shape 7: a trend annotation becomes .trend(of:)', (
       tester,
     ) async {
@@ -6921,6 +7099,15 @@ void main() {
     testWidgets('a series option no V1 mark carries is refused, not dropped', (
       tester,
     ) async {
+      // RE-POINTED, not weakened. This used to use `unit: 'W'` as its example
+      // of an uncarried option; the five Cartesian marks now CARRY unit, so
+      // keeping it here would pin a behaviour this slice deliberately removed.
+      // The carried case is asserted positively instead — see round trip
+      // "shape 29" / "29b" / "29d", which require the unit to survive AND to
+      // appear in the emitted text. `tension` is still genuinely uncarried
+      // (LineMark has no curve tension), so the claim in the test's name is
+      // unchanged, and the assertion is now on the diagnostic's full PHRASE
+      // rather than on the bare option word.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -6928,7 +7115,7 @@ void main() {
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
-              unit: 'W',
+              tension: 0.6,
               points: <ChartDataPoint>[
                 ChartDataPoint(x: 0, y: 1),
                 ChartDataPoint(x: 1, y: 2),
@@ -6946,7 +7133,7 @@ void main() {
         allOf(
           contains('does not reproduce'),
           contains('power'),
-          contains('unit'),
+          contains('curve tension'),
         ),
       );
     });

@@ -2286,6 +2286,9 @@ class _GrammarChainEmitter {
     final id = series.id;
     final name = series.name;
     final color = series.color;
+    // `unit` is a SeriesMark field every Cartesian family carries, so it is
+    // reversed once here beside the other shared identity fields.
+    final unit = series.unit;
     final yAxisId = series.yAxisId;
 
     switch (series) {
@@ -2311,6 +2314,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             open: _number(open),
@@ -2331,6 +2335,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2380,6 +2385,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2409,6 +2415,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2432,6 +2439,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -3097,6 +3105,15 @@ class _GrammarChainEmitter {
       }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);
+      // `unit` sits on the shared SeriesMark intermediate, and every Cartesian
+      // geom verb takes it in this slot — directly after `color:` — so it is
+      // written once here rather than in each family case, exactly as the
+      // radial chain writes it (see _emitRadialGeometry). The four reference
+      // marks are not SeriesMarks and structurally have no unit; TrendMark is
+      // the only non-series mark this switch can reach.
+      if (mark is SeriesMark<_SourceRow>) {
+        _optionalString(writer, 'unit', mark.unit);
+      }
       switch (mark) {
         case LineMark<_SourceRow>():
           _optionalNumber(writer, 'strokeWidth', mark.strokeWidth);
