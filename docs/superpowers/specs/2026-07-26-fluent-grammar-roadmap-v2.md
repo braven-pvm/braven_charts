@@ -102,6 +102,11 @@ Blocker distribution over the 117, in gate-firing order:
 | no range-area mark | 9 | 1b |
 | fill gradient / path animation / render mode / glow / jitter | 8 | 1d |
 | annotations, chart-level options, unbound axis | 9 | mixed |
+| per-candle `candlestickStyle` | 2 | **unrecorded until 2026-07-30** — `CandlestickMark` carries no per-candle style; decide accessor vs named refusal with 1d |
+
+**After 1c′ lands, the next blockers are `bar style` (26) and shared-x alignment (21)** — together ~60% of everything still refusing. Everything the roadmap files under 1d totals 12. Shared-x needs its own design: one row list plus *total* accessors genuinely cannot express series with divergent x domains.
+
+**Seven states never reach the generator at all** — the whole of `ValueSummaryPage` fails `extractSourceDocument()`, upstream of every grammar concern. Filed as register item **BC-0044**; excluded from the counts above.
 
 ### 1c′ — Cartesian emission foundation (BC-0040, inserted before 1b)
 Sequenced **ahead of the new marks**, because a new mark lands on a base where its own page still cannot emit: `geomRangeArea` would close 9 of 117 states, and those 9 would still refuse behind `unit`, `fillGradient`, `pathAnimation` and the axis binding. This item takes the widest-reach blockers instead — `unit` on the Cartesian marks, reconstruction of the legacy single-axis binding, and the per-point `pointKey`/`label`/`segmentStyle` metadata that a temporary axis patch exposed as the second-order blocker. Acceptance: at least the Line and Area pages emit on the **mounted page** with a `*_grammar_test.dart` gate matching the radial four, and the census is re-measured and recorded.
