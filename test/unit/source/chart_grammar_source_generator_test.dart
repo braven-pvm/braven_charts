@@ -3763,13 +3763,22 @@ void main() {
     ) async {
       // MAXIMAL fixture: every optional on `.trend(` is set EXPLICITLY, so no
       // theme-resolved value lands in the expected list and every conditional
-      // emission path is live. Shape 7 above is the MINIMAL trend and stays —
-      // but the identical assertion against it catches only 6 of 9 deletions,
-      // because a minimal trend never emits `windowSize`, `showConfidenceBand`
-      // or `dashPattern`. Anything THIS fixture does not emit is NOT pinned by
-      // this test: a whole-list assertion pins what its fixture emits and is
-      // blind to the rest (measured: 11 of 11 mutations caught here, 6 of 9
-      // against the minimal shape).
+      // emission path is live. Anything THIS fixture does not emit is NOT
+      // pinned by this test: a whole-list assertion pins what its fixture emits
+      // and is blind to the rest.
+      //
+      // Measured, one mutation set of 10 — each of `_emitTrend`'s 9 writer
+      // statements deleted in turn, plus one unconditional
+      // `writer.namedArgument('probe', ...)` added: 10 of 10 caught here.
+      //
+      // The MINIMAL trend — "shape 7: a trend annotation becomes .trend(of:)"
+      // — stays, and is kept rather than rewritten, but the identical assertion
+      // against it could catch at most 6 of those 9 deletions. Measured, its
+      // emitted list is exactly
+      // [id, of, method, name, color: Color(0xFF2196F3), lineWidth: 2.0]:
+      // `windowSize`, `showConfidenceBand` and `dashPattern` are never emitted
+      // by it, and the last two entries are THEME-resolved values the author
+      // never set, so pinning that shape would also break on a palette change.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3807,6 +3816,21 @@ void main() {
         'lineWidth: 1.5,',
         'dashPattern: <double>[4.0, 2.0],',
       ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. Without this gate a rename in the
+      // emitter, mirrored into the expected list, stays green while the Grammar
+      // pane ships a chain that does not compile — measured by renaming
+      // `showConfidenceBand` to `showConfidenceBandZZ` in `_emitTrend` and in
+      // the list above together: green without the gate, RED with it. This is
+      // also the ONLY caller of the gate for `windowSize:`, `showConfidenceBand:`
+      // and `dashPattern:` on `.trend(` — no other fixture emits them.
+      // Real subprocesses, so `expectRoundTrip`'s `runAsync` note applies here.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_trend_maximal',
+        ),
+      );
     });
 
     testWidgets('shape 8: a threshold annotation becomes .threshold(', (
@@ -3860,12 +3884,17 @@ void main() {
     ) async {
       // MAXIMAL fixture: every optional on `.threshold(` is set EXPLICITLY, so
       // no theme-resolved value lands in the expected list and every
-      // conditional emission path is live. Shape 8 above is the MINIMAL
-      // threshold and stays — but it never sets `id` or `dashPattern`, and a
-      // whole-list assertion pins only what its fixture emits. Anything THIS
-      // fixture does not emit is NOT pinned by this test (measured on `.trend(`:
-      // the same assertion catches 11 of 11 mutations against a maximal fixture
-      // and 6 of 9 against a minimal one).
+      // conditional emission path is live — `axis` is the one argument here
+      // that could select a path, and it does not: `_emitThreshold` writes
+      // `annotation.axis.name` whichever value it holds, unlike `_emitBand`
+      // (see "shape 34b"). The MINIMAL threshold — "shape 8: a threshold
+      // annotation becomes .threshold(" — stays, but it never sets `id` or
+      // `dashPattern`, so the identical assertion against it would pin neither.
+      // Anything THIS fixture does not emit is NOT pinned by this test.
+      //
+      // Measured, one mutation set of 8 — each of `_emitThreshold`'s 7 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 8 of 8 caught here.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3899,6 +3928,16 @@ void main() {
         'strokeWidth: 2.5,',
         'dashPattern: <double>[6.0, 3.0],',
       ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `dashPattern:` on `.threshold(`, so without this gate that
+      // name is compiled by nothing.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_threshold_maximal',
+        ),
+      );
     });
 
     testWidgets('shape 9: a range annotation becomes .band(', (tester) async {
@@ -3949,12 +3988,22 @@ void main() {
       tester,
     ) async {
       // MAXIMAL fixture: every optional on `.band(` is set EXPLICITLY, so no
-      // theme-resolved value lands in the expected list and every conditional
-      // emission path is live. Shape 9 above is the MINIMAL band and stays —
-      // but it never sets `id`, and its fragment list names neither `label` nor
-      // `color`. Anything THIS fixture does not emit is NOT pinned by this test:
-      // a whole-list assertion pins what its fixture emits and is blind to the
-      // rest.
+      // theme-resolved value lands in the expected list. That is NOT the same
+      // as "every conditional emission path is live": `axis` selects which
+      // model field each bound is read from, so this Y fixture leaves
+      // `_emitBand`'s X arm dead. "shape 34b" carries that arm — see its
+      // comment for the mutation that proves the two are independent.
+      //
+      // The MINIMAL band — "shape 9: a range annotation becomes .band(" —
+      // stays, but it never sets `id`, and its fragment list names neither
+      // `label` nor `color`. Anything THIS fixture does not emit is NOT pinned
+      // by this test: a whole-list assertion pins what its fixture emits and is
+      // blind to the rest.
+      //
+      // Measured, one mutation set of 7 — each of `_emitBand`'s 6 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 7 of 7 caught by shapes 34 and 34b together (and by each of them
+      // individually, since both fixtures emit all six).
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3986,7 +4035,76 @@ void main() {
         "label: 'Zone',",
         'color: Color(0x332563EB),',
       ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `id:`, `label:` and `color:` together on `.band(`.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_band_maximal',
+        ),
+      );
     });
+
+    testWidgets(
+      'shape 34b: a MAXIMAL .band( on the X axis pins its whole argument list',
+      (tester) async {
+        // `axis` on `.band(` is not just another optional: `_emitBand` reads it
+        // to CHOOSE which model field each bound comes from —
+        // `(isY ? annotation.startY : annotation.startX)!`. Setting every
+        // optional therefore does NOT make every conditional path live, and the
+        // MAXIMAL Y band above ("shape 34: a MAXIMAL .band( pins its whole
+        // argument list") leaves the X arm emitted by nothing — every other
+        // `.band(`/`.threshold(` fixture in this file is `AnnotationAxis.y`
+        // too. Measured: before this shape existed, swapping ONLY the X
+        // operands (`start:` reading `endX`, `end:` reading `startX`, the Y arm
+        // byte-identical) left the source-generator and drift suites green at
+        // `+190: All tests passed!`; with this shape the same swap fails here.
+        // So the X arm needs its own fixture, not another optional on the Y one.
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT)
+                .geomLine(y: samplePower, name: 'Power')
+                .band(
+                  start: 1,
+                  end: 3,
+                  axis: AnnotationAxis.x,
+                  id: 'interval',
+                  label: 'Interval',
+                  color: const Color(0x33F59E0B),
+                )
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // `literalArguments` slices from the FIRST occurrence of the opening
+        // token, so a second `.band(` would leave this assertion reading the
+        // wrong literal and silently pinning nothing about the other.
+        expect('.band('.allMatches(generated.source).length, 1);
+        // `start` and `end` differ, and differ from the Y fixture's values, so
+        // reversing the X operands or reading the Y pair fails here rather than
+        // landing on a value that happens to match.
+        expect(literalArguments(generated.source, '.band('), <String>[
+          "id: 'interval',",
+          'start: 1.0,',
+          'end: 3.0,',
+          'axis: AnnotationAxis.x,',
+          "label: 'Interval',",
+          'color: Color(0x33F59E0B),',
+        ]);
+        // The list above pins the emitted TEXT; only `dart analyze` proves those
+        // names exist on the real builder.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_band_x_maximal',
+          ),
+        );
+      },
+    );
 
     testWidgets('shape 10: a point annotation becomes .pointAt(', (
       tester,
@@ -4041,11 +4159,17 @@ void main() {
     ) async {
       // MAXIMAL fixture: every optional on `.pointAt(` is set EXPLICITLY, so no
       // theme-resolved value lands in the expected list and every conditional
-      // emission path is live. Shape 10 above is the MINIMAL point and stays —
-      // but it never sets `id`, and its fragment list names neither `label`,
+      // emission path is live — `_emitPoint` has no value-selecting branch, so
+      // here setting every optional really does cover every path. The MINIMAL
+      // point — "shape 10: a point annotation becomes .pointAt(" — stays, but
+      // it never sets `id`, and its fragment list names neither `label`,
       // `color` nor `markerSize`. Anything THIS fixture does not emit is NOT
       // pinned by this test: a whole-list assertion pins what its fixture emits
       // and is blind to the rest.
+      //
+      // Measured, one mutation set of 8 — each of `_emitPoint`'s 7 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 8 of 8 caught here.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -4079,6 +4203,16 @@ void main() {
         'markerSize: 12.0,',
         'markerShape: MarkerShape.star,',
       ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `id:` together with `markerSize:` and `markerShape:` on
+      // `.pointAt(`.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_point_maximal',
+        ),
+      );
     });
 
     testWidgets('shape 11: chart-level grid, title and legend are emitted', (
