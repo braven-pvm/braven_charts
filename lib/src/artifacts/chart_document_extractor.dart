@@ -166,6 +166,11 @@ class ChartDocumentExtractOptions {
   final Map<String, JsonObjectValue> yAxisFormatterDescriptors;
 
   /// Stable IDs for interaction callbacks resolved during hydration.
+  ///
+  /// Semantics-bearing callbacks fail extraction when their descriptor is
+  /// absent. Optional host notifications may instead be omitted with an
+  /// explicit warning; consult the callback property's API documentation for
+  /// its policy.
   final Map<String, JsonObjectValue> interactionBindingDescriptors;
 
   /// Portable numeric formatter descriptors keyed by radial series ID.

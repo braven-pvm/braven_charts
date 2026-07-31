@@ -29,12 +29,12 @@
 ///     preset list, so adding a preset moves the census instead of drifting
 ///     away from it.
 ///  3. **Extraction uses the PAGE'S OWN `documentOptions`.** A prior probe
-///     recorded seven `ValueSummaryPage` states as unreachable purely because
-///     it extracted with `const ChartDocumentExtractOptions()`. That page
-///     declares `interactionBindingDescriptors` its own Source pane passes;
-///     without them extraction fails `runtime_binding_required`. The workbench
-///     each chart is mounted inside is located through the ELEMENT TREE, so
-///     this cannot go stale the way a per-page key table would.
+///     recorded seven `ValueSummaryPage` states as unreachable after extracting
+///     with defaults instead of the callback descriptor its Source pane uses.
+///     Default extraction now omits that optional host notification with a
+///     warning, while the page options preserve its binding identity. The
+///     workbench each chart is mounted inside is located through the ELEMENT
+///     TREE, so this cannot go stale the way a per-page key table would.
 ///  4. **Charts are counted per chart, not per page.** `ChartWorkbenchPage`
 ///     mounts two workbenches and more than one chart; a per-page verdict would
 ///     silently drop the rest.
@@ -577,8 +577,8 @@ void _censusCurrentTree(WidgetTester tester, _CensusPage page, String state) {
       continue;
     }
 
-    // THE PAGE'S OWN OPTIONS. Defaults are what made a prior probe report
-    // seven ValueSummaryPage states as unreachable.
+    // THE PAGE'S OWN OPTIONS. This preserves optional host binding identities
+    // as well as every formatter descriptor declared by the mounted surface.
     final extracted = controller.extractSourceDocument(
       workbench.documentOptions,
     );
