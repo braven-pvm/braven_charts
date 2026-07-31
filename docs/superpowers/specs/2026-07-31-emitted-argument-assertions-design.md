@@ -51,14 +51,15 @@ The same lever qualifies the headline justification. "Catches arguments added in
 
 Maximal fixtures also avoid a second trap: a minimal trend emits `color:` and `lineWidth:` the author never set, so its expected list contains **theme-resolved values** that a palette change would break. A maximal fixture sets every optional explicitly and contains none.
 
-### Five failure modes — three of them silent
+### Seven failure modes — five of them silent
 
 1. **Single-line verb forms are unreachable** (silent). `literalArguments(source, '.x(')` does not error; it returns the *next* verb's body. Proven live: a wrong list was pinned, the collapsed-form writer deleted, and the test stayed green. This matters because the collapsed `.x(…, label:)` **is one of the 40 survivors** — it needs a whole-**line** assertion instead.
 2. **A verb appearing twice** (silent): only the first instance is read. Mitigation already exists in the file at `:6721` — `expect('.geomPolar('.allMatches(source).length, 1);` — and becomes mandatory on every new assertion. Note `.trend(` can in principle be written by two code paths.
 3. **Empty argument list** throws `RangeError` rather than returning `[]` (loud). No verb emits one today; a one-line guard covers it.
 4. **The opening token inside a string literal** poisons the slice (loud, fails closed). Pinned fixtures must not carry labels/units/names containing an opening token.
-5. **Prefix collisions** (silent, latent): `indexOf` matches anywhere, so a bare `ChartConfig(` would match inside `PolarChartConfig(`. **Rule: the opening must be `.verb(` or a `name: Type(` pair**, never a bare type name.
+5. **Prefix collisions** (silent, latent): `indexOf` matches anywhere, so a bare `ChartConfig(` would match inside `PolarChartConfig(`. **Rule: the opening must be `.verb(`, a `name: Type(` pair, or a bare `Type(` only when no other class in `lib/` ends with that token — audited with `grep -rn "class [A-Za-z_]*<Token>\b" lib/`, never assumed.** The bare form is needed because a wrapped verb is reached at its config type (see Architecture below) and the emitter does not always precede it with an argument name: `_emitGrid` writes a bare `GridConfig(` line. Where a `name: Type(` pair is available it is always preferred (`pane: PolarPaneConfig(`). The audited exception fails *closed* in the common case: if a suffix-matching type is ever emitted alongside the plain one, `allMatches(...).length` rises above 1 and the mandatory guard reddens. Only a source emitting the suffixed type and **no** plain occurrence would slice silently.
 6. **"Every optional set" is not "every path live"** (silent). An argument whose VALUE selects which model field is read leaves the other arm dead no matter how maximal the fixture is. Measured on `_emitBand`: `(isY ? annotation.startY : annotation.startX)!`, with every band/threshold fixture on `AnnotationAxis.y` — swapping only the X operands left the source-generator and drift suites green. Such arguments need a **fixture per branch**; Slice 1 added a second X-axis band shape for exactly this.
+7. **Equal-valued arguments hide a cross-wire** (silent). Whole-list equality pins the emitted TEXT, so two writers whose fixture values are *equal* cannot be told apart: swapping which model field feeds which argument name leaves the list byte-identical. Measured in `_emitGrid`, whose maximal fixture is **forced** into this position — it writes a boolean only when it differs from the `true` default, so `horizontal` and `vertical` must **both** be `false` to be emitted at all. Swapping the two operands (`valueIf('horizontal', grid.vertical, …); valueIf('vertical', grid.horizontal, …);`) left the maximal shape 40 GREEN (`00:03 +1: All tests passed!`) while the **minimal** shape 11, which sets only `horizontal`, went RED. So maximality is not strictly dominant: a minimal shape that sets one of a pair is the *only* thing that can catch their cross-wire, which is a second reason the existing minimal shapes are kept rather than rewritten. Where a fixture is free to choose, give paired arguments **distinct** values.
 
 ### The assertion pins text, not API
 
@@ -91,7 +92,7 @@ Nested config bodies **flatten into the list**, so these assertions also pin the
 
 **One fixture per verb suffices** — verified for the two hardest. A single `.geomBar(` fixture emits all twelve arguments at once (`barWidthPercent` and `barWidthPixels` coexist, no warnings); a single `.geomPoint(` fixture emits size/colour/opacity channels with their encodings together.
 
-Wrapped verbs open at the **config type**, not the verb: `GridConfig(`, `XAxisConfig(`, `InteractionConfig(`, `ChartTheme(` — opening at `.grid(` includes the wrapper lines in the list.
+Wrapped verbs open at the **config type**, not the verb: `GridConfig(`, `XAxisConfig(`, `InteractionConfig(`, `ChartTheme(` — opening at `.grid(` includes the wrapper lines in the list. These are the audited bare-`Type(` exception of failure mode 5, not a violation of it: `_emitGrid` writes the type on its own line with no preceding argument name, so no `name: Type(` pair exists to open at. Audited for `GridConfig(`: `grep -rn "class [A-Za-z_]*GridConfig\b" lib/` returns exactly one class (`lib/src/models/grid_config.dart:43`), and the only other emitted form is the config form's `grid: GridConfig(` (`chart_config_dart_emitter.dart:6443`), which would push `allMatches` to 2 and trip the mandatory guard.
 
 ### The mandatory shape
 
@@ -110,7 +111,7 @@ expect(literalArguments(generated.source, '.trend('), <String>[ /* full list, in
 Four companions are non-negotiable, because three failure modes are silent:
 1. **Maximal fixtures**, added as NEW shapes rather than by rewriting existing minimal ones — the minimal shapes are worth keeping, and a minimal-fixture list leaves conditionals unpinned.
 2. **`allMatches(...).length == 1`** on every assertion.
-3. **Openings are `.verb(` or `name: Type(`** — never a bare type name.
+3. **Openings are `.verb(`, `name: Type(`, or an audited bare `Type(`** (failure mode 5) — never an unaudited bare type name.
 4. **Conditional arguments are pinned by making them LIVE in the fixture**, never by an optional entry in the expected list. Each test states in a comment that anything its fixture does not emit is unpinned, so a future reader cannot over-credit it.
 
 ## Invariants

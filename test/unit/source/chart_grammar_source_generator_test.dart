@@ -276,6 +276,16 @@ final List<RadialGrammarRow> concentricGrammarRows = <RadialGrammarRow>[
 // mark carries them through to the geom* verb's `style:` / `dataLabels:` args.
 // Each value is validly constructible INSIDE its series (pie radiusFactor in
 // (0, 1]; donut innerRadiusFactor in (0, 1)).
+//
+// EDITING WARNING. These consts are shared by 6-12 shapes each, and the
+// MAXIMAL shapes 42/43 pin their nested bodies by whole-list EQUALITY — a
+// nested config literal flattens into the pinned list, field by field. So
+// changing one field here for one shape's benefit breaks a 30-40 entry
+// equality in another test with a large, non-obvious diff. It fails CLOSED
+// (the equality reddens; nothing goes silently unpinned), so this is an
+// ergonomics note, not a correctness one. If a shape needs different values,
+// mint a shape-owned const the way `maximalGrouping` below was minted, rather
+// than editing a shared one.
 // ---------------------------------------------------------------------------
 
 const styledPieStyle = PieChartStyle(
@@ -310,6 +320,9 @@ const styledPolarStyle = PolarColumnStyle(
 // durable-selection style, small-slice grouping and (pie/donut) a variable
 // slice-radius encoding. The marks now carry these too, so a chart that sets
 // them EMITS instead of being refused by the round-trip proof.
+//
+// The same EDITING WARNING as the styled block above applies: shapes 42/43 pin
+// these bodies field by field by whole-list equality.
 // ---------------------------------------------------------------------------
 
 const showcaseSelection = RadialSelectionStyle(
@@ -820,6 +833,8 @@ const polarIntervals = <String, PolarColumnInterval>{
 };
 
 /// Every field differs from the class default, so a dropped style cannot pass.
+/// Shared: shape 43 pins this body field by field by whole-list equality — see
+/// the EDITING WARNING on the styled radial block above before changing it.
 const styledTargetMarker = PolarColumnTargetMarkerStyle(
   color: Color(0xFF0F172A),
   width: 3,
@@ -827,7 +842,8 @@ const styledTargetMarker = PolarColumnTargetMarkerStyle(
   opacity: 0.9,
 );
 
-/// Every field differs from the class default.
+/// Every field differs from the class default. Shared: shape 43 pins this body
+/// field by field by whole-list equality.
 const styledIntervalStyle = PolarColumnIntervalStyle(
   display: PolarColumnIntervalDisplay.band,
   color: Color(0xFF334155),
@@ -3631,6 +3647,11 @@ void main() {
             'the axis unit must reach the source, or this control is '
             'vacuous and a whole-file token search would have passed it',
       );
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomLine(` would leave the list below reading one
+      // mark and silently saying nothing about the other. Mandatory on every
+      // call site — added here retrospectively; this site predates the rule.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'mark-0',",
         'y: (row) => row.mark0,',
@@ -3681,6 +3702,7 @@ void main() {
       // Read out of the geom call, not out of the file: the same `unit:` token
       // is a `YAxisConfig` field, and this fixture emits an axis literal right
       // beside the mark.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, '.geomLine('),
         contains("unit: 'W',"),
@@ -3745,6 +3767,7 @@ void main() {
       // field, an extra field, a wrong accessor and a reordering then all fail.
       // Scoped to the call because `label:` is also an axis field and this
       // chart puts one on the axis right beside the mark.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -3806,6 +3829,7 @@ void main() {
             'the axis label must reach the source, or this control is vacuous '
             'and a whole-file token search would have passed it',
       );
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -4092,6 +4116,7 @@ void main() {
       );
       // The WHOLE argument list of the geom call, not one fragment: a dropped
       // field, an extra field, a wrong value and a reordering then all fail.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -4225,6 +4250,7 @@ void main() {
         isTrue,
         reason: 'blocked with: ${blockedReason(generated)}',
       );
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -4813,10 +4839,20 @@ void main() {
       // names exist on the real builder. This is the only fixture in the corpus
       // that emits `id:` together with `markerSize:` and `markerShape:` on
       // `.pointAt(`.
+      //
+      // `fixtureName` is a real PATH — `expectGeneratedSourceCompiles` writes
+      // `<cwd>/.dart_tool/<fixtureName>.dart`, shells out to `dart format` and
+      // `dart analyze` on it, then deletes it. So it must be UNIQUE across the
+      // repo: this shape and shape 37 (the maximal `.geomPoint(`) both used
+      // `grammar_source_point_maximal`, which is benign only while both live in
+      // this one file and run sequentially, and becomes a real race the moment
+      // either moves — test FILES run concurrently. Renamed to
+      // `..._point_at_maximal`, which also makes an analyze failure name the
+      // shape that produced it.
       await tester.runAsync(
         () => expectGeneratedSourceCompiles(
           generated.source,
-          fixtureName: 'grammar_source_point_maximal',
+          fixtureName: 'grammar_source_point_at_maximal',
         ),
       );
     });
@@ -4882,11 +4918,34 @@ void main() {
       // statements deleted in turn, plus one unconditional
       // `writer.namedArgument('probe', ...)` added: 7 of 7 caught here.
       //
+      // What that set does NOT contain, measured rather than assumed: a
+      // CROSS-WIRE between the two booleans. `_emitGrid` writes a bool only
+      // when it differs from the `true` default, so a maximal grid is FORCED to
+      // set `horizontal` and `vertical` both `false` — and once their values
+      // are equal, whole-list equality on emitted TEXT cannot tell the two
+      // writers apart. Swapping their operands
+      // (`valueIf('horizontal', grid.vertical, defaults.vertical);
+      // valueIf('vertical', grid.horizontal, defaults.horizontal);`) leaves
+      // THIS shape green (`00:03 +1: All tests passed!`) while the MINIMAL
+      // "shape 11", which sets only `horizontal`, goes RED. So this shape pins
+      // the two booleans' PRESENCE and text, and shape 11 pins which model
+      // field feeds `horizontal:` — a second, independent reason the minimal
+      // grid stays, and the general rule: give paired arguments distinct values
+      // wherever the fixture is free to choose. Here it is not.
+      //
       // Opened at `GridConfig(`, NOT at `.grid(`: measured, `.grid(` returns
       // the WRAPPER lines (`GridConfig(`, …, `),`) rather than the field list,
-      // because `literalArguments` slices by indentation. `GridConfig(` is a
-      // `Type(` opening with no prefix collision (a bare `ChartConfig(` would
-      // also match inside `PolarChartConfig(`).
+      // because `literalArguments` slices by indentation. That makes this the
+      // audited bare-`Type(` opening the design allows, not the bare type name
+      // it forbids: `_emitGrid` writes `GridConfig(` on its own line with no
+      // preceding argument name, so there is no `name: Type(` pair to open at.
+      // Collision-audited rather than assumed —
+      // `grep -rn "class [A-Za-z_]*GridConfig\b" lib/` returns exactly one
+      // class (`lib/src/models/grid_config.dart:43`), and the only other
+      // emitted form is the CONFIG form's `grid: GridConfig(`
+      // (`chart_config_dart_emitter.dart:6443`), which would push the count
+      // below to 2 and redden this test. (A bare `ChartConfig(` would by
+      // contrast match silently inside `PolarChartConfig(`.)
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -5027,9 +5086,34 @@ void main() {
       // — they belong to `_emitRadialGeometry`'s `DonutMark` arm, no single
       // donut fixture can be maximal over them (`center:` and `concentric:` are
       // mutually exclusive by lowering's precedence rule), and none of them is
-      // among this slice's survivors; and the nested-config FIELDS the four
+      // among this slice's survivors; and the nested-config FIELDS the five
       // literals below leave at their class defaults, since each config emitter
       // writes only what differs.
+      //
+      // Those nested bodies are NOT maximal, and the exact shortfall is stated
+      // here so the counts below cannot be over-credited. Counted by reading
+      // each emitter: `PieChartStyle` 5 of 19 pie-reachable seams
+      // (`_emitRadialStyle`, `chart_config_dart_emitter.dart:3961` — 21
+      // statements, of which `innerRadiusFactor`/`sweepAngleDegrees` are
+      // donut-only; `borderColor`, `borderColorMode`, the three border shifts,
+      // `selectionExplodeOffset`, `opacity`, `cornerRadius`, `cornerTreatment`,
+      // `animationMode`, `dataTransitionMode`, `gradient`, `shadow` and
+      // `selectedElevation` stay at default); `PieDataLabelConfig` 3 of 17
+      // (`_emitRadialLabelConfig`, `:4085`); `PieSliceRadiusConfig` 4 of 5 —
+      // the 5th is the `formatter` placeholder, which is UNREACHABLE from any
+      // shape asserting `warnings, isEmpty`, since emitting it also raises
+      // `runtimeValueOmitted`; `RadialSelectionStyle` 4 of 4 and
+      // `RadialSliceGroupingConfig` 5 of 5 are maximal already.
+      //
+      // Deliberate, not an oversight: those remaining seams belong to the
+      // CONFIG emitter, which this item puts explicitly out of scope (spec
+      // "Out of scope — the config emitter … filed as BC-0048"). Widening the
+      // shared style consts to close them would pull BC-0048's surface into
+      // BC-0046 and would edit consts 6–12 other shapes depend on. They are not
+      // unguarded meanwhile — `grep -rl <name> test/ example/test/` finds
+      // `cornerTreatment` in 10 files, `selectionExplodeOffset` in 11,
+      // `connectorLength` in 9, `borderColorMode` in 7 — the config-form suites
+      // read them, because the emitter is SHARED between the two forms.
       //
       // Neither `_emitRadialGeometry`'s prologue nor its pie arm branches on an
       // argument VALUE to choose which model field it reads (checked before
@@ -5045,11 +5129,14 @@ void main() {
       //     `selectionStyle`, `dataLabels`, `sliceRadiusConfig`,
       //     `sliceGroupingConfig`), deleted one at a time — a whole `if` block
       //     counts as one statement;
-      //   - all 21 field statements of the four nested config bodies that
-      //     flatten into this list: 5 `PieChartStyle`, 4 `RadialSelectionStyle`,
-      //     3 `PieDataLabelConfig`, 4 `PieSliceRadiusConfig`, 5
-      //     `RadialSliceGroupingConfig` — the accepted config-emitter coupling,
-      //     earning coverage rather than costing it;
+      //   - all 21 field statements the five nested config literals make LIVE
+      //     and so flatten into this list — 5 `PieChartStyle`, 4
+      //     `RadialSelectionStyle`, 3 `PieDataLabelConfig`, 4
+      //     `PieSliceRadiusConfig`, 5 `RadialSliceGroupingConfig` — which is
+      //     the accepted config-emitter coupling earning coverage rather than
+      //     costing it, and is 21 of the 50 seams those five emitters own
+      //     (19 + 4 + 17 + 5 + 5; see the shortfall stated above — the balance
+      //     is BC-0048's);
       //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
       //     `_emitRadialGeometry`.
       final generated = generateGrammar(
@@ -5165,6 +5252,20 @@ void main() {
       // differs from the default), and the plot-level `.polarConfig(` literal,
       // which is a separate opening covered by "shape 22"/"shape 23".
       //
+      // One of those four bodies is NOT maximal, stated so the count below
+      // cannot be over-credited: `PolarColumnStyle` makes 3 of the 10 seams of
+      // `_emitPolarColumnStyleArgument` live (`chart_config_dart_emitter.dart:
+      // 2880` — `cornerRadiusMode`, `borderColor`, `showDataLabels`,
+      // `maximumVisibleDataLabels`, `dataLabelRadialPosition`, `dataLabelStyle`
+      // and `gradient` stay at default). The other three are maximal:
+      // `RadialSelectionStyle` 4 of 4, `PolarColumnTargetMarkerStyle` 4 of 4,
+      // `PolarColumnIntervalStyle` 6 of 6. The 7 unreached seams belong to the
+      // CONFIG emitter, out of scope for this item by the spec ("Out of scope —
+      // the config emitter … filed as BC-0048"), and are read by the
+      // config-form suites through the SHARED emitter — `grep -rl` over `test/`
+      // and `example/test/` finds `maximumVisibleDataLabels` in 9 files and
+      // `dataLabelRadialPosition` in 8.
+      //
       // `rose: true` coexists with the target and interval channels — verified
       // by this fixture emitting all of them together with `warnings` empty,
       // not assumed. And nothing in `_emitPolarGeometry` branches on an
@@ -5179,10 +5280,11 @@ void main() {
       //     `intervalLow`, `intervalHigh`, `intervalStyle`), deleted one at a
       //     time — a whole `if` block counts as one statement, except the
       //     interval block's two `namedArgument` lines, deleted separately;
-      //   - all 17 field statements of the four nested config bodies that
-      //     flatten into this list: 3 `PolarColumnStyle`, 4
+      //   - all 17 field statements the four nested config literals make LIVE
+      //     and so flatten into this list: 3 `PolarColumnStyle`, 4
       //     `RadialSelectionStyle`, 4 `PolarColumnTargetMarkerStyle`, 6
-      //     `PolarColumnIntervalStyle`;
+      //     `PolarColumnIntervalStyle` — 17 of the 24 seams those four emitters
+      //     own (see the shortfall stated above; the balance is BC-0048's);
       //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
       //     `_emitPolarGeometry`.
       final generated = generateGrammar(
@@ -8074,6 +8176,7 @@ void main() {
       // happens to name, and the whole point of this presentation is the pane.
       // `clockwise` and `clipMarks` are the showcase's own resting values, so
       // they are correctly elided.
+      expect('pane: PolarPaneConfig('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, 'pane: PolarPaneConfig('),
         <String>[
@@ -8451,6 +8554,17 @@ void main() {
       // alone (`outerRadiusFactor`, `outerPadding`, the visible-label caps,
       // the radial `labelOffset`, the layered composition) are correctly
       // elided, and this list fails if any of that flips.
+      //
+      // `PolarChartConfig(` is the audited bare-`Type(` opening: the GRAMMAR
+      // form writes it with no argument name (`emitPolarChartConfig(writer,
+      // null, …)` — `chart_config_dart_emitter.dart:3387`), so no
+      // `name: Type(` pair exists to open at. Audited rather than assumed —
+      // `grep -rn "class [A-Za-z_]*PolarChartConfig\b" lib/` returns exactly
+      // one class, and the CONFIG form's `polarChartConfig: PolarChartConfig(`
+      // would push the count below to 2 and redden this test. (It is the
+      // reverse direction that is unsafe: a bare `ChartConfig(` would match
+      // silently INSIDE this token.)
+      expect('PolarChartConfig('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, 'PolarChartConfig('), <String>[
         'pane: PolarPaneConfig(',
         'innerRadiusFactor: 0.12,',
@@ -9316,6 +9430,7 @@ void main() {
       // `null` for `axis.unit` left that fragment green. The complete argument
       // list fails on a dropped field, an extra field, a wrong value and a
       // reordering alike.
+      expect('YAxisConfig.withId('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, 'YAxisConfig.withId('),
         <String>[

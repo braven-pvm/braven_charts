@@ -11,6 +11,26 @@
 **Spec:** `docs/superpowers/specs/2026-07-31-emitted-argument-assertions-design.md`
 **Register:** BC-0046 (lane `chart-grammar`)
 
+## Progress
+
+Slices 1–3 have landed; their checkboxes below are ticked. The durable record is the
+commit, not the tick — this table is what a reader should trust if the two disagree.
+
+| Task | Commit | Shapes added |
+|---|---|---|
+| 1.1 helper empty-list guard | `b317a37b` | — (helper only) |
+| 1.2 maximal `.trend(` | `eda62dff` | 32 |
+| 1.3 maximal `.threshold(` / `.band(` / `.pointAt(` | `950ee8a4`, compile gate + X band arm `8a1c2c5d` | 33, 34, 34b, 35 |
+| plan amendment (compile gate, failure mode 6) | `80e9ac18` | — |
+| 2.1 maximal `.geomBar(` | `354de6c7` | 36 |
+| 2.2 maximal `.geomPoint(` / `.geomArea(` / `.geomCandlestick(` | `b0e1b711`, area made maximal `b27d8c12` | 37, 38, 39 |
+| 3.1 maximal `GridConfig(` | `e80a7301` | 40 |
+| 3.2 collapsed `.x(field, label:)` by LINE | `e0014c9f` | 41 |
+| 3.3 radial + polar tails | `e3c07607` | 42, 43 |
+| Slice 3 review fixups | this commit | — (comments, guards, docs) |
+
+Slice 4 and the Final Verification list are still open.
+
 ## Global Constraints
 
 - Worktree `F:\Repositories\braven_charts-emitted-gate`, branch `feature/grammar-emitted-argument-gate` (off `origin/master` `997b1028`). PR to master only on the owner's explicit go-ahead.
@@ -102,14 +122,15 @@ testWidgets('shape NN: a MAXIMAL <verb> pins its whole argument list',
 });
 ```
 
-### Six failure modes — three silent. Respect all of them.
+### Seven failure modes — five silent. Respect all of them.
 
 1. **SILENT — single-line verb forms are unreachable.** `literalArguments(source, '.x(')` does not error; it returns the **next** verb's body. Measured by pinning that wrong list, deleting the collapsed-form writer, and watching the test stay green. The collapsed `.x(…, label:)` **is** a survivor, so it gets a whole-**line** assertion (Task 3.2).
 2. **SILENT — a verb appearing twice**: only the first is read. `expect('<opening>'.allMatches(source).length, 1);` is **mandatory on every assertion**.
 3. **LOUD — an empty argument list** throws `RangeError` rather than returning `[]`. Guarded in Task 1.1.
 4. **LOUD (fails closed) — the opening token inside a string literal** poisons the slice. Fixtures must not carry labels/units/names containing an opening token.
-5. **SILENT/latent — prefix collisions.** `indexOf` matches anywhere, so a bare `ChartConfig(` matches inside `PolarChartConfig(`. **Openings must be `.verb(` or `name: Type(` — never a bare type name.** Wrapped verbs open at the **config type** (`GridConfig(`, `XAxisConfig(`, `InteractionConfig(`, `ChartTheme(`); opening at `.grid(` includes the wrapper lines.
+5. **SILENT/latent — prefix collisions.** `indexOf` matches anywhere, so a bare `ChartConfig(` matches inside `PolarChartConfig(`. **Openings must be `.verb(`, `name: Type(`, or a bare `Type(` only where the collision has been AUDITED** — `grep -rn "class [A-Za-z_]*<Token>\b" lib/` must return exactly the one class, checked and recorded in the test's comment, never assumed. Prefer a `name: Type(` pair wherever the emitter writes one (`pane: PolarPaneConfig(`). Wrapped verbs are reached at the **config type** (`GridConfig(`, `XAxisConfig(`, `InteractionConfig(`, `ChartTheme(`) because opening at `.grid(` returns the wrapper lines instead of the field list — and `_emitGrid` writes `GridConfig(` on its own line with no preceding argument name, so the bare form is the only opening available there. Audited for `GridConfig(`: one class in `lib/`, and the config form's `grid: GridConfig(` would push `allMatches` to 2 and trip the mandatory guard. The exception fails *closed* except in the one case where a suffix-matching type is emitted and the plain one is not.
 6. **SILENT — "every optional set" ≠ "every path live".** An argument whose VALUE selects which model field is read leaves the other arm dead however many optionals the fixture sets. `_emitBand` is the measured case: `(isY ? annotation.startY : annotation.startX)!` — with every `.band(`/`.threshold(` fixture on `AnnotationAxis.y`, swapping only the X operands left the source-generator and drift suites green at `+190: All tests passed!`. Such an argument needs a **second fixture per branch** (Slice 1 added `shape 34b` for the X band), never one more optional on the first. Before writing a fixture, read its emitter for `? :` and `if (x == …)` on an argument VALUE — candidates in later slices include `layoutMode`, `markerShape` and the axis arguments.
+7. **SILENT — equal VALUES hide a cross-wire.** The list pins emitted TEXT, so two writers whose fixture values are *equal* are indistinguishable: swap which model field feeds which argument name and the list is byte-identical. Measured in `_emitGrid`, where the maximal fixture is **forced** into it — a boolean is written only when it differs from the `true` default, so a maximal grid must set `horizontal` and `vertical` **both** `false`. Swapping the two operands left maximal shape 40 GREEN (`00:03 +1: All tests passed!`) while MINIMAL shape 11, which sets only `horizontal`, went RED. Two consequences: give paired arguments **distinct** values wherever the fixture is free to choose, and note that maximality is not strictly dominant — a minimal shape setting one of a pair is the only thing that catches their cross-wire, a second reason existing minimal shapes are kept rather than rewritten.
 
 **Order is safe to freeze** — every chain-verb emitter writes a fixed sequence and conditionals only add or remove; there is no `for (final entry in map.entries) namedArgument(...)` anywhere in `lib/src/source/`. **But the synthesised `GrammarRow` class and row literals ARE data-ordered — never whole-list those.**
 
@@ -127,7 +148,7 @@ testWidgets('shape NN: a MAXIMAL <verb> pins its whole argument list',
 **Interfaces:**
 - Produces: `literalArguments` returns `const <String>[]` for an empty argument list instead of throwing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Put this beside the helper:
 
@@ -145,12 +166,12 @@ test('literalArguments returns an empty list for a verb with no arguments', () {
 });
 ```
 
-- [ ] **Step 2: Run it — expect FAIL**
+- [x] **Step 2: Run it — expect FAIL**
 
 Run: `cd /f/Repositories/braven_charts-emitted-gate && flutter test test/unit/source/chart_grammar_source_generator_test.dart --plain-name 'literalArguments returns an empty list'`
 Expected: FAIL with `RangeError (end): Invalid value: Not in inclusive range`.
 
-- [ ] **Step 3: Add the guard**
+- [x] **Step 3: Add the guard**
 
 In `literalArguments`, after `end` is computed and its `expect` passes:
 
@@ -158,11 +179,11 @@ In `literalArguments`, after `end` is computed and its `expect` passes:
   if (end < bodyStart) return const <String>[];
 ```
 
-- [ ] **Step 4: Run it — expect PASS.** Then run the whole file to confirm the 15 existing call sites are unaffected.
+- [x] **Step 4: Run it — expect PASS.** Then run the whole file to confirm the 15 existing call sites are unaffected.
 
 Run: `flutter test test/unit/source/chart_grammar_source_generator_test.dart`
 
-- [ ] **Step 5: Format gate, analyzes, commit**
+- [x] **Step 5: Format gate, analyzes, commit**
 
 ```bash
 dart run tool/check_dart_format.dart
@@ -180,7 +201,7 @@ git commit -m "test(source): make literalArguments return empty rather than thro
 - Consumes: `literalArguments` (Task 1.1), the file's existing `snapshotOf` / `generateGrammar` / `emittedChain` helpers.
 - Produces: the pattern every later task copies.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 This fixture and expected list are **pilot-verified** — it caught 11 of 11 mutations.
 
@@ -231,9 +252,9 @@ testWidgets('shape 32: a MAXIMAL .trend( pins its whole argument list',
 
 Match the file's existing fixture conventions for `rows`/`snapshotOf` — read shape 7 at `:3706` and the canonical call site at `:3006` first. If the emitted order differs from the list above, **fix the list to the real order**, never the emitter.
 
-- [ ] **Step 2: Run it.** If it fails, the failure message prints the actual list — correct the expectation to match reality and re-run until green.
+- [x] **Step 2: Run it.** If it fails, the failure message prints the actual list — correct the expectation to match reality and re-run until green.
 
-- [ ] **Step 3: MUTATION-VERIFY, deletion direction — this is the point of the task**
+- [x] **Step 3: MUTATION-VERIFY, deletion direction — this is the point of the task**
 
 For each of the 8 survivors (`id`, `method`, `windowSize`, `name`, `color`, `showConfidenceBand`, `lineWidth`, `dashPattern`), delete its `writer.namedArgument(...)` line in `_emitTrend` (`lib/src/source/chart_grammar_source_generator.dart:3546-3567`), run this test, and confirm it FAILS. Apply and revert **within one Bash invocation**:
 
@@ -247,13 +268,13 @@ cd /f/Repositories/braven_charts-emitted-gate && \
 
 Report any argument whose deletion leaves the test green — that is a hole the assertion did not close.
 
-- [ ] **Step 4: MUTATION-VERIFY, addition direction**
+- [x] **Step 4: MUTATION-VERIFY, addition direction**
 
 Add an unconditional `writer.namedArgument('probe', "'x'");` to `_emitTrend` and confirm the test FAILS (`which longer than expected`). Revert in the same invocation.
 
 This is the property that justified choosing whole-list equality over fragment lists — verify it rather than assuming it. Note the honest limit: it catches additions **on a path the fixture exercises**; a conditional add on a dead path slips through (measured).
 
-- [ ] **Step 5: Full suite, format gate, analyzes, commit**
+- [x] **Step 5: Full suite, format gate, analyzes, commit**
 
 ```bash
 flutter test && dart run tool/check_dart_format.dart
@@ -269,11 +290,11 @@ git commit -m "test(source): pin the whole .trend( argument list on a maximal fi
 **Interfaces:**
 - Consumes: the pattern from Task 1.2.
 
-- [ ] **Step 1: Read the three emitters and write down their emission order**
+- [x] **Step 1: Read the three emitters and write down their emission order**
 
 `_emitThreshold`, `_emitBand`, `_emitPoint` — `lib/src/source/chart_grammar_source_generator.dart:3569-3629`. Note which arguments are conditional; the fixture must make **every** one live.
 
-- [ ] **Step 2: Write the three tests**
+- [x] **Step 2: Write the three tests**
 
 One per verb, each following the mandatory shape at the top of this plan. Here is `.threshold(` in full; `.band(` and `.pointAt(` take the identical shape with their own fixture and list.
 
@@ -318,15 +339,15 @@ testWidgets('shape 33: a MAXIMAL .threshold( pins its whole argument list',
 
 Survivors each fixture must make live: `.threshold(` → `id`, `color`, `strokeWidth`, `dashPattern`; `.band(` → `id`, `label`, `color`; `.pointAt(` → `id`, `label`, `color`, `markerSize`. Check each verb's real parameter names and enum types on `BravenChart` before writing its fixture — the names above are from the emitter, and the builder's may differ.
 
-- [ ] **Step 3: Run them**, correcting each expected list to the real emitted order.
+- [x] **Step 3: Run them**, correcting each expected list to the real emitted order.
 
-- [ ] **Step 4: MUTATION-VERIFY both directions for all 11 arguments**, exactly as Task 1.2 Steps 3–4. Report any that slip.
+- [x] **Step 4: MUTATION-VERIFY both directions for all 11 arguments**, exactly as Task 1.2 Steps 3–4. Report any that slip.
 
-- [ ] **Step 5: Re-measure the survivor count**
+- [x] **Step 5: Re-measure the survivor count**
 
 Delete all remaining survivors' writer lines at once, run the package suite, and record the new count. Slice 1 should have taken 40 → 21. Revert in the same invocation and confirm `git status --short` is clean.
 
-- [ ] **Step 6: Full suite, format gate, analyzes, commit**
+- [x] **Step 6: Full suite, format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -342,7 +363,7 @@ git commit -m "test(source): pin the whole .threshold(/.band(/.pointAt( argument
 **Files:**
 - Modify: `test/unit/source/chart_grammar_source_generator_test.dart`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Verified during recon: a single `.geomBar(` fixture emits all twelve arguments at once — `barWidthPercent` and `barWidthPixels` **coexist**, no mutual exclusion, no warnings.
 
@@ -396,11 +417,11 @@ testWidgets('shape 36: a MAXIMAL .geomBar( pins its whole argument list',
 
 Confirm the real parameter names, enum type and emitted order against `_emitGeometry`'s bar arm and the `geomBar` signature before running — correct the expectation to reality, never the emitter.
 
-- [ ] **Step 2: Run it**, correcting the expected list to reality.
+- [x] **Step 2: Run it**, correcting the expected list to reality.
 
-- [ ] **Step 3: MUTATION-VERIFY both directions** for the 6 survivors, in `_emitGeometry`'s bar arm.
+- [x] **Step 3: MUTATION-VERIFY both directions** for the 6 survivors, in `_emitGeometry`'s bar arm.
 
-- [ ] **Step 4: Full suite, format gate, analyzes, commit**
+- [x] **Step 4: Full suite, format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -412,19 +433,19 @@ git commit -m "test(source): pin the whole .geomBar( argument list on a maximal 
 **Files:**
 - Modify: `test/unit/source/chart_grammar_source_generator_test.dart`
 
-- [ ] **Step 1: Write the three tests**
+- [x] **Step 1: Write the three tests**
 
 `.geomPoint(` (survivors `colorBy`, `opacityBy`, `markerRadius`, `markerShape`) — verified during recon that one fixture emits size/sizeEncoding/colorBy/colorEncoding/opacityBy/opacityEncoding/markerRadius/markerShape together with `warnings` empty. **The channels must carry their encodings**: `size:`/`colorBy:`/`opacityBy:` without them throws `GrammarSpecException(missingChannelEncoding)`. Expect nested encoding bodies to flatten into the list — that is the accepted cost, and it means this assertion also pins the config emitter's rendering.
 
 `.geomArea(` — survivor `baseline`. `.geomCandlestick(` — survivor `timestamp`, which is conditional on the plan carrying a stamp, so the fixture must supply timestamps.
 
-- [ ] **Step 2: Run them**, correcting each expected list to reality.
+- [x] **Step 2: Run them**, correcting each expected list to reality.
 
-- [ ] **Step 3: MUTATION-VERIFY both directions** for all 6 survivors.
+- [x] **Step 3: MUTATION-VERIFY both directions** for all 6 survivors.
 
-- [ ] **Step 4: Re-measure.** Slice 2 should have taken 21 → 9. Record it.
+- [x] **Step 4: Re-measure.** Slice 2 should have taken 21 → 9. Record it.
 
-- [ ] **Step 5: Full suite, format gate, analyzes, commit**
+- [x] **Step 5: Full suite, format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -440,17 +461,17 @@ git commit -m "test(source): pin the whole .geomPoint(/.geomArea(/.geomCandlesti
 **Files:**
 - Modify: `test/unit/source/chart_grammar_source_generator_test.dart`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 **Open at `GridConfig(`, not `.grid(`** — measured: opening at `.grid(` returns the wrapper lines (`GridConfig(`, …, `),`) while opening at `GridConfig(` returns the clean field list. This also honours failure mode 5: the opening is a `Type(` reached via the wrapper, and `GridConfig(` has no prefix collision (unlike a bare `ChartConfig(`).
 
 Survivors to make live: `vertical`, `horizontalColor`, `verticalColor`, `horizontalStrokeWidth`, `verticalStrokeWidth`. `horizontal` is already pinned — include it in the list anyway, since this is whole-list equality.
 
-- [ ] **Step 2: Run it**, correcting the expected list to reality.
+- [x] **Step 2: Run it**, correcting the expected list to reality.
 
-- [ ] **Step 3: MUTATION-VERIFY both directions** for the 5 survivors in `_emitGrid`.
+- [x] **Step 3: MUTATION-VERIFY both directions** for the 5 survivors in `_emitGrid`.
 
-- [ ] **Step 4: Format gate, analyzes, commit**
+- [x] **Step 4: Format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -465,7 +486,7 @@ git commit -m "test(source): pin the whole GridConfig( field list on a maximal f
 **Interfaces:**
 - Produces: the whole-line assertion form, for any single-line verb.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `literalArguments` **cannot** read this form — measured: `literalArguments(source, '.x(')` silently returns the *next* verb's body, and a test pinned that way stayed green when the collapsed-form writer was deleted. Pin the trimmed line instead:
 
@@ -487,11 +508,11 @@ testWidgets('shape NN: the collapsed .x(field, label:) form is pinned by LINE',
 
 `split('\n')` avoids needing a `dart:convert` import the file may not carry. Confirm the exact emitted text — including whether the line ends in a trailing character — before pinning it.
 
-- [ ] **Step 2: Run it**, correcting the expected line to reality.
+- [x] **Step 2: Run it**, correcting the expected line to reality.
 
-- [ ] **Step 3: MUTATION-VERIFY** — delete the collapsed-form writer at `chart_grammar_source_generator.dart:3304-3309` and confirm this test FAILS. This is the mutation that a `literalArguments`-based test does **not** catch, so it is the whole justification for the different form.
+- [x] **Step 3: MUTATION-VERIFY** — delete the collapsed-form writer at `chart_grammar_source_generator.dart:3304-3309` and confirm this test FAILS. This is the mutation that a `literalArguments`-based test does **not** catch, so it is the whole justification for the different form.
 
-- [ ] **Step 4: Format gate, analyzes, commit**
+- [x] **Step 4: Format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -503,19 +524,19 @@ git commit -m "test(source): pin the collapsed .x(field, label:) form by whole l
 **Files:**
 - Modify: `test/unit/source/chart_grammar_source_generator_test.dart`
 
-- [ ] **Step 1: Write the two tests**
+- [x] **Step 1: Write the two tests**
 
 `.geomPie(`/`.geomDonut(` — survivor `color` (the series colour, `chart_grammar_source_generator.dart:3037`). `.geomPolar(` — survivors `name` (`:2971`) and `color` (`:2972`).
 
 Both must set `allMatches(...).length == 1`; note `.geomPolar(` is asserted with `length, 2` at `:4333`, so a multi-series polar fixture would break the slicer — use a **single**-series fixture here.
 
-- [ ] **Step 2: Run them**, correcting each expected list to reality.
+- [x] **Step 2: Run them**, correcting each expected list to reality.
 
-- [ ] **Step 3: MUTATION-VERIFY both directions** for all 3 survivors.
+- [x] **Step 3: MUTATION-VERIFY both directions** for all 3 survivors.
 
-- [ ] **Step 4: Re-measure.** Slice 3 should have taken 9 → 0 for the verb surface. Record it, and state plainly if anything remains.
+- [x] **Step 4: Re-measure.** Slice 3 should have taken 9 → 0 for the verb surface. Record it, and state plainly if anything remains.
 
-- [ ] **Step 5: Full suite, format gate, analyzes, commit**
+- [x] **Step 5: Full suite, format gate, analyzes, commit**
 
 ```bash
 git add test/unit/source/chart_grammar_source_generator_test.dart
@@ -583,12 +604,12 @@ git commit -m "docs: record the measured survivor count after pinning"
 
 ## Final verification (before requesting a PR)
 
-- [ ] Root `flutter test` green; `cd example && flutter test` green.
+- [ ] Root `flutter test` green; `cd example && flutter test` green. **The example suite is RED at this branch's merge base `997b1028` and cannot be signed off before the rebase below**: `example/test/showcase/grammar_emission_census_test.dart` fails twice (`mount-site counts moved`, and `['Workbench'][2] is <1> instead of <2>`) because master's `851e9eca` (PR #150) reconciled the Workbench census *after* `997b1028` and this branch does not carry it. Verified not to be this branch's doing — `git diff $(git merge-base origin/master HEAD)..HEAD -- example/` is empty. Do **not** hand-edit the census numbers here; `851e9eca` owns them and an edit would conflict.
 - [ ] `flutter test test/meta/` — drift gates green, `missing=0`.
 - [ ] `flutter analyze lib` and `flutter analyze example/lib` — "No issues found!".
 - [ ] `dart run tool/check_dart_format.dart` — passes.
-- [ ] **`lib/` is untouched** — `git diff origin/master..HEAD -- lib/` is empty. This slice adds tests and fixtures only.
+- [ ] **`lib/` is untouched** — `git diff $(git merge-base origin/master HEAD)..HEAD -- lib/` is empty. This slice adds tests and fixtures only. **Measure from the MERGE BASE, not from `origin/master`**: while the branch is behind, `git diff origin/master..HEAD -- lib/` reports master's own commits *in reverse* (measured: `d4336e99 fix(artifacts): define optional callback omission policy` shows as 3 files / 32 deletions the branch "removed"), so the plain form reads as a violation the branch did not commit. The two forms become identical after the rebase below.
 - [ ] **Every new assertion mutation-verified in both directions**, with the results reported per argument.
-- [ ] No existing assertion weakened — `git diff origin/master..HEAD -- test/` with every removed line classified.
+- [ ] No existing assertion weakened — `git diff $(git merge-base origin/master HEAD)..HEAD -- test/` with every removed line classified (merge base, for the same reason as above).
 - [ ] Final survivor count re-measured and recorded, with any remainder named.
 - [ ] Rebase onto latest `origin/master`; re-run the suites.
