@@ -8004,11 +8004,75 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'standard',
+        // DELETION COVERAGE, and the reason every case below carries a list
+        // this long.
+        //
+        // These acceptance cases have no `rebuilt:` closure, so the whole-list
+        // `literalArguments` equality the shapes above use does not reach them
+        // — several emit `.geomPolar(` two or three times, which the slicer
+        // cannot read (it takes only the FIRST occurrence). What they get
+        // instead is per-case deletion coverage: every argument line THIS
+        // case's chain emits is named, so deleting any one of those writer
+        // lines fails THIS case rather than shipping a chain that silently
+        // dropped a value. The list is derived from the REAL emitted source —
+        // dumped from the generator and transcribed — never from the showcase
+        // page, because the page is what the emitter is being checked
+        // against.
+        //
+        // The honest limit of the form: `contains` is one-directional. It
+        // catches a DELETED argument and cannot notice an ADDED one. The
+        // addition direction is carried by `expectGeneratedSourceCompiles`,
+        // which every case runs — an argument the builder has no parameter for
+        // fails `dart analyze` (measured: an unconditional `probe: 'x'` on
+        // `.geomPolar(` reddens all eight polar cases).
+        //
+        // The mutation set MEASURED for these nine lists, with its size: the
+        // 83 writer statements behind them deleted one at a time — every
+        // argument of `_emitPolarGeometry` and the donut arm of
+        // `_emitRadialGeometry`, the `.polarConfig(` and `.theme(` emissions,
+        // and every field of `PolarColumnStyle` / `PolarLabelStyle` /
+        // `PolarChartConfig` / the target-marker, interval, concentric and
+        // centre literals — plus 3 unconditional probe arguments added. 86 of
+        // 86 caught, and all 83 deletions were caught by the FRAGMENT (the
+        // failure names the missing argument), not merely by the compile gate
+        // reacting to broken output.
+        //
+        // Entries whose values the emitter RESOLVES rather than the showcase
+        // authoring (`borderWidth: 0.75,`, `dataLabelRadialPosition: 0.56,`
+        // and the label-style sizes) are pinned too: they are what this chart
+        // emits, which is the thing being guarded.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Category volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'opacity: 0.97,',
+          'borderColor: Color(0xFF1E3A5F),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
           'columnColor: (row) => row.columnColor,',
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
           'outerRadiusFactor: 0.84,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1E293B),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8052,12 +8116,56 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'rose',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
           '.geomPolar(',
-          'rose: true,',
-          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Monthly volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 6.0,',
+          'opacity: 0.98,',
+          'borderColor: Color(0xFFF59E0B),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFFFFF7ED),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
           'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.24,',
+          'endLightnessShift: -0.18,',
           'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF000000),',
+          'blurRadius: 12.0,',
+          'offset: Offset(0.0, 5.0),',
+          'opacity: 0.38,',
+          'animationMode: PolarColumnAnimationMode.sweep,',
+          'rose: true,',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.08,',
+          'outerRadiusFactor: 0.86,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.08,',
+          'outerPadding: 0.0,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFFF8FAFC),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          'color: Color(0xFFFDE68A),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8117,17 +8225,57 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'partial',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use. The pane literals stay the
+        // load-bearing part, and they are ALSO asserted whole below.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Category volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 8.0,',
+          'opacity: 0.86,',
+          'borderColor: Color(0xFF7C2D12),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFF431407),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.28,',
+          'endLightnessShift: -0.08,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF9A3412),',
+          'blurRadius: 10.0,',
+          'offset: Offset(0.0, 3.0),',
+          'opacity: 0.18,',
+          'animationMode: PolarColumnAnimationMode.fade,',
           'columnColor: (row) => row.columnColor,',
           '.polarConfig(',
+          'PolarChartConfig(',
           'pane: PolarPaneConfig(',
           'startAngleDegrees: 150.0,',
           'sweepAngleDegrees: 240.0,',
           'innerRadiusFactor: 0.28,',
           'outerRadiusFactor: 0.9,',
+          'angularAxis: PolarCategoryAxisConfig(',
           'innerPadding: 0.14,',
           'outerPadding: 0.08,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF7C2D12),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8203,17 +8351,56 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'layered',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use. Both series' text is here —
+        // the second series' own id, value field, name, colour and opacity
+        // are what make this the LAYERED case rather than a one-series one.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-capacity',",
+          'category: (row) => row.category,',
           'value: (row) => row.value,',
-          'value: (row) => row.value2,',
+          "name: 'Capacity',",
+          'color: Color(0xFF0D9488),',
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
           'opacity: 0.32,',
+          'borderColor: Color(0xFF1E40AF),',
+          'borderWidth: 0.75,',
           'showDataLabels: false,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          "id: 'showcase-polar-observed',",
+          'value: (row) => row.value2,',
+          "name: 'Observed',",
+          'color: Color(0xFF2563EB),',
+          'opacity: 0.92,',
           // `layered` IS the composition default, so the mode itself is
           // correctly elided; the pane/axis knobs are what prove the plot
           // config reached the chain.
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'outerRadiusFactor: 0.86,',
+          'angularAxis: PolarCategoryAxisConfig(',
           'innerPadding: 0.16,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1E3A8A),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF1D4ED8),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8276,11 +8463,61 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'grouped',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use — this one emits `.geomPolar(`
+        // THREE times, which the `literalArguments` slicer cannot read at
+        // all (it takes only the first occurrence).
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-north',",
+          'category: (row) => row.category,',
           'value: (row) => row.value,',
+          "name: 'North',",
+          'color: Color(0xFFE63946),',
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'opacity: 0.92,',
+          'borderColor: Color(0xFF7C2D12),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.18,',
+          'endLightnessShift: -0.16,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF92400E),',
+          'blurRadius: 7.0,',
+          'offset: Offset(0.0, 2.0),',
+          'opacity: 0.16,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          "id: 'showcase-polar-south',",
           'value: (row) => row.value2,',
+          "name: 'South',",
+          'color: Color(0xFFF77F00),',
+          "id: 'showcase-polar-west',",
           'value: (row) => row.value3,',
+          "name: 'West',",
+          'color: Color(0xFFFCBF49),',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.1,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF78350F),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'fontSize: 10.0,',
+          'composition: PolarColumnCompositionConfig(',
           'mode: PolarColumnCompositionMode.grouped,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8350,10 +8587,66 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'stacked',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
-          'mode: PolarColumnCompositionMode.stacked,',
+          '.geomPolar(',
+          "id: 'showcase-polar-new',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'New accounts',",
+          'color: Color(0xFF2563EB),',
+          "unit: 'accounts',",
+          'style: PolarColumnStyle(',
           'cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,',
-          // The third series' own value field, negative and unclamped.
+          'opacity: 0.97,',
+          'borderColor: Color(0xFF7DD3FC),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFFF8FAFC),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.2,',
+          'endLightnessShift: -0.2,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF000000),',
+          'blurRadius: 10.0,',
+          'offset: Offset(0.0, 4.0),',
+          'opacity: 0.42,',
+          'animationMode: PolarColumnAnimationMode.sweep,',
+          "id: 'showcase-polar-expansion',",
+          'value: (row) => row.value2,',
+          "name: 'Expansion',",
+          'color: Color(0xFF0D9488),',
+          "id: 'showcase-polar-churn',",
+          'value: (row) => row.value3,',
+          "name: 'Churn',",
+          'color: Color(0xFF06B6D4),',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.14,',
+          'outerRadiusFactor: 0.9,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFFE0F2FE),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFFBAE6FD),',
+          'fontSize: 10.0,',
+          'composition: PolarColumnCompositionConfig(',
+          'mode: PolarColumnCompositionMode.stacked,',
+          '.theme(ChartTheme.light)',
+          // The third series' own value field, negative and unclamped. This
+          // one is a ROW literal rather than a chain argument, which is why
+          // it sits outside the chain list above.
           'value3: -13.0,',
         ],
         chart: (controller) => BravenChartPlus(
@@ -8414,13 +8707,56 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'references',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-actual-targets',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Actual versus plan',",
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
+          'opacity: 0.9,',
+          'borderColor: Color(0xFF334155),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          'columnColor: (row) => row.columnColor,',
           'target: (row) => row.target,',
           'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'color: Color(0xFFF59E0B),',
+          'width: 3.0,',
           'lengthFactor: 0.68,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.14,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1F2937),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
           'thresholds: [',
+          'PolarThreshold(',
+          'value: 80.0,',
           "label: 'Capacity',",
+          'color: Color(0xFFDC2626),',
+          'width: 2.0,',
           'dashPattern: <double>[7.0, 4.0],',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8478,7 +8814,31 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'intervals',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-forecast-intervals',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Forecast',",
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
+          'opacity: 0.78,',
+          'borderColor: Color(0xFF1E3A8A),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.22,',
+          'endLightnessShift: -0.14,',
+          'animationMode: PolarColumnAnimationMode.fade,',
+          'columnColor: (row) => row.columnColor,',
           'intervalLow: (row) => row.intervalLow,',
           'intervalHigh: (row) => row.intervalHigh,',
           // The showcase's authored interval knobs are the class defaults
@@ -8487,12 +8847,27 @@ void main() {
           'intervalStyle: PolarColumnIntervalStyle(',
           'color: Color(0xFF0F172A),',
           'width: 2.0,',
-          // The plot-level config: the fragment list above named only
+          // The plot-level config: the fragment list used to name only
           // per-SERIES text, so the whole `.polarConfig(...)` verb could be
           // dropped from the chain and this case would still have passed.
           // (The round-trip proof cannot see it either — it re-lowers the
           // captured `PolarChartConfig` OBJECT, not the emitted literal.)
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.16,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF334155),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -8613,17 +8988,28 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'grammar-authored concentric config',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
           '.geomDonut(',
+          "id: 'revenue',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
           'ring: (row) => row.ring,',
+          "unit: 'USD',",
           'concentric: ConcentricDonutConfig(',
           'innerRadiusFactor: 0.28,',
           'outerRadiusFactor: 0.94,',
           'ringGap: 6.0,',
           // `outerToInner` and `groupedByRing` are the class defaults the
           // showcase leaves alone, so they are correctly elided.
+          'ringWeights: {',
           "'revenue-Current period': 1.25,",
+          'centerContent: DonutCenterContent(',
           "label: 'Revenue mix',",
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
