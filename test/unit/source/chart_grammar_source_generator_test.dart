@@ -76,6 +76,18 @@ double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
 
+/// A TOTAL per-candle timestamp, derived from `t` rather than stored on
+/// [Sample].
+///
+/// The emitter plans a `timestamp` field only when EVERY candle in the series
+/// carries one — a partial timestamp is refused by name — so the maximal
+/// candlestick fixture needs a non-nullable accessor. Deriving it here leaves
+/// the shared `rows` const list, which a dozen other shapes capture, untouched.
+/// UTC because the emitted literal is `DateTime.parse(<toIso8601String()>)`,
+/// and only a UTC stamp survives that round trip unambiguously.
+DateTime sampleStamp(Sample row) =>
+    DateTime.utc(2026, 1, 1 + row.t.toInt(), 9, 30);
+
 /// Per-point text accessors, as top-level tear-offs so a chain that declares
 /// them stays comparable. The key is derived from `t`, which is unique per row:
 /// a repeated key inside one series is refused by name (shape 30d), so a fixture
@@ -2910,6 +2922,347 @@ void main() {
         ),
       );
     });
+
+    testWidgets('shape 37: a MAXIMAL .geomPoint( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the SCATTER surface: every optional
+      // `_emitScatterChannels` and the shared prologue can write is set
+      // EXPLICITLY, so no theme-resolved value lands in the expected list and
+      // every conditional emission path in that arm is live. The three
+      // quantitative channels MUST carry their encodings — `size:`/`colorBy:`/
+      // `opacityBy:` without one throws GrammarSpecException(
+      // missingChannelEncoding) — so the encoding bodies FLATTEN into this
+      // list. That is the accepted cost recorded in the design: this assertion
+      // also pins the CONFIG emitter's rendering of those four literals.
+      //
+      // None of the four survivors selects which model field is read (read
+      // before writing this fixture: `colorBy`/`opacityBy` go through
+      // `channel()` on a plan accessor, `markerRadius` through
+      // `_optionalNumber`, `markerShape` is written as
+      // `SeriesMarkerShape.${name}` whatever its value), so unlike `.band(`
+      // none needs a second fixture per branch. The one value-selecting
+      // conditional in this arm is `categoryBy`'s
+      // `label == null ? CategoryChannel(f) : CategoryChannel(f, label: ...)`:
+      // this fixture makes the LABELLED arm live, and the unlabelled arm is
+      // NOT pinned here.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Deliberately NOT set here: `label:`/`pointKey:` (shape 30/30e
+      // read them out of the geom verb's own list) and `yAxisId:`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomPoint(
+                y: samplePower,
+                name: 'Markers',
+                color: const Color(0xFF2563EB),
+                unit: 'W',
+                isXOrdered: true,
+                size: const Channel<Sample>(sampleEffort),
+                sizeEncoding: const ScatterSizeEncoding(
+                  minimumRadius: 3,
+                  maximumRadius: 18,
+                  minimumValue: 1,
+                  maximumValue: 9,
+                  label: 'Effort',
+                  unit: 'au',
+                  showLegend: false,
+                ),
+                colorBy: const Channel<Sample>(sampleHeartRate),
+                colorEncoding: const ScatterColorEncoding(
+                  colors: <Color>[Color(0xFF16A34A), Color(0xFFF59E0B)],
+                  scaleType: ScatterColorScaleType.piecewise,
+                  thresholds: <double>[140],
+                  bandLabels: <String>['Steady', 'Hard'],
+                  minimumValue: 100,
+                  maximumValue: 180,
+                  label: 'Heart rate',
+                  unit: 'bpm',
+                  showLegend: false,
+                ),
+                opacityBy: const Channel<Sample>(sampleHigh),
+                opacityEncoding: const ScatterOpacityEncoding(
+                  minimumOpacity: 0.3,
+                  maximumOpacity: 0.9,
+                  minimumValue: 110,
+                  maximumValue: 140,
+                  label: 'Confidence',
+                  unit: 'pct',
+                  showLegend: false,
+                ),
+                categoryBy: const CategoryChannel<Sample>(
+                  sampleZone,
+                  label: 'Zone',
+                ),
+                categories: const <ScatterCategoryStyle>[
+                  ScatterCategoryStyle(
+                    key: 'Endurance',
+                    label: 'Zone 2',
+                    color: Color(0xFF16A34A),
+                    shape: SeriesMarkerShape.square,
+                  ),
+                  ScatterCategoryStyle(
+                    key: 'Tempo',
+                    label: 'Zone 3',
+                    color: Color(0xFFF59E0B),
+                    shape: SeriesMarkerShape.triangle,
+                  ),
+                ],
+                markerRadius: 5,
+                markerShape: SeriesMarkerShape.diamond,
+                markerStyle: const ScatterMarkerStyle(
+                  fillColor: Color(0xFF0EA5E9),
+                  strokeColor: Color(0xFF0F172A),
+                  strokeWidth: 1.5,
+                  opacity: 0.8,
+                  width: 9,
+                  height: 7,
+                  rotationDegrees: 30,
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomPoint(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomPoint('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPoint('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.markers,',
+        "name: 'Markers',",
+        'color: Color(0xFF2563EB),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'size: Channel((row) => row.markersSize),',
+        'sizeEncoding: ScatterSizeEncoding(',
+        'minimumRadius: 3.0,',
+        'maximumRadius: 18.0,',
+        'minimumValue: 1.0,',
+        'maximumValue: 9.0,',
+        "label: 'Effort',",
+        "unit: 'au',",
+        'showLegend: false,',
+        '),',
+        'colorBy: Channel((row) => row.markersColor),',
+        'colorEncoding: ScatterColorEncoding(',
+        'colors: [',
+        'Color(0xFF16A34A),',
+        'Color(0xFFF59E0B),',
+        '],',
+        'scaleType: ScatterColorScaleType.piecewise,',
+        'thresholds: [140.0],',
+        "bandLabels: ['Steady', 'Hard'],",
+        'minimumValue: 100.0,',
+        'maximumValue: 180.0,',
+        "label: 'Heart rate',",
+        "unit: 'bpm',",
+        'showLegend: false,',
+        '),',
+        'opacityBy: Channel((row) => row.markersOpacity),',
+        'opacityEncoding: ScatterOpacityEncoding(',
+        'minimumOpacity: 0.3,',
+        'maximumOpacity: 0.9,',
+        'minimumValue: 110.0,',
+        'maximumValue: 140.0,',
+        "label: 'Confidence',",
+        "unit: 'pct',",
+        'showLegend: false,',
+        '),',
+        "categoryBy: CategoryChannel((row) => row.markersCategory, label: 'Zone'),",
+        'categories: [',
+        'ScatterCategoryStyle(',
+        "key: 'Endurance',",
+        "label: 'Zone 2',",
+        'color: Color(0xFF16A34A),',
+        'shape: SeriesMarkerShape.square,',
+        '),',
+        'ScatterCategoryStyle(',
+        "key: 'Tempo',",
+        "label: 'Zone 3',",
+        'color: Color(0xFFF59E0B),',
+        'shape: SeriesMarkerShape.triangle,',
+        '),',
+        '],',
+        'markerRadius: 5.0,',
+        'markerShape: SeriesMarkerShape.diamond,',
+        'markerStyle: ScatterMarkerStyle(',
+        'fillColor: Color(0xFF0EA5E9),',
+        'strokeColor: Color(0xFF0F172A),',
+        'strokeWidth: 1.5,',
+        'opacity: 0.8,',
+        'width: 9.0,',
+        'height: 7.0,',
+        'rotationDegrees: 30.0,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `opacityBy:`, `opacityEncoding:`, `markerRadius:`,
+      // `markerShape:` and `markerStyle:` on `.geomPoint(`, so without this
+      // gate those names are compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_point_maximal',
+        ),
+      );
+    });
+
+    testWidgets('shape 38: a MAXIMAL .geomArea( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the AREA-SPECIFIC surface: every optional
+      // `_emitGeometry`'s area arm can write as a direct argument is set
+      // EXPLICITLY, so no theme-resolved value lands in the expected list and
+      // every conditional emission path in that arm is live. None of them
+      // selects which model field is read (`baseline`, `fillOpacity`,
+      // `strokeWidth` go through `_optionalNumber`, `dashPattern` through
+      // `_optionalNumberList`, `interpolation` is written as
+      // `LineInterpolation.${name}` whatever its value), so unlike `.band(` no
+      // second fixture per branch is needed.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test.
+      // Deliberately NOT set here: `dataPointLabels:` (the shape above already
+      // pins `dataPointLabels: DataPointLabelConfig(`; including it would
+      // flatten a fifteen-field config body into this list and couple the
+      // assertion to the config emitter for no new coverage), `label:`/
+      // `pointKey:` (shape 30/30e) and `yAxisId:`. `colorBy:`/`colorEncoding:`
+      // CANNOT be added: an area mark bakes a colour channel into per-point
+      // segment styles, which the reverser cannot recover, so the generator
+      // REFUSES such a chart by name rather than dropping it silently — a
+      // fixture setting them would be testing that diagnostic instead.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomArea(
+                y: samplePower,
+                name: 'Load',
+                color: const Color(0xFF7C3AED),
+                unit: 'W',
+                isXOrdered: true,
+                baseline: 40,
+                fillOpacity: 0.22,
+                strokeWidth: 2.4,
+                dashPattern: const <double>[5, 3],
+                interpolation: LineInterpolation.monotone,
+                showDataPointMarkers: true,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomArea(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomArea('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomArea('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.load,',
+        "name: 'Load',",
+        'color: Color(0xFF7C3AED),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'baseline: 40.0,',
+        'fillOpacity: 0.22,',
+        'strokeWidth: 2.4,',
+        'dashPattern: <double>[5.0, 3.0],',
+        'interpolation: LineInterpolation.monotone,',
+        'showDataPointMarkers: true,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `baseline:` on `.geomArea(`, so without this gate that name
+      // is compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_area_maximal',
+        ),
+      );
+    });
+
+    testWidgets(
+      'shape 39: a MAXIMAL .geomCandlestick( pins its whole argument list',
+      (tester) async {
+        // MAXIMAL fixture for the CANDLESTICK surface: every optional
+        // `.geomCandlestick(` takes is set EXPLICITLY, so no theme-resolved
+        // value lands in the expected list and every conditional emission path
+        // is live. `timestamp:` is the survivor, and it is written ONLY when
+        // the plan carries a stamp — which it does only when EVERY candle has
+        // one — so `sampleStamp` is total. Without it this assertion would be
+        // vacuous for the one argument it exists to pin.
+        //
+        // The candlestick arm adds nothing of its own after the prologue, so
+        // this list IS the prologue with open/high/low/close in place of `y`.
+        // `isXOrdered:` cannot appear: `_emitGeometry`'s `isXOrdered` switch
+        // sends candlestick to its `_ => false` default (the candlestick series
+        // hard-codes the flag), and `.geomCandlestick(` takes no such argument.
+        //
+        // Anything THIS fixture does not emit is NOT pinned by this test.
+        // Deliberately NOT set here: `yAxisId:` (shape 5 reads it out of
+        // `.geomCandlestick(`'s own list).
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT)
+                .geomCandlestick(
+                  open: sampleOpen,
+                  high: sampleHigh,
+                  low: sampleLow,
+                  close: sampleClose,
+                  timestamp: sampleStamp,
+                  name: 'Price',
+                  color: const Color(0xFFDC2626),
+                  unit: 'USD',
+                )
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // `literalArguments` slices from the FIRST occurrence of the opening
+        // token, so a second `.geomCandlestick(` would leave this assertion
+        // reading the wrong literal and silently pinning nothing about the
+        // other.
+        expect('.geomCandlestick('.allMatches(generated.source).length, 1);
+        expect(
+          literalArguments(generated.source, '.geomCandlestick('),
+          <String>[
+            "id: 'mark-0',",
+            'open: (row) => row.priceOpen,',
+            'high: (row) => row.priceHigh,',
+            'low: (row) => row.priceLow,',
+            'close: (row) => row.priceClose,',
+            'timestamp: (row) => row.priceTimestamp,',
+            "name: 'Price',",
+            'color: Color(0xFFDC2626),',
+            "unit: 'USD',",
+          ],
+        );
+        // The list above pins the emitted TEXT; only `dart analyze` proves those
+        // names exist on the real builder. This is the only fixture in the
+        // corpus that emits `timestamp:` on `.geomCandlestick(`, so without
+        // this gate that name is compiled by nothing in the repo — and it is
+        // also the only one that compiles the synthesised `DateTime` row slot.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_candlestick_maximal',
+          ),
+        );
+      },
+    );
 
     testWidgets('shape 29: a Cartesian series unit round-trips AND is emitted', (
       tester,
