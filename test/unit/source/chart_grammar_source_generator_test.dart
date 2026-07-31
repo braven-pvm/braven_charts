@@ -324,6 +324,25 @@ const showcaseGrouping = RadialSliceGroupingConfig(
   label: 'Other',
 );
 
+/// Grouping that can ride ALONGSIDE a variable slice radius.
+///
+/// `RadialCategorySeries` refuses `sliceGroupingConfig` + `sliceRadiusConfig`
+/// unless the second metric carries an explicit aggregation policy — measured,
+/// mounting [showcaseGrouping] with [showcaseRadius] throws `ArgumentError:
+/// Radial slice grouping cannot be combined with variable slice radii without
+/// an explicit second-metric aggregation policy`. So a MAXIMAL pie, which needs
+/// `radius:`, `sliceRadiusConfig:` and `sliceGroupingConfig:` live at once,
+/// cannot reuse [showcaseGrouping]: it would be a chart the package will not
+/// build. Every field is also set away from its default, so no field of the
+/// emitted literal is elided by the config emitter's `_numberIf` seams.
+const maximalGrouping = RadialSliceGroupingConfig(
+  minimumShare: 0.08,
+  minimumSourceCount: 3,
+  label: 'Other',
+  color: Color(0xFF64748B),
+  radiusAggregation: RadialSliceRadiusAggregation.weightedMean,
+);
+
 /// The donut-centre label / value styling the showcase page applies.
 ///
 /// `donut_charts_page.dart` builds both from its resolved chart theme in every
@@ -847,6 +866,37 @@ final List<PolarAdvancedRow> polarRoseRows = <PolarAdvancedRow>[
       category: row.fruit,
       value: polarObserved[row.fruit]!.toDouble(),
       columnColor: polarColumnColors[row.fruit],
+    ),
+];
+
+/// Column colours for EVERY category, unlike [polarColumnColors].
+///
+/// The presentation fixtures above colour a SUBSET on purpose — reproducing the
+/// absences is what they test. The maximal shape's job is different: it needs
+/// every advanced channel LIVE at once, so it colours all four.
+const polarMaximalColumnColors = <String, Color>{
+  'Apple': Color(0xFF16A34A),
+  'Pear': Color(0xFF2563EB),
+  'Plum': Color(0xFF7C3AED),
+  'Fig': Color(0xFFDC2626),
+};
+
+/// The MAXIMAL polar rows: value AND all four advanced per-category channels.
+///
+/// No existing polar fixture carries them together — `polarReferenceRows` has
+/// colour + target, `polarIntervalRows` has the two bounds, `polarRoseRows` has
+/// colour — so none of them can emit `columnColor:`, `target:`, `intervalLow:`
+/// and `intervalHigh:` in one `.geomPolar(` literal, and a whole-list assertion
+/// against any of them would be blind to the channels its fixture omits.
+final List<PolarAdvancedRow> polarMaximalRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarMaximalColumnColors[row.fruit],
+      target: polarObserved[row.fruit]!.toDouble() + 8,
+      intervalLow: polarObserved[row.fruit]!.toDouble() - 4,
+      intervalHigh: polarObserved[row.fruit]!.toDouble() + 4,
     ),
 ];
 
@@ -4946,6 +4996,278 @@ void main() {
         );
       },
     );
+
+    testWidgets('shape 42: a MAXIMAL .geomPie( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the RADIAL CATEGORY surface: every optional on
+      // `.geomPie(` is set EXPLICITLY, so no theme-resolved value lands in the
+      // expected list and every conditional emission in `_emitRadialGeometry`'s
+      // shared prologue and its `PieMark` arm is live. The survivor this shape
+      // exists for is the series `color:` — `_optionalColor(writer, 'color',
+      // mark.color)`, the ONE argument of the radial family that no assertion
+      // read before — and it is emitted by BOTH `geomPie` and `geomDonut` from
+      // that single shared statement, so pinning it here pins it for the donut
+      // too (measured: deleting that line reddens this test).
+      //
+      // `sliceGroupingConfig:` and `sliceRadiusConfig:` are NOT freely
+      // combinable: `RadialCategorySeries` throws `ArgumentError: Radial slice
+      // grouping cannot be combined with variable slice radii without an
+      // explicit second-metric aggregation policy` when grouping rides a
+      // variable radius without one (measured — the first run of this fixture
+      // died on it with `showcaseGrouping`). Hence [maximalGrouping], which
+      // carries `radiusAggregation:`. That is the only way a fixture can be
+      // maximal over BOTH, and it is why this shape cannot reuse the existing
+      // grouping const.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Not pinned here, deliberately: `ring:` and the donut-only
+      // arguments (`center:`, `concentric:`, `ringIds:`, `dataLabelsByRing:`)
+      // — they belong to `_emitRadialGeometry`'s `DonutMark` arm, no single
+      // donut fixture can be maximal over them (`center:` and `concentric:` are
+      // mutually exclusive by lowering's precedence rule), and none of them is
+      // among this slice's survivors; and the nested-config FIELDS the four
+      // literals below leave at their class defaults, since each config emitter
+      // writes only what differs.
+      //
+      // Neither `_emitRadialGeometry`'s prologue nor its pie arm branches on an
+      // argument VALUE to choose which model field it reads (checked before
+      // writing this fixture: `_optionalString` / `_optionalColor` return early
+      // on null and write one field; the seams switch on `mark` runtime type,
+      // not on a value), so unlike `.band(` this verb needs no second fixture
+      // per branch.
+      //
+      // Measured, one mutation set of 35 — 35 of 35 caught:
+      //   - 13 writer statements of `_emitRadialGeometry` this fixture makes
+      //     live (`id`, `category`, `value`, `radius`, `sliceColor`, `name`,
+      //     `color`, `unit`, and the five `PieMark`-arm seams `style`,
+      //     `selectionStyle`, `dataLabels`, `sliceRadiusConfig`,
+      //     `sliceGroupingConfig`), deleted one at a time — a whole `if` block
+      //     counts as one statement;
+      //   - all 21 field statements of the four nested config bodies that
+      //     flatten into this list: 5 `PieChartStyle`, 4 `RadialSelectionStyle`,
+      //     3 `PieDataLabelConfig`, 4 `PieSliceRadiusConfig`, 5
+      //     `RadialSliceGroupingConfig` — the accepted config-emitter coupling,
+      //     earning coverage rather than costing it;
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitRadialGeometry`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(sliceColorRadiusGrammarRows)
+              .geomPie(
+                category: (row) => row.category,
+                value: (row) => row.value,
+                radius: (row) => row.radius,
+                sliceColor: (row) => row.sliceColor,
+                id: 'slices',
+                name: 'Harvest',
+                color: const Color(0xFF9333EA),
+                unit: 'kg',
+                style: styledPieStyle,
+                selectionStyle: showcaseSelection,
+                dataLabels: styledPieLabels,
+                sliceRadiusConfig: showcaseRadius,
+                sliceGroupingConfig: maximalGrouping,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomPie(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other. A radial
+      // spec may hold only ONE mark, so a second pie cannot arise today — the
+      // guard is here because that is a property of the SPEC, not of the
+      // slicer, and the slicer is what fails silently if it changes.
+      expect('.geomPie('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPie('), <String>[
+        "id: 'slices',",
+        'category: (row) => row.category,',
+        'value: (row) => row.value,',
+        'radius: (row) => row.radius,',
+        'sliceColor: (row) => row.sliceColor,',
+        "name: 'Harvest',",
+        'color: Color(0xFF9333EA),',
+        "unit: 'kg',",
+        'style: PieChartStyle(',
+        'startAngleDegrees: 30.0,',
+        'clockwise: false,',
+        'radiusFactor: 0.8,',
+        'sliceGap: 4.0,',
+        'borderWidth: 2.0,',
+        '),',
+        'selectionStyle: RadialSelectionStyle(',
+        'effect: RadialSelectionEffect.lift,',
+        'liftScale: 1.12,',
+        'liftOffset: 8.0,',
+        'backdropBlur: 1.5,',
+        '),',
+        'dataLabels: PieDataLabelConfig(',
+        'position: PieDataLabelPosition.inside,',
+        'minimumShare: 0.05,',
+        'padding: 10.0,',
+        '),',
+        'sliceRadiusConfig: PieSliceRadiusConfig(',
+        'minimumFactor: 0.4,',
+        'scale: PieSliceRadiusScale.linear,',
+        "label: 'Area',",
+        "unit: 'km2',",
+        '),',
+        'sliceGroupingConfig: RadialSliceGroupingConfig(',
+        'minimumShare: 0.08,',
+        'minimumSourceCount: 3,',
+        "label: 'Other',",
+        'color: Color(0xFF64748B),',
+        'radiusAggregation: RadialSliceRadiusAggregation.weightedMean,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` against the
+      // real package proves those names exist on `BravenChart.geomPie`. This is
+      // the only fixture in the corpus that emits `radius:`, `sliceColor:`,
+      // `style:`, `selectionStyle:`, `dataLabels:`, `sliceRadiusConfig:` and
+      // `sliceGroupingConfig:` on ONE `.geomPie(`, and the only one anywhere
+      // that emits `radiusAggregation:`, so without this gate a rename of that
+      // argument mirrored into the list above would stay green while the
+      // Grammar pane shipped a chain that does not compile.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_pie_maximal',
+        ),
+      );
+    });
+
+    testWidgets('shape 43: a MAXIMAL .geomPolar( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the POLAR surface: every optional on `.geomPolar(`
+      // is set EXPLICITLY — including all four advanced per-category channels
+      // at once, which no existing polar shape does — so no theme-resolved
+      // value lands in the expected list and every conditional emission in
+      // `_emitPolarGeometry` is live. The survivors this shape exists for are
+      // `name:` and `color:`, the two arguments of the polar family no
+      // assertion read before.
+      //
+      // SINGLE-series on purpose. `.geomPolar(` is the one verb this file
+      // already asserts with `allMatches(...).length, 2` ("shape 21: a
+      // MULTI-SERIES polar emits one geomPolar per series"), because a polar
+      // composition really does write N of them — and `literalArguments` reads
+      // only the FIRST. A multi-series fixture here would pin series 1 and say
+      // nothing whatever about series 2 while looking like it covered both.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Not pinned here: the nested-config FIELDS the four literals below
+      // leave at their class defaults (each config emitter writes only what
+      // differs from the default), and the plot-level `.polarConfig(` literal,
+      // which is a separate opening covered by "shape 22"/"shape 23".
+      //
+      // `rose: true` coexists with the target and interval channels — verified
+      // by this fixture emitting all of them together with `warnings` empty,
+      // not assumed. And nothing in `_emitPolarGeometry` branches on an
+      // argument VALUE to choose which model field it reads (`rose` is written
+      // from `mark.preset`, every channel from its own plan field), so unlike
+      // `.band(` this verb needs no second fixture per branch.
+      //
+      // Measured, one mutation set of 33 — 33 of 33 caught:
+      //   - all 15 writer statements of `_emitPolarGeometry` (`id`, `category`,
+      //     `value`, `name`, `color`, `unit`, `style`, `selectionStyle`,
+      //     `rose`, `columnColor`, `target`, `targetMarkerStyle`,
+      //     `intervalLow`, `intervalHigh`, `intervalStyle`), deleted one at a
+      //     time — a whole `if` block counts as one statement, except the
+      //     interval block's two `namedArgument` lines, deleted separately;
+      //   - all 17 field statements of the four nested config bodies that
+      //     flatten into this list: 3 `PolarColumnStyle`, 4
+      //     `RadialSelectionStyle`, 4 `PolarColumnTargetMarkerStyle`, 6
+      //     `PolarColumnIntervalStyle`;
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitPolarGeometry`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(polarMaximalRows)
+              .geomPolar(
+                category: (row) => row.category,
+                value: (row) => row.value,
+                id: 'observed',
+                name: 'Observed',
+                color: const Color(0xFF9333EA),
+                unit: 'kg',
+                style: styledPolarStyle,
+                selectionStyle: showcaseSelection,
+                rose: true,
+                columnColor: (row) => row.columnColor,
+                target: (row) => row.target,
+                targetMarkerStyle: styledTargetMarker,
+                intervalLow: (row) => row.intervalLow,
+                intervalHigh: (row) => row.intervalHigh,
+                intervalStyle: styledIntervalStyle,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // MANDATORY, and load-bearing for this verb in particular: the slicer
+      // reads only the FIRST `.geomPolar(`, and this file's own "shape 21"
+      // asserts a chart that emits TWO of them.
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPolar('), <String>[
+        "id: 'observed',",
+        'category: (row) => row.category,',
+        'value: (row) => row.value,',
+        "name: 'Observed',",
+        'color: Color(0xFF9333EA),',
+        "unit: 'kg',",
+        'style: PolarColumnStyle(',
+        'cornerRadius: 6.0,',
+        'opacity: 0.9,',
+        'borderWidth: 2.0,',
+        '),',
+        'selectionStyle: RadialSelectionStyle(',
+        'effect: RadialSelectionEffect.lift,',
+        'liftScale: 1.12,',
+        'liftOffset: 8.0,',
+        'backdropBlur: 1.5,',
+        '),',
+        'rose: true,',
+        'columnColor: (row) => row.columnColor,',
+        'target: (row) => row.target,',
+        'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+        'color: Color(0xFF0F172A),',
+        'width: 3.0,',
+        'lengthFactor: 0.8,',
+        'opacity: 0.9,',
+        '),',
+        'intervalLow: (row) => row.intervalLow,',
+        'intervalHigh: (row) => row.intervalHigh,',
+        'intervalStyle: PolarColumnIntervalStyle(',
+        'display: PolarColumnIntervalDisplay.band,',
+        'color: Color(0xFF334155),',
+        'width: 2.0,',
+        'capLengthFactor: 0.5,',
+        'bandLengthFactor: 0.7,',
+        'opacity: 0.8,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` against the
+      // real package proves those names exist on `BravenChart.geomPolar`. This
+      // is the only fixture in the corpus that emits `rose:`, `columnColor:`,
+      // `target:`, `targetMarkerStyle:`, `intervalLow:`, `intervalHigh:` and
+      // `intervalStyle:` on ONE `.geomPolar(` — the presentation shapes each
+      // emit a subset — so without this gate a rename mirrored into the list
+      // above would stay green while the Grammar pane shipped a chain that does
+      // not compile.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_polar_maximal',
+        ),
+      );
+    });
 
     testWidgets('shape 12: a pie emits geomPie and round-trips', (
       tester,
