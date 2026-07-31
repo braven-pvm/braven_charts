@@ -3758,6 +3758,57 @@ void main() {
       );
     });
 
+    testWidgets('shape 32: a MAXIMAL .trend( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.trend(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path is live. Shape 7 above is the MINIMAL trend and stays —
+      // but the identical assertion against it catches only 6 of 9 deletions,
+      // because a minimal trend never emits `windowSize`, `showConfidenceBand`
+      // or `dashPattern`. Anything THIS fixture does not emit is NOT pinned by
+      // this test: a whole-list assertion pins what its fixture emits and is
+      // blind to the rest (measured: 11 of 11 mutations caught here, 6 of 9
+      // against the minimal shape).
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .trend(
+                of: 'mark-0',
+                method: TrendType.movingAverage,
+                windowSize: 3,
+                id: 'fit',
+                name: 'Trend',
+                color: const Color(0xFF16A34A),
+                showConfidenceBand: true,
+                lineWidth: 1.5,
+                dashPattern: const <double>[4, 2],
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.trend(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.trend('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.trend('), <String>[
+        "id: 'fit',",
+        "of: 'mark-0',",
+        'method: TrendType.movingAverage,',
+        'windowSize: 3,',
+        "name: 'Trend',",
+        'color: Color(0xFF16A34A),',
+        'showConfidenceBand: true,',
+        'lineWidth: 1.5,',
+        'dashPattern: <double>[4.0, 2.0],',
+      ]);
+    });
+
     testWidgets('shape 8: a threshold annotation becomes .threshold(', (
       tester,
     ) async {
