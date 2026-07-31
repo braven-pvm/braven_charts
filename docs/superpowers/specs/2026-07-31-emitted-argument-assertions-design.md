@@ -43,7 +43,7 @@ The ruled-out alternative is recorded so it is not revisited: *"does the argumen
 
 ### The pilot result that shapes everything
 
-Piloted on `.trend(` (the worst survivor, 8 of 9 unpinned). Against a **maximal** fixture the assertion caught **11 of 11** mutations. Against the **existing minimal** shape the identical assertion caught only **6 of 9** — `windowSize`, `showConfidenceBand` and `dashPattern` slipped through green, because a minimal trend never emits them.
+Piloted on `.trend(` (the worst survivor, 8 of 9 unpinned), and re-measured on the delivered fixture with one stated mutation set: `_emitTrend`'s **9 writer statements deleted one at a time, plus 1 unconditional probe argument added — 10 of 10 caught**. Against the **existing minimal** shape the identical assertion could catch at most **6 of those 9 deletions**: its emitted list is exactly `[id, of, method, name, color: Color(0xFF2196F3), lineWidth: 2.0]`, so `windowSize`, `showConfidenceBand` and `dashPattern` are never emitted by it. (An earlier draft said "11 of 11"; with 9 writer statements that denominator was not reproducible, so it is corrected here.)
 
 **So coverage is a property of the FIXTURE, not of the assertion form.** A whole-list assertion pins the arguments its fixture emits and is blind to the rest. Every one of these assertions needs a fixture that sets every optional on that verb — not the nearest existing shape.
 
@@ -58,6 +58,11 @@ Maximal fixtures also avoid a second trap: a minimal trend emits `color:` and `l
 3. **Empty argument list** throws `RangeError` rather than returning `[]` (loud). No verb emits one today; a one-line guard covers it.
 4. **The opening token inside a string literal** poisons the slice (loud, fails closed). Pinned fixtures must not carry labels/units/names containing an opening token.
 5. **Prefix collisions** (silent, latent): `indexOf` matches anywhere, so a bare `ChartConfig(` would match inside `PolarChartConfig(`. **Rule: the opening must be `.verb(` or a `name: Type(` pair**, never a bare type name.
+6. **"Every optional set" is not "every path live"** (silent). An argument whose VALUE selects which model field is read leaves the other arm dead no matter how maximal the fixture is. Measured on `_emitBand`: `(isY ? annotation.startY : annotation.startX)!`, with every band/threshold fixture on `AnnotationAxis.y` — swapping only the X operands left the source-generator and drift suites green. Such arguments need a **fixture per branch**; Slice 1 added a second X-axis band shape for exactly this.
+
+### The assertion pins text, not API
+
+Whole-list equality proves the emitted characters and nothing about the builder. A rename in the emitter mirrored into the expected list stays green while the Grammar pane ships a chain that does not compile — measured on `.trend(` `showConfidenceBand`. Every maximal shape therefore also calls `expectGeneratedSourceCompiles` (real `dart format` + `dart analyze` subprocesses via `tester.runAsync`), which is the only gate in the repo that resolves emitted argument names against the real fluent surface. It matters most exactly here: a maximal fixture is usually the sole emitter of its rarest arguments.
 
 ### What the pattern costs
 

@@ -29,7 +29,9 @@
 
 **The round-trip proof never reads the emitted text.** The generator's own docstring says so, verified by mutation: deleting the `.grid(...)`/`.title(...)` emission produces *zero* refusals. So an emitted argument is guarded only where someone wrote an explicit assertion — that is the whole hole.
 
-**Coverage is a property of the FIXTURE, not the assertion form.** Piloted on `.trend(`: the identical whole-list assertion caught **11 of 11** mutations against a maximal fixture and only **6 of 9** against the existing minimal shape 7 — `windowSize`, `showConfidenceBand` and `dashPattern` slipped through green, because a minimal trend never emits them.
+**Coverage is a property of the FIXTURE, not the assertion form.** Piloted on `.trend(`, then re-measured on the delivered shape 32 with one stated mutation set: `_emitTrend`'s **9** writer statements deleted one at a time plus **1** unconditional probe argument added — **10 of 10 caught**. The same assertion against the existing minimal shape 7 could catch at most **6 of those 9 deletions**: its emitted list is exactly `[id, of, method, name, color: Color(0xFF2196F3), lineWidth: 2.0]`, so `windowSize`, `showConfidenceBand` and `dashPattern` are never emitted by it — and the last two entries are theme-resolved values the author never set.
+
+*(An earlier draft of this plan said "11 of 11 / 6 of 9". `_emitTrend` has 9 writer statements, so the 11 had no reproducible denominator; the numbers above are the measured ones. Always state the mutation set AND its size.)*
 
 So **every assertion in this plan needs a fixture that sets every optional on its verb.** Anything a fixture does not emit is not pinned by it, full stop.
 
@@ -70,11 +72,11 @@ Every whole-list assertion in this plan takes this form. Deviating from it reint
 testWidgets('shape NN: a MAXIMAL <verb> pins its whole argument list',
     (tester) async {
   // MAXIMAL fixture: every optional on this verb is set EXPLICITLY, so no
-  // theme-resolved value lands in the expected list and every conditional
-  // emission path is live. Anything this fixture does not emit is NOT pinned
-  // by this test — a whole-list assertion pins what its fixture emits and is
-  // blind to the rest (measured: the same assertion catches 11/11 mutations
-  // here and 6/9 against a minimal fixture).
+  // theme-resolved value lands in the expected list. Anything this fixture
+  // does not emit is NOT pinned by this test — a whole-list assertion pins
+  // what its fixture emits and is blind to the rest. State the mutation set
+  // MEASURED for this shape, with its size, so a reader can reproduce it
+  // (e.g. "9 writer-statement deletions + 1 unconditional probe: 10 of 10").
   final generated = generateGrammar(await snapshotOf(tester, /* fixture */));
   expect(generated.warnings, isEmpty);
   expect(generated.isComplete, isTrue);
@@ -83,16 +85,31 @@ testWidgets('shape NN: a MAXIMAL <verb> pins its whole argument list',
   expect(literalArguments(generated.source, '<opening>'), <String>[
     /* the complete list, in emitted order */
   ]);
+  // MANDATORY. The list above pins emitted TEXT and nothing more; only
+  // `dart analyze` against the real package proves those argument NAMES exist
+  // on the builder. Without it, renaming an argument in the emitter and
+  // mirroring the rename into the list above stays green while the Grammar
+  // pane ships a chain that does not compile — measured on `.trend(`
+  // `showConfidenceBand`: green without this gate, RED with it. Maximal
+  // fixtures are usually the ONLY emitters of their rarest arguments, so
+  // without this line those names are compiled by nothing in the repo.
+  await tester.runAsync(
+    () => expectGeneratedSourceCompiles(
+      generated.source,
+      fixtureName: 'grammar_source_<verb>_maximal',
+    ),
+  );
 });
 ```
 
-### Five failure modes — three silent. Respect all of them.
+### Six failure modes — three silent. Respect all of them.
 
 1. **SILENT — single-line verb forms are unreachable.** `literalArguments(source, '.x(')` does not error; it returns the **next** verb's body. Measured by pinning that wrong list, deleting the collapsed-form writer, and watching the test stay green. The collapsed `.x(…, label:)` **is** a survivor, so it gets a whole-**line** assertion (Task 3.2).
 2. **SILENT — a verb appearing twice**: only the first is read. `expect('<opening>'.allMatches(source).length, 1);` is **mandatory on every assertion**.
 3. **LOUD — an empty argument list** throws `RangeError` rather than returning `[]`. Guarded in Task 1.1.
 4. **LOUD (fails closed) — the opening token inside a string literal** poisons the slice. Fixtures must not carry labels/units/names containing an opening token.
 5. **SILENT/latent — prefix collisions.** `indexOf` matches anywhere, so a bare `ChartConfig(` matches inside `PolarChartConfig(`. **Openings must be `.verb(` or `name: Type(` — never a bare type name.** Wrapped verbs open at the **config type** (`GridConfig(`, `XAxisConfig(`, `InteractionConfig(`, `ChartTheme(`); opening at `.grid(` includes the wrapper lines.
+6. **SILENT — "every optional set" ≠ "every path live".** An argument whose VALUE selects which model field is read leaves the other arm dead however many optionals the fixture sets. `_emitBand` is the measured case: `(isY ? annotation.startY : annotation.startX)!` — with every `.band(`/`.threshold(` fixture on `AnnotationAxis.y`, swapping only the X operands left the source-generator and drift suites green at `+190: All tests passed!`. Such an argument needs a **second fixture per branch** (Slice 1 added `shape 34b` for the X band), never one more optional on the first. Before writing a fixture, read its emitter for `? :` and `if (x == …)` on an argument VALUE — candidates in later slices include `layoutMode`, `markerShape` and the axis arguments.
 
 **Order is safe to freeze** — every chain-verb emitter writes a fixed sequence and conditionals only add or remove; there is no `for (final entry in map.entries) namedArgument(...)` anywhere in `lib/src/source/`. **But the synthesised `GrammarRow` class and row literals ARE data-ordered — never whole-list those.**
 
