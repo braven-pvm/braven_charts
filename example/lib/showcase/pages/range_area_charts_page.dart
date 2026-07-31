@@ -61,6 +61,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
   bool _showCoordinateLabels = true;
   bool _showIntervalInLegend = true;
   bool _showIntervalAxisValues = true;
+  bool _showIntervalInTrackingPanel = true;
   bool _showIntersectionMarkers = true;
   bool _interpolateTracking = true;
   bool _showValueSummary = true;
@@ -123,6 +124,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       _showCoordinateLabels = true;
       _showIntervalInLegend = true;
       _showIntervalAxisValues = true;
+      _showIntervalInTrackingPanel = true;
       _showIntersectionMarkers = true;
       _interpolateTracking = true;
       _showValueSummary = true;
@@ -427,6 +429,7 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
       unit: _unit,
       showInLegend: _showIntervalInLegend,
       showTrackingAxisLabel: _showIntervalAxisValues,
+      showInTrackingTooltip: _showIntervalInTrackingPanel,
       interpolation: _interpolation,
       fillOpacity: (_fillOpacity * opacityScale).clamp(0.02, 0.82).toDouble(),
       fillGradient: _useGradient
@@ -627,6 +630,14 @@ class _RangeAreaChartsPageState extends State<RangeAreaChartsPage> {
               'Keep tracking active while suppressing paired low/high labels',
           value: _showIntervalAxisValues,
           onChanged: (value) => setState(() => _showIntervalAxisValues = value),
+        ),
+        BoolOption(
+          label: 'Show interval in tracking panel',
+          subtitle:
+              'Exclude its low, high, midpoint, and span without hiding it',
+          value: _showIntervalInTrackingPanel,
+          onChanged: (value) =>
+              setState(() => _showIntervalInTrackingPanel = value),
         ),
         BoolOption(
           label: 'Connect gaps',

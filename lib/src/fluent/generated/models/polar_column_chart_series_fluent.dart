@@ -213,6 +213,10 @@ extension PolarColumnChartSeriesFluent on PolarColumnChartSeries {
   PolarColumnChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [PolarColumnChartSeries.showInTrackingTooltip] with [value].
+  PolarColumnChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [PolarColumnChartSeries.preset] with [value].
   PolarColumnChartSeries withPreset(PolarColumnPreset value) =>
       copyWith(preset: value);

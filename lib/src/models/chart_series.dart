@@ -72,6 +72,7 @@ class ChartSeries {
     this.unit,
     this.showInLegend = true,
     this.showTrackingAxisLabel = true,
+    this.showInTrackingTooltip = true,
   });
 
   final String id;
@@ -143,7 +144,8 @@ class ChartSeries {
 
   /// Whether automatic legends include this series.
   ///
-  /// Manual [LegendAnnotation] instances remain fully host-controlled.
+  /// All built-in legend surfaces omit the complete series entry when false.
+  /// A host can still render its own unrelated legend widget if needed.
   final bool showInLegend;
 
   /// Whether tracking mode may expose this series' value on its Y-axis.
@@ -151,6 +153,13 @@ class ChartSeries {
   /// This does not remove the series from tracking tooltips or point
   /// selection. It only controls series-specific axis value labels.
   final bool showTrackingAxisLabel;
+
+  /// Whether the tracking tooltip includes this series.
+  ///
+  /// This only controls the series' row in the crosshair/tracking tooltip.
+  /// Rendering, intersection markers, point selection, and Y-axis tracking
+  /// labels remain independently controlled.
+  final bool showInTrackingTooltip;
 
   int get length => points.length;
   bool get isEmpty => points.isEmpty;
@@ -175,6 +184,7 @@ class ChartSeries {
     String? unit,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
   }) {
     return ChartSeries(
       id: id ?? this.id,
@@ -191,6 +201,8 @@ class ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
     );
   }
 
@@ -210,7 +222,8 @@ class ChartSeries {
         other.yAxisConfig == yAxisConfig &&
         other.unit == unit &&
         other.showInLegend == showInLegend &&
-        other.showTrackingAxisLabel == showTrackingAxisLabel;
+        other.showTrackingAxisLabel == showTrackingAxisLabel &&
+        other.showInTrackingTooltip == showInTrackingTooltip;
   }
 
   @override
@@ -228,6 +241,7 @@ class ChartSeries {
     unit,
     showInLegend,
     showTrackingAxisLabel,
+    showInTrackingTooltip,
   );
 
   /// Helper for list equality comparison.
@@ -278,6 +292,7 @@ class ChartSeries {
       'isXOrdered': isXOrdered,
       if (!showInLegend) 'showInLegend': false,
       if (!showTrackingAxisLabel) 'showTrackingAxisLabel': false,
+      if (!showInTrackingTooltip) 'showInTrackingTooltip': false,
       if (metadata != null) 'metadata': metadata,
       if (yAxisId != null) 'yAxisId': yAxisId,
       if (yAxisConfig != null)
@@ -333,6 +348,7 @@ class ChartSeries {
       isXOrdered: json['isXOrdered'] as bool? ?? false,
       showInLegend: json['showInLegend'] as bool? ?? true,
       showTrackingAxisLabel: json['showTrackingAxisLabel'] as bool? ?? true,
+      showInTrackingTooltip: json['showInTrackingTooltip'] as bool? ?? true,
     );
   }
 }
@@ -359,6 +375,7 @@ class LineChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.25,
@@ -417,6 +434,7 @@ class LineChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -447,6 +465,8 @@ class LineChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -529,6 +549,7 @@ class ScatterChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.markerRadius = 5.0,
     this.markerShape = SeriesMarkerShape.circle,
     this.markerStyle,
@@ -582,6 +603,7 @@ class ScatterChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     double? markerRadius,
     SeriesMarkerShape? markerShape,
     ScatterMarkerStyle? markerStyle,
@@ -618,6 +640,8 @@ class ScatterChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       markerRadius: markerRadius ?? this.markerRadius,
       markerShape: markerShape ?? this.markerShape,
       markerStyle: clearMarkerStyle ? null : (markerStyle ?? this.markerStyle),
@@ -764,6 +788,7 @@ class AreaChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.25,
@@ -836,6 +861,7 @@ class AreaChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     LineInterpolation? interpolation,
     double? strokeWidth,
     double? tension,
@@ -875,6 +901,8 @@ class AreaChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       interpolation: interpolation ?? this.interpolation,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
@@ -997,6 +1025,7 @@ class BarChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.barWidthPercent,
     this.barWidthPixels,
     this.minWidth = 4.0,
@@ -1396,6 +1425,7 @@ class BarChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     double? barWidthPercent,
     double? barWidthPixels,
     double? minWidth,
@@ -1447,6 +1477,8 @@ class BarChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       minWidth: minWidth ?? this.minWidth,

@@ -68,6 +68,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct ChartLegend omits opted-out series completely', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChartLegend(
+            series: [
+              LineChartSeries(
+                id: 'observed',
+                name: 'Observed',
+                points: [ChartDataPoint(x: 0, y: 42)],
+              ),
+              RangeAreaChartSeries(
+                id: 'interval',
+                name: 'Forecast interval',
+                points: [RangeAreaDataPoint(x: 0, low: 35, high: 48)],
+                showInLegend: false,
+              ),
+            ],
+            hiddenSeriesIds: const {},
+            onSeriesToggle: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Observed'), findsOneWidget);
+    expect(find.text('Forecast interval'), findsNothing);
+  });
+
+  testWidgets('explicit canvas legend omits opted-out series completely', (
+    tester,
+  ) async {
+    final observed = LineChartSeries(
+      id: 'observed',
+      name: 'Observed',
+      points: [ChartDataPoint(x: 0, y: 42)],
+    );
+    final interval = RangeAreaChartSeries(
+      id: 'interval',
+      name: 'Forecast interval',
+      points: [RangeAreaDataPoint(x: 0, low: 35, high: 48)],
+      showInLegend: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 700,
+          height: 420,
+          child: BravenChartPlus(
+            showLegend: false,
+            series: [observed, interval],
+            annotations: [
+              LegendAnnotation(series: [observed, interval]),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final legend = renderBox.debugElements
+        .whereType<LegendAnnotationElement>()
+        .single;
+
+    expect(legend.debugSeriesIds, ['observed']);
+  });
+
   testWidgets('legend renders bar and path-aware series swatches', (
     tester,
   ) async {

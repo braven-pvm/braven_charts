@@ -59,6 +59,10 @@ extension CandlestickChartSeriesFluent on CandlestickChartSeries {
   CandlestickChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [CandlestickChartSeries.showInTrackingTooltip] with [value].
+  CandlestickChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [CandlestickChartSeries.candlestickStyle] with [value].
   CandlestickChartSeries withCandlestickStyle(CandlestickChartStyle value) =>
       copyWith(candlestickStyle: value);

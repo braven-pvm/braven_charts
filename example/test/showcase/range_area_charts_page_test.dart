@@ -155,10 +155,11 @@ void main() {
     expect(chart.interactionConfig!.crosshair.interpolateValues, isTrue);
     expect(find.text('Show interval in legend'), findsOneWidget);
     expect(find.text('Show interval axis values'), findsOneWidget);
+    expect(find.text('Show interval in tracking panel'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('toggles interval legend and tracking-axis visibility', (
+  testWidgets('toggles every interval presentation surface independently', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 1000);
@@ -172,6 +173,7 @@ void main() {
 
     await tester.tap(find.text('Show interval in legend'));
     await tester.tap(find.text('Show interval axis values'));
+    await tester.tap(find.text('Show interval in tracking panel'));
     await tester.pump();
 
     final chart = tester.widget<BravenChartPlus>(
@@ -182,8 +184,10 @@ void main() {
 
     expect(interval.showInLegend, isFalse);
     expect(interval.showTrackingAxisLabel, isFalse);
+    expect(interval.showInTrackingTooltip, isFalse);
     expect(observed.showInLegend, isTrue);
     expect(observed.showTrackingAxisLabel, isTrue);
+    expect(observed.showInTrackingTooltip, isTrue);
     expect(tester.takeException(), isNull);
   });
 

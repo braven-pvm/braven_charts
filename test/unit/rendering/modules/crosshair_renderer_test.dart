@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/interaction/core/cartesian_tracking_snapshot.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_theme.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
@@ -52,6 +53,76 @@ void main() {
       test('creates instance with const constructor', () {
         const renderer = CrosshairRenderer();
         expect(renderer, isNotNull);
+      });
+    });
+
+    group('Tracking tooltip series visibility', () {
+      test('omits opted-out rows without removing other tracking values', () {
+        const hiddenValue = CartesianTrackedSeriesValue(
+          seriesId: 'interval',
+          seriesName: 'Forecast interval',
+          seriesColor: Color(0xFF805AD5),
+          x: 4,
+          y: 67,
+          dataPointIndex: 0,
+          isInterpolated: false,
+          formattedX: '4',
+          formattedY: '67%',
+        );
+        const visibleValue = CartesianTrackedSeriesValue(
+          seriesId: 'observed',
+          seriesName: 'Observed',
+          seriesColor: Color(0xFF2563EB),
+          x: 4,
+          y: 65,
+          dataPointIndex: 0,
+          isInterpolated: false,
+          formattedX: '4',
+          formattedY: '65%',
+        );
+
+        final filtered = renderer.resolveTrackingTooltipValues(
+          values: const [hiddenValue, visibleValue],
+          series: const [
+            ChartSeries(
+              id: 'interval',
+              points: [],
+              showInTrackingTooltip: false,
+            ),
+            ChartSeries(id: 'observed', points: []),
+          ],
+        );
+
+        expect(filtered.map((value) => value.seriesId), ['observed']);
+      });
+
+      test('does not suppress derived trend rows', () {
+        const trendValue = CartesianTrackedSeriesValue(
+          seriesId: 'trend',
+          seriesName: 'Trend',
+          seriesColor: Color(0xFF2563EB),
+          x: 4,
+          y: 65,
+          dataPointIndex: 0,
+          isInterpolated: true,
+          linkedSeriesId: 'observed',
+          isTrend: true,
+          formattedX: '4',
+          formattedY: '65%',
+        );
+
+        final filtered = renderer.resolveTrackingTooltipValues(
+          values: const [trendValue],
+          series: const [
+            ChartSeries(
+              id: 'observed',
+              points: [],
+              showInTrackingTooltip: false,
+            ),
+          ],
+        );
+
+        expect(filtered, [trendValue]);
       });
     });
 

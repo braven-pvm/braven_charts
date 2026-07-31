@@ -12,8 +12,9 @@ import '../utils/dashed_path.dart';
 
 /// A legend widget for displaying chart series with show/hide functionality.
 ///
-/// The legend displays all series with their colors and names, allowing users
-/// to toggle series visibility. This is meant to be used alongside BravenChartPlus.
+/// The legend displays opted-in series with their colors and names, allowing
+/// users to toggle series visibility. Series with
+/// [ChartSeries.showInLegend] set to false are omitted completely.
 ///
 /// Example:
 /// ```dart
@@ -125,6 +126,9 @@ class ChartLegend extends StatelessWidget {
     final theme = Theme.of(context);
     final effectiveBackgroundColor = backgroundColor ?? theme.cardColor;
     final effectiveBorderColor = borderColor ?? theme.dividerColor;
+    final legendSeries = series
+        .where((candidate) => candidate.showInLegend)
+        .toList(growable: false);
 
     return Container(
       padding: padding,
@@ -137,12 +141,12 @@ class ChartLegend extends StatelessWidget {
           ? Wrap(
               spacing: spacing,
               runSpacing: runSpacing,
-              children: series.map(_buildLegendItem).toList(),
+              children: legendSeries.map(_buildLegendItem).toList(),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: series
+              children: legendSeries
                   .map(
                     (s) => Padding(
                       padding: EdgeInsets.only(bottom: spacing),

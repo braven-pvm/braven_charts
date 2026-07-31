@@ -71,6 +71,10 @@ extension LineChartSeriesFluent on LineChartSeries {
   LineChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [LineChartSeries.showInTrackingTooltip] with [value].
+  LineChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [LineChartSeries.interpolation] with [value].
   LineChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);
@@ -196,6 +200,10 @@ extension ScatterChartSeriesFluent on ScatterChartSeries {
   /// Replaces [ScatterChartSeries.showTrackingAxisLabel] with [value].
   ScatterChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
+
+  /// Replaces [ScatterChartSeries.showInTrackingTooltip] with [value].
+  ScatterChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
 
   /// Replaces [ScatterChartSeries.markerRadius] with [value].
   ScatterChartSeries withMarkerRadius(double value) =>
@@ -371,6 +379,10 @@ extension AreaChartSeriesFluent on AreaChartSeries {
   AreaChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [AreaChartSeries.showInTrackingTooltip] with [value].
+  AreaChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [AreaChartSeries.interpolation] with [value].
   AreaChartSeries withInterpolation(LineInterpolation value) =>
       copyWith(interpolation: value);
@@ -528,6 +540,10 @@ extension BarChartSeriesFluent on BarChartSeries {
   /// Replaces [BarChartSeries.showTrackingAxisLabel] with [value].
   BarChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
+
+  /// Replaces [BarChartSeries.showInTrackingTooltip] with [value].
+  BarChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
 
   /// Replaces [BarChartSeries.barGap] with [value].
   BarChartSeries withBarGap(double value) => copyWith(barGap: value);

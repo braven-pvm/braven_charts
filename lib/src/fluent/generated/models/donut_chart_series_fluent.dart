@@ -46,6 +46,10 @@ extension DonutChartSeriesFluent on DonutChartSeries {
   DonutChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [DonutChartSeries.showInTrackingTooltip] with [value].
+  DonutChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [DonutChartSeries.donutStyle] with [value].
   DonutChartSeries withDonutStyle(DonutChartStyle value) =>
       copyWith(donutStyle: value);

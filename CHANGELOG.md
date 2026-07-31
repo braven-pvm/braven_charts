@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Per-series `showInTrackingTooltip` control. Set it to `false` to omit the
+  complete series row from the crosshair tracking panel while preserving the
+  rendered series, tracked snapshot, intersection markers, selection, and
+  independently configured axis-side tracking labels.
+
+### Fixed
+
+- `showInLegend: false` now removes the complete series entry from every
+  built-in legend path, including reusable `ChartLegend` widgets and explicit
+  canvas `LegendAnnotation`s, rather than only affecting automatically
+  generated legends.
+
 ## 0.16.0 - 2026-07-29
 
 ### Added

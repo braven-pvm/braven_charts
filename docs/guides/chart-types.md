@@ -268,6 +268,13 @@ Declare wider and narrower Range Area series in order for a nested forecast
 fan. See the complete [Range Area guide](../../doc/range_area_charts.md) and
 [runnable showcase](https://braven-pvm.github.io/braven_charts/?page=range-area-charts).
 
+Presentation visibility is independent per series. Set `showInLegend: false`
+to remove its complete entry from built-in legends,
+`showInTrackingTooltip: false` to remove its complete row from the crosshair
+tracking panel, and `showTrackingAxisLabel: false` to suppress only its
+axis-side tracking badge. None of these flags hides the rendered series or
+removes its values from the tracking snapshot.
+
 ## Chart and data workbench
 
 Line and Area work with the package-owned Chart/Data/Split surface. The chart

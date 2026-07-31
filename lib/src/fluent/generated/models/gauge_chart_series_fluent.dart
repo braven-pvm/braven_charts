@@ -240,6 +240,10 @@ extension GaugeChartSeriesFluent on GaugeChartSeries {
   GaugeChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [GaugeChartSeries.showInTrackingTooltip] with [value].
+  GaugeChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [GaugeChartSeries.indicatorStyle] with [value].
   GaugeChartSeries withIndicatorStyle(GaugeIndicatorStyle value) =>
       copyWith(indicatorStyle: value);
