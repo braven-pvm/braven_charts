@@ -94,7 +94,9 @@ jobs:
     permissions:
       id-token: write # required for OIDC authentication with pub.dev
       contents: read
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    # Pin the reusable workflow to a reviewed Node 24 revision. The moving v1
+    # alias still resolves to an older workflow that invokes a Node 20 action.
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@43c102f4dc9b9829c862401f0b64c7c9184eab4e
 
   deploy-showcase:
     name: Deploy showcase
