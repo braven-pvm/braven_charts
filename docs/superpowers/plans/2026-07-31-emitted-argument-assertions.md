@@ -29,7 +29,7 @@ commit, not the tick — this table is what a reader should trust if the two dis
 | 3.3 radial + polar tails | `e3c07607` | 42, 43 |
 | Slice 3 review fixups | `b99ddb61` | — (comments, guards, docs) |
 | 4.1 showcase deletion coverage | `8fd16d33` | — (all nine `expectShowcaseEmits` lists) |
-| 4.2 final re-measure and record | this commit | — (spec + BC-0046 record) |
+| 4.2 final re-measure and record | `9c765def` | — (spec + BC-0046 record) |
 
 Slice 4's measured mutation set, folded into the record by Task 4.2: **83**
 writer-statement deletions behind the nine showcase lists, one at a time, plus
