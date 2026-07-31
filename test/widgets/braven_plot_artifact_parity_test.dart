@@ -16,6 +16,14 @@
 /// those same ids out. If that ever stops being true, this file goes red — a
 /// feature, not a nuisance.
 ///
+/// The single-axis twins are written the LEGACY way — widget-level `yAxis`,
+/// series unbound — because that is what a config author writes for a chart
+/// with one axis, and `BravenPlot` now mounts a one-axis chain that no mark
+/// binds explicitly the same way (see `braven_plot.dart`). Shape 3 keeps the
+/// per-series binding: its marks name their axes, so it is genuinely
+/// multi-axis. Comparison strength is unchanged — every shape is still full
+/// JSON identity.
+///
 /// `test/unit/grammar/plot_lowering_parity_test.dart` is the CONFIG-level
 /// sibling of this file.
 library;
@@ -164,13 +172,12 @@ void main() {
       ),
       handBuilt: (controller) => BravenChartPlus(
         bravenChartController: controller,
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           LineChartSeries(
             id: 'mark-0',
             name: 'Power',
             points: points(rowPower),
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
         ],
       ),
@@ -214,22 +221,19 @@ void main() {
       handBuilt: (controller) => BravenChartPlus(
         bravenChartController: controller,
         xAxisConfig: const XAxisConfig(label: 'Elapsed'),
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           LineChartSeries(
             id: 'power',
             name: 'Power',
             color: const Color(0xFF2563EB),
             points: points(rowPower),
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
           AreaChartSeries(
             id: 'hr',
             name: 'Heart rate',
             fillOpacity: 0.25,
             points: points(rowHeartRate),
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
         ],
         annotations: <ChartAnnotation>[
@@ -322,6 +326,7 @@ void main() {
       ),
       handBuilt: (controller) => BravenChartPlus(
         bravenChartController: controller,
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           ScatterChartSeries(
             id: 'mark-0',
@@ -337,8 +342,6 @@ void main() {
                   categoryValue: row.zone,
                 ),
             ],
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
             sizeEncoding: const ScatterSizeEncoding(label: 'Effort'),
             colorEncoding: const ScatterColorEncoding(
               colors: <Color>[Color(0xFF16A34A), Color(0xFFDC2626)],
@@ -379,6 +382,7 @@ void main() {
       ),
       handBuilt: (controller) => BravenChartPlus(
         bravenChartController: controller,
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           CandlestickChartSeries(
             id: 'mark-0',
@@ -393,8 +397,6 @@ void main() {
                   close: row.close,
                 ),
             ],
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
         ],
       ),
@@ -430,13 +432,12 @@ void main() {
         title: 'Session',
         subtitle: 'Power over time',
         showLegend: false,
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           LineChartSeries(
             id: 'mark-0',
             name: 'Power',
             points: points(rowPower),
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
         ],
       ),
@@ -456,6 +457,7 @@ void main() {
       ),
       handBuilt: (controller) => BravenChartPlus(
         bravenChartController: controller,
+        yAxis: defaultAxis(),
         series: <ChartSeries>[
           BarChartSeries(
             id: 'mark-0',
@@ -463,8 +465,6 @@ void main() {
             points: points(rowPower),
             barWidthPercent: 0.8,
             orientation: BarOrientation.horizontal,
-            yAxisId: 'axis-0',
-            yAxisConfig: defaultAxis(),
           ),
         ],
       ),

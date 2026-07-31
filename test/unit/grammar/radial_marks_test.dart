@@ -24,6 +24,8 @@ double fruitMass(Fruit row) => row.mass;
 Object fruitBasket(Fruit row) => row.basket;
 Color? fruitColumnColor(Fruit row) => const Color(0xFF112233);
 Color? fruitSliceColor(Fruit row) => const Color(0xFFFF0000);
+String? fruitPointLabel(Fruit row) => row.name;
+String? fruitPointKey(Fruit row) => row.basket;
 num? fruitTarget(Fruit row) => row.mass;
 num? fruitLow(Fruit row) => row.mass - 1;
 num? fruitHigh(Fruit row) => row.mass + 1;
@@ -323,6 +325,392 @@ void main() {
       );
       expect(rose.toString(), 'PolarMark(id: wind, name: Wind, preset: rose)');
       expect(standard.toString() == rose.toString(), isFalse);
+    });
+  });
+
+  group('SeriesMark carries unit for every series family', () {
+    test('unit lives on SeriesMark and reaches every series mark', () {
+      const line = LineMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const area = AreaMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const bar = BarMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const scatter = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const candle = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+        unit: 'kg',
+      );
+      const pie = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+
+      expect(line.unit, 'kg');
+      expect(area.unit, 'kg');
+      expect(bar.unit, 'kg');
+      expect(scatter.unit, 'kg');
+      expect(candle.unit, 'kg');
+      expect(pie.unit, 'kg');
+
+      expect(line, isA<SeriesMark<Fruit>>());
+      expect(area, isA<SeriesMark<Fruit>>());
+      expect(bar, isA<SeriesMark<Fruit>>());
+      expect(scatter, isA<SeriesMark<Fruit>>());
+      expect(candle, isA<SeriesMark<Fruit>>());
+      expect(pie, isA<SeriesMark<Fruit>>());
+    });
+
+    // RadialMark declared its own `final String? unit;` before the intermediate
+    // existed; re-parenting deleted it in favour of `super.unit`. This pins
+    // that the forwarding survives — a radial unit still arrives, and arrives
+    // through the base declaration.
+    //
+    // It is NOT a guard against the field being left behind: measured by
+    // probe, re-adding `final String? unit;` to RadialMark passes this test and
+    // every other one, because Dart getter dispatch is virtual and the subclass
+    // getter wins whatever the static type. The only thing that catches that
+    // shadow is the analyzer's `overridden_fields` lint, which `flutter analyze
+    // lib` reports — so the guard for the deletion is the analyzer, not a test,
+    // and it is recorded here so nobody mistakes this test for one.
+    test('a radial unit is readable through the SeriesMark base', () {
+      const SeriesMark<Fruit> pie = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const SeriesMark<Fruit> donut = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const SeriesMark<Fruit> polar = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      expect(pie.unit, 'kg');
+      expect(donut.unit, 'kg');
+      expect(polar.unit, 'kg');
+    });
+
+    test('unit participates in equality for every series mark', () {
+      const withUnit = AreaMark<Fruit>(x: fruitMass, y: fruitCount, unit: 'kg');
+      const without = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(withUnit == without, isFalse);
+      expect(withUnit.hashCode == without.hashCode, isFalse);
+
+      const lineWithUnit = LineMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const lineWithout = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(lineWithUnit == lineWithout, isFalse);
+      expect(lineWithUnit.hashCode == lineWithout.hashCode, isFalse);
+
+      const barWithUnit = BarMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const barWithout = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(barWithUnit == barWithout, isFalse);
+      expect(barWithUnit.hashCode == barWithout.hashCode, isFalse);
+
+      const scatterWithUnit = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        unit: 'kg',
+      );
+      const scatterWithout = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(scatterWithUnit == scatterWithout, isFalse);
+      expect(scatterWithUnit.hashCode == scatterWithout.hashCode, isFalse);
+
+      const candleWithUnit = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+        unit: 'kg',
+      );
+      const candleWithout = CandlestickMark<Fruit>(
+        x: fruitMass,
+        open: fruitCount,
+        high: fruitCount,
+        low: fruitCount,
+        close: fruitCount,
+      );
+      expect(candleWithUnit == candleWithout, isFalse);
+      expect(candleWithUnit.hashCode == candleWithout.hashCode, isFalse);
+
+      // The three radial families are SeriesMarks too, and this slice moved
+      // their `unit` off their own declaration onto the shared base — so they
+      // belong in a test that says "every series mark". They are not decoration
+      // here: measured by mutation, with these three pairs absent, deleting
+      // `other.unit == unit` and the `unit` hash entry from PieMark passed the
+      // ENTIRE suite (4148 tests), so the radial half of the carry had no
+      // equality guard anywhere.
+      const pieWithUnit = PieMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const pieWithout = PieMark<Fruit>(category: fruitName, value: fruitCount);
+      expect(pieWithUnit == pieWithout, isFalse);
+      expect(pieWithUnit.hashCode == pieWithout.hashCode, isFalse);
+
+      const donutWithUnit = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const donutWithout = DonutMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+      );
+      expect(donutWithUnit == donutWithout, isFalse);
+      expect(donutWithUnit.hashCode == donutWithout.hashCode, isFalse);
+
+      const polarWithUnit = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+        unit: 'kg',
+      );
+      const polarWithout = PolarMark<Fruit>(
+        category: fruitName,
+        value: fruitCount,
+      );
+      expect(polarWithUnit == polarWithout, isFalse);
+      expect(polarWithUnit.hashCode == polarWithout.hashCode, isFalse);
+    });
+
+    test('annotation marks are NOT SeriesMarks and cannot carry a unit', () {
+      // TrendMark/ThresholdMark/BandMark/PointMark lower to ChartAnnotations,
+      // and no annotation type in this package has a unit. Keeping them off
+      // SeriesMark makes "accepted then silently discarded" unrepresentable —
+      // the proof could not catch it, because _sameAnnotation never reads a
+      // unit.
+      const trend = TrendMark<Fruit>(sourceMarkId: 'a');
+      const threshold = ThresholdMark<Fruit>(value: 3);
+      const band = BandMark<Fruit>(start: 1, end: 2);
+      const point = PointMark<Fruit>(seriesId: 'a', dataPointIndex: 0);
+      expect(trend, isNot(isA<SeriesMark<Fruit>>()));
+      expect(threshold, isNot(isA<SeriesMark<Fruit>>()));
+      expect(band, isNot(isA<SeriesMark<Fruit>>()));
+      expect(point, isNot(isA<SeriesMark<Fruit>>()));
+      expect(trend, isA<Mark<Fruit>>());
+      expect(threshold, isA<Mark<Fruit>>());
+      expect(band, isA<Mark<Fruit>>());
+      expect(point, isA<Mark<Fruit>>());
+    });
+  });
+
+  group('isXOrdered on the four Cartesian geometry marks', () {
+    test('it participates in equality on every family that carries it', () {
+      // The emitter's round-trip proof compares MARKS as well as series, so a
+      // flag left out of `==`/`hashCode` would let a plan that dropped it look
+      // identical to one that kept it.
+      const lineOrdered = LineMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const lineDefault = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(lineOrdered == lineDefault, isFalse);
+      expect(lineOrdered.hashCode == lineDefault.hashCode, isFalse);
+
+      const areaOrdered = AreaMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const areaDefault = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(areaOrdered == areaDefault, isFalse);
+      expect(areaOrdered.hashCode == areaDefault.hashCode, isFalse);
+
+      const barOrdered = BarMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const barDefault = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(barOrdered == barDefault, isFalse);
+      expect(barOrdered.hashCode == barDefault.hashCode, isFalse);
+
+      const scatterOrdered = ScatterMark<Fruit>(
+        x: fruitMass,
+        y: fruitCount,
+        isXOrdered: true,
+      );
+      const scatterDefault = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(scatterOrdered == scatterDefault, isFalse);
+      expect(scatterOrdered.hashCode == scatterDefault.hashCode, isFalse);
+    });
+
+    test('it defaults to false — the same default ChartSeries has', () {
+      // Not `bool?`: the lowered field is a non-nullable bool defaulting to
+      // false, so a nullable mark field would only add a second spelling of
+      // the same "no" — and a default of TRUE would change nearest-point
+      // behaviour for every chart authored through the chain.
+      const line = LineMark<Fruit>(x: fruitMass, y: fruitCount);
+      const area = AreaMark<Fruit>(x: fruitMass, y: fruitCount);
+      const bar = BarMark<Fruit>(x: fruitMass, y: fruitCount);
+      const scatter = ScatterMark<Fruit>(x: fruitMass, y: fruitCount);
+      expect(<bool>[
+        line.isXOrdered,
+        area.isXOrdered,
+        bar.isXOrdered,
+        scatter.isXOrdered,
+      ], everyElement(isFalse));
+    });
+  });
+
+  group('label and pointKey on the four Cartesian geometry marks', () {
+    // The same argument the `isXOrdered` group makes, for the two accessors
+    // that shipped one commit earlier without it. Measured by mutation:
+    // deleting all sixteen `==`/`hashCode` entries for `label` and `pointKey`
+    // left the entire root suite green, so nothing held these fields to
+    // participating in mark identity — and a plan that dropped an accessor
+    // would compare equal to one that kept it.
+    //
+    // Top-level tear-offs, so the marks stay const and the comparison is a
+    // comparison of the same function object rather than of two closures that
+    // can never be equal.
+    Map<String, List<bool>> distinctions(
+      Mark<Fruit> Function({
+        FieldAccessor<Fruit, String?>? label,
+        FieldAccessor<Fruit, String?>? pointKey,
+      })
+      build, {
+      required bool byLabel,
+    }) {
+      final bare = build();
+      final carrying = byLabel
+          ? build(label: fruitPointLabel)
+          : build(pointKey: fruitPointKey);
+      return <String, List<bool>>{
+        'equal': <bool>[carrying == bare],
+        'sameHash': <bool>[carrying.hashCode == bare.hashCode],
+      };
+    }
+
+    Mark<Fruit> line({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => LineMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> area({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => AreaMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> bar({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => BarMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+    Mark<Fruit> scatter({
+      FieldAccessor<Fruit, String?>? label,
+      FieldAccessor<Fruit, String?>? pointKey,
+    }) => ScatterMark<Fruit>(
+      x: fruitMass,
+      y: fruitCount,
+      label: label,
+      pointKey: pointKey,
+    );
+
+    final families =
+        <
+          String,
+          Mark<Fruit> Function({
+            FieldAccessor<Fruit, String?>? label,
+            FieldAccessor<Fruit, String?>? pointKey,
+          })
+        >{
+          'LineMark': line,
+          'AreaMark': area,
+          'BarMark': bar,
+          'ScatterMark': scatter,
+        };
+
+    test('label participates in equality on every family that carries it', () {
+      // Whole-map comparison, so one family missed in `==` or in `hashCode`
+      // cannot hide behind another family's failure.
+      expect(
+        <String, Map<String, List<bool>>>{
+          for (final entry in families.entries)
+            entry.key: distinctions(entry.value, byLabel: true),
+        },
+        <String, Map<String, List<bool>>>{
+          for (final family in families.keys)
+            family: <String, List<bool>>{
+              'equal': <bool>[false],
+              'sameHash': <bool>[false],
+            },
+        },
+      );
+    });
+
+    test(
+      'pointKey participates in equality on every family that carries it',
+      () {
+        expect(
+          <String, Map<String, List<bool>>>{
+            for (final entry in families.entries)
+              entry.key: distinctions(entry.value, byLabel: false),
+          },
+          <String, Map<String, List<bool>>>{
+            for (final family in families.keys)
+              family: <String, List<bool>>{
+                'equal': <bool>[false],
+                'sameHash': <bool>[false],
+              },
+          },
+        );
+      },
+    );
+
+    test('two marks declaring the SAME accessors stay equal', () {
+      // The control: without it the assertions above would pass for marks that
+      // compare unequal to everything, which proves nothing about the fields.
+      expect(
+        <String, List<bool>>{
+          for (final entry in families.entries)
+            entry.key: <bool>[
+              entry.value(label: fruitPointLabel, pointKey: fruitPointKey) ==
+                  entry.value(label: fruitPointLabel, pointKey: fruitPointKey),
+              entry
+                      .value(label: fruitPointLabel, pointKey: fruitPointKey)
+                      .hashCode ==
+                  entry
+                      .value(label: fruitPointLabel, pointKey: fruitPointKey)
+                      .hashCode,
+            ],
+        },
+        <String, List<bool>>{
+          for (final family in families.keys) family: <bool>[true, true],
+        },
+      );
     });
   });
 }

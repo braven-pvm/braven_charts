@@ -492,9 +492,124 @@ void main() {
         expect(bindings, hasLength(1));
         expect(bindings.first.yAxisId, equals('inline_axis'));
       });
+
+      test('getEffectiveBindings sends an unbound series to the widget-level '
+          'axis even when that axis is NAMED', () {
+        // Priority 3 targets "the primary axis", and `getEffectiveYAxes`
+        // auto-generates `primary_axis` for the widget-level axis ONLY when
+        // it carries no id of its own. A named widget-level axis therefore
+        // used to leave every unbound series pointing at an axis that does
+        // not exist, which left the chart's ONLY axis with nothing bound to
+        // it — no data for `computeAxisBounds` and no series for
+        // `AxisColorResolver` to tint from.
+        manager.setPrimaryYAxisConfig(
+          YAxisConfig.withId(id: 'watts', position: YAxisPosition.left),
+        );
+        manager.setSeries([
+          const ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: [ChartDataPoint(x: 0, y: 180)],
+          ),
+        ]);
+
+        expect(manager.getEffectiveYAxes().single.id, equals('watts'));
+        expect(manager.getEffectiveBindings().single.yAxisId, equals('watts'));
+      });
+
+      test('getEffectiveBindings keeps the synthetic id when an inline config '
+          'suppresses the widget-level axis', () {
+        // `getEffectiveYAxes` drops the widget-level axis as soon as ANY
+        // series carries an inline config, so there is no primary axis for
+        // an unbound series to join and the synthetic id must stay. A mixed
+        // chart is deliberately left exactly as it was: silently rehoming
+        // the unbound series onto the inline axis renders a different chart.
+        manager.setPrimaryYAxisConfig(
+          YAxisConfig.withId(id: 'watts', position: YAxisPosition.left),
+        );
+        manager.setSeries([
+          ChartSeries(
+            id: 'bound',
+            name: 'Bound',
+            points: const [ChartDataPoint(x: 0, y: 10)],
+            yAxisConfig: YAxisConfig.withId(
+              id: 'inline_axis',
+              position: YAxisPosition.right,
+            ),
+          ),
+          const ChartSeries(
+            id: 'unbound',
+            name: 'Unbound',
+            points: [ChartDataPoint(x: 0, y: 180)],
+          ),
+        ]);
+
+        expect(manager.getEffectiveYAxes().map((axis) => axis.id), <String>[
+          'inline_axis',
+        ]);
+        expect(
+          manager
+              .getEffectiveBindings()
+              .firstWhere((binding) => binding.seriesId == 'unbound')
+              .yAxisId,
+          equals('primary_axis'),
+        );
+      });
+
+      test('setPrimaryYAxisConfig invalidates the binding cache', () {
+        // The widget pushes series BEFORE the primary axis
+        // (`updateRenderObject`), so a binding list cached against the old
+        // primary must not survive the axis changing under it.
+        manager.setSeries([
+          const ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: [ChartDataPoint(x: 0, y: 180)],
+          ),
+        ]);
+        expect(
+          manager.getEffectiveBindings().single.yAxisId,
+          equals('primary_axis'),
+        );
+
+        manager.setPrimaryYAxisConfig(
+          YAxisConfig.withId(id: 'watts', position: YAxisPosition.left),
+        );
+
+        expect(manager.getEffectiveBindings().single.yAxisId, equals('watts'));
+      });
     });
 
     group('Axis Bounds Computation', () {
+      test(
+        'computeAxisBounds reads the DATA for a named widget-level axis',
+        () {
+          // The dangling binding was not merely cosmetic: with nothing bound
+          // to the only axis, the loop below found no points and fell through
+          // to the `0..100` no-data fallback for a chart that plainly has
+          // data.
+          manager.setPrimaryYAxisConfig(
+            YAxisConfig.withId(id: 'watts', position: YAxisPosition.left),
+          );
+          manager.setSeries([
+            const ChartSeries(
+              id: 's1',
+              name: 'Series 1',
+              points: [
+                ChartDataPoint(x: 0, y: 180),
+                ChartDataPoint(x: 1, y: 260),
+              ],
+            ),
+          ]);
+
+          final bounds = manager.computeAxisBounds();
+          // 180..260 with the standard 5% pad, NOT the padded 0..100 fallback
+          // (-5..105).
+          expect(bounds['watts']!.min, closeTo(176.0, 1e-9));
+          expect(bounds['watts']!.max, closeTo(264.0, 1e-9));
+        },
+      );
+
       test('computeAxisBounds creates default axis when no series', () {
         final bounds = manager.computeAxisBounds();
         expect(bounds, contains('primary_axis'));

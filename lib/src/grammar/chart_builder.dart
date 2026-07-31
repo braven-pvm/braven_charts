@@ -250,12 +250,29 @@ final class BravenChart<T> {
       _copy(defaultY: accessor, yLabel: label);
 
   /// Appends a connected line through `(x, y)`.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each POINT (`ChartDataPoint.label`); [pointKey] gives each
+  /// point a stable identity for selection. Both are per-point accessors that
+  /// may return null — or `''`, which means the same thing — for a row that has
+  /// neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomLine({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? strokeWidth,
@@ -271,6 +288,10 @@ final class BravenChart<T> {
       y: _resolveY('geomLine', y),
       name: name,
       color: color,
+      unit: unit,
+      label: label,
+      pointKey: pointKey,
+      isXOrdered: isXOrdered,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       strokeWidth: strokeWidth,
@@ -287,12 +308,29 @@ final class BravenChart<T> {
   /// [colorBy] colours the area's TOP EDGE per segment (the leading-point
   /// rule), NOT the fill — value-driven fill is not yet supported. It requires
   /// [colorEncoding]; the package ships no default colour ramp.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each POINT (`ChartDataPoint.label`); [pointKey] gives each
+  /// point a stable identity for selection. Both are per-point accessors that
+  /// may return null — or `''`, which means the same thing — for a row that has
+  /// neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? colorBy,
     ScatterColorEncoding? colorEncoding,
     double? baseline,
@@ -310,6 +348,10 @@ final class BravenChart<T> {
       y: _resolveY('geomArea', y),
       name: name,
       color: color,
+      unit: unit,
+      label: label,
+      pointKey: pointKey,
+      isXOrdered: isXOrdered,
       colorBy: colorBy,
       colorEncoding: colorEncoding,
       baseline: baseline,
@@ -327,12 +369,31 @@ final class BravenChart<T> {
   ///
   /// Bars have no orientation of their own: transposing the plane is a
   /// whole-chart operation, expressed by [transposed].
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each BAR (`ChartDataPoint.label`) — the per-point text, as
+  /// opposed to [labelStyle], which is the series-wide configuration deciding
+  /// how such a label is drawn. [pointKey] gives each bar a stable identity for
+  /// selection. Both may return null — or `''`, which means the same thing —
+  /// for a row that has neither. Keys must be unique among one mark's keyed
+  /// rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomBar({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barGap,
@@ -352,6 +413,10 @@ final class BravenChart<T> {
       y: _resolveY('geomBar', y),
       name: name,
       color: color,
+      unit: unit,
+      label: label,
+      pointKey: pointKey,
+      isXOrdered: isXOrdered,
       barWidthPercent: barWidthPercent,
       barWidthPixels: barWidthPixels,
       barGap: barGap,
@@ -373,12 +438,30 @@ final class BravenChart<T> {
   /// [categories]; the package ships neither a default color ramp nor a
   /// categorical palette, so a channel without its template is rejected when
   /// the spec is lowered.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each MARKER (`ChartDataPoint.label`), which is distinct from
+  /// [categoryBy]: a label identifies one point, while several points share a
+  /// category. [pointKey] gives each marker a stable identity for selection.
+  /// Both may return null — or `''`, which means the same thing — for a row
+  /// that has neither. Keys must be unique among one mark's keyed rows.
+  ///
+  /// [isXOrdered] declares that the data is already sorted ascending by `x`
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
+  /// DECLARATION, never inferred from the rows.
   BravenChart<T> geomPoint({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
     String? id,
     String? name,
     Color? color,
+    String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
+    bool isXOrdered = false,
     Channel<T>? size,
     ScatterSizeEncoding? sizeEncoding,
     Channel<T>? colorBy,
@@ -398,6 +481,10 @@ final class BravenChart<T> {
       y: _resolveY('geomPoint', y),
       name: name,
       color: color,
+      unit: unit,
+      label: label,
+      pointKey: pointKey,
+      isXOrdered: isXOrdered,
       size: size,
       sizeEncoding: sizeEncoding,
       colorBy: colorBy,
@@ -414,6 +501,10 @@ final class BravenChart<T> {
   );
 
   /// Appends one open-high-low-close candle per row.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
   BravenChart<T> geomCandlestick({
     required FieldAccessor<T, num> open,
     required FieldAccessor<T, num> high,
@@ -424,6 +515,7 @@ final class BravenChart<T> {
     String? id,
     String? name,
     Color? color,
+    String? unit,
     String? yAxisId,
   }) => _append(
     CandlestickMark<T>(
@@ -436,6 +528,7 @@ final class BravenChart<T> {
       timestamp: timestamp,
       name: name,
       color: color,
+      unit: unit,
       yAxisId: yAxisId,
     ),
   );

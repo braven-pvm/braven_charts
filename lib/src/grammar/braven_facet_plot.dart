@@ -10,6 +10,7 @@ import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
 import 'braven_plot.dart';
+import 'facet_panel_scope.dart';
 import 'facet_partition.dart';
 import 'facet_spec.dart';
 import 'grammar_diagnostics.dart';
@@ -106,7 +107,10 @@ List<BravenFacetPanel<T>> resolveFacetPanels<T>(PlotSpec<T> spec) {
         label: facetStripLabel(value, facet.label),
         spec: _injectPanel<T>(
           base,
-          <T>[for (final row in spec.data) if (facet.by(row) == value) row],
+          <T>[
+            for (final row in spec.data)
+              if (facet.by(row) == value) row,
+          ],
           xRange,
           yRange,
         ),
@@ -245,10 +249,16 @@ class _BravenFacetPlotState<T> extends State<BravenFacetPlot<T>> {
         ),
       ),
       Expanded(
-        child: BravenPlot<T>(
-          panel.spec,
-          interactionGroupController: _syncController,
-          emptyStateConfig: widget.emptyStateConfig,
+        // `FacetPanelScope` changes nothing about what the panel renders — it
+        // tells `BravenPlot` to keep the multi-axis mount, which is the mount
+        // every faceted chart has always had. See the scope's own docstring for
+        // why switching it would move the render.
+        child: FacetPanelScope(
+          child: BravenPlot<T>(
+            panel.spec,
+            interactionGroupController: _syncController,
+            emptyStateConfig: widget.emptyStateConfig,
+          ),
         ),
       ),
     ],

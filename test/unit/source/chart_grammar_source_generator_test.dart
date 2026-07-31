@@ -76,6 +76,13 @@ double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
 
+/// Per-point text accessors, as top-level tear-offs so a chain that declares
+/// them stays comparable. The key is derived from `t`, which is unique per row:
+/// a repeated key inside one series is refused by name (shape 30d), so a fixture
+/// keyed on `zone` would be testing that diagnostic instead of this one.
+String? sampleZoneLabel(Sample row) => row.zone;
+String? samplePointKey(Sample row) => 'p${row.t.toInt()}';
+
 const rows = <Sample>[
   Sample(
     t: 0,
@@ -162,6 +169,31 @@ final List<GrammarRow> grammarRows = <GrammarRow>[
       priceClose: row.close,
       timeInZone: row.power,
     ),
+];
+
+/// The row shape the emitter synthesises for a series carrying per-point text:
+/// one non-nullable `String` slot per accessor, `''` where the captured point
+/// had none. The field NAMES are the ones the emitter derives from the series
+/// name ('Power' -> `powerLabel`, `powerPointKey`), so a rebuilt twin written
+/// against this class is written against the emitter's own naming.
+class KeyedRow {
+  const KeyedRow({
+    required this.x,
+    required this.power,
+    this.powerLabel = '',
+    this.powerPointKey = '',
+  });
+
+  final double x;
+  final double power;
+  final String powerLabel;
+  final String powerPointKey;
+}
+
+const keyedRows = <KeyedRow>[
+  KeyedRow(x: 0, power: 168, powerLabel: 'Warm-up', powerPointKey: 'p0'),
+  KeyedRow(x: 1, power: 204, powerLabel: 'Threshold', powerPointKey: 'p1'),
+  KeyedRow(x: 2, power: 268, powerLabel: 'VO2', powerPointKey: 'p2'),
 ];
 
 /// Scatter rows are keyed on power, so the synthesised x is power there.
@@ -2282,14 +2314,18 @@ String? blockedReason(ChartGeneratedSource generated) {
 /// expectation the whole block, so a dropped field, an extra field, a wrong
 /// value and a reordering all fail.
 ///
-/// The literal is delimited by indentation: its closing `),` sits at the same
-/// column as the opening token, so a nested literal's deeper `),` cannot end it.
+/// The literal is delimited by indentation: its closing paren sits at the same
+/// column as the opening token, so a nested literal's deeper one cannot end it.
+/// The closing comma is OPTIONAL because a chain verb — `.geomLine(` — closes
+/// on a bare `)` so the next `.verb(` can follow, while a nested config literal
+/// closes on `),`. Matching the paren alone reads both; it cannot end a literal
+/// early, because every line inside one is indented further than its opening.
 List<String> literalArguments(String source, String opening) {
   final start = source.indexOf(opening);
   expect(start, isNonNegative, reason: 'missing "$opening" in:\n$source');
   final indent = start - (source.lastIndexOf('\n', start) + 1);
   final bodyStart = source.indexOf('\n', start) + 1;
-  final end = source.indexOf('\n${' ' * indent}),', start);
+  final end = source.indexOf('\n${' ' * indent})', start);
   expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
   return <String>[
     for (final line in source.substring(bodyStart, end).split('\n'))
@@ -2300,7 +2336,13 @@ List<String> literalArguments(String source, String opening) {
 void main() {
   group('round trip', () {
     testWidgets('shape 1: a single line', (tester) async {
-      await expectRoundTrip(
+      // The twin declares the axis but does NOT bind the mark to it, because
+      // that is what the emitter writes: a chart with one axis and no explicit
+      // binding is mounted as the legacy single-axis chart, so its captured
+      // series carries no `yAxisId` for `_planGeometry` to reverse. Binding it
+      // here would mount the multi-axis shape instead and the rebuilt document
+      // would differ by `series[*].axisId` plus `inlineAxis`.
+      final generated = await expectRoundTrip(
         tester,
         name: 'single_line',
         fragments: <String>[
@@ -2329,10 +2371,16 @@ void main() {
               y: (row) => row.power,
               name: 'Power',
               strokeWidth: 2.4,
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
+      // The proof never reads the emitted text, and the twin above is
+      // HAND-WRITTEN — so nothing else in this test notices if the emitter
+      // starts writing `yAxisId:` again. It would still compile, still
+      // round-trip against the hand-written twin, and still hand a reader a
+      // chain that mounts a different document from the chart they copied it
+      // from. This assertion is the only thing that catches that.
+      expect(generated.source, isNot(contains('yAxisId')));
     });
 
     testWidgets('shape 2: multi-series on a shared x', (tester) async {
@@ -2365,13 +2413,11 @@ void main() {
               y: (row) => row.power,
               name: 'Power',
               fillOpacity: 0.18,
-              yAxisId: 'axis-0',
             )
             .geomLine(
               id: 'mark-1',
               y: (row) => row.heartRate,
               name: 'Heart rate',
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -2504,7 +2550,6 @@ void main() {
               id: 'mark-0',
               y: (row) => row.heartRate,
               name: 'Efforts',
-              yAxisId: 'axis-0',
               size: Channel<GrammarRow>((row) => row.efforts),
               sizeEncoding: const ScatterSizeEncoding(
                 minimumRadius: 4,
@@ -2602,7 +2647,6 @@ void main() {
               name: 'Time in zone',
               color: const Color(0xFF7C3AED),
               barWidthPercent: 0.7,
-              yAxisId: 'axis-0',
             )
             .transposed()
             .build(bravenChartController: controller),
@@ -2648,12 +2692,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .interaction(
               const InteractionConfig(
                 crosshair: CrosshairConfig(
@@ -2715,14 +2754,12 @@ void main() {
                 show: true,
                 position: DataPointLabelPosition.below,
               ),
-              yAxisId: 'axis-0',
             )
             .geomLine(
               id: 'mark-1',
               y: (row) => row.heartRate,
               name: 'Heart rate',
               showDataPointMarkers: true,
-              yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
       );
@@ -2764,9 +2801,905 @@ void main() {
               name: 'Time in zone',
               barWidthPercent: 0.7,
               labelStyle: const BarLabelStyle(show: true, showUnit: true),
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 29: a Cartesian series unit round-trips AND is emitted', (
+      tester,
+    ) async {
+      // `unit` is a SeriesMark field the five Cartesian families now carry, so
+      // a chart that sets one must come back carrying it. The `fragments` half
+      // is the load-bearing half: the generator's internal proof re-lowers the
+      // reconstructed spec and never reads a CHARACTER of the emitted text (see
+      // `_firstMismatch`'s doc), so a missing writer line would ship a chain
+      // that silently drops the unit while the proof still passed.
+      await expectRoundTrip(
+        tester,
+        name: 'series_unit',
+        fragments: <String>["unit: 'W'", "unit: 'bpm'"],
+        original: (controller) => BravenChart.of(rows)
+            .x(sampleT, label: 'Elapsed')
+            .y(samplePower, label: 'Power')
+            .geomArea(name: 'Power', unit: 'W')
+            .geomLine(y: sampleHeartRate, name: 'Heart rate', unit: 'bpm')
+            .build(bravenChartController: controller),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x, label: 'Elapsed')
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'axis-0',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomArea(
+              id: 'mark-0',
+              y: (row) => row.power,
+              name: 'Power',
+              unit: 'W',
+            )
+            .geomLine(
+              id: 'mark-1',
+              y: (row) => row.heartRate,
+              name: 'Heart rate',
+              unit: 'bpm',
+            )
+            .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 29b: EVERY Cartesian family emits its unit', (
+      tester,
+    ) async {
+      // The reversal is five separate `unit: series.unit` lines in
+      // `_planGeometry`, one per family, so a family missed there is a family
+      // that silently drops the unit. Each family is generated on its own and
+      // its EMITTED TEXT asserted — the proof would catch a missing plan line,
+      // but nothing except this assertion catches a missing writer line.
+      //
+      // The text assertion is scoped to the family's own geom call rather than
+      // to the whole source: `unit:` is a `YAxisConfig` field too, so a bare
+      // `contains("unit: 'W'")` would be satisfied by an AXIS unit that says
+      // nothing about the mark. And because a text match cannot tell a real
+      // parameter from an invented one, each of the three families
+      // `expectRoundTrip` does not already compile (shape 29 covers area and
+      // line) goes through the same `dart format` + `dart analyze` floor the
+      // file's other harnesses use.
+      final charts = <String, Widget Function(BravenChartController)>{
+        'geomLine': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomLine(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomArea': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomArea(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomBar': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomBar(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomPoint': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomPoint(y: samplePower, unit: 'W', yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomCandlestick': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomCandlestick(
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+              unit: 'W',
               yAxisId: 'axis-0',
             )
             .build(bravenChartController: controller),
+      };
+      final emitted = <String, bool>{};
+      final blocked = <String, String?>{};
+      final clean = <String, bool>{};
+      final complete = <String, bool>{};
+      final sources = <String, String>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(tester, entry.value),
+        );
+        sources[entry.key] = generated.source;
+        blocked[entry.key] = blockedReason(generated);
+        clean[entry.key] = generated.warnings.isEmpty;
+        complete[entry.key] = generated.isComplete;
+        // The map key IS the emitted verb, so the unit is read out of that
+        // family's own argument list — not found anywhere in the file.
+        final opening = '.${entry.key}(';
+        emitted[entry.key] =
+            generated.source.contains(opening) &&
+            literalArguments(generated.source, opening).contains("unit: 'W',");
+      }
+      // Compared as WHOLE MAPS so one missing family cannot hide behind an
+      // earlier failure.
+      expect(blocked, <String, String?>{
+        for (final verb in charts.keys) verb: null,
+      });
+      expect(clean, <String, bool>{for (final verb in charts.keys) verb: true});
+      expect(complete, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      expect(emitted, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      // `dart format` + `dart analyze` on the emitted chain, for the families
+      // no round-trip shape compiles. A fragment match proves a parameter NAME
+      // was written; only this proves the verb actually has it. Real
+      // subprocesses, so the `runAsync` escape hatch applies.
+      for (final verb in const <String>[
+        'geomBar',
+        'geomPoint',
+        'geomCandlestick',
+      ]) {
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            sources[verb]!,
+            fixtureName: 'grammar_unit_$verb',
+          ),
+        );
+      }
+    });
+
+    testWidgets('shape 29c: a unit-less Cartesian series emits NO unit '
+        'argument', (tester) async {
+      // The control for the two above: `unit` is optional on the mark and on
+      // the verb, so a chart that sets none must stay byte-identical to what it
+      // emitted before this slice — no `unit:` argument in the geom call.
+      //
+      // The AXIS deliberately declares a unit while the mark declares none.
+      // `unit:` is a `YAxisConfig` field as well as a mark field
+      // (`chart_config_dart_emitter` writes it inside the axis literal), so a
+      // whole-file `isNot(contains('unit:'))` is satisfiable — and breakable —
+      // by text that says nothing about the field under test. This fixture
+      // makes that token present on purpose, so the control can only pass by
+      // reading the geom call itself.
+      //
+      // And it reads the WHOLE argument list rather than searching it for one
+      // token: an extra argument, a dropped one, a changed value and a
+      // reordering then all fail, which is the same bar shapes 24 and 25 hold
+      // their unguarded literals to.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .yAxis(
+                YAxisConfig.withId(
+                  id: 'axis-0',
+                  position: YAxisPosition.left,
+                  unit: 'W',
+                ),
+              )
+              .geomLine(y: samplePower, yAxisId: 'axis-0')
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(emittedChain(generated), isTrue);
+      expect(
+        generated.source,
+        contains("unit: 'W',"),
+        reason:
+            'the axis unit must reach the source, or this control is '
+            'vacuous and a whole-file token search would have passed it',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.mark0,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+        "yAxisId: 'axis-0',",
+      ]);
+    });
+
+    testWidgets('shape 29d: a CONFIG-authored series carrying a unit is no '
+        'longer refused for it', (tester) async {
+      // The config direction, which is what item 1c' exists for: a chart
+      // authored with `LineChartSeries(unit: 'W')` rather than through the
+      // chain. It binds its axis explicitly on both sides — `yAxisId` plus the
+      // inline `yAxisConfig`, the shape lowering itself produces — because the
+      // LEGACY single-axis binding is Slice 2's job, and this test must isolate
+      // what Slice 1 changes.
+      final axis = YAxisConfig.withId(
+        id: 'axis-0',
+        position: YAxisPosition.left,
+      );
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                unit: 'W',
+                yAxisId: 'axis-0',
+                yAxisConfig: axis,
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 1),
+                  ChartDataPoint(x: 1, y: 2),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      // Read out of the geom call, not out of the file: the same `unit:` token
+      // is a `YAxisConfig` field, and this fixture emits an axis literal right
+      // beside the mark.
+      expect(
+        literalArguments(generated.source, '.geomLine('),
+        contains("unit: 'W',"),
+      );
+    });
+
+    testWidgets('shape 30: per-point labels and keys round-trip AND are '
+        'emitted', (tester) async {
+      // The config direction again: a chart authored with `ChartDataPoint`s
+      // that carry a `label` and a `pointKey`. Before this slice the captured
+      // and re-lowered points differed, so the whole chart was refused with the
+      // generic loss sentence.
+      //
+      // The emitted-text assertion below is the load-bearing half. The proof
+      // re-lowers the reconstructed spec and never reads a CHARACTER of the
+      // emitted chain, so a missing `label:`/`pointKey:` writer line would ship
+      // a chain that silently drops per-point identity while every other
+      // assertion here — including the rebuilt-document comparison, whose twin
+      // is hand-written rather than compiled from this text — still passed.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'point_label_and_key',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168, label: 'Warm-up', pointKey: 'p0'),
+                ChartDataPoint(
+                  x: 1,
+                  y: 204,
+                  label: 'Threshold',
+                  pointKey: 'p1',
+                ),
+                ChartDataPoint(x: 2, y: 268, label: 'VO2', pointKey: 'p2'),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(keyedRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              label: (row) => row.powerLabel,
+              pointKey: (row) => row.powerPointKey,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The WHOLE argument list of the geom call, not two fragments: a dropped
+      // field, an extra field, a wrong accessor and a reordering then all fail.
+      // Scoped to the call because `label:` is also an axis field and this
+      // chart puts one on the axis right beside the mark.
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'label: (row) => row.powerLabel,',
+        'pointKey: (row) => row.powerPointKey,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+      // The row class has to carry both, or the accessors above name fields
+      // that do not exist. (`expectRoundTrip` compiles the emitted source, so
+      // this is belt and braces — but it names WHICH field went missing.)
+      expect(generated.source, contains('final String powerLabel;'));
+      expect(generated.source, contains('final String powerPointKey;'));
+      expect(generated.source, contains("powerLabel: 'Warm-up',"));
+      expect(generated.source, contains("powerPointKey: 'p0',"));
+    });
+
+    testWidgets('shape 30b: a series with no per-point text emits neither '
+        'accessor', (tester) async {
+      // The control for shape 30. Both accessors are optional, so a chart that
+      // sets neither must emit exactly what it emitted before this slice — no
+      // `label:` and no `pointKey:` in the geom call.
+      //
+      // The AXIS deliberately carries a label, because `label:` is a
+      // `YAxisConfig` field too: a whole-file `isNot(contains('label:'))` would
+      // be satisfiable by text that says nothing about the mark. Reading the
+      // geom's own argument list is the only assertion that can fail for the
+      // right reason.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(
+        generated.source,
+        contains("label: 'Power',"),
+        reason:
+            'the axis label must reach the source, or this control is vacuous '
+            'and a whole-file token search would have passed it',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+    });
+
+    testWidgets('shape 30c: a PARTIALLY labelled series round-trips', (
+      tester,
+    ) async {
+      // Per-point text travels through a NON-NULLABLE row slot, so a point
+      // that had no label is written as `''` and has to come back as null.
+      // Without the empty-string normalisation in lowering this chart cannot
+      // round-trip at all — and a `pointKey` would not merely differ, it would
+      // trip `ChartDataPoint`'s own assert.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'point_label_partial',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168, label: 'Warm-up', pointKey: 'p0'),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268, label: 'VO2', pointKey: 'p2'),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) =>
+            BravenChart.of(<KeyedRow>[
+                  const KeyedRow(
+                    x: 0,
+                    power: 168,
+                    powerLabel: 'Warm-up',
+                    powerPointKey: 'p0',
+                  ),
+                  const KeyedRow(x: 1, power: 204),
+                  const KeyedRow(
+                    x: 2,
+                    power: 268,
+                    powerLabel: 'VO2',
+                    powerPointKey: 'p2',
+                  ),
+                ])
+                .x((row) => row.x)
+                .yAxis(
+                  YAxisConfig.withId(id: 'y', position: YAxisPosition.left),
+                )
+                .geomLine(
+                  id: 'power',
+                  y: (row) => row.power,
+                  name: 'Power',
+                  label: (row) => row.powerLabel,
+                  pointKey: (row) => row.powerPointKey,
+                )
+                .build(bravenChartController: controller),
+      );
+      // The unlabelled row is written as the empty literal, which is what the
+      // normalisation on the other side has to read.
+      expect(generated.source, contains("powerLabel: '',"));
+      expect(generated.source, contains("powerPointKey: '',"));
+    });
+
+    testWidgets('shape 30d: colliding point keys are refused by NAME', (
+      tester,
+    ) async {
+      // A `pointKey` is the stable selection identity, so a captured chart that
+      // repeats one inside a series cannot be expressed as a chain that means
+      // the same thing. The grammar's own `duplicatePointKey` diagnostic fires
+      // while the proof re-lowers, and the generator quotes it — a named
+      // boundary rather than the generic "does not reproduce exactly".
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168, pointKey: 'dup'),
+                  ChartDataPoint(x: 1, y: 204, pointKey: 'dup'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(generated), isFalse);
+      expect(blockedReason(generated), contains('dup'));
+      expect(blockedReason(generated), contains('pointKey'));
+    });
+
+    testWidgets('shape 30e: EVERY family that carries per-point text reverses '
+        'AND emits both accessors', (tester) async {
+      // Shapes 30, 30b and 30c are all `LineChartSeries`, and the reversal is a
+      // separate `label:`/`pointKey:` pair per family in `_planGeometry`.
+      // Measured by mutation: deleting both lines from the AREA, BAR and
+      // SCATTER arms left the entire root suite green (4192 passed, the same
+      // count as the unmutated baseline). The emitted TEXT survives that
+      // mutation — the writer reads `plan.accessors`, which the planner
+      // registers either way — while the mark handed to the proof loses its
+      // accessor, so the re-lowered points come back unlabelled and every such
+      // chart is silently REFUSED. This shape is what makes the three sibling
+      // arms fail.
+      //
+      // Each family is generated on its own, its accessors are read out of its
+      // OWN argument list, and the results are compared as WHOLE MAPS so one
+      // missing family cannot hide behind an earlier failure. The three
+      // families no round-trip shape compiles also go through the `dart format`
+      // + `dart analyze` floor: a text match proves a parameter NAME was
+      // written, only the floor proves the verb actually has it.
+      final charts = <String, Widget Function(BravenChartController)>{
+        'geomLine': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomLine(
+              y: samplePower,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+        'geomArea': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomArea(
+              y: samplePower,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+        'geomBar': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomBar(
+              y: samplePower,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+        'geomPoint': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomPoint(
+              y: samplePower,
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+              yAxisId: 'axis-0',
+            )
+            .build(bravenChartController: controller),
+      };
+      final blocked = <String, String?>{};
+      final clean = <String, bool>{};
+      final complete = <String, bool>{};
+      final accessorArguments = <String, List<String>>{};
+      final sources = <String, String>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(tester, entry.value),
+        );
+        sources[entry.key] = generated.source;
+        blocked[entry.key] = blockedReason(generated);
+        clean[entry.key] = generated.warnings.isEmpty;
+        complete[entry.key] = generated.isComplete;
+        // The map key IS the emitted verb, so the two accessors are read out of
+        // that family's own argument list — not found anywhere in the file.
+        // `label:` is a `YAxisConfig` field as well.
+        final opening = '.${entry.key}(';
+        accessorArguments[entry.key] = generated.source.contains(opening)
+            ? <String>[
+                for (final argument in literalArguments(
+                  generated.source,
+                  opening,
+                ))
+                  if (argument.startsWith('label:') ||
+                      argument.startsWith('pointKey:'))
+                    argument,
+              ]
+            : <String>['no $opening call in the emitted source'];
+      }
+      // Compared as WHOLE MAPS so one missing family cannot hide behind an
+      // earlier failure. `blocked` is the REVERSAL half: a family whose plan
+      // drops an accessor re-lowers to unlabelled points, which the proof
+      // refuses.
+      expect(blocked, <String, String?>{
+        for (final verb in charts.keys) verb: null,
+      });
+      expect(clean, <String, bool>{for (final verb in charts.keys) verb: true});
+      expect(complete, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      // The EMISSION half, and it is the exact accessor text rather than a
+      // boolean: a wrong row field, a dropped argument and a swapped order all
+      // fail. The row base name is the auto-assigned mark id, so the fields are
+      // `mark0Label` and `mark0PointKey`.
+      expect(accessorArguments, <String, List<String>>{
+        for (final verb in charts.keys)
+          verb: <String>[
+            'label: (row) => row.mark0Label,',
+            'pointKey: (row) => row.mark0PointKey,',
+          ],
+      });
+      for (final verb in const <String>['geomArea', 'geomBar', 'geomPoint']) {
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            sources[verb]!,
+            fixtureName: 'grammar_point_text_$verb',
+          ),
+        );
+      }
+    });
+
+    testWidgets('shape 31: isXOrdered round-trips AND is emitted', (
+      tester,
+    ) async {
+      // `isXOrdered` is a series-level data-shape hint that changes NEAREST-
+      // POINT behaviour (see `chart_selection_expression.dart`), so a chart
+      // that declares it must come back declaring it. It is carried
+      // EXPLICITLY: the generator never infers it from the synthesised rows,
+      // which are sorted here and would read as ordered if it did.
+      //
+      // The emitted-text assertion below is the load-bearing half. The proof
+      // re-lowers the reconstructed spec and never reads a CHARACTER of the
+      // emitted chain, so a missing writer line would ship a chain that
+      // silently dropped the flag while the rebuilt-document comparison — whose
+      // twin is hand-written rather than compiled from this text — still
+      // passed.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'series_is_x_ordered',
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              isXOrdered: true,
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              isXOrdered: true,
+            )
+            .build(bravenChartController: controller),
+      );
+      // The WHOLE argument list of the geom call, not one fragment: a dropped
+      // field, an extra field, a wrong value and a reordering then all fail.
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'isXOrdered: true,',
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+    });
+
+    testWidgets('shape 31b: EVERY family that carries isXOrdered emits it', (
+      tester,
+    ) async {
+      // The emission is a single switch with one arm per carrying family, and
+      // the reversal is one `isXOrdered: series.isXOrdered` per family in
+      // `_planGeometry`. A family missed in either place is a family that
+      // silently drops the flag, and shape 31 only compiles `geomLine`.
+      //
+      // Each flag is read out of that family's OWN argument list rather than
+      // found anywhere in the file, and the three families no round-trip shape
+      // compiles go through the same `dart format` + `dart analyze` floor —
+      // a text match proves a parameter NAME was written, only the floor proves
+      // the verb actually has it.
+      final charts = <String, Widget Function(BravenChartController)>{
+        'geomLine': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomLine(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomArea': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomArea(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomBar': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomBar(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+        'geomPoint': (controller) => BravenChart.of(rows)
+            .x(sampleT)
+            .yAxis(
+              YAxisConfig.withId(id: 'axis-0', position: YAxisPosition.left),
+            )
+            .geomPoint(y: samplePower, isXOrdered: true, yAxisId: 'axis-0')
+            .build(bravenChartController: controller),
+      };
+      final emitted = <String, bool>{};
+      final blocked = <String, String?>{};
+      final clean = <String, bool>{};
+      final complete = <String, bool>{};
+      final sources = <String, String>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(tester, entry.value),
+        );
+        sources[entry.key] = generated.source;
+        blocked[entry.key] = blockedReason(generated);
+        clean[entry.key] = generated.warnings.isEmpty;
+        complete[entry.key] = generated.isComplete;
+        final opening = '.${entry.key}(';
+        emitted[entry.key] =
+            generated.source.contains(opening) &&
+            literalArguments(
+              generated.source,
+              opening,
+            ).contains('isXOrdered: true,');
+      }
+      // Compared as WHOLE MAPS so one missing family cannot hide behind an
+      // earlier failure.
+      expect(blocked, <String, String?>{
+        for (final verb in charts.keys) verb: null,
+      });
+      expect(clean, <String, bool>{for (final verb in charts.keys) verb: true});
+      expect(complete, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      expect(emitted, <String, bool>{
+        for (final verb in charts.keys) verb: true,
+      });
+      for (final verb in const <String>['geomArea', 'geomBar', 'geomPoint']) {
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            sources[verb]!,
+            fixtureName: 'grammar_is_x_ordered_$verb',
+          ),
+        );
+      }
+    });
+
+    testWidgets('shape 31c: a chart at the false default emits NO isXOrdered '
+        'argument', (tester) async {
+      // The byte-identity control for the two above. `false` is the default on
+      // the mark, the verb and `ChartSeries`, so a chart that declares nothing
+      // must emit exactly what it emitted before this slice.
+      //
+      // Asserted twice, deliberately. The whole-argument-list expectation is
+      // the precise one — an `isXOrdered: false,` written unconditionally fails
+      // it. The whole-file expectation is the byte-identity claim itself: the
+      // grammar form writes this token nowhere else (only the CONFIG source
+      // form emits an `isXOrdered` on the series literal), so its complete
+      // absence is exactly what "unchanged output" means here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'power',",
+        'y: (row) => row.power,',
+        "name: 'Power',",
+        'strokeWidth: 2.0,',
+        'dashPattern: <double>[],',
+        'interpolation: LineInterpolation.linear,',
+      ]);
+      expect(generated.source, isNot(contains('isXOrdered')));
+    });
+
+    testWidgets('shape 31d: a per-point segment style is refused with a NAMED '
+        'reason', (tester) async {
+      // `segmentStyle` is deliberately NOT carried. Measured: carrying it
+      // unblocks zero states (the one censused chart using it still refuses on
+      // a marker field behind it), it would need a new row-field kind — rows
+      // have slots for numbers, strings, stamps and colours only — and it
+      // collides with `LineMark.colorBy`, which already bakes
+      // `segmentStyle.color` per point. So it gets an honest NAMED boundary
+      // instead of the generic "does not reproduce exactly" tail.
+      //
+      // The axis is bound explicitly on both halves, as shape 29d is, so the
+      // refusal cannot be attributed to the legacy single-axis binding.
+      final axis = YAxisConfig.withId(
+        id: 'axis-0',
+        position: YAxisPosition.left,
+      );
+      LineChartSeries forecast({SegmentStyle? style}) => LineChartSeries(
+        id: 'forecast',
+        yAxisId: 'axis-0',
+        yAxisConfig: axis,
+        points: <ChartDataPoint>[
+          const ChartDataPoint(x: 0, y: 1),
+          ChartDataPoint(x: 1, y: 2, segmentStyle: style),
+        ],
+      );
+
+      final styled = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              forecast(style: const SegmentStyle(dashPattern: <double>[2, 6])),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(styled), isFalse);
+      expect(blockedReason(styled), contains('segment style'));
+      // The dash case is the one no mark can produce at all, so "no V1 line
+      // mark carries" is the true sentence for it — and the colour case below
+      // must NOT get that sentence.
+      expect(blockedReason(styled), contains('no V1 line mark carries'));
+
+      // A COLOUR-ONLY per-point style is a DIFFERENT boundary and must say so.
+      // `LineMark.colorBy` + `colorEncoding` bakes exactly this shape into
+      // every point at lowering (`_xyColorPoints` writes
+      // `SegmentStyle.color(...)`), so telling the author that no V1 line mark
+      // carries it is false — a chain paints these colours perfectly well. What
+      // fails is the REVERSE direction: the generator cannot recover the
+      // channel and its encoding from the baked result. The showcase already
+      // ships this shape (`chart_grammar_page.dart`'s `colourLine`), so the
+      // sentence an author actually reads is this one, not the dash one.
+      final coloured = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              forecast(style: const SegmentStyle(color: Color(0xFF16A34A))),
+            ],
+          ),
+        ),
+      );
+      expect(emittedChain(coloured), isFalse);
+      expect(
+        blockedReason(coloured),
+        allOf(
+          contains('segment colour'),
+          contains('colorBy'),
+          contains('colorEncoding'),
+          isNot(contains('no V1 line mark carries')),
+        ),
+      );
+
+      // The control, and it is not decoration: without it the assertions above
+      // would pass for a fixture refused for some unrelated reason, and the
+      // reason string would be naming a boundary this chart never reached. The
+      // SAME chart with the style removed must emit.
+      final plain = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[forecast()],
+          ),
+        ),
+      );
+      expect(
+        emittedChain(plain),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(plain)}',
       );
     });
 
@@ -2792,12 +3725,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .trend(
               id: 'mark-1',
               of: 'mark-0',
@@ -2841,12 +3769,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .threshold(
               id: 'mark-1',
               value: 250,
@@ -2890,12 +3813,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .band(
               id: 'mark-1',
               start: 200,
@@ -2942,12 +3860,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .pointAt(
               id: 'mark-1',
               seriesId: 'mark-0',
@@ -2997,12 +3910,7 @@ void main() {
                 label: 'Power',
               ),
             )
-            .geomLine(
-              id: 'mark-0',
-              y: (row) => row.power,
-              name: 'Power',
-              yAxisId: 'axis-0',
-            )
+            .geomLine(id: 'mark-0', y: (row) => row.power, name: 'Power')
             .grid(const GridConfig(horizontal: false, verticalStrokeWidth: 1.5))
             .title('Session', subtitle: 'Power over time')
             .legend(false)
@@ -6921,6 +7829,15 @@ void main() {
     testWidgets('a series option no V1 mark carries is refused, not dropped', (
       tester,
     ) async {
+      // RE-POINTED, not weakened. This used to use `unit: 'W'` as its example
+      // of an uncarried option; the five Cartesian marks now CARRY unit, so
+      // keeping it here would pin a behaviour this slice deliberately removed.
+      // The carried case is asserted positively instead — see round trip
+      // "shape 29" / "29b" / "29d", which require the unit to survive AND to
+      // appear in the emitted text. `tension` is still genuinely uncarried
+      // (LineMark has no curve tension), so the claim in the test's name is
+      // unchanged, and the assertion is now on the diagnostic's full PHRASE
+      // rather than on the bare option word.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -6928,7 +7845,7 @@ void main() {
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
-              unit: 'W',
+              tension: 0.6,
               points: <ChartDataPoint>[
                 ChartDataPoint(x: 0, y: 1),
                 ChartDataPoint(x: 1, y: 2),
@@ -6946,7 +7863,7 @@ void main() {
         allOf(
           contains('does not reproduce'),
           contains('power'),
-          contains('unit'),
+          contains('curve tension'),
         ),
       );
     });
@@ -6977,17 +7894,295 @@ void main() {
       },
     );
 
-    testWidgets('a single-axis config chart explains the axis binding', (
+    testWidgets('a single-axis config chart emits and round-trips', (
       tester,
     ) async {
-      // A chart authored through the single-axis path (`BravenChartPlus` with
-      // no per-series yAxisId) cannot be reproduced by the grammar, which
-      // always binds each series to an explicit axis. The diagnostic explains
-      // that rather than leaving the reader guessing.
-      final snapshot = await snapshotOf(
+      // CONVERTED, not deleted, from "a single-axis config chart explains the
+      // axis binding". That test pinned the REFUSAL of a chart authored through
+      // the single-axis path (`BravenChartPlus` with a widget-level yAxis and
+      // no per-series binding) — the behaviour this slice deliberately removes.
+      // So it becomes the stronger claim: the same chart now emits AND the
+      // chain it emits reproduces the captured DOCUMENT, gated by
+      // `expectRoundTrip`'s document equality rather than by a message.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'legacy_single_axis',
+        fragments: <String>[
+          'BravenChart.of(rows)',
+          'YAxisConfig.withId(',
+          '.geomLine(',
+        ],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            label: 'Power',
+            unit: 'W',
+          ),
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              unit: 'W',
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'y',
+                position: YAxisPosition.left,
+                label: 'Power',
+                unit: 'W',
+              ),
+            )
+            .geomLine(
+              id: 'power',
+              y: (row) => row.power,
+              name: 'Power',
+              unit: 'W',
+            )
+            .build(bravenChartController: controller),
+      );
+      // The proof NEVER READS THE EMITTED TEXT, so the one thing that makes
+      // this chain the legacy shape has to be asserted here: a `yAxisId:` on
+      // the geom would bind the mark, `BravenPlot` would mount the multi-axis
+      // shape, and the chain would hand back a DIFFERENT document from the
+      // chart it was reversed from — while every other assertion above still
+      // passed, because the rebuilt twin is hand-written, not compiled from
+      // this text.
+      expect(generated.source, isNot(contains('yAxisId')));
+      // The AXIS is asserted as a whole literal, not as fragments. `unit:` is a
+      // field of both `YAxisConfig` and the geom verb, and this chart carries
+      // 'W' on both, so a bare `contains("unit: 'W'")` is satisfied by the geom
+      // alone and says nothing about the axis — proven by mutation: emitting
+      // `null` for `axis.unit` left that fragment green. The complete argument
+      // list fails on a dropped field, an extra field, a wrong value and a
+      // reordering alike.
+      expect(
+        literalArguments(generated.source, 'YAxisConfig.withId('),
+        <String>[
+          "id: 'y',",
+          'position: YAxisPosition.left,',
+          "label: 'Power',",
+          "unit: 'W',",
+        ],
+      );
+    });
+
+    testWidgets(
+      'a MIXED binding is still refused — only the LOWERED side is normalised',
+      (tester) async {
+        // One series bound through an inline axis config, one left unbound. The
+        // captured document keeps that difference — `getEffectiveYAxes` returns
+        // only the inline axis, and `getEffectiveBindings` sends the unbound
+        // series to a synthetic 'primary_axis' rather than to the inline one — so
+        // treating the unbound series as bound to the other's axis renders a
+        // DIFFERENT chart (measured: 4265 of 960000 pixels differ under
+        // normalizationMode.perSeries). This shape must therefore stay refused.
+        //
+        // What this pins is the ASYMMETRY of `_firstMismatch`'s comparison, not
+        // the gate in front of it. Measured by mutation: normalising BOTH sides
+        // — the "a null yAxisId means axes.first" shape — fails this test,
+        // while widening the gate, up to deleting it outright, leaves it green,
+        // because the captured side is never stripped and its binding always
+        // has to be met. The gate's own coupling is stated by "a single-axis
+        // chart with an EXPLICIT binding still emits" below.
+        final snapshot = await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              LineChartSeries(
+                id: 'a',
+                yAxisConfig: YAxisConfig.withId(
+                  id: 'a-axis',
+                  position: YAxisPosition.left,
+                  min: 0,
+                  max: 1000,
+                ),
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 1),
+                  ChartDataPoint(x: 1, y: 2),
+                ],
+              ),
+              const LineChartSeries(
+                id: 'b',
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 900),
+                  ChartDataPoint(x: 1, y: 950),
+                ],
+              ),
+            ],
+          ),
+        );
+        final generated = generateGrammar(snapshot);
+        expect(emittedChain(generated), isFalse);
+        expect(
+          blockedReason(generated),
+          allOf(contains('does not reproduce'), contains('yAxisId')),
+        );
+      },
+    );
+
+    testWidgets('an ALL-UNBOUND chart refused for something else is not blamed '
+        'on its axis binding', (tester) async {
+      // The counterpart to the guard above, and the reason the axis sentence
+      // can be trusted at all. `_firstMismatch` NORMALISES the lowered binding
+      // away for a legacy single-axis chart, then reports the mismatch; if the
+      // detail is computed against the UN-normalised series, every such chart
+      // that differs for any other reason is told to "bind every series
+      // explicitly — or none", which it already satisfies. The advice is then
+      // unfollowable and the sentence's own premise ("this one does not") is
+      // false about the chart in front of it.
+      //
+      // Two fixtures, because the reachability is not hypothetical. An empty
+      // `label` is the one per-point text value that cannot round-trip (it
+      // returns from the non-nullable row slot as null — see shape 30c), and a
+      // per-point `pointStyle` is carried by no Cartesian mark at all. Both
+      // charts leave EVERY series unbound, which is the legacy single-axis
+      // shape this slice's sibling made emit.
+      final charts = <String, List<ChartDataPoint>>{
+        'empty label': const <ChartDataPoint>[
+          ChartDataPoint(x: 0, y: 168, label: 'Warm-up'),
+          ChartDataPoint(x: 1, y: 204, label: ''),
+        ],
+        'point style': const <ChartDataPoint>[
+          ChartDataPoint(x: 0, y: 168),
+          ChartDataPoint(
+            x: 1,
+            y: 204,
+            pointStyle: PointStyle(color: Colors.red),
+          ),
+        ],
+      };
+      final blocked = <String, String?>{};
+      for (final entry in charts.entries) {
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChartPlus(
+              bravenChartController: controller,
+              yAxis: YAxisConfig(position: YAxisPosition.left),
+              series: <ChartSeries>[
+                LineChartSeries(
+                  id: 'power',
+                  name: 'Power',
+                  points: entry.value,
+                ),
+              ],
+            ),
+          ),
+        );
+        blocked[entry.key] = blockedReason(generated);
+      }
+      // Both are still REFUSED — this is not an argument for emitting them.
+      expect(blocked.keys, charts.keys);
+      expect(blocked.values, everyElement(isNotNull));
+      // Compared as a WHOLE MAP so one fixture cannot hide behind the other.
+      expect(
+        <String, bool>{
+          for (final entry in blocked.entries)
+            entry.key: entry.value!.contains('yAxisId'),
+        },
+        <String, bool>{for (final name in charts.keys) name: false},
+      );
+    });
+
+    testWidgets('a single-axis chart with an EXPLICIT binding still emits', (
+      tester,
+    ) async {
+      // The gate's positive half, stated by name so the coupling is visible
+      // instead of incidental. ONE declared axis, and the captured series is
+      // bound to it — the multi-axis mount, which `BravenPlot` keeps whenever a
+      // mark names its axis.
+      //
+      // This chart emits ONLY because the gate carries its all-unbound clause.
+      // Drop that clause and `legacySingleAxis` is true here too, the LOWERED
+      // series is stripped of the binding the CAPTURED one still carries, the
+      // comparison can never be met, and this reproducible chart is refused
+      // with the axis sentence. Measured: that mutation fails this test and
+      // round-trip shapes 5, 29b, 29c and 29d, and NOTHING else.
+      final generated = await expectRoundTrip(
+        tester,
+        name: 'explicitly_bound_single_axis',
+        fragments: <String>['BravenChart.of(rows)', '.geomLine('],
+        original: (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          series: <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              yAxisId: 'power-axis',
+              yAxisConfig: YAxisConfig.withId(
+                id: 'power-axis',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+              points: const <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 168),
+                ChartDataPoint(x: 1, y: 204),
+                ChartDataPoint(x: 2, y: 268),
+              ],
+            ),
+          ],
+        ),
+        rebuilt: (controller) => BravenChart.of(grammarRows)
+            .x((row) => row.x)
+            .yAxis(
+              YAxisConfig.withId(
+                id: 'power-axis',
+                position: YAxisPosition.left,
+                label: 'Power',
+              ),
+            )
+            .geomLine(id: 'power', y: (row) => row.power, yAxisId: 'power-axis')
+            .build(bravenChartController: controller),
+      );
+      // The proof never reads the emitted text, and the twin above is
+      // hand-written, so the binding that makes this the multi-axis shape has
+      // to be asserted on the text itself: without it the emitted chain would
+      // mount the LEGACY shape and hand back a document with no `axisId` and no
+      // `inlineAxis`, while every assertion above still passed.
+      expect(generated.source, contains("yAxisId: 'power-axis'"));
+    });
+
+    testWidgets('TWO declared axes with every series unbound is still refused', (
+      tester,
+    ) async {
+      // The boundary the `axes.length == 1` half of the gate describes, stated
+      // as an outcome. `BravenPlot` mounts the legacy shape only when the chain
+      // declares EXACTLY ONE axis, so a document that declares two while
+      // binding no series must not be normalised into an unbound chain: that
+      // chain would take the multi-axis mount and hand back `series[*].axisId`
+      // plus `inlineAxis` the captured document does not have.
+      //
+      // This test does NOT guard that clause, and the assertion says so rather
+      // than pretending otherwise: the refusal comes a layer EARLIER, because
+      // lowering binds every unbound mark to `axes.first`, which leaves the
+      // second axis with nothing measuring against it, and the grammar layer's
+      // own unboundAxis diagnostic rejects the reconstructed spec before
+      // `_firstMismatch` runs. Measured by mutation: dropping the
+      // `axes.length == 1` clause leaves this test — and every other test in
+      // this file — green. That clause is defence in depth; the outcome below
+      // is what actually has to hold.
+      //
+      // The render pipeline never builds this shape — `getEffectiveYAxes`
+      // returns the widget-level axis alone while no series carries an inline
+      // config — but a ChartDocument is a PERSISTED artifact that can arrive
+      // from disk or from a host, so the generator still has to meet it.
+      // `patchedSnapshot` is how this file states rows the renderer will not
+      // produce.
+      final single = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
+          yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
           series: const <ChartSeries>[
             LineChartSeries(
               id: 'power',
@@ -6999,15 +8194,21 @@ void main() {
           ],
         ),
       );
-      final generated = generateGrammar(snapshot);
+      final twoAxes = patchedSnapshot(single, (json) {
+        final axes = json['axes']! as List<Object?>;
+        axes.add(
+          Map<String, Object?>.of(axes.first! as Map<String, Object?>)
+            ..['id'] = 'second'
+            ..['position'] = 'right',
+        );
+      });
+      final generated = generateGrammar(twoAxes);
       expect(emittedChain(generated), isFalse);
       expect(
         blockedReason(generated),
         allOf(
-          contains('does not reproduce'),
-          contains('power'),
-          contains('single-axis'),
-          contains('yAxisId'),
+          contains('rejected by the grammar layer'),
+          contains('No mark measures against the axis "second"'),
         ),
       );
     });
@@ -7015,9 +8216,17 @@ void main() {
     testWidgets('grid and legend never trip the chart-option gate', (
       tester,
     ) async {
-      // Grid and legend are now carried by PlotSpec, so they must NOT appear in
-      // any chart-option block reason. These single-axis charts still block —
-      // on the single-axis path — but never for `grid` or `legend`.
+      // Grid and legend are carried by PlotSpec, so they must NOT appear in any
+      // chart-option block reason.
+      //
+      // This used to mount a single-axis chart and assert only that the reason
+      // named neither. That chart now EMITS, so `blockedReason` is null and
+      // `isNot(contains(...))` passes on nothing at all — the test would have
+      // gone on reporting success with the whole chart-option gate deleted. It
+      // now makes both halves real: the carrying chart must EMIT with its
+      // non-default grid and legend in the text, and a chart that still blocks
+      // for an unrelated reason must produce a reason that is genuinely there
+      // and still names neither.
       final nonDefaultGrid = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -7037,8 +8246,44 @@ void main() {
       );
       final gridResult = generateGrammar(nonDefaultGrid);
       expect(
-        blockedReason(gridResult),
-        allOf(isNot(contains('grid')), isNot(contains('legend'))),
+        emittedChain(gridResult),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(gridResult)}',
+      );
+      expect(gridResult.source, contains('.grid('));
+      expect(gridResult.source, contains('.legend(false)'));
+
+      // The same chart plus one option no V1 mark carries. It blocks — so
+      // `blockedReason` is a real sentence — and that sentence must still name
+      // the tension and neither the grid nor the legend.
+      final blockedForOtherReasons = await snapshotOf(
+        tester,
+        (controller) => BravenChartPlus(
+          bravenChartController: controller,
+          grid: const GridConfig(horizontal: false),
+          showLegend: false,
+          series: const <ChartSeries>[
+            LineChartSeries(
+              id: 'power',
+              tension: 0.6,
+              points: <ChartDataPoint>[
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 1, y: 2),
+              ],
+            ),
+          ],
+        ),
+      );
+      final blockedResult = generateGrammar(blockedForOtherReasons);
+      expect(emittedChain(blockedResult), isFalse);
+      expect(
+        blockedReason(blockedResult),
+        allOf(
+          isNotNull,
+          contains('curve tension'),
+          isNot(contains('grid')),
+          isNot(contains('legend')),
+        ),
       );
     });
 

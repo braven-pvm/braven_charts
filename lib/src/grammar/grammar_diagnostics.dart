@@ -139,6 +139,9 @@ enum GrammarDiagnosticCode {
   /// a concentric donut, within a single ring).
   duplicateRadialCategory,
 
+  /// A Cartesian geometry repeated the same `pointKey` within a single series.
+  duplicatePointKey,
+
   /// A radial spec also requested faceting, which radial does not yet support.
   facetedRadialUnsupported,
 
@@ -572,6 +575,23 @@ final class GrammarSpecException implements Exception {
         GrammarDiagnosticCode.duplicateRadialCategory,
         'Radial geom has duplicate category "$category"; each slice/column '
         'category must be unique (per ring for a concentric donut).',
+      );
+
+  /// A Cartesian geometry repeated a `pointKey` within a single series.
+  ///
+  /// The Cartesian counterpart of [GrammarSpecException.duplicateRadialCategory]
+  /// — same collision, different identity. A `pointKey` is the identity
+  /// selection, hit-testing and stream eviction are expressed against, so two
+  /// points sharing one make every such expression ambiguous. The mark is named
+  /// because a Cartesian spec may hold several geometries and the keys are
+  /// scoped per SERIES.
+  factory GrammarSpecException.duplicatePointKey(String markId, String key) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.duplicatePointKey,
+        'The mark "$markId" produced the pointKey "$key" for more than one '
+        'row. A pointKey is the stable identity of one observation within its '
+        'series, so it must be unique among that series\' keyed points; leave '
+        'it null (or empty) for rows that have no durable key.',
       );
 
   /// A radial spec also requested faceting.

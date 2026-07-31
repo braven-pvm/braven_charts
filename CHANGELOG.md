@@ -14,7 +14,188 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered series, tracked snapshot, intersection markers, selection, and
   independently configured axis-side tracking labels.
 
+- A measure unit on the Cartesian grammar marks: `unit:` on
+  `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
+  `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed
+  back into generated Dart source. A config-authored Cartesian chart whose
+  series declares a unit is no longer refused for it.
+- `SeriesMark<T>`, a sealed intermediate between `Mark<T>` and the six mark
+  families that lower to a series — the five Cartesian ones plus `RadialMark` —
+  declaring `unit` once for all of them. `TrendMark`, `ThresholdMark`,
+  `BandMark` and `PointMark` stay on `Mark<T>`: they lower to annotations,
+  which have no unit, so they structurally cannot carry one. Existing code is
+  unaffected; `unit` remains readable on every radial mark exactly as before.
+- Per-point metadata on the four Cartesian geometry marks: `label:` and
+  `pointKey:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`. Both are accessors (`String? Function(T)`) carried onto
+  `ChartDataPoint.label` and `ChartDataPoint.pointKey`, and both are reversed
+  back into generated Dart source. An empty string means "this point has none",
+  which is what lets a partially labelled or partially keyed series round-trip.
+- A `duplicatePointKey` Grammar diagnostic: a `pointKey` accessor that yields
+  the same key for two rows of one mark is refused by name rather than lowering
+  to a series whose selection identity is ambiguous. The Cartesian counterpart
+  of `duplicateRadialCategory`.
+- `isXOrdered:` on `BravenChart.geomLine()`, `geomArea()`, `geomBar()` and
+  `geomPoint()`, carried onto `ChartSeries.isXOrdered` and reversed back into
+  generated Dart source. It is a DECLARATION, never inferred from the data:
+  a chart that does not declare it stays unordered even when its rows happen to
+  arrive sorted, so nearest-point behaviour cannot change underneath an
+  existing chart. `geomCandlestick()` does not take it —
+  `CandlestickChartSeries` is ordered by its own contract.
+- A named refusal for a per-point `segmentStyle`, in two sentences because it is
+  two boundaries. A style setting `strokeWidth` or `dashPattern` is reported as
+  one "no V1 … mark carries"; a COLOUR-ONLY style is reported as a per-point
+  segment colour that a chain paints from `colorBy` + `colorEncoding`, which the
+  reverser cannot recover from the baked colours. Either way it beats falling
+  into the generic "does not reproduce exactly" sentence. The style is
+  deliberately not carried yet: it needs a row-field kind the synthesised rows
+  do not have, and it shares its slot with `LineMark.colorBy`, which already
+  bakes `segmentStyle.color` per point.
+- Generated Dart source now reverses the LEGACY SINGLE-AXIS chart: a
+  `BravenChartPlus` built the ordinary way — a widget-level `yAxis` and no
+  per-series binding — emits a `BravenChart` chain instead of being refused
+  with the axis sentence. Only a chart that binds SOME series and not others
+  still reaches that refusal — an all-unbound chart refused for some OTHER
+  reason is no longer told to change a binding that was never the problem.
+
+### Changed
+
+- **`BravenPlot` mounts a single-axis chain as the legacy single-axis chart.**
+  When a spec declares exactly one Y axis and no mark names it, the axis now
+  reaches `BravenChartPlus` as a widget-level `yAxis` with the series left
+  unbound, instead of as an inline `yAxisConfig` on every series. This is what
+  makes a chain and the config chart it reverses to the SAME chart rather than
+  merely similar ones.
+
+  **Rendering asks two different questions here, and they have different
+  answers.** Read both before upgrading.
+
+  - **A chain reversed from a config chart renders identically: no change.**
+    Both mounts tint the Y-axis tick and axis labels with the series colour —
+    an axis takes its colour from the first series bound to it, and a
+    widget-level axis has the chart's unbound series bound to it at render time
+    — so the change is not visible. Verified in pixels rather than argued:
+    eight chart shapes rendered at a fixed 600x400 host and compared as raw
+    RGBA, each against the config chart it claims to be, all **0 of 240,000
+    pixels differing** (`test/widgets/braven_plot_pixel_parity_test.dart`). The
+    shapes are: no widget-level axis; a labelled axis; an axis declaring `min`
+    and `max`; an axis the author named; a two-axis chart (the mount this must
+    not touch); and the three authored-spec forms of the same. Earlier releases
+    of this entry claimed the labels turned grey. That was wrong in both
+    directions and is retracted: the tinting is what the legacy mount
+    preserves, and the grey it described was a separate defect, now fixed (see
+    below).
+  - **An AUTHORED `PlotSpec` or `BravenChart` chain CHANGES appearance for six
+    shapes.** The zeroes above compare two charts that both exist *after* this
+    release; they say nothing about what an existing grammar chart drew
+    *before* it. Where a spec declares one Y axis that no mark binds to, that
+    chart is now the legacy chart — and the legacy chart honours axis settings
+    the previous mount dropped. Measured by reverting
+    `lib/src/grammar/braven_plot.dart` and
+    `lib/src/rendering/modules/multi_axis_manager.dart` to the previous
+    release, capturing every shape at the same 600x400 host, and differencing
+    the frames:
+
+    | authored single-axis shape | pixels changed (of 240,000) | in the plot area | filed under |
+    |---|---|---|---|
+    | axis declares `min` AND `max` | 25,885 | 20,770 | Fixed |
+    | `min` only | 25,126 | 20,284 | Fixed |
+    | `max` only | 23,196 | 17,854 | Fixed |
+    | `scaleType: AxisScaleType.log` | 11,948 | 11,745 | Fixed |
+    | `position: YAxisPosition.hidden` | 9,721 | 8,532 | Changed |
+    | `visible: false` | 9,721 | 8,532 | Changed |
+    | no axis declared | 0 | 0 | unchanged |
+    | a plain labelled axis | 0 | 0 | unchanged |
+    | an axis the author named | 0 | 0 | unchanged |
+
+    "In the plot area" counts the differing pixels outside the 80-column
+    Y-label gutter. Every row is asserted — both the parity zero and the size
+    of the before/after change — by the mount divergence table in
+    `test/widgets/braven_plot_pixel_parity_test.dart`, which reproduces the
+    previous mount in process, so this list cannot go stale unnoticed. The four
+    `Fixed` rows are described under **Fixed** below; the two hidden ones are
+    the next bullet.
+  - **A hidden or invisible single Y axis no longer draws horizontal grid
+    lines.** `position: YAxisPosition.hidden` and `visible: false` hide the
+    axis on either mount, and both mounts lay the plot area out identically;
+    what changed is that the previous mount kept drawing the hidden axis'
+    horizontal grid and the legacy chart does not. That accounts for the whole
+    difference, measured by removing the thing at issue: with
+    `GridConfig(horizontal: false)` the two mounts draw the byte-identical
+    frame. Unlike the four rows above this is a behaviour change rather than a
+    fix — neither mount was ignoring what the author asked for — so it is
+    called out here rather than under **Fixed**.
+  - **Extracted documents.** `BravenChartController.extractDocument()` on a
+    single-axis chain no longer sets `series[*].axisId` or
+    `series[*].inlineAxis`; the axis appears once, in `axes`. Hosts that
+    persist or diff these documents will see the shape change. It is a fix, not
+    a new capability: the document now matches the config chart's.
+
+  Four shapes are DECLINED and keep the multi-axis mount verbatim: a chart with
+  several declared axes; a one-axis chart whose mark names its axis (the author
+  asked for the multi-axis path); a `BravenFacetPlot` panel, because faceting
+  delivers the shared range `FacetScales.fixed` computes through an inline axis
+  config and a widget-level axis applies `min`/`max` where an inline one does
+  not, so re-mounting a panel would change what every faceted chart draws; and
+  any chart carrying a series family that cannot express an unbound series
+  (everything outside the five Cartesian families), which keeps the multi-axis
+  mount for the whole plot rather than mounting half of it. A radial spec
+  lowers to no Y axis at all and never reaches this shape.
+
+  An axis carrying `min`/`max` is NOT declined, although the two mounts do
+  disagree about it — only a widget-level axis applies the range to the Y
+  domain. Declining it was measured and rejected: it changes no emitter
+  refusal anywhere in the suite, and it makes the reversed chart differ from
+  the chart it was reversed from by 25,885 of 240,000 pixels, 20,770 of them in
+  the plot area. The reasoning is recorded in `_legacySingleAxisSeries`. That
+  is the same 25,885 pixels an upgrading authored chart sees, disclosed as a
+  fix below — this paragraph is about why an alternative mount was rejected,
+  and is not where the user-facing change is published.
+
 ### Fixed
+
+- **An authored single Y axis' `min`/`max` was silently ignored.** A
+  `PlotSpec` or `BravenChart` chain whose one Y axis declares `min`, `max` or
+  both, and whose marks do not bind to it, reached the chart only as an inline
+  per-series `yAxisConfig` — and the inline path never applies a range to the
+  Y domain. It was not a weaker range, it was no range: measured under the
+  previous mount, an axis with `min: 100, max: 300` drew the byte-identical
+  frame to the same axis carrying none, and so did `min`-only and `max`-only.
+  The axis now reaches the chart as a widget-level `yAxis`, which applies it,
+  and the authored chart draws exactly what the equivalent config chart draws.
+  Charts relying on the old behaviour will see the plot area move: 25,885 of
+  240,000 pixels for `min` and `max`, 25,126 for `min` only, 23,196 for `max`
+  only, at a 600x400 host.
+- **An authored single Y axis' `scaleType: AxisScaleType.log` drew log tick
+  labels over a LINEAR plot.** `BravenChartPlus` takes the Y scale type from
+  its widget-level axis — `widget.yAxis?.scaleType ?? AxisScaleType.linear` in
+  `braven_chart_plus.dart` — and the previous mount never set one, so the data
+  was mapped linearly while the axis renderer, reading the inline config,
+  labelled the ticks logarithmically. The chart was not merely linear, it was
+  mislabelled. Measured: under the previous mount a log axis' plot area is
+  byte-identical to a plain linear chart's, and the only difference between
+  them is 3,996 pixels of relabelled gutter. The data is now mapped on the
+  scale that was asked for — 11,948 of 240,000 pixels against the old chart,
+  11,745 of them in the plot area. Both halves are asserted in
+  `test/widgets/braven_plot_pixel_parity_test.dart`.
+- **A widget-level `yAxis` carrying an id of its own had nothing bound to it.**
+  A series that declares neither `yAxisId` nor an inline `yAxisConfig` is bound
+  to the chart's primary axis, but that binding named the auto-generated id
+  `'primary_axis'` literally — and that id exists only when the widget-level
+  axis carries none. Give the axis any id and every series pointed at an axis
+  the chart did not have, leaving the chart's only axis unbound: axis bounds
+  fell through to the `0..100` no-data fallback for a chart that plainly has
+  data, and the tick and axis labels dropped from the series colour to the
+  `#333333` default. Reachable three ways — a `BravenChartPlus` whose
+  widget-level `yAxis` was built with `YAxisConfig.withId`; every hand-written
+  `PlotSpec`, because lowering stamps `'axis-0'` on an axis that declares no id
+  (including the axis it invents for a spec with no `yAxes` at all); and a
+  generated chain, because extraction stamps `'y'`. The grammar shapes were
+  measured at 4,658 and 5,378 of 240,000 pixels against the config chart they
+  claim to be, all of it in the Y-label gutter; both are now 0. A chart whose
+  series carries an inline `yAxisConfig` is deliberately unchanged: the
+  widget-level axis is suppressed there, so an unbound series in that chart
+  stays unbound rather than silently adopting another series' axis and scale.
 
 - `showInLegend: false` now removes the complete series entry from every
   built-in legend path, including reusable `ChartLegend` widgets and explicit

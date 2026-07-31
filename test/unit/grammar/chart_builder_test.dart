@@ -50,6 +50,8 @@ double sampleOpen(Sample row) => row.open;
 double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
+String? sampleZoneLabel(Sample row) => row.zone;
+String? samplePointKey(Sample row) => 'key-${row.time}';
 
 const rows = <Sample>[
   Sample(
@@ -394,6 +396,300 @@ void main() {
           .toSpec();
 
       expect((spec.marks.last as TrendMark<Sample>).sourceMarkId, 'power');
+    });
+  });
+
+  group('unit reaches every Cartesian mark', () {
+    // The five Cartesian geom verbs build `SeriesMark`s, the only marks that
+    // can hold a unit. The annotation verbs (trend/threshold/band/point) build
+    // marks that structurally cannot, so there is nothing to forward there.
+    //
+    // Both assertions below compare a WHOLE MAP rather than looping with a
+    // per-family `expect`, so one missing forward cannot hide behind an
+    // earlier family's failure short-circuiting the rest.
+    Map<String, PlotSpec<Sample>> specsWith({String? unit}) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': base.geomLine(unit: unit).toSpec(),
+        'geomArea': base.geomArea(unit: unit).toSpec(),
+        'geomBar': base.geomBar(unit: unit).toSpec(),
+        'geomPoint': base.geomPoint(unit: unit).toSpec(),
+        'geomCandlestick': base
+            .geomCandlestick(
+              open: sampleOpen,
+              high: sampleHigh,
+              low: sampleLow,
+              close: sampleClose,
+              unit: unit,
+            )
+            .toSpec(),
+      };
+    }
+
+    Map<String, String?> unitsOf(Map<String, PlotSpec<Sample>> specs) => {
+      for (final entry in specs.entries)
+        entry.key: (entry.value.marks.single as SeriesMark<Sample>).unit,
+    };
+
+    test('the Cartesian geom verbs forward unit to their marks', () {
+      expect(unitsOf(specsWith(unit: 'W')), <String, String?>{
+        'geomLine': 'W',
+        'geomArea': 'W',
+        'geomBar': 'W',
+        'geomPoint': 'W',
+        'geomCandlestick': 'W',
+      });
+    });
+
+    test('omitting unit leaves every Cartesian mark unitless', () {
+      // A default of `''` or the axis unit would be silently wrong: the
+      // lowered series must stay unitless so nothing appears in a tooltip
+      // that the author never asked for.
+      expect(unitsOf(specsWith()), <String, String?>{
+        'geomLine': null,
+        'geomArea': null,
+        'geomBar': null,
+        'geomPoint': null,
+        'geomCandlestick': null,
+      });
+    });
+
+    test('geomLine with a unit equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the unit
+      // did not displace or disturb any other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power', strokeWidth: 3, unit: 'W')
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              strokeWidth: 3,
+              unit: 'W',
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
+  group('per-point label and pointKey reach the four geometry marks', () {
+    // Candlestick is deliberately absent: its points are
+    // `CandlestickDataPoint`s built by their own lowering path, and no censused
+    // chart carries per-candle text. The four verbs below are the ones whose
+    // series lower to plain `ChartDataPoint`s.
+    Map<String, PlotSpec<Sample>> specsWith({
+      FieldAccessor<Sample, String?>? label,
+      FieldAccessor<Sample, String?>? pointKey,
+    }) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': base.geomLine(label: label, pointKey: pointKey).toSpec(),
+        'geomArea': base.geomArea(label: label, pointKey: pointKey).toSpec(),
+        'geomBar': base.geomBar(label: label, pointKey: pointKey).toSpec(),
+        'geomPoint': base.geomPoint(label: label, pointKey: pointKey).toSpec(),
+      };
+    }
+
+    // Whole-map comparisons, so one missing forward cannot hide behind an
+    // earlier family's failure.
+    Map<String, Object?> accessorsOf(
+      Map<String, PlotSpec<Sample>> specs,
+      Object? Function(Mark<Sample>) read,
+    ) => <String, Object?>{
+      for (final entry in specs.entries)
+        entry.key: read(entry.value.marks.single),
+    };
+
+    test('the four verbs forward label to their marks', () {
+      expect(
+        accessorsOf(
+          specsWith(label: sampleZoneLabel),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => mark.label,
+            AreaMark<Sample>() => mark.label,
+            BarMark<Sample>() => mark.label,
+            ScatterMark<Sample>() => mark.label,
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': sampleZoneLabel,
+          'geomArea': sampleZoneLabel,
+          'geomBar': sampleZoneLabel,
+          'geomPoint': sampleZoneLabel,
+        },
+      );
+    });
+
+    test('the four verbs forward pointKey to their marks', () {
+      expect(
+        accessorsOf(
+          specsWith(pointKey: samplePointKey),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => mark.pointKey,
+            AreaMark<Sample>() => mark.pointKey,
+            BarMark<Sample>() => mark.pointKey,
+            ScatterMark<Sample>() => mark.pointKey,
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': samplePointKey,
+          'geomArea': samplePointKey,
+          'geomBar': samplePointKey,
+          'geomPoint': samplePointKey,
+        },
+      );
+    });
+
+    test('omitting both leaves every mark without per-point text', () {
+      // The control: a defaulted accessor would put text on points the author
+      // never asked to label, and would key points that have no identity.
+      expect(
+        accessorsOf(
+          specsWith(),
+          (mark) => switch (mark) {
+            LineMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            AreaMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            BarMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            ScatterMark<Sample>() => <Object?>[mark.label, mark.pointKey],
+            _ => 'not a geometry mark',
+          },
+        ),
+        <String, Object?>{
+          'geomLine': <Object?>[null, null],
+          'geomArea': <Object?>[null, null],
+          'geomBar': <Object?>[null, null],
+          'geomPoint': <Object?>[null, null],
+        },
+      );
+    });
+
+    test('geomLine with both equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the two new
+      // arguments displaced no other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(
+            name: 'Power',
+            label: sampleZoneLabel,
+            pointKey: samplePointKey,
+          )
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              label: sampleZoneLabel,
+              pointKey: samplePointKey,
+            ),
+          ],
+        ),
+      );
+    });
+  });
+
+  group('isXOrdered reaches the four geometry marks', () {
+    // Candlestick is deliberately absent: `CandlestickChartSeries` hard-codes
+    // `isXOrdered: true` and asserts against false, so the flag has no meaning
+    // there. ONE NAME at all three layers — mark field, verb parameter and
+    // `ChartSeries.isXOrdered` — so nothing has to remember a rename.
+    Map<String, PlotSpec<Sample>> specsWith({bool? isXOrdered}) {
+      final base = BravenChart.of(rows).x(sampleTime).y(samplePower);
+      return <String, PlotSpec<Sample>>{
+        'geomLine': isXOrdered == null
+            ? base.geomLine().toSpec()
+            : base.geomLine(isXOrdered: isXOrdered).toSpec(),
+        'geomArea': isXOrdered == null
+            ? base.geomArea().toSpec()
+            : base.geomArea(isXOrdered: isXOrdered).toSpec(),
+        'geomBar': isXOrdered == null
+            ? base.geomBar().toSpec()
+            : base.geomBar(isXOrdered: isXOrdered).toSpec(),
+        'geomPoint': isXOrdered == null
+            ? base.geomPoint().toSpec()
+            : base.geomPoint(isXOrdered: isXOrdered).toSpec(),
+      };
+    }
+
+    // Whole-map comparisons, so one missing forward cannot hide behind an
+    // earlier family's failure.
+    Map<String, Object?> flagsOf(Map<String, PlotSpec<Sample>> specs) =>
+        <String, Object?>{
+          for (final entry in specs.entries)
+            entry.key: switch (entry.value.marks.single) {
+              LineMark<Sample>(:final isXOrdered) => isXOrdered,
+              AreaMark<Sample>(:final isXOrdered) => isXOrdered,
+              BarMark<Sample>(:final isXOrdered) => isXOrdered,
+              ScatterMark<Sample>(:final isXOrdered) => isXOrdered,
+              _ => 'not a geometry mark',
+            },
+        };
+
+    test('the four verbs forward isXOrdered to their marks', () {
+      expect(flagsOf(specsWith(isXOrdered: true)), <String, Object?>{
+        'geomLine': true,
+        'geomArea': true,
+        'geomBar': true,
+        'geomPoint': true,
+      });
+    });
+
+    test('omitting it leaves every mark unordered', () {
+      // The control. `false` is `ChartSeries.isXOrdered`'s own default, so a
+      // mark that defaulted to true would quietly change nearest-point
+      // behaviour for every chart authored through the chain.
+      expect(flagsOf(specsWith()), <String, Object?>{
+        'geomLine': false,
+        'geomArea': false,
+        'geomBar': false,
+        'geomPoint': false,
+      });
+    });
+
+    test('geomLine with isXOrdered equals the hand-written mark', () {
+      // Whole-spec equality, this file's contract: it also proves the flag
+      // displaced no other field on the mark.
+      final spec = BravenChart.of(rows)
+          .x(sampleTime)
+          .y(samplePower)
+          .geomLine(name: 'Power', strokeWidth: 3, isXOrdered: true)
+          .toSpec();
+
+      expect(
+        spec,
+        const PlotSpec<Sample>(
+          data: rows,
+          marks: <Mark<Sample>>[
+            LineMark<Sample>(
+              id: 'mark-0',
+              x: sampleTime,
+              y: samplePower,
+              name: 'Power',
+              strokeWidth: 3,
+              isXOrdered: true,
+            ),
+          ],
+        ),
+      );
     });
   });
 
@@ -846,11 +1142,9 @@ void main() {
           mode: PolarColumnCompositionMode.grouped,
         ),
       );
-      final chart = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine(id: 'power')
-          .polarConfig(polar);
+      final chart = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine(id: 'power').polarConfig(polar);
 
       expect(chart.toSpec().polar, same(polar));
       expect(
@@ -998,12 +1292,9 @@ void main() {
 
   group('.facet sets PlotSpec.facet', () {
     test('facet with defaults lands on the spec', () {
-      final spec = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .facet(sampleZone)
-          .toSpec();
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().facet(sampleZone).toSpec();
 
       expect(spec.facet, const FacetSpec<Sample>(by: sampleZone));
       expect(spec.facet!.scales, FacetScales.fixed);
@@ -1014,7 +1305,12 @@ void main() {
           .x(sampleTime)
           .y(samplePower)
           .geomLine()
-          .facet(sampleZone, columns: 3, scales: FacetScales.freeY, label: 'Zone')
+          .facet(
+            sampleZone,
+            columns: 3,
+            scales: FacetScales.freeY,
+            label: 'Zone',
+          )
           .toSpec();
 
       expect(
@@ -1029,38 +1325,32 @@ void main() {
     });
 
     test('a chain without .facet leaves the spec unfaceted', () {
-      final spec = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .toSpec();
+      final spec = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().toSpec();
       expect(spec.facet, isNull);
     });
   });
 
   group('faceted terminals', () {
-    Matcher throwsCode(GrammarDiagnosticCode code) =>
-        throwsA(isA<GrammarSpecException>().having((e) => e.code, 'code', code));
+    Matcher throwsCode(GrammarDiagnosticCode code) => throwsA(
+      isA<GrammarSpecException>().having((e) => e.code, 'code', code),
+    );
 
     test('.build() on a faceted chain throws, directing to buildFaceted', () {
       expect(
-        () => BravenChart.of(rows)
-            .x(sampleTime)
-            .y(samplePower)
-            .geomLine()
-            .facet(sampleZone)
-            .build(),
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).geomLine().facet(sampleZone).build(),
         throwsCode(GrammarDiagnosticCode.facetedSpecNotLowerable),
       );
     });
 
     test('.buildFaceted() on a non-faceted chain throws', () {
       expect(
-        () => BravenChart.of(rows)
-            .x(sampleTime)
-            .y(samplePower)
-            .geomLine()
-            .buildFaceted(),
+        () => BravenChart.of(
+          rows,
+        ).x(sampleTime).y(samplePower).geomLine().buildFaceted(),
         throwsCode(GrammarDiagnosticCode.notFaceted),
       );
     });
@@ -1078,11 +1368,9 @@ void main() {
     });
 
     test('.build() on a non-faceted chain still returns a BravenPlot', () {
-      final widget = BravenChart.of(rows)
-          .x(sampleTime)
-          .y(samplePower)
-          .geomLine()
-          .build();
+      final widget = BravenChart.of(
+        rows,
+      ).x(sampleTime).y(samplePower).geomLine().build();
       expect(widget, isA<BravenPlot<Sample>>());
     });
   });

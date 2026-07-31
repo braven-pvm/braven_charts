@@ -111,6 +111,7 @@ import '../grammar/grammar_diagnostics.dart';
 import '../grammar/mark.dart';
 import '../grammar/plot_lowering.dart';
 import '../grammar/plot_spec.dart';
+import '../grammar/series_axis_unbinding.dart';
 import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/chart_annotation.dart';
@@ -1842,10 +1843,13 @@ class _GrammarChainEmitter {
   ///   [_sameAnnotation] for annotations, which spells the comparison out
   ///   because `ChartAnnotation` declares no `operator ==`) genuinely proves
   ///   the reconstruction: a channel, value or option a mark fails to carry
-  ///   diverges here and is refused. The one caveat inside that proof is that a
-  ///   config object a mark carries VERBATIM (a data-label or style config)
+  ///   diverges here and is refused. Two caveats sit inside that proof. First,
+  ///   a config object a mark carries VERBATIM (a data-label or style config)
   ///   travels into the rebuilt series as the captured instance, so that field
-  ///   is a passthrough sitting inside an otherwise genuine comparison.
+  ///   is a passthrough sitting inside an otherwise genuine comparison. Second,
+  ///   the series comparison holds ONE normalisation — the legacy single-axis
+  ///   binding — which the comparison site below states, gates and explains;
+  ///   nothing else about a series is normalised away.
   /// - **Passthrough.** `xAxis`, `theme`, `interaction`, `grid`, `title`,
   ///   `subtitle` and `showLegend` are handed to the proof spec AS the captured
   ///   instances (see the spec built in `_tryEmitChain`) and `lowerPlotSpec`
@@ -1874,12 +1878,78 @@ class _GrammarChainEmitter {
     if (lowered.series.length != configuration.series.length) {
       return (subject: 'the series list', detail: _genericLossDetail);
     }
+    // A chart authored through the single-axis path carries no per-series
+    // binding at all, while lowering ALWAYS binds — `_bindAxis` resolves
+    // `mark.yAxisId ?? axes.first.id` and stamps the resolved axis onto every
+    // series. `BravenPlot` now mounts that same legacy shape for a chain that
+    // declares one axis and binds no mark (see `braven_plot.dart`), so the two
+    // are the SAME chart and the binding lowering added is not a difference.
+    //
+    // The gate is deliberately narrow, and the narrowness is the whole point.
+    // "A null yAxisId means axes.first" is WRONG: `getEffectiveYAxes` ignores
+    // the widget-level yAxis as soon as any series carries an inline config,
+    // and in exactly that case `getEffectiveBindings` still sends an unbound
+    // series to the synthetic 'primary_axis' — there is no primary axis left
+    // for it to join — and not to the first declared axis. A document with
+    // one series bound inline and one unbound is reachable, and treating the
+    // unbound one as bound to the other's axis renders a DIFFERENT chart
+    // (measured: 4265 of 960000 pixels differ under
+    // normalizationMode.perSeries). Hence: every captured series unbound, and
+    // exactly one declared axis.
+    //
+    // The two clauses are NOT equally load-bearing and are NOT equally
+    // guarded, and saying which is which is the honest framing. Each of these
+    // was measured by mutation, applied and reverted inside one invocation:
+    //
+    //  - Dropping the all-unbound clause FAILS eight tests — round-trip shapes
+    //    5, 29b, 29c, 29d, 30e, 31b and 31d, plus the named guard below. (The
+    //    count grew as later slices added shapes; re-measured 2026-07-31.) The
+    //    clause is
+    //    load-bearing in the opposite direction from the obvious one: it is
+    //    what keeps a single-axis chart whose captured series ARE bound
+    //    EMITTING. Without it the lowered side is stripped while the captured
+    //    side keeps its binding, so the comparison can never be met and a
+    //    perfectly reproducible chart is wrongly REFUSED. "a single-axis chart
+    //    with an EXPLICIT binding still emits" states that coupling by name.
+    //  - Dropping the `axes.length == 1` clause on its own changes nothing any
+    //    test can see: a document declaring two axes with no series bound is
+    //    rejected a layer earlier, by the grammar's own unboundAxis
+    //    diagnostic, because lowering binds every unbound mark to `axes.first`
+    //    and leaves the second axis with nothing measuring against it. That
+    //    half really is defence in depth, and no test attributes a refusal to
+    //    it. Dropping BOTH clauses together DOES fail (shape 3, multi-axis),
+    //    so the pair is guarded even though this half alone is not.
+    //  - Normalising BOTH sides instead — the "null means axes.first" shape —
+    //    makes the mixed-binding document emit and fails "a MIXED binding is
+    //    still refused". That guard pins the ASYMMETRY of the comparison
+    //    below, NOT this gate: it stays green under every widening of the gate,
+    //    up to and including deleting it outright, because the captured side is
+    //    never stripped and its binding always has to be met.
+    final legacySingleAxis =
+        configuration.axes.length == 1 &&
+        configuration.series.every(
+          (series) => series.yAxisId == null && series.yAxisConfig == null,
+        );
     for (var index = 0; index < lowered.series.length; index++) {
       final expected = configuration.series[index];
-      if (lowered.series[index] != expected) {
+      // Only the LOWERED side is normalised. The captured side is left exactly
+      // as it was extracted, so a captured binding can never be normalised
+      // AWAY — the comparison still has to meet it, whatever the gate says.
+      final actual = legacySingleAxis
+          ? _withoutAxisBinding(lowered.series[index])
+          : lowered.series[index];
+      if (actual != expected) {
+        // The NORMALISED series, deliberately: the detail has to explain the
+        // comparison that actually failed. Handing the un-normalised one over
+        // makes the axis sentence reachable for a chart whose binding this
+        // loop already normalised away — a legacy single-axis chart refused
+        // for a per-point field would then be told to "bind every series
+        // explicitly — or none", which it already satisfies. When the gate did
+        // NOT apply, or the family cannot be unbound, `actual` IS the lowered
+        // series and the axis sentence stays exactly as reachable as before.
         return (
           subject: 'series "${expected.id}"',
-          detail: _seriesLossDetail(expected, lowered.series[index]),
+          detail: _seriesLossDetail(expected, actual),
         );
       }
     }
@@ -1954,23 +2024,33 @@ class _GrammarChainEmitter {
   /// supports and defaulting the rest, so the fields that differ are precisely
   /// the options no V1 mark carries. Naming the first such field turns "does
   /// not reproduce exactly" into an actionable boundary. When the only
-  /// difference is the axis binding — the captured chart used the single-axis
-  /// path and left `yAxisId` unset, while the grammar always binds every
-  /// series to an explicit axis — that is called out specifically, because it
-  /// is the usual reason a config-authored single-axis chart cannot round-trip.
+  /// difference is the axis binding, that is called out specifically — and
+  /// only the MIXED case can reach it, because [_firstMismatch] passes the
+  /// series it actually compared: for a legacy single-axis chart the binding
+  /// has already been normalised off the [lowered] side, so it cannot differ
+  /// here and the sentence cannot fire. (Stated as a contract, not as an
+  /// argument about argument order: an all-unbound chart refused for a
+  /// per-point field used to be told to bind every series "explicitly — or
+  /// none", advice it already satisfied.)
   String _seriesLossDetail(ChartSeries expected, ChartSeries lowered) {
     final field = _firstUncarriedField(expected, lowered);
     if (field != null) {
       return 'It carries $field, which no V1 ${_familyWord(expected)} mark '
           'carries.';
     }
+    // Per-POINT options are named before the axis binding below. For a MIXED
+    // binding — the one shape that still reaches the axis sentence — both are
+    // true at once, and the per-point field is the more specific of the two.
+    final pointDetail = _pointLossDetail(expected, lowered);
+    if (pointDetail != null) return pointDetail;
     if (expected.yAxisId != lowered.yAxisId ||
         (expected.yAxisConfig == null) != (lowered.yAxisConfig == null)) {
-      return 'The captured chart leaves this series\' yAxisId unset (the '
-          'single-axis path), while the grammar binds every series to an '
-          'explicit axis, so the reconstructed chain would render a different '
-          'chart document. Author the chart through the grammar, or with '
-          'explicit .yAxis(...) declarations, to express it as a chain.';
+      return 'The captured chart leaves this series\' yAxisId unset while the '
+          'grammar binds every series to an explicit axis, so the '
+          'reconstructed chain would render a different chart document. A '
+          'chart that leaves EVERY series unbound is reproduced as the '
+          'single-axis chart it is; this one does not, so bind every series '
+          'explicitly — or none — to express it as a chain.';
     }
     return _genericLossDetail;
   }
@@ -1984,6 +2064,18 @@ class _GrammarChainEmitter {
     CandlestickChartSeries() => 'candlestick',
     _ => 'V1',
   };
+
+  /// [series] with its Y-axis binding removed, for the legacy single-axis
+  /// comparison in [_firstMismatch].
+  ///
+  /// The family list is [seriesWithoutAxisBinding]'s, shared with `BravenPlot`
+  /// so the mount and this comparison can never disagree about which families
+  /// can be unbound — see that function's docstring for what drift would cost.
+  /// The fallback is this side's, and it is the OPPOSITE one: a family the
+  /// helper cannot unbind is returned UNCHANGED, so it keeps its binding and
+  /// FAILS the comparison rather than slipping through it.
+  static ChartSeries _withoutAxisBinding(ChartSeries series) =>
+      seriesWithoutAxisBinding(series) ?? series;
 
   /// The first option set on [expected] that the [lowered] series does not
   /// carry, phrased for a diagnostic, or null when the two differ only in
@@ -2061,6 +2153,65 @@ class _GrammarChainEmitter {
         break;
     }
     return null;
+  }
+
+  /// The sentence naming the PER-POINT option set on [expected] that the
+  /// [lowered] points do not reproduce, or null when the points differ in some
+  /// other way — or not at all.
+  ///
+  /// Only `segmentStyle` is named, and it is named because it is deliberately
+  /// NOT carried:
+  ///
+  ///  - measured, carrying it unblocks ZERO states — the one censused chart
+  ///    using it still refuses on a marker field behind it;
+  ///  - it would need a new row-field kind, since a synthesised row has slots
+  ///    for numbers, strings, stamps and colours only; and
+  ///  - it collides with `LineMark.colorBy`, which already bakes
+  ///    `segmentStyle.color` into each point at lowering, so the same slot has
+  ///    two owners.
+  ///
+  /// Dropping it silently would change the dashes and colours the chart draws,
+  /// so the honest outcome is a NAMED boundary rather than the generic tail.
+  /// Revisit with roadmap item 1d.
+  ///
+  /// That last collision is why there are TWO sentences rather than one. A
+  /// style setting `strokeWidth` or `dashPattern` is one no V1 mark can produce
+  /// at all. A COLOUR-ONLY style is the exact shape `_xyColorPoints` bakes for
+  /// a line or area mark carrying `colorBy` + `colorEncoding` — the showcase
+  /// ships such charts — so "no V1 line mark carries it" would be false there:
+  /// the chain paints those colours, and it is the REVERSE direction that
+  /// fails, since the channel and its encoding cannot be recovered from the
+  /// baked result. Bar and scatter are deliberately not in that branch: a bar's
+  /// colour channel bakes into `pointStyle` and a scatter's into `colorValue`,
+  /// so a `segmentStyle` on either really is uncarried.
+  static String? _pointLossDetail(ChartSeries expected, ChartSeries lowered) {
+    // A length difference is not a per-point OPTION loss — it is a different
+    // dataset — so it is left to the generic tail rather than misnamed here.
+    if (expected.points.length != lowered.points.length) return null;
+    var differs = false;
+    var everyDifferenceIsColourOnly = true;
+    for (var index = 0; index < expected.points.length; index++) {
+      final captured = expected.points[index].segmentStyle;
+      if (captured == lowered.points[index].segmentStyle) continue;
+      differs = true;
+      if (captured == null ||
+          captured.color == null ||
+          captured.strokeWidth != null ||
+          captured.dashPattern != null) {
+        everyDifferenceIsColourOnly = false;
+      }
+    }
+    if (!differs) return null;
+    final bakesSegmentColour =
+        expected is LineChartSeries || expected is AreaChartSeries;
+    if (everyDifferenceIsColourOnly && bakesSegmentColour) {
+      return 'It carries a per-point segment colour. A chain paints those from '
+          'a colorBy channel plus a colorEncoding, and the reverser cannot '
+          'recover that channel from the baked colours, so declare colorBy and '
+          'colorEncoding on the geom verb to express it.';
+    }
+    return 'It carries a per-point segment style, which no V1 '
+        '${_familyWord(expected)} mark carries.';
   }
 
   /// Structural equality for two annotations of the SAME expressible type.
@@ -2270,6 +2421,36 @@ class _GrammarChainEmitter {
   Object Function(_SourceRow) _string(_Field field) =>
       (row) => row.strings[field.slot];
 
+  /// [_string]'s `String`-typed sibling, for the per-point text accessors.
+  ///
+  /// The radial category channel is `FieldAccessor<T, Object?>` and takes
+  /// [_string]; `label`/`pointKey` are `FieldAccessor<T, String?>`, and a
+  /// closure typed `Object Function(_SourceRow)` is not assignable to that.
+  String Function(_SourceRow) _text(_Field field) =>
+      (row) => row.strings[field.slot];
+
+  /// Plans one per-point text accessor (`label` or `pointKey`) for [series],
+  /// or returns null when no point carries one.
+  ///
+  /// The row slot is a NON-NULLABLE `String`, so a point that carried nothing
+  /// is written as `''`. That is not a lossy shortcut: lowering reads `''` back
+  /// as "no value" (see `_pointText` in `plot_lowering.dart`), so a partially
+  /// labelled or partially keyed series reproduces exactly. It also matters for
+  /// `pointKey` specifically — `ChartDataPoint` ASSERTS a non-empty key, so
+  /// there is no other string a bare point could travel as.
+  FieldAccessor<_SourceRow, String?>? _planPointText(
+    ChartSeries series,
+    String base,
+    String role,
+    Map<String, _Field> accessors,
+    String? Function(ChartDataPoint) read,
+  ) {
+    if (series.points.every((point) => read(point) == null)) return null;
+    final field = _addField(_suffixed(base, role), _FieldKind.string);
+    accessors[role] = field;
+    return _text(field);
+  }
+
   DateTime Function(_SourceRow) _stamp(_Field field) =>
       (row) => row.stamps[field.slot]!;
 
@@ -2286,6 +2467,9 @@ class _GrammarChainEmitter {
     final id = series.id;
     final name = series.name;
     final color = series.color;
+    // `unit` is a SeriesMark field every Cartesian family carries, so it is
+    // reversed once here beside the other shared identity fields.
+    final unit = series.unit;
     final yAxisId = series.yAxisId;
 
     switch (series) {
@@ -2311,6 +2495,7 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
             yAxisId: yAxisId,
             x: x,
             open: _number(open),
@@ -2324,6 +2509,20 @@ class _GrammarChainEmitter {
       case LineChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2331,6 +2530,10 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
+            label: label,
+            pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2345,6 +2548,20 @@ class _GrammarChainEmitter {
       case ScatterChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         Channel<_SourceRow>? quantitative(
           String role,
           double? Function(ChartDataPoint) read,
@@ -2380,6 +2597,10 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
+            label: label,
+            pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2402,6 +2623,20 @@ class _GrammarChainEmitter {
       case AreaChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2409,6 +2644,10 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
+            label: label,
+            pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2425,6 +2664,20 @@ class _GrammarChainEmitter {
       case BarChartSeries():
         final y = _addField(base, _FieldKind.number);
         accessors['y'] = y;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
         return _GeometryPlan(
           series: series,
           accessors: accessors,
@@ -2432,6 +2685,10 @@ class _GrammarChainEmitter {
             id: id,
             name: name,
             color: color,
+            unit: unit,
+            label: label,
+            pointKey: pointKey,
+            isXOrdered: series.isXOrdered,
             yAxisId: yAxisId,
             x: x,
             y: _number(y),
@@ -2581,6 +2838,25 @@ class _GrammarChainEmitter {
             }
           case ChartSeries():
             row.numbers[plan.accessors['y']!.slot] = series.points[index].y;
+        }
+        // Per-point text is family-independent, so it is written once here
+        // rather than in each arm. Only the four Cartesian geometry families
+        // plan these fields, so a candlestick plan simply has neither key and
+        // this reads nothing.
+        //
+        // A point that carried nothing is written as '' — the empty string is
+        // how "no label / no key" travels through a non-nullable row slot, and
+        // lowering reads it back as null.
+        final labelField = plan.accessors['label'];
+        final keyField = plan.accessors['pointKey'];
+        if (labelField != null || keyField != null) {
+          final point = series.points[index];
+          if (labelField != null) {
+            row.strings[labelField.slot] = point.label ?? '';
+          }
+          if (keyField != null) {
+            row.strings[keyField.slot] = point.pointKey ?? '';
+          }
         }
       }
     }
@@ -3097,6 +3373,45 @@ class _GrammarChainEmitter {
       }
       _optionalString(writer, 'name', mark.name);
       _optionalColor(writer, 'color', mark.color);
+      // `unit` sits on the shared SeriesMark intermediate, and every Cartesian
+      // geom verb takes it in this slot — directly after `color:` — so it is
+      // written once here rather than in each family case, exactly as the
+      // radial chain writes it (see _emitRadialGeometry). The four reference
+      // marks are not SeriesMarks and structurally have no unit; TrendMark is
+      // the only non-series mark this switch can reach.
+      if (mark is SeriesMark<_SourceRow>) {
+        _optionalString(writer, 'unit', mark.unit);
+      }
+      // Per-point text, read out of the PLAN rather than off the mark: the four
+      // geometry marks that carry `label`/`pointKey` share no intermediate, and
+      // `plan.accessors` is already how every other synthesised accessor
+      // (open/high/low/close, the scatter channels) reaches this writer. A plan
+      // holds an entry only when some point carried a value, so a chart with no
+      // per-point text emits neither argument.
+      final label = plan.accessors['label'];
+      if (label != null) writer.namedArgument('label', label.accessor());
+      final pointKey = plan.accessors['pointKey'];
+      if (pointKey != null) {
+        writer.namedArgument('pointKey', pointKey.accessor());
+      }
+      // `isXOrdered` is read off the MARK, unlike the two accessors above: it
+      // is a plain declared flag, not a synthesised row accessor, so there is
+      // nothing in the plan to read. The four families that carry it share no
+      // intermediate — `CandlestickMark` is a `SeriesMark` too, but its series
+      // hard-codes the flag — so this is a switch rather than a base-class
+      // read, and the default arm is what keeps candlestick and trend silent.
+      //
+      // Written ONLY when true. False is the default on the mark, on the verb
+      // and on `ChartSeries`, so a chart that declares nothing must emit
+      // exactly the text it emitted before this slice.
+      final isXOrdered = switch (mark) {
+        LineMark<_SourceRow>() => mark.isXOrdered,
+        AreaMark<_SourceRow>() => mark.isXOrdered,
+        BarMark<_SourceRow>() => mark.isXOrdered,
+        ScatterMark<_SourceRow>() => mark.isXOrdered,
+        _ => false,
+      };
+      if (isXOrdered) writer.namedArgument('isXOrdered', 'true');
       switch (mark) {
         case LineMark<_SourceRow>():
           _optionalNumber(writer, 'strokeWidth', mark.strokeWidth);

@@ -79,8 +79,36 @@ sealed class Mark<T> {
   final String? yAxisId;
 }
 
+/// A mark that lowers to a `ChartSeries`.
+///
+/// Split out from [Mark] so that [unit] — which every lowered series carries
+/// (`ChartSeries.unit`) — reaches the geometry marks and CANNOT reach
+/// [TrendMark]/[ThresholdMark]/[BandMark]/[PointMark], which lower to
+/// `ChartAnnotation`s. No annotation type in this package has a unit, and the
+/// round-trip proof compares annotations with a helper that never reads one, so
+/// a unit on those marks would be accepted and silently discarded with nothing
+/// able to catch it.
+///
+/// [yAxisId] stays optional here rather than required: [RadialMark] extends
+/// this class and deliberately does not forward it, because a radial series
+/// measures against no Y axis.
+sealed class SeriesMark<T> extends Mark<T> {
+  /// Shared identity fields plus the measure unit.
+  const SeriesMark({
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    this.unit,
+  });
+
+  /// Measure unit carried onto the lowered series (`ChartSeries.unit`). Null
+  /// lowers to a series with no unit.
+  final String? unit;
+}
+
 /// A connected line through `(x, y)`.
-final class LineMark<T> extends Mark<T> {
+final class LineMark<T> extends SeriesMark<T> {
   /// Creates a line geometry.
   const LineMark({
     required this.x,
@@ -89,6 +117,10 @@ final class LineMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
+    this.label,
+    this.pointKey,
+    this.isXOrdered = false,
     this.colorBy,
     this.colorEncoding,
     this.strokeWidth,
@@ -103,6 +135,33 @@ final class LineMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every point unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one point unlabelled.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// This is the identity selection is expressed against, so it must be unique
+  /// among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that point unkeyed, and unkeyed points never collide with each
+  /// other.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`), which lets hit-testing and selection binary-
+  /// search instead of scanning.
+  ///
+  /// DECLARED, never derived. The lowering does not inspect the data to decide
+  /// this: a sorted-looking dataset is not a promise that the next one will be,
+  /// and inferring it would silently change nearest-point behaviour for every
+  /// chart whose rows happen to arrive in order. Defaults to false, the same
+  /// default `ChartSeries` has.
+  final bool isXOrdered;
 
   /// Optional colour channel: each segment's stroke is the ramp colour of the
   /// leading point's value over the data's finite domain, baked at lowering
@@ -140,6 +199,10 @@ final class LineMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.strokeWidth == strokeWidth &&
@@ -156,6 +219,10 @@ final class LineMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
+    label,
+    pointKey,
+    isXOrdered,
     colorBy,
     colorEncoding,
     strokeWidth,
@@ -170,7 +237,7 @@ final class LineMark<T> extends Mark<T> {
 }
 
 /// A filled band between `y` and a baseline.
-final class AreaMark<T> extends Mark<T> {
+final class AreaMark<T> extends SeriesMark<T> {
   /// Creates an area geometry.
   const AreaMark({
     required this.x,
@@ -179,6 +246,10 @@ final class AreaMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
+    this.label,
+    this.pointKey,
+    this.isXOrdered = false,
     this.colorBy,
     this.colorEncoding,
     this.baseline,
@@ -195,6 +266,26 @@ final class AreaMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every point unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one point unlabelled.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that point unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Optional colour channel. Colours the area's TOP EDGE per segment (the
   /// leading-point rule), NOT the fill — value-driven fill is not yet
@@ -238,6 +329,10 @@ final class AreaMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.colorBy == colorBy &&
           other.colorEncoding == colorEncoding &&
           other.baseline == baseline &&
@@ -256,6 +351,10 @@ final class AreaMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
+    label,
+    pointKey,
+    isXOrdered,
     colorBy,
     colorEncoding,
     baseline,
@@ -275,7 +374,7 @@ final class AreaMark<T> extends Mark<T> {
 ///
 /// Orientation is NOT a per-mark property: transposing a Cartesian chart is a
 /// whole-chart operation in this package, expressed by [PlotSpec.transposed].
-final class BarMark<T> extends Mark<T> {
+final class BarMark<T> extends SeriesMark<T> {
   /// Creates a bar geometry.
   const BarMark({
     required this.x,
@@ -284,6 +383,10 @@ final class BarMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
+    this.label,
+    this.pointKey,
+    this.isXOrdered = false,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barGap,
@@ -302,6 +405,29 @@ final class BarMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// bar labels. Null leaves every bar unlabelled; an accessor that returns
+  /// null — or `''`, which is treated as the same thing — leaves that one bar
+  /// unlabelled.
+  ///
+  /// This is the per-POINT text. [labelStyle] is the series-wide configuration
+  /// that decides how such a label is drawn; the two compose.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that bar unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Optional colour channel: each bar's fill is the ramp colour of this
   /// field's value over the data's finite domain, baked at lowering into
@@ -359,6 +485,10 @@ final class BarMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.barWidthPercent == barWidthPercent &&
           other.barWidthPixels == barWidthPixels &&
           other.barGap == barGap &&
@@ -371,14 +501,22 @@ final class BarMark<T> extends Mark<T> {
           other.sizeBy == sizeBy &&
           other.sizeEncoding == sizeEncoding;
 
+  // `Object.hashAll`, not `Object.hash`: this mark's field list is the longest
+  // in the file and `Object.hash` stops at 20 positional arguments, which the
+  // list below has already passed. The list form has no such ceiling, so a
+  // field added here fails on its merits rather than on an arity limit.
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
     x,
     y,
     id,
     name,
     color,
     yAxisId,
+    unit,
+    label,
+    pointKey,
+    isXOrdered,
     barWidthPercent,
     barWidthPixels,
     barGap,
@@ -390,7 +528,7 @@ final class BarMark<T> extends Mark<T> {
     colorEncoding,
     sizeBy,
     sizeEncoding,
-  );
+  ]);
 
   @override
   String toString() => 'BarMark(id: $id, name: $name)';
@@ -415,7 +553,7 @@ final class BarMark<T> extends Mark<T> {
 /// `GrammarDiagnosticCode.missingChannelEncoding`. The package ships no
 /// categorical palette and no default color ramp, and inventing one here would
 /// mint design surface the rest of the library does not have.
-final class ScatterMark<T> extends Mark<T> {
+final class ScatterMark<T> extends SeriesMark<T> {
   /// Creates a scatter geometry.
   const ScatterMark({
     required this.x,
@@ -424,6 +562,10 @@ final class ScatterMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
+    this.label,
+    this.pointKey,
+    this.isXOrdered = false,
     this.size,
     this.sizeEncoding,
     this.colorBy,
@@ -442,6 +584,30 @@ final class ScatterMark<T> extends Mark<T> {
 
   /// Vertical position accessor.
   final FieldAccessor<T, num> y;
+
+  /// Per-point label accessor (`ChartDataPoint.label`), read by tooltips and
+  /// data-point labels. Null leaves every marker unlabelled; an accessor that
+  /// returns null — or `''`, which is treated as the same thing — leaves that
+  /// one marker unlabelled.
+  ///
+  /// Distinct from [categoryBy]: a label identifies ONE point, while several
+  /// points share a category value — which is why a category drives the
+  /// categorical scale and a label does not.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey` rather than lowering to a series
+  /// whose selection is ambiguous. Null — or `''`, treated as the same thing —
+  /// leaves that marker unkeyed, and unkeyed points never collide.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Declares that this mark's rows are already sorted ascending by [x]
+  /// (`ChartSeries.isXOrdered`). DECLARED, never derived — see
+  /// [LineMark.isXOrdered]. Defaults to false, the same default `ChartSeries`
+  /// has.
+  final bool isXOrdered;
 
   /// Marker-area channel. Lowers to `ChartDataPoint.magnitude`.
   final Channel<T>? size;
@@ -486,6 +652,10 @@ final class ScatterMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
+          other.isXOrdered == isXOrdered &&
           other.size == size &&
           other.sizeEncoding == sizeEncoding &&
           other.colorBy == colorBy &&
@@ -506,6 +676,10 @@ final class ScatterMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
+    label,
+    pointKey,
+    isXOrdered,
     size,
     sizeEncoding,
     colorBy,
@@ -524,7 +698,7 @@ final class ScatterMark<T> extends Mark<T> {
 }
 
 /// An open-high-low-close candle per row.
-final class CandlestickMark<T> extends Mark<T> {
+final class CandlestickMark<T> extends SeriesMark<T> {
   /// Creates a candlestick geometry.
   const CandlestickMark({
     required this.x,
@@ -536,6 +710,7 @@ final class CandlestickMark<T> extends Mark<T> {
     super.name,
     super.color,
     super.yAxisId,
+    super.unit,
     this.timestamp,
   });
 
@@ -571,6 +746,7 @@ final class CandlestickMark<T> extends Mark<T> {
           other.name == name &&
           other.color == color &&
           other.yAxisId == yAxisId &&
+          other.unit == unit &&
           other.timestamp == timestamp;
 
   @override
@@ -584,6 +760,7 @@ final class CandlestickMark<T> extends Mark<T> {
     name,
     color,
     yAxisId,
+    unit,
     timestamp,
   );
 
@@ -850,15 +1027,18 @@ final class PointMark<T> extends Mark<T> {
 /// radial branch of `spec.lower()`, may contain no other mark, and honors no
 /// Cartesian axis/grid option. Like the Cartesian marks these hold functions,
 /// so they carry no `copyWith` and no `@chartSurface`.
-sealed class RadialMark<T> extends Mark<T> {
+sealed class RadialMark<T> extends SeriesMark<T> {
   /// Shared radial channels plus the inherited identity fields.
+  ///
+  /// [Mark.yAxisId] is deliberately NOT forwarded: a radial series measures
+  /// against no Y axis, so binding one would be accepted and discarded.
   const RadialMark({
     required this.category,
     required this.value,
     super.id,
     super.name,
     super.color,
-    this.unit,
+    super.unit,
   });
 
   /// Slice/column identity accessor. Stringified into the category label.
@@ -866,10 +1046,6 @@ sealed class RadialMark<T> extends Mark<T> {
 
   /// Magnitude accessor: angle-share for pie/donut, radius for polar.
   final FieldAccessor<T, num> value;
-
-  /// Measure unit carried by every radial series (`ChartSeries.unit`). Null
-  /// lowers to a series with no unit. Shared by pie/donut/concentric/polar.
-  final String? unit;
 }
 
 /// A pie: each row is a slice, [RadialMark.value] is the angle-share.
