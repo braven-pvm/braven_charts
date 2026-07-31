@@ -4883,6 +4883,70 @@ void main() {
       );
     });
 
+    testWidgets(
+      'shape 41: the collapsed .x(field, label:) form is pinned by LINE',
+      (tester) async {
+        // MAXIMAL fixture: `.x(` takes exactly ONE optional — `label:` — and
+        // this fixture sets it EXPLICITLY, so no theme-resolved value lands in
+        // the pinned text. `_emitX` writes this collapsed single-line form only
+        // when the label is the ONLY thing set on the X axis (it compares the
+        // whole `XAxisConfig` against `XAxisConfig(label: label)`); an X axis
+        // carrying anything else travels as a `.x(...)` plus a separate
+        // `.xAxis(` literal, which this test does NOT pin.
+        //
+        // Pinned by LINE, not by `literalArguments`: measured, that helper
+        // CANNOT read a single-line verb. `literalArguments(source, '.x(')`
+        // does not throw — it slices from the line AFTER the opening token and
+        // returns the NEXT verb's body, so a test written that way pins
+        // somebody else's arguments and stays GREEN when this writer is
+        // deleted. Every single-line verb needs the whole-LINE form instead.
+        //
+        // Measured, one mutation set of 4 — the collapsed-form `writeLine`
+        // statement deleted; the `label:` branch of its ternary collapsed onto
+        // the label-less branch (the survivor's own writer, deleted); an
+        // unconditional `, probe: 'x'` added INSIDE the collapsed line; and an
+        // unconditional `writer.namedArgument('probe', "'x'")` added to
+        // `_emitX` — 4 of 4 caught, the last of them by the compile gate below
+        // rather than by the line assertion.
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT, label: 'Elapsed')
+                .geomLine(y: samplePower, name: 'Power')
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // Collected as a LIST rather than read with `firstWhere`, because the
+        // silent failure mode that `expect(opening.allMatches(source).length,
+        // 1)` closes for a whole-list assertion applies to a whole-line one
+        // too: `firstWhere` reads only the FIRST `.x(` line and says nothing
+        // about a second. Whole-list equality on the matching lines pins the
+        // COUNT as well as the text. `.xAxis(` does not match — `startsWith`
+        // is on the literal `.x(`.
+        final xLines = generated.source
+            .split('\n')
+            .map((line) => line.trim())
+            .where((line) => line.startsWith('.x('))
+            .toList();
+        expect(xLines, <String>[".x((row) => row.x, label: 'Elapsed')"]);
+        // The line above pins emitted TEXT and nothing more; only `dart
+        // analyze` against the real package proves `label:` is a parameter of
+        // `BravenChart.x`. It also closes the one addition direction a line
+        // assertion is blind to on its own: an argument added on its OWN line
+        // leaves the `.x(` line byte-identical, and is caught here as a source
+        // that no longer parses.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_x_collapsed_label',
+          ),
+        );
+      },
+    );
+
     testWidgets('shape 12: a pie emits geomPie and round-trips', (
       tester,
     ) async {
