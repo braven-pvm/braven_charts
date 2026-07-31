@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered series, tracked snapshot, intersection markers, selection, and
   independently configured axis-side tracking labels.
 
-
 - A measure unit on the Cartesian grammar marks: `unit:` on
   `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
   `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed
@@ -197,8 +196,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   series carries an inline `yAxisConfig` is deliberately unchanged: the
   widget-level axis is suppressed there, so an unbound series in that chart
   stays unbound rather than silently adopting another series' axis and scale.
-
-### Fixed
 
 - `showInLegend: false` now removes the complete series entry from every
   built-in legend path, including reusable `ChartLegend` widgets and explicit
