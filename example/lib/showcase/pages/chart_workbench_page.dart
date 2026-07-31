@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../data/portable_chart_showcase_generator.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
-
-enum _WorkbenchDataset { recovery, intervals, distribution }
 
 /// Demonstrates Chart/Data/Split/Source composition and host actions.
 class ChartWorkbenchPage extends StatefulWidget {
@@ -25,8 +25,8 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
 
   final _chartController = _ShowcaseChartController();
   final _workbenchController = ChartWorkbenchController();
-  var _dataset = _WorkbenchDataset.recovery;
-  var _generation = 1;
+  late PortableShowcaseChartStory _story;
+  var _seed = 51001;
   var _captureSequence = 0;
   var _rowLayout = ChartTableRowLayout.wide;
   var _refreshPolicy = ChartTableRefreshPolicy.onDocumentRevision;
@@ -34,6 +34,15 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
   String? _capturedJson;
   String? _captureError;
   List<ChartArtifactWarning> _captureWarnings = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _story = PortableChartShowcaseGenerator.generate(
+      _seed,
+      kind: PortableShowcaseChartKind.mixed,
+    );
+  }
 
   @override
   void dispose() {
@@ -44,19 +53,21 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
 
   ChartDocumentExtractOptions get _documentOptions =>
       ChartDocumentExtractOptions(
-        documentId: 'workbench-${_dataset.name}-$_generation',
+        documentId: 'workbench-${_story.kind.name}-${_story.seed}',
         includeViewState: true,
         yAxisFormatterDescriptors: {'y': _twoDecimalFormatter},
       );
 
   void _generateDataset() {
     setState(() {
-      _generation += 1;
-      _dataset = _WorkbenchDataset
-          .values[(_dataset.index + 1) % _WorkbenchDataset.values.length];
+      final previousKind = _story.kind;
+      do {
+        _story = PortableChartShowcaseGenerator.generate(++_seed);
+      } while (_story.kind == previousKind);
       _captureError = null;
       _captureWarnings = const [];
     });
+    _refreshAfterChartUpdate();
   }
 
   void _changeRowLayout(ChartTableRowLayout value) {
@@ -89,9 +100,10 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
     if (!mounted) return;
     setState(() {
       _refreshPolicy = ChartTableRefreshPolicy.manual;
-      _generation += 1;
-      _dataset = _WorkbenchDataset
-          .values[(_dataset.index + 1) % _WorkbenchDataset.values.length];
+      final previousKind = _story.kind;
+      do {
+        _story = PortableChartShowcaseGenerator.generate(++_seed);
+      } while (_story.kind == previousKind);
     });
   }
 
@@ -110,7 +122,8 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
         provenance: ChartArtifactProvenance(
           values: JsonObjectValue({
             'surface': const JsonStringValue('chart-workbench-showcase'),
-            'dataset': JsonStringValue(_dataset.name),
+            'seed': JsonNumberValue(_story.seed),
+            'family': JsonStringValue(_story.kind.name),
           }),
         ),
       ),
@@ -142,10 +155,25 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final compactHeader = MediaQuery.sizeOf(context).width < 900;
     return ChartPageLayout(
       title: 'Chart Workbench',
       subtitle:
-          'Inspect one effective chart as an interactive view, native data, reusable Dart source, or a portable artifact',
+          'Build one chart, then give users linked Chart, Data, Split, and Source views plus safe product actions',
+      actions: [
+        if (compactHeader)
+          IconButton(
+            tooltip: 'Generate another chart',
+            onPressed: _generateDataset,
+            icon: const Icon(Icons.casino_outlined),
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: _generateDataset,
+            icon: const Icon(Icons.casino_outlined),
+            label: const Text('Generate another chart'),
+          ),
+      ],
       optionsChildren: _buildOptions(),
       chart: _buildShowcase(),
     );
@@ -222,7 +250,7 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
         icon: Icons.auto_graph_outlined,
         children: [
           ActionButton(
-            label: 'Generate another dataset',
+            label: 'Generate another chart',
             icon: Icons.casino_outlined,
             onPressed: _generateDataset,
           ),
@@ -266,16 +294,22 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FeatureStrip(hasCapture: _capturedArtifact != null),
-        const SizedBox(height: 16),
-        const _PointLinkingHint(),
-        const SizedBox(height: 16),
+        _WorkbenchJourneyOverview(hasCapture: _capturedArtifact != null),
+        const SizedBox(height: 24),
+        const _JourneySectionHeader(
+          eyebrow: 'LINKED PRESENTATION',
+          step: '1',
+          title: 'Explore one mounted chart in four ways',
+          description:
+              'Switch views below. The chart stays mounted, table rows link to exact points, and Source reflects the same effective document.',
+        ),
+        const SizedBox(height: 12),
         SizedBox(
           height: MediaQuery.sizeOf(context).width < 700 ? 760 : 570,
           child: ChartCard(
-            title: _datasetTitle,
+            title: _story.title,
             subtitle:
-                '$_datasetDescription · generation $_generation · one mounted chart',
+                '${_story.summary} · seed ${_story.seed} · one mounted chart',
             padding: const EdgeInsets.all(8),
             child: BravenChartWorkbench(
               key: const ValueKey('showcase-chart-workbench'),
@@ -336,26 +370,14 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
               chartBuilder: (context, controller) => BravenChartPlus(
                 key: const ValueKey('workbench-mounted-chart'),
                 bravenChartController: controller,
-                title: _datasetTitle,
-                subtitle: _datasetDescription,
-                series: _series,
-                annotations: [
-                  ThresholdAnnotation(
-                    id: 'workbench-reference',
-                    axis: AnnotationAxis.y,
-                    value: _referenceValue,
-                    label: 'Reference',
-                  ),
-                ],
-                xAxisConfig: const XAxisConfig(
-                  label: 'Sample',
-                  min: 0,
-                  max: 15,
-                ),
-                yAxis: YAxisConfig(
-                  position: YAxisPosition.left,
-                  label: 'Value',
-                ),
+                title: _story.title,
+                subtitle: _story.explanation,
+                series: _story.series,
+                annotations: _story.annotations,
+                theme: _story.theme,
+                showLegend: _story.showLegend,
+                xAxisConfig: _story.xAxisConfig,
+                yAxis: _story.yAxis,
                 contextMenuConfig: const ChartContextMenuConfig(
                   enableLongPress: true,
                 ),
@@ -363,116 +385,63 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+        const _JourneySectionHeader(
+          eyebrow: 'HOST BOUNDARY',
+          step: '2',
+          title: 'Send the current chart back to your app',
+          description:
+              'Add to report extracts a portable artifact. Workbench does not save, upload, authorize, or retain it.',
+        ),
+        const SizedBox(height: 12),
         _ArtifactProofCard(
           artifact: _capturedArtifact,
           encodedJson: _capturedJson,
           error: _captureError,
           warnings: _captureWarnings,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+        const _JourneySectionHeader(
+          eyebrow: 'INDEPENDENT RUNTIMES',
+          step: '3',
+          title: 'Restore independent copies and compare changes',
+          description:
+              'Each hydrated chart gets its own controller; document comparison remains explicit and source-preserving.',
+        ),
+        const SizedBox(height: 12),
+        _HydratedComparisonShowcase(
+          chartController: _chartController,
+          documentOptions: _documentOptions,
+          sourceToken: '${_story.kind.name}-${_story.seed}',
+        ),
+        const SizedBox(height: 24),
+        const _JourneySectionHeader(
+          eyebrow: 'ADVANCED PROOF',
+          step: '4',
+          title: 'Control table freshness for live data',
+          description:
+              'A bounded stream continues updating while the user controls when the data view refreshes.',
+        ),
+        const SizedBox(height: 12),
         const _BoundedStreamProof(),
-        const SizedBox(height: 16),
-        _HydratedComparisonShowcase(controller: _workbenchController),
-        const SizedBox(height: 16),
-        const _UsageCard(),
+        const SizedBox(height: 24),
+        const _WorkbenchCodeReference(),
         const SizedBox(height: 16),
       ],
     ),
   );
-
-  String get _datasetTitle => switch (_dataset) {
-    _WorkbenchDataset.recovery => 'Recovery response',
-    _WorkbenchDataset.intervals => 'Interval comparison',
-    _WorkbenchDataset.distribution => 'Sample distribution',
-  };
-
-  String get _datasetDescription => switch (_dataset) {
-    _WorkbenchDataset.recovery => 'Line and area series over a shared X axis',
-    _WorkbenchDataset.intervals => 'Grouped bars for observed and target work',
-    _WorkbenchDataset.distribution => 'Scatter samples with a reference trend',
-  };
-
-  double get _referenceValue => switch (_dataset) {
-    _WorkbenchDataset.recovery => 125,
-    _WorkbenchDataset.intervals => 110,
-    _WorkbenchDataset.distribution => 95,
-  };
-
-  List<ChartSeries> get _series {
-    final phase = _generation * 0.37;
-    List<ChartDataPoint> points(double base, double amplitude, double offset) =>
-        List.generate(16, (index) {
-          final wave = math.sin(index / 2.4 + phase + offset) * amplitude;
-          final trend = (_generation % 4 - 1.5) * index * 0.35;
-          return ChartDataPoint(x: index.toDouble(), y: base + wave + trend);
-        });
-
-    return switch (_dataset) {
-      _WorkbenchDataset.recovery => [
-        AreaChartSeries(
-          id: 'load',
-          name: 'Training load',
-          unit: 'AU',
-          color: const Color(0xFF4F46E5),
-          points: points(128, 24, 0),
-          interpolation: LineInterpolation.monotone,
-          fillOpacity: 0.18,
-        ),
-        LineChartSeries(
-          id: 'readiness',
-          name: 'Readiness',
-          unit: 'AU',
-          color: const Color(0xFF059669),
-          points: points(105, 15, 1.1),
-          interpolation: LineInterpolation.monotone,
-          showDataPointMarkers: true,
-        ),
-      ],
-      _WorkbenchDataset.intervals => [
-        BarChartSeries(
-          id: 'observed',
-          name: 'Observed',
-          unit: 'kJ',
-          color: const Color(0xFF2563EB),
-          points: points(112, 18, 0),
-          barWidthPercent: 0.62,
-        ),
-        BarChartSeries(
-          id: 'target',
-          name: 'Target',
-          unit: 'kJ',
-          color: const Color(0xFFF59E0B),
-          points: points(104, 10, 1.4),
-          barWidthPercent: 0.62,
-        ),
-      ],
-      _WorkbenchDataset.distribution => [
-        ScatterChartSeries(
-          id: 'observed',
-          name: 'Observed',
-          unit: 'ms',
-          color: const Color(0xFF7C3AED),
-          points: points(96, 22, 0.6),
-          markerRadius: 4,
-        ),
-        LineChartSeries(
-          id: 'trend',
-          name: 'Trend',
-          unit: 'ms',
-          color: const Color(0xFFDC2626),
-          points: points(98, 9, 0),
-          interpolation: LineInterpolation.bezier,
-        ),
-      ],
-    };
-  }
 }
 
 class _HydratedComparisonShowcase extends StatefulWidget {
-  const _HydratedComparisonShowcase({required this.controller});
+  const _HydratedComparisonShowcase({
+    required this.chartController,
+    required this.documentOptions,
+    required this.sourceToken,
+  });
 
-  final ChartWorkbenchController controller;
+  final BravenChartController chartController;
+  final ChartDocumentExtractOptions documentOptions;
+  final String sourceToken;
 
   @override
   State<_HydratedComparisonShowcase> createState() =>
@@ -491,23 +460,27 @@ class _HydratedComparisonShowcaseState
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_schedulePreparation);
+    widget.chartController.addListener(_schedulePreparation);
     WidgetsBinding.instance.addPostFrameCallback((_) => _schedulePreparation());
   }
 
   @override
   void didUpdateWidget(_HydratedComparisonShowcase oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_schedulePreparation);
-      widget.controller.addListener(_schedulePreparation);
+    if (oldWidget.chartController != widget.chartController) {
+      oldWidget.chartController.removeListener(_schedulePreparation);
+      widget.chartController.addListener(_schedulePreparation);
+      _sourceRevision = null;
+      _schedulePreparation();
+    } else if (oldWidget.sourceToken != widget.sourceToken) {
+      _sourceRevision = null;
       _schedulePreparation();
     }
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_schedulePreparation);
+    widget.chartController.removeListener(_schedulePreparation);
     for (final controller in _tileControllers) {
       controller.dispose();
     }
@@ -515,19 +488,25 @@ class _HydratedComparisonShowcaseState
   }
 
   void _schedulePreparation() {
-    final snapshot = widget.controller.tableSnapshot;
-    if (snapshot == null ||
-        snapshot.revision == _sourceRevision ||
-        _prepareScheduled) {
-      return;
-    }
+    if (_prepareScheduled) return;
     _prepareScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prepareScheduled = false;
       if (!mounted) return;
-      final current = widget.controller.tableSnapshot;
-      if (current == null || current.revision == _sourceRevision) return;
-      _prepare(current);
+      final extracted = widget.chartController.extractDocument(
+        widget.documentOptions,
+      );
+      switch (extracted) {
+        case ChartArtifactSuccess<ChartDocumentSnapshot>():
+          if (extracted.value.revision == _sourceRevision) return;
+          _prepare(extracted.value);
+        case ChartArtifactFailure<ChartDocumentSnapshot>():
+          setState(() {
+            _configurations = null;
+            _comparison = null;
+            _comparisonError = extracted.error;
+          });
+      }
     });
   }
 
@@ -612,6 +591,7 @@ class _HydratedComparisonShowcaseState
   Widget build(BuildContext context) {
     final configurations = _configurations;
     return Card(
+      key: const ValueKey('workbench-comparison-proof'),
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -961,89 +941,368 @@ ChartDocument _scaledDocument(
   return ChartDocument.fromJson(json);
 }
 
-class _FeatureStrip extends StatelessWidget {
-  const _FeatureStrip({required this.hasCapture});
+class _WorkbenchJourneyOverview extends StatelessWidget {
+  const _WorkbenchJourneyOverview({required this.hasCapture});
 
   final bool hasCapture;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 12.0;
-        final columns = constraints.maxWidth >= 840 ? 3 : 1;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.secondaryContainer.withValues(alpha: 0.42),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _FeatureCard(
-              width: width,
-              step: '1',
-              icon: Icons.view_week_outlined,
-              title: 'Choose a view',
-              description:
-                  'Chart, native data, Split, or reusable Dart—without remounting.',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.hub_outlined, color: colors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'One chart, four linked views, one host-owned result',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'BravenChartPlus renders the chart. BravenChartWorkbench wraps that same mounted chart when users also need its exact data, generated source, or an app-specific action.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            _FeatureCard(
-              width: width,
-              step: '2',
-              icon: Icons.link_outlined,
-              title: 'Link rows to points',
-              description:
-                  'Focus or select a row to highlight its exact chart points.',
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final decisions = [
+                  const _WorkbenchDecision(
+                    icon: Icons.show_chart,
+                    title: 'Use BravenChartPlus directly',
+                    description: 'Your screen only needs an interactive chart.',
+                  ),
+                  const _WorkbenchDecision(
+                    icon: Icons.dashboard_customize_outlined,
+                    title: 'Add a Workbench',
+                    description:
+                        'Users need Chart, Data, Split, or Source—or must send the current chart into your workflow.',
+                  ),
+                ];
+                if (constraints.maxWidth < 720) {
+                  return Column(
+                    children: [
+                      for (
+                        var index = 0;
+                        index < decisions.length;
+                        index++
+                      ) ...[
+                        decisions[index],
+                        if (index != decisions.length - 1)
+                          const SizedBox(height: 8),
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: decisions[0]),
+                    const SizedBox(width: 12),
+                    Expanded(child: decisions[1]),
+                  ],
+                );
+              },
             ),
-            _FeatureCard(
-              width: width,
-              step: '3',
-              icon: hasCapture
-                  ? Icons.check_circle_outline
-                  : Icons.extension_outlined,
-              title: hasCapture ? 'Portable copy ready' : 'Run a host action',
-              description: 'Capture JSON and a PNG without owning persistence.',
-              complete: hasCapture,
-            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            const _WorkbenchFlow(),
+            const SizedBox(height: 12),
+            _WorkbenchOutcome(hasCapture: hasCapture, colors: colors),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _PointLinkingHint extends StatelessWidget {
-  const _PointLinkingHint();
+class _WorkbenchDecision extends StatelessWidget {
+  const _WorkbenchDecision({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.secondaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
+        color: colors.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.outlineVariant),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.ads_click_outlined),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Try linked views and host actions'),
-                  SizedBox(height: 4),
-                  Text(
-                    'Click a data row to link its chart points. Right-click the chart, press Shift+F10, or long-press to run the same host action beside native annotation commands.',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: colors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkbenchFlow extends StatelessWidget {
+  const _WorkbenchFlow();
+
+  static const _steps = [
+    (
+      icon: Icons.show_chart,
+      title: 'Your chart',
+      detail: 'One mounted BravenChartPlus',
+    ),
+    (
+      icon: Icons.view_week_outlined,
+      title: 'Linked views',
+      detail: 'Chart · Data · Split · Source',
+    ),
+    (
+      icon: Icons.extension_outlined,
+      title: 'Host action',
+      detail: 'For example, Add to report',
+    ),
+    (
+      icon: Icons.inventory_2_outlined,
+      title: 'Your application',
+      detail: 'Owns storage, policy, and navigation',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final isVertical = constraints.maxWidth < 760;
+      final children = <Widget>[];
+      for (var index = 0; index < _steps.length; index++) {
+        final step = _steps[index];
+        children.add(
+          isVertical
+              ? _WorkbenchFlowNode(
+                  icon: step.icon,
+                  title: step.title,
+                  detail: step.detail,
+                )
+              : Expanded(
+                  child: _WorkbenchFlowNode(
+                    icon: step.icon,
+                    title: step.title,
+                    detail: step.detail,
+                  ),
+                ),
+        );
+        if (index != _steps.length - 1) {
+          children.add(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isVertical ? 0 : 8,
+                vertical: isVertical ? 4 : 0,
+              ),
+              child: Icon(
+                isVertical
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_forward_rounded,
+                size: 18,
               ),
             ),
-          ],
+          );
+        }
+      }
+      return isVertical
+          ? Column(children: children)
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: children,
+            );
+    },
+  );
+}
+
+class _WorkbenchFlowNode extends StatelessWidget {
+  const _WorkbenchFlowNode({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '$title. $detail',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: colors.primary),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkbenchOutcome extends StatelessWidget {
+  const _WorkbenchOutcome({required this.hasCapture, required this.colors});
+
+  final bool hasCapture;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(
+        hasCapture ? Icons.check_circle_outline : Icons.touch_app_outlined,
+        size: 18,
+        color: colors.primary,
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          key: const ValueKey('workbench-outcome-status'),
+          hasCapture
+              ? 'Portable result ready below. The Workbench returned it; this demo host chose what to do next.'
+              : 'Try it below: switch views, select a data row, then choose Add to report. Nothing is saved until the host handles the returned artifact.',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ),
+    ],
+  );
+}
+
+class _JourneySectionHeader extends StatelessWidget {
+  const _JourneySectionHeader({
+    required this.eyebrow,
+    required this.step,
+    required this.title,
+    required this.description,
+  });
+
+  final String eyebrow;
+  final String step;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 17,
+          backgroundColor: colors.primaryContainer,
+          foregroundColor: colors.onPrimaryContainer,
+          child: Text(
+            step,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                eyebrow,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.7,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                description,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1083,85 +1342,6 @@ class _PointLinkStatus extends StatelessWidget {
       );
     },
   );
-}
-
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.width,
-    required this.step,
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.complete = false,
-  });
-
-  final double width;
-  final String step;
-  final IconData icon;
-  final String title;
-  final String description;
-  final bool complete;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: width,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: complete
-              ? colors.primaryContainer
-              : colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: complete ? colors.primary : colors.outlineVariant,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: complete
-                    ? colors.primary
-                    : colors.secondaryContainer,
-                foregroundColor: complete
-                    ? colors.onPrimary
-                    : colors.onSecondaryContainer,
-                child: Text(step),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(icon, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _BoundedStreamProof extends StatefulWidget {
@@ -1768,71 +1948,167 @@ class _ShowcaseChartController extends BravenChartController {
   }
 }
 
-class _UsageCard extends StatelessWidget {
-  const _UsageCard();
+class _WorkbenchCodeReference extends StatefulWidget {
+  const _WorkbenchCodeReference();
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  State<_WorkbenchCodeReference> createState() =>
+      _WorkbenchCodeReferenceState();
+}
+
+class _WorkbenchCodeReferenceState extends State<_WorkbenchCodeReference> {
+  static const _snippets = [
+    (
+      label: 'Compose linked views',
+      source: '''final workbenchController = ChartWorkbenchController();
+
+final workbench = BravenChartWorkbench(
+  workbenchController: workbenchController,
+  initialDisplayMode: ChartDisplayMode.split,
+  availableDisplayModes: const {
+    ChartDisplayMode.chart,
+    ChartDisplayMode.data,
+    ChartDisplayMode.split,
+    ChartDisplayMode.source,
+  },
+  chartBuilder: (context, chartController) => BravenChartPlus(
+    bravenChartController: chartController,
+    series: series,
+  ),
+);''',
+    ),
+    (
+      label: 'Return an artifact',
+      source: '''BravenChartWorkbench(
+  chartBuilder: (context, chartController) => BravenChartPlus(
+    bravenChartController: chartController,
+    series: series,
+  ),
+  actionsBuilder: (context, handle) => [
+    FilledButton.icon(
+      icon: const Icon(Icons.bookmark_add_outlined),
+      label: const Text('Add to report'),
+      onPressed: () async {
+        final result = await handle.extractArtifact(options);
+        switch (result) {
+          case ChartArtifactSuccess<ChartArtifact>():
+            await reportStore.add(result.value);
+          case ChartArtifactFailure<ChartArtifact>():
+            showArtifactError(result.error);
+        }
+      },
+    ),
+  ],
+);''',
+    ),
+  ];
+
+  var _selectedSnippet = 0;
+  var _wrapLines = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final snippet = _snippets[_selectedSnippet];
+    return Card(
+      key: const ValueKey('workbench-code-reference'),
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Use the workbench without coupling storage',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Build the chart with the supplied controller. Add host actions through the stable handle, then persist the returned artifact wherever your application chooses.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
+          Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add Workbench without handing it storage',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The supplied chart controller links every view. The stable handle returns an artifact; your application decides whether and where to persist it.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SegmentedButton<int>(
+                      key: const ValueKey('workbench-code-snippet-selector'),
+                      showSelectedIcon: false,
+                      segments: [
+                        for (var index = 0; index < _snippets.length; index++)
+                          ButtonSegment<int>(
+                            value: index,
+                            label: Text(_snippets[index].label),
+                          ),
+                      ],
+                      selected: {_selectedSnippet},
+                      onSelectionChanged: (selection) =>
+                          setState(() => _selectedSnippet = selection.single),
+                    ),
+                    Text(
+                      'Dart · ${snippet.label}',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    IconButton(
+                      tooltip: _wrapLines
+                          ? 'Disable line wrapping'
+                          : 'Wrap lines',
+                      onPressed: () => setState(() => _wrapLines = !_wrapLines),
+                      icon: Icon(
+                        _wrapLines ? Icons.wrap_text : Icons.horizontal_rule,
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      key: const ValueKey('copy-workbench-code'),
+                      onPressed: () => _copyCode(context, snippet),
+                      icon: const Icon(Icons.copy_all_outlined),
+                      label: const Text('Copy code'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            child: const SelectableText(
-              'BravenChartWorkbench(\n'
-              '  initialDisplayMode: ChartDisplayMode.split,\n'
-              '  tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,\n'
-              '  chartBuilder: (context, controller) => BravenChartPlus(\n'
-              '    bravenChartController: controller,\n'
-              '    series: series,\n'
-              '  ),\n'
-              '  // Table rows focus/select matching chart points by default.\n'
-              '  actionsBuilder: (context, handle) => [\n'
-              '    FilledButton(\n'
-              '      onPressed: () => save(handle.extractArtifact(options)),\n'
-              "      child: const Text('Add to report'),\n"
-              '    ),\n'
-              '  ],\n'
-              '  contextActionsBuilder: (context, handle, invocation) => [\n'
-              '    ChartContextAction(\n'
-              "      id: 'host.addToReport',\n"
-              "      label: 'Add to report',\n"
-              '      onSelected: () => save(handle.extractArtifact(options)),\n'
-              '    ),\n'
-              '  ],\n'
-              '  chartActionButtonBuilder: (context, handle) =>\n'
-              '      ChartOverlayAction(\n'
-              "        id: 'host.addToReport',\n"
-              "        tooltip: 'Add chart to report',\n"
-              '        icon: Icons.bookmark_add_outlined,\n'
-              '        onPressed: () => save(handle.extractArtifact(options)),\n'
-              '      ),\n'
-              ');',
-              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          Divider(height: 1, color: colors.outlineVariant),
+          SizedBox(
+            height: 390,
+            child: ChartCodeBlock(
+              code: snippet.source,
+              wrapLines: _wrapLines,
+              semanticLabel: '${snippet.label} Dart example',
+              surfaceKey: const ValueKey('workbench-usage-code-window'),
+              codeKey: const ValueKey('workbench-usage-code'),
             ),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+
+  Future<void> _copyCode(
+    BuildContext context,
+    ({String label, String source}) snippet,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: snippet.source));
+    if (!context.mounted) return;
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text('${snippet.label} code copied')));
+  }
 }

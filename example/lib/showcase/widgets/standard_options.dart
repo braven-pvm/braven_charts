@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'chart_options.dart';
 import 'options_panel.dart';
+import 'showcase_guide_link.dart';
 import 'showcase_randomizer.dart';
 
 /// Separates stable authored examples from the exhaustive generated sandbox.
@@ -379,6 +380,10 @@ class ChartPageLayout extends StatelessWidget {
     required bool showOptionsButton,
   }) {
     final theme = Theme.of(context);
+    final guideScope = ShowcaseGuideScope.maybeOf(context);
+    final guide = guideScope == null
+        ? null
+        : showcaseGuideForPage(guideScope.page);
     final headerActions = <Widget>[
       ...?actions,
       // Compact pages expose the same action inside the options sheet. Keeping
@@ -419,6 +424,13 @@ class ChartPageLayout extends StatelessWidget {
                   if (titleBadge != null) ...[
                     const SizedBox(width: 10),
                     titleBadge!,
+                  ],
+                  if (guide != null && guideScope != null) ...[
+                    const SizedBox(width: 8),
+                    ShowcaseGuideButton(
+                      guide: guide,
+                      onOpen: guideScope.onOpenPublicUrl,
+                    ),
                   ],
                 ],
               );

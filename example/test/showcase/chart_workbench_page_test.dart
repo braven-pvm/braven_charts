@@ -18,10 +18,21 @@ void main() {
     await _settleWorkbench(tester);
 
     expect(find.text('Chart Workbench'), findsOneWidget);
-    expect(find.text('Choose a view'), findsOneWidget);
-    expect(find.text('Link rows to points'), findsOneWidget);
-    expect(find.text('Try linked views and host actions'), findsOneWidget);
-    expect(find.text('Run a host action'), findsOneWidget);
+    expect(
+      find.text('One chart, four linked views, one host-owned result'),
+      findsOneWidget,
+    );
+    expect(find.text('Use BravenChartPlus directly'), findsOneWidget);
+    expect(find.text('Add a Workbench'), findsOneWidget);
+    expect(find.text('Your chart'), findsOneWidget);
+    expect(find.text('Linked views'), findsOneWidget);
+    expect(find.text('Host action'), findsOneWidget);
+    expect(find.text('Your application'), findsOneWidget);
+    expect(find.text('Explore one mounted chart in four ways'), findsOneWidget);
+    expect(
+      find.text('Send the current chart back to your app'),
+      findsOneWidget,
+    );
     expect(find.byType(BravenChartWorkbench), findsNWidgets(2));
     expect(find.byType(BravenChartPlus), findsNWidgets(5));
     expect(find.byType(ChartDataTable), findsNWidgets(2));
@@ -49,6 +60,39 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses the standard copyable Dart code surface', (tester) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final codeReference = find.byKey(
+      const ValueKey('workbench-code-reference'),
+    );
+    await tester.ensureVisible(codeReference);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('workbench-usage-code-window')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('workbench-usage-code')), findsOneWidget);
+    expect(find.byType(ChartCodeBlock), findsOneWidget);
+    expect(find.text('Compose linked views'), findsWidgets);
+    expect(find.text('Return an artifact'), findsOneWidget);
+    expect(find.byKey(const ValueKey('copy-workbench-code')), findsOneWidget);
+
+    await tester.tap(find.text('Return an artifact'));
+    await tester.pumpAndSettle();
+
+    final code = tester.widget<ChartCodeBlock>(find.byType(ChartCodeBlock));
+    expect(code.code, contains('handle.extractArtifact(options)'));
+    expect(code.code, contains('reportStore.add(result.value)'));
     expect(tester.takeException(), isNull);
   });
 
@@ -100,8 +144,8 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(find.text('Add to report'), findsOneWidget);
-    await tester.tap(find.text('Add to report'));
+    expect(find.text('Add to report'), findsWidgets);
+    await tester.tap(find.text('Add to report').last);
     await _settleWorkbench(tester, includeAsyncDelay: true);
 
     expect(find.text('Portable copy returned to the host'), findsOneWidget);
@@ -198,7 +242,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('chart-source-code')), findsOneWidget);
-    expect(find.text('Copy code'), findsOneWidget);
+    expect(
+      find.descendant(of: mainWorkbench, matching: find.text('Copy code')),
+      findsOneWidget,
+    );
     expect(find.byType(BravenChartPlus), findsNWidgets(5));
     expect(tester.takeException(), isNull);
   });
@@ -214,8 +261,8 @@ void main() {
     await _settleWorkbench(tester);
     expect(find.text('3 documents'), findsOneWidget);
     expect(find.textContaining('aligned rows'), findsOneWidget);
-    expect(find.text('Hide Training load'), findsNWidgets(3));
-    expect(find.text('All 2 series are visible.'), findsNWidgets(3));
+    expect(find.text('Hide Observed'), findsNWidgets(3));
+    expect(find.text('All 3 series are visible.'), findsNWidgets(3));
 
     BravenChartPlus restoredChart(int index) => tester.widget<BravenChartPlus>(
       find.descendant(
@@ -248,7 +295,7 @@ void main() {
           .value
           .document
           .series,
-      hasLength(2),
+      hasLength(3),
     );
 
     final secondTileToggle = find.byKey(
@@ -258,13 +305,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(secondTileToggle);
     await tester.pumpAndSettle();
-    expect(find.text('Show Training load'), findsOneWidget);
-    expect(find.text('Hide Training load'), findsNWidgets(2));
+    expect(find.text('Show Observed'), findsOneWidget);
+    expect(find.text('Hide Observed'), findsNWidgets(2));
     expect(
-      find.text('Training load is hidden in this restored chart only.'),
+      find.text('Observed is hidden in this restored chart only.'),
       findsOneWidget,
     );
-    expect(find.text('All 2 series are visible.'), findsNWidgets(2));
+    expect(find.text('All 3 series are visible.'), findsNWidgets(2));
     expect(planController.hiddenSeriesIds, contains(targetSeriesId));
     final after = planController.extractDocument(visibleSeriesOptions);
     expect(after, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
@@ -273,7 +320,7 @@ void main() {
           .value
           .document
           .series,
-      hasLength(1),
+      hasLength(2),
     );
     expect(restoredChart(0).bravenChartController!.hiddenSeriesIds, isEmpty);
     expect(restoredChart(2).bravenChartController!.hiddenSeriesIds, isEmpty);
@@ -289,6 +336,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('prepares document comparison without an active data view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+
+    final mainWorkbench = find.byKey(
+      const ValueKey('showcase-chart-workbench'),
+    );
+    await tester.tap(
+      find.descendant(of: mainWorkbench, matching: find.text('Chart')),
+    );
+    await _settleWorkbench(tester);
+
+    final comparisonProof = find.byKey(
+      const ValueKey('workbench-comparison-proof'),
+    );
+    expect(
+      find.descendant(
+        of: comparisonProof,
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: comparisonProof,
+        matching: find.text('Three independently hydrated charts'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('keeps restored controls attached after the source changes', (
     tester,
   ) async {
@@ -298,21 +382,28 @@ void main() {
 
     await tester.pumpWidget(subject());
     await _settleWorkbench(tester);
-    await tester.tap(find.text('Generate another dataset'));
+    await tester.tap(find.text('Generate another chart').first);
     await _settleWorkbench(tester);
 
-    expect(find.text('Hide Observed'), findsNWidgets(3));
     final secondTileToggle = find.byKey(
       const ValueKey('comparison-tile-toggle-1'),
     );
+    final sourceChart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('comparison-tile-1')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    final seriesName = sourceChart.series.first.name!;
+    expect(find.text('Hide $seriesName'), findsNWidgets(3));
     await tester.ensureVisible(secondTileToggle);
     await tester.pumpAndSettle();
     await tester.tap(secondTileToggle);
     await tester.pumpAndSettle();
 
-    expect(find.text('Show Observed'), findsOneWidget);
+    expect(find.text('Show $seriesName'), findsOneWidget);
     expect(
-      find.text('Observed is hidden in this restored chart only.'),
+      find.text('$seriesName is hidden in this restored chart only.'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -347,9 +438,9 @@ void main() {
     );
     await tester.tap(firstRow);
     await _settleWorkbench(tester);
-    expect(find.text('2 selected'), findsOneWidget);
+    expect(find.text('3 selected'), findsOneWidget);
     final selectedTable = tester.widget<ChartDataTable>(mainTable);
-    expect(selectedTable.selectedPointRefs.length, 2);
+    expect(selectedTable.selectedPointRefs.length, 3);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('showcase-chart-workbench')),
@@ -365,7 +456,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(addToReport);
     await _settleWorkbench(tester, includeAsyncDelay: true);
-    expect(find.text('2 selected points'), findsOneWidget);
+    expect(find.text('3 selected points'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -382,7 +473,7 @@ void main() {
     await _settleWorkbench(tester, includeAsyncDelay: true);
 
     expect(find.text('Portable copy returned to the host'), findsOneWidget);
-    expect(find.text('Portable copy ready'), findsOneWidget);
+    expect(find.textContaining('Portable result ready below'), findsOneWidget);
     expect(find.textContaining('workbench-capture-1'), findsOneWidget);
     expect(find.text('Preview attached'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -546,20 +637,61 @@ void main() {
 
     await tester.pumpWidget(subject());
     await _settleWorkbench(tester);
-    expect(find.text('Recovery response'), findsWidgets);
+    final workbench = find.byKey(const ValueKey('showcase-chart-workbench'));
+    final beforeChart = tester.widget<BravenChartPlus>(
+      find.descendant(of: workbench, matching: find.byType(BravenChartPlus)),
+    );
+    final beforeTable = tester.widget<ChartDataTable>(
+      find.descendant(of: workbench, matching: find.byType(ChartDataTable)),
+    );
 
-    await tester.tap(find.text('Generate another dataset'));
+    await tester.tap(find.text('Generate another chart').first);
     await _settleWorkbench(tester);
 
-    expect(find.text('Interval comparison'), findsWidgets);
-    final table = tester.widget<ChartDataTable>(
-      find.descendant(
-        of: find.byKey(const ValueKey('showcase-chart-workbench')),
-        matching: find.byType(ChartDataTable),
-      ),
+    final afterChart = tester.widget<BravenChartPlus>(
+      find.descendant(of: workbench, matching: find.byType(BravenChartPlus)),
     );
-    expect(table.model?.documentId, 'workbench-intervals-2');
+    final table = tester.widget<ChartDataTable>(
+      find.descendant(of: workbench, matching: find.byType(ChartDataTable)),
+    );
+    expect(afterChart.title, isNot(beforeChart.title));
+    expect(table.model?.documentId, isNot(beforeTable.model?.documentId));
+    expect(table.model?.documentId, startsWith('workbench-'));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps varied generated chart families inside one Workbench', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final workbench = find.byKey(const ValueKey('showcase-chart-workbench'));
+    final seriesTypes = <Type>{};
+    final titles = <String>{};
+    for (var generation = 0; generation < 8; generation++) {
+      final chart = tester.widget<BravenChartPlus>(
+        find.descendant(of: workbench, matching: find.byType(BravenChartPlus)),
+      );
+      seriesTypes.add(chart.series.first.runtimeType);
+      titles.add(chart.title!);
+      final table = tester.widget<ChartDataTable>(
+        find.descendant(of: workbench, matching: find.byType(ChartDataTable)),
+      );
+      expect(table.model?.rowCount, greaterThan(0));
+      expect(find.text('3 documents'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Generate another chart').first);
+      await _settleWorkbench(tester);
+    }
+
+    expect(titles, hasLength(8));
+    expect(seriesTypes.length, greaterThanOrEqualTo(4));
   });
 
   testWidgets('keeps the showcase usable on a compact viewport', (
