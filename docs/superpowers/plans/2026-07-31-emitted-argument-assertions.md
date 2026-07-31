@@ -27,9 +27,15 @@ commit, not the tick — this table is what a reader should trust if the two dis
 | 3.1 maximal `GridConfig(` | `e80a7301` | 40 |
 | 3.2 collapsed `.x(field, label:)` by LINE | `e0014c9f` | 41 |
 | 3.3 radial + polar tails | `e3c07607` | 42, 43 |
-| Slice 3 review fixups | this commit | — (comments, guards, docs) |
+| Slice 3 review fixups | `b99ddb61` | — (comments, guards, docs) |
+| 4.1 showcase deletion coverage | `8fd16d33` | — (all nine `expectShowcaseEmits` lists) |
 
-Slice 4 and the Final Verification list are still open.
+Task 4.2 and the Final Verification list are still open. Slice 4's measured
+mutation set, for the record Task 4.2 has to fold in: **83** writer-statement
+deletions behind the nine showcase lists, one at a time, plus **3**
+unconditional probe additions — **86 of 86 caught**, and all 83 deletions were
+caught by the FRAGMENT (the failure names the missing argument) rather than by
+the compile gate reacting to broken output.
 
 ## Global Constraints
 
@@ -555,19 +561,19 @@ git commit -m "test(source): pin the radial and polar series colour and name arg
 **Interfaces:**
 - Produces: each showcase case fails if an argument its own emitted chain contains is deleted.
 
-- [ ] **Step 1: Read the harness**
+- [x] **Step 1: Read the harness**
 
 Find `expectShowcaseEmits` and read what it asserts today. These cases have **no `rebuilt:` closure**, so whole-list equality does not apply — they need the deletion-coverage form instead.
 
-- [ ] **Step 2: Write the failing test for ONE case first**
+- [x] **Step 2: Write the failing test for ONE case first**
 
 For a single showcase case, assert that its emitted source contains the arguments that case's chart actually sets. Derive the list from the real emitted output, not from the page source. Confirm it passes, then confirm it FAILS when one of those writer lines is deleted.
 
-- [ ] **Step 3: Extend to the remaining eight**, each verified the same way.
+- [x] **Step 3: Extend to the remaining eight**, each verified the same way.
 
-- [ ] **Step 4: MUTATION-VERIFY across the set** — pick three arguments spanning different verbs, delete each, and confirm at least one showcase case fails for each.
+- [x] **Step 4: MUTATION-VERIFY across the set** — pick three arguments spanning different verbs, delete each, and confirm at least one showcase case fails for each.
 
-- [ ] **Step 5: Full suite, example suite, format gate, analyzes, commit**
+- [x] **Step 5: Full suite, example suite, format gate, analyzes, commit**
 
 ```bash
 flutter test && (cd example && flutter test)
