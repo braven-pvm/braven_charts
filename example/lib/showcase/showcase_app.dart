@@ -43,6 +43,7 @@ import 'widgets/beta_badge.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
+import 'widgets/showcase_guide_link.dart';
 import 'widgets/polar_column_gallery_cards.dart';
 import 'widgets/gallery_flagships.dart';
 
@@ -476,24 +477,25 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     final selectedDestination = _destinations[_selectedIndex];
 
     if (selectedDestination.slug == 'docs' && width < 600) {
-      return selectedDestination.page;
+      return _buildSelectedPage();
     }
 
     // Adaptive layout breakpoints
     if (width < 600) {
       final selectedSlug = _destinations[_selectedIndex].slug;
       if (selectedSlug == 'mobile-interaction') {
-        return _destinations[_selectedIndex].page;
+        return _buildSelectedPage();
       }
       final isChartTypeRoute = showcaseChartTypes.any(
         (chartType) => chartType.slug == selectedSlug,
       );
       if (_hasRecognizedExplicitPageRequest && !isChartTypeRoute) {
-        return selectedDestination.page;
+        return _buildSelectedPage();
       }
       return MobileShowcasePage(
         initialChartSlug: isChartTypeRoute ? selectedSlug : null,
         onChartTypeSelected: _selectSlug,
+        onOpenPublicUrl: _openPublicUrl,
       );
     } else if (width < 900) {
       return _buildTabletLayout(extended: false);
@@ -525,12 +527,17 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
   Widget _buildSelectedPage() {
     final destination = _destinations[_selectedIndex];
     final proposal = destination.reviewProposal;
-    if (proposal == null) return destination.page;
+    final page = ShowcaseGuideScope(
+      page: destination.slug,
+      onOpenPublicUrl: _openPublicUrl,
+      child: destination.page,
+    );
+    if (proposal == null) return page;
 
     return Column(
       children: [
         _ReviewProposalBanner(proposal: proposal),
-        Expanded(child: destination.page),
+        Expanded(child: page),
       ],
     );
   }

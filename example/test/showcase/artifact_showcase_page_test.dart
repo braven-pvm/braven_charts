@@ -26,7 +26,8 @@ void main() {
     expect(find.text('Capture current chart'), findsOneWidget);
     expect(find.text('Captured charts'), findsOneWidget);
     expect(find.text('No captured charts yet'), findsOneWidget);
-    expect(find.text('3. Restore or inspect'), findsOneWidget);
+    expect(find.text('3. Inspect'), findsOneWidget);
+    expect(find.text('4. Restore'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -106,6 +107,11 @@ void main() {
     await tester.pump();
     final secondChart = tester.widget<BravenChartPlus>(chartFinder);
     expect(secondChart.title, isNot(firstChart.title));
+    expect(
+      secondChart.series.first.runtimeType,
+      isNot(firstChart.series.first.runtimeType),
+    );
+    expect(find.textContaining('Seed'), findsWidgets);
     expect(chartFinder, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -226,7 +232,7 @@ void main() {
     expect(find.byTooltip('Generate random chart'), findsOneWidget);
     expect(find.byTooltip('Capture current chart'), findsOneWidget);
     expect(find.text('Chart Artifacts'), findsOneWidget);
-    expect(find.text('1. Generate'), findsOneWidget);
+    expect(find.text('1. Explore'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

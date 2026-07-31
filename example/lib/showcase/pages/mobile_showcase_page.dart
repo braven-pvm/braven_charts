@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../widgets/braven_brand.dart';
 import '../widgets/chart_type_catalog.dart';
+import '../widgets/showcase_guide_link.dart';
 
 /// A phone-first introduction to every Braven Charts family.
 ///
@@ -20,10 +21,12 @@ class MobileShowcasePage extends StatefulWidget {
     super.key,
     this.initialChartSlug,
     this.onChartTypeSelected,
+    this.onOpenPublicUrl,
   });
 
   final String? initialChartSlug;
   final ValueChanged<String>? onChartTypeSelected;
+  final ValueChanged<String>? onOpenPublicUrl;
 
   @override
   State<MobileShowcasePage> createState() => _MobileShowcasePageState();
@@ -121,11 +124,21 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
     final chartType = showcaseChartTypes[_selectedIndex];
     final scheme = Theme.of(context).colorScheme;
     final examples = _mobileExamples(chartType.slug, _visualStyle);
+    final guide = showcaseGuideForPage(chartType.slug);
 
     return Scaffold(
       key: const ValueKey('mobile-showcase'),
       appBar: AppBar(
         title: const BravenBrand(markSize: 34),
+        actions: [
+          if (guide != null && widget.onOpenPublicUrl != null)
+            IconButton(
+              key: const ValueKey('mobile-showcase-guide-button'),
+              tooltip: 'Open ${guide.title} guide',
+              onPressed: () => widget.onOpenPublicUrl!(guide.url),
+              icon: const Icon(Icons.menu_book_outlined),
+            ),
+        ],
         scrolledUnderElevation: 1,
       ),
       body: SafeArea(

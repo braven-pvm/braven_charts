@@ -12,6 +12,24 @@ Use the public package barrel throughout:
 import 'package:braven_charts/braven_charts.dart';
 ```
 
+## The product journey
+
+The [live artifact showcase](https://braven-pvm.github.io/braven_charts/#/braven_charts/?page=artifact-showcase)
+turns the API into four visible steps:
+
+1. **Explore** a generated Line, Area, Bar, Scatter, Range Area, Pie, Donut, or
+   mixed chart in Chart, Data, or Split view.
+2. **Capture** the mounted chart's effective document, durable view state, and
+   optional PNG preview.
+3. **Inspect** the saved copy as its native data table or deterministic JSON,
+   independently of the live chart.
+4. **Restore** that JSON into a fresh interactive runtime with a new
+   `BravenChartController`.
+
+The generated examples are seeded so they are repeatable during debugging,
+while still proving that the artifact contract is independent of chart family,
+theme, series count, and presentation.
+
 ## What an artifact contains
 
 `ChartArtifact` is the portable envelope. Its main fields are:
@@ -29,6 +47,12 @@ import 'package:braven_charts/braven_charts.dart';
 Runtime callbacks and services are rebound separately through
 `ChartRuntimeBindings`. A restored chart receives fresh controllers and must
 not share mutable runtime state with the chart that produced the artifact.
+
+`BravenChartWorkbench` is one optional user interface for producing this
+result. Workbench owns linked Chart, Data, Split, and Source presentation; the
+artifact is the value that can leave that UI. Neither API chooses a database,
+report model, upload service, authorization policy, or retention policy for
+the host.
 
 ## Save a mounted chart
 

@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
+import '../data/portable_chart_showcase_generator.dart';
 import '../widgets/standard_options.dart';
-
-enum _GeneratedChartKind { line, area, bar, scatter, mixed }
 
 enum _ArtifactInspectorMode { data, json }
 
@@ -23,21 +21,12 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     arguments: {'decimals': JsonNumberValue(2)},
   ).toDocument();
 
-  static const _palette = <Color>[
-    Color(0xFF2563EB),
-    Color(0xFFDC2626),
-    Color(0xFF059669),
-    Color(0xFFD97706),
-    Color(0xFF7C3AED),
-  ];
-
-  final _random = math.Random(7162026);
   final _sourceController = BravenChartController();
   final _restoredController = BravenChartController();
   final _tableController = ChartTableController();
   final _inspectorKey = GlobalKey();
 
-  late _GeneratedChartSpec _generated;
+  late PortableShowcaseChartStory _generated;
   ChartTableModel? _liveTable;
   final List<_CapturedArtifactEntry> _captures = [];
   String? _selectedCaptureId;
@@ -46,10 +35,11 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
   _ArtifactInspectorMode _inspectorMode = _ArtifactInspectorMode.data;
   int _generation = 0;
+  int _seed = 7162026;
   int _captureSequence = 0;
   bool _busy = false;
   String _status =
-      'Generate a chart, capture it, then restore or inspect the saved copy.';
+      'Generate a chart, capture it, then inspect or restore the saved copy.';
   String? _error;
 
   @override
@@ -67,139 +57,15 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     super.dispose();
   }
 
-  _GeneratedChartSpec _nextGeneratedChart() {
+  PortableShowcaseChartStory _nextGeneratedChart() {
     _generation += 1;
     final previousKind = _generation == 1 ? null : _generated.kind;
-    var kind = _GeneratedChartKind
-        .values[_random.nextInt(_GeneratedChartKind.values.length)];
-    if (kind == previousKind) {
-      kind =
-          _GeneratedChartKind.values[(kind.index + 1 + _random.nextInt(4)) %
-              _GeneratedChartKind.values.length];
-    }
-
-    final pointCount = 12 + _random.nextInt(9);
-    final seriesCount = kind == _GeneratedChartKind.mixed
-        ? 3
-        : 1 + _random.nextInt(3);
-    final base = 45 + _random.nextDouble() * 90;
-    final amplitude = 12 + _random.nextDouble() * 28;
-    final slope = (_random.nextDouble() - 0.5) * 2.4;
-    final phase = _random.nextDouble() * math.pi;
-    final series = <ChartSeries>[];
-
-    for (var seriesIndex = 0; seriesIndex < seriesCount; seriesIndex++) {
-      final points = <ChartDataPoint>[];
-      for (var pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-        final wave = math.sin(pointIndex / (2.1 + seriesIndex * 0.55) + phase);
-        final noise = (_random.nextDouble() - 0.5) * amplitude * 0.42;
-        final y = math.max(
-          2,
-          base +
-              seriesIndex * 18 +
-              wave * amplitude +
-              slope * pointIndex +
-              noise,
-        );
-        points.add(
-          ChartDataPoint(
-            x: pointIndex.toDouble(),
-            y: y.toDouble(),
-            label: pointIndex % 5 == 0 ? 'Sample ${pointIndex + 1}' : null,
-          ),
-        );
-      }
-      final seriesKind = kind == _GeneratedChartKind.mixed
-          ? _GeneratedChartKind.values[seriesIndex % 4]
-          : kind;
-      series.add(
-        _seriesFor(
-          seriesKind,
-          id: 'generation-$_generation-series-$seriesIndex',
-          name: _seriesName(seriesIndex),
-          color: _palette[seriesIndex % _palette.length],
-          points: points,
-        ),
-      );
-    }
-
-    final titleStem = switch (kind) {
-      _GeneratedChartKind.line => 'Signal trend',
-      _GeneratedChartKind.area => 'Cumulative load',
-      _GeneratedChartKind.bar => 'Interval comparison',
-      _GeneratedChartKind.scatter => 'Sample distribution',
-      _GeneratedChartKind.mixed => 'Multi-series report',
-    };
-    return _GeneratedChartSpec(
-      generation: _generation,
-      kind: kind,
-      title: '$titleStem $_generation',
-      subtitle:
-          '${kind.label} · $seriesCount ${seriesCount == 1 ? 'series' : 'series'} · $pointCount samples',
-      series: series,
-      annotations: [
-        ThresholdAnnotation(
-          id: 'generated-threshold-$_generation',
-          axis: AnnotationAxis.y,
-          value: base + amplitude * 0.45,
-          label: 'Reference',
-        ),
-      ],
-    );
+    PortableShowcaseChartStory story;
+    do {
+      story = PortableChartShowcaseGenerator.generate(_seed++);
+    } while (story.kind == previousKind);
+    return story;
   }
-
-  ChartSeries _seriesFor(
-    _GeneratedChartKind kind, {
-    required String id,
-    required String name,
-    required Color color,
-    required List<ChartDataPoint> points,
-  }) => switch (kind) {
-    _GeneratedChartKind.line => LineChartSeries(
-      id: id,
-      name: name,
-      unit: 'units',
-      color: color,
-      points: points,
-      interpolation: LineInterpolation.bezier,
-      showDataPointMarkers: true,
-      dataPointMarkerRadius: 2.5,
-    ),
-    _GeneratedChartKind.area => AreaChartSeries(
-      id: id,
-      name: name,
-      unit: 'units',
-      color: color,
-      points: points,
-      interpolation: LineInterpolation.bezier,
-      fillOpacity: 0.24,
-    ),
-    _GeneratedChartKind.bar => BarChartSeries(
-      id: id,
-      name: name,
-      unit: 'units',
-      color: color,
-      points: points,
-      barWidthPercent: 0.62,
-    ),
-    _GeneratedChartKind.scatter => ScatterChartSeries(
-      id: id,
-      name: name,
-      unit: 'units',
-      color: color,
-      points: points,
-      markerRadius: 4,
-    ),
-    _GeneratedChartKind.mixed => throw StateError(
-      'Mixed charts are assembled from concrete series kinds.',
-    ),
-  };
-
-  String _seriesName(int index) => switch (index) {
-    0 => 'Observed',
-    1 => 'Benchmark',
-    _ => 'Forecast',
-  };
 
   void _generateRandomChart() {
     if (_busy) return;
@@ -211,7 +77,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
       _displayMode = ChartDisplayMode.split;
       _error = null;
       _status =
-          'Generated ${_generated.kind.label.toLowerCase()} with fresh data. Capture it to keep a portable copy.';
+          'Generated ${_generated.kindLabel.toLowerCase()} seed ${_generated.seed} with fresh data and presentation. Capture it to keep a portable copy.';
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLiveTable());
   }
@@ -219,7 +85,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   void _refreshLiveTable([int attachmentAttempt = 0]) {
     if (!mounted || _restoredConfiguration != null) return;
     final result = _sourceController.extractDocument(
-      _tableDocumentOptions('live-generation-${_generated.generation}'),
+      _tableDocumentOptions('live-generation-${_generated.seed}'),
     );
     if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
       final table = ChartTableModel.fromDocument(
@@ -307,6 +173,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
             'source': JsonStringValue(
               sourceEntry == null ? 'random-generator' : sourceEntry.artifactId,
             ),
+            'seed': JsonNumberValue(_generated.seed),
+            'family': JsonStringValue(_generated.kind.name),
           }),
         ),
       ),
@@ -515,6 +383,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
               hasSelection: _selectedEntry != null,
               hasRestored: _restoredEntry != null,
             ),
+            const SizedBox(height: 12),
+            const _ArtifactPromise(),
             const SizedBox(height: 16),
             _StatusBanner(status: _status, error: _error),
             const SizedBox(height: 16),
@@ -583,6 +453,37 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      if (restored == null) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _TinyLabel(
+                              icon: Icons.auto_awesome_outlined,
+                              label: 'Seed ${_generated.seed}',
+                            ),
+                            _TinyLabel(
+                              icon: Icons.category_outlined,
+                              label: _generated.kindLabel,
+                            ),
+                            _TinyLabel(
+                              icon: Icons.data_array_outlined,
+                              label: '${_generated.pointCount} source values',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _generated.explanation,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -638,6 +539,10 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
             subtitle: _generated.subtitle,
             annotations: _generated.annotations,
             series: _generated.series,
+            theme: _generated.theme,
+            showLegend: _generated.showLegend,
+            xAxisConfig: _generated.xAxisConfig,
+            yAxis: _generated.yAxis,
           )
         : _restoredConfiguration!.build(
             key: const ValueKey('restored-chart'),
@@ -764,24 +669,6 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   }
 }
 
-class _GeneratedChartSpec {
-  const _GeneratedChartSpec({
-    required this.generation,
-    required this.kind,
-    required this.title,
-    required this.subtitle,
-    required this.series,
-    required this.annotations,
-  });
-
-  final int generation;
-  final _GeneratedChartKind kind;
-  final String title;
-  final String subtitle;
-  final List<ChartSeries> series;
-  final List<ChartAnnotation> annotations;
-}
-
 class _CapturedArtifactEntry {
   _CapturedArtifactEntry({
     required this.sequence,
@@ -826,16 +713,6 @@ MemoryImage? _thumbnailProviderFor(ChartArtifact artifact) {
   return bytes == null ? null : MemoryImage(bytes);
 }
 
-extension on _GeneratedChartKind {
-  String get label => switch (this) {
-    _GeneratedChartKind.line => 'Line chart',
-    _GeneratedChartKind.area => 'Area chart',
-    _GeneratedChartKind.bar => 'Bar chart',
-    _GeneratedChartKind.scatter => 'Scatter chart',
-    _GeneratedChartKind.mixed => 'Mixed chart',
-  };
-}
-
 class _WorkflowStrip extends StatelessWidget {
   const _WorkflowStrip({
     required this.hasCaptures,
@@ -853,21 +730,27 @@ class _WorkflowStrip extends StatelessWidget {
       final steps = [
         const _WorkflowStep(
           number: 1,
-          title: 'Generate',
-          detail: 'Create a fresh chart and data set',
+          title: 'Explore',
+          detail: 'Generate a real chart and switch Chart, Data, or Split',
           complete: true,
         ),
         _WorkflowStep(
           number: 2,
           title: 'Capture',
-          detail: 'Store JSON, data, state, and preview',
+          detail: 'Extract resolved data, state, styling, and a PNG preview',
           complete: hasCaptures,
         ),
         _WorkflowStep(
           number: 3,
-          title: 'Restore or inspect',
-          detail: 'Select a saved copy and prove it travels',
-          complete: hasSelection || hasRestored,
+          title: 'Inspect',
+          detail: 'Select a saved copy and read its native table or JSON',
+          complete: hasSelection,
+        ),
+        _WorkflowStep(
+          number: 4,
+          title: 'Restore',
+          detail: 'Hydrate the saved JSON into a fresh interactive chart',
+          complete: hasRestored,
         ),
       ];
       if (constraints.maxWidth < 720) {
@@ -889,6 +772,71 @@ class _WorkflowStrip extends StatelessWidget {
         ],
       );
     },
+  );
+}
+
+class _ArtifactPromise extends StatelessWidget {
+  const _ArtifactPromise();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Wrap(
+          spacing: 24,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'One effective chart becomes:',
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const _PromiseItem(
+              icon: Icons.data_object,
+              label: 'Deterministic JSON',
+            ),
+            const _PromiseItem(
+              icon: Icons.table_rows_outlined,
+              label: 'Source data',
+            ),
+            const _PromiseItem(
+              icon: Icons.image_outlined,
+              label: 'PNG preview',
+            ),
+            const _PromiseItem(
+              icon: Icons.restore_outlined,
+              label: 'Fresh chart',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PromiseItem extends StatelessWidget {
+  const _PromiseItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 17, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(width: 6),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
   );
 }
 

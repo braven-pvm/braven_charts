@@ -6,11 +6,94 @@ host actions. It owns the generic presentation and extraction lifecycle; your
 application still owns the chart configuration, persistence, permissions,
 navigation, and action policy.
 
+If the screen only needs an interactive chart, use `BravenChartPlus` directly.
+Use Workbench when one chart must support several linked user tasks:
+
+- interact with the visual chart;
+- inspect the exact effective values;
+- compare chart and data side by side;
+- copy generated Dart for the effective configuration; or
+- return the current chart to a host workflow such as **Add to report**.
+
+Workbench does not save charts, upload data, or become a report builder. Its
+host action handle returns a portable artifact; the application decides what
+that action means and owns every side effect.
+
+## The mental model
+
+Pick the smallest surface that matches the user's task:
+
+| User need | Use | What it owns |
+| --- | --- | --- |
+| Interact with one chart | `BravenChartPlus` | Rendering and chart interaction |
+| View that same chart as Chart, Data, Split, or Source | `BravenChartWorkbench` | Linked presentation and safe host-action hooks |
+| Save, transmit, or restore the effective chart | `ChartArtifact` | Validated portable data, optional view state, and optional preview |
+| Align and calculate deltas across saved charts | `ChartComparisonBuilder` | Explicit cross-document comparison |
+
+The Workbench is therefore a wrapper around one mounted chart, not another
+chart type and not a persistence service:
+
+```text
+your BravenChartPlus
+        │
+        ▼
+BravenChartWorkbench
+Chart · Data · Split · Source
+        │
+        │ host action calls extractArtifact()
+        ▼
+your application
+save · attach · share · compare · discard
+```
+
+Until the host handles the successful artifact result, nothing has been saved,
+uploaded, authorized, or retained.
+
 Use the public package barrel:
 
 ```dart
 import 'package:braven_charts/braven_charts.dart';
 ```
+
+## What the showcase proves
+
+The [live Workbench showcase](https://braven-pvm.github.io/braven_charts/#/braven_charts/?page=chart-workbench)
+uses seeded, varied chart families to demonstrate four separate contracts:
+
+1. **Linked presentation:** Chart, Data, Split, and Source are four views of
+   one mounted chart. A selected table row highlights the same durable chart
+   points; switching views does not create another chart.
+2. **Host boundary:** **Add to report** calls `extractArtifact()`. The result
+   contains the effective document, requested durable view state, diagnostics,
+   and optional PNG preview. The demo displays that result; a real application
+   decides whether to store, upload, attach, or discard it.
+3. **Independent restoration:** the demo derives three portable documents
+   (current, plan +5%, and plan -8%), hydrates each with its own controller,
+   and compares their source values explicitly. Hiding a series in one restored
+   chart does not mutate the others.
+4. **Controlled freshness:** a bounded live chart continues changing while its
+   Data view remains a deliberate snapshot until the user or host refreshes it.
+
+The comparison section is not an automatic history service built into the
+Workbench. It is a visible proof that artifacts can be restored into
+independent runtimes and passed to the separate comparison API.
+
+The companion [artifact showcase](https://braven-pvm.github.io/braven_charts/#/braven_charts/?page=artifact-showcase)
+focuses on capture, library inspection, deterministic JSON, and restoration.
+
+## What a host action receives
+
+`actionsBuilder`, the chart context menu, and a chart overlay button can expose
+the same host-owned command. The command receives a stable
+`ChartWorkbenchHandle`; calling `extractArtifact()` returns one of:
+
+- `ChartArtifactSuccess<ChartArtifact>` with the portable result and warnings;
+- `ChartArtifactFailure<ChartArtifact>` with a structured error and warnings.
+
+The successful `ChartArtifact` is data, not a callback and not a saved record.
+It is safe to encode with `ChartArtifactJsonCodec`, hand to application
+storage, attach to a report model, or hydrate into a new chart. The package
+does not choose that destination.
 
 ## Minimal workbench
 
