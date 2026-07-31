@@ -3855,6 +3855,52 @@ void main() {
       );
     });
 
+    testWidgets('shape 33: a MAXIMAL .threshold( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.threshold(` is set EXPLICITLY, so
+      // no theme-resolved value lands in the expected list and every
+      // conditional emission path is live. Shape 8 above is the MINIMAL
+      // threshold and stays — but it never sets `id` or `dashPattern`, and a
+      // whole-list assertion pins only what its fixture emits. Anything THIS
+      // fixture does not emit is NOT pinned by this test (measured on `.trend(`:
+      // the same assertion catches 11 of 11 mutations against a maximal fixture
+      // and 6 of 9 against a minimal one).
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .threshold(
+                value: 250,
+                axis: AnnotationAxis.y,
+                id: 'ftp',
+                label: 'FTP',
+                color: const Color(0xFFDC2626),
+                strokeWidth: 2.5,
+                dashPattern: const <double>[6, 3],
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.threshold(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.threshold('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.threshold('), <String>[
+        "id: 'ftp',",
+        'value: 250.0,',
+        'axis: AnnotationAxis.y,',
+        "label: 'FTP',",
+        'color: Color(0xFFDC2626),',
+        'strokeWidth: 2.5,',
+        'dashPattern: <double>[6.0, 3.0],',
+      ]);
+    });
+
     testWidgets('shape 9: a range annotation becomes .band(', (tester) async {
       await expectRoundTrip(
         tester,
@@ -3897,6 +3943,49 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+    });
+
+    testWidgets('shape 34: a MAXIMAL .band( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.band(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path is live. Shape 9 above is the MINIMAL band and stays —
+      // but it never sets `id`, and its fragment list names neither `label` nor
+      // `color`. Anything THIS fixture does not emit is NOT pinned by this test:
+      // a whole-list assertion pins what its fixture emits and is blind to the
+      // rest.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .band(
+                start: 200,
+                end: 260,
+                axis: AnnotationAxis.y,
+                id: 'zone2',
+                label: 'Zone',
+                color: const Color(0x332563EB),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.band(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.band('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.band('), <String>[
+        "id: 'zone2',",
+        'start: 200.0,',
+        'end: 260.0,',
+        'axis: AnnotationAxis.y,',
+        "label: 'Zone',",
+        'color: Color(0x332563EB),',
+      ]);
     });
 
     testWidgets('shape 10: a point annotation becomes .pointAt(', (
@@ -3945,6 +4034,51 @@ void main() {
             )
             .build(bravenChartController: controller),
       );
+    });
+
+    testWidgets('shape 35: a MAXIMAL .pointAt( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.pointAt(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path is live. Shape 10 above is the MINIMAL point and stays —
+      // but it never sets `id`, and its fragment list names neither `label`,
+      // `color` nor `markerSize`. Anything THIS fixture does not emit is NOT
+      // pinned by this test: a whole-list assertion pins what its fixture emits
+      // and is blind to the rest.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .pointAt(
+                seriesId: 'mark-0',
+                dataPointIndex: 1,
+                id: 'peak',
+                label: 'Peak',
+                color: const Color(0xFFDC2626),
+                markerSize: 12,
+                markerShape: MarkerShape.star,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.pointAt(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.pointAt('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.pointAt('), <String>[
+        "id: 'peak',",
+        "seriesId: 'mark-0',",
+        'dataPointIndex: 1,',
+        "label: 'Peak',",
+        'color: Color(0xFFDC2626),',
+        'markerSize: 12.0,',
+        'markerShape: MarkerShape.star,',
+      ]);
     });
 
     testWidgets('shape 11: chart-level grid, title and legend are emitted', (
