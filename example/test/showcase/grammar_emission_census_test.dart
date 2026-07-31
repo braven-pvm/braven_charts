@@ -229,7 +229,7 @@ const List<_CensusPage> _censusPages = <_CensusPage>[
     name: 'Workbench',
     build: ChartWorkbenchPage.new,
     sourceFile: 'chart_workbench_page.dart',
-    mountSites: 2,
+    mountSites: 3,
   ),
   _CensusPage(
     name: 'Grammar',
@@ -369,7 +369,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'RangeArea': <int>[7, 7, 0],
   'ValueSummary': <int>[8, 6, 4],
   'Selection': <int>[10, 10, 7],
-  'Workbench': <int>[5, 2, 2],
+  'Workbench': <int>[5, 2, 1],
   'Grammar': <int>[12, 9, 8],
   'Pie': <int>[6, 6, 6],
   'Donut': <int>[5, 5, 5],
@@ -381,20 +381,21 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[28, 111],
+  _Family.cartesian: <int>[27, 111],
   _Family.radial: <int>[31, 55],
 };
 
 const int _expectedWithVerdict = 166;
-const int _expectedEmitting = 59;
+const int _expectedEmitting = 58;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than
-/// inside it. They emit; they have no Grammar pane. The census that this file
-/// replaces counted them in its headline, which is why they are pinned here
-/// instead of merely excluded.
+/// inside it. The deterministic generated document carries a marker radius,
+/// which the V1 line mark cannot reproduce, so all three honestly refuse. They
+/// have no Grammar pane. The census that this file replaces counted them in its
+/// headline, which is why they are pinned here instead of merely excluded.
 const int _expectedShadowCharts = 3;
-const int _expectedShadowEmitting = 3;
+const int _expectedShadowEmitting = 0;
 
 /// Example chips the census deliberately does not walk, and why.
 ///
@@ -449,8 +450,8 @@ void _mountSiteGuard() {
   expect(found, declared, reason: 'mount-site counts moved');
   expect(
     found.values.fold<int>(0, (a, b) => a + b),
-    15,
-    reason: 'the census is sized against 15 mount sites; found $found',
+    16,
+    reason: 'the census is sized against 16 mount sites; found $found',
   );
 }
 
