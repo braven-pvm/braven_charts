@@ -29,13 +29,25 @@ commit, not the tick — this table is what a reader should trust if the two dis
 | 3.3 radial + polar tails | `e3c07607` | 42, 43 |
 | Slice 3 review fixups | `b99ddb61` | — (comments, guards, docs) |
 | 4.1 showcase deletion coverage | `8fd16d33` | — (all nine `expectShowcaseEmits` lists) |
+| 4.2 final re-measure and record | this commit | — (spec + BC-0046 record) |
 
-Task 4.2 and the Final Verification list are still open. Slice 4's measured
-mutation set, for the record Task 4.2 has to fold in: **83** writer-statement
-deletions behind the nine showcase lists, one at a time, plus **3**
-unconditional probe additions — **86 of 86 caught**, and all 83 deletions were
-caught by the FRAGMENT (the failure names the missing argument) rather than by
-the compile gate reacting to broken output.
+Slice 4's measured mutation set, folded into the record by Task 4.2: **83**
+writer-statement deletions behind the nine showcase lists, one at a time, plus
+**3** unconditional probe additions — **86 of 86 caught**, and all 83 deletions
+were caught by the FRAGMENT (the failure names the missing argument) rather
+than by the compile gate reacting to broken output.
+
+**Task 4.2's own measurement: 0 of 90 argument sites survive** — all 90 blanked
+one at a time, all 90 RED (63 first caught by a new maximal shape, 27 by a
+pre-existing test; 3.2 failing tests per deletion on average), plus **12 of 12**
+unconditional additions caught, one per emitter function. The batch is recorded
+alongside it: all 90 blanked at once gives `+4150 ~8 -101` on the package suite
+and 14 example failures against a 2-failure baseline. Residuals are named in the
+spec's *What "0 of 90" does not claim* — scope is the grammar emitter only
+(`chart_config_dart_emitter.dart` is BC-0048), the census counts writer
+statements so 90 sites cover 91 argument texts, and deletion coverage is neither
+cross-wire nor dead-path coverage. The Final Verification list below is what
+remains.
 
 ## Global Constraints
 
@@ -586,11 +598,13 @@ git commit -m "test(source): give the showcase emission cases deletion coverage"
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-31-emitted-argument-assertions-design.md`, the BC-0046 register item
 
-- [ ] **Step 1: Re-measure the survivor count by the same deletion method**
+- [x] **Step 1: Re-measure the survivor count by the same deletion method**
 
 Blank every argument site the emitter writes, run the package and example suites, and record which sites survive. The method is valid because every gate involved is **monotone in deletions** — a green run with N blanked proves each of the N individually.
 
-- [ ] **Step 2: Record the real number**
+**Measured: 0 of 90 survive.** Note the direction the monotone argument runs in: a green batch proves every member a survivor, but a RED batch attributes to nothing, so it can never prove a site *pinned*. With zero survivors the batch that would prove them is empty, so the number rests on **90 single-site deletions, all RED**. The batch was run anyway as a whole-surface check: all 90 blanked → package `01:49 +4150 ~8 -101: Some tests failed.` (101 distinct tests: 96 in `chart_grammar_source_generator_test.dart`, 5 in `test/widgets/braven_plot_pixel_parity_test.dart`), example 14 failures against its 2-failure baseline.
+
+- [x] **Step 2: Record the real number**
 
 Update the spec's measured-number section and BC-0046's Evidence with the final count. **If any survivors remain, say which and why** — do not round to zero. The register lives OUTSIDE git: edit in place, run `validate` then `refresh`, never `git add` it.
 
@@ -599,7 +613,7 @@ Update the spec's measured-number section and BC-0046's Evidence with the final 
 & 'F:\Repositories\_braven_charts_register\register.ps1' refresh
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-07-31-emitted-argument-assertions-design.md
@@ -610,12 +624,12 @@ git commit -m "docs: record the measured survivor count after pinning"
 
 ## Final verification (before requesting a PR)
 
-- [ ] Root `flutter test` green; `cd example && flutter test` green. **The example suite is RED at this branch's merge base `997b1028` and cannot be signed off before the rebase below**: `example/test/showcase/grammar_emission_census_test.dart` fails twice (`mount-site counts moved`, and `['Workbench'][2] is <1> instead of <2>`) because master's `851e9eca` (PR #150) reconciled the Workbench census *after* `997b1028` and this branch does not carry it. Verified not to be this branch's doing — `git diff $(git merge-base origin/master HEAD)..HEAD -- example/` is empty. Do **not** hand-edit the census numbers here; `851e9eca` owns them and an edit would conflict.
-- [ ] `flutter test test/meta/` — drift gates green, `missing=0`.
-- [ ] `flutter analyze lib` and `flutter analyze example/lib` — "No issues found!".
-- [ ] `dart run tool/check_dart_format.dart` — passes.
-- [ ] **`lib/` is untouched** — `git diff $(git merge-base origin/master HEAD)..HEAD -- lib/` is empty. This slice adds tests and fixtures only. **Measure from the MERGE BASE, not from `origin/master`**: while the branch is behind, `git diff origin/master..HEAD -- lib/` reports master's own commits *in reverse* (measured: `d4336e99 fix(artifacts): define optional callback omission policy` shows as 3 files / 32 deletions the branch "removed"), so the plain form reads as a violation the branch did not commit. The two forms become identical after the rebase below.
-- [ ] **Every new assertion mutation-verified in both directions**, with the results reported per argument.
-- [ ] No existing assertion weakened — `git diff $(git merge-base origin/master HEAD)..HEAD -- test/` with every removed line classified (merge base, for the same reason as above).
-- [ ] Final survivor count re-measured and recorded, with any remainder named.
-- [ ] Rebase onto latest `origin/master`; re-run the suites.
+- [ ] Root `flutter test` green (**yes** — `03:59 +4251 ~8: All tests passed!` at Task 4.2); `cd example && flutter test` green (**no**, and not this branch's doing — 2 failures, unchanged from the merge base). **The example suite is RED at this branch's merge base `997b1028` and cannot be signed off before the rebase below**: `example/test/showcase/grammar_emission_census_test.dart` fails twice (`mount-site counts moved`, and `['Workbench'][2] is <1> instead of <2>`) because master's `851e9eca` (PR #150) reconciled the Workbench census *after* `997b1028` and this branch does not carry it. Verified not to be this branch's doing — `git diff $(git merge-base origin/master HEAD)..HEAD -- example/` is empty. Do **not** hand-edit the census numbers here; `851e9eca` owns them and an edit would conflict.
+- [x] `flutter test test/meta/` — drift gates green: `00:11 +57: All tests passed!` at Task 4.2.
+- [x] `flutter analyze lib` and `flutter analyze example/lib` — "No issues found!" for both at Task 4.2.
+- [x] `dart run tool/check_dart_format.dart` — passes at Task 4.2 (`119 file(s)`, `0 changed`).
+- [x] **`lib/` is untouched** — `git diff $(git merge-base origin/master HEAD)..HEAD -- lib/` is empty. This slice adds tests and fixtures only. **Measure from the MERGE BASE, not from `origin/master`**: while the branch is behind, `git diff origin/master..HEAD -- lib/` reports master's own commits *in reverse* (measured: `d4336e99 fix(artifacts): define optional callback omission policy` shows as 3 files / 32 deletions the branch "removed"), so the plain form reads as a violation the branch did not commit. The two forms become identical after the rebase below.
+- [x] **Every new assertion mutation-verified in both directions**, with the results reported per argument — per task as it landed, and re-verified whole-surface at Task 4.2: 90 single-site deletions (all RED) plus 12 unconditional additions (all caught).
+- [x] No existing assertion weakened — `git diff $(git merge-base origin/master HEAD)..HEAD -- test/` removes **7** lines: 3 comments (reworded) and 4 assertion strings that were re-inserted in emitted order. Each of the 4 re-checked in `HEAD` by `grep -c -F`: `'rose: true,'` 5, `'scaleMode: PolarRadialScaleMode.areaCorrect,'` 4, `'value: (row) => row.value2,'` 8, `'mode: PolarColumnCompositionMode.stacked,'` 1.
+- [x] Final survivor count re-measured and recorded, with any remainder named — **0 of 90**; the remainders that are NOT counted by that number are named in the spec's *What "0 of 90" does not claim*.
+- [ ] Rebase onto latest `origin/master`; re-run the suites. **Still open, and it is the only thing between this branch and a green PR** — it is what clears the two example-suite census failures above.

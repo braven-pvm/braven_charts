@@ -1,7 +1,7 @@
 # Pinning Emitted Grammar Arguments — Design
 
 **Date:** 2026-07-31
-**Status:** Approved (brainstorming). Next: implementation plan.
+**Status:** Delivered on the branch below — Slices 1–4 landed and the survivor count re-measured at **0 of 90** (see *The final number*). Not yet merged.
 **Register:** BC-0046 (lane `chart-grammar`).
 **Worktree/branch:** `F:\Repositories\braven_charts-emitted-gate`, `feature/grammar-emitted-argument-gate` (off `origin/master` `997b1028`).
 
@@ -15,7 +15,7 @@ Every argument the grammar source emitter writes is pinned, so deleting its writ
 
 Nothing is broken today — the values are emitted correctly. The defect is that nothing would notice if they stopped being.
 
-## The measured number
+## The measured number (the starting number)
 
 **40 of 90 argument sites are unpinned**, measured on merged master `997b1028` by *deleting each writer line and running the suite* — not by grep.
 
@@ -34,6 +34,43 @@ The method is sound because every gate involved is **monotone in deletions** (`c
 | **Total** | **40** |
 
 **Corrections to this item's own filed figures**, both downward: the pre-#146 count was **51, not 54** (three sites were already pinned but grep-missed — `scatter.size`, `scatter.categoryBy`, `geom.showDataPointMarkers`), and PR #146 closed **11**, giving 40 rather than the estimated 47. #146 closed nothing outside Cartesian: annotations, grid, radial and polar are identical before and after.
+
+## The final number (re-measured after Slices 1–4)
+
+**0 of 90 argument sites are unpinned.** Re-measured on `feature/grammar-emitted-argument-gate` (Task 4.2, `lib/` untouched) against the **same 90-site census** the 40 came from, by the same method: blank that site's writer statement, run the suite, read the verdict off the exit code. All 90 blanked **one at a time**; all 90 came back RED, each naming the argument in its failure message.
+
+| Family | Sites | Unpinned before | Unpinned now |
+|---|---|---|---|
+| Cartesian geometry (`geom`/`line`/`area`/`bar`) + scatter | 32 | 12 | **0** |
+| `.trend` | 9 | 8 | **0** |
+| `.threshold` | 7 | 4 | **0** |
+| `.band` | 6 | 3 | **0** |
+| `.pointAt` | 7 | 4 | **0** |
+| `GridConfig` | 6 | 5 | **0** |
+| collapsed `.x(…, label:)` | 1 | 1 | **0** |
+| radial (`.geomPie`/`.geomDonut`) | 9 | 1 | **0** |
+| polar (`.geomPolar`) | 11 | 2 | **0** |
+| `.yAxis` / `.title` | 2 | 0 | **0** |
+| **Total** | **90** | **40** | **0** |
+
+**Why the count rests on 90 individual runs rather than one batch.** Batched deletion is the cheap form of this measurement and it is valid, because every gate involved is **monotone in deletions** — `contains(fragment)`, whole-list equality and `dart analyze` error counts can only worsen as more arguments are removed — so one *green* run with N blanked proves each of the N individually. That inference runs in the GREEN direction only: a *red* batch attributes to nothing, so it can never prove a site pinned. With **zero** survivors the batch that would prove them is empty, which is why the final number is 90 single-site runs. The batch was still run, as a whole-surface check:
+
+- all 90 blanked, package suite → `01:49 +4150 ~8 -101: Some tests failed.` — **101** distinct failing tests, 96 in `test/unit/source/chart_grammar_source_generator_test.dart` and 5 in `test/widgets/braven_plot_pixel_parity_test.dart`;
+- all 90 blanked, example suite → 14 failing tests against a **2-failure baseline** at this merge base (`grammar_emission_census_test.dart`, master's `851e9eca`, not this branch's — see the plan's final-verification note).
+
+A single deletion reddens **3.2 tests on average** (min 1, max 10). The first witness is one of the new maximal shapes 32–43 for **63** of the 90 sites, and a pre-existing test for the other **27** — so the build did not merely re-pin what was already covered.
+
+**The other direction, re-measured too.** One **unconditional** `writer.namedArgument('probe', "'x'")` inserted into each of the 11 emitter functions that write a chain verb's arguments (`_emitPolarGeometry`, `_emitRadialGeometry`, `_emitYAxis`, `_emitGeometry`, `_emitScatterChannels`, `_emitTrend`, `_emitThreshold`, `_emitBand`, `_emitPoint`, `_emitGrid`, `_emitTitle`), plus probe text added inside the collapsed `.x(` **line** — **12 of 12 caught**, each by the shape that pins that verb (`Which: at location [n] is 'probe: 'x','` …).
+
+### What "0 of 90" does not claim
+
+Named rather than rounded away:
+
+1. **Scope is the grammar emitter.** The 90 sites are `lib/src/source/chart_grammar_source_generator.dart` only. `chart_config_dart_emitter.dart` is roughly 5× the size and is **BC-0048**, not measured here — though Slice 4's showcase fragment lists incidentally pin 83 writer statements spanning *both* emitters for the polar/radial surface.
+2. **The census counts writer STATEMENTS, not emitted argument texts.** Two statements write a *nested* argument inside their own value expression: the collapsed `.x(…, label:)` (broken out as its own census key, because it was a survivor) and `categoryBy`'s `CategoryChannel(f, label: …)`. The nested `label:` inside `categoryBy` is folded into one site, so 90 sites cover 91 argument texts. Measured separately: forcing `label` to null emits `categoryBy: CategoryChannel((row) => row.markersCategory),` and shape 37 fails on it — pinned, not a hidden survivor.
+3. **Deletion coverage is not cross-wire coverage** (failure mode 7). Two writers whose fixture values are equal stay indistinguishable; in `_emitGrid` the *minimal* shape 11 is the only thing that catches the swap, which is why the minimal shapes were kept.
+4. **Addition coverage is path-bound.** Unconditional additions are caught (12 of 12 above); a *conditional* addition on a path no pinned fixture exercises still slips through green — measured during the pilot, unchanged by this build.
+5. **One arm is dead rather than pinned.** `CategoryChannel(f)` without a label cannot be emitted by any chart (`ScatterCategoryEncoding.label` is non-nullable, and the only shape that could reach the unlabelled arm is refused with `missingChannelEncoding`). It is recorded in shape 37's comment as a `lib/` cleanup candidate, out of scope for a test-only slice — not an open survivor.
 
 ## Mechanism (owner-decided, pilot-validated)
 
