@@ -2327,6 +2327,12 @@ List<String> literalArguments(String source, String opening) {
   final bodyStart = source.indexOf('\n', start) + 1;
   final end = source.indexOf('\n${' ' * indent})', start);
   expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
+  // An EMPTY argument list puts the closing paren on the line directly after
+  // the opening, so `end` lands one BEFORE `bodyStart` and `substring` throws
+  // `RangeError` instead of reporting the empty list. Return it instead: a
+  // RangeError raised deep inside this helper is a far worse diagnostic than
+  // an expectation that fails against `[]`.
+  if (end < bodyStart) return const <String>[];
   return <String>[
     for (final line in source.substring(bodyStart, end).split('\n'))
       if (line.trim().isNotEmpty) line.trim(),
@@ -2334,6 +2340,22 @@ List<String> literalArguments(String source, String opening) {
 }
 
 void main() {
+  group('literalArguments', () {
+    test('returns an empty list for a verb with no arguments', () {
+      // For `Verb(\n)` the computed bodyStart is one past end, and substring
+      // throws RangeError. No verb emits an empty list today, but a config
+      // emitter that drops the one field that differed would produce one, and a
+      // RangeError deep inside a helper is a worse diagnostic than an empty
+      // list.
+      const source =
+          'final chart = BravenChart.of(rows)\n'
+          '    .verb(\n'
+          '    )\n'
+          '    .build();';
+      expect(literalArguments(source, '.verb('), isEmpty);
+    });
+  });
+
   group('round trip', () {
     testWidgets('shape 1: a single line', (tester) async {
       // The twin declares the axis but does NOT bind the mark to it, because
