@@ -1901,8 +1901,10 @@ class _GrammarChainEmitter {
     // guarded, and saying which is which is the honest framing. Each of these
     // was measured by mutation, applied and reverted inside one invocation:
     //
-    //  - Dropping the all-unbound clause FAILS four tests — round-trip shapes
-    //    5, 29b, 29c and 29d, plus the named guard below. The clause is
+    //  - Dropping the all-unbound clause FAILS eight tests — round-trip shapes
+    //    5, 29b, 29c, 29d, 30e, 31b and 31d, plus the named guard below. (The
+    //    count grew as later slices added shapes; re-measured 2026-07-31.) The
+    //    clause is
     //    load-bearing in the opposite direction from the obvious one: it is
     //    what keeps a single-axis chart whose captured series ARE bound
     //    EMITTING. Without it the lowered side is stripped while the captured
