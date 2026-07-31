@@ -4815,6 +4815,74 @@ void main() {
       );
     });
 
+    testWidgets('shape 40: a MAXIMAL GridConfig( pins its whole field list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every field on `GridConfig` is set EXPLICITLY and away
+      // from its default, because `_emitGrid` writes a field ONLY when it
+      // differs from `const GridConfig()` — so a fixture that leaves `vertical`
+      // at `true` never emits it, and no assertion against that fixture can
+      // pin it. Anything THIS fixture does not emit is NOT pinned by this test:
+      // a whole-list assertion pins what its fixture emits and is blind to the
+      // rest. The MINIMAL grid — "shape 11: chart-level grid, title and legend
+      // are emitted" — stays, but it sets only `horizontal` and
+      // `verticalStrokeWidth`, so it can pin at most those two.
+      //
+      // Measured, one mutation set of 7 — each of `_emitGrid`'s 6 writer
+      // statements deleted in turn, plus one unconditional
+      // `writer.namedArgument('probe', ...)` added: 7 of 7 caught here.
+      //
+      // Opened at `GridConfig(`, NOT at `.grid(`: measured, `.grid(` returns
+      // the WRAPPER lines (`GridConfig(`, …, `),`) rather than the field list,
+      // because `literalArguments` slices by indentation. `GridConfig(` is a
+      // `Type(` opening with no prefix collision (a bare `ChartConfig(` would
+      // also match inside `PolarChartConfig(`).
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .grid(
+                const GridConfig(
+                  horizontal: false,
+                  vertical: false,
+                  horizontalColor: Color(0xFF94A3B8),
+                  verticalColor: Color(0xFF64748B),
+                  horizontalStrokeWidth: 1.25,
+                  verticalStrokeWidth: 2.5,
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `GridConfig(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('GridConfig('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, 'GridConfig('), <String>[
+        'horizontal: false,',
+        'vertical: false,',
+        'horizontalColor: Color(0xFF94A3B8),',
+        'verticalColor: Color(0xFF64748B),',
+        'horizontalStrokeWidth: 1.25,',
+        'verticalStrokeWidth: 2.5,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real `GridConfig` constructor. This is the only
+      // fixture in the corpus that emits `vertical:`, `horizontalColor:`,
+      // `verticalColor:` or `horizontalStrokeWidth:` at all, so without this
+      // gate those four names are compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_grid_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 12: a pie emits geomPie and round-trips', (
       tester,
     ) async {
