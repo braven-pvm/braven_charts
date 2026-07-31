@@ -483,6 +483,11 @@ alignment, unit/domain safety, diagnostics, and independent hydration.
   `HydratedBravenChart` runtime.
 - `ChartRuntimeBindings` reattaches host callbacks, formatters, tooltips,
   codecs, and extension capabilities without serializing executable behavior.
+- `ChartDocumentExtractOptions.interactionBindingDescriptors` gives portable
+  identity to callbacks a host intends to rebind. Semantics-bearing callbacks
+  fail closed without that identity; optional host notifications, including
+  `CartesianValueSummaryConfig.onPlacementChanged`, are omitted with an
+  explicit extraction warning.
 
 ### Data payloads
 

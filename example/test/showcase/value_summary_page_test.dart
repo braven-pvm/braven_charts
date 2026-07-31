@@ -83,6 +83,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'controller-backed presets extract with defaults and name callback omission',
+    (tester) async {
+      await pumpPage(tester);
+
+      for (final preset in const [
+        'line',
+        'multiSeries',
+        'multiAxis',
+        'candlestick',
+        'pinned',
+        'draggable',
+      ]) {
+        await tester.tap(find.byKey(ValueKey('value-summary-preset-$preset')));
+        await tester.pumpAndSettle();
+
+        final chart = tester.widget<BravenChartPlus>(
+          find.byType(BravenChartPlus),
+        );
+        final result = chart.bravenChartController!.extractSourceDocument(
+          ChartDocumentExtractOptions(
+            documentId: 'value-summary-default-$preset',
+          ),
+        );
+
+        expect(
+          result,
+          isA<ChartArtifactSuccess<ChartDocumentSnapshot>>(),
+          reason: '$preset should extract with default options',
+        );
+        final success = result as ChartArtifactSuccess<ChartDocumentSnapshot>;
+        expect(
+          success.warnings.map((warning) => warning.path),
+          contains(
+            r'$.interaction.configuration.callbacks.valueSummary.onPlacementChanged',
+          ),
+          reason: '$preset should name the omitted host callback',
+        );
+      }
+    },
+  );
+
   testWidgets('switches presets, keeping each stage summary-enabled', (
     tester,
   ) async {
@@ -527,9 +569,7 @@ void main() {
           tester.getTopLeft(find.byType(BravenChartPlus)) +
           renderBox.plotToWidget(transform.dataToPlot(dataX, dataY));
 
-      final pointer = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(pointer.removePointer);
       await pointer.addPointer(location: Offset.zero);
       await pointer.moveTo(cursorFor(4.6, 30));
@@ -703,10 +743,7 @@ void main() {
     await revealOption(tester, gapSlider);
     tester.widget<SliderOption>(gapSlider).onChanged(24);
     await tester.pumpAndSettle();
-    expect(
-      style().labelValueGap,
-      const ChartStyleValue<double>.value(24.0),
-    );
+    expect(style().labelValueGap, const ChartStyleValue<double>.value(24.0));
 
     // Min and max width sliders follow the same first-touch promotion.
     final minWidthSlider = find.byKey(
@@ -1010,10 +1047,7 @@ void main() {
       );
       // The page's single controller is the package's concrete class: only
       // its resetPlacement handshake can reach the chart.
-      expect(
-        summary.controller,
-        isA<DefaultCartesianValueSummaryController>(),
-      );
+      expect(summary.controller, isA<DefaultCartesianValueSummaryController>());
       expect(summary.onPlacementChanged, isNotNull);
 
       // The panel is painted and acquirable as a drag target.
@@ -1029,9 +1063,7 @@ void main() {
       await revealOption(tester, readout);
       expect(readout, findsOneWidget);
       expect(find.textContaining('No committed placement'), findsOneWidget);
-      final reset = find.byKey(
-        const ValueKey('value-summary-reset-placement'),
-      );
+      final reset = find.byKey(const ValueKey('value-summary-reset-placement'));
       await revealOption(tester, reset);
       expect(reset, findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -1079,60 +1111,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'presentation override switches any preset between overlay and '
-    'annotation',
-    (tester) async {
-      await pumpPage(tester);
+  testWidgets('presentation override switches any preset between overlay and '
+      'annotation', (tester) async {
+    await pumpPage(tester);
 
-      CartesianValueSummaryPresentation presentation() => tester
-          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
-          .interactionConfig!
-          .valueSummary
-          .presentation;
+    CartesianValueSummaryPresentation presentation() => tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .interactionConfig!
+        .valueSummary
+        .presentation;
 
-      // The line preset defaults to the fixed overlay, and the helper line
-      // spells out the resolved kind (Value policy dropdown convention).
-      expect(presentation(), isA<CartesianValueSummaryOverlay>());
+    // The line preset defaults to the fixed overlay, and the helper line
+    // spells out the resolved kind (Value policy dropdown convention).
+    expect(presentation(), isA<CartesianValueSummaryOverlay>());
 
-      final annotationSegment = find.text('Annotation');
-      await revealOption(tester, annotationSegment);
-      expect(find.text('Preset default'), findsOneWidget);
-      expect(find.text('currently: overlay'), findsOneWidget);
-      await tester.tap(annotationSegment);
-      await tester.pumpAndSettle();
-      expect(
-        presentation(),
-        isA<CartesianValueSummaryAnnotation>().having(
-          (p) => p.draggable,
-          'draggable',
-          isTrue,
-        ),
-      );
-      expect(find.text('currently: annotation'), findsOneWidget);
-      // The Draggable Panel section auto-shows with the override.
-      final readout = find.byKey(
-        const ValueKey('value-summary-placement-readout'),
-      );
-      await revealOption(tester, readout);
-      expect(readout, findsOneWidget);
+    final annotationSegment = find.text('Annotation');
+    await revealOption(tester, annotationSegment);
+    expect(find.text('Preset default'), findsOneWidget);
+    expect(find.text('currently: overlay'), findsOneWidget);
+    await tester.tap(annotationSegment);
+    await tester.pumpAndSettle();
+    expect(
+      presentation(),
+      isA<CartesianValueSummaryAnnotation>().having(
+        (p) => p.draggable,
+        'draggable',
+        isTrue,
+      ),
+    );
+    expect(find.text('currently: annotation'), findsOneWidget);
+    // The Draggable Panel section auto-shows with the override.
+    final readout = find.byKey(
+      const ValueKey('value-summary-placement-readout'),
+    );
+    await revealOption(tester, readout);
+    expect(readout, findsOneWidget);
 
-      // Scroll back up to the Summary section's presentation control.
-      final overlaySegment = find.text('Overlay');
-      await revealOption(tester, overlaySegment, delta: -120);
-      await tester.tap(overlaySegment);
-      await tester.pumpAndSettle();
-      expect(presentation(), isA<CartesianValueSummaryOverlay>());
-      expect(find.text('currently: overlay'), findsOneWidget);
-      expect(readout, findsNothing);
+    // Scroll back up to the Summary section's presentation control.
+    final overlaySegment = find.text('Overlay');
+    await revealOption(tester, overlaySegment, delta: -120);
+    await tester.tap(overlaySegment);
+    await tester.pumpAndSettle();
+    expect(presentation(), isA<CartesianValueSummaryOverlay>());
+    expect(find.text('currently: overlay'), findsOneWidget);
+    expect(readout, findsNothing);
 
-      await tester.tap(find.text('Preset default'));
-      await tester.pumpAndSettle();
-      expect(presentation(), isA<CartesianValueSummaryOverlay>());
-      expect(find.text('currently: overlay'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await tester.tap(find.text('Preset default'));
+    await tester.pumpAndSettle();
+    expect(presentation(), isA<CartesianValueSummaryOverlay>());
+    expect(find.text('currently: overlay'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'synchronized preset with the Annotation override exposes no placement '
@@ -1221,9 +1250,7 @@ void main() {
       // Reset Placement goes through DefaultCartesianValueSummaryController:
       // the chart-side handshake restores the configured placement, and the
       // readout empties.
-      final reset = find.byKey(
-        const ValueKey('value-summary-reset-placement'),
-      );
+      final reset = find.byKey(const ValueKey('value-summary-reset-placement'));
       await revealOption(tester, reset);
       await tester.tap(reset);
       await tester.pumpAndSettle();
@@ -1445,113 +1472,110 @@ void main() {
     },
   );
 
-  testWidgets(
-    'workbench modes: Data shows the table, Source emits the summary '
-    'config, and the summary survives a mode round-trip',
-    (tester) async {
-      await pumpPage(tester);
+  testWidgets('workbench modes: Data shows the table, Source emits the summary '
+      'config, and the summary survives a mode round-trip', (tester) async {
+    await pumpPage(tester);
 
-      final switcher = find.byKey(
-        const ValueKey('chart-workbench-mode-switcher'),
-      );
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
 
-      // Data: the table replaces the chart pane with one row per sample.
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Data')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(ChartDataTable), findsOneWidget);
-      final workbench = tester.widget<BravenChartWorkbench>(
-        find.byType(BravenChartWorkbench),
-      );
-      expect(workbench.workbenchController!.tableModel?.rowCount, 11);
+    // Data: the table replaces the chart pane with one row per sample.
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    expect(workbench.workbenchController!.tableModel?.rowCount, 11);
 
-      // Split: chart and table side by side — the summary stays painted on
-      // the single mounted chart.
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Split')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(BravenChartPlus), findsOneWidget);
-      expect(find.byType(ChartDataTable), findsOneWidget);
-      expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
+    // Split: chart and table side by side — the summary stays painted on
+    // the single mounted chart.
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
 
-      // Back to Chart: the summary pipeline is intact after the round-trip,
-      // still resolving the latest-datum fallback.
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Chart')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(BravenChartPlus), findsOneWidget);
-      expect(find.byType(ChartDataTable), findsNothing);
-      final renderBox = _renderBox(tester);
-      expect(renderBox.debugValueSummaryModel, isNotNull);
-      expect(renderBox.debugValueSummaryBounds, isNot(Rect.zero));
-      expect(
-        renderBox.debugValueSummarySnapshot?.origin,
-        CartesianTrackingOrigin.fallback,
-      );
+    // Back to Chart: the summary pipeline is intact after the round-trip,
+    // still resolving the latest-datum fallback.
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Chart')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byType(ChartDataTable), findsNothing);
+    final renderBox = _renderBox(tester);
+    expect(renderBox.debugValueSummaryModel, isNotNull);
+    expect(renderBox.debugValueSummaryBounds, isNot(Rect.zero));
+    expect(
+      renderBox.debugValueSummarySnapshot?.origin,
+      CartesianTrackingOrigin.fallback,
+    );
 
-      // The candlestick preset's document works in Data mode too — the
-      // table models OHLC rows without any extra options.
-      await tester.tap(
-        find.byKey(const ValueKey('value-summary-preset-candlestick')),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Data')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(ChartDataTable), findsOneWidget);
-      expect(workbench.workbenchController!.tableModel?.rowCount, 28);
+    // The candlestick preset's document works in Data mode too — the
+    // table models OHLC rows without any extra options.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-candlestick')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(workbench.workbenchController!.tableModel?.rowCount, 28);
 
-      // Source last, back on the line preset: the generated Dart names the
-      // page variable and carries the enabled value summary configuration.
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Chart')),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Source')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(ChartSourceView), findsOneWidget);
-      expect(
-        workbench.workbenchController!.sourceState.phase,
-        ChartWorkbenchSourcePhase.ready,
-      );
-      final source = workbench.workbenchController!.generatedSource!.source;
-      expect(source, contains('final valueSummaryChart = BravenChartPlus('));
-      expect(source, contains('valueSummary: CartesianValueSummaryConfig('));
+    // Source last, back on the line preset: the generated Dart names the
+    // page variable and carries the enabled value summary configuration.
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Chart')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ChartSourceView), findsOneWidget);
+    expect(
+      workbench.workbenchController!.sourceState.phase,
+      ChartWorkbenchSourcePhase.ready,
+    );
+    final source = workbench.workbenchController!.generatedSource!.source;
+    expect(source, contains('final valueSummaryChart = BravenChartPlus('));
+    expect(source, contains('valueSummary: CartesianValueSummaryConfig('));
 
-      // Switching preset with a captured Source snapshot in hand invalidates
-      // it and remounts the chart underneath the open pane. The pane re-emits
-      // for the new preset and the hidden panes stop animating, so this
-      // settles.
-      await tester.tap(
-        find.byKey(const ValueKey('value-summary-preset-candlestick')),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        workbench.workbenchController!.generatedSource!.source,
-        contains('CandlestickChartSeries('),
-      );
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
-      await tester.pumpAndSettle();
+    // Switching preset with a captured Source snapshot in hand invalidates
+    // it and remounts the chart underneath the open pane. The pane re-emits
+    // for the new preset and the hidden panes stop animating, so this
+    // settles.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-candlestick')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      workbench.workbenchController!.generatedSource!.source,
+      contains('CandlestickChartSeries('),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('value-summary-preset-line')));
+    await tester.pumpAndSettle();
 
-      // Chart once more: the summary is alive after the full mode tour.
-      await tester.tap(
-        find.descendant(of: switcher, matching: find.text('Chart')),
-      );
-      await tester.pumpAndSettle();
-      expect(_renderBox(tester).debugValueSummaryModel, isNotNull);
-      expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
-      expect(tester.takeException(), isNull);
-    },
-  );
+    // Chart once more: the summary is alive after the full mode tour.
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Chart')),
+    );
+    await tester.pumpAndSettle();
+    expect(_renderBox(tester).debugValueSummaryModel, isNotNull);
+    expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 ChartRenderBox _renderBox(WidgetTester tester) {

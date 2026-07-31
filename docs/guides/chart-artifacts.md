@@ -48,6 +48,22 @@ Runtime callbacks and services are rebound separately through
 `ChartRuntimeBindings`. A restored chart receives fresh controllers and must
 not share mutable runtime state with the chart that produced the artifact.
 
+Executable behavior follows two extraction policies:
+
+- callbacks needed to preserve portable chart semantics require an explicit
+  entry in `ChartDocumentExtractOptions.interactionBindingDescriptors`;
+  extraction fails with `runtime_binding_required` when that identity is
+  missing;
+- optional host notifications can be omitted without changing the portable
+  chart. For example, an unbound
+  `CartesianValueSummaryConfig.onPlacementChanged` is omitted and extraction
+  succeeds with a path-bearing warning. Supply its
+  `valueSummary.onPlacementChanged` descriptor when the restored host needs to
+  rebind that notification.
+
+Always inspect warnings on successful extraction. They are the machine-readable
+record of runtime behavior that did not cross the document boundary.
+
 `BravenChartWorkbench` is one optional user interface for producing this
 result. Workbench owns linked Chart, Data, Split, and Source presentation; the
 artifact is the value that can leave that UI. Neither API chooses a database,

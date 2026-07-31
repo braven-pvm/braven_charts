@@ -184,7 +184,8 @@ final class CartesianValueSummaryAnnotation
           other.clampToPlot == clampToPlot;
 
   @override
-  int get hashCode => Object.hash('annotation', placement, draggable, clampToPlot);
+  int get hashCode =>
+      Object.hash('annotation', placement, draggable, clampToPlot);
 
   @override
   String toString() =>
@@ -274,7 +275,8 @@ final class CartesianValueSummaryAutomaticContent
           other.includeHiddenSeries == includeHiddenSeries;
 
   @override
-  int get hashCode => Object.hash('automatic', includeTrends, includeHiddenSeries);
+  int get hashCode =>
+      Object.hash('automatic', includeTrends, includeHiddenSeries);
 
   @override
   String toString() =>
@@ -556,6 +558,12 @@ class CartesianValueSummaryConfig {
   final bool announceChanges;
 
   /// Called once per completed drag with the committed placement.
+  ///
+  /// Artifact extraction preserves this host notification when
+  /// `ChartDocumentExtractOptions.interactionBindingDescriptors` supplies a
+  /// descriptor for `valueSummary.onPlacementChanged`. Without one, extraction
+  /// succeeds, omits the callback, and returns an explicit warning because the
+  /// callback does not affect the portable chart's visual or data semantics.
   ///
   /// Excluded from [operator ==] and [hashCode], following the
   /// `InteractionConfig` callback rule.

@@ -546,20 +546,17 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         ChartDisplayMode.split,
         ChartDisplayMode.source,
       },
-      // Every preset wires valueSummary.onPlacementChanged, and executable
-      // callbacks only cross the document boundary as explicit runtime
-      // binding descriptors — without one, table and source extraction fail
-      // (the cartesian scatter-marginals preset sets this precedent for its
-      // viewport callback).
+      // Every preset wires valueSummary.onPlacementChanged. The callback is an
+      // optional host notification, so default extraction can omit it with a
+      // warning; this descriptor preserves its identity for hosts that want to
+      // rebind it after hydration.
       documentOptions: ChartDocumentExtractOptions(
         documentId: 'value-summary-showcase',
         includeViewState: true,
         interactionBindingDescriptors: {
           ChartInteractionDocumentCodec.valueSummaryPlacementChangedBinding:
               JsonObjectValue(const {
-                'id': JsonStringValue(
-                  'showcase.valueSummary.placementChanged',
-                ),
+                'id': JsonStringValue('showcase.valueSummary.placementChanged'),
               }),
         },
       ),
@@ -621,7 +618,10 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       // even while the point tooltip is disabled: the crosshair renderer
       // reads the same style object for the tracking panel regardless of
       // [TooltipConfig.enabled].
-      tooltip: TooltipConfig(enabled: _pointTooltip, style: _trackingPanelStyle),
+      tooltip: TooltipConfig(
+        enabled: _pointTooltip,
+        style: _trackingPanelStyle,
+      ),
       valueSummary: _summaryConfig(withController: withController),
     );
   }
@@ -969,8 +969,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           BoolOption(
             key: const ValueKey('value-summary-enabled'),
             label: 'Value Summary',
-            subtitle:
-                'The flagship: a persistent, policy-resolved datum panel',
+            subtitle: 'The flagship: a persistent, policy-resolved datum panel',
             value: _summaryEnabled,
             onChanged: (value) => setState(() => _summaryEnabled = value),
           ),

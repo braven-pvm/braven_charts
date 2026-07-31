@@ -72,16 +72,18 @@ const _fullConfig = CartesianValueSummaryConfig(
 
 void main() {
   group('CartesianValueSummaryConfig artifact codec', () {
-    test('omits the default config and decodes an absent field to disabled',
-        () {
-      final document = _encode(const InteractionConfig());
-      final json = _configurationJson(document);
-      expect(json.containsKey('valueSummary'), isFalse);
+    test(
+      'omits the default config and decodes an absent field to disabled',
+      () {
+        final document = _encode(const InteractionConfig());
+        final json = _configurationJson(document);
+        expect(json.containsKey('valueSummary'), isFalse);
 
-      final decoded = _decode(document);
-      expect(decoded.valueSummary, const CartesianValueSummaryConfig());
-      expect(decoded.valueSummary.enabled, isFalse);
-    });
+        final decoded = _decode(document);
+        expect(decoded.valueSummary, const CartesianValueSummaryConfig());
+        expect(decoded.valueSummary.enabled, isFalse);
+      },
+    );
 
     test('runtime-only controller keeps the sub-config omitted', () {
       final controller = DefaultCartesianValueSummaryController();
@@ -122,39 +124,41 @@ void main() {
       expect(decoded.valueSummary.style, _fullStyle);
     });
 
-    test('tri-state style fields keep inherit, explicit, and none distinct',
-        () {
-      const source = InteractionConfig(
-        valueSummary: CartesianValueSummaryConfig(
-          enabled: true,
-          style: CartesianValueSummaryStyle(
-            borderColor: ChartStyleValue<Color>.none(),
-            accentColor: ChartStyleValue.value(Color(0xFF2563EB)),
+    test(
+      'tri-state style fields keep inherit, explicit, and none distinct',
+      () {
+        const source = InteractionConfig(
+          valueSummary: CartesianValueSummaryConfig(
+            enabled: true,
+            style: CartesianValueSummaryStyle(
+              borderColor: ChartStyleValue<Color>.none(),
+              accentColor: ChartStyleValue.value(Color(0xFF2563EB)),
+            ),
           ),
-        ),
-      );
-      final document = _encode(source);
-      final style = Map<String, Object?>.from(
-        _valueSummaryJson(document)['style']! as Map,
-      );
-      expect(style.containsKey('backgroundColor'), isFalse);
-      expect(style['borderColor'], 'none');
-      expect(style['accentColor'], 0xFF2563EB);
+        );
+        final document = _encode(source);
+        final style = Map<String, Object?>.from(
+          _valueSummaryJson(document)['style']! as Map,
+        );
+        expect(style.containsKey('backgroundColor'), isFalse);
+        expect(style['borderColor'], 'none');
+        expect(style['accentColor'], 0xFF2563EB);
 
-      final decodedStyle = _decode(document).valueSummary.style;
-      expect(decodedStyle.backgroundColor.isInherit, isTrue);
-      expect(decodedStyle.borderColor.isNone, isTrue);
-      expect(decodedStyle.borderColor, const ChartStyleValue<Color>.none());
-      expect(
-        decodedStyle.borderColor,
-        isNot(const ChartStyleValue<Color>.inherit()),
-      );
-      expect(
-        decodedStyle.accentColor,
-        const ChartStyleValue.value(Color(0xFF2563EB)),
-      );
-      expect(decodedStyle, source.valueSummary.style);
-    });
+        final decodedStyle = _decode(document).valueSummary.style;
+        expect(decodedStyle.backgroundColor.isInherit, isTrue);
+        expect(decodedStyle.borderColor.isNone, isTrue);
+        expect(decodedStyle.borderColor, const ChartStyleValue<Color>.none());
+        expect(
+          decodedStyle.borderColor,
+          isNot(const ChartStyleValue<Color>.inherit()),
+        );
+        expect(
+          decodedStyle.accentColor,
+          const ChartStyleValue.value(Color(0xFF2563EB)),
+        );
+        expect(decodedStyle, source.valueSummary.style);
+      },
+    );
 
     test('labelValueGap round-trips inherit, none, and value forms', () {
       Map<String, Object?> styleJson(CartesianValueSummaryStyle style) {
@@ -260,27 +264,32 @@ void main() {
       expect(failure.error.message, contains('valuePolicy'));
     });
 
-    test('rejects an unknown presentation kind with a structured diagnostic',
-        () {
-      final result = ChartInteractionDocumentCodec.decode(
-        _mutateValueSummary(
-          _encode(const InteractionConfig(valueSummary: _fullConfig)),
-          (summary) => summary
-            ..['presentation'] = {
-              'kind': 'holographic',
-              'placement': {
-                'anchor': {'x': 0.0, 'y': 0.0},
-                'offset': {'dx': 0.0, 'dy': 0.0},
+    test(
+      'rejects an unknown presentation kind with a structured diagnostic',
+      () {
+        final result = ChartInteractionDocumentCodec.decode(
+          _mutateValueSummary(
+            _encode(const InteractionConfig(valueSummary: _fullConfig)),
+            (summary) => summary
+              ..['presentation'] = {
+                'kind': 'holographic',
+                'placement': {
+                  'anchor': {'x': 0.0, 'y': 0.0},
+                  'offset': {'dx': 0.0, 'dy': 0.0},
+                },
               },
-            },
-        ),
-      );
+          ),
+        );
 
-      expect(result, isA<ChartArtifactFailure<InteractionConfig>>());
-      final failure = result as ChartArtifactFailure<InteractionConfig>;
-      expect(failure.error.code, ChartArtifactDiagnosticCodes.invalidArtifact);
-      expect(failure.error.message, contains('holographic'));
-    });
+        expect(result, isA<ChartArtifactFailure<InteractionConfig>>());
+        final failure = result as ChartArtifactFailure<InteractionConfig>;
+        expect(
+          failure.error.code,
+          ChartArtifactDiagnosticCodes.invalidArtifact,
+        );
+        expect(failure.error.message, contains('holographic'));
+      },
+    );
   });
 
   group('CartesianValueSummary builder content', () {
@@ -341,10 +350,7 @@ void main() {
       final warning = success.warnings.singleWhere(
         (warning) => warning.path!.contains('valueSummary'),
       );
-      expect(
-        warning.code,
-        ChartArtifactDiagnosticCodes.runtimeBindingRequired,
-      );
+      expect(warning.code, ChartArtifactDiagnosticCodes.runtimeBindingRequired);
       expect(warning.message, contains(_builderBindingId));
     });
 
@@ -403,22 +409,33 @@ void main() {
   });
 
   group('CartesianValueSummary onPlacementChanged binding', () {
-    test('requires a runtime descriptor when the callback is present', () {
+    test('omits an unbound host notification with a diagnostic', () {
       final result = ChartInteractionDocumentCodec.encode(
         InteractionConfig(
           valueSummary: CartesianValueSummaryConfig(
+            enabled: true,
             onPlacementChanged: (placement) {},
           ),
         ),
       );
 
-      expect(result, isA<ChartArtifactFailure<ChartInteractionDocument>>());
-      final failure = result as ChartArtifactFailure<ChartInteractionDocument>;
+      expect(result, isA<ChartArtifactSuccess<ChartInteractionDocument>>());
+      final success = result as ChartArtifactSuccess<ChartInteractionDocument>;
       expect(
-        failure.error.code,
+        success.warnings.single.code,
         ChartArtifactDiagnosticCodes.runtimeBindingRequired,
       );
-      expect(failure.error.path, contains('valueSummary.onPlacementChanged'));
+      expect(
+        success.warnings.single.path,
+        contains('valueSummary.onPlacementChanged'),
+      );
+      expect(success.warnings.single.message, contains('was omitted'));
+      expect(success.value.requiredBindings, isEmpty);
+      expect(_configurationJson(success.value)['callbacks'], isNull);
+
+      final decoded = _decode(success.value);
+      expect(decoded.valueSummary.enabled, isTrue);
+      expect(decoded.valueSummary.onPlacementChanged, isNull);
     });
 
     test('rebinds the callback through the registry on decode', () {
@@ -455,8 +472,9 @@ void main() {
       rebound.valueSummary.onPlacementChanged!(ChartOverlayPlacement.topLeft);
       expect(committed, ChartOverlayPlacement.topLeft);
 
-      final degraded = ChartInteractionDocumentCodec.decode(document)
-          as ChartArtifactSuccess<InteractionConfig>;
+      final degraded =
+          ChartInteractionDocumentCodec.decode(document)
+              as ChartArtifactSuccess<InteractionConfig>;
       expect(degraded.value.valueSummary.onPlacementChanged, isNull);
       expect(
         degraded.warnings.single.code,
@@ -466,6 +484,30 @@ void main() {
   });
 
   group('CartesianValueSummary capability and hydration', () {
+    test('default document extraction reports the omitted host callback', () {
+      final result = _extractResult(
+        InteractionConfig(
+          valueSummary: CartesianValueSummaryConfig(
+            enabled: true,
+            onPlacementChanged: (placement) {},
+          ),
+        ),
+      );
+
+      expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+      final success = result as ChartArtifactSuccess<ChartDocumentSnapshot>;
+      expect(
+        success.warnings.single.path,
+        r'$.interaction.configuration.callbacks.valueSummary.onPlacementChanged',
+      );
+      expect(success.warnings.single.message, contains('was omitted'));
+      expect(success.value.document.interaction.requiredBindings, isEmpty);
+
+      final hydrated = _hydrate(success.value.document);
+      expect(hydrated.interaction.valueSummary.enabled, isTrue);
+      expect(hydrated.interaction.valueSummary.onPlacementChanged, isNull);
+    });
+
     test('declares the capability only for non-default configs', () {
       final enabled = _extract(
         const InteractionConfig(valueSummary: _fullConfig),
@@ -501,8 +543,7 @@ void main() {
       );
     });
 
-    test('hydration falls back to automatic content for a missing builder',
-        () {
+    test('hydration falls back to automatic content for a missing builder', () {
       final snapshot = _extract(
         const InteractionConfig(
           valueSummary: CartesianValueSummaryConfig(
@@ -577,23 +618,31 @@ ChartInteractionDocument _mutateValueSummary(
 }
 
 ChartDocumentSnapshot _extract(InteractionConfig interaction) {
-  final series = LineChartSeries(
+  final result = _extractResult(interaction);
+  expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+  return (result as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
+}
+
+ChartArtifactResult<ChartDocumentSnapshot> _extractResult(
+  InteractionConfig interaction,
+) {
+  const series = LineChartSeries(
     id: 'power',
     name: 'Power',
     unit: 'W',
-    color: const Color(0xFF2563EB),
-    points: const [
+    color: Color(0xFF2563EB),
+    points: [
       ChartDataPoint(x: 0, y: 180),
       ChartDataPoint(x: 1, y: 210),
       ChartDataPoint(x: 2, y: 195),
     ],
   );
   final theme = ChartTheme.light;
-  final result = ChartDocumentExtractor.extract(
+  return ChartDocumentExtractor.extract(
     source: ChartDocumentExtractionSource(
-      allSeries: [series],
-      visibleSeries: [series],
-      declaredSeries: [series],
+      allSeries: const [series],
+      visibleSeries: const [series],
+      declaredSeries: const [series],
       annotations: const [],
       xAxis: const XAxisConfig(label: 'Sample'),
       axes: [
@@ -622,8 +671,6 @@ ChartDocumentSnapshot _extract(InteractionConfig interaction) {
     ),
     revision: 1,
   );
-  expect(result, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
-  return (result as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
 }
 
 HydratedChartConfiguration _hydrate(ChartDocument document) {

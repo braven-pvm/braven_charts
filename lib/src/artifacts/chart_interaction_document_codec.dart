@@ -16,8 +16,10 @@ import 'json_value.dart';
 /// Complete portable codec for [InteractionConfig].
 ///
 /// Executable callbacks are represented only by explicit host binding
-/// descriptors. Decoding a document that requires bindings is deferred to the
-/// hydration layer, where a runtime registry can safely resolve them.
+/// descriptors. Optional host notifications without a descriptor are omitted
+/// with a diagnostic; callbacks that carry portable behavior fail closed.
+/// Decoding a document that requires bindings is deferred to the hydration
+/// layer, where a runtime registry can safely resolve them.
 abstract final class ChartInteractionDocumentCodec {
   static const tooltipBuilderBinding = 'tooltip.customBuilder';
   static const dataPointTapBinding = 'onDataPointTap';
@@ -41,10 +43,21 @@ abstract final class ChartInteractionDocumentCodec {
     try {
       final callbacks = <String, Object?>{};
       final requiredBindings = <String>{};
-      void capture(String field, bool present) {
+      void capture(String field, bool present, {bool omitWhenUnbound = false}) {
         if (!present) return;
         final descriptor = runtimeBindingDescriptors[field];
         if (descriptor == null) {
+          if (omitWhenUnbound) {
+            warnings.add(
+              ChartArtifactWarning(
+                code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+                message:
+                    'Optional interaction callback $field was omitted because no runtime binding descriptor was supplied.',
+                path: r'$.interaction.configuration.callbacks.' + field,
+              ),
+            );
+            return;
+          }
           throw _BindingException(
             'Interaction callback $field requires a runtime binding descriptor.',
             r'$.interaction.configuration.callbacks.' + field,
@@ -70,6 +83,7 @@ abstract final class ChartInteractionDocumentCodec {
       capture(
         valueSummaryPlacementChangedBinding,
         config.valueSummary.onPlacementChanged != null,
+        omitWhenUnbound: true,
       );
 
       return ChartArtifactSuccess(
