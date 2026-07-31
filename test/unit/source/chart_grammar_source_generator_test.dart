@@ -2854,13 +2854,23 @@ void main() {
       //
       // Anything THIS fixture does not emit is NOT pinned by this test: a
       // whole-list assertion pins what its fixture emits and is blind to the
-      // rest. Deliberately NOT set here, each pinned elsewhere: `label:` and
-      // `pointKey:` (shape 31, read out of `.geomBar(`'s own list), `labelStyle:`
-      // (shape 10 above, whose nested `BarLabelStyle(` body would otherwise
-      // flatten into this list and couple it to the config emitter), and
-      // `yAxisId:`. `colorBy:`/`sizeBy:` CANNOT be added: `BarMark` carries them
-      // but the bar arm never writes them, so a fixture setting them would be
-      // testing that gap rather than this list.
+      // rest. Deliberately NOT set here, each pinned elsewhere — and "pinned
+      // elsewhere" is a claim that was CHECKED, not assumed (the sibling claim
+      // in shape 38 below was false when it was written):
+      //   - `label:`/`pointKey:` — shape 30e, which reads both out of
+      //     `.geomBar(`'s OWN argument list. (Shape 31 is `isXOrdered`, which
+      //     this list pins itself.)
+      //   - `labelStyle:` — its nested `BarLabelStyle(` body would flatten into
+      //     this list; every field of that shared `_emitBarLabelStyle` body is
+      //     already pinned by `chart_dart_source_generator_test.dart:2058-2067`
+      //     (collisionPolicy, plotEdgeAware, collisionPadding, backgroundColor,
+      //     borderColor, borderWidth, borderRadius, backgroundPadding, callout,
+      //     showStackTotal) plus shape 10's `show`/`showUnit`, so excluding it
+      //     costs no coverage.
+      //   - `yAxisId:`.
+      // `colorBy:`/`sizeBy:` CANNOT be added: `BarMark` carries them but the bar
+      // arm never writes them, so a fixture setting them would be testing that
+      // gap rather than this list.
       //
       // Measured, one mutation set of 13 — each of the bar arm's 6 writer
       // statements deleted in turn (`barWidthPercent`, `barWidthPixels`,
@@ -2943,14 +2953,52 @@ void main() {
       // `SeriesMarkerShape.${name}` whatever its value), so unlike `.band(`
       // none needs a second fixture per branch. The one value-selecting
       // conditional in this arm is `categoryBy`'s
-      // `label == null ? CategoryChannel(f) : CategoryChannel(f, label: ...)`:
-      // this fixture makes the LABELLED arm live, and the unlabelled arm is
-      // NOT pinned here.
+      // `label == null ? CategoryChannel(f) : CategoryChannel(f, label: ...)`
+      // (`_emitScatterChannels`), and this fixture makes the LABELLED arm live.
+      // The unlabelled arm needs no companion fixture because it is
+      // UNREACHABLE, established by probe rather than by inference:
+      //   - the reversed channel is built with
+      //     `label: series.categoryEncoding?.label`, and
+      //     `ScatterCategoryEncoding.label` is NON-nullable (it defaults to
+      //     'Category'), so `label == null` iff `categoryEncoding == null`;
+      //   - the same reversal sets `categories: categoryEncoding?.categories ??
+      //     const []`, so that same chart reaches the grammar layer with a
+      //     `categoryBy` and an EMPTY `categories`, which
+      //     `_validateScatterChannels` refuses
+      //     (`GrammarSpecException.missingChannelEncoding`);
+      //   - measured on the only shape that can produce it — a CONFIG-authored
+      //     `ScatterChartSeries` whose points carry `categoryValue` and whose
+      //     `categoryEncoding` is null. It mounts and extracts cleanly, and the
+      //     generator then emits NO chain at all: `isComplete` false and the
+      //     source is the "grammar chain was not emitted" comment naming that
+      //     diagnostic.
+      // So no emitted chain can ever contain `CategoryChannel(f)` without a
+      // label; the arm is dead code in the emitter (a later `lib/` cleanup,
+      // out of scope for a test-only slice), not an open survivor.
       //
       // Anything THIS fixture does not emit is NOT pinned by this test: a
       // whole-list assertion pins what its fixture emits and is blind to the
       // rest. Deliberately NOT set here: `label:`/`pointKey:` (shape 30/30e
       // read them out of the geom verb's own list) and `yAxisId:`.
+      //
+      // Measured, one mutation set of 52 — 52 of 52 caught here:
+      //   - 6 shared-prologue writer statements this fixture makes live (`id`,
+      //     `y`, `name`, `color`, `unit`, `isXOrdered`), deleted in turn;
+      //   - all 11 statements of `_emitScatterChannels` (`channel('size')`,
+      //     the `sizeEncoding` call, `channel('colorBy')`, the `colorEncoding`
+      //     call, `channel('opacityBy')`, the `opacityEncoding` call, the
+      //     `categoryBy` argument, the `categories` call, `markerRadius`, the
+      //     `markerShape` if-block, the `markerStyle` call) — the whole
+      //     `if (category != null)` block counts as its TWO inner statements,
+      //     deleted separately;
+      //   - all 34 field statements of the nested config bodies that flatten
+      //     into this list: 7 sizeEncoding, 9 colorEncoding (including the
+      //     `colors` loop), 7 opacityEncoding, 4 in the ONE
+      //     `ScatterCategoryStyle` loop body that writes both entries, and 7
+      //     markerStyle — the accepted config-emitter coupling, earning
+      //     coverage rather than costing it;
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitScatterChannels`.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3128,16 +3176,45 @@ void main() {
       // `LineInterpolation.${name}` whatever its value), so unlike `.band(` no
       // second fixture per branch is needed.
       //
+      // `dataPointLabels:` IS set, with every one of its fifteen emittable
+      // fields at a non-default value. An earlier revision left it out "for no
+      // new coverage"; that was measurably false — with it omitted, deleting
+      // `_numberIf(writer, 'markerGap', ...)` from
+      // `chart_config_dart_emitter._emitDataPointLabelsArgument` left the whole
+      // package suite green at `+4247 ~8` — the unmutated count. (Shape 9 above
+      // pins `show:` and `position:` only, as fragments, and neither is
+      // `markerGap`.) The body therefore flattens into this list, which
+      // is the config-emitter coupling the design accepted — here it buys the
+      // fifteen field deletions listed below.
+      //
+      // `formatter:` is the one DataPointLabelConfig field deliberately left
+      // null: its emission is a comment plus a `runtimeValueOmitted` WARNING,
+      // which this shape's `expect(warnings, isEmpty)` forbids by construction,
+      // so a fixture setting it would be testing the warning path instead of
+      // this list. It is not claimed as covered here.
+      //
       // Anything THIS fixture does not emit is NOT pinned by this test.
-      // Deliberately NOT set here: `dataPointLabels:` (the shape above already
-      // pins `dataPointLabels: DataPointLabelConfig(`; including it would
-      // flatten a fifteen-field config body into this list and couple the
-      // assertion to the config emitter for no new coverage), `label:`/
+      // Deliberately NOT set here: `label:`/
       // `pointKey:` (shape 30/30e) and `yAxisId:`. `colorBy:`/`colorEncoding:`
       // CANNOT be added: an area mark bakes a colour channel into per-point
       // segment styles, which the reverser cannot recover, so the generator
       // REFUSES such a chart by name rather than dropping it silently — a
       // fixture setting them would be testing that diagnostic instead.
+      //
+      // Measured, one mutation set of 29 — 29 of 29 caught here:
+      //   - 6 shared-prologue writer statements this fixture makes live (`id`,
+      //     `y`, `name`, `color`, `unit`, `isXOrdered`), deleted in turn;
+      //   - the 7 statements the area arm reaches (`baseline`, `fillOpacity`,
+      //     `strokeWidth`, `dashPattern`, the `interpolation` if-block, and
+      //     `_emitDataPointMarkers`'s two inner writers `showDataPointMarkers`
+      //     and the `dataPointLabels` call);
+      //   - all 15 field statements of
+      //     `_emitDataPointLabelsArgument` (`show`, `position`, `content`,
+      //     `offsetX`, `offsetY`, `markerGap`, `collisionPolicy`,
+      //     `collisionPadding`, `plotEdgeAware`, `labelColor`, `fontSize`,
+      //     `fontWeight`, `showUnit`, `background`, `backgroundOpacity`);
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to the
+      //     area arm.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3155,6 +3232,23 @@ void main() {
                 dashPattern: const <double>[5, 3],
                 interpolation: LineInterpolation.monotone,
                 showDataPointMarkers: true,
+                dataPointLabels: const DataPointLabelConfig(
+                  show: true,
+                  position: DataPointLabelPosition.below,
+                  content: DataPointLabelContent.pointLabel,
+                  offsetX: 3,
+                  offsetY: -2,
+                  markerGap: 6,
+                  collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+                  collisionPadding: 3,
+                  plotEdgeAware: false,
+                  labelColor: Color(0xFF0F172A),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  showUnit: true,
+                  background: Color(0xFFF8FAFC),
+                  backgroundOpacity: 0.6,
+                ),
               )
               .build(bravenChartController: controller),
         ),
@@ -3178,6 +3272,23 @@ void main() {
         'dashPattern: <double>[5.0, 3.0],',
         'interpolation: LineInterpolation.monotone,',
         'showDataPointMarkers: true,',
+        'dataPointLabels: DataPointLabelConfig(',
+        'show: true,',
+        'position: DataPointLabelPosition.below,',
+        'content: DataPointLabelContent.pointLabel,',
+        'offsetX: 3.0,',
+        'offsetY: -2.0,',
+        'markerGap: 6.0,',
+        'collisionPolicy: DataPointLabelCollisionPolicy.reposition,',
+        'collisionPadding: 3.0,',
+        'plotEdgeAware: false,',
+        'labelColor: Color(0xFF0F172A),',
+        'fontSize: 11.0,',
+        'fontWeight: FontWeight.w700,',
+        'showUnit: true,',
+        'background: Color(0xFFF8FAFC),',
+        'backgroundOpacity: 0.6,',
+        '),',
       ]);
       // The list above pins the emitted TEXT; only `dart analyze` proves those
       // names exist on the real builder. This is the only fixture in the corpus
@@ -3211,6 +3322,15 @@ void main() {
         // Anything THIS fixture does not emit is NOT pinned by this test.
         // Deliberately NOT set here: `yAxisId:` (shape 5 reads it out of
         // `.geomCandlestick(`'s own list).
+        //
+        // Measured, one mutation set of 7 — 7 of 7 caught here: each of the 6
+        // writer statements this fixture makes live deleted in turn (`id`, the
+        // `open`/`high`/`low`/`close` for-loop, the `timestamp` if-block,
+        // `name`, `color`, `unit`), plus 1 unconditional
+        // `writer.namedArgument('probe', ...)` added to the candlestick arm.
+        // The four OHLC accessors come from ONE writer statement, so they are
+        // one deletion, not four — the denominator says so rather than
+        // rounding up.
         final generated = generateGrammar(
           await snapshotOf(
             tester,
