@@ -2828,6 +2828,89 @@ void main() {
       );
     });
 
+    testWidgets('shape 36: a MAXIMAL .geomBar( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the BAR-SPECIFIC surface: every optional
+      // `_emitGeometry`'s bar arm can write is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path in that arm is live. `barWidthPercent` and
+      // `barWidthPixels` are NOT mutually exclusive — one fixture emits both,
+      // with `warnings` empty. None of these six selects which model field is
+      // read (`layoutMode` is written as `BarLayoutMode.${name}` whatever its
+      // value), so unlike `.band(` no second fixture per branch is needed.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Deliberately NOT set here, each pinned elsewhere: `label:` and
+      // `pointKey:` (shape 31, read out of `.geomBar(`'s own list), `labelStyle:`
+      // (shape 10 above, whose nested `BarLabelStyle(` body would otherwise
+      // flatten into this list and couple it to the config emitter), and
+      // `yAxisId:`. `colorBy:`/`sizeBy:` CANNOT be added: `BarMark` carries them
+      // but the bar arm never writes them, so a fixture setting them would be
+      // testing that gap rather than this list.
+      //
+      // Measured, one mutation set of 13 — each of the bar arm's 6 writer
+      // statements deleted in turn (`barWidthPercent`, `barWidthPixels`,
+      // `barGap`, the whole `layoutMode` if-block, `groupId`, `baselineValue`),
+      // each of the 6 shared statements this fixture makes live deleted in turn
+      // (`id`, `y`, `name`, `color`, `unit`, `isXOrdered`), plus one
+      // unconditional `writer.namedArgument('probe', ...)` added to the bar
+      // arm: 13 of 13 caught here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomBar(
+                y: samplePower,
+                name: 'Output',
+                color: const Color(0xFF2563EB),
+                unit: 'W',
+                isXOrdered: true,
+                barWidthPercent: 0.6,
+                barWidthPixels: 12,
+                barGap: 4,
+                layoutMode: BarLayoutMode.grouped,
+                groupId: 'g1',
+                baselineValue: 10,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomBar(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomBar('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomBar('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.output,',
+        "name: 'Output',",
+        'color: Color(0xFF2563EB),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'barWidthPercent: 0.6,',
+        'barWidthPixels: 12.0,',
+        'barGap: 4.0,',
+        'layoutMode: BarLayoutMode.grouped,',
+        "groupId: 'g1',",
+        'baselineValue: 10.0,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `barWidthPixels:`, `barGap:`, `layoutMode:`, `groupId:` and
+      // `baselineValue:` on `.geomBar(`, so without this gate those names are
+      // compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_bar_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 29: a Cartesian series unit round-trips AND is emitted', (
       tester,
     ) async {
