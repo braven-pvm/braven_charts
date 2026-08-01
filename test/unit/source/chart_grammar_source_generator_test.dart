@@ -76,6 +76,18 @@ double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
 
+/// A TOTAL per-candle timestamp, derived from `t` rather than stored on
+/// [Sample].
+///
+/// The emitter plans a `timestamp` field only when EVERY candle in the series
+/// carries one — a partial timestamp is refused by name — so the maximal
+/// candlestick fixture needs a non-nullable accessor. Deriving it here leaves
+/// the shared `rows` const list, which a dozen other shapes capture, untouched.
+/// UTC because the emitted literal is `DateTime.parse(<toIso8601String()>)`,
+/// and only a UTC stamp survives that round trip unambiguously.
+DateTime sampleStamp(Sample row) =>
+    DateTime.utc(2026, 1, 1 + row.t.toInt(), 9, 30);
+
 /// Per-point text accessors, as top-level tear-offs so a chain that declares
 /// them stays comparable. The key is derived from `t`, which is unique per row:
 /// a repeated key inside one series is refused by name (shape 30d), so a fixture
@@ -264,6 +276,16 @@ final List<RadialGrammarRow> concentricGrammarRows = <RadialGrammarRow>[
 // mark carries them through to the geom* verb's `style:` / `dataLabels:` args.
 // Each value is validly constructible INSIDE its series (pie radiusFactor in
 // (0, 1]; donut innerRadiusFactor in (0, 1)).
+//
+// EDITING WARNING. These consts are shared by 6-12 shapes each, and the
+// MAXIMAL shapes 42/43 pin their nested bodies by whole-list EQUALITY — a
+// nested config literal flattens into the pinned list, field by field. So
+// changing one field here for one shape's benefit breaks a 30-40 entry
+// equality in another test with a large, non-obvious diff. It fails CLOSED
+// (the equality reddens; nothing goes silently unpinned), so this is an
+// ergonomics note, not a correctness one. If a shape needs different values,
+// mint a shape-owned const the way `maximalGrouping` below was minted, rather
+// than editing a shared one.
 // ---------------------------------------------------------------------------
 
 const styledPieStyle = PieChartStyle(
@@ -298,6 +320,9 @@ const styledPolarStyle = PolarColumnStyle(
 // durable-selection style, small-slice grouping and (pie/donut) a variable
 // slice-radius encoding. The marks now carry these too, so a chart that sets
 // them EMITS instead of being refused by the round-trip proof.
+//
+// The same EDITING WARNING as the styled block above applies: shapes 42/43 pin
+// these bodies field by field by whole-list equality.
 // ---------------------------------------------------------------------------
 
 const showcaseSelection = RadialSelectionStyle(
@@ -310,6 +335,25 @@ const showcaseSelection = RadialSelectionStyle(
 const showcaseGrouping = RadialSliceGroupingConfig(
   minimumShare: 0.08,
   label: 'Other',
+);
+
+/// Grouping that can ride ALONGSIDE a variable slice radius.
+///
+/// `RadialCategorySeries` refuses `sliceGroupingConfig` + `sliceRadiusConfig`
+/// unless the second metric carries an explicit aggregation policy — measured,
+/// mounting [showcaseGrouping] with [showcaseRadius] throws `ArgumentError:
+/// Radial slice grouping cannot be combined with variable slice radii without
+/// an explicit second-metric aggregation policy`. So a MAXIMAL pie, which needs
+/// `radius:`, `sliceRadiusConfig:` and `sliceGroupingConfig:` live at once,
+/// cannot reuse [showcaseGrouping]: it would be a chart the package will not
+/// build. Every field is also set away from its default, so no field of the
+/// emitted literal is elided by the config emitter's `_numberIf` seams.
+const maximalGrouping = RadialSliceGroupingConfig(
+  minimumShare: 0.08,
+  minimumSourceCount: 3,
+  label: 'Other',
+  color: Color(0xFF64748B),
+  radiusAggregation: RadialSliceRadiusAggregation.weightedMean,
 );
 
 /// The donut-centre label / value styling the showcase page applies.
@@ -789,6 +833,8 @@ const polarIntervals = <String, PolarColumnInterval>{
 };
 
 /// Every field differs from the class default, so a dropped style cannot pass.
+/// Shared: shape 43 pins this body field by field by whole-list equality — see
+/// the EDITING WARNING on the styled radial block above before changing it.
 const styledTargetMarker = PolarColumnTargetMarkerStyle(
   color: Color(0xFF0F172A),
   width: 3,
@@ -796,7 +842,8 @@ const styledTargetMarker = PolarColumnTargetMarkerStyle(
   opacity: 0.9,
 );
 
-/// Every field differs from the class default.
+/// Every field differs from the class default. Shared: shape 43 pins this body
+/// field by field by whole-list equality.
 const styledIntervalStyle = PolarColumnIntervalStyle(
   display: PolarColumnIntervalDisplay.band,
   color: Color(0xFF334155),
@@ -835,6 +882,37 @@ final List<PolarAdvancedRow> polarRoseRows = <PolarAdvancedRow>[
       category: row.fruit,
       value: polarObserved[row.fruit]!.toDouble(),
       columnColor: polarColumnColors[row.fruit],
+    ),
+];
+
+/// Column colours for EVERY category, unlike [polarColumnColors].
+///
+/// The presentation fixtures above colour a SUBSET on purpose — reproducing the
+/// absences is what they test. The maximal shape's job is different: it needs
+/// every advanced channel LIVE at once, so it colours all four.
+const polarMaximalColumnColors = <String, Color>{
+  'Apple': Color(0xFF16A34A),
+  'Pear': Color(0xFF2563EB),
+  'Plum': Color(0xFF7C3AED),
+  'Fig': Color(0xFFDC2626),
+};
+
+/// The MAXIMAL polar rows: value AND all four advanced per-category channels.
+///
+/// No existing polar fixture carries them together — `polarReferenceRows` has
+/// colour + target, `polarIntervalRows` has the two bounds, `polarRoseRows` has
+/// colour — so none of them can emit `columnColor:`, `target:`, `intervalLow:`
+/// and `intervalHigh:` in one `.geomPolar(` literal, and a whole-list assertion
+/// against any of them would be blind to the channels its fixture omits.
+final List<PolarAdvancedRow> polarMaximalRows = <PolarAdvancedRow>[
+  for (final row in harvest)
+    PolarAdvancedRow(
+      category: row.fruit,
+      value: polarObserved[row.fruit]!.toDouble(),
+      columnColor: polarMaximalColumnColors[row.fruit],
+      target: polarObserved[row.fruit]!.toDouble() + 8,
+      intervalLow: polarObserved[row.fruit]!.toDouble() - 4,
+      intervalHigh: polarObserved[row.fruit]!.toDouble() + 4,
     ),
 ];
 
@@ -2327,6 +2405,12 @@ List<String> literalArguments(String source, String opening) {
   final bodyStart = source.indexOf('\n', start) + 1;
   final end = source.indexOf('\n${' ' * indent})', start);
   expect(end, isNonNegative, reason: 'unterminated "$opening" in:\n$source');
+  // An EMPTY argument list puts the closing paren on the line directly after
+  // the opening, so `end` lands one BEFORE `bodyStart` and `substring` throws
+  // `RangeError` instead of reporting the empty list. Return it instead: a
+  // RangeError raised deep inside this helper is a far worse diagnostic than
+  // an expectation that fails against `[]`.
+  if (end < bodyStart) return const <String>[];
   return <String>[
     for (final line in source.substring(bodyStart, end).split('\n'))
       if (line.trim().isNotEmpty) line.trim(),
@@ -2334,6 +2418,22 @@ List<String> literalArguments(String source, String opening) {
 }
 
 void main() {
+  group('literalArguments', () {
+    test('returns an empty list for a verb with no arguments', () {
+      // For `Verb(\n)` the computed bodyStart is one past end, and substring
+      // throws RangeError. No verb emits an empty list today, but a config
+      // emitter that drops the one field that differed would produce one, and a
+      // RangeError deep inside a helper is a worse diagnostic than an empty
+      // list.
+      const source =
+          'final chart = BravenChart.of(rows)\n'
+          '    .verb(\n'
+          '    )\n'
+          '    .build();';
+      expect(literalArguments(source, '.verb('), isEmpty);
+    });
+  });
+
   group('round trip', () {
     testWidgets('shape 1: a single line', (tester) async {
       // The twin declares the axis but does NOT bind the mark to it, because
@@ -2806,6 +2906,550 @@ void main() {
       );
     });
 
+    testWidgets('shape 36: a MAXIMAL .geomBar( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the BAR-SPECIFIC surface: every optional
+      // `_emitGeometry`'s bar arm can write is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path in that arm is live. `barWidthPercent` and
+      // `barWidthPixels` are NOT mutually exclusive — one fixture emits both,
+      // with `warnings` empty. None of these six selects which model field is
+      // read (`layoutMode` is written as `BarLayoutMode.${name}` whatever its
+      // value), so unlike `.band(` no second fixture per branch is needed.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Deliberately NOT set here, each pinned elsewhere — and "pinned
+      // elsewhere" is a claim that was CHECKED, not assumed (the sibling claim
+      // in shape 38 below was false when it was written):
+      //   - `label:`/`pointKey:` — shape 30e, which reads both out of
+      //     `.geomBar(`'s OWN argument list. (Shape 31 is `isXOrdered`, which
+      //     this list pins itself.)
+      //   - `labelStyle:` — its nested `BarLabelStyle(` body would flatten into
+      //     this list; every field of that shared `_emitBarLabelStyle` body is
+      //     already pinned by `chart_dart_source_generator_test.dart:2058-2067`
+      //     (collisionPolicy, plotEdgeAware, collisionPadding, backgroundColor,
+      //     borderColor, borderWidth, borderRadius, backgroundPadding, callout,
+      //     showStackTotal) plus shape 10's `show`/`showUnit`, so excluding it
+      //     costs no coverage.
+      //   - `yAxisId:`.
+      // `colorBy:`/`sizeBy:` CANNOT be added: `BarMark` carries them but the bar
+      // arm never writes them, so a fixture setting them would be testing that
+      // gap rather than this list.
+      //
+      // Measured, one mutation set of 13 — each of the bar arm's 6 writer
+      // statements deleted in turn (`barWidthPercent`, `barWidthPixels`,
+      // `barGap`, the whole `layoutMode` if-block, `groupId`, `baselineValue`),
+      // each of the 6 shared statements this fixture makes live deleted in turn
+      // (`id`, `y`, `name`, `color`, `unit`, `isXOrdered`), plus one
+      // unconditional `writer.namedArgument('probe', ...)` added to the bar
+      // arm: 13 of 13 caught here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomBar(
+                y: samplePower,
+                name: 'Output',
+                color: const Color(0xFF2563EB),
+                unit: 'W',
+                isXOrdered: true,
+                barWidthPercent: 0.6,
+                barWidthPixels: 12,
+                barGap: 4,
+                layoutMode: BarLayoutMode.grouped,
+                groupId: 'g1',
+                baselineValue: 10,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomBar(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomBar('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomBar('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.output,',
+        "name: 'Output',",
+        'color: Color(0xFF2563EB),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'barWidthPercent: 0.6,',
+        'barWidthPixels: 12.0,',
+        'barGap: 4.0,',
+        'layoutMode: BarLayoutMode.grouped,',
+        "groupId: 'g1',",
+        'baselineValue: 10.0,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `barWidthPixels:`, `barGap:`, `layoutMode:`, `groupId:` and
+      // `baselineValue:` on `.geomBar(`, so without this gate those names are
+      // compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_bar_maximal',
+        ),
+      );
+    });
+
+    testWidgets('shape 37: a MAXIMAL .geomPoint( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the SCATTER surface: every optional
+      // `_emitScatterChannels` and the shared prologue can write is set
+      // EXPLICITLY, so no theme-resolved value lands in the expected list and
+      // every conditional emission path in that arm is live. The three
+      // quantitative channels MUST carry their encodings — `size:`/`colorBy:`/
+      // `opacityBy:` without one throws GrammarSpecException(
+      // missingChannelEncoding) — so the encoding bodies FLATTEN into this
+      // list. That is the accepted cost recorded in the design: this assertion
+      // also pins the CONFIG emitter's rendering of those four literals.
+      //
+      // None of the four survivors selects which model field is read (read
+      // before writing this fixture: `colorBy`/`opacityBy` go through
+      // `channel()` on a plan accessor, `markerRadius` through
+      // `_optionalNumber`, `markerShape` is written as
+      // `SeriesMarkerShape.${name}` whatever its value), so unlike `.band(`
+      // none needs a second fixture per branch. The one value-selecting
+      // conditional in this arm is `categoryBy`'s
+      // `label == null ? CategoryChannel(f) : CategoryChannel(f, label: ...)`
+      // (`_emitScatterChannels`), and this fixture makes the LABELLED arm live.
+      // The unlabelled arm needs no companion fixture because it is
+      // UNREACHABLE, established by probe rather than by inference:
+      //   - the reversed channel is built with
+      //     `label: series.categoryEncoding?.label`, and
+      //     `ScatterCategoryEncoding.label` is NON-nullable (it defaults to
+      //     'Category'), so `label == null` iff `categoryEncoding == null`;
+      //   - the same reversal sets `categories: categoryEncoding?.categories ??
+      //     const []`, so that same chart reaches the grammar layer with a
+      //     `categoryBy` and an EMPTY `categories`, which
+      //     `_validateScatterChannels` refuses
+      //     (`GrammarSpecException.missingChannelEncoding`);
+      //   - measured on the only shape that can produce it — a CONFIG-authored
+      //     `ScatterChartSeries` whose points carry `categoryValue` and whose
+      //     `categoryEncoding` is null. It mounts and extracts cleanly, and the
+      //     generator then emits NO chain at all: `isComplete` false and the
+      //     source is the "grammar chain was not emitted" comment naming that
+      //     diagnostic.
+      // So no emitted chain can ever contain `CategoryChannel(f)` without a
+      // label; the arm is dead code in the emitter (a later `lib/` cleanup,
+      // out of scope for a test-only slice), not an open survivor.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Deliberately NOT set here: `label:`/`pointKey:` (shape 30/30e
+      // read them out of the geom verb's own list) and `yAxisId:`.
+      //
+      // Measured, one mutation set of 52 — 52 of 52 caught here:
+      //   - 6 shared-prologue writer statements this fixture makes live (`id`,
+      //     `y`, `name`, `color`, `unit`, `isXOrdered`), deleted in turn;
+      //   - all 11 statements of `_emitScatterChannels` (`channel('size')`,
+      //     the `sizeEncoding` call, `channel('colorBy')`, the `colorEncoding`
+      //     call, `channel('opacityBy')`, the `opacityEncoding` call, the
+      //     `categoryBy` argument, the `categories` call, `markerRadius`, the
+      //     `markerShape` if-block, the `markerStyle` call) — the whole
+      //     `if (category != null)` block counts as its TWO inner statements,
+      //     deleted separately;
+      //   - all 34 field statements of the nested config bodies that flatten
+      //     into this list: 7 sizeEncoding, 9 colorEncoding (including the
+      //     `colors` loop), 7 opacityEncoding, 4 in the ONE
+      //     `ScatterCategoryStyle` loop body that writes both entries, and 7
+      //     markerStyle — the accepted config-emitter coupling, earning
+      //     coverage rather than costing it;
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitScatterChannels`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomPoint(
+                y: samplePower,
+                name: 'Markers',
+                color: const Color(0xFF2563EB),
+                unit: 'W',
+                isXOrdered: true,
+                size: const Channel<Sample>(sampleEffort),
+                sizeEncoding: const ScatterSizeEncoding(
+                  minimumRadius: 3,
+                  maximumRadius: 18,
+                  minimumValue: 1,
+                  maximumValue: 9,
+                  label: 'Effort',
+                  unit: 'au',
+                  showLegend: false,
+                ),
+                colorBy: const Channel<Sample>(sampleHeartRate),
+                colorEncoding: const ScatterColorEncoding(
+                  colors: <Color>[Color(0xFF16A34A), Color(0xFFF59E0B)],
+                  scaleType: ScatterColorScaleType.piecewise,
+                  thresholds: <double>[140],
+                  bandLabels: <String>['Steady', 'Hard'],
+                  minimumValue: 100,
+                  maximumValue: 180,
+                  label: 'Heart rate',
+                  unit: 'bpm',
+                  showLegend: false,
+                ),
+                opacityBy: const Channel<Sample>(sampleHigh),
+                opacityEncoding: const ScatterOpacityEncoding(
+                  minimumOpacity: 0.3,
+                  maximumOpacity: 0.9,
+                  minimumValue: 110,
+                  maximumValue: 140,
+                  label: 'Confidence',
+                  unit: 'pct',
+                  showLegend: false,
+                ),
+                categoryBy: const CategoryChannel<Sample>(
+                  sampleZone,
+                  label: 'Zone',
+                ),
+                categories: const <ScatterCategoryStyle>[
+                  ScatterCategoryStyle(
+                    key: 'Endurance',
+                    label: 'Zone 2',
+                    color: Color(0xFF16A34A),
+                    shape: SeriesMarkerShape.square,
+                  ),
+                  ScatterCategoryStyle(
+                    key: 'Tempo',
+                    label: 'Zone 3',
+                    color: Color(0xFFF59E0B),
+                    shape: SeriesMarkerShape.triangle,
+                  ),
+                ],
+                markerRadius: 5,
+                markerShape: SeriesMarkerShape.diamond,
+                markerStyle: const ScatterMarkerStyle(
+                  fillColor: Color(0xFF0EA5E9),
+                  strokeColor: Color(0xFF0F172A),
+                  strokeWidth: 1.5,
+                  opacity: 0.8,
+                  width: 9,
+                  height: 7,
+                  rotationDegrees: 30,
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomPoint(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomPoint('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPoint('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.markers,',
+        "name: 'Markers',",
+        'color: Color(0xFF2563EB),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'size: Channel((row) => row.markersSize),',
+        'sizeEncoding: ScatterSizeEncoding(',
+        'minimumRadius: 3.0,',
+        'maximumRadius: 18.0,',
+        'minimumValue: 1.0,',
+        'maximumValue: 9.0,',
+        "label: 'Effort',",
+        "unit: 'au',",
+        'showLegend: false,',
+        '),',
+        'colorBy: Channel((row) => row.markersColor),',
+        'colorEncoding: ScatterColorEncoding(',
+        'colors: [',
+        'Color(0xFF16A34A),',
+        'Color(0xFFF59E0B),',
+        '],',
+        'scaleType: ScatterColorScaleType.piecewise,',
+        'thresholds: [140.0],',
+        "bandLabels: ['Steady', 'Hard'],",
+        'minimumValue: 100.0,',
+        'maximumValue: 180.0,',
+        "label: 'Heart rate',",
+        "unit: 'bpm',",
+        'showLegend: false,',
+        '),',
+        'opacityBy: Channel((row) => row.markersOpacity),',
+        'opacityEncoding: ScatterOpacityEncoding(',
+        'minimumOpacity: 0.3,',
+        'maximumOpacity: 0.9,',
+        'minimumValue: 110.0,',
+        'maximumValue: 140.0,',
+        "label: 'Confidence',",
+        "unit: 'pct',",
+        'showLegend: false,',
+        '),',
+        "categoryBy: CategoryChannel((row) => row.markersCategory, label: 'Zone'),",
+        'categories: [',
+        'ScatterCategoryStyle(',
+        "key: 'Endurance',",
+        "label: 'Zone 2',",
+        'color: Color(0xFF16A34A),',
+        'shape: SeriesMarkerShape.square,',
+        '),',
+        'ScatterCategoryStyle(',
+        "key: 'Tempo',",
+        "label: 'Zone 3',",
+        'color: Color(0xFFF59E0B),',
+        'shape: SeriesMarkerShape.triangle,',
+        '),',
+        '],',
+        'markerRadius: 5.0,',
+        'markerShape: SeriesMarkerShape.diamond,',
+        'markerStyle: ScatterMarkerStyle(',
+        'fillColor: Color(0xFF0EA5E9),',
+        'strokeColor: Color(0xFF0F172A),',
+        'strokeWidth: 1.5,',
+        'opacity: 0.8,',
+        'width: 9.0,',
+        'height: 7.0,',
+        'rotationDegrees: 30.0,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `opacityBy:`, `opacityEncoding:`, `markerRadius:`,
+      // `markerShape:` and `markerStyle:` on `.geomPoint(`, so without this
+      // gate those names are compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_point_maximal',
+        ),
+      );
+    });
+
+    testWidgets('shape 38: a MAXIMAL .geomArea( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the AREA-SPECIFIC surface: every optional
+      // `_emitGeometry`'s area arm can write as a direct argument is set
+      // EXPLICITLY, so no theme-resolved value lands in the expected list and
+      // every conditional emission path in that arm is live. None of them
+      // selects which model field is read (`baseline`, `fillOpacity`,
+      // `strokeWidth` go through `_optionalNumber`, `dashPattern` through
+      // `_optionalNumberList`, `interpolation` is written as
+      // `LineInterpolation.${name}` whatever its value), so unlike `.band(` no
+      // second fixture per branch is needed.
+      //
+      // `dataPointLabels:` IS set, with every one of its fifteen emittable
+      // fields at a non-default value. An earlier revision left it out "for no
+      // new coverage"; that was measurably false — with it omitted, deleting
+      // `_numberIf(writer, 'markerGap', ...)` from
+      // `chart_config_dart_emitter._emitDataPointLabelsArgument` left the whole
+      // package suite green at `+4247 ~8` — the unmutated count. (Shape 9 above
+      // pins `show:` and `position:` only, as fragments, and neither is
+      // `markerGap`.) The body therefore flattens into this list, which
+      // is the config-emitter coupling the design accepted — here it buys the
+      // fifteen field deletions listed below.
+      //
+      // `formatter:` is the one DataPointLabelConfig field deliberately left
+      // null: its emission is a comment plus a `runtimeValueOmitted` WARNING,
+      // which this shape's `expect(warnings, isEmpty)` forbids by construction,
+      // so a fixture setting it would be testing the warning path instead of
+      // this list. It is not claimed as covered here.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test.
+      // Deliberately NOT set here: `label:`/
+      // `pointKey:` (shape 30/30e) and `yAxisId:`. `colorBy:`/`colorEncoding:`
+      // CANNOT be added: an area mark bakes a colour channel into per-point
+      // segment styles, which the reverser cannot recover, so the generator
+      // REFUSES such a chart by name rather than dropping it silently — a
+      // fixture setting them would be testing that diagnostic instead.
+      //
+      // Measured, one mutation set of 29 — 29 of 29 caught here:
+      //   - 6 shared-prologue writer statements this fixture makes live (`id`,
+      //     `y`, `name`, `color`, `unit`, `isXOrdered`), deleted in turn;
+      //   - the 7 statements the area arm reaches (`baseline`, `fillOpacity`,
+      //     `strokeWidth`, `dashPattern`, the `interpolation` if-block, and
+      //     `_emitDataPointMarkers`'s two inner writers `showDataPointMarkers`
+      //     and the `dataPointLabels` call);
+      //   - all 15 field statements of
+      //     `_emitDataPointLabelsArgument` (`show`, `position`, `content`,
+      //     `offsetX`, `offsetY`, `markerGap`, `collisionPolicy`,
+      //     `collisionPadding`, `plotEdgeAware`, `labelColor`, `fontSize`,
+      //     `fontWeight`, `showUnit`, `background`, `backgroundOpacity`);
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to the
+      //     area arm.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomArea(
+                y: samplePower,
+                name: 'Load',
+                color: const Color(0xFF7C3AED),
+                unit: 'W',
+                isXOrdered: true,
+                baseline: 40,
+                fillOpacity: 0.22,
+                strokeWidth: 2.4,
+                dashPattern: const <double>[5, 3],
+                interpolation: LineInterpolation.monotone,
+                showDataPointMarkers: true,
+                dataPointLabels: const DataPointLabelConfig(
+                  show: true,
+                  position: DataPointLabelPosition.below,
+                  content: DataPointLabelContent.pointLabel,
+                  offsetX: 3,
+                  offsetY: -2,
+                  markerGap: 6,
+                  collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+                  collisionPadding: 3,
+                  plotEdgeAware: false,
+                  labelColor: Color(0xFF0F172A),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  showUnit: true,
+                  background: Color(0xFFF8FAFC),
+                  backgroundOpacity: 0.6,
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomArea(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomArea('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomArea('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.load,',
+        "name: 'Load',",
+        'color: Color(0xFF7C3AED),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'baseline: 40.0,',
+        'fillOpacity: 0.22,',
+        'strokeWidth: 2.4,',
+        'dashPattern: <double>[5.0, 3.0],',
+        'interpolation: LineInterpolation.monotone,',
+        'showDataPointMarkers: true,',
+        'dataPointLabels: DataPointLabelConfig(',
+        'show: true,',
+        'position: DataPointLabelPosition.below,',
+        'content: DataPointLabelContent.pointLabel,',
+        'offsetX: 3.0,',
+        'offsetY: -2.0,',
+        'markerGap: 6.0,',
+        'collisionPolicy: DataPointLabelCollisionPolicy.reposition,',
+        'collisionPadding: 3.0,',
+        'plotEdgeAware: false,',
+        'labelColor: Color(0xFF0F172A),',
+        'fontSize: 11.0,',
+        'fontWeight: FontWeight.w700,',
+        'showUnit: true,',
+        'background: Color(0xFFF8FAFC),',
+        'backgroundOpacity: 0.6,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `baseline:` on `.geomArea(`, so without this gate that name
+      // is compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_area_maximal',
+        ),
+      );
+    });
+
+    testWidgets(
+      'shape 39: a MAXIMAL .geomCandlestick( pins its whole argument list',
+      (tester) async {
+        // MAXIMAL fixture for the CANDLESTICK surface: every optional
+        // `.geomCandlestick(` takes is set EXPLICITLY, so no theme-resolved
+        // value lands in the expected list and every conditional emission path
+        // is live. `timestamp:` is the survivor, and it is written ONLY when
+        // the plan carries a stamp — which it does only when EVERY candle has
+        // one — so `sampleStamp` is total. Without it this assertion would be
+        // vacuous for the one argument it exists to pin.
+        //
+        // The candlestick arm adds nothing of its own after the prologue, so
+        // this list IS the prologue with open/high/low/close in place of `y`.
+        // `isXOrdered:` cannot appear: `_emitGeometry`'s `isXOrdered` switch
+        // sends candlestick to its `_ => false` default (the candlestick series
+        // hard-codes the flag), and `.geomCandlestick(` takes no such argument.
+        //
+        // Anything THIS fixture does not emit is NOT pinned by this test.
+        // Deliberately NOT set here: `yAxisId:` (shape 5 reads it out of
+        // `.geomCandlestick(`'s own list).
+        //
+        // Measured, one mutation set of 7 — 7 of 7 caught here: each of the 6
+        // writer statements this fixture makes live deleted in turn (`id`, the
+        // `open`/`high`/`low`/`close` for-loop, the `timestamp` if-block,
+        // `name`, `color`, `unit`), plus 1 unconditional
+        // `writer.namedArgument('probe', ...)` added to the candlestick arm.
+        // The four OHLC accessors come from ONE writer statement, so they are
+        // one deletion, not four — the denominator says so rather than
+        // rounding up.
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT)
+                .geomCandlestick(
+                  open: sampleOpen,
+                  high: sampleHigh,
+                  low: sampleLow,
+                  close: sampleClose,
+                  timestamp: sampleStamp,
+                  name: 'Price',
+                  color: const Color(0xFFDC2626),
+                  unit: 'USD',
+                )
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // `literalArguments` slices from the FIRST occurrence of the opening
+        // token, so a second `.geomCandlestick(` would leave this assertion
+        // reading the wrong literal and silently pinning nothing about the
+        // other.
+        expect('.geomCandlestick('.allMatches(generated.source).length, 1);
+        expect(
+          literalArguments(generated.source, '.geomCandlestick('),
+          <String>[
+            "id: 'mark-0',",
+            'open: (row) => row.priceOpen,',
+            'high: (row) => row.priceHigh,',
+            'low: (row) => row.priceLow,',
+            'close: (row) => row.priceClose,',
+            'timestamp: (row) => row.priceTimestamp,',
+            "name: 'Price',",
+            'color: Color(0xFFDC2626),',
+            "unit: 'USD',",
+          ],
+        );
+        // The list above pins the emitted TEXT; only `dart analyze` proves those
+        // names exist on the real builder. This is the only fixture in the
+        // corpus that emits `timestamp:` on `.geomCandlestick(`, so without
+        // this gate that name is compiled by nothing in the repo — and it is
+        // also the only one that compiles the synthesised `DateTime` row slot.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_candlestick_maximal',
+          ),
+        );
+      },
+    );
+
     testWidgets('shape 29: a Cartesian series unit round-trips AND is emitted', (
       tester,
     ) async {
@@ -3003,6 +3647,11 @@ void main() {
             'the axis unit must reach the source, or this control is '
             'vacuous and a whole-file token search would have passed it',
       );
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomLine(` would leave the list below reading one
+      // mark and silently saying nothing about the other. Mandatory on every
+      // call site — added here retrospectively; this site predates the rule.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'mark-0',",
         'y: (row) => row.mark0,',
@@ -3053,6 +3702,7 @@ void main() {
       // Read out of the geom call, not out of the file: the same `unit:` token
       // is a `YAxisConfig` field, and this fixture emits an axis literal right
       // beside the mark.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, '.geomLine('),
         contains("unit: 'W',"),
@@ -3117,6 +3767,7 @@ void main() {
       // field, an extra field, a wrong accessor and a reordering then all fail.
       // Scoped to the call because `label:` is also an axis field and this
       // chart puts one on the axis right beside the mark.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -3178,6 +3829,7 @@ void main() {
             'the axis label must reach the source, or this control is vacuous '
             'and a whole-file token search would have passed it',
       );
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -3464,6 +4116,7 @@ void main() {
       );
       // The WHOLE argument list of the geom call, not one fragment: a dropped
       // field, an extra field, a wrong value and a reordering then all fail.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -3597,6 +4250,7 @@ void main() {
         isTrue,
         reason: 'blocked with: ${blockedReason(generated)}',
       );
+      expect('.geomLine('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, '.geomLine('), <String>[
         "id: 'power',",
         'y: (row) => row.power,',
@@ -3736,6 +4390,81 @@ void main() {
       );
     });
 
+    testWidgets('shape 32: a MAXIMAL .trend( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.trend(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path is live. Anything THIS fixture does not emit is NOT
+      // pinned by this test: a whole-list assertion pins what its fixture emits
+      // and is blind to the rest.
+      //
+      // Measured, one mutation set of 10 — each of `_emitTrend`'s 9 writer
+      // statements deleted in turn, plus one unconditional
+      // `writer.namedArgument('probe', ...)` added: 10 of 10 caught here.
+      //
+      // The MINIMAL trend — "shape 7: a trend annotation becomes .trend(of:)"
+      // — stays, and is kept rather than rewritten, but the identical assertion
+      // against it could catch at most 6 of those 9 deletions. Measured, its
+      // emitted list is exactly
+      // [id, of, method, name, color: Color(0xFF2196F3), lineWidth: 2.0]:
+      // `windowSize`, `showConfidenceBand` and `dashPattern` are never emitted
+      // by it, and the last two entries are THEME-resolved values the author
+      // never set, so pinning that shape would also break on a palette change.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .trend(
+                of: 'mark-0',
+                method: TrendType.movingAverage,
+                windowSize: 3,
+                id: 'fit',
+                name: 'Trend',
+                color: const Color(0xFF16A34A),
+                showConfidenceBand: true,
+                lineWidth: 1.5,
+                dashPattern: const <double>[4, 2],
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.trend(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.trend('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.trend('), <String>[
+        "id: 'fit',",
+        "of: 'mark-0',",
+        'method: TrendType.movingAverage,',
+        'windowSize: 3,',
+        "name: 'Trend',",
+        'color: Color(0xFF16A34A),',
+        'showConfidenceBand: true,',
+        'lineWidth: 1.5,',
+        'dashPattern: <double>[4.0, 2.0],',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. Without this gate a rename in the
+      // emitter, mirrored into the expected list, stays green while the Grammar
+      // pane ships a chain that does not compile — measured by renaming
+      // `showConfidenceBand` to `showConfidenceBandZZ` in `_emitTrend` and in
+      // the list above together: green without the gate, RED with it. This is
+      // also the ONLY caller of the gate for `windowSize:`, `showConfidenceBand:`
+      // and `dashPattern:` on `.trend(` — no other fixture emits them.
+      // Real subprocesses, so `expectRoundTrip`'s `runAsync` note applies here.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_trend_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 8: a threshold annotation becomes .threshold(', (
       tester,
     ) async {
@@ -3782,6 +4511,67 @@ void main() {
       );
     });
 
+    testWidgets('shape 33: a MAXIMAL .threshold( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.threshold(` is set EXPLICITLY, so
+      // no theme-resolved value lands in the expected list and every
+      // conditional emission path is live — `axis` is the one argument here
+      // that could select a path, and it does not: `_emitThreshold` writes
+      // `annotation.axis.name` whichever value it holds, unlike `_emitBand`
+      // (see "shape 34b"). The MINIMAL threshold — "shape 8: a threshold
+      // annotation becomes .threshold(" — stays, but it never sets `id` or
+      // `dashPattern`, so the identical assertion against it would pin neither.
+      // Anything THIS fixture does not emit is NOT pinned by this test.
+      //
+      // Measured, one mutation set of 8 — each of `_emitThreshold`'s 7 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 8 of 8 caught here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .threshold(
+                value: 250,
+                axis: AnnotationAxis.y,
+                id: 'ftp',
+                label: 'FTP',
+                color: const Color(0xFFDC2626),
+                strokeWidth: 2.5,
+                dashPattern: const <double>[6, 3],
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.threshold(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.threshold('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.threshold('), <String>[
+        "id: 'ftp',",
+        'value: 250.0,',
+        'axis: AnnotationAxis.y,',
+        "label: 'FTP',",
+        'color: Color(0xFFDC2626),',
+        'strokeWidth: 2.5,',
+        'dashPattern: <double>[6.0, 3.0],',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `dashPattern:` on `.threshold(`, so without this gate that
+      // name is compiled by nothing.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_threshold_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 9: a range annotation becomes .band(', (tester) async {
       await expectRoundTrip(
         tester,
@@ -3825,6 +4615,128 @@ void main() {
             .build(bravenChartController: controller),
       );
     });
+
+    testWidgets('shape 34: a MAXIMAL .band( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.band(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list. That is NOT the same
+      // as "every conditional emission path is live": `axis` selects which
+      // model field each bound is read from, so this Y fixture leaves
+      // `_emitBand`'s X arm dead. "shape 34b" carries that arm — see its
+      // comment for the mutation that proves the two are independent.
+      //
+      // The MINIMAL band — "shape 9: a range annotation becomes .band(" —
+      // stays, but it never sets `id`, and its fragment list names neither
+      // `label` nor `color`. Anything THIS fixture does not emit is NOT pinned
+      // by this test: a whole-list assertion pins what its fixture emits and is
+      // blind to the rest.
+      //
+      // Measured, one mutation set of 7 — each of `_emitBand`'s 6 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 7 of 7 caught by shapes 34 and 34b together (and by each of them
+      // individually, since both fixtures emit all six).
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .band(
+                start: 200,
+                end: 260,
+                axis: AnnotationAxis.y,
+                id: 'zone2',
+                label: 'Zone',
+                color: const Color(0x332563EB),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.band(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.band('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.band('), <String>[
+        "id: 'zone2',",
+        'start: 200.0,',
+        'end: 260.0,',
+        'axis: AnnotationAxis.y,',
+        "label: 'Zone',",
+        'color: Color(0x332563EB),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `id:`, `label:` and `color:` together on `.band(`.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_band_maximal',
+        ),
+      );
+    });
+
+    testWidgets(
+      'shape 34b: a MAXIMAL .band( on the X axis pins its whole argument list',
+      (tester) async {
+        // `axis` on `.band(` is not just another optional: `_emitBand` reads it
+        // to CHOOSE which model field each bound comes from —
+        // `(isY ? annotation.startY : annotation.startX)!`. Setting every
+        // optional therefore does NOT make every conditional path live, and the
+        // MAXIMAL Y band above ("shape 34: a MAXIMAL .band( pins its whole
+        // argument list") leaves the X arm emitted by nothing — every other
+        // `.band(`/`.threshold(` fixture in this file is `AnnotationAxis.y`
+        // too. Measured: before this shape existed, swapping ONLY the X
+        // operands (`start:` reading `endX`, `end:` reading `startX`, the Y arm
+        // byte-identical) left the source-generator and drift suites green at
+        // `+190: All tests passed!`; with this shape the same swap fails here.
+        // So the X arm needs its own fixture, not another optional on the Y one.
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT)
+                .geomLine(y: samplePower, name: 'Power')
+                .band(
+                  start: 1,
+                  end: 3,
+                  axis: AnnotationAxis.x,
+                  id: 'interval',
+                  label: 'Interval',
+                  color: const Color(0x33F59E0B),
+                )
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // `literalArguments` slices from the FIRST occurrence of the opening
+        // token, so a second `.band(` would leave this assertion reading the
+        // wrong literal and silently pinning nothing about the other.
+        expect('.band('.allMatches(generated.source).length, 1);
+        // `start` and `end` differ, and differ from the Y fixture's values, so
+        // reversing the X operands or reading the Y pair fails here rather than
+        // landing on a value that happens to match.
+        expect(literalArguments(generated.source, '.band('), <String>[
+          "id: 'interval',",
+          'start: 1.0,',
+          'end: 3.0,',
+          'axis: AnnotationAxis.x,',
+          "label: 'Interval',",
+          'color: Color(0x33F59E0B),',
+        ]);
+        // The list above pins the emitted TEXT; only `dart analyze` proves those
+        // names exist on the real builder.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_band_x_maximal',
+          ),
+        );
+      },
+    );
 
     testWidgets('shape 10: a point annotation becomes .pointAt(', (
       tester,
@@ -3874,6 +4786,77 @@ void main() {
       );
     });
 
+    testWidgets('shape 35: a MAXIMAL .pointAt( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every optional on `.pointAt(` is set EXPLICITLY, so no
+      // theme-resolved value lands in the expected list and every conditional
+      // emission path is live — `_emitPoint` has no value-selecting branch, so
+      // here setting every optional really does cover every path. The MINIMAL
+      // point — "shape 10: a point annotation becomes .pointAt(" — stays, but
+      // it never sets `id`, and its fragment list names neither `label`,
+      // `color` nor `markerSize`. Anything THIS fixture does not emit is NOT
+      // pinned by this test: a whole-list assertion pins what its fixture emits
+      // and is blind to the rest.
+      //
+      // Measured, one mutation set of 8 — each of `_emitPoint`'s 7 writer
+      // statements deleted in turn, plus one unconditional probe argument
+      // added: 8 of 8 caught here.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .pointAt(
+                seriesId: 'mark-0',
+                dataPointIndex: 1,
+                id: 'peak',
+                label: 'Peak',
+                color: const Color(0xFFDC2626),
+                markerSize: 12,
+                markerShape: MarkerShape.star,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.pointAt(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.pointAt('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.pointAt('), <String>[
+        "id: 'peak',",
+        "seriesId: 'mark-0',",
+        'dataPointIndex: 1,',
+        "label: 'Peak',",
+        'color: Color(0xFFDC2626),',
+        'markerSize: 12.0,',
+        'markerShape: MarkerShape.star,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `id:` together with `markerSize:` and `markerShape:` on
+      // `.pointAt(`.
+      //
+      // `fixtureName` is a real PATH — `expectGeneratedSourceCompiles` writes
+      // `<cwd>/.dart_tool/<fixtureName>.dart`, shells out to `dart format` and
+      // `dart analyze` on it, then deletes it. So it must be UNIQUE across the
+      // repo: this shape and shape 37 (the maximal `.geomPoint(`) both used
+      // `grammar_source_point_maximal`, which is benign only while both live in
+      // this one file and run sequentially, and becomes a real race the moment
+      // either moves — test FILES run concurrently. Renamed to
+      // `..._point_at_maximal`, which also makes an analyze failure name the
+      // shape that produced it.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_point_at_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 11: chart-level grid, title and legend are emitted', (
       tester,
     ) async {
@@ -3915,6 +4898,476 @@ void main() {
             .title('Session', subtitle: 'Power over time')
             .legend(false)
             .build(bravenChartController: controller),
+      );
+    });
+
+    testWidgets('shape 40: a MAXIMAL GridConfig( pins its whole field list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture: every field on `GridConfig` is set EXPLICITLY and away
+      // from its default, because `_emitGrid` writes a field ONLY when it
+      // differs from `const GridConfig()` — so a fixture that leaves `vertical`
+      // at `true` never emits it, and no assertion against that fixture can
+      // pin it. Anything THIS fixture does not emit is NOT pinned by this test:
+      // a whole-list assertion pins what its fixture emits and is blind to the
+      // rest. The MINIMAL grid — "shape 11: chart-level grid, title and legend
+      // are emitted" — stays, but it sets only `horizontal` and
+      // `verticalStrokeWidth`, so it can pin at most those two.
+      //
+      // Measured, one mutation set of 7 — each of `_emitGrid`'s 6 writer
+      // statements deleted in turn, plus one unconditional
+      // `writer.namedArgument('probe', ...)` added: 7 of 7 caught here.
+      //
+      // What that set does NOT contain, measured rather than assumed: a
+      // CROSS-WIRE between the two booleans. `_emitGrid` writes a bool only
+      // when it differs from the `true` default, so a maximal grid is FORCED to
+      // set `horizontal` and `vertical` both `false` — and once their values
+      // are equal, whole-list equality on emitted TEXT cannot tell the two
+      // writers apart. Swapping their operands
+      // (`valueIf('horizontal', grid.vertical, defaults.vertical);
+      // valueIf('vertical', grid.horizontal, defaults.horizontal);`) leaves
+      // THIS shape green (`00:03 +1: All tests passed!`) while the MINIMAL
+      // "shape 11", which sets only `horizontal`, goes RED. So this shape pins
+      // the two booleans' PRESENCE and text, and shape 11 pins which model
+      // field feeds `horizontal:` — a second, independent reason the minimal
+      // grid stays, and the general rule: give paired arguments distinct values
+      // wherever the fixture is free to choose. Here it is not.
+      //
+      // Opened at `GridConfig(`, NOT at `.grid(`: measured, `.grid(` returns
+      // the WRAPPER lines (`GridConfig(`, …, `),`) rather than the field list,
+      // because `literalArguments` slices by indentation. That makes this the
+      // audited bare-`Type(` opening the design allows, not the bare type name
+      // it forbids: `_emitGrid` writes `GridConfig(` on its own line with no
+      // preceding argument name, so there is no `name: Type(` pair to open at.
+      // Collision-audited rather than assumed —
+      // `grep -rn "class [A-Za-z_]*GridConfig\b" lib/` returns exactly one
+      // class (`lib/src/models/grid_config.dart:43`), and the only other
+      // emitted form is the CONFIG form's `grid: GridConfig(`
+      // (`chart_config_dart_emitter.dart:6443`), which would push the count
+      // below to 2 and redden this test. (A bare `ChartConfig(` would by
+      // contrast match silently inside `PolarChartConfig(`.)
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Power')
+              .grid(
+                const GridConfig(
+                  horizontal: false,
+                  vertical: false,
+                  horizontalColor: Color(0xFF94A3B8),
+                  verticalColor: Color(0xFF64748B),
+                  horizontalStrokeWidth: 1.25,
+                  verticalStrokeWidth: 2.5,
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `GridConfig(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('GridConfig('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, 'GridConfig('), <String>[
+        'horizontal: false,',
+        'vertical: false,',
+        'horizontalColor: Color(0xFF94A3B8),',
+        'verticalColor: Color(0xFF64748B),',
+        'horizontalStrokeWidth: 1.25,',
+        'verticalStrokeWidth: 2.5,',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real `GridConfig` constructor. This is the only
+      // fixture in the corpus that emits `vertical:`, `horizontalColor:`,
+      // `verticalColor:` or `horizontalStrokeWidth:` at all, so without this
+      // gate those four names are compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_grid_maximal',
+        ),
+      );
+    });
+
+    testWidgets(
+      'shape 41: the collapsed .x(field, label:) form is pinned by LINE',
+      (tester) async {
+        // MAXIMAL fixture: `.x(` takes exactly ONE optional — `label:` — and
+        // this fixture sets it EXPLICITLY, so no theme-resolved value lands in
+        // the pinned text. `_emitX` writes this collapsed single-line form only
+        // when the label is the ONLY thing set on the X axis (it compares the
+        // whole `XAxisConfig` against `XAxisConfig(label: label)`); an X axis
+        // carrying anything else travels as a `.x(...)` plus a separate
+        // `.xAxis(` literal, which this test does NOT pin.
+        //
+        // Pinned by LINE, not by `literalArguments`: measured, that helper
+        // CANNOT read a single-line verb. `literalArguments(source, '.x(')`
+        // does not throw — it slices from the line AFTER the opening token and
+        // returns the NEXT verb's body, so a test written that way pins
+        // somebody else's arguments and stays GREEN when this writer is
+        // deleted. Every single-line verb needs the whole-LINE form instead.
+        //
+        // Measured, one mutation set of 4 — the collapsed-form `writeLine`
+        // statement deleted; the `label:` branch of its ternary collapsed onto
+        // the label-less branch (the survivor's own writer, deleted); an
+        // unconditional `, probe: 'x'` added INSIDE the collapsed line; and an
+        // unconditional `writer.namedArgument('probe', "'x'")` added to
+        // `_emitX` — 4 of 4 caught, the last of them by the compile gate below
+        // rather than by the line assertion.
+        final generated = generateGrammar(
+          await snapshotOf(
+            tester,
+            (controller) => BravenChart.of(rows)
+                .x(sampleT, label: 'Elapsed')
+                .geomLine(y: samplePower, name: 'Power')
+                .build(bravenChartController: controller),
+          ),
+        );
+        expect(generated.warnings, isEmpty);
+        expect(generated.isComplete, isTrue);
+        // Collected as a LIST rather than read with `firstWhere`, because the
+        // silent failure mode that `expect(opening.allMatches(source).length,
+        // 1)` closes for a whole-list assertion applies to a whole-line one
+        // too: `firstWhere` reads only the FIRST `.x(` line and says nothing
+        // about a second. Whole-list equality on the matching lines pins the
+        // COUNT as well as the text. `.xAxis(` does not match — `startsWith`
+        // is on the literal `.x(`.
+        final xLines = generated.source
+            .split('\n')
+            .map((line) => line.trim())
+            .where((line) => line.startsWith('.x('))
+            .toList();
+        expect(xLines, <String>[".x((row) => row.x, label: 'Elapsed')"]);
+        // The line above pins emitted TEXT and nothing more; only `dart
+        // analyze` against the real package proves `label:` is a parameter of
+        // `BravenChart.x`. It also closes the one addition direction a line
+        // assertion is blind to on its own: an argument added on its OWN line
+        // leaves the `.x(` line byte-identical, and is caught here as a source
+        // that no longer parses.
+        await tester.runAsync(
+          () => expectGeneratedSourceCompiles(
+            generated.source,
+            fixtureName: 'grammar_source_x_collapsed_label',
+          ),
+        );
+      },
+    );
+
+    testWidgets('shape 42: a MAXIMAL .geomPie( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the RADIAL CATEGORY surface: every optional on
+      // `.geomPie(` is set EXPLICITLY, so no theme-resolved value lands in the
+      // expected list and every conditional emission in `_emitRadialGeometry`'s
+      // shared prologue and its `PieMark` arm is live. The survivor this shape
+      // exists for is the series `color:` — `_optionalColor(writer, 'color',
+      // mark.color)`, the ONE argument of the radial family that no assertion
+      // read before — and it is emitted by BOTH `geomPie` and `geomDonut` from
+      // that single shared statement, so pinning it here pins it for the donut
+      // too (measured: deleting that line reddens this test).
+      //
+      // `sliceGroupingConfig:` and `sliceRadiusConfig:` are NOT freely
+      // combinable: `RadialCategorySeries` throws `ArgumentError: Radial slice
+      // grouping cannot be combined with variable slice radii without an
+      // explicit second-metric aggregation policy` when grouping rides a
+      // variable radius without one (measured — the first run of this fixture
+      // died on it with `showcaseGrouping`). Hence [maximalGrouping], which
+      // carries `radiusAggregation:`. That is the only way a fixture can be
+      // maximal over BOTH, and it is why this shape cannot reuse the existing
+      // grouping const.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Not pinned here, deliberately: `ring:` and the donut-only
+      // arguments (`center:`, `concentric:`, `ringIds:`, `dataLabelsByRing:`)
+      // — they belong to `_emitRadialGeometry`'s `DonutMark` arm, no single
+      // donut fixture can be maximal over them (`center:` and `concentric:` are
+      // mutually exclusive by lowering's precedence rule), and none of them is
+      // among this slice's survivors; and the nested-config FIELDS the five
+      // literals below leave at their class defaults, since each config emitter
+      // writes only what differs.
+      //
+      // Those nested bodies are NOT maximal, and the exact shortfall is stated
+      // here so the counts below cannot be over-credited. Counted by reading
+      // each emitter: `PieChartStyle` 5 of 19 pie-reachable seams
+      // (`_emitRadialStyle`, `chart_config_dart_emitter.dart:3961` — 21
+      // statements, of which `innerRadiusFactor`/`sweepAngleDegrees` are
+      // donut-only; `borderColor`, `borderColorMode`, the three border shifts,
+      // `selectionExplodeOffset`, `opacity`, `cornerRadius`, `cornerTreatment`,
+      // `animationMode`, `dataTransitionMode`, `gradient`, `shadow` and
+      // `selectedElevation` stay at default); `PieDataLabelConfig` 3 of 17
+      // (`_emitRadialLabelConfig`, `:4085`); `PieSliceRadiusConfig` 4 of 5 —
+      // the 5th is the `formatter` placeholder, which is UNREACHABLE from any
+      // shape asserting `warnings, isEmpty`, since emitting it also raises
+      // `runtimeValueOmitted`; `RadialSelectionStyle` 4 of 4 and
+      // `RadialSliceGroupingConfig` 5 of 5 are maximal already.
+      //
+      // Deliberate, not an oversight: those remaining seams belong to the
+      // CONFIG emitter, which this item puts explicitly out of scope (spec
+      // "Out of scope — the config emitter … filed as BC-0048"). Widening the
+      // shared style consts to close them would pull BC-0048's surface into
+      // BC-0046 and would edit consts 6–12 other shapes depend on. They are not
+      // unguarded meanwhile — `grep -rl <name> test/ example/test/` finds
+      // `cornerTreatment` in 10 files, `selectionExplodeOffset` in 11,
+      // `connectorLength` in 9, `borderColorMode` in 7 — the config-form suites
+      // read them, because the emitter is SHARED between the two forms.
+      //
+      // Neither `_emitRadialGeometry`'s prologue nor its pie arm branches on an
+      // argument VALUE to choose which model field it reads (checked before
+      // writing this fixture: `_optionalString` / `_optionalColor` return early
+      // on null and write one field; the seams switch on `mark` runtime type,
+      // not on a value), so unlike `.band(` this verb needs no second fixture
+      // per branch.
+      //
+      // Measured, one mutation set of 35 — 35 of 35 caught:
+      //   - 13 writer statements of `_emitRadialGeometry` this fixture makes
+      //     live (`id`, `category`, `value`, `radius`, `sliceColor`, `name`,
+      //     `color`, `unit`, and the five `PieMark`-arm seams `style`,
+      //     `selectionStyle`, `dataLabels`, `sliceRadiusConfig`,
+      //     `sliceGroupingConfig`), deleted one at a time — a whole `if` block
+      //     counts as one statement;
+      //   - all 21 field statements the five nested config literals make LIVE
+      //     and so flatten into this list — 5 `PieChartStyle`, 4
+      //     `RadialSelectionStyle`, 3 `PieDataLabelConfig`, 4
+      //     `PieSliceRadiusConfig`, 5 `RadialSliceGroupingConfig` — which is
+      //     the accepted config-emitter coupling earning coverage rather than
+      //     costing it, and is 21 of the 50 seams those five emitters own
+      //     (19 + 4 + 17 + 5 + 5; see the shortfall stated above — the balance
+      //     is BC-0048's);
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitRadialGeometry`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(sliceColorRadiusGrammarRows)
+              .geomPie(
+                category: (row) => row.category,
+                value: (row) => row.value,
+                radius: (row) => row.radius,
+                sliceColor: (row) => row.sliceColor,
+                id: 'slices',
+                name: 'Harvest',
+                color: const Color(0xFF9333EA),
+                unit: 'kg',
+                style: styledPieStyle,
+                selectionStyle: showcaseSelection,
+                dataLabels: styledPieLabels,
+                sliceRadiusConfig: showcaseRadius,
+                sliceGroupingConfig: maximalGrouping,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomPie(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other. A radial
+      // spec may hold only ONE mark, so a second pie cannot arise today — the
+      // guard is here because that is a property of the SPEC, not of the
+      // slicer, and the slicer is what fails silently if it changes.
+      expect('.geomPie('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPie('), <String>[
+        "id: 'slices',",
+        'category: (row) => row.category,',
+        'value: (row) => row.value,',
+        'radius: (row) => row.radius,',
+        'sliceColor: (row) => row.sliceColor,',
+        "name: 'Harvest',",
+        'color: Color(0xFF9333EA),',
+        "unit: 'kg',",
+        'style: PieChartStyle(',
+        'startAngleDegrees: 30.0,',
+        'clockwise: false,',
+        'radiusFactor: 0.8,',
+        'sliceGap: 4.0,',
+        'borderWidth: 2.0,',
+        '),',
+        'selectionStyle: RadialSelectionStyle(',
+        'effect: RadialSelectionEffect.lift,',
+        'liftScale: 1.12,',
+        'liftOffset: 8.0,',
+        'backdropBlur: 1.5,',
+        '),',
+        'dataLabels: PieDataLabelConfig(',
+        'position: PieDataLabelPosition.inside,',
+        'minimumShare: 0.05,',
+        'padding: 10.0,',
+        '),',
+        'sliceRadiusConfig: PieSliceRadiusConfig(',
+        'minimumFactor: 0.4,',
+        'scale: PieSliceRadiusScale.linear,',
+        "label: 'Area',",
+        "unit: 'km2',",
+        '),',
+        'sliceGroupingConfig: RadialSliceGroupingConfig(',
+        'minimumShare: 0.08,',
+        'minimumSourceCount: 3,',
+        "label: 'Other',",
+        'color: Color(0xFF64748B),',
+        'radiusAggregation: RadialSliceRadiusAggregation.weightedMean,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` against the
+      // real package proves those names exist on `BravenChart.geomPie`. This is
+      // the only fixture in the corpus that emits `radius:`, `sliceColor:`,
+      // `style:`, `selectionStyle:`, `dataLabels:`, `sliceRadiusConfig:` and
+      // `sliceGroupingConfig:` on ONE `.geomPie(`, and the only one anywhere
+      // that emits `radiusAggregation:`, so without this gate a rename of that
+      // argument mirrored into the list above would stay green while the
+      // Grammar pane shipped a chain that does not compile.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_pie_maximal',
+        ),
+      );
+    });
+
+    testWidgets('shape 43: a MAXIMAL .geomPolar( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the POLAR surface: every optional on `.geomPolar(`
+      // is set EXPLICITLY — including all four advanced per-category channels
+      // at once, which no existing polar shape does — so no theme-resolved
+      // value lands in the expected list and every conditional emission in
+      // `_emitPolarGeometry` is live. The survivors this shape exists for are
+      // `name:` and `color:`, the two arguments of the polar family no
+      // assertion read before.
+      //
+      // SINGLE-series on purpose. `.geomPolar(` is the one verb this file
+      // already asserts with `allMatches(...).length, 2` ("shape 21: a
+      // MULTI-SERIES polar emits one geomPolar per series"), because a polar
+      // composition really does write N of them — and `literalArguments` reads
+      // only the FIRST. A multi-series fixture here would pin series 1 and say
+      // nothing whatever about series 2 while looking like it covered both.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test: a
+      // whole-list assertion pins what its fixture emits and is blind to the
+      // rest. Not pinned here: the nested-config FIELDS the four literals below
+      // leave at their class defaults (each config emitter writes only what
+      // differs from the default), and the plot-level `.polarConfig(` literal,
+      // which is a separate opening covered by "shape 22"/"shape 23".
+      //
+      // One of those four bodies is NOT maximal, stated so the count below
+      // cannot be over-credited: `PolarColumnStyle` makes 3 of the 10 seams of
+      // `_emitPolarColumnStyleArgument` live (`chart_config_dart_emitter.dart:
+      // 2880` — `cornerRadiusMode`, `borderColor`, `showDataLabels`,
+      // `maximumVisibleDataLabels`, `dataLabelRadialPosition`, `dataLabelStyle`
+      // and `gradient` stay at default). The other three are maximal:
+      // `RadialSelectionStyle` 4 of 4, `PolarColumnTargetMarkerStyle` 4 of 4,
+      // `PolarColumnIntervalStyle` 6 of 6. The 7 unreached seams belong to the
+      // CONFIG emitter, out of scope for this item by the spec ("Out of scope —
+      // the config emitter … filed as BC-0048"), and are read by the
+      // config-form suites through the SHARED emitter — `grep -rl` over `test/`
+      // and `example/test/` finds `maximumVisibleDataLabels` in 9 files and
+      // `dataLabelRadialPosition` in 8.
+      //
+      // `rose: true` coexists with the target and interval channels — verified
+      // by this fixture emitting all of them together with `warnings` empty,
+      // not assumed. And nothing in `_emitPolarGeometry` branches on an
+      // argument VALUE to choose which model field it reads (`rose` is written
+      // from `mark.preset`, every channel from its own plan field), so unlike
+      // `.band(` this verb needs no second fixture per branch.
+      //
+      // Measured, one mutation set of 33 — 33 of 33 caught:
+      //   - all 15 writer statements of `_emitPolarGeometry` (`id`, `category`,
+      //     `value`, `name`, `color`, `unit`, `style`, `selectionStyle`,
+      //     `rose`, `columnColor`, `target`, `targetMarkerStyle`,
+      //     `intervalLow`, `intervalHigh`, `intervalStyle`), deleted one at a
+      //     time — a whole `if` block counts as one statement, except the
+      //     interval block's two `namedArgument` lines, deleted separately;
+      //   - all 17 field statements the four nested config literals make LIVE
+      //     and so flatten into this list: 3 `PolarColumnStyle`, 4
+      //     `RadialSelectionStyle`, 4 `PolarColumnTargetMarkerStyle`, 6
+      //     `PolarColumnIntervalStyle` — 17 of the 24 seams those four emitters
+      //     own (see the shortfall stated above; the balance is BC-0048's);
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to
+      //     `_emitPolarGeometry`.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(polarMaximalRows)
+              .geomPolar(
+                category: (row) => row.category,
+                value: (row) => row.value,
+                id: 'observed',
+                name: 'Observed',
+                color: const Color(0xFF9333EA),
+                unit: 'kg',
+                style: styledPolarStyle,
+                selectionStyle: showcaseSelection,
+                rose: true,
+                columnColor: (row) => row.columnColor,
+                target: (row) => row.target,
+                targetMarkerStyle: styledTargetMarker,
+                intervalLow: (row) => row.intervalLow,
+                intervalHigh: (row) => row.intervalHigh,
+                intervalStyle: styledIntervalStyle,
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // MANDATORY, and load-bearing for this verb in particular: the slicer
+      // reads only the FIRST `.geomPolar(`, and this file's own "shape 21"
+      // asserts a chart that emits TWO of them.
+      expect('.geomPolar('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomPolar('), <String>[
+        "id: 'observed',",
+        'category: (row) => row.category,',
+        'value: (row) => row.value,',
+        "name: 'Observed',",
+        'color: Color(0xFF9333EA),',
+        "unit: 'kg',",
+        'style: PolarColumnStyle(',
+        'cornerRadius: 6.0,',
+        'opacity: 0.9,',
+        'borderWidth: 2.0,',
+        '),',
+        'selectionStyle: RadialSelectionStyle(',
+        'effect: RadialSelectionEffect.lift,',
+        'liftScale: 1.12,',
+        'liftOffset: 8.0,',
+        'backdropBlur: 1.5,',
+        '),',
+        'rose: true,',
+        'columnColor: (row) => row.columnColor,',
+        'target: (row) => row.target,',
+        'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+        'color: Color(0xFF0F172A),',
+        'width: 3.0,',
+        'lengthFactor: 0.8,',
+        'opacity: 0.9,',
+        '),',
+        'intervalLow: (row) => row.intervalLow,',
+        'intervalHigh: (row) => row.intervalHigh,',
+        'intervalStyle: PolarColumnIntervalStyle(',
+        'display: PolarColumnIntervalDisplay.band,',
+        'color: Color(0xFF334155),',
+        'width: 2.0,',
+        'capLengthFactor: 0.5,',
+        'bandLengthFactor: 0.7,',
+        'opacity: 0.8,',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` against the
+      // real package proves those names exist on `BravenChart.geomPolar`. This
+      // is the only fixture in the corpus that emits `rose:`, `columnColor:`,
+      // `target:`, `targetMarkerStyle:`, `intervalLow:`, `intervalHigh:` and
+      // `intervalStyle:` on ONE `.geomPolar(` — the presentation shapes each
+      // emit a subset — so without this gate a rename mirrored into the list
+      // above would stay green while the Grammar pane shipped a chain that does
+      // not compile.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_polar_maximal',
+        ),
       );
     });
 
@@ -6551,11 +8004,75 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'standard',
+        // DELETION COVERAGE, and the reason every case below carries a list
+        // this long.
+        //
+        // These acceptance cases have no `rebuilt:` closure, so the whole-list
+        // `literalArguments` equality the shapes above use does not reach them
+        // — several emit `.geomPolar(` two or three times, which the slicer
+        // cannot read (it takes only the FIRST occurrence). What they get
+        // instead is per-case deletion coverage: every argument line THIS
+        // case's chain emits is named, so deleting any one of those writer
+        // lines fails THIS case rather than shipping a chain that silently
+        // dropped a value. The list is derived from the REAL emitted source —
+        // dumped from the generator and transcribed — never from the showcase
+        // page, because the page is what the emitter is being checked
+        // against.
+        //
+        // The honest limit of the form: `contains` is one-directional. It
+        // catches a DELETED argument and cannot notice an ADDED one. The
+        // addition direction is carried by `expectGeneratedSourceCompiles`,
+        // which every case runs — an argument the builder has no parameter for
+        // fails `dart analyze` (measured: an unconditional `probe: 'x'` on
+        // `.geomPolar(` reddens all eight polar cases).
+        //
+        // The mutation set MEASURED for these nine lists, with its size: the
+        // 83 writer statements behind them deleted one at a time — every
+        // argument of `_emitPolarGeometry` and the donut arm of
+        // `_emitRadialGeometry`, the `.polarConfig(` and `.theme(` emissions,
+        // and every field of `PolarColumnStyle` / `PolarLabelStyle` /
+        // `PolarChartConfig` / the target-marker, interval, concentric and
+        // centre literals — plus 3 unconditional probe arguments added. 86 of
+        // 86 caught, and all 83 deletions were caught by the FRAGMENT (the
+        // failure names the missing argument), not merely by the compile gate
+        // reacting to broken output.
+        //
+        // Entries whose values the emitter RESOLVES rather than the showcase
+        // authoring (`borderWidth: 0.75,`, `dataLabelRadialPosition: 0.56,`
+        // and the label-style sizes) are pinned too: they are what this chart
+        // emits, which is the thing being guarded.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Category volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'opacity: 0.97,',
+          'borderColor: Color(0xFF1E3A5F),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
           'columnColor: (row) => row.columnColor,',
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
           'outerRadiusFactor: 0.84,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1E293B),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -6599,12 +8116,56 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'rose',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
           '.geomPolar(',
-          'rose: true,',
-          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Monthly volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 6.0,',
+          'opacity: 0.98,',
+          'borderColor: Color(0xFFF59E0B),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFFFFF7ED),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
           'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.24,',
+          'endLightnessShift: -0.18,',
           'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF000000),',
+          'blurRadius: 12.0,',
+          'offset: Offset(0.0, 5.0),',
+          'opacity: 0.38,',
+          'animationMode: PolarColumnAnimationMode.sweep,',
+          'rose: true,',
+          'columnColor: (row) => row.columnColor,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.08,',
+          'outerRadiusFactor: 0.86,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.08,',
+          'outerPadding: 0.0,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFFF8FAFC),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.areaCorrect,',
+          'color: Color(0xFFFDE68A),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -6664,17 +8225,57 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'partial',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use. The pane literals stay the
+        // load-bearing part, and they are ALSO asserted whole below.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-column',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Category volume',",
+          "unit: 'requests',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 8.0,',
+          'opacity: 0.86,',
+          'borderColor: Color(0xFF7C2D12),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFF431407),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.28,',
+          'endLightnessShift: -0.08,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF9A3412),',
+          'blurRadius: 10.0,',
+          'offset: Offset(0.0, 3.0),',
+          'opacity: 0.18,',
+          'animationMode: PolarColumnAnimationMode.fade,',
           'columnColor: (row) => row.columnColor,',
           '.polarConfig(',
+          'PolarChartConfig(',
           'pane: PolarPaneConfig(',
           'startAngleDegrees: 150.0,',
           'sweepAngleDegrees: 240.0,',
           'innerRadiusFactor: 0.28,',
           'outerRadiusFactor: 0.9,',
+          'angularAxis: PolarCategoryAxisConfig(',
           'innerPadding: 0.14,',
           'outerPadding: 0.08,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF7C2D12),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -6723,6 +8324,7 @@ void main() {
       // happens to name, and the whole point of this presentation is the pane.
       // `clockwise` and `clipMarks` are the showcase's own resting values, so
       // they are correctly elided.
+      expect('pane: PolarPaneConfig('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, 'pane: PolarPaneConfig('),
         <String>[
@@ -6749,17 +8351,56 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'layered',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use. Both series' text is here —
+        // the second series' own id, value field, name, colour and opacity
+        // are what make this the LAYERED case rather than a one-series one.
         fragments: <String>[
           '.geomPolar(',
+          "id: 'showcase-polar-capacity',",
+          'category: (row) => row.category,',
           'value: (row) => row.value,',
-          'value: (row) => row.value2,',
+          "name: 'Capacity',",
+          'color: Color(0xFF0D9488),',
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
           'opacity: 0.32,',
+          'borderColor: Color(0xFF1E40AF),',
+          'borderWidth: 0.75,',
           'showDataLabels: false,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          "id: 'showcase-polar-observed',",
+          'value: (row) => row.value2,',
+          "name: 'Observed',",
+          'color: Color(0xFF2563EB),',
+          'opacity: 0.92,',
           // `layered` IS the composition default, so the mode itself is
           // correctly elided; the pane/axis knobs are what prove the plot
           // config reached the chain.
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'outerRadiusFactor: 0.86,',
+          'angularAxis: PolarCategoryAxisConfig(',
           'innerPadding: 0.16,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1E3A8A),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF1D4ED8),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -6822,11 +8463,61 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'grouped',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use — this one emits `.geomPolar(`
+        // THREE times, which the `literalArguments` slicer cannot read at
+        // all (it takes only the first occurrence).
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-north',",
+          'category: (row) => row.category,',
           'value: (row) => row.value,',
+          "name: 'North',",
+          'color: Color(0xFFE63946),',
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'opacity: 0.92,',
+          'borderColor: Color(0xFF7C2D12),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.18,',
+          'endLightnessShift: -0.16,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF92400E),',
+          'blurRadius: 7.0,',
+          'offset: Offset(0.0, 2.0),',
+          'opacity: 0.16,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          "id: 'showcase-polar-south',",
           'value: (row) => row.value2,',
+          "name: 'South',",
+          'color: Color(0xFFF77F00),',
+          "id: 'showcase-polar-west',",
           'value: (row) => row.value3,',
+          "name: 'West',",
+          'color: Color(0xFFFCBF49),',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.1,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF78350F),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'fontSize: 10.0,',
+          'composition: PolarColumnCompositionConfig(',
           'mode: PolarColumnCompositionMode.grouped,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -6896,10 +8587,66 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'stacked',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
-          'mode: PolarColumnCompositionMode.stacked,',
+          '.geomPolar(',
+          "id: 'showcase-polar-new',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'New accounts',",
+          'color: Color(0xFF2563EB),',
+          "unit: 'accounts',",
+          'style: PolarColumnStyle(',
           'cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,',
-          // The third series' own value field, negative and unclamped.
+          'opacity: 0.97,',
+          'borderColor: Color(0xFF7DD3FC),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'color: Color(0xFFF8FAFC),',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.2,',
+          'endLightnessShift: -0.2,',
+          'shadow: PolarColumnShadowStyle(',
+          'color: Color(0xFF000000),',
+          'blurRadius: 10.0,',
+          'offset: Offset(0.0, 4.0),',
+          'opacity: 0.42,',
+          'animationMode: PolarColumnAnimationMode.sweep,',
+          "id: 'showcase-polar-expansion',",
+          'value: (row) => row.value2,',
+          "name: 'Expansion',",
+          'color: Color(0xFF0D9488),',
+          "id: 'showcase-polar-churn',",
+          'value: (row) => row.value3,',
+          "name: 'Churn',",
+          'color: Color(0xFF06B6D4),',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.14,',
+          'outerRadiusFactor: 0.9,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFFE0F2FE),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFFBAE6FD),',
+          'fontSize: 10.0,',
+          'composition: PolarColumnCompositionConfig(',
+          'mode: PolarColumnCompositionMode.stacked,',
+          '.theme(ChartTheme.light)',
+          // The third series' own value field, negative and unclamped. This
+          // one is a ROW literal rather than a chain argument, which is why
+          // it sits outside the chain list above.
           'value3: -13.0,',
         ],
         chart: (controller) => BravenChartPlus(
@@ -6960,13 +8707,56 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'references',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-actual-targets',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Actual versus plan',",
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
+          'opacity: 0.9,',
+          'borderColor: Color(0xFF334155),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'animationMode: PolarColumnAnimationMode.grow,',
+          'columnColor: (row) => row.columnColor,',
           'target: (row) => row.target,',
           'targetMarkerStyle: PolarColumnTargetMarkerStyle(',
+          'color: Color(0xFFF59E0B),',
+          'width: 3.0,',
           'lengthFactor: 0.68,',
+          '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.14,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF1F2937),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
           'thresholds: [',
+          'PolarThreshold(',
+          'value: 80.0,',
           "label: 'Capacity',",
+          'color: Color(0xFFDC2626),',
+          'width: 2.0,',
           'dashPattern: <double>[7.0, 4.0],',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -7024,7 +8814,31 @@ void main() {
       final generated = await expectShowcaseEmits(
         tester,
         presentation: 'intervals',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
+          '.geomPolar(',
+          "id: 'showcase-polar-forecast-intervals',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
+          "name: 'Forecast',",
+          "unit: 'orders',",
+          'style: PolarColumnStyle(',
+          'cornerRadius: 5.0,',
+          'opacity: 0.78,',
+          'borderColor: Color(0xFF1E3A8A),',
+          'borderWidth: 0.75,',
+          'dataLabelRadialPosition: 0.56,',
+          'dataLabelStyle: PolarLabelStyle(',
+          'fontSize: 11.0,',
+          'fontWeight: FontWeight.w700,',
+          'gradient: PolarColumnGradientStyle(',
+          'startLightnessShift: 0.22,',
+          'endLightnessShift: -0.14,',
+          'animationMode: PolarColumnAnimationMode.fade,',
+          'columnColor: (row) => row.columnColor,',
           'intervalLow: (row) => row.intervalLow,',
           'intervalHigh: (row) => row.intervalHigh,',
           // The showcase's authored interval knobs are the class defaults
@@ -7033,12 +8847,27 @@ void main() {
           'intervalStyle: PolarColumnIntervalStyle(',
           'color: Color(0xFF0F172A),',
           'width: 2.0,',
-          // The plot-level config: the fragment list above named only
+          // The plot-level config: the fragment list used to name only
           // per-SERIES text, so the whole `.polarConfig(...)` verb could be
           // dropped from the chain and this case would still have passed.
           // (The round-trip proof cannot see it either — it re-lowers the
           // captured `PolarChartConfig` OBJECT, not the emitted literal.)
           '.polarConfig(',
+          'PolarChartConfig(',
+          'pane: PolarPaneConfig(',
+          'innerRadiusFactor: 0.12,',
+          'angularAxis: PolarCategoryAxisConfig(',
+          'innerPadding: 0.16,',
+          'labelOffset: 4.0,',
+          'labelStyle: PolarLabelStyle(',
+          'color: Color(0xFF334155),',
+          'fontSize: 12.0,',
+          'fontWeight: FontWeight.w500,',
+          'radialAxis: PolarNumericAxisConfig(',
+          'scaleMode: PolarRadialScaleMode.linear,',
+          'color: Color(0xFF475569),',
+          'fontSize: 10.0,',
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -7100,6 +8929,17 @@ void main() {
       // alone (`outerRadiusFactor`, `outerPadding`, the visible-label caps,
       // the radial `labelOffset`, the layered composition) are correctly
       // elided, and this list fails if any of that flips.
+      //
+      // `PolarChartConfig(` is the audited bare-`Type(` opening: the GRAMMAR
+      // form writes it with no argument name (`emitPolarChartConfig(writer,
+      // null, …)` — `chart_config_dart_emitter.dart:3387`), so no
+      // `name: Type(` pair exists to open at. Audited rather than assumed —
+      // `grep -rn "class [A-Za-z_]*PolarChartConfig\b" lib/` returns exactly
+      // one class, and the CONFIG form's `polarChartConfig: PolarChartConfig(`
+      // would push the count below to 2 and redden this test. (It is the
+      // reverse direction that is unsafe: a bare `ChartConfig(` would match
+      // silently INSIDE this token.)
+      expect('PolarChartConfig('.allMatches(generated.source).length, 1);
       expect(literalArguments(generated.source, 'PolarChartConfig('), <String>[
         'pane: PolarPaneConfig(',
         'innerRadiusFactor: 0.12,',
@@ -7148,17 +8988,28 @@ void main() {
       await expectShowcaseEmits(
         tester,
         presentation: 'grammar-authored concentric config',
+        // DELETION COVERAGE: this case's whole emitted chain, argument by
+        // argument, derived from the real emitted source. See `standard`
+        // above for why these cases take a fragment list rather than the
+        // whole-list equality the shapes use.
         fragments: <String>[
           '.geomDonut(',
+          "id: 'revenue',",
+          'category: (row) => row.category,',
+          'value: (row) => row.value,',
           'ring: (row) => row.ring,',
+          "unit: 'USD',",
           'concentric: ConcentricDonutConfig(',
           'innerRadiusFactor: 0.28,',
           'outerRadiusFactor: 0.94,',
           'ringGap: 6.0,',
           // `outerToInner` and `groupedByRing` are the class defaults the
           // showcase leaves alone, so they are correctly elided.
+          'ringWeights: {',
           "'revenue-Current period': 1.25,",
+          'centerContent: DonutCenterContent(',
           "label: 'Revenue mix',",
+          '.theme(ChartTheme.light)',
         ],
         chart: (controller) => BravenChartPlus(
           bravenChartController: controller,
@@ -7965,6 +9816,7 @@ void main() {
       // `null` for `axis.unit` left that fragment green. The complete argument
       // list fails on a dropped field, an extra field, a wrong value and a
       // reordering alike.
+      expect('YAxisConfig.withId('.allMatches(generated.source).length, 1);
       expect(
         literalArguments(generated.source, 'YAxisConfig.withId('),
         <String>[
