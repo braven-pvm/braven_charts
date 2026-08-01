@@ -183,12 +183,16 @@ class DataConverter {
           if (interval.low! < yMin) yMin = interval.low!;
           if (interval.high! > yMax) yMax = interval.high!;
         } else if (s is HeatmapChartSeries) {
-          final halfWidth = s.cellWidth / 2;
-          final halfHeight = s.cellHeight / 2;
-          if (point.x - halfWidth < xMin) xMin = point.x - halfWidth;
-          if (point.x + halfWidth > xMax) xMax = point.x + halfWidth;
-          if (point.y - halfHeight < yMin) yMin = point.y - halfHeight;
-          if (point.y + halfHeight > yMax) yMax = point.y + halfHeight;
+          final cell = s.cellAt(pointIndex);
+          final bounds = cell.bounds;
+          final cellXMinimum = bounds?.xMinimum ?? point.x - s.cellWidth / 2;
+          final cellXMaximum = bounds?.xMaximum ?? point.x + s.cellWidth / 2;
+          final cellYMinimum = bounds?.yMinimum ?? point.y - s.cellHeight / 2;
+          final cellYMaximum = bounds?.yMaximum ?? point.y + s.cellHeight / 2;
+          if (cellXMinimum < xMin) xMin = cellXMinimum;
+          if (cellXMaximum > xMax) xMax = cellXMaximum;
+          if (cellYMinimum < yMin) yMin = cellYMinimum;
+          if (cellYMaximum > yMax) yMax = cellYMaximum;
         } else if (s is BarChartSeries) {
           final info = barComposition[s.id];
           final rangeStart = s.rangeStartValueFor(pointIndex);

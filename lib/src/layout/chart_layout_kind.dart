@@ -175,18 +175,15 @@ class ChartLayoutResolver {
       );
     }
     final heatmapSeries = allSeries.whereType<HeatmapChartSeries>().toList();
-    if (heatmapSeries.isNotEmpty && heatmapSeries.length != allSeries.length) {
+    if (heatmapSeries.isNotEmpty &&
+        allSeries.any(
+          (candidate) =>
+              candidate is! HeatmapChartSeries && candidate is! LineChartSeries,
+        )) {
       throw ArgumentError.value(
         allSeries.length,
         'series',
-        'Heatmap cannot be mixed with other Cartesian series in v1',
-      );
-    }
-    if (heatmapSeries.length > 1) {
-      throw ArgumentError.value(
-        heatmapSeries.length,
-        'series',
-        'A Heatmap chart accepts exactly one HeatmapChartSeries in v1',
+        'Heatmap can only be composed with Cartesian Line overlays',
       );
     }
     return radialSeries.isEmpty

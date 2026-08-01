@@ -45,6 +45,95 @@ void main() {
   );
 
   group('ChartSelectionResolver', () {
+    test('Heatmap row and column expansion stay within the source series', () {
+      final cells = <HeatmapDataPoint>[
+        HeatmapDataPoint(x: 0, y: 0, value: 10),
+        HeatmapDataPoint(x: 1, y: 0, value: 20),
+        HeatmapDataPoint(x: 0, y: 1, value: 30),
+        HeatmapDataPoint(x: 1, y: 1, value: 40),
+      ];
+      final matrix = HeatmapChartSeries(
+        id: 'matrix',
+        points: cells,
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Color(0xFFFFFFFF), Color(0xFF0000FF)],
+        ),
+      );
+      final other = matrix.copyWith(id: 'other');
+      final matrixHit = ChartDataHit(
+        seriesId: 'matrix',
+        pointIndex: 1,
+        plotPosition: Offset.zero,
+        semanticBounds: Rect.zero,
+        point: cells[1],
+        formattedValue: '20',
+        ordinal: 2,
+        count: 4,
+      );
+
+      final row = ChartSelectionResolver.resolve(
+        scope: ChartSelectionScope.mark,
+        heatmapExpansion: HeatmapSelectionExpansion.row,
+        hits: [matrixHit],
+        series: [matrix, other],
+      );
+      final column = ChartSelectionResolver.resolve(
+        scope: ChartSelectionScope.mark,
+        heatmapExpansion: HeatmapSelectionExpansion.column,
+        hits: [matrixHit],
+        series: [matrix, other],
+      );
+
+      expect(row.pointRefs, {
+        const ChartPointRef(seriesId: 'matrix', pointIndex: 0),
+        const ChartPointRef(seriesId: 'matrix', pointIndex: 1),
+      });
+      expect(column.pointRefs, {
+        const ChartPointRef(seriesId: 'matrix', pointIndex: 1),
+        const ChartPointRef(seriesId: 'matrix', pointIndex: 3),
+      });
+    });
+
+    test('Heatmap expansion excludes cells hidden by a value filter', () {
+      final cells = <HeatmapDataPoint>[
+        HeatmapDataPoint(x: 0, y: 0, value: 10),
+        HeatmapDataPoint(x: 1, y: 0, value: 50),
+      ];
+      final matrix = HeatmapChartSeries(
+        id: 'matrix',
+        points: cells,
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Color(0xFFFFFFFF), Color(0xFF0000FF)],
+        ),
+        valueFilter: const HeatmapValueFilter(
+          minimumValue: 40,
+          maximumValue: 60,
+          mode: HeatmapValueFilterMode.hide,
+        ),
+      );
+      final matrixHit = ChartDataHit(
+        seriesId: 'matrix',
+        pointIndex: 1,
+        plotPosition: Offset.zero,
+        semanticBounds: Rect.zero,
+        point: cells[1],
+        formattedValue: '50',
+        ordinal: 2,
+        count: 2,
+      );
+
+      final targets = ChartSelectionResolver.resolve(
+        scope: ChartSelectionScope.mark,
+        heatmapExpansion: HeatmapSelectionExpansion.row,
+        hits: [matrixHit],
+        series: [matrix],
+      );
+
+      expect(targets.pointRefs, {
+        const ChartPointRef(seriesId: 'matrix', pointIndex: 1),
+      });
+    });
+
     test('mark expands every source row represented by an aggregate hit', () {
       final targets = ChartSelectionResolver.resolve(
         scope: ChartSelectionScope.mark,

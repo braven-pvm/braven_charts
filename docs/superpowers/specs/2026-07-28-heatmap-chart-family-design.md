@@ -1,9 +1,9 @@
 # Native Cartesian Heatmap Chart Family — Design Specification
 
-**Date:** 2026-07-28  
-**Register:** `BC-0037`  
-**Status:** Approved direction; implementation in progress  
-**Branch:** `feature/BC-0037-heatmaps`  
+**Date:** 2026-07-28
+**Register:** `BC-0037`
+**Status:** Approved direction; implementation in progress
+**Branch:** `feature/BC-0037-heatmaps`
 **Roadmap:** `docs/superpowers/plans/2026-07-28-heatmap-chart-family-roadmap.md`
 
 ## Product outcome
@@ -442,4 +442,3 @@ These are reviewable implementation choices, not blockers to Slice 1:
 - exact small-matrix threshold for expanded semantics;
 - whether the first calendar adapter lives on the series or in showcase/data
   preparation.
-

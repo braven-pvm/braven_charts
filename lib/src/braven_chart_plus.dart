@@ -1933,6 +1933,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (widget.interactionConfig != oldWidget.interactionConfig) {
       final selection =
           (widget.interactionConfig ?? const InteractionConfig()).selection;
+      final oldSelection =
+          (oldWidget.interactionConfig ?? const InteractionConfig()).selection;
       final supportsBrush =
           selection.acquisitionMode ==
               ChartSelectionAcquisitionMode.xInterval ||
@@ -1957,6 +1959,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       widget.bravenChartController?.updateSelectionBrushState(
         _selectionBrushState,
       );
+      if (_selectionBrushState?.visible == true &&
+          selection.heatmapExpansion != oldSelection.heatmapExpansion) {
+        _scheduleInitialSelectionBrushCommit();
+      }
     }
 
     if (widget.interactionGroupController !=
@@ -2005,6 +2011,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             (radialDataChanged && !radialAnimationModeChanged),
         restartSeriesAnimations: transitionKeyChanged,
       );
+      if (seriesChanged) {
+        _scheduleInteractionGroupViewportRestore();
+      }
       if (radialAnimationModeChanged || transitionKeyChanged) {
         _startRadialRevealAnimation();
       }
@@ -2316,6 +2325,26 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         },
       );
     }
+  }
+
+  void _scheduleInteractionGroupViewportRestore() {
+    final controller = widget.interactionGroupController;
+    if (controller == null ||
+        !widget.interactionGroupOptions.synchronizeViewport ||
+        _layoutKind != ChartLayoutKind.cartesian) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !identical(widget.interactionGroupController, controller) ||
+          !widget.interactionGroupOptions.synchronizeViewport) {
+        return;
+      }
+      final viewport = controller.viewport;
+      if (viewport != null) {
+        _applySynchronizedViewport(viewport);
+      }
+    });
   }
 
   void _applySynchronizedSelection(Set<ChartPointKeyRef> selection) {
@@ -6581,6 +6610,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       scope: interaction.selection.scope,
       hits: <ChartDataHit>[hit],
       series: _effectiveDataSeries,
+      heatmapExpansion: interaction.selection.heatmapExpansion,
     );
     _applyResolvedSelectionTargets(targets, operation);
   }
@@ -6702,6 +6732,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       scope: interaction.selection.scope,
       hits: effectiveHits,
       series: _effectiveDataSeries,
+      heatmapExpansion: interaction.selection.heatmapExpansion,
     );
 
     if (interaction.selection.scope == ChartSelectionScope.markOrWholeSeries) {
@@ -6770,15 +6801,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       scope: interaction.selection.scope,
       hits: gesture.hits,
       series: _effectiveDataSeries,
+      heatmapExpansion: interaction.selection.heatmapExpansion,
     );
     final previousExpression = _selectionExpressionForSnapshot();
     _applyResolvedSelectionTargets(targets, operation);
-    _preserveSelectionGestureIntent(
-      gesture,
-      targets,
-      operation,
-      previousExpression,
-    );
+    if (!_usesExpandedHeatmapSelection(gesture, interaction.selection)) {
+      _preserveSelectionGestureIntent(
+        gesture,
+        targets,
+        operation,
+        previousExpression,
+      );
+    }
     if (interaction.selection.brush.enabled &&
         (gesture.acquisitionMode == ChartSelectionAcquisitionMode.xInterval ||
             gesture.acquisitionMode ==
@@ -6787,6 +6821,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                 ChartSelectionAcquisitionMode.rectangle)) {
       _updateSelectionBrushFromGesture(gesture);
     }
+  }
+
+  bool _usesExpandedHeatmapSelection(
+    ChartSelectionGestureResult gesture,
+    ChartSelectionConfig selection,
+  ) {
+    if (selection.heatmapExpansion == HeatmapSelectionExpansion.cell) {
+      return false;
+    }
+    final heatmapSeriesIds = <String>{
+      for (final series in _effectiveDataSeries)
+        if (series is HeatmapChartSeries) series.id,
+    };
+    return gesture.hits.any((hit) => heatmapSeriesIds.contains(hit.seriesId));
   }
 
   void _initializeSelectionBrushFromConfig() {
@@ -7626,6 +7674,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       scope: interaction.selection.scope,
       hits: hits,
       series: _resolvedChartData.allSeries,
+      heatmapExpansion: interaction.selection.heatmapExpansion,
       polarChartConfig: widget.polarChartConfig,
     );
     _applyResolvedSelectionTargets(
@@ -7670,6 +7719,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               scope: interaction.selection.scope,
               hits: <ChartDataHit>[hit],
               series: _resolvedChartData.allSeries,
+              heatmapExpansion: interaction.selection.heatmapExpansion,
               polarChartConfig: widget.polarChartConfig,
             );
       final previousPointSelection = <ChartPointRef>{..._selectedPointRefs};
@@ -9479,11 +9529,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final heatmaps = _effectiveDataSeries
         .whereType<HeatmapChartSeries>()
         .toList(growable: false);
-    if (heatmaps.length != 1 ||
-        heatmaps.length != _effectiveDataSeries.length) {
+    if (heatmaps.isEmpty || heatmaps.length != _effectiveDataSeries.length) {
       return false;
     }
-    final series = heatmaps.single;
 
     if (key == LogicalKeyboardKey.escape) {
       if (_focusedPointRefs.isEmpty &&
@@ -9498,7 +9546,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       final current = _focusedPointRefs.firstOrNull;
-      if (current == null || current.seriesId != series.id) return false;
+      if (current == null) return false;
+      final series = heatmaps
+          .where((candidate) => candidate.id == current.seriesId)
+          .firstOrNull;
+      if (series == null) return false;
       return _activateCartesianPointSelection(
         current,
         callbackPoint: series.cellAt(current.pointIndex),
@@ -9517,10 +9569,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       return false;
     }
 
-    final hits = _heatmapKeyboardHits(series);
+    final hits = _heatmapKeyboardHitsForSeries(heatmaps);
     if (hits.isEmpty) return false;
     final currentRef = _focusedPointRefs.firstOrNull;
-    if (currentRef == null || currentRef.seriesId != series.id) {
+    if (currentRef == null || !hits.any(_hitMatchesRef(currentRef))) {
       _setKeyboardHeatmapFocus(
         key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowUp
             ? hits.last
@@ -9538,7 +9590,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     var bestPrimary = double.infinity;
     var bestSecondary = double.infinity;
     for (final candidate in hits) {
-      if (candidate.pointIndex == current.pointIndex) continue;
+      if (candidate.seriesId == current.seriesId &&
+          candidate.pointIndex == current.pointIndex) {
+        continue;
+      }
       final cell = candidate.point as HeatmapDataPoint;
       final dx = cell.x - currentCell.x;
       final dy = cell.y - currentCell.y;
@@ -9583,6 +9638,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final second = b.point as HeatmapDataPoint;
       final row = second.y.compareTo(first.y);
       return row != 0 ? row : first.x.compareTo(second.x);
+    });
+    return hits;
+  }
+
+  List<ChartDataHit> _heatmapKeyboardHitsForSeries(
+    List<HeatmapChartSeries> series,
+  ) {
+    final seriesOrder = <String, int>{
+      for (var index = 0; index < series.length; index++)
+        series[index].id: index,
+    };
+    final hits = <ChartDataHit>[
+      for (final item in series) ..._heatmapKeyboardHits(item),
+    ];
+    hits.sort((first, second) {
+      final firstCell = first.point as HeatmapDataPoint;
+      final secondCell = second.point as HeatmapDataPoint;
+      final row = secondCell.y.compareTo(firstCell.y);
+      if (row != 0) return row;
+      final column = firstCell.x.compareTo(secondCell.x);
+      if (column != 0) return column;
+      return (seriesOrder[first.seriesId] ?? 0).compareTo(
+        seriesOrder[second.seriesId] ?? 0,
+      );
     });
     return hits;
   }
@@ -10649,17 +10728,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   String? _adjacentHeatmapSemanticsValue(int delta) {
-    final series = _effectiveDataSeries
+    final heatmaps = _effectiveDataSeries
         .whereType<HeatmapChartSeries>()
-        .firstOrNull;
-    if (series == null) return null;
-    final hits = _heatmapKeyboardHits(series);
+        .toList(growable: false);
+    if (heatmaps.isEmpty) return null;
+    final hits = _heatmapKeyboardHitsForSeries(heatmaps);
     if (hits.isEmpty) return null;
     final current = _focusedPointRefs.firstOrNull;
     final index = current == null
         ? -1
         : hits.indexWhere(_hitMatchesRef(current));
     final target = hits[(index + delta).clamp(0, hits.length - 1)];
+    final series = heatmaps
+        .where((candidate) => candidate.id == target.seriesId)
+        .first;
     final cell = target.point as HeatmapDataPoint;
     return '${series.displayName}, ${cell.label ?? 'cell'}, '
         'column ${_heatmapCoordinateLabel(cell.x, xAxis: true)}, '
@@ -11709,11 +11791,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final focusedScatter = hasOnlyScatter ? _focusedScatterSemantics() : null;
     final hasOnlyHeatmap =
         !isNonCartesian &&
-        _effectiveDataSeries.length == 1 &&
-        _effectiveDataSeries.single is HeatmapChartSeries;
+        _effectiveDataSeries.isNotEmpty &&
+        _effectiveDataSeries.every((series) => series is HeatmapChartSeries);
     final heatmapSeries = hasOnlyHeatmap
-        ? _effectiveDataSeries.single as HeatmapChartSeries
-        : null;
+        ? _effectiveDataSeries.whereType<HeatmapChartSeries>().toList(
+            growable: false,
+          )
+        : const <HeatmapChartSeries>[];
+    final heatmapCellCount = hasOnlyHeatmap
+        ? heatmapSeries.fold<int>(0, (sum, series) => sum + series.cells.length)
+        : 0;
     final focusedHeatmap = hasOnlyHeatmap ? _focusedHeatmapSemantics() : null;
     final Widget renderedChart = hasCandlesticks
         ? Semantics(
@@ -11799,7 +11886,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             label: widget.title ?? 'Interactive heatmap chart',
             value:
                 focusedHeatmap?.value ??
-                '${heatmapSeries!.cells.length} cells in one matrix',
+                '$heatmapCellCount cells in ${heatmapSeries.length} '
+                    '${heatmapSeries.length == 1 ? 'matrix' : 'matrices'}',
             increasedValue: focusedHeatmap == null
                 ? null
                 : _adjacentHeatmapSemanticsValue(1) ?? focusedHeatmap.value,

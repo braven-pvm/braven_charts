@@ -34,6 +34,24 @@ void main() {
       expect(result.p95Micros, lessThan(_frameBudgetMicros));
     });
 
+    test('10K cells with a durable hide filter stay within one frame', () {
+      final element = _element(
+        columns: 100,
+        rows: 100,
+        valueFilter: const HeatmapValueFilter(
+          minimumValue: 45,
+          maximumValue: 55,
+          mode: HeatmapValueFilterMode.hide,
+        ),
+      );
+
+      final result = _measure(() => _paint(element));
+
+      _printResult('Filtered Heatmap (10,000 source)', result);
+      expect(element.visibleHeatmapPointIndices, hasLength(10000));
+      expect(result.p95Micros, lessThan(_frameBudgetMicros));
+    });
+
     test('250K source cells cull to the small viewport before paint', () {
       final element = _element(
         columns: 500,
@@ -89,6 +107,7 @@ SeriesElement _element({
   required int columns,
   required int rows,
   bool showLabels = false,
+  HeatmapValueFilter? valueFilter,
   ChartTransform? transform,
 }) {
   final cells = [
@@ -108,6 +127,7 @@ SeriesElement _element({
         colors: const [Color(0xFFE0F2FE), Color(0xFF0369A1)],
       ),
       showCellLabels: showLabels,
+      valueFilter: valueFilter,
       borderWidth: 0.5,
       gapFraction: 0.04,
       cornerRadius: 1.5,

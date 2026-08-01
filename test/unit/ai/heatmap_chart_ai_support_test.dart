@@ -23,6 +23,21 @@ void main() {
             'unit': '°C',
             'show_legend': false,
           },
+          'heatmap_empty_value_style': {
+            'value': 0,
+            'fill_color': '#E5E7EB',
+            'border_color': '#D1D5DB',
+            'border_width': 0.8,
+            'show_label': true,
+            'show_in_legend': true,
+            'legend_label': 'No contributions',
+          },
+          'heatmap_value_filter': {
+            'minimum_value': 10,
+            'maximum_value': 30,
+            'mode': 'hide',
+            'excluded_opacity': 0.2,
+          },
           'heatmap_cell_width': 0.8,
           'heatmap_cell_height': 0.9,
           'heatmap_gap_fraction': 0.12,
@@ -40,6 +55,12 @@ void main() {
               'point_key': 'monday-am',
               'label': '18.5 °C',
               'timestamp': '2026-07-29T08:00:00Z',
+              'bounds': {
+                'x_minimum': -0.4,
+                'x_maximum': 0.6,
+                'y_minimum': -0.3,
+                'y_maximum': 0.4,
+              },
             },
             {
               'x': 1,
@@ -63,6 +84,15 @@ void main() {
     expect(series.cells.first.pointKey, 'monday-am');
     expect(series.cells.first.label, '18.5 °C');
     expect(series.cells.first.timestamp, DateTime.utc(2026, 7, 29, 8));
+    expect(
+      series.cells.first.bounds,
+      HeatmapCellBounds(
+        xMinimum: -0.4,
+        xMaximum: 0.6,
+        yMinimum: -0.3,
+        yMaximum: 0.4,
+      ),
+    );
     expect(series.cells.last.isMissing, isTrue);
     expect(series.cells.last.value, isNull);
     expect(series.cells.last.pointKey, 'tuesday-am');
@@ -84,6 +114,78 @@ void main() {
     expect(series.showCellLabels, isTrue);
     expect(series.cellLabelColor, const Color(0xFF111827));
     expect(series.cellLabelFontSize, 10);
+    expect(
+      series.emptyValueStyle,
+      const HeatmapEmptyValueStyle(
+        fillColor: Color(0xFFE5E7EB),
+        borderColor: Color(0xFFD1D5DB),
+        borderWidth: 0.8,
+        showLabel: true,
+        showInLegend: true,
+        legendLabel: 'No contributions',
+      ),
+    );
+    expect(
+      series.valueFilter,
+      const HeatmapValueFilter(
+        minimumValue: 10,
+        maximumValue: 30,
+        mode: HeatmapValueFilterMode.hide,
+        excludedOpacity: 0.2,
+      ),
+    );
+  });
+
+  test('AI builder preserves independent scales for multiple Heatmaps', () {
+    final result = ChartConfigBuilder.fromJson({
+      'chart_type': 'heatmap',
+      'series': [
+        {
+          'id': 'latency-axis',
+          'name': 'Latency',
+          'type': 'heatmap',
+          'unit': 'ms',
+          'heatmap_color_scale': {
+            'type': 'sequential',
+            'colors': ['#E0F2FE', '#075985'],
+            'minimum': 35,
+            'maximum': 100,
+            'label': 'Latency',
+            'unit': 'ms',
+          },
+          'data': [
+            {'x': 0, 'y': 0, 'value': 42},
+          ],
+        },
+        {
+          'id': 'error-rate-axis',
+          'name': 'Error rate',
+          'type': 'heatmap',
+          'unit': '%',
+          'heatmap_color_scale': {
+            'type': 'sequential',
+            'colors': ['#FFF7ED', '#C2410C'],
+            'minimum': 0,
+            'maximum': 3,
+            'label': 'Error rate',
+            'unit': '%',
+          },
+          'data': [
+            {'x': 0, 'y': 1, 'value': 1.8},
+          ],
+        },
+      ],
+    });
+
+    expect(result.series, hasLength(2));
+    final latency = result.series[0] as HeatmapChartSeries;
+    final errors = result.series[1] as HeatmapChartSeries;
+    expect((latency.id, latency.unit), ('latency-axis', 'ms'));
+    expect(latency.colorScale.minimumValue, 35);
+    expect(latency.colorScale.maximumValue, 100);
+    expect((errors.id, errors.unit), ('error-rate-axis', '%'));
+    expect(errors.colorScale.minimumValue, 0);
+    expect(errors.colorScale.maximumValue, 3);
   });
 
   test('AI builder creates diverging and threshold Heatmap scales', () {
@@ -176,6 +278,28 @@ void main() {
     );
   });
 
+  test('AI builder rejects incomplete Heatmap cell bounds', () {
+    expect(
+      () => _build(
+        data: [
+          {
+            'x': 0,
+            'y': 0,
+            'value': 1,
+            'bounds': {'x_minimum': -0.5, 'x_maximum': 0.5, 'y_minimum': -0.5},
+          },
+        ],
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('y_maximum'),
+        ),
+      ),
+    );
+  });
+
   test('AI builder rejects malformed Heatmap scale and colors', () {
     expect(
       () => _build(
@@ -222,6 +346,7 @@ void main() {
       seriesProperties.keys,
       containsAll([
         'heatmap_color_scale',
+        'heatmap_empty_value_style',
         'heatmap_cell_width',
         'heatmap_cell_height',
         'heatmap_gap_fraction',
@@ -249,7 +374,17 @@ void main() {
         'missing_color',
       ]),
     );
-    expect(pointProperties.keys, containsAll(['x', 'y', 'value', 'missing']));
+    expect(
+      pointProperties.keys,
+      containsAll(['x', 'y', 'value', 'missing', 'bounds']),
+    );
+    final bounds = pointProperties['bounds']! as Map<String, dynamic>;
+    expect(bounds['required'], [
+      'x_minimum',
+      'x_maximum',
+      'y_minimum',
+      'y_maximum',
+    ]);
   });
 }
 

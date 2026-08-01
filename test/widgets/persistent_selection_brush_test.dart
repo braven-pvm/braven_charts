@@ -1448,6 +1448,73 @@ void main() {
       );
     });
 
+    testWidgets(
+      'heatmap expansion changes preserve and re-resolve the box brush',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        StateSetter? rebuild;
+        var expansion = HeatmapSelectionExpansion.cell;
+        await tester.pumpWidget(
+          StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return _heatmapHost(controller: controller, expansion: expansion);
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final brushBefore = controller.selectionBrushState;
+        expect(brushBefore?.visible, isTrue);
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 4),
+        });
+
+        rebuild!(() => expansion = HeatmapSelectionExpansion.row);
+        await tester.pumpAndSettle();
+
+        expect(
+          tester
+              .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+              .interactionConfig!
+              .selection
+              .heatmapExpansion,
+          HeatmapSelectionExpansion.row,
+        );
+        expect(controller.selectionBrushState, brushBefore);
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 3),
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 4),
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 5),
+        });
+        expect(
+          controller.selectionExpression.clauses,
+          isNot(everyElement(isA<ChartSelectionRectangleClause>())),
+          reason:
+              'Expanded Heatmap semantics must retain the resolved row '
+              'identities because a plain rectangle clause cannot encode '
+              'row or column expansion.',
+        );
+        expect(
+          tester
+              .renderObject<ChartRenderBox>(_chartRenderFinder())
+              .selectionBrushWidgetRect,
+          isNotNull,
+        );
+
+        rebuild!(() => expansion = HeatmapSelectionExpansion.column);
+        await tester.pumpAndSettle();
+
+        expect(controller.selectionBrushState, brushBefore);
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 1),
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 4),
+          const ChartPointRef(seriesId: 'matrix', pointIndex: 7),
+        });
+      },
+    );
+
     testWidgets('box expression re-resolves after a compatible data revision', (
       tester,
     ) async {
@@ -1964,6 +2031,61 @@ Widget _host({
               brush: brush,
             ),
             onSelectionResultChanged: onSelectionResultChanged,
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+
+Widget _heatmapHost({
+  required BravenChartController controller,
+  required HeatmapSelectionExpansion expansion,
+}) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 640,
+      height: 420,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        showLegend: false,
+        series: [
+          HeatmapChartSeries(
+            id: 'matrix',
+            colorScale: HeatmapColorScale.sequential(
+              colors: const [Colors.white, Colors.blue],
+            ),
+            points: [
+              HeatmapDataPoint(x: 0, y: 0, value: 10),
+              HeatmapDataPoint(x: 1, y: 0, value: 20),
+              HeatmapDataPoint(x: 2, y: 0, value: 30),
+              HeatmapDataPoint(x: 0, y: 1, value: 40),
+              HeatmapDataPoint(x: 1, y: 1, value: 50),
+              HeatmapDataPoint(x: 2, y: 1, value: 60),
+              HeatmapDataPoint(x: 0, y: 2, value: 70),
+              HeatmapDataPoint(x: 1, y: 2, value: 80),
+              HeatmapDataPoint(x: 2, y: 2, value: 90),
+            ],
+          ),
+        ],
+        interactionConfig: InteractionConfig(
+          enableSelection: true,
+          selection: ChartSelectionConfig(
+            acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
+            scope: ChartSelectionScope.mark,
+            heatmapExpansion: expansion,
+            useModifierKeys: false,
+            brush: const ChartSelectionBrushConfig(
+              enabled: true,
+              initialVisible: true,
+              initialBox: ChartSelectionBrushBox(
+                minimumX: 0.75,
+                maximumX: 1.25,
+                minimumY: 0.75,
+                maximumY: 1.25,
+                referenceSeriesId: 'matrix',
+              ),
+            ),
           ),
         ),
       ),

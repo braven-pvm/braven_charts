@@ -16,6 +16,55 @@ void main() {
       );
     });
 
+    test('accepts one Heatmap with Line contour overlays', () {
+      final heatmap = HeatmapChartSeries(
+        id: 'density',
+        points: [HeatmapDataPoint(x: 0, y: 0, value: 1, pointKey: 'cell')],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Color(0xFFFFFFFF), Color(0xFF000000)],
+        ),
+      );
+
+      expect(
+        ChartLayoutResolver.resolve([
+          heatmap,
+          const LineChartSeries(id: 'contour', points: []),
+        ]),
+        ChartLayoutKind.cartesian,
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          heatmap,
+          const ScatterChartSeries(id: 'scatter', points: []),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('Line overlays'),
+          ),
+        ),
+      );
+    });
+
+    test('accepts multiple Heatmap series with independent colour axes', () {
+      HeatmapChartSeries heatmap(String id, Color color) => HeatmapChartSeries(
+        id: id,
+        points: [HeatmapDataPoint(x: 0, y: 0, value: 1, pointKey: '$id-cell')],
+        colorScale: HeatmapColorScale.sequential(
+          colors: [const Color(0xFFFFFFFF), color],
+        ),
+      );
+
+      expect(
+        ChartLayoutResolver.resolve([
+          heatmap('latency', const Color(0xFF00695C)),
+          heatmap('errors', const Color(0xFFC62828)),
+        ]),
+        ChartLayoutKind.cartesian,
+      );
+    });
+
     test('uses partition-radial layout for exactly one PieChartSeries', () {
       final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
 

@@ -51,11 +51,18 @@ class ViewportConstraints {
   /// 2. If zoom exceeds limits, scale ranges back to limit
   /// 3. Preserve center point of current viewport
   ///
+  /// [minimumXRange] optionally replaces the default X-axis zoom-in floor.
+  /// This is useful when a host has synchronized a deliberately narrow
+  /// viewport over a much larger conceptual domain and local zoom should
+  /// continue from that viewport instead of snapping back to [maxZoomLevel]
+  /// relative to the full domain. Y-axis limits remain unchanged.
+  ///
   /// Returns the transform unchanged if within bounds, or a new clamped
   /// transform if zoom exceeded limits.
   ChartTransform clampZoomLevel({
     required ChartTransform transform,
     required ChartTransform baseTransform,
+    double? minimumXRange,
   }) {
     final originalXRange = baseTransform.dataXMax - baseTransform.dataXMin;
     final originalYRange = baseTransform.dataYMax - baseTransform.dataYMin;
@@ -63,13 +70,20 @@ class ViewportConstraints {
     final currentXRange = transform.dataXMax - transform.dataXMin;
     final currentYRange = transform.dataYMax - transform.dataYMin;
 
+    final effectiveMinimumXRange = minimumXRange == null
+        ? originalXRange / maxZoomLevel
+        : minimumXRange.clamp(
+            originalXRange / double.maxFinite,
+            originalXRange / minZoomLevel,
+          );
+    final maximumXRange = originalXRange / minZoomLevel;
+
     // Calculate current zoom levels
-    final currentZoomX = originalXRange / currentXRange;
     final currentZoomY = originalYRange / currentYRange;
 
     // Check if clamping needed
     final bool needsClampX =
-        currentZoomX < minZoomLevel || currentZoomX > maxZoomLevel;
+        currentXRange < effectiveMinimumXRange || currentXRange > maximumXRange;
     final bool needsClampY =
         currentZoomY < minZoomLevel || currentZoomY > maxZoomLevel;
 
@@ -78,11 +92,13 @@ class ViewportConstraints {
     }
 
     // Clamp zoom levels
-    final clampedZoomX = currentZoomX.clamp(minZoomLevel, maxZoomLevel);
     final clampedZoomY = currentZoomY.clamp(minZoomLevel, maxZoomLevel);
 
     // Calculate new ranges from clamped zoom
-    final newXRange = originalXRange / clampedZoomX;
+    final newXRange = currentXRange.clamp(
+      effectiveMinimumXRange,
+      maximumXRange,
+    );
     final newYRange = originalYRange / clampedZoomY;
 
     // Preserve center of current viewport

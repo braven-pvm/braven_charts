@@ -17,6 +17,13 @@ extension HeatmapDataPointFluent on HeatmapDataPoint {
   /// Replaces [HeatmapDataPoint.value] with [value].
   HeatmapDataPoint withValue(double value) => copyWith(value: value);
 
+  /// Replaces [HeatmapDataPoint.bounds] with [value].
+  HeatmapDataPoint withBounds(HeatmapCellBounds value) =>
+      copyWith(bounds: value);
+
+  /// Clears [HeatmapDataPoint.bounds] to `null`.
+  HeatmapDataPoint clearBounds() => copyWith(clearBounds: true);
+
   /// Replaces [HeatmapDataPoint.pointKey] with [value].
   HeatmapDataPoint withPointKey(String value) => copyWith(pointKey: value);
 

@@ -7,6 +7,61 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/widgets.dart' show Color;
 
+/// Generated fluent modifiers for [HeatmapValueFilter].
+extension HeatmapValueFilterFluent on HeatmapValueFilter {
+  /// Replaces [HeatmapValueFilter.minimumValue] with [value].
+  HeatmapValueFilter withMinimumValue(double value) =>
+      copyWith(minimumValue: value);
+
+  /// Replaces [HeatmapValueFilter.maximumValue] with [value].
+  HeatmapValueFilter withMaximumValue(double value) =>
+      copyWith(maximumValue: value);
+
+  /// Replaces [HeatmapValueFilter.mode] with [value].
+  HeatmapValueFilter withMode(HeatmapValueFilterMode value) =>
+      copyWith(mode: value);
+
+  /// Replaces [HeatmapValueFilter.excludedOpacity] with [value].
+  HeatmapValueFilter withExcludedOpacity(double value) =>
+      copyWith(excludedOpacity: value);
+}
+
+/// Generated fluent modifiers for [HeatmapEmptyValueStyle].
+extension HeatmapEmptyValueStyleFluent on HeatmapEmptyValueStyle {
+  /// Replaces [HeatmapEmptyValueStyle.value] with [value].
+  HeatmapEmptyValueStyle withValue(double value) => copyWith(value: value);
+
+  /// Replaces [HeatmapEmptyValueStyle.fillColor] with [value].
+  HeatmapEmptyValueStyle withFillColor(Color value) =>
+      copyWith(fillColor: value);
+
+  /// Replaces [HeatmapEmptyValueStyle.borderColor] with [value].
+  HeatmapEmptyValueStyle withBorderColor(Color value) =>
+      copyWith(borderColor: value);
+
+  /// Clears [HeatmapEmptyValueStyle.borderColor] to `null`.
+  HeatmapEmptyValueStyle clearBorderColor() => copyWith(clearBorderColor: true);
+
+  /// Replaces [HeatmapEmptyValueStyle.borderWidth] with [value].
+  HeatmapEmptyValueStyle withBorderWidth(double value) =>
+      copyWith(borderWidth: value);
+
+  /// Clears [HeatmapEmptyValueStyle.borderWidth] to `null`.
+  HeatmapEmptyValueStyle clearBorderWidth() => copyWith(clearBorderWidth: true);
+
+  /// Replaces [HeatmapEmptyValueStyle.showLabel] with [value].
+  HeatmapEmptyValueStyle withShowLabel(bool value) =>
+      copyWith(showLabel: value);
+
+  /// Replaces [HeatmapEmptyValueStyle.showInLegend] with [value].
+  HeatmapEmptyValueStyle withShowInLegend(bool value) =>
+      copyWith(showInLegend: value);
+
+  /// Replaces [HeatmapEmptyValueStyle.legendLabel] with [value].
+  HeatmapEmptyValueStyle withLegendLabel(String value) =>
+      copyWith(legendLabel: value);
+}
+
 /// Generated fluent modifiers for [HeatmapAnimationStyle].
 extension HeatmapAnimationStyleFluent on HeatmapAnimationStyle {
   /// Replaces [HeatmapAnimationStyle.entranceMode] with [value].
@@ -104,6 +159,10 @@ extension HeatmapChartSeriesFluent on HeatmapChartSeries {
   HeatmapChartSeries withShowTrackingAxisLabel(bool value) =>
       copyWith(showTrackingAxisLabel: value);
 
+  /// Replaces [HeatmapChartSeries.showInTrackingTooltip] with [value].
+  HeatmapChartSeries withShowInTrackingTooltip(bool value) =>
+      copyWith(showInTrackingTooltip: value);
+
   /// Replaces [HeatmapChartSeries.cellWidth] with [value].
   HeatmapChartSeries withCellWidth(double value) => copyWith(cellWidth: value);
 
@@ -142,6 +201,21 @@ extension HeatmapChartSeriesFluent on HeatmapChartSeries {
   /// Replaces [HeatmapChartSeries.cellLabelFontSize] with [value].
   HeatmapChartSeries withCellLabelFontSize(double value) =>
       copyWith(cellLabelFontSize: value);
+
+  /// Replaces [HeatmapChartSeries.emptyValueStyle] with [value].
+  HeatmapChartSeries withEmptyValueStyle(HeatmapEmptyValueStyle value) =>
+      copyWith(emptyValueStyle: value);
+
+  /// Clears [HeatmapChartSeries.emptyValueStyle] to `null`.
+  HeatmapChartSeries clearEmptyValueStyle() =>
+      copyWith(clearEmptyValueStyle: true);
+
+  /// Replaces [HeatmapChartSeries.valueFilter] with [value].
+  HeatmapChartSeries withValueFilter(HeatmapValueFilter value) =>
+      copyWith(valueFilter: value);
+
+  /// Clears [HeatmapChartSeries.valueFilter] to `null`.
+  HeatmapChartSeries clearValueFilter() => copyWith(clearValueFilter: true);
 
   /// Replaces [HeatmapChartSeries.animation] with [value].
   HeatmapChartSeries withAnimation(HeatmapAnimationStyle value) =>

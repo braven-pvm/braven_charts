@@ -30,6 +30,10 @@ enum ChartTableAuxiliaryField {
   waterfallCumulative,
   normalizedShare,
   heatmapRowCoordinate,
+  heatmapXMinimum,
+  heatmapXMaximum,
+  heatmapYMinimum,
+  heatmapYMaximum,
 }
 
 extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
@@ -50,6 +54,10 @@ extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
     ChartTableAuxiliaryField.waterfallCumulative => 'Running total',
     ChartTableAuxiliaryField.normalizedShare => 'Share',
     ChartTableAuxiliaryField.heatmapRowCoordinate => 'Y',
+    ChartTableAuxiliaryField.heatmapXMinimum => 'X min',
+    ChartTableAuxiliaryField.heatmapXMaximum => 'X max',
+    ChartTableAuxiliaryField.heatmapYMinimum => 'Y min',
+    ChartTableAuxiliaryField.heatmapYMaximum => 'Y max',
   };
 
   /// Unit that replaces the source series unit for this derived measure.
@@ -467,16 +475,20 @@ class ChartTableModel {
     final heatmapSeries = selected
         .where((series) => series.type == 'heatmap')
         .toList();
-    if (heatmapSeries.length > 1) {
+    if (heatmapSeries.isNotEmpty &&
+        selected.any(
+          (series) => series.type != 'heatmap' && series.type != 'line',
+        )) {
       throw UnsupportedError(
-        'Heatmap table projection supports exactly one matrix series.',
+        'Heatmap tables only support Line contour overlays.',
       );
     }
-    if (heatmapSeries.isNotEmpty && heatmapSeries.length != selected.length) {
-      throw UnsupportedError(
-        'Heatmap table projection cannot mix chart families.',
-      );
-    }
+    final hasHeatmapOverlays =
+        heatmapSeries.isNotEmpty && heatmapSeries.length != selected.length;
+    final hasMultipleHeatmaps = heatmapSeries.length > 1;
+    final hasIrregularHeatmap = heatmapSeries.any(
+      _heatmapSeriesHasExplicitBounds,
+    );
     if (gaugeSeries.length > 1) {
       throw UnsupportedError(
         'Gauge table projection supports exactly one measurement.',
@@ -518,7 +530,10 @@ class ChartTableModel {
         ? ChartTableProjectionKind.pie
         : polarSeries.isNotEmpty
         ? ChartTableProjectionKind.polar
-        : options.rowLayout == ChartTableRowLayout.long
+        : hasHeatmapOverlays ||
+              hasMultipleHeatmaps ||
+              hasIrregularHeatmap ||
+              options.rowLayout == ChartTableRowLayout.long
         ? ChartTableProjectionKind.cartesianLong
         : ChartTableProjectionKind.cartesianWide;
     final xFormatter =
@@ -687,6 +702,32 @@ class ChartTableModel {
                   display: _displayNumber(point.y.asDouble, heatmapYFormatter),
                   isValid: point.y.asDouble.isFinite,
                 ),
+              if (heatmap?.bounds case final bounds?) ...{
+                ChartTableAuxiliaryField.heatmapXMinimum:
+                    ChartTableAuxiliaryValue(
+                      raw: bounds.xMinimum,
+                      display: _displayNumber(bounds.xMinimum, xFormatter),
+                      isValid: bounds.xMinimum.isFinite,
+                    ),
+                ChartTableAuxiliaryField.heatmapXMaximum:
+                    ChartTableAuxiliaryValue(
+                      raw: bounds.xMaximum,
+                      display: _displayNumber(bounds.xMaximum, xFormatter),
+                      isValid: bounds.xMaximum.isFinite,
+                    ),
+                ChartTableAuxiliaryField
+                    .heatmapYMinimum: ChartTableAuxiliaryValue(
+                  raw: bounds.yMinimum,
+                  display: _displayNumber(bounds.yMinimum, heatmapYFormatter),
+                  isValid: bounds.yMinimum.isFinite,
+                ),
+                ChartTableAuxiliaryField
+                    .heatmapYMaximum: ChartTableAuxiliaryValue(
+                  raw: bounds.yMaximum,
+                  display: _displayNumber(bounds.yMaximum, heatmapYFormatter),
+                  isValid: bounds.yMaximum.isFinite,
+                ),
+              },
             },
           ),
         );
@@ -1431,7 +1472,15 @@ Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
     };
   }
   if (series.type == 'heatmap') {
-    return const {ChartTableAuxiliaryField.heatmapRowCoordinate};
+    return Set.unmodifiable({
+      ChartTableAuxiliaryField.heatmapRowCoordinate,
+      if (_heatmapSeriesHasExplicitBounds(series)) ...{
+        ChartTableAuxiliaryField.heatmapXMinimum,
+        ChartTableAuxiliaryField.heatmapXMaximum,
+        ChartTableAuxiliaryField.heatmapYMinimum,
+        ChartTableAuxiliaryField.heatmapYMaximum,
+      },
+    });
   }
   if (series.type == 'scatter') {
     return Set.unmodifiable({
@@ -1838,7 +1887,15 @@ double? _chartNumber(JsonValue? value) {
   }
 }
 
-({double? value, bool isMissing}) _heatmapCellValues(ChartPointDocument point) {
+typedef _HeatmapTableBounds = ({
+  double xMinimum,
+  double xMaximum,
+  double yMinimum,
+  double yMaximum,
+});
+
+({double? value, bool isMissing, _HeatmapTableBounds? bounds})
+_heatmapCellValues(ChartPointDocument point) {
   final extension = point.extensions['heatmap.cell.v1'];
   if (extension is! JsonObjectValue) {
     throw const FormatException(
@@ -1851,6 +1908,7 @@ double? _chartNumber(JsonValue? value) {
       'Heatmap table cells require an explicit missing-state flag.',
     );
   }
+  final bounds = _heatmapTableBounds(extension.values['bounds']);
   final rawValue = _chartNumber(extension.values['value']);
   if (rawMissing) {
     if (extension.values.containsKey('value')) {
@@ -1858,14 +1916,57 @@ double? _chartNumber(JsonValue? value) {
         'Explicitly missing Heatmap table cells cannot carry a value.',
       );
     }
-    return (value: null, isMissing: true);
+    return (value: null, isMissing: true, bounds: bounds);
   }
   if (rawValue == null || !rawValue.isFinite) {
     throw const FormatException(
       'Measured Heatmap table cells require a finite value.',
     );
   }
-  return (value: rawValue, isMissing: false);
+  return (value: rawValue, isMissing: false, bounds: bounds);
+}
+
+bool _heatmapSeriesHasExplicitBounds(ChartSeriesDocument series) {
+  final payload = series.data;
+  if (series.type != 'heatmap' || payload is! InlineChartDataPayload) {
+    return false;
+  }
+  return payload.points.any((point) {
+    final extension = point.extensions['heatmap.cell.v1'];
+    return extension is JsonObjectValue &&
+        extension.values['bounds'] is JsonObjectValue;
+  });
+}
+
+_HeatmapTableBounds? _heatmapTableBounds(JsonValue? value) {
+  if (value == null || value is JsonNullValue) return null;
+  if (value is! JsonObjectValue) {
+    throw const FormatException('Heatmap table cell bounds must be an object.');
+  }
+  final xMinimum = _chartNumber(value.values['xMinimum']);
+  final xMaximum = _chartNumber(value.values['xMaximum']);
+  final yMinimum = _chartNumber(value.values['yMinimum']);
+  final yMaximum = _chartNumber(value.values['yMaximum']);
+  if (xMinimum == null ||
+      xMaximum == null ||
+      yMinimum == null ||
+      yMaximum == null ||
+      !xMinimum.isFinite ||
+      !xMaximum.isFinite ||
+      !yMinimum.isFinite ||
+      !yMaximum.isFinite ||
+      xMinimum >= xMaximum ||
+      yMinimum >= yMaximum) {
+    throw const FormatException(
+      'Heatmap table cell bounds require finite positive extents.',
+    );
+  }
+  return (
+    xMinimum: xMinimum,
+    xMaximum: xMaximum,
+    yMinimum: yMinimum,
+    yMaximum: yMaximum,
+  );
 }
 
 String _heatmapColumnId(double x) {

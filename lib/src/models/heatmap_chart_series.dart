@@ -40,6 +40,225 @@ enum HeatmapEntranceOrder {
   radial,
 }
 
+/// Presentation applied to finite cells outside a [HeatmapValueFilter].
+enum HeatmapValueFilterMode {
+  /// Keep excluded cells visible at a reduced opacity.
+  dim,
+
+  /// Remove excluded cells from painting and hit testing.
+  hide,
+}
+
+/// An inclusive measured-value window for Heatmap presentation.
+///
+/// Filtering never mutates or removes source cells. Tables, artifacts, source
+/// generation, and copied series continue to contain the complete matrix.
+/// Missing cells are independent from this measured-value window and retain
+/// their normal missing-cell presentation.
+@ChartSurface()
+final class HeatmapValueFilter {
+  const HeatmapValueFilter({
+    required this.minimumValue,
+    required this.maximumValue,
+    this.mode = HeatmapValueFilterMode.dim,
+    this.excludedOpacity = 0.14,
+  });
+
+  /// Inclusive lower bound of the visible measured-value window.
+  final double minimumValue;
+
+  /// Inclusive upper bound of the visible measured-value window.
+  final double maximumValue;
+
+  /// Presentation used for finite cells outside the window.
+  final HeatmapValueFilterMode mode;
+
+  /// Opacity applied to excluded cells when [mode] is
+  /// [HeatmapValueFilterMode.dim].
+  final double excludedOpacity;
+
+  /// Whether [cell] belongs to the inclusive measured-value window.
+  ///
+  /// Missing cells are not excluded by a measured-value filter.
+  bool includes(HeatmapDataPoint cell) {
+    final value = cell.value;
+    return cell.isMissing ||
+        value == null ||
+        (value >= minimumValue && value <= maximumValue);
+  }
+
+  void validate() {
+    if (!minimumValue.isFinite) {
+      throw ArgumentError.value(
+        minimumValue,
+        'valueFilter.minimumValue',
+        'must be finite',
+      );
+    }
+    if (!maximumValue.isFinite) {
+      throw ArgumentError.value(
+        maximumValue,
+        'valueFilter.maximumValue',
+        'must be finite',
+      );
+    }
+    if (minimumValue > maximumValue) {
+      throw ArgumentError.value(
+        minimumValue,
+        'valueFilter.minimumValue',
+        'must be less than or equal to maximumValue',
+      );
+    }
+    if (!excludedOpacity.isFinite ||
+        excludedOpacity < 0 ||
+        excludedOpacity > 1) {
+      throw ArgumentError.value(
+        excludedOpacity,
+        'valueFilter.excludedOpacity',
+        'must be finite and between zero and one',
+      );
+    }
+  }
+
+  HeatmapValueFilter copyWith({
+    double? minimumValue,
+    double? maximumValue,
+    HeatmapValueFilterMode? mode,
+    double? excludedOpacity,
+  }) => HeatmapValueFilter(
+    minimumValue: minimumValue ?? this.minimumValue,
+    maximumValue: maximumValue ?? this.maximumValue,
+    mode: mode ?? this.mode,
+    excludedOpacity: excludedOpacity ?? this.excludedOpacity,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HeatmapValueFilter &&
+          other.minimumValue == minimumValue &&
+          other.maximumValue == maximumValue &&
+          other.mode == mode &&
+          other.excludedOpacity == excludedOpacity;
+
+  @override
+  int get hashCode =>
+      Object.hash(minimumValue, maximumValue, mode, excludedOpacity);
+}
+
+/// Presentation for a real Heatmap cell whose measured value represents an
+/// application-defined empty state.
+///
+/// This is deliberately independent from [HeatmapDataPoint.missing]. A
+/// matching cell remains a finite, selectable data point and continues to
+/// participate in tables, artifacts, tooltips, and the measured-value domain.
+/// Missing cells still use [HeatmapColorScale.missingColor].
+@ChartSurface()
+final class HeatmapEmptyValueStyle {
+  const HeatmapEmptyValueStyle({
+    this.value = 0,
+    this.fillColor = const Color(0xFFE5E7EB),
+    this.borderColor,
+    this.borderWidth,
+    this.showLabel = false,
+    this.showInLegend = true,
+    this.legendLabel = 'No activity',
+  });
+
+  /// Finite measured value treated as the empty application state.
+  final double value;
+
+  /// Fill used instead of the measured colour-scale result.
+  final Color fillColor;
+
+  /// Optional outline colour. When absent, the series outline is inherited.
+  final Color? borderColor;
+
+  /// Optional outline width. When absent, the series width is inherited.
+  final double? borderWidth;
+
+  /// Whether matching cells show their numeric value.
+  ///
+  /// This is independent from [HeatmapChartSeries.showCellLabels].
+  final bool showLabel;
+
+  /// Whether [legendLabel] and [fillColor] appear beside the colour scale.
+  final bool showInLegend;
+
+  /// Human-readable wording for the empty-value legend swatch.
+  final String legendLabel;
+
+  bool matches(HeatmapDataPoint cell) => !cell.isMissing && cell.value == value;
+
+  void validate() {
+    if (!value.isFinite) {
+      throw ArgumentError.value(
+        value,
+        'emptyValueStyle.value',
+        'must be finite',
+      );
+    }
+    final width = borderWidth;
+    if (width != null && (!width.isFinite || width < 0)) {
+      throw ArgumentError.value(
+        width,
+        'emptyValueStyle.borderWidth',
+        'must be finite and non-negative',
+      );
+    }
+    if (legendLabel.trim().isEmpty) {
+      throw ArgumentError.value(
+        legendLabel,
+        'emptyValueStyle.legendLabel',
+        'must not be blank',
+      );
+    }
+  }
+
+  HeatmapEmptyValueStyle copyWith({
+    double? value,
+    Color? fillColor,
+    Color? borderColor,
+    bool clearBorderColor = false,
+    double? borderWidth,
+    bool clearBorderWidth = false,
+    bool? showLabel,
+    bool? showInLegend,
+    String? legendLabel,
+  }) => HeatmapEmptyValueStyle(
+    value: value ?? this.value,
+    fillColor: fillColor ?? this.fillColor,
+    borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
+    borderWidth: clearBorderWidth ? null : (borderWidth ?? this.borderWidth),
+    showLabel: showLabel ?? this.showLabel,
+    showInLegend: showInLegend ?? this.showInLegend,
+    legendLabel: legendLabel ?? this.legendLabel,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HeatmapEmptyValueStyle &&
+          other.value == value &&
+          other.fillColor == fillColor &&
+          other.borderColor == borderColor &&
+          other.borderWidth == borderWidth &&
+          other.showLabel == showLabel &&
+          other.showInLegend == showInLegend &&
+          other.legendLabel == legendLabel;
+
+  @override
+  int get hashCode => Object.hash(
+    value,
+    fillColor,
+    borderColor,
+    borderWidth,
+    showLabel,
+    showInLegend,
+    legendLabel,
+  );
+}
+
 /// Motion settings for a native Heatmap series.
 @ChartSurface()
 final class HeatmapAnimationStyle {
@@ -184,6 +403,7 @@ final class HeatmapChartSeries extends ChartSeries {
     super.unit,
     super.showInLegend,
     super.showTrackingAxisLabel,
+    super.showInTrackingTooltip,
     this.cellWidth = 1,
     this.cellHeight = 1,
     this.gapFraction = 0.06,
@@ -193,6 +413,8 @@ final class HeatmapChartSeries extends ChartSeries {
     this.showCellLabels = false,
     this.cellLabelColor,
     this.cellLabelFontSize = 11,
+    this.emptyValueStyle,
+    this.valueFilter,
     this.animation = const HeatmapAnimationStyle(),
   }) : super(
          points: List<HeatmapDataPoint>.unmodifiable(points),
@@ -230,6 +452,18 @@ final class HeatmapChartSeries extends ChartSeries {
 
   /// Cell-label size in logical pixels.
   final double cellLabelFontSize;
+
+  /// Optional presentation for a finite application-defined empty value.
+  ///
+  /// A null value keeps every finite cell on [colorScale]. This never changes
+  /// the behaviour of [HeatmapDataPoint.missing].
+  final HeatmapEmptyValueStyle? emptyValueStyle;
+
+  /// Optional inclusive measured-value window used for presentation.
+  ///
+  /// The complete source matrix remains available through [cells], tables,
+  /// artifacts, and generated source regardless of this filter.
+  final HeatmapValueFilter? valueFilter;
 
   /// Entrance and stable-identity data-update motion.
   final HeatmapAnimationStyle animation;
@@ -294,6 +528,8 @@ final class HeatmapChartSeries extends ChartSeries {
         'must be finite and greater than zero',
       );
     }
+    emptyValueStyle?.validate();
+    valueFilter?.validate();
     animation.validate();
 
     final identities = <HeatmapCellIdentity>{};
@@ -387,6 +623,7 @@ final class HeatmapChartSeries extends ChartSeries {
     bool clearUnit = false,
     bool? showInLegend,
     bool? showTrackingAxisLabel,
+    bool? showInTrackingTooltip,
     HeatmapColorScale? colorScale,
     double? cellWidth,
     double? cellHeight,
@@ -398,6 +635,10 @@ final class HeatmapChartSeries extends ChartSeries {
     Color? cellLabelColor,
     bool clearCellLabelColor = false,
     double? cellLabelFontSize,
+    HeatmapEmptyValueStyle? emptyValueStyle,
+    bool clearEmptyValueStyle = false,
+    HeatmapValueFilter? valueFilter,
+    bool clearValueFilter = false,
     HeatmapAnimationStyle? animation,
   }) {
     if (style != null && style != SeriesStyle.heatmap) {
@@ -430,6 +671,8 @@ final class HeatmapChartSeries extends ChartSeries {
       showInLegend: showInLegend ?? this.showInLegend,
       showTrackingAxisLabel:
           showTrackingAxisLabel ?? this.showTrackingAxisLabel,
+      showInTrackingTooltip:
+          showInTrackingTooltip ?? this.showInTrackingTooltip,
       cellWidth: cellWidth ?? this.cellWidth,
       cellHeight: cellHeight ?? this.cellHeight,
       gapFraction: gapFraction ?? this.gapFraction,
@@ -441,6 +684,10 @@ final class HeatmapChartSeries extends ChartSeries {
           ? null
           : (cellLabelColor ?? this.cellLabelColor),
       cellLabelFontSize: cellLabelFontSize ?? this.cellLabelFontSize,
+      emptyValueStyle: clearEmptyValueStyle
+          ? null
+          : (emptyValueStyle ?? this.emptyValueStyle),
+      valueFilter: clearValueFilter ? null : (valueFilter ?? this.valueFilter),
       animation: animation ?? this.animation,
     );
   }
@@ -460,6 +707,8 @@ final class HeatmapChartSeries extends ChartSeries {
         other.showCellLabels == showCellLabels &&
         other.cellLabelColor == cellLabelColor &&
         other.cellLabelFontSize == cellLabelFontSize &&
+        other.emptyValueStyle == emptyValueStyle &&
+        other.valueFilter == valueFilter &&
         other.animation == animation;
   }
 
@@ -476,6 +725,8 @@ final class HeatmapChartSeries extends ChartSeries {
     showCellLabels,
     cellLabelColor,
     cellLabelFontSize,
+    emptyValueStyle,
+    valueFilter,
     animation,
   );
 }

@@ -13,6 +13,12 @@ void main() {
           x: 0,
           y: 0,
           value: 0,
+          bounds: HeatmapCellBounds(
+            xMinimum: -0.75,
+            xMaximum: 0.25,
+            yMinimum: -0.4,
+            yMaximum: 0.6,
+          ),
           pointKey: 'mon-00',
           label: 'Monday midnight',
           metadata: const {'source': 'sensor-a'},
@@ -20,6 +26,12 @@ void main() {
         HeatmapDataPoint.missing(
           x: 1,
           y: 0,
+          bounds: HeatmapCellBounds(
+            xMinimum: 0.25,
+            xMaximum: 1.5,
+            yMinimum: -0.4,
+            yMaximum: 0.6,
+          ),
           pointKey: 'mon-01',
           label: 'Missing sample',
         ),
@@ -44,6 +56,20 @@ void main() {
       borderColor: const Color(0xFF334155),
       borderWidth: 1.5,
       cornerRadius: 3,
+      emptyValueStyle: const HeatmapEmptyValueStyle(
+        fillColor: Color(0xFFE5E7EB),
+        borderColor: Color(0xFFD1D5DB),
+        borderWidth: 0.8,
+        showLabel: true,
+        showInLegend: true,
+        legendLabel: 'No contributions',
+      ),
+      valueFilter: const HeatmapValueFilter(
+        minimumValue: 10,
+        maximumValue: 20,
+        mode: HeatmapValueFilterMode.hide,
+        excludedOpacity: 0.2,
+      ),
       showInLegend: false,
       showTrackingAxisLabel: false,
       showCellLabels: true,
@@ -89,6 +115,14 @@ void main() {
       expect(
         (decoded.value as HeatmapChartSeries).animation.entranceOrder,
         HeatmapEntranceOrder.radial,
+      );
+      expect(
+        (decoded.value as HeatmapChartSeries).emptyValueStyle?.legendLabel,
+        'No contributions',
+      );
+      expect(
+        (decoded.value as HeatmapChartSeries).valueFilter,
+        source.valueFilter,
       );
     }
   });
@@ -149,5 +183,55 @@ void main() {
     expect(decoded.cells.first.isMissing, isFalse);
     expect(decoded.cells.last.value, isNull);
     expect(decoded.cells.last.isMissing, isTrue);
+  });
+
+  test('multiple Heatmap documents preserve independent colour axes', () {
+    final sources = [
+      HeatmapChartSeries(
+        id: 'latency-axis',
+        unit: 'ms',
+        points: [HeatmapDataPoint(x: 0, y: 0, value: 42)],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Colors.white, Colors.blue],
+          minimumValue: 35,
+          maximumValue: 100,
+          label: 'Latency',
+          unit: 'ms',
+        ),
+      ),
+      HeatmapChartSeries(
+        id: 'error-rate-axis',
+        unit: '%',
+        points: [HeatmapDataPoint(x: 0, y: 1, value: 1.8)],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Colors.white, Colors.orange],
+          minimumValue: 0,
+          maximumValue: 3,
+          label: 'Error rate',
+          unit: '%',
+        ),
+      ),
+    ];
+
+    final decoded = [
+      for (final source in sources)
+        (ChartSeriesDocumentCodec.decode(
+                      (ChartSeriesDocumentCodec.encode(source)
+                              as ChartArtifactSuccess<ChartSeriesDocument>)
+                          .value,
+                    )
+                    as ChartArtifactSuccess<ChartSeries>)
+                .value
+            as HeatmapChartSeries,
+    ];
+
+    expect(decoded.map((series) => series.id), [
+      'latency-axis',
+      'error-rate-axis',
+    ]);
+    expect(decoded.map((series) => series.unit), ['ms', '%']);
+    expect(decoded[0].colorScale.maximumValue, 100);
+    expect(decoded[1].colorScale.maximumValue, 3);
+    expect(decoded[0].colorScale.colors, isNot(decoded[1].colorScale.colors));
   });
 }

@@ -91,6 +91,55 @@ void main() {
         expect(result.dataYMax - result.dataYMin, closeTo(expectedRange, 0.01));
       });
 
+      test('accepts a host-synchronized X zoom anchor', () {
+        final baseTransform = createTransform(dataXMax: 1000000);
+        final synchronizedTransform = createTransform(
+          dataXMin: 999699.5,
+          dataXMax: 999999.5,
+        );
+
+        final result = constraints.clampZoomLevel(
+          transform: synchronizedTransform,
+          baseTransform: baseTransform,
+          minimumXRange: 30,
+        );
+
+        expect(result.dataXMin, synchronizedTransform.dataXMin);
+        expect(result.dataXMax, synchronizedTransform.dataXMax);
+      });
+
+      test('keeps the default full-domain X zoom limit without an anchor', () {
+        final baseTransform = createTransform(dataXMax: 1000000);
+        final synchronizedTransform = createTransform(
+          dataXMin: 999699.5,
+          dataXMax: 999999.5,
+        );
+
+        final result = constraints.clampZoomLevel(
+          transform: synchronizedTransform,
+          baseTransform: baseTransform,
+        );
+
+        expect(result.dataXMax - result.dataXMin, closeTo(100000, 0.01));
+      });
+
+      test('clamps local zoom against the synchronized X anchor floor', () {
+        final baseTransform = createTransform(dataXMax: 1000000);
+        final overZoomedTransform = createTransform(
+          dataXMin: 999850,
+          dataXMax: 999870,
+        );
+
+        final result = constraints.clampZoomLevel(
+          transform: overZoomedTransform,
+          baseTransform: baseTransform,
+          minimumXRange: 30,
+        );
+
+        expect(result.dataXMax - result.dataXMin, closeTo(30, 0.01));
+        expect((result.dataXMin + result.dataXMax) / 2, closeTo(999860, 0.01));
+      });
+
       test('clamps zoom-out beyond min limit', () {
         final baseTransform = createTransform();
         // 0.5x zoom (range doubled), but min is 0.8

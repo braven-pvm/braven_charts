@@ -620,6 +620,8 @@ void _validateHeatmapConfiguration<T>(
       cellLabelColor: mark.cellLabelColor,
       cellLabelFontSize:
           mark.cellLabelFontSize ?? _heatmapDefaults.cellLabelFontSize,
+      emptyValueStyle: mark.emptyValueStyle,
+      valueFilter: mark.valueFilter,
     );
   } on ArgumentError catch (error) {
     throw GrammarSpecException.invalidHeatmapConfiguration(
@@ -1093,6 +1095,8 @@ HeatmapChartSeries _lowerHeatmap<T>(
     cellLabelColor: mark.cellLabelColor,
     cellLabelFontSize:
         mark.cellLabelFontSize ?? _heatmapDefaults.cellLabelFontSize,
+    emptyValueStyle: mark.emptyValueStyle,
+    valueFilter: mark.valueFilter,
   );
   try {
     series.validateCategoryCoordinates(

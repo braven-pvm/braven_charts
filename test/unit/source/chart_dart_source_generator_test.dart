@@ -452,6 +452,12 @@ void main() {
                 x: 0,
                 y: 0,
                 value: 99.9,
+                bounds: HeatmapCellBounds(
+                  xMinimum: -0.75,
+                  xMaximum: 0.25,
+                  yMinimum: -0.4,
+                  yMaximum: 0.6,
+                ),
                 pointKey: 'api-morning',
                 label: 'API · morning',
               ),
@@ -481,6 +487,12 @@ void main() {
             showCellLabels: true,
             cellLabelColor: const Color(0xFFFFFFFF),
             cellLabelFontSize: 12,
+            valueFilter: const HeatmapValueFilter(
+              minimumValue: 98.5,
+              maximumValue: 100,
+              mode: HeatmapValueFilterMode.hide,
+              excludedOpacity: 0.2,
+            ),
             animation: const HeatmapAnimationStyle(
               entranceMode: HeatmapEntranceMode.scale,
               entranceOrder: HeatmapEntranceOrder.radial,
@@ -501,6 +513,9 @@ void main() {
         expect(second.source, first.source);
         expect(first.source, contains('HeatmapChartSeries('));
         expect(first.source, contains('HeatmapDataPoint('));
+        expect(first.source, contains('bounds: HeatmapCellBounds('));
+        expect(first.source, contains('xMinimum: -0.75,'));
+        expect(first.source, contains('xMaximum: 0.25,'));
         expect(first.source, contains('value: 99.9,'));
         expect(first.source, contains("pointKey: 'api-morning',"));
         expect(first.source, contains('HeatmapDataPoint.missing('));
@@ -521,6 +536,11 @@ void main() {
         expect(first.source, contains('showCellLabels: true,'));
         expect(first.source, contains('cellLabelColor: Color(0xFFFFFFFF),'));
         expect(first.source, contains('cellLabelFontSize: 12.0,'));
+        expect(first.source, contains('valueFilter: HeatmapValueFilter('));
+        expect(first.source, contains('minimumValue: 98.5,'));
+        expect(first.source, contains('maximumValue: 100.0,'));
+        expect(first.source, contains('mode: HeatmapValueFilterMode.hide,'));
+        expect(first.source, contains('excludedOpacity: 0.2,'));
         expect(first.source, contains('animation: HeatmapAnimationStyle('));
         expect(
           first.source,
@@ -542,6 +562,52 @@ void main() {
         expect(first.completeness, ChartGeneratedSourceCompleteness.complete);
       },
     );
+
+    test('emits independent colour scales for multiple Heatmap series', () {
+      final snapshot = _snapshot(
+        HeatmapChartSeries(
+          id: 'latency-axis',
+          name: 'Latency',
+          unit: 'ms',
+          points: [HeatmapDataPoint(x: 0, y: 0, value: 42)],
+          colorScale: HeatmapColorScale.sequential(
+            colors: const [Color(0xFFE0F2FE), Color(0xFF075985)],
+            minimumValue: 35,
+            maximumValue: 100,
+            label: 'Latency',
+            unit: 'ms',
+          ),
+        ),
+        additionalSeries: [
+          HeatmapChartSeries(
+            id: 'error-rate-axis',
+            name: 'Error rate',
+            unit: '%',
+            points: [HeatmapDataPoint(x: 0, y: 1, value: 1.8)],
+            colorScale: HeatmapColorScale.sequential(
+              colors: const [Color(0xFFFFF7ED), Color(0xFFC2410C)],
+              minimumValue: 0,
+              maximumValue: 3,
+              label: 'Error rate',
+              unit: '%',
+            ),
+          ),
+        ],
+      );
+
+      final generated = _success(ChartDartSourceGenerator.generate(snapshot));
+
+      expect('HeatmapChartSeries('.allMatches(generated.source), hasLength(2));
+      expect(generated.source, contains("id: 'latency-axis',"));
+      expect(generated.source, contains("unit: 'ms',"));
+      expect(generated.source, contains('minimumValue: 35.0,'));
+      expect(generated.source, contains('maximumValue: 100.0,'));
+      expect(generated.source, contains("id: 'error-rate-axis',"));
+      expect(generated.source, contains("unit: '%',"));
+      expect(generated.source, contains('minimumValue: 0.0,'));
+      expect(generated.source, contains('maximumValue: 3.0,'));
+      expect(generated.completeness, ChartGeneratedSourceCompleteness.complete);
+    });
 
     test('omits all data explicitly when the inline ceiling is exceeded', () {
       final generated = _success(
@@ -1781,6 +1847,7 @@ void main() {
               selection: ChartSelectionConfig(
                 acquisitionMode: ChartSelectionAcquisitionMode.xInterval,
                 scope: ChartSelectionScope.markOrWholeSeries,
+                heatmapExpansion: HeatmapSelectionExpansion.column,
                 operation: ChartSelectionOperation.add,
                 dragActivation: ChartSelectionDragActivation.shiftPrimaryButton,
                 clearOnBackgroundTap: false,
@@ -1805,6 +1872,10 @@ void main() {
       expect(
         generated.source,
         contains('scope: ChartSelectionScope.markOrWholeSeries'),
+      );
+      expect(
+        generated.source,
+        contains('heatmapExpansion: HeatmapSelectionExpansion.column'),
       );
       expect(
         generated.source,

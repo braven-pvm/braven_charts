@@ -150,6 +150,12 @@ final heatmapScale = HeatmapColorScale.diverging(
   label: 'Temperature',
   unit: '°C',
 );
+const heatmapEmptyValueStyle = HeatmapEmptyValueStyle(
+  fillColor: Color(0xFFE5E7EB),
+  borderColor: Color(0xFFD1D5DB),
+  borderWidth: 0.8,
+  legendLabel: 'No readings',
+);
 
 const rows = <Sample>[
   Sample(
@@ -2508,6 +2514,8 @@ void main() {
             'pointKey: (row) => row.temperaturePointKey,',
             'label: (row) => row.temperatureLabel,',
             'colorScale: HeatmapColorScale.diverging(',
+            'emptyValueStyle: HeatmapEmptyValueStyle(',
+            "legendLabel: 'No readings',",
             'cellWidth: 0.9,',
             'showCellLabels: true,',
           ],
@@ -2520,6 +2528,7 @@ void main() {
                 pointKey: heatmapPointKey,
                 label: heatmapLabel,
                 colorScale: heatmapScale,
+                emptyValueStyle: heatmapEmptyValueStyle,
                 name: 'Temperature',
                 unit: '°C',
                 cellWidth: 0.9,
@@ -2542,6 +2551,7 @@ void main() {
                 pointKey: heatmapPointKey,
                 label: heatmapLabel,
                 colorScale: heatmapScale,
+                emptyValueStyle: heatmapEmptyValueStyle,
                 name: 'Temperature',
                 unit: '°C',
                 cellWidth: 0.9,

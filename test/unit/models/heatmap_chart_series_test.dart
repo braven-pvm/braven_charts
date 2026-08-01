@@ -6,6 +6,55 @@ void main() {
   HeatmapColorScale scale() =>
       HeatmapColorScale.sequential(colors: const [Colors.white, Colors.blue]);
 
+  test('validates and retains explicit Cartesian cell bounds', () {
+    final bounds = HeatmapCellBounds(
+      xMinimum: 1,
+      xMaximum: 4,
+      yMinimum: 10,
+      yMaximum: 14,
+    );
+    final point = HeatmapDataPoint(x: 2, y: 12, value: 7, bounds: bounds);
+    final missing = HeatmapDataPoint.missing(x: 3, y: 11, bounds: bounds);
+
+    expect(point.bounds, bounds);
+    expect(point.isValid, isTrue);
+    expect(missing.bounds, bounds);
+    expect(point.copyWith(value: 8).bounds, bounds);
+    expect(point.copyWith(clearBounds: true).bounds, isNull);
+    expect(point, point.copyWith());
+  });
+
+  test('rejects invalid or non-containing explicit cell bounds', () {
+    expect(
+      () =>
+          HeatmapCellBounds(xMinimum: 2, xMaximum: 2, yMinimum: 0, yMaximum: 1),
+      throwsArgumentError,
+    );
+    expect(
+      () => HeatmapCellBounds(
+        xMinimum: double.nan,
+        xMaximum: 2,
+        yMinimum: 0,
+        yMaximum: 1,
+      ),
+      throwsArgumentError,
+    );
+    final bounds = HeatmapCellBounds(
+      xMinimum: 0,
+      xMaximum: 1,
+      yMinimum: 0,
+      yMaximum: 1,
+    );
+    expect(
+      () => HeatmapDataPoint(x: 2, y: 0.5, value: 1, bounds: bounds),
+      throwsArgumentError,
+    );
+    expect(
+      () => HeatmapDataPoint.missing(x: 0.5, y: 2, bounds: bounds),
+      throwsArgumentError,
+    );
+  });
+
   test('retains a typed immutable cell view and resolves its domain', () {
     final series = HeatmapChartSeries(
       id: 'matrix',
@@ -81,6 +130,109 @@ void main() {
     expect(() => create(borderWidth: -1), throwsArgumentError);
     expect(() => create(cornerRadius: -1), throwsArgumentError);
     expect(() => create(cellLabelFontSize: 0), throwsArgumentError);
+  });
+
+  test('empty-value presentation stays distinct from missing cells', () {
+    const emptyStyle = HeatmapEmptyValueStyle(
+      fillColor: Color(0xFFE5E7EB),
+      borderColor: Color(0xFFD1D5DB),
+      borderWidth: 1,
+      showLabel: true,
+      legendLabel: 'No contributions',
+    );
+    final zero = HeatmapDataPoint(x: 0, y: 0, value: 0);
+    final missing = HeatmapDataPoint.missing(x: 1, y: 0);
+    final series = HeatmapChartSeries(
+      id: 'contributions',
+      colorScale: scale(),
+      points: [zero, missing, HeatmapDataPoint(x: 2, y: 0, value: 3)],
+      emptyValueStyle: emptyStyle,
+    );
+
+    expect(series.emptyValueStyle, emptyStyle);
+    expect(emptyStyle.matches(zero), isTrue);
+    expect(emptyStyle.matches(missing), isFalse);
+    expect(emptyStyle.matches(series.cells.last), isFalse);
+    expect(series.measuredValues, [0, 3]);
+    expect(series.copyWith(clearEmptyValueStyle: true).emptyValueStyle, isNull);
+  });
+
+  test('validates empty-value presentation', () {
+    HeatmapChartSeries create(HeatmapEmptyValueStyle style) =>
+        HeatmapChartSeries(
+          id: 'matrix',
+          colorScale: scale(),
+          points: [HeatmapDataPoint(x: 0, y: 0, value: 0)],
+          emptyValueStyle: style,
+        );
+
+    expect(
+      () => create(const HeatmapEmptyValueStyle(value: double.nan)),
+      throwsArgumentError,
+    );
+    expect(
+      () => create(const HeatmapEmptyValueStyle(borderWidth: -1)),
+      throwsArgumentError,
+    );
+    expect(
+      () => create(const HeatmapEmptyValueStyle(legendLabel: '  ')),
+      throwsArgumentError,
+    );
+  });
+
+  test('value filter is inclusive and preserves missing cells', () {
+    const filter = HeatmapValueFilter(
+      minimumValue: 2,
+      maximumValue: 4,
+      mode: HeatmapValueFilterMode.hide,
+    );
+
+    expect(filter.includes(HeatmapDataPoint(x: 0, y: 0, value: 2)), isTrue);
+    expect(filter.includes(HeatmapDataPoint(x: 1, y: 0, value: 4)), isTrue);
+    expect(filter.includes(HeatmapDataPoint(x: 2, y: 0, value: 1)), isFalse);
+    expect(filter.includes(HeatmapDataPoint.missing(x: 3, y: 0)), isTrue);
+  });
+
+  test('validates and copies value-filter presentation', () {
+    const filter = HeatmapValueFilter(
+      minimumValue: 2,
+      maximumValue: 4,
+      excludedOpacity: 0.2,
+    );
+    final series = HeatmapChartSeries(
+      id: 'matrix',
+      colorScale: scale(),
+      points: [HeatmapDataPoint(x: 0, y: 0, value: 1)],
+      valueFilter: filter,
+    );
+
+    expect(series.valueFilter, filter);
+    expect(
+      series.copyWith(
+        valueFilter: filter.copyWith(mode: HeatmapValueFilterMode.hide),
+      ),
+      isNot(series),
+    );
+    expect(series.copyWith(clearValueFilter: true).valueFilter, isNull);
+    expect(
+      () => HeatmapValueFilter(
+        minimumValue: double.nan,
+        maximumValue: 4,
+      ).validate(),
+      throwsArgumentError,
+    );
+    expect(
+      () => HeatmapValueFilter(minimumValue: 5, maximumValue: 4).validate(),
+      throwsArgumentError,
+    );
+    expect(
+      () => HeatmapValueFilter(
+        minimumValue: 2,
+        maximumValue: 4,
+        excludedOpacity: 1.1,
+      ).validate(),
+      throwsArgumentError,
+    );
   });
 
   test('validates and copies Heatmap motion settings', () {
@@ -181,6 +333,20 @@ void main() {
     expect(series.copyWith(showCellLabels: true), isNot(series));
     expect(series.copyWith(cellLabelColor: Colors.green), isNot(series));
     expect(series.copyWith(cellLabelFontSize: 14), isNot(series));
+    expect(
+      series.copyWith(
+        emptyValueStyle: const HeatmapEmptyValueStyle(
+          legendLabel: 'No activity',
+        ),
+      ),
+      isNot(series),
+    );
+    expect(
+      series.copyWith(
+        valueFilter: const HeatmapValueFilter(minimumValue: 0, maximumValue: 1),
+      ),
+      isNot(series),
+    );
     expect(
       series.copyWith(
         animation: const HeatmapAnimationStyle(

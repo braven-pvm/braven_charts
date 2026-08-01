@@ -181,5 +181,28 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('withDomain retains continuous scale semantics', () {
+      final source = HeatmapColorScale.diverging(
+        lowColor: blue,
+        midpointColor: white,
+        highColor: red,
+        midpoint: 0,
+        label: 'Change',
+      );
+
+      final resolved = source.withDomain(
+        minimumValue: -10,
+        maximumValue: 20,
+        showLegend: false,
+      );
+
+      expect(resolved.minimumValue, -10);
+      expect(resolved.maximumValue, 20);
+      expect(resolved.midpoint, 0);
+      expect(resolved.colors, source.colors);
+      expect(resolved.label, 'Change');
+      expect(resolved.showLegend, isFalse);
+    });
   });
 }

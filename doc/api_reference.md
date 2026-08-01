@@ -92,18 +92,43 @@ Workbench, data table, artifact, and generated-source contracts. See
 - `HeatmapDataPoint` keeps X position, Y position, and the independently
   measured colour value in one typed cell. `HeatmapDataPoint.missing` retains
   an explicit matrix position without inventing a numeric value.
+- `HeatmapCellBounds` optionally gives one cell an unequal axis-aligned
+  rectangle. The same bounds drive data extents, culling, painting, hit
+  testing, semantics, selection, artifacts, Data mode, and generated Source.
 - `HeatmapColorScale` provides validated sequential, diverging, and threshold
   scales with fixed or automatic domains, palette reversal, clamping, a
   semantic midpoint, missing-cell colour, and portable formatter descriptors.
+- `HeatmapSharedColorDomain` derives one JSON-safe continuous domain across
+  independent series and applies it without merging panels or renderers.
 - `HeatmapChartSeries` controls cell dimensions, gaps, borders, corners,
-  contrast-aware labels, and `HeatmapAnimationStyle`.
+  contrast-aware labels, `HeatmapValueFilter`, and `HeatmapAnimationStyle`.
+- `HeatmapValueFilter` retains one inclusive measured-value window and either
+  dims or hides excluded finite cells without changing the source matrix,
+  colour domain, table, generated Source, or artifact.
 - `HeatmapColorLegend` renders the same continuous ramp or discrete threshold
-  bands used by the chart.
+  bands used by the chart. Continuous legends can opt into an accessible range
+  control through `onValueFilterChanged`.
+- `HeatmapColorLegendGroup` presents the visible colour axes for multiple
+  Heatmap series in one compact horizontal or vertical surface and routes
+  independent filter changes by series ID.
+- `HeatmapSelectionExpansion` extends native rectangle mark selection from the
+  cells touched by the brush to their complete source rows or columns while
+  preserving series identity and hide-filter exclusions.
+- `HeatmapMatrixDomain`, `HeatmapViewportRequest`, `HeatmapTileKey`,
+  `HeatmapTileRequest`, and `HeatmapTile` define a finite regular matrix and
+  deterministic viewport-to-tile contract without entering the renderer.
+- `HeatmapTileSource` is the host transport boundary for asynchronously loaded
+  cells. `HeatmapViewportController` coalesces viewport requests, deduplicates
+  in-flight loads, rejects stale publication, maintains a bounded LRU cache,
+  and materializes the current resident cells as an ordinary immutable
+  `HeatmapChartSeries`.
 
 Heatmap is a native Cartesian family and uses the ordinary numeric or
 categorical X/Y axes, annotations, zoom, pan, scrollbars, tracking, tooltip,
-selection, keyboard, and Workbench contracts. Exactly one Heatmap series is
-allowed in a V1 chart and it cannot mix with another Cartesian family.
+selection, keyboard, and Workbench contracts. Multiple Heatmap series may
+share one matrix while retaining independent units, colour scales, filters,
+portable identity, and generated Source. Heatmap compositions may otherwise
+only add Line overlays such as prepared density contours.
 
 The renderer indexes the complete matrix while materializing and painting only
 the visible window. Interactive semantics are capped for dense matrices while
@@ -112,10 +137,19 @@ Entrance motion supports fade or scale with row, column, radial, or
 simultaneous order; compatible value updates interpolate by stable cell
 identity and reduced motion resolves immediately.
 
-Artifacts preserve inline or columnar cells, explicit missing state,
+For a conceptual matrix that should not remain fully resident, the host keeps
+explicit X/Y axis bounds from `HeatmapMatrixDomain`, forwards visible bounds
+to `HeatmapViewportController`, and renders its current snapshot. Source
+futures never run in the render object. Workbench and portable output preserve
+the resident snapshot rather than serializing the provider or claiming that
+the complete conceptual matrix is present.
+
+Artifacts preserve inline or columnar cells, explicit missing state and cell
+bounds,
 categorical axes, colour scale, styling, and animation. Native Data mode offers
-matrix and long projections, and generated Dart, Grammar, fluent modifiers,
-and tool configuration reconstruct the same family. See
+matrix and long projections; explicit rectangles automatically select lossless
+long form with X/Y minimum and maximum fields. Generated Dart, Grammar, fluent
+modifiers, and tool configuration reconstruct the same family. See
 [Heatmap charts](heatmap_charts.md).
 
 ### Line and Area charts

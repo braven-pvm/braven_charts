@@ -19,6 +19,7 @@ import '../models/donut_chart_config.dart'
     show DonutCenterContent, DonutChartStyle;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
+import '../models/heatmap_chart_series.dart' show HeatmapEmptyValueStyle;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
@@ -527,6 +528,7 @@ final class BravenChart<T> {
     bool? showCellLabels,
     Color? cellLabelColor,
     double? cellLabelFontSize,
+    HeatmapEmptyValueStyle? emptyValueStyle,
   }) => _append(
     HeatmapMark<T>(
       id: _idFor(id),
@@ -549,6 +551,7 @@ final class BravenChart<T> {
       showCellLabels: showCellLabels,
       cellLabelColor: cellLabelColor,
       cellLabelFontSize: cellLabelFontSize,
+      emptyValueStyle: emptyValueStyle,
     ),
   );
 

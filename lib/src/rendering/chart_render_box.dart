@@ -471,6 +471,11 @@ class ChartRenderBox extends RenderBox {
   /// _originalTransform for full dataset constraints, they would be overwritten.
   ChartTransform? _panConstraintTransform;
 
+  // A host-synchronized viewport may intentionally be much narrower than the
+  // default 10x limit relative to a conceptual full domain. Preserve that
+  // viewport as a local zoom anchor without weakening full-domain pan bounds.
+  double? _synchronizedViewportZoomAnchorXRange;
+
   // ==========================================================================
   // Widget-Provided Axis Bounds Tracking
   // ==========================================================================
@@ -654,6 +659,7 @@ class ChartRenderBox extends RenderBox {
       return false;
     }
     if (transform.dataXMin == xMin && transform.dataXMax == xMax) return false;
+    _synchronizedViewportZoomAnchorXRange = xMax - xMin;
     _transform = transform.copyWith(dataXMin: xMin, dataXMax: xMax);
     _updateAxesFromTransform();
     markNeedsPaint();
@@ -2305,6 +2311,10 @@ class ChartRenderBox extends RenderBox {
     return _viewportConstraints.clampZoomLevel(
       transform: transform,
       baseTransform: zoomBaseTransform,
+      minimumXRange: _synchronizedViewportZoomAnchorXRange == null
+          ? null
+          : _synchronizedViewportZoomAnchorXRange! /
+                _viewportConstraints.maxZoomLevel,
     );
   }
 

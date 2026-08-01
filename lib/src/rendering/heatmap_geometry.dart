@@ -34,7 +34,8 @@ class HeatmapViewportIndex {
     List<HeatmapDataPoint> cells, {
     required this.cellWidth,
     required this.cellHeight,
-  }) : _rows = _buildRows(cells) {
+  }) : _rows = _buildRows(cells),
+       _irregularIndex = _HeatmapBoundsIndex.fromCells(cells) {
     if (!cellWidth.isFinite || cellWidth <= 0) {
       throw ArgumentError.value(
         cellWidth,
@@ -54,6 +55,7 @@ class HeatmapViewportIndex {
   final double cellWidth;
   final double cellHeight;
   final List<_HeatmapRow> _rows;
+  final _HeatmapBoundsIndex? _irregularIndex;
 
   int get rowCount => _rows.length;
 
@@ -62,8 +64,11 @@ class HeatmapViewportIndex {
     for (final row in _rows) {
       count += row.entries.length;
     }
-    return count;
+    return count + (_irregularIndex?.cellCount ?? 0);
   }
+
+  /// Number of cells using explicit per-point rectangles.
+  int get irregularCellCount => _irregularIndex?.cellCount ?? 0;
 
   /// Returns source indices for cells that can affect the visible viewport.
   ///
@@ -83,7 +88,7 @@ class HeatmapViewportIndex {
         'must be non-negative',
       );
     }
-    if (_rows.isEmpty) {
+    if (_rows.isEmpty && _irregularIndex == null) {
       return const HeatmapViewportQuery(
         pointIndices: [],
         visitedRowCount: 0,
@@ -112,6 +117,17 @@ class HeatmapViewportIndex {
       }
     }
 
+    final irregularQuery = _irregularIndex?.queryRect(
+      minX: orderedMinX - cellWidth * overscanCellCount,
+      maxX: orderedMaxX + cellWidth * overscanCellCount,
+      minY: orderedMinY - cellHeight * overscanCellCount,
+      maxY: orderedMaxY + cellHeight * overscanCellCount,
+    );
+    if (irregularQuery != null) {
+      pointIndices.addAll(irregularQuery.pointIndices);
+      visitedCellCount += irregularQuery.visitedCellCount;
+    }
+
     // Internal ordering is spatial; all public identities and overlap order
     // remain the immutable source-series order.
     pointIndices.sort();
@@ -127,7 +143,9 @@ class HeatmapViewportIndex {
   /// More than one result is possible when host-supplied keyed cells overlap.
   /// Results use source order; callers can reverse them for topmost paint hit.
   List<int> pointIndicesAt(Offset position) {
-    if (_rows.isEmpty || !position.dx.isFinite || !position.dy.isFinite) {
+    if ((_rows.isEmpty && _irregularIndex == null) ||
+        !position.dx.isFinite ||
+        !position.dy.isFinite) {
       return const [];
     }
     final halfWidth = cellWidth / 2;
@@ -143,6 +161,7 @@ class HeatmapViewportIndex {
         result.add(row.entries[entryIndex].pointIndex);
       }
     }
+    result.addAll(_irregularIndex?.pointIndicesAt(position) ?? const []);
     result.sort();
     return List<int>.unmodifiable(result);
   }
@@ -179,7 +198,7 @@ class HeatmapViewportIndex {
     final rows = <double, List<_HeatmapEntry>>{};
     for (var pointIndex = 0; pointIndex < cells.length; pointIndex++) {
       final cell = cells[pointIndex];
-      if (!cell.isValid) continue;
+      if (!cell.isValid || cell.bounds != null) continue;
       rows
           .putIfAbsent(cell.y, () => <_HeatmapEntry>[])
           .add(_HeatmapEntry(x: cell.x, pointIndex: pointIndex));
@@ -190,6 +209,188 @@ class HeatmapViewportIndex {
     ]..sort((left, right) => left.y.compareTo(right.y));
     return List<_HeatmapRow>.unmodifiable(result);
   }
+}
+
+class _HeatmapBoundsQuery {
+  const _HeatmapBoundsQuery({
+    required this.pointIndices,
+    required this.visitedCellCount,
+  });
+
+  final List<int> pointIndices;
+  final int visitedCellCount;
+}
+
+/// A secondary immutable interval tree for the opt-in irregular-cell path.
+///
+/// The regular row index above remains untouched when no point has explicit
+/// bounds. Nodes are ordered by minimum X and retain the maximum X extent of
+/// their subtree, allowing viewport and point queries to prune both sides.
+class _HeatmapBoundsIndex {
+  _HeatmapBoundsIndex._(this.root, this.cellCount);
+
+  factory _HeatmapBoundsIndex.fromEntries(List<_HeatmapBoundsEntry> entries) {
+    entries.sort((left, right) {
+      final byMinimum = left.bounds.xMinimum.compareTo(right.bounds.xMinimum);
+      return byMinimum != 0
+          ? byMinimum
+          : left.pointIndex.compareTo(right.pointIndex);
+    });
+    return _HeatmapBoundsIndex._(
+      _HeatmapBoundsNode.build(entries, 0, entries.length),
+      entries.length,
+    );
+  }
+
+  static _HeatmapBoundsIndex? fromCells(List<HeatmapDataPoint> cells) {
+    final entries = <_HeatmapBoundsEntry>[];
+    for (var pointIndex = 0; pointIndex < cells.length; pointIndex++) {
+      final cell = cells[pointIndex];
+      final bounds = cell.bounds;
+      if (!cell.isValid || bounds == null) continue;
+      entries.add(_HeatmapBoundsEntry(pointIndex: pointIndex, bounds: bounds));
+    }
+    return entries.isEmpty ? null : _HeatmapBoundsIndex.fromEntries(entries);
+  }
+
+  final _HeatmapBoundsNode? root;
+  final int cellCount;
+
+  _HeatmapBoundsQuery queryRect({
+    required double minX,
+    required double maxX,
+    required double minY,
+    required double maxY,
+  }) {
+    final indices = <int>[];
+    final visited = _MutableCount();
+    root?.queryRect(
+      minX: minX,
+      maxX: maxX,
+      minY: minY,
+      maxY: maxY,
+      pointIndices: indices,
+      visited: visited,
+    );
+    return _HeatmapBoundsQuery(
+      pointIndices: indices,
+      visitedCellCount: visited.value,
+    );
+  }
+
+  List<int> pointIndicesAt(Offset position) {
+    final indices = <int>[];
+    root?.queryPoint(position, indices);
+    return indices;
+  }
+}
+
+class _HeatmapBoundsNode {
+  _HeatmapBoundsNode({
+    required this.entry,
+    required this.left,
+    required this.right,
+  }) : maximumX = math.max(
+         entry.bounds.xMaximum,
+         math.max(
+           left?.maximumX ?? double.negativeInfinity,
+           right?.maximumX ?? double.negativeInfinity,
+         ),
+       ),
+       minimumX = math.min(
+         entry.bounds.xMinimum,
+         math.min(
+           left?.minimumX ?? double.infinity,
+           right?.minimumX ?? double.infinity,
+         ),
+       );
+
+  static _HeatmapBoundsNode? build(
+    List<_HeatmapBoundsEntry> entries,
+    int start,
+    int end,
+  ) {
+    if (start >= end) return null;
+    final middle = (start + end) >> 1;
+    return _HeatmapBoundsNode(
+      entry: entries[middle],
+      left: build(entries, start, middle),
+      right: build(entries, middle + 1, end),
+    );
+  }
+
+  final _HeatmapBoundsEntry entry;
+  final _HeatmapBoundsNode? left;
+  final _HeatmapBoundsNode? right;
+  final double maximumX;
+  final double minimumX;
+
+  void queryRect({
+    required double minX,
+    required double maxX,
+    required double minY,
+    required double maxY,
+    required List<int> pointIndices,
+    required _MutableCount visited,
+  }) {
+    if (left != null && left!.maximumX >= minX && left!.minimumX <= maxX) {
+      left!.queryRect(
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        pointIndices: pointIndices,
+        visited: visited,
+      );
+    }
+    if (entry.bounds.xMinimum <= maxX) {
+      visited.value++;
+      if (entry.bounds.xMaximum >= minX &&
+          entry.bounds.yMinimum <= maxY &&
+          entry.bounds.yMaximum >= minY) {
+        pointIndices.add(entry.pointIndex);
+      }
+      if (right != null && right!.maximumX >= minX && right!.minimumX <= maxX) {
+        right!.queryRect(
+          minX: minX,
+          maxX: maxX,
+          minY: minY,
+          maxY: maxY,
+          pointIndices: pointIndices,
+          visited: visited,
+        );
+      }
+    }
+  }
+
+  void queryPoint(Offset position, List<int> pointIndices) {
+    if (left != null &&
+        left!.maximumX >= position.dx &&
+        left!.minimumX <= position.dx) {
+      left!.queryPoint(position, pointIndices);
+    }
+    if (entry.bounds.xMinimum <= position.dx) {
+      if (entry.bounds.contains(position.dx, position.dy)) {
+        pointIndices.add(entry.pointIndex);
+      }
+      if (right != null &&
+          right!.maximumX >= position.dx &&
+          right!.minimumX <= position.dx) {
+        right!.queryPoint(position, pointIndices);
+      }
+    }
+  }
+}
+
+class _HeatmapBoundsEntry {
+  const _HeatmapBoundsEntry({required this.pointIndex, required this.bounds});
+
+  final int pointIndex;
+  final HeatmapCellBounds bounds;
+}
+
+class _MutableCount {
+  int value = 0;
 }
 
 class _HeatmapRow {

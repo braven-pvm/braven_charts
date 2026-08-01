@@ -10,6 +10,8 @@ import '../models/chart_series.dart' show LineInterpolation;
 import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
+import '../models/heatmap_chart_series.dart'
+    show HeatmapEmptyValueStyle, HeatmapValueFilter;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -728,6 +730,8 @@ final class HeatmapMark<T> extends Mark<T> {
     this.showCellLabels,
     this.cellLabelColor,
     this.cellLabelFontSize,
+    this.emptyValueStyle,
+    this.valueFilter,
   });
 
   /// Horizontal cell-centre accessor.
@@ -767,6 +771,8 @@ final class HeatmapMark<T> extends Mark<T> {
   final bool? showCellLabels;
   final Color? cellLabelColor;
   final double? cellLabelFontSize;
+  final HeatmapEmptyValueStyle? emptyValueStyle;
+  final HeatmapValueFilter? valueFilter;
 
   @override
   bool operator ==(Object other) =>
@@ -791,7 +797,9 @@ final class HeatmapMark<T> extends Mark<T> {
           other.cornerRadius == cornerRadius &&
           other.showCellLabels == showCellLabels &&
           other.cellLabelColor == cellLabelColor &&
-          other.cellLabelFontSize == cellLabelFontSize;
+          other.cellLabelFontSize == cellLabelFontSize &&
+          other.emptyValueStyle == emptyValueStyle &&
+          other.valueFilter == valueFilter;
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
@@ -815,6 +823,8 @@ final class HeatmapMark<T> extends Mark<T> {
     showCellLabels,
     cellLabelColor,
     cellLabelFontSize,
+    emptyValueStyle,
+    valueFilter,
   ]);
 
   @override

@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 147 of 149 classes have a synthesizable subject: every verb they
+// 149 of 151 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1887 verbs total; 11 of them have an argument type with no
+// 1919 verbs total; 12 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 147;
+const int _executedClasses = 149;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
@@ -3685,6 +3685,63 @@ void _smokeGridConfig(_Verb verb, GridConfig subject) {
   );
 }
 
+/// Smoke coverage for [HeatmapValueFilter]'s 4 executable verb(s).
+void _smokeHeatmapValueFilter(_Verb verb, HeatmapValueFilter subject) {
+  verb(
+    'HeatmapValueFilterFluent.withMinimumValue',
+    () => subject.withMinimumValue(1.0),
+  );
+  verb(
+    'HeatmapValueFilterFluent.withMaximumValue',
+    () => subject.withMaximumValue(1.0),
+  );
+  verb(
+    'HeatmapValueFilterFluent.withMode',
+    () => subject.withMode(HeatmapValueFilterMode.dim),
+  );
+  verb(
+    'HeatmapValueFilterFluent.withExcludedOpacity',
+    () => subject.withExcludedOpacity(0.14),
+  );
+}
+
+/// Smoke coverage for [HeatmapEmptyValueStyle]'s 9 executable verb(s).
+void _smokeHeatmapEmptyValueStyle(_Verb verb, HeatmapEmptyValueStyle subject) {
+  verb('HeatmapEmptyValueStyleFluent.withValue', () => subject.withValue(0));
+  verb(
+    'HeatmapEmptyValueStyleFluent.withFillColor',
+    () => subject.withFillColor(const Color(0xFFE5E7EB)),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.withBorderWidth',
+    () => subject.withBorderWidth(1.0),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.clearBorderWidth',
+    () => subject.clearBorderWidth(),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.withShowLabel',
+    () => subject.withShowLabel(false),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.withShowInLegend',
+    () => subject.withShowInLegend(true),
+  );
+  verb(
+    'HeatmapEmptyValueStyleFluent.withLegendLabel',
+    () => subject.withLegendLabel('y'),
+  );
+}
+
 /// Smoke coverage for [HeatmapAnimationStyle]'s 9 executable verb(s).
 void _smokeHeatmapAnimationStyle(_Verb verb, HeatmapAnimationStyle subject) {
   verb(
@@ -3725,7 +3782,7 @@ void _smokeHeatmapAnimationStyle(_Verb verb, HeatmapAnimationStyle subject) {
   );
 }
 
-/// Smoke coverage for [HeatmapChartSeries]'s 25 executable verb(s).
+/// Smoke coverage for [HeatmapChartSeries]'s 30 executable verb(s).
 void _smokeHeatmapChartSeries(_Verb verb, HeatmapChartSeries subject) {
   verb('HeatmapChartSeriesFluent.withName', () => subject.withName('y'));
   verb('HeatmapChartSeriesFluent.clearName', () => subject.clearName());
@@ -3759,6 +3816,10 @@ void _smokeHeatmapChartSeries(_Verb verb, HeatmapChartSeries subject) {
   verb(
     'HeatmapChartSeriesFluent.withShowTrackingAxisLabel',
     () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'HeatmapChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
   );
   verb(
     'HeatmapChartSeriesFluent.withCellWidth',
@@ -3801,6 +3862,24 @@ void _smokeHeatmapChartSeries(_Verb verb, HeatmapChartSeries subject) {
     () => subject.withCellLabelFontSize(11),
   );
   verb(
+    'HeatmapChartSeriesFluent.withEmptyValueStyle',
+    () => subject.withEmptyValueStyle(HeatmapEmptyValueStyle()),
+  );
+  verb(
+    'HeatmapChartSeriesFluent.clearEmptyValueStyle',
+    () => subject.clearEmptyValueStyle(),
+  );
+  verb(
+    'HeatmapChartSeriesFluent.withValueFilter',
+    () => subject.withValueFilter(
+      HeatmapValueFilter(minimumValue: 1.0, maximumValue: 1.0),
+    ),
+  );
+  verb(
+    'HeatmapChartSeriesFluent.clearValueFilter',
+    () => subject.clearValueFilter(),
+  );
+  verb(
     'HeatmapChartSeriesFluent.withAnimation',
     () => subject.withAnimation(const HeatmapAnimationStyle()),
   );
@@ -3819,11 +3898,12 @@ void _compileHeatmapChartSeries(
   subject.withColorScale(a0);
 }
 
-/// Smoke coverage for [HeatmapDataPoint]'s 23 executable verb(s).
+/// Smoke coverage for [HeatmapDataPoint]'s 24 executable verb(s).
 void _smokeHeatmapDataPoint(_Verb verb, HeatmapDataPoint subject) {
   verb('HeatmapDataPointFluent.withX', () => subject.withX(1.0));
   verb('HeatmapDataPointFluent.withY', () => subject.withY(1.0));
   verb('HeatmapDataPointFluent.withValue', () => subject.withValue(1.0));
+  verb('HeatmapDataPointFluent.clearBounds', () => subject.clearBounds());
   verb('HeatmapDataPointFluent.withPointKey', () => subject.withPointKey('y'));
   verb('HeatmapDataPointFluent.clearPointKey', () => subject.clearPointKey());
   verb(
@@ -3883,6 +3963,12 @@ void _smokeHeatmapDataPoint(_Verb verb, HeatmapDataPoint subject) {
     'HeatmapDataPointFluent.clearPointStyle',
     () => subject.clearPointStyle(),
   );
+}
+
+/// Compile-only coverage for [HeatmapDataPoint]'s 1 verb(s)
+/// whose argument type has no synthesizable value.
+void _compileHeatmapDataPoint(HeatmapDataPoint subject, HeatmapCellBounds a0) {
+  subject.withBounds(a0);
 }
 
 /// Smoke coverage for [CrosshairStyle]'s 10 executable verb(s).
@@ -4352,7 +4438,7 @@ void _smokeChartSelectionBrushConfig(
   );
 }
 
-/// Smoke coverage for [ChartSelectionConfig]'s 14 executable verb(s).
+/// Smoke coverage for [ChartSelectionConfig]'s 15 executable verb(s).
 void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
     'ChartSelectionConfigFluent.withAcquisitionMode',
@@ -4361,6 +4447,10 @@ void _smokeChartSelectionConfig(_Verb verb, ChartSelectionConfig subject) {
   verb(
     'ChartSelectionConfigFluent.withScope',
     () => subject.withScope(ChartSelectionScope.mark),
+  );
+  verb(
+    'ChartSelectionConfigFluent.withHeatmapExpansion',
+    () => subject.withHeatmapExpansion(HeatmapSelectionExpansion.cell),
   );
   verb(
     'ChartSelectionConfigFluent.withOperation',
@@ -7693,6 +7783,7 @@ const List<Function> _compileOnlyCases = <Function>[
   _compileAreaChartSeries,
   _compileGaugeChartSeries,
   _compileHeatmapChartSeries,
+  _compileHeatmapDataPoint,
   _compileRangeAreaChartSeries,
 ];
 
@@ -7708,6 +7799,7 @@ const List<String> _compileOnlyVerbs = <String>[
   'AreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
   'GaugeChartSeriesFluent.withIndicatorStyle — no synthesizable value for GaugeIndicatorStyle',
   'HeatmapChartSeriesFluent.withColorScale — no synthesizable value for HeatmapColorScale',
+  'HeatmapDataPointFluent.withBounds — no synthesizable value for HeatmapCellBounds',
   'RangeAreaChartSeriesFluent.withFillGradient — no synthesizable value for AreaGradient',
 ];
 
@@ -8487,6 +8579,26 @@ void main() {
         _record(_smokeGridConfig, subject),
         isEmpty,
         reason: 'generated GridConfigFluent verb(s) threw',
+      );
+    });
+    test('HeatmapValueFilter', () {
+      final subject = _subject(
+        () => HeatmapValueFilter(minimumValue: 0.5, maximumValue: 0.5),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeHeatmapValueFilter, subject),
+        isEmpty,
+        reason: 'generated HeatmapValueFilterFluent verb(s) threw',
+      );
+    });
+    test('HeatmapEmptyValueStyle', () {
+      final subject = _subject(() => HeatmapEmptyValueStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeHeatmapEmptyValueStyle, subject),
+        isEmpty,
+        reason: 'generated HeatmapEmptyValueStyleFluent verb(s) threw',
       );
     });
     test('HeatmapAnimationStyle', () {
@@ -9539,9 +9651,9 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 147);
+    expect(_executedClasses, 149);
     expect(_skippedClasses, 2);
-    expect(_compileOnlyCases, hasLength(7));
-    expect(_compileOnlyVerbs, hasLength(11));
+    expect(_compileOnlyCases, hasLength(8));
+    expect(_compileOnlyVerbs, hasLength(12));
   });
 }

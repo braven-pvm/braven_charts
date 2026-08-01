@@ -54,6 +54,10 @@ final colorScale = HeatmapColorScale.diverging(
   label: 'Temperature',
   unit: 'C',
 );
+const emptyValueStyle = HeatmapEmptyValueStyle(
+  fillColor: Color(0xFFE5E7EB),
+  legendLabel: 'No readings',
+);
 
 Matcher throwsGrammarCode(GrammarDiagnosticCode code) => throwsA(
   isA<GrammarSpecException>().having((error) => error.code, 'code', code),
@@ -78,6 +82,7 @@ void main() {
             pointKey: rowKey,
             label: rowLabel,
             colorScale: colorScale,
+            emptyValueStyle: emptyValueStyle,
             unit: 'C',
             cellWidth: 0.9,
             cellHeight: 0.8,
@@ -88,6 +93,11 @@ void main() {
             showCellLabels: true,
             cellLabelColor: const Color(0xFF0F172A),
             cellLabelFontSize: 10,
+            valueFilter: const HeatmapValueFilter(
+              minimumValue: 10,
+              maximumValue: 20,
+              mode: HeatmapValueFilterMode.hide,
+            ),
           ),
         ],
       ).lower();
@@ -120,6 +130,7 @@ void main() {
             ),
           ],
           colorScale: colorScale,
+          emptyValueStyle: emptyValueStyle,
           yAxisId: 'axis-0',
           yAxisConfig: axis,
           unit: 'C',
@@ -132,6 +143,11 @@ void main() {
           showCellLabels: true,
           cellLabelColor: const Color(0xFF0F172A),
           cellLabelFontSize: 10,
+          valueFilter: const HeatmapValueFilter(
+            minimumValue: 10,
+            maximumValue: 20,
+            mode: HeatmapValueFilterMode.hide,
+          ),
         ),
       ]);
       expect(lowered.yAxes, <YAxisConfig>[axis]);
@@ -150,6 +166,7 @@ void main() {
             pointKey: rowKey,
             label: rowLabel,
             colorScale: colorScale,
+            emptyValueStyle: emptyValueStyle,
             unit: 'C',
             cornerRadius: 2,
             showCellLabels: true,
@@ -171,6 +188,7 @@ void main() {
               pointKey: rowKey,
               label: rowLabel,
               colorScale: colorScale,
+              emptyValueStyle: emptyValueStyle,
               unit: 'C',
               cornerRadius: 2,
               showCellLabels: true,

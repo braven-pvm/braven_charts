@@ -2436,6 +2436,9 @@ class SeriesElement implements DataHitElement {
     if (series is ScatterChartSeries) {
       return scatterDataHitsInPlotRect(plotRect);
     }
+    if (series is HeatmapChartSeries) {
+      return _heatmapDataHitsInPlotRect(plotRect);
+    }
     if (series is RangeAreaChartSeries) {
       _resolveRangeAreaGeometry();
       final candidates = _rangeAreaSelectionCandidates(plotRect);
@@ -2452,6 +2455,32 @@ class SeriesElement implements DataHitElement {
       ];
     }
     return _dataHitsWhere(plotBounds: plotRect, contains: plotRect.contains);
+  }
+
+  List<ChartDataHit> _heatmapDataHitsInPlotRect(Rect plotRect) {
+    final heatmap = series;
+    final viewportIndex = _resolveHeatmapViewportIndex();
+    if (heatmap is! HeatmapChartSeries || viewportIndex == null) {
+      return const [];
+    }
+    final first = _currentTransform.plotToData(plotRect.left, plotRect.top);
+    final second = _currentTransform.plotToData(
+      plotRect.right,
+      plotRect.bottom,
+    );
+    final query = viewportIndex.queryViewport(
+      minX: first.dx,
+      maxX: second.dx,
+      minY: first.dy,
+      maxY: second.dy,
+      overscanCellCount: 0,
+    );
+    _selectionCandidateCount = query.pointIndices.length;
+    return <ChartDataHit>[
+      for (final pointIndex in query.pointIndices)
+        if (_heatmapCellRect(heatmap, pointIndex).overlaps(plotRect))
+          ?_heatmapDataHit(pointIndex),
+    ];
   }
 
   bool _verticalRangeIntersectsRect({
@@ -3002,13 +3031,14 @@ class SeriesElement implements DataHitElement {
 
   Rect _heatmapCellRect(HeatmapChartSeries heatmap, int pointIndex) {
     final cell = heatmap.cellAt(pointIndex);
+    final explicitBounds = cell.bounds;
     final first = _currentTransform.dataToPlot(
-      cell.x - heatmap.cellWidth / 2,
-      cell.y - heatmap.cellHeight / 2,
+      explicitBounds?.xMinimum ?? cell.x - heatmap.cellWidth / 2,
+      explicitBounds?.yMinimum ?? cell.y - heatmap.cellHeight / 2,
     );
     final second = _currentTransform.dataToPlot(
-      cell.x + heatmap.cellWidth / 2,
-      cell.y + heatmap.cellHeight / 2,
+      explicitBounds?.xMaximum ?? cell.x + heatmap.cellWidth / 2,
+      explicitBounds?.yMaximum ?? cell.y + heatmap.cellHeight / 2,
     );
     var rect = Rect.fromPoints(first, second);
     final horizontalInset = rect.width * heatmap.gapFraction / 2;
@@ -3031,6 +3061,8 @@ class SeriesElement implements DataHitElement {
     for (final index in viewportIndex.pointIndicesAt(dataPosition).reversed) {
       // The data index excludes most candidates; the exact plot rectangle
       // retains visual gap semantics and topmost source paint order.
+      final cell = heatmap.cellAt(index);
+      if (_isHiddenByHeatmapValueFilter(heatmap, cell)) continue;
       if (_heatmapCellRect(heatmap, index).contains(position)) {
         return index;
       }
@@ -3046,6 +3078,7 @@ class SeriesElement implements DataHitElement {
       return null;
     }
     final cell = heatmap.cellAt(pointIndex);
+    if (_isHiddenByHeatmapValueFilter(heatmap, cell)) return null;
     final rect = _heatmapCellRect(heatmap, pointIndex);
     final suffix = heatmap.unit == null || heatmap.unit!.isEmpty
         ? ''
@@ -3067,12 +3100,7 @@ class SeriesElement implements DataHitElement {
           ? 'Missing'
           : '${cell.value!.toStringAsFixed(2)}$suffix',
       colorLabel: heatmap.colorScale.label,
-      markerColor: heatmap.colorScale.colorFor(
-        cell.value,
-        resolvedMinimumValue: heatmap.resolvedMinimumValue,
-        resolvedMaximumValue: heatmap.resolvedMaximumValue,
-        isMissing: cell.isMissing,
-      ),
+      markerColor: _heatmapCellColor(heatmap, cell),
       ordinal: pointIndex + 1,
       count: heatmap.cells.length,
       isSelected: _isPointSelected(pointIndex),
@@ -3096,21 +3124,14 @@ class SeriesElement implements DataHitElement {
     canvas.save();
     canvas.clipRect(plotBounds);
     final fill = Paint()..style = PaintingStyle.fill;
-    final border = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = heatmap.borderColor
-      ..strokeWidth = heatmap.borderWidth;
+    final border = Paint()..style = PaintingStyle.stroke;
     final coordinateBounds = _heatmapCoordinateBounds(heatmap);
     for (final index in visibleHeatmapPointIndices) {
       final cell = heatmap.cellAt(index);
+      if (_isHiddenByHeatmapValueFilter(heatmap, cell)) continue;
       var rect = _heatmapCellRect(heatmap, index);
       if (!rect.overlaps(plotBounds) || rect.isEmpty) continue;
-      var color = heatmap.colorScale.colorFor(
-        cell.value,
-        resolvedMinimumValue: heatmap.resolvedMinimumValue,
-        resolvedMaximumValue: heatmap.resolvedMaximumValue,
-        isMissing: cell.isMissing,
-      );
+      var color = _heatmapCellColor(heatmap, cell);
       if (color == null || color.a == 0) continue;
       final cellProgress = _heatmapCellRevealProgress(
         heatmap,
@@ -3138,12 +3159,74 @@ class SeriesElement implements DataHitElement {
       );
       final rounded = RRect.fromRectAndRadius(rect, radius);
       canvas.drawRRect(rounded, fill);
-      if (heatmap.borderWidth > 0) canvas.drawRRect(rounded, border);
-      if (heatmap.showCellLabels && !cell.isMissing && cellProgress >= 0.72) {
+      final emptyStyle = heatmap.emptyValueStyle;
+      final isEmptyValue = emptyStyle?.matches(cell) ?? false;
+      final borderWidth = isEmptyValue
+          ? (emptyStyle!.borderWidth ?? heatmap.borderWidth)
+          : heatmap.borderWidth;
+      if (borderWidth > 0) {
+        var borderColor = isEmptyValue
+            ? (emptyStyle!.borderColor ?? heatmap.borderColor)
+            : heatmap.borderColor;
+        if (_isDimmedByHeatmapValueFilter(heatmap, cell)) {
+          borderColor = borderColor.withValues(
+            alpha: borderColor.a * heatmap.valueFilter!.excludedOpacity,
+          );
+        }
+        border
+          ..color = borderColor
+          ..strokeWidth = borderWidth;
+        canvas.drawRRect(rounded, border);
+      }
+      final showLabel = isEmptyValue
+          ? emptyStyle!.showLabel
+          : heatmap.showCellLabels;
+      if (showLabel &&
+          !cell.isMissing &&
+          !_isDimmedByHeatmapValueFilter(heatmap, cell) &&
+          cellProgress >= 0.72) {
         _paintHeatmapCellLabel(canvas, heatmap, cell, rect, color);
       }
     }
     canvas.restore();
+  }
+
+  Color? _heatmapCellColor(HeatmapChartSeries heatmap, HeatmapDataPoint cell) {
+    final emptyStyle = heatmap.emptyValueStyle;
+    var color = emptyStyle != null && emptyStyle.matches(cell)
+        ? emptyStyle.fillColor
+        : heatmap.colorScale.colorFor(
+            cell.value,
+            resolvedMinimumValue: heatmap.resolvedMinimumValue,
+            resolvedMaximumValue: heatmap.resolvedMaximumValue,
+            isMissing: cell.isMissing,
+          );
+    if (color != null && _isDimmedByHeatmapValueFilter(heatmap, cell)) {
+      color = color.withValues(
+        alpha: color.a * heatmap.valueFilter!.excludedOpacity,
+      );
+    }
+    return color;
+  }
+
+  bool _isHiddenByHeatmapValueFilter(
+    HeatmapChartSeries heatmap,
+    HeatmapDataPoint cell,
+  ) {
+    final filter = heatmap.valueFilter;
+    return filter != null &&
+        filter.mode == HeatmapValueFilterMode.hide &&
+        !filter.includes(cell);
+  }
+
+  bool _isDimmedByHeatmapValueFilter(
+    HeatmapChartSeries heatmap,
+    HeatmapDataPoint cell,
+  ) {
+    final filter = heatmap.valueFilter;
+    return filter != null &&
+        filter.mode == HeatmapValueFilterMode.dim &&
+        !filter.includes(cell);
   }
 
   double _heatmapCellRevealProgress(

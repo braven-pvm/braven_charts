@@ -56,6 +56,68 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('multiple Heatmap series share geometry but keep colour axes', (
+    tester,
+  ) async {
+    final latencyScale = HeatmapColorScale.sequential(
+      colors: const [Colors.white, Colors.blue],
+      minimumValue: 35,
+      maximumValue: 100,
+      label: 'Latency',
+      unit: 'ms',
+    );
+    final errorScale = HeatmapColorScale.sequential(
+      colors: const [Colors.white, Colors.orange],
+      minimumValue: 0,
+      maximumValue: 3,
+      label: 'Error rate',
+      unit: '%',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 500,
+            height: 320,
+            child: BravenChartPlus(
+              series: [
+                HeatmapChartSeries(
+                  id: 'latency-axis',
+                  unit: 'ms',
+                  points: [HeatmapDataPoint(x: 0, y: 0, value: 42)],
+                  colorScale: latencyScale,
+                ),
+                HeatmapChartSeries(
+                  id: 'error-rate-axis',
+                  unit: '%',
+                  points: [HeatmapDataPoint(x: 0, y: 1, value: 1.8)],
+                  colorScale: errorScale,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final mounted = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus),
+    );
+    final mountedHeatmaps = mounted.series.cast<HeatmapChartSeries>();
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+
+    expect(mountedHeatmaps, hasLength(2));
+    expect(mountedHeatmaps[0].colorScale, latencyScale);
+    expect(mountedHeatmaps[1].colorScale, errorScale);
+    expect(renderBox.transform!.dataYMin, -0.5);
+    expect(renderBox.transform!.dataYMax, 1.5);
+    expect(renderBox.debugSeriesCachePicture, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('invalid Heatmap category coordinates fail visibly', (
     tester,
   ) async {
@@ -91,13 +153,14 @@ void main() {
     tester,
   ) async {
     final key = GlobalKey();
-    final points = [HeatmapDataPoint(x: 0, y: 0, value: 1)];
+    final points = [HeatmapDataPoint(x: 0, y: 0, value: 0)];
 
     Widget chart({
       required bool reverse,
       required bool showLabels,
       required double gap,
       required double radius,
+      required HeatmapEmptyValueStyle? emptyValueStyle,
     }) => MaterialApp(
       home: Scaffold(
         body: SizedBox(
@@ -116,6 +179,7 @@ void main() {
                 showCellLabels: showLabels,
                 gapFraction: gap,
                 cornerRadius: radius,
+                emptyValueStyle: emptyValueStyle,
               ),
             ],
           ),
@@ -124,7 +188,13 @@ void main() {
     );
 
     await tester.pumpWidget(
-      chart(reverse: false, showLabels: false, gap: 0, radius: 0),
+      chart(
+        reverse: false,
+        showLabels: false,
+        gap: 0,
+        radius: 0,
+        emptyValueStyle: null,
+      ),
     );
     await tester.pumpAndSettle();
     final renderBox = tester.allRenderObjects
@@ -134,7 +204,19 @@ void main() {
     expect(initialPicture, isNotNull);
 
     await tester.pumpWidget(
-      chart(reverse: true, showLabels: true, gap: 0.2, radius: 8),
+      chart(
+        reverse: true,
+        showLabels: true,
+        gap: 0.2,
+        radius: 8,
+        emptyValueStyle: const HeatmapEmptyValueStyle(
+          fillColor: Color(0xFFE5E7EB),
+          borderColor: Color(0xFF94A3B8),
+          borderWidth: 1.5,
+          showLabel: false,
+          legendLabel: 'No activity',
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -146,6 +228,16 @@ void main() {
     expect(updated.showCellLabels, isTrue);
     expect(updated.gapFraction, 0.2);
     expect(updated.cornerRadius, 8);
+    expect(
+      updated.emptyValueStyle,
+      const HeatmapEmptyValueStyle(
+        fillColor: Color(0xFFE5E7EB),
+        borderColor: Color(0xFF94A3B8),
+        borderWidth: 1.5,
+        showLabel: false,
+        legendLabel: 'No activity',
+      ),
+    );
     expect(renderBox.debugSeriesCachePicture, isNot(same(initialPicture)));
     expect(tester.takeException(), isNull);
   });

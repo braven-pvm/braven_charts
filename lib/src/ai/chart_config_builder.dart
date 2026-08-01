@@ -471,6 +471,32 @@ class ChartConfigBuilder {
       family: 'Heatmap',
       index: index,
     );
+    final boundsValue = value['bounds'];
+    HeatmapCellBounds? bounds;
+    if (boundsValue != null) {
+      if (boundsValue is! Map<String, dynamic>) {
+        throw FormatException(
+          'Heatmap data point $index bounds must be an object.',
+        );
+      }
+
+      double requiredBound(String key) {
+        final number = boundsValue[key];
+        if (number is! num || !number.isFinite) {
+          throw FormatException(
+            'Heatmap data point $index bounds require a finite numeric $key.',
+          );
+        }
+        return number.toDouble();
+      }
+
+      bounds = HeatmapCellBounds(
+        xMinimum: requiredBound('x_minimum'),
+        xMaximum: requiredBound('x_maximum'),
+        yMinimum: requiredBound('y_minimum'),
+        yMaximum: requiredBound('y_maximum'),
+      );
+    }
 
     if (missing == true) {
       if (value.containsKey('value')) {
@@ -484,6 +510,7 @@ class ChartConfigBuilder {
         pointKey: pointKey,
         timestamp: timestamp,
         label: label as String?,
+        bounds: bounds,
       );
     }
 
@@ -494,6 +521,7 @@ class ChartConfigBuilder {
       pointKey: pointKey,
       timestamp: timestamp,
       label: label as String?,
+      bounds: bounds,
     );
   }
 
@@ -567,6 +595,97 @@ class ChartConfigBuilder {
         'heatmap_cell_label_font_size',
         fallback: 11,
       ),
+      emptyValueStyle: _parseHeatmapEmptyValueStyle(
+        seriesJson['heatmap_empty_value_style'],
+      ),
+      valueFilter: _parseHeatmapValueFilter(seriesJson['heatmap_value_filter']),
+    );
+  }
+
+  static HeatmapValueFilter? _parseHeatmapValueFilter(Object? value) {
+    if (value == null) return null;
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException('heatmap_value_filter must be an object.');
+    }
+    final mode = switch (value['mode']) {
+      null || 'dim' => HeatmapValueFilterMode.dim,
+      'hide' => HeatmapValueFilterMode.hide,
+      _ => throw const FormatException(
+        'heatmap_value_filter.mode must be dim or hide.',
+      ),
+    };
+    return HeatmapValueFilter(
+      minimumValue: _finiteNumber(
+        value['minimum_value'],
+        'heatmap_value_filter.minimum_value',
+      ),
+      maximumValue: _finiteNumber(
+        value['maximum_value'],
+        'heatmap_value_filter.maximum_value',
+      ),
+      mode: mode,
+      excludedOpacity: _finiteNumber(
+        value['excluded_opacity'],
+        'heatmap_value_filter.excluded_opacity',
+        fallback: 0.14,
+      ),
+    );
+  }
+
+  static HeatmapEmptyValueStyle? _parseHeatmapEmptyValueStyle(Object? value) {
+    if (value == null) return null;
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException(
+        'heatmap_empty_value_style must be an object.',
+      );
+    }
+    return HeatmapEmptyValueStyle(
+      value: _finiteNumber(
+        value['value'],
+        'heatmap_empty_value_style.value',
+        fallback: 0,
+      ),
+      fillColor: switch (value['fill_color']) {
+        final String color => _requiredColor(
+          color,
+          'heatmap_empty_value_style.fill_color',
+        ),
+        null => const Color(0xFFE5E7EB),
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.fill_color must be a color string.',
+        ),
+      },
+      borderColor: switch (value['border_color']) {
+        final String color => _requiredColor(
+          color,
+          'heatmap_empty_value_style.border_color',
+        ),
+        null => null,
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.border_color must be a color string.',
+        ),
+      },
+      borderWidth: _optionalFiniteNumber(
+        value['border_width'],
+        'heatmap_empty_value_style.border_width',
+      ),
+      showLabel: _booleanValue(
+        value['show_label'],
+        'heatmap_empty_value_style.show_label',
+        fallback: false,
+      ),
+      showInLegend: _booleanValue(
+        value['show_in_legend'],
+        'heatmap_empty_value_style.show_in_legend',
+        fallback: true,
+      ),
+      legendLabel: switch (value['legend_label']) {
+        final String label => label,
+        null => 'No activity',
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.legend_label must be a string.',
+        ),
+      },
     );
   }
 

@@ -484,6 +484,7 @@ TouchInteractionConfig _decodeTouch(Map<String, Object?> map) =>
 Map<String, Object?> _encodeSelection(ChartSelectionConfig value) => {
   'acquisitionMode': value.acquisitionMode.name,
   'scope': value.scope.name,
+  'heatmapExpansion': value.heatmapExpansion.name,
   'operation': value.operation.name,
   'dragActivation': value.dragActivation.name,
   'clearOnBackgroundTap': value.clearOnBackgroundTap,
@@ -504,6 +505,9 @@ ChartSelectionConfig _decodeSelection(Map<String, Object?> map) =>
     ChartSelectionConfig(
       acquisitionMode: _decodeSelectionAcquisitionMode(map),
       scope: _decodeSelectionScope(map),
+      heatmapExpansion: map['heatmapExpansion'] == null
+          ? HeatmapSelectionExpansion.cell
+          : _enum(map, 'heatmapExpansion', HeatmapSelectionExpansion.values),
       operation: _enum(map, 'operation', ChartSelectionOperation.values),
       dragActivation: _decodeSelectionDragActivation(map),
       clearOnBackgroundTap: _bool(map, 'clearOnBackgroundTap'),

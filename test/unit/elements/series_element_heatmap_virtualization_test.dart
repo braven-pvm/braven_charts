@@ -60,6 +60,60 @@ void main() {
     expect(element.dataHitAt(cellEdge), isNull);
   });
 
+  test(
+    'irregular Heatmap geometry drives culling, hit, and selection bounds',
+    () {
+      final heatmap = HeatmapChartSeries(
+        id: 'irregular',
+        points: [
+          HeatmapDataPoint(
+            x: 14,
+            y: 35,
+            value: 10,
+            bounds: HeatmapCellBounds(
+              xMinimum: 11,
+              xMaximum: 17,
+              yMinimum: 33,
+              yMaximum: 37,
+            ),
+          ),
+          HeatmapDataPoint(
+            x: 50,
+            y: 50,
+            value: 20,
+            bounds: HeatmapCellBounds(
+              xMinimum: 49,
+              xMaximum: 51,
+              yMinimum: 49,
+              yMaximum: 51,
+            ),
+          ),
+        ],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Colors.white, Colors.blue],
+        ),
+        gapFraction: 0.1,
+      );
+      final element = SeriesElement(
+        series: heatmap,
+        transform: initialTransform,
+      );
+
+      expect(element.visibleHeatmapPointIndices, [0]);
+      final center = initialTransform.dataToPlot(14, 35);
+      final hit = element.dataHitAt(center);
+      expect(hit?.pointIndex, 0);
+      expect(hit?.semanticBounds.width, closeTo(108, 0.001));
+      expect(hit?.semanticBounds.height, closeTo(36, 0.001));
+      expect(element.dataHitAt(initialTransform.dataToPlot(11, 35)), isNull);
+
+      final selected = element.dataHitsInPlotRect(
+        Rect.fromCenter(center: center, width: 20, height: 20),
+      );
+      expect(selected.map((value) => value.pointIndex), [0]);
+    },
+  );
+
   test('Heatmap viewport cache follows transform changes', () {
     final element = SeriesElement(
       series: denseSeries(),
@@ -104,6 +158,45 @@ void main() {
       element.dataHitAt(initialTransform.dataToPlot(15, 35))!.pointIndex,
       0,
     );
+  });
+
+  test('value filtering dims or removes paint and hit-test identity', () {
+    final points = [
+      HeatmapDataPoint(x: 15, y: 35, value: 10),
+      HeatmapDataPoint(x: 16, y: 35, value: 50),
+      HeatmapDataPoint.missing(x: 17, y: 35),
+    ];
+    HeatmapChartSeries filtered(HeatmapValueFilterMode mode) =>
+        HeatmapChartSeries(
+          id: 'filtered',
+          points: points,
+          colorScale: HeatmapColorScale.sequential(
+            colors: const [Colors.white, Colors.blue],
+            missingColor: Colors.grey,
+          ),
+          valueFilter: HeatmapValueFilter(
+            minimumValue: 40,
+            maximumValue: 60,
+            mode: mode,
+            excludedOpacity: 0.2,
+          ),
+        );
+
+    final element = SeriesElement(
+      series: filtered(HeatmapValueFilterMode.dim),
+      transform: initialTransform,
+    );
+    final excluded = element.dataHitForPointIndex(0);
+    expect(excluded, isNotNull);
+    expect(excluded!.markerColor!.a, closeTo(0.2, 0.001));
+    expect(element.dataHitForPointIndex(1), isNotNull);
+    expect(element.dataHitForPointIndex(2), isNotNull);
+
+    element.updateSeries(filtered(HeatmapValueFilterMode.hide));
+    expect(element.dataHitForPointIndex(0), isNull);
+    expect(element.dataHitAt(initialTransform.dataToPlot(15, 35)), isNull);
+    expect(element.dataHitForPointIndex(1), isNotNull);
+    expect(element.dataHitForPointIndex(2), isNotNull);
   });
 
   test('dense Heatmap semantics stay bounded and prioritize selection', () {

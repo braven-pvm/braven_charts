@@ -607,6 +607,7 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           showInLegend: showInLegend,
           showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
           cellWidth: _double(style, 'heatmapCellWidth'),
           cellHeight: _double(style, 'heatmapCellHeight'),
           gapFraction: _double(style, 'heatmapGapFraction'),
@@ -619,6 +620,12 @@ abstract final class ChartSeriesDocumentCodec {
             r'$.style.heatmapCellLabelColor',
           ),
           cellLabelFontSize: _double(style, 'heatmapCellLabelFontSize'),
+          emptyValueStyle: _decodeHeatmapEmptyValueStyle(
+            _optionalMap(style, 'heatmapEmptyValueStyle'),
+          ),
+          valueFilter: _decodeHeatmapValueFilter(
+            _optionalMap(style, 'heatmapValueFilter'),
+          ),
           animation: _decodeHeatmapAnimation(
             _optionalMap(style, 'heatmapAnimation'),
           ),
@@ -1003,6 +1010,13 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
           _heatmapPointExtensionKey: _jsonObject({
             'isMissing': point.isMissing,
             if (!point.isMissing) 'value': _number(point.value!),
+            if (point.bounds case final bounds?)
+              'bounds': {
+                'xMinimum': _number(bounds.xMinimum),
+                'xMaximum': _number(bounds.xMaximum),
+                'yMinimum': _number(bounds.yMinimum),
+                'yMaximum': _number(bounds.yMaximum),
+              },
           }, path: r'$.data.points[$index].extensions.heatmap'),
       },
     );
@@ -1017,6 +1031,7 @@ HeatmapDataPoint _decodeHeatmapPoint(ChartPointDocument point) {
   }
   final values = _objectMap(extension);
   final isMissing = _bool(values, 'isMissing');
+  final bounds = _decodeHeatmapCellBounds(values['bounds']);
   if (isMissing) {
     if (values.containsKey('value')) {
       throw const _UnsupportedModelException(
@@ -1027,6 +1042,7 @@ HeatmapDataPoint _decodeHeatmapPoint(ChartPointDocument point) {
     return HeatmapDataPoint.missing(
       x: point.x.asDouble,
       y: point.y.asDouble,
+      bounds: bounds,
       pointKey: point.pointKey,
       timestamp: point.timestamp,
       label: point.label,
@@ -1038,6 +1054,7 @@ HeatmapDataPoint _decodeHeatmapPoint(ChartPointDocument point) {
     x: common.x,
     y: common.y,
     value: _double(values, 'value'),
+    bounds: bounds,
     pointKey: common.pointKey,
     magnitude: common.magnitude,
     colorValue: common.colorValue,
@@ -1048,6 +1065,23 @@ HeatmapDataPoint _decodeHeatmapPoint(ChartPointDocument point) {
     metadata: common.metadata,
     segmentStyle: common.segmentStyle,
     pointStyle: common.pointStyle,
+  );
+}
+
+HeatmapCellBounds? _decodeHeatmapCellBounds(Object? value) {
+  if (value == null) return null;
+  if (value is! Map) {
+    throw const _UnsupportedModelException(
+      'Heatmap cell bounds must be an object.',
+      r'$.data.point.extensions.heatmap.cell.v1.bounds',
+    );
+  }
+  final values = Map<String, Object?>.from(value);
+  return HeatmapCellBounds(
+    xMinimum: _double(values, 'xMinimum'),
+    xMaximum: _double(values, 'xMaximum'),
+    yMinimum: _double(values, 'yMinimum'),
+    yMaximum: _double(values, 'yMaximum'),
   );
 }
 
@@ -1353,6 +1387,12 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['heatmapShowCellLabels'] = series.showCellLabels
         ..['heatmapCellLabelColor'] = series.cellLabelColor?.toARGB32()
         ..['heatmapCellLabelFontSize'] = _number(series.cellLabelFontSize)
+        ..['heatmapEmptyValueStyle'] = series.emptyValueStyle == null
+            ? null
+            : _encodeHeatmapEmptyValueStyle(series.emptyValueStyle!)
+        ..['heatmapValueFilter'] = series.valueFilter == null
+            ? null
+            : _encodeHeatmapValueFilter(series.valueFilter!)
         ..['heatmapAnimation'] = _encodeHeatmapAnimation(series.animation);
     case BarChartSeries():
       result
@@ -1971,6 +2011,52 @@ Map<String, Object?> _encodePathAnimationTiming(PathAnimationTiming timing) => {
   if (timing.duration case final duration?)
     'durationMicros': duration.inMicroseconds,
 };
+
+Map<String, Object?> _encodeHeatmapEmptyValueStyle(
+  HeatmapEmptyValueStyle style,
+) => {
+  'value': _number(style.value),
+  'fillColor': style.fillColor.toARGB32(),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  if (style.borderWidth != null) 'borderWidth': _number(style.borderWidth!),
+  'showLabel': style.showLabel,
+  'showInLegend': style.showInLegend,
+  'legendLabel': style.legendLabel,
+};
+
+HeatmapEmptyValueStyle? _decodeHeatmapEmptyValueStyle(
+  Map<String, Object?>? value,
+) => value == null
+    ? null
+    : HeatmapEmptyValueStyle(
+        value: _double(value, 'value'),
+        fillColor: _color(value, 'fillColor'),
+        borderColor: _optionalColor(
+          value['borderColor'],
+          r'$.style.heatmapEmptyValueStyle.borderColor',
+        ),
+        borderWidth: _optionalDouble(value['borderWidth']),
+        showLabel: _bool(value, 'showLabel'),
+        showInLegend: _bool(value, 'showInLegend'),
+        legendLabel: _string(value, 'legendLabel'),
+      );
+
+Map<String, Object?> _encodeHeatmapValueFilter(HeatmapValueFilter filter) => {
+  'minimumValue': _number(filter.minimumValue),
+  'maximumValue': _number(filter.maximumValue),
+  'mode': filter.mode.name,
+  'excludedOpacity': _number(filter.excludedOpacity),
+};
+
+HeatmapValueFilter? _decodeHeatmapValueFilter(Map<String, Object?>? value) =>
+    value == null
+    ? null
+    : HeatmapValueFilter(
+        minimumValue: _double(value, 'minimumValue'),
+        maximumValue: _double(value, 'maximumValue'),
+        mode: _enum(value, 'mode', HeatmapValueFilterMode.values),
+        excludedOpacity: _double(value, 'excludedOpacity'),
+      );
 
 Map<String, Object?> _encodeHeatmapAnimation(HeatmapAnimationStyle style) => {
   'entranceMode': style.entranceMode.name,

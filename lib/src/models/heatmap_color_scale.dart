@@ -187,6 +187,52 @@ final class HeatmapColorScale {
   final String? unit;
   final bool showLegend;
 
+  /// Returns this continuous colour scale with an explicit numeric domain.
+  ///
+  /// This is useful when several independent Heatmaps must remain visually
+  /// comparable. Threshold scales already own a fixed set of semantic bands
+  /// and therefore do not accept a continuous domain.
+  HeatmapColorScale withDomain({
+    required double minimumValue,
+    required double maximumValue,
+    bool? showLegend,
+  }) {
+    switch (type) {
+      case HeatmapColorScaleType.sequential:
+        return HeatmapColorScale.sequential(
+          colors: colors,
+          minimumValue: minimumValue,
+          maximumValue: maximumValue,
+          reverse: reverse,
+          clamp: clamp,
+          missingColor: missingColor,
+          label: label,
+          unit: unit,
+          showLegend: showLegend ?? this.showLegend,
+        );
+      case HeatmapColorScaleType.diverging:
+        return HeatmapColorScale.diverging(
+          lowColor: colors[0],
+          midpointColor: colors[1],
+          highColor: colors[2],
+          midpoint: midpoint!,
+          minimumValue: minimumValue,
+          maximumValue: maximumValue,
+          reverse: reverse,
+          clamp: clamp,
+          missingColor: missingColor,
+          label: label,
+          unit: unit,
+          showLegend: showLegend ?? this.showLegend,
+        );
+      case HeatmapColorScaleType.threshold:
+        throw UnsupportedError(
+          'Threshold Heatmap scales use fixed semantic bands and cannot '
+          'accept a continuous domain',
+        );
+    }
+  }
+
   /// Resolves one measured value against the fixed or caller-resolved domain.
   ///
   /// A null or explicitly missing value uses [missingColor]. A finite measured

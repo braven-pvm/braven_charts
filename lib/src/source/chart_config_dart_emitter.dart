@@ -822,6 +822,28 @@ class ChartConfigDartEmitter {
     writer.indented(() {
       writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
       writer.namedArgument('y', DartSourceWriter.numberLiteral(point.y));
+      if (point.bounds case final bounds?) {
+        writer.writeLine('bounds: HeatmapCellBounds(');
+        writer.indented(() {
+          writer.namedArgument(
+            'xMinimum',
+            DartSourceWriter.numberLiteral(bounds.xMinimum),
+          );
+          writer.namedArgument(
+            'xMaximum',
+            DartSourceWriter.numberLiteral(bounds.xMaximum),
+          );
+          writer.namedArgument(
+            'yMinimum',
+            DartSourceWriter.numberLiteral(bounds.yMinimum),
+          );
+          writer.namedArgument(
+            'yMaximum',
+            DartSourceWriter.numberLiteral(bounds.yMaximum),
+          );
+        });
+        writer.writeLine('),');
+      }
       if (!point.isMissing) {
         writer.namedArgument(
           'value',
@@ -2020,7 +2042,59 @@ class ChartConfigDartEmitter {
     );
     _optionalColor(writer, 'cellLabelColor', series.cellLabelColor);
     _numberIf(writer, 'cellLabelFontSize', series.cellLabelFontSize, 11);
+    _emitHeatmapEmptyValueStyle(writer, series.emptyValueStyle);
+    _emitHeatmapValueFilter(writer, series.valueFilter);
     _emitHeatmapAnimationStyle(writer, series.animation);
+  }
+
+  void _emitHeatmapEmptyValueStyle(
+    DartSourceWriter writer,
+    HeatmapEmptyValueStyle? style,
+  ) {
+    if (style == null) return;
+    writer.writeLine('emptyValueStyle: HeatmapEmptyValueStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'value', style.value, 0);
+      _colorIf(writer, 'fillColor', style.fillColor, const Color(0xFFE5E7EB));
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _optionalNumber(writer, 'borderWidth', style.borderWidth);
+      _valueIf(writer, 'showLabel', style.showLabel, defaultValue: false);
+      _valueIf(writer, 'showInLegend', style.showInLegend, defaultValue: true);
+      if (options.includeDefaultValues || style.legendLabel != 'No activity') {
+        writer.namedArgument(
+          'legendLabel',
+          DartSourceWriter.stringLiteral(style.legendLabel),
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitHeatmapValueFilter(
+    DartSourceWriter writer,
+    HeatmapValueFilter? filter,
+  ) {
+    if (filter == null) return;
+    writer.writeLine('valueFilter: HeatmapValueFilter(');
+    writer.indented(() {
+      writer.namedArgument(
+        'minimumValue',
+        DartSourceWriter.numberLiteral(filter.minimumValue),
+      );
+      writer.namedArgument(
+        'maximumValue',
+        DartSourceWriter.numberLiteral(filter.maximumValue),
+      );
+      _enumIf(
+        writer,
+        'mode',
+        'HeatmapValueFilterMode',
+        filter.mode.name,
+        defaultName: 'dim',
+      );
+      _numberIf(writer, 'excludedOpacity', filter.excludedOpacity, 0.14);
+    });
+    writer.writeLine('),');
   }
 
   void _emitHeatmapAnimationStyle(
@@ -5737,6 +5811,14 @@ class ChartConfigDartEmitter {
           writer.namedArgument(
             'scope',
             'ChartSelectionScope.${interaction.selection.scope.name}',
+          );
+        }
+        if (interaction.selection.heatmapExpansion !=
+            HeatmapSelectionExpansion.cell) {
+          writer.namedArgument(
+            'heatmapExpansion',
+            'HeatmapSelectionExpansion.'
+                '${interaction.selection.heatmapExpansion.name}',
           );
         }
         if (interaction.selection.operation !=

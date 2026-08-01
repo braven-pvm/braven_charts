@@ -1,8 +1,8 @@
 # Native Cartesian Heatmap Chart Family — Delivery Roadmap
 
-**Date:** 2026-07-28  
-**Register:** `BC-0037`  
-**Branch:** `feature/BC-0037-heatmaps`  
+**Date:** 2026-07-28
+**Register:** `BC-0037`
+**Branch:** `feature/BC-0037-heatmaps`
 **Status:** Phase 1 Slices 0–6 complete locally; maintainer review pending
 **Design:** `docs/superpowers/specs/2026-07-28-heatmap-chart-family-design.md`
 

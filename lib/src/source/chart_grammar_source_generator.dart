@@ -2796,6 +2796,7 @@ class _GrammarChainEmitter {
             showCellLabels: series.showCellLabels,
             cellLabelColor: series.cellLabelColor,
             cellLabelFontSize: series.cellLabelFontSize,
+            emptyValueStyle: series.emptyValueStyle,
           ),
         );
 
@@ -2964,7 +2965,12 @@ class _GrammarChainEmitter {
         // lowering reads it back as null.
         final labelField = plan.accessors['label'];
         final keyField = plan.accessors['pointKey'];
-        if (labelField != null || keyField != null) {
+        // Heatmap plans nullable text slots because missing cells and sparse
+        // labels must retain null rather than collapse to the empty-string
+        // convention used by the four ordinary Cartesian point families.
+        // Its switch arm above has already populated those optional slots.
+        if (series is! HeatmapChartSeries &&
+            (labelField != null || keyField != null)) {
           final point = series.points[index];
           if (labelField != null) {
             row.strings[labelField.slot] = point.label ?? '';
@@ -3496,14 +3502,6 @@ class _GrammarChainEmitter {
           if (missing != null) {
             writer.namedArgument('missing', missing.accessor());
           }
-          final pointKey = plan.accessors['pointKey'];
-          if (pointKey != null) {
-            writer.namedArgument('pointKey', pointKey.accessor());
-          }
-          final label = plan.accessors['label'];
-          if (label != null) {
-            writer.namedArgument('label', label.accessor());
-          }
         case _:
           writer.namedArgument('y', plan.accessors['y']!.accessor());
       }
@@ -3603,7 +3601,6 @@ class _GrammarChainEmitter {
         case HeatmapMark<_SourceRow>():
           _config.emitHeatmapOptions(writer, plan.series as HeatmapChartSeries);
           _absorbConfigWarnings();
-          _optionalString(writer, 'unit', mark.unit);
         case TrendMark<_SourceRow>():
           break;
         case ThresholdMark<_SourceRow>() ||

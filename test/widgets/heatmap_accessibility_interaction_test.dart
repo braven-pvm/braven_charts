@@ -103,6 +103,58 @@ void main() {
   });
 
   testWidgets(
+    'viewport-backed resident snapshots replace accessible cell identity',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _host(
+          points: [
+            HeatmapDataPoint(
+              x: 10,
+              y: 0,
+              value: 12,
+              label: 'Resident column 10',
+              pointKey: 'resident-10',
+            ),
+          ],
+          xCategories: null,
+          yCategories: null,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.semantics.byLabel(RegExp('Resident column 10')), findsOne);
+
+      await tester.pumpWidget(
+        _host(
+          points: [
+            HeatmapDataPoint(
+              x: 900000,
+              y: 0,
+              value: 84,
+              label: 'Resident column 900000',
+              pointKey: 'resident-900000',
+            ),
+          ],
+          xCategories: null,
+          yCategories: null,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics.byLabel(RegExp('Resident column 900000')),
+        findsOne,
+      );
+      expect(
+        find.semantics.byLabel(RegExp('Resident column 10')),
+        findsNothing,
+      );
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
     'selection composes with annotations, zoom, pan, and both scrollbars',
     (tester) async {
       final controller = BravenChartController();
@@ -139,6 +191,89 @@ void main() {
 
       expect(controller.selectedPointRefs, {
         const ChartPointRef(seriesId: 'matrix', pointIndex: 2),
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'keyboard traversal preserves identity across multiple Heatmap series',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      String? activatedSeries;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 560,
+              height: 380,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                onPointTap: (_, seriesId) => activatedSeries = seriesId,
+                series: [
+                  HeatmapChartSeries(
+                    id: 'latency',
+                    name: 'Latency',
+                    unit: 'ms',
+                    points: [
+                      HeatmapDataPoint(
+                        x: 0,
+                        y: 1,
+                        value: 42,
+                        label: 'Latency at midnight',
+                      ),
+                    ],
+                    colorScale: HeatmapColorScale.sequential(
+                      colors: const [Colors.white, Colors.blue],
+                    ),
+                  ),
+                  HeatmapChartSeries(
+                    id: 'errors',
+                    name: 'Errors',
+                    unit: '%',
+                    points: [
+                      HeatmapDataPoint(
+                        x: 0,
+                        y: 0,
+                        value: 2,
+                        label: 'Errors at midnight',
+                      ),
+                    ],
+                    colorScale: HeatmapColorScale.sequential(
+                      colors: const [Colors.white, Colors.red],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BravenChartPlus));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+
+      expect(controller.focusedPointRefs, {
+        const ChartPointRef(seriesId: 'errors', pointIndex: 0),
+      });
+      final semantics = tester.widget<Semantics>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == 'Interactive heatmap chart',
+        ),
+      );
+      expect(semantics.properties.value, contains('Errors'));
+      expect(semantics.properties.value, contains('2.00 %'));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(activatedSeries, 'errors');
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'errors', pointIndex: 0),
       });
       expect(tester.takeException(), isNull);
     },
