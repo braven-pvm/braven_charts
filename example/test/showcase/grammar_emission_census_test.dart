@@ -51,6 +51,7 @@ import 'package:braven_charts_example/showcase/pages/chart_workbench_page.dart';
 import 'package:braven_charts_example/showcase/pages/concentric_donut_page.dart';
 import 'package:braven_charts_example/showcase/pages/donut_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/gauge_charts_page.dart';
+import 'package:braven_charts_example/showcase/pages/heatmap_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/pages/radial_bar_page.dart';
@@ -212,6 +213,13 @@ const List<_CensusPage> _censusPages = <_CensusPage>[
     statePrefixes: <String>['range-area-preset-'],
   ),
   _CensusPage(
+    name: 'Heatmap',
+    build: HeatmapChartsPage.new,
+    sourceFile: 'heatmap_charts_page.dart',
+    mountSites: 1,
+    statePrefixes: <String>['heatmap-preset-'],
+  ),
+  _CensusPage(
     name: 'ValueSummary',
     build: ValueSummaryPage.new,
     sourceFile: 'value_summary_page.dart',
@@ -358,8 +366,8 @@ void main() {
   });
 }
 
-/// `page -> [tuples, with a verdict, emitting]`, measured 2026-07-31 on
-/// `feature/grammar-cartesian-foundation`.
+/// `page -> [tuples, with a verdict, emitting]`, measured 2026-08-01 on
+/// `feature/BC-0043-heatmap-histogram`.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[15, 12, 3],
   'Area': <int>[9, 9, 3],
@@ -367,6 +375,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'BarLab': <int>[28, 28, 0],
   'Candlestick': <int>[10, 8, 0],
   'RangeArea': <int>[7, 7, 0],
+  'Heatmap': <int>[18, 15, 0],
   'ValueSummary': <int>[8, 6, 4],
   'Selection': <int>[10, 10, 7],
   'Workbench': <int>[5, 2, 1],
@@ -381,11 +390,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[27, 113],
+  _Family.cartesian: <int>[27, 128],
   _Family.radial: <int>[31, 55],
 };
 
-const int _expectedWithVerdict = 168;
+const int _expectedWithVerdict = 183;
 const int _expectedEmitting = 58;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
@@ -450,8 +459,8 @@ void _mountSiteGuard() {
   expect(found, declared, reason: 'mount-site counts moved');
   expect(
     found.values.fold<int>(0, (a, b) => a + b),
-    16,
-    reason: 'the census is sized against 16 mount sites; found $found',
+    17,
+    reason: 'the census is sized against 17 mount sites; found $found',
   );
 }
 

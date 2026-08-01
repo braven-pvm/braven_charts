@@ -2311,6 +2311,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
 
   Widget _choice(_HeatmapPreset preset, String label, IconData icon) {
     return ChoiceChip(
+      key: ValueKey<String>('heatmap-preset-${preset.name}'),
       selected: _preset == preset,
       onSelected: (_) {
         _clearMatrixSelection();
