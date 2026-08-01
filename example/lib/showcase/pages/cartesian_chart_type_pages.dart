@@ -94,6 +94,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   int _authoredPresetIndex = 0;
   bool _playgroundActive = false;
   LineInterpolation _interpolation = LineInterpolation.monotone;
+  double _bezierTension = 0.25;
   double _strokeWidth = 2.5;
   double _lineGlow = 0;
   double _fillOpacity = 0.24;
@@ -339,6 +340,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _playgroundActive = false;
       _authoredPresetIndex = index;
       _presetIndex = index;
+      if (widget.family == _CartesianFamily.line && index == 11) {
+        _interpolation = LineInterpolation.bezier;
+        _bezierTension = 0.25;
+      }
       _scatterSelectionResult = const ChartSelectionResult.empty();
       _resetMotionData();
     });
@@ -613,7 +618,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           // sizing contract and remains intentionally independent.
           final preferredHeight = switch ((widget.family, compact)) {
             (_CartesianFamily.line, true) =>
-              _isLineSynchronized ? 2060.0 : 1040.0,
+              _isLineSynchronized ? 2064.0 : 1040.0,
             (_CartesianFamily.line, false) =>
               _isLineSynchronized ? 1640.0 : 1100.0,
             (_CartesianFamily.area, true) => 1040.0,
@@ -725,6 +730,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.ads_click_outlined,
         description:
             'Select canonical points or complete series. Shift adds, Ctrl/Cmd toggles, Alt subtracts, and a background tap clears.',
+      ),
+      _ChartTypePreset(
+        label: 'Data gaps',
+        icon: Icons.signal_cellular_connected_no_internet_4_bar_outlined,
+        description:
+            'NaN and infinite samples break the path without hiding valid observations or connecting across the gap.',
+      ),
+      _ChartTypePreset(
+        label: 'Close points',
+        icon: Icons.timeline_outlined,
+        description:
+            'Tightly clustered X values stress Bézier control handles without allowing backward folds.',
       ),
     ],
     _CartesianFamily.area => const [
@@ -939,6 +956,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool get _isLineSelectionPreset =>
       widget.family == _CartesianFamily.line && _presetIndex == 9;
 
+  bool get _isLineDataGapPreset =>
+      widget.family == _CartesianFamily.line && _presetIndex == 10;
+
+  bool get _isLineClosePointsPreset =>
+      widget.family == _CartesianFamily.line && _presetIndex == 11;
+
   bool get _isAreaSelectionPreset =>
       widget.family == _CartesianFamily.area && _presetIndex == 7;
 
@@ -1112,12 +1135,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           chartController: _chartController,
           workbenchController: _workbenchController,
           initialDisplayMode: _initialDisplayMode,
-          availableDisplayModes: const {
-            ChartDisplayMode.chart,
-            ChartDisplayMode.data,
-            ChartDisplayMode.split,
-            ChartDisplayMode.source,
-          },
+          availableDisplayModes: _isLineDataGapPreset
+              ? const {
+                  ChartDisplayMode.chart,
+                  ChartDisplayMode.data,
+                  ChartDisplayMode.split,
+                }
+              : const {
+                  ChartDisplayMode.chart,
+                  ChartDisplayMode.data,
+                  ChartDisplayMode.split,
+                  ChartDisplayMode.source,
+                },
           documentOptions: _workbenchDocumentOptions,
           sourceOptions: ChartDartSourceOptions(
             variableName: '${widget.family.name}Chart',
@@ -1600,6 +1629,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _CartesianFamily.line =>
         _isPathSelectionPreset
             ? '${_buildSeries().length} series · ${_formatChartSelectionAcquisitionMode(_pathSelectionAcquisitionMode).toLowerCase()} · ${_formatChartSelectionScope(_pathSelectionScope).toLowerCase()} scope · ${_formatChartSelectionOperation(_pathSelectionOperation).toLowerCase()} operation · $_pathSelectionCount selected'
+            : _isLineDataGapPreset
+            ? '2 sensor streams · 4 invalid samples shown as gaps · finite observations remain interactive'
+            : _isLineClosePointsPreset
+            ? 'Bézier vs linear reference · 2 close clusters · 11 clustered samples · tension ${_bezierTension.toStringAsFixed(2)}'
             : _isLineForecast
             ? 'Observed + prognosis · dotted forecast · current-time boundary'
             : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
@@ -1792,7 +1825,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       .length;
 
   String get _xAxisLabel => switch (widget.family) {
-    _CartesianFamily.line => _isLineForecast ? 'Hour' : 'Elapsed interval',
+    _CartesianFamily.line =>
+      _isLineForecast
+          ? 'Hour'
+          : _isLineClosePointsPreset
+          ? 'Elapsed time (min)'
+          : 'Elapsed interval',
     _CartesianFamily.area => 'Period',
     _CartesianFamily.scatter => switch (_presetIndex) {
       0 => 'Height (cm)',
@@ -1820,7 +1858,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   };
 
   String get _yAxisLabel => switch (widget.family) {
-    _CartesianFamily.line => _isLineForecast ? 'Temperature (°C)' : 'Value',
+    _CartesianFamily.line =>
+      _isLineForecast
+          ? 'Temperature (°C)'
+          : _isLineClosePointsPreset
+          ? 'Response (L/min)'
+          : 'Value',
     _CartesianFamily.area => 'Magnitude',
     _CartesianFamily.scatter => switch (_presetIndex) {
       0 => 'Body mass (kg)',
@@ -2004,6 +2047,20 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           value: _interpolation,
           values: LineInterpolation.values,
           onChanged: (value) => setState(() => _interpolation = value),
+        ),
+      if (_isLineClosePointsPreset &&
+          _interpolation == LineInterpolation.bezier)
+        SliderOption(
+          key: const ValueKey('line-close-points-tension'),
+          label: 'Bézier tension',
+          description:
+              'Increase control-handle reach while the curve preserves forward X motion.',
+          value: _bezierTension,
+          min: 0,
+          max: 1,
+          divisions: 20,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _bezierTension = value),
         ),
       if (widget.family != _CartesianFamily.scatter &&
           (_playgroundActive || (!_isLineSpotlight && !_isAreaPulse)))
@@ -3809,6 +3866,60 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             points: _offsetPoints(_primaryPoints, 12),
             color: const Color(0xFF0F9F8F),
           ),
+      ];
+    }
+    if (_isLineDataGapPreset) {
+      return const [
+        LineChartSeries(
+          id: 'gap-temperature',
+          name: 'Temperature',
+          unit: '°C',
+          points: _temperatureGapPoints,
+          color: Color(0xFF2563EB),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 3,
+          showDataPointMarkers: true,
+          dataPointMarkerRadius: 4,
+          dataPointLabels: DataPointLabelConfig(show: true, showUnit: true),
+        ),
+        LineChartSeries(
+          id: 'gap-pressure',
+          name: 'Pressure',
+          unit: 'kPa',
+          points: _pressureGapPoints,
+          color: Color(0xFFF97316),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 3,
+          showDataPointMarkers: true,
+          dataPointMarkerRadius: 4,
+        ),
+      ];
+    }
+    if (_isLineClosePointsPreset) {
+      return [
+        const LineChartSeries(
+          id: 'close-points-linear-reference',
+          name: 'Linear reference',
+          unit: 'L/min',
+          points: _closePointResponsePoints,
+          color: Color(0xFF94A3B8),
+          interpolation: LineInterpolation.linear,
+          strokeWidth: 1.5,
+          dashPattern: [5, 4],
+        ),
+        LineChartSeries(
+          id: 'close-points-bezier',
+          name: 'Bézier response',
+          unit: 'L/min',
+          points: _closePointResponsePoints,
+          color: const Color(0xFF0891B2),
+          interpolation: _interpolation,
+          tension: _bezierTension,
+          strokeWidth: _strokeWidth,
+          showDataPointMarkers: true,
+          dataPointMarkerRadius: 4,
+          lineGlow: _lineGlow,
+        ),
       ];
     }
     if (_isLineForecast) {
@@ -5794,6 +5905,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     setState(() {
       _presetIndex = 0;
       _interpolation = LineInterpolation.monotone;
+      _bezierTension = 0.25;
       _strokeWidth = 2.5;
       _lineGlow = 0;
       _fillOpacity = 0.24;
@@ -7956,6 +8068,51 @@ const _secondaryPoints = [
   ChartDataPoint(x: 5, y: 51),
   ChartDataPoint(x: 6, y: 55),
   ChartDataPoint(x: 7, y: 59),
+];
+
+const _temperatureGapPoints = [
+  ChartDataPoint(x: 0, y: 18.2),
+  ChartDataPoint(x: 1, y: 19.6),
+  ChartDataPoint(x: 2, y: 21.4),
+  ChartDataPoint(x: 3, y: double.nan),
+  ChartDataPoint(x: 4, y: double.infinity),
+  ChartDataPoint(x: 5, y: 22.8),
+  ChartDataPoint(x: 6, y: 21.9),
+  ChartDataPoint(x: 7, y: 23.6),
+  ChartDataPoint(x: 8, y: 24.1),
+];
+
+const _pressureGapPoints = [
+  ChartDataPoint(x: 0, y: 16.8),
+  ChartDataPoint(x: 1, y: 17.5),
+  ChartDataPoint(x: 2, y: 18.1),
+  ChartDataPoint(x: 3, y: 18.9),
+  ChartDataPoint(x: 4, y: 19.2),
+  ChartDataPoint(x: 5, y: double.negativeInfinity),
+  ChartDataPoint(x: double.infinity, y: 20.4),
+  ChartDataPoint(x: 7, y: 20.8),
+  ChartDataPoint(x: 8, y: 21.2),
+];
+
+const _closePointResponsePoints = [
+  ChartDataPoint(x: 14, y: 48),
+  ChartDataPoint(x: 19, y: 55),
+  ChartDataPoint(x: 24, y: 62),
+  ChartDataPoint(x: 28.5, y: 82),
+  ChartDataPoint(x: 32.8, y: 94),
+  ChartDataPoint(x: 35.9, y: 116),
+  ChartDataPoint(x: 36, y: 138),
+  ChartDataPoint(x: 36.08, y: 136),
+  ChartDataPoint(x: 36.14, y: 151),
+  ChartDataPoint(x: 36.22, y: 121),
+  ChartDataPoint(x: 36.31, y: 145),
+  ChartDataPoint(x: 42.5, y: 130),
+  ChartDataPoint(x: 44.9, y: 128),
+  ChartDataPoint(x: 45, y: 109),
+  ChartDataPoint(x: 45.03, y: 134),
+  ChartDataPoint(x: 45.09, y: 112),
+  ChartDataPoint(x: 45.18, y: 141),
+  ChartDataPoint(x: 57.5, y: 113),
 ];
 
 const _powerPoints = [

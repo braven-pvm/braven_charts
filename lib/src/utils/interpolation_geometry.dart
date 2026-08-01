@@ -446,17 +446,57 @@ abstract final class InterpolationGeometry {
     final startY = getY(p1);
     final endX = getX(p2);
     final endY = getY(p2);
+    final rawControl1X = startX + (getX(p2) - getX(p0)) * alpha / 3.0;
+    final rawControl2X = endX - (getX(p3) - startX) * alpha / 3.0;
+    final (control1X, control2X) = _boundedBezierControlXs(
+      startX: startX,
+      endX: endX,
+      rawControl1X: rawControl1X,
+      rawControl2X: rawControl2X,
+    );
 
     return CubicSegment(
       startX: startX,
       startY: startY,
-      control1X: startX + (getX(p2) - getX(p0)) * alpha / 3.0,
+      control1X: control1X,
       control1Y: startY + (getY(p2) - getY(p0)) * alpha / 3.0,
-      control2X: endX - (getX(p3) - startX) * alpha / 3.0,
+      control2X: control2X,
       control2Y: endY - (getY(p3) - startY) * alpha / 3.0,
       endX: endX,
       endY: endY,
     );
+  }
+
+  /// Projects Catmull-Rom-derived X handles onto the monotonic interval of one
+  /// Bezier segment.
+  ///
+  /// Uneven X spacing can otherwise let a distant neighbour pull a control
+  /// handle beyond either endpoint. The cubic then travels backwards in X,
+  /// producing loops and ambiguous tracking roots. Clamping both handles to
+  /// the local interval prevents endpoint escape; collapsing crossed handles
+  /// to their isotonic midpoint prevents an internal direction reversal while
+  /// retaining as much of the requested tension as possible.
+  static (double, double) _boundedBezierControlXs({
+    required double startX,
+    required double endX,
+    required double rawControl1X,
+    required double rawControl2X,
+  }) {
+    if (startX == endX) return (startX, endX);
+
+    final minimumX = math.min(startX, endX);
+    final maximumX = math.max(startX, endX);
+    var control1X = rawControl1X.clamp(minimumX, maximumX).toDouble();
+    var control2X = rawControl2X.clamp(minimumX, maximumX).toDouble();
+    final handlesCross = startX < endX
+        ? control1X > control2X
+        : control1X < control2X;
+    if (handlesCross) {
+      final midpoint = (control1X + control2X) / 2.0;
+      control1X = midpoint;
+      control2X = midpoint;
+    }
+    return (control1X, control2X);
   }
 
   static CubicSegment? _monotoneSegmentFor<T>({

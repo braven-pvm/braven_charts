@@ -515,46 +515,50 @@ class SeriesElement implements DataHitElement {
     final points = pathSeries.points
         .map((point) => _currentTransform.dataToPlot(point.x, point.y))
         .toList(growable: false);
-    if (points.length == 1) return (position - points.single).distance;
-
     var nearest = double.infinity;
-    for (var index = 0; index < points.length - 1; index++) {
-      final start = points[index];
-      final end = points[index + 1];
-      final segmentDistance = switch (interpolation) {
-        LineInterpolation.linear => _distanceToLineSegment(
-          position,
-          start,
-          end,
-        ),
-        LineInterpolation.stepped => math.min(
-          _distanceToLineSegment(position, start, Offset(end.dx, start.dy)),
-          _distanceToLineSegment(position, Offset(end.dx, start.dy), end),
-        ),
-        LineInterpolation.bezier || LineInterpolation.monotone => () {
-          final minimumX = math.min(start.dx, end.dx);
-          final maximumX = math.max(start.dx, end.dx);
-          if (position.dx < minimumX || position.dx > maximumX) {
-            return math.min(
-              (position - start).distance,
-              (position - end).distance,
+    for (final run in _finitePlotPointRuns(points)) {
+      if (run.length == 1) {
+        nearest = math.min(nearest, (position - run.single).distance);
+        continue;
+      }
+      for (var index = 0; index < run.length - 1; index++) {
+        final start = run[index];
+        final end = run[index + 1];
+        final segmentDistance = switch (interpolation) {
+          LineInterpolation.linear => _distanceToLineSegment(
+            position,
+            start,
+            end,
+          ),
+          LineInterpolation.stepped => math.min(
+            _distanceToLineSegment(position, start, Offset(end.dx, start.dy)),
+            _distanceToLineSegment(position, Offset(end.dx, start.dy), end),
+          ),
+          LineInterpolation.bezier || LineInterpolation.monotone => () {
+            final minimumX = math.min(start.dx, end.dx);
+            final maximumX = math.max(start.dx, end.dx);
+            if (position.dx < minimumX || position.dx > maximumX) {
+              return math.min(
+                (position - start).distance,
+                (position - end).distance,
+              );
+            }
+            final curveY = InterpolationGeometry.interpolateYForX<Offset>(
+              points: run,
+              startIndex: index,
+              targetX: position.dx,
+              interpolation: interpolation,
+              getX: (point) => point.dx,
+              getY: (point) => point.dy,
+              tension: tension,
             );
-          }
-          final curveY = InterpolationGeometry.interpolateYForX<Offset>(
-            points: points,
-            startIndex: index,
-            targetX: position.dx,
-            interpolation: interpolation,
-            getX: (point) => point.dx,
-            getY: (point) => point.dy,
-            tension: tension,
-          );
-          return (position.dy - curveY).abs();
-        }(),
-      };
-      nearest = math.min(nearest, segmentDistance);
+            return (position.dy - curveY).abs();
+          }(),
+        };
+        nearest = math.min(nearest, segmentDistance);
+      }
     }
-    return nearest;
+    return nearest.isFinite ? nearest : null;
   }
 
   double get _pathInteractionStrokeScale => isHovered
@@ -621,6 +625,7 @@ class SeriesElement implements DataHitElement {
     _clearResolvedScatterGeometry();
     _clearResolvedCandlestickGeometry();
     _clearResolvedRangeAreaGeometry();
+    _cachedHasNonFiniteLineX = null;
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -645,6 +650,7 @@ class SeriesElement implements DataHitElement {
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
+    _cachedHasNonFiniteLineX = null;
     _barViewportIndex = null;
     _pointSelectionViewportIndex = null;
     _clearResolvedBarGeometry();
@@ -685,6 +691,7 @@ class SeriesElement implements DataHitElement {
 
   // Segment color caching - fast-path check result
   bool? _cachedHasSegmentOverrides;
+  bool? _cachedHasNonFiniteLineX;
 
   // TextPainter cache for data-point labels — keyed by formatted text string
   final Map<String, TextPainter> _labelPainterCache = {};
@@ -3931,6 +3938,61 @@ class SeriesElement implements DataHitElement {
     return _cachedHasSegmentOverrides!;
   }
 
+  ({List<ChartDataPoint> points, List<int> originalIndices}) _visibleLinePoints(
+    LineChartSeries series,
+  ) {
+    final visiblePoints = <ChartDataPoint>[];
+    final visibleIndices = <int>[];
+    if (series.points.isEmpty) {
+      return (points: visiblePoints, originalIndices: visibleIndices);
+    }
+
+    _cachedHasNonFiniteLineX ??= series.points.any(
+      (point) => !point.x.isFinite,
+    );
+    if (_cachedHasNonFiniteLineX!) {
+      for (var index = 0; index < series.points.length; index++) {
+        visiblePoints.add(series.points[index]);
+        visibleIndices.add(index);
+      }
+      return (points: visiblePoints, originalIndices: visibleIndices);
+    }
+
+    final xMin = _currentTransform.dataXMin;
+    final xMax = _currentTransform.dataXMax;
+    final margin = (xMax - xMin) * 0.1;
+
+    var lo = 0;
+    var hi = series.points.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (series.points[mid].x < xMin - margin) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    final startIndex = lo > 0 ? lo - 1 : 0;
+
+    lo = startIndex;
+    hi = series.points.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (series.points[mid].x <= xMax + margin) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    final endIndex = lo < series.points.length ? lo + 1 : series.points.length;
+
+    for (var index = startIndex; index < endIndex; index++) {
+      visiblePoints.add(series.points[index]);
+      visibleIndices.add(index);
+    }
+    return (points: visiblePoints, originalIndices: visibleIndices);
+  }
+
   /// Original single-color line rendering (fast path).
   void _paintLineSeriesSingleColor(
     Canvas canvas,
@@ -3960,53 +4022,9 @@ class SeriesElement implements DataHitElement {
     if (needsRegeneration) {
       // PERFORMANCE OPTIMIZATION: Only process points within visible viewport
       // During streaming with 500+ points but only 100 visible, this saves 80% of work
-      final visiblePoints = <ChartDataPoint>[];
-      final visibleIndices =
-          <int>[]; // Track original indices for hover matching
-      final xMin = _currentTransform.dataXMin;
-      final xMax = _currentTransform.dataXMax;
-
-      // Use a margin based on the visible range to ensure edge rendering is correct
-      // at all zoom levels. 10% of visible range ensures lines connect properly.
-      final xSpan = xMax - xMin;
-      final margin = xSpan * 0.1;
-
-      // Find the first visible point index using binary search for efficiency
-      int startIdx = 0;
-      int endIdx = series.points.length;
-
-      // Binary search for first point >= xMin - margin
-      int lo = 0, hi = series.points.length;
-      while (lo < hi) {
-        final mid = (lo + hi) >> 1;
-        if (series.points[mid].x < xMin - margin) {
-          lo = mid + 1;
-        } else {
-          hi = mid;
-        }
-      }
-      // Include one point before for line continuity
-      startIdx = lo > 0 ? lo - 1 : 0;
-
-      // Binary search for first point > xMax + margin
-      lo = startIdx;
-      hi = series.points.length;
-      while (lo < hi) {
-        final mid = (lo + hi) >> 1;
-        if (series.points[mid].x <= xMax + margin) {
-          lo = mid + 1;
-        } else {
-          hi = mid;
-        }
-      }
-      // Include one point after for line continuity
-      endIdx = lo < series.points.length ? lo + 1 : series.points.length;
-
-      // Collect visible points
-      for (int idx = startIdx; idx < endIdx; idx++) {
-        visiblePoints.add(series.points[idx]);
-        visibleIndices.add(idx);
-      }
+      final visible = _visibleLinePoints(series);
+      final visiblePoints = visible.points;
+      final visibleIndices = visible.originalIndices;
 
       // If no visible points, skip rendering
       if (visiblePoints.isEmpty) {
@@ -4018,20 +4036,19 @@ class SeriesElement implements DataHitElement {
       }
 
       // PRE-TRANSFORM visible points ONCE to avoid redundant calculations
-      final transformedPoints = visiblePoints
-          .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-          .toList();
+      var containsNonFinitePoint = false;
+      final transformedPoints = <Offset>[];
+      for (final point in visiblePoints) {
+        final transformed = _currentTransform.dataToPlot(point.x, point.y);
+        containsNonFinitePoint |= !_isFinitePlotPoint(transformed);
+        transformedPoints.add(transformed);
+      }
 
-      final path = Path();
-      path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
-
-      InterpolationGeometry.addPathSegments<Offset>(
-        path: path,
-        points: transformedPoints,
-        interpolation: series.interpolation,
-        getX: (point) => point.dx,
-        getY: (point) => point.dy,
-        tension: series.tension,
+      final path = _buildPathFromFiniteRuns(
+        transformedPoints,
+        series.interpolation,
+        series.tension,
+        containsNonFinitePoint: containsNonFinitePoint,
       );
 
       // Cache the generated path, transformed points, original indices, and transform
@@ -4102,53 +4119,10 @@ class SeriesElement implements DataHitElement {
     final opacity = _getOpacity();
     final effectiveStrokeWidth = strokeWidth * _pathInteractionStrokeScale;
 
-    // Filter to visible points (same optimization as single-color path)
-    final visiblePoints = <ChartDataPoint>[];
-    final visibleIndices = <int>[]; // Track original indices for style lookup
-    final xMin = _currentTransform.dataXMin;
-    final xMax = _currentTransform.dataXMax;
-
-    // Use a margin based on the visible range to ensure edge rendering is correct
-    // at all zoom levels. 10% of visible range ensures lines connect properly.
-    final xSpan = xMax - xMin;
-    final margin = xSpan * 0.1;
-
-    // Find the first visible point index using binary search for efficiency
-    int startIdx = 0;
-    int endIdx = series.points.length;
-
-    // Binary search for first point >= xMin - margin
-    int lo = 0, hi = series.points.length;
-    while (lo < hi) {
-      final mid = (lo + hi) >> 1;
-      if (series.points[mid].x < xMin - margin) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    // Include one point before for line continuity
-    startIdx = lo > 0 ? lo - 1 : 0;
-
-    // Binary search for first point > xMax + margin
-    lo = startIdx;
-    hi = series.points.length;
-    while (lo < hi) {
-      final mid = (lo + hi) >> 1;
-      if (series.points[mid].x <= xMax + margin) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    // Include one point after for line continuity
-    endIdx = lo < series.points.length ? lo + 1 : series.points.length;
-
-    // Collect visible points
-    for (int i = startIdx; i < endIdx; i++) {
-      visiblePoints.add(series.points[i]);
-      visibleIndices.add(i);
-    }
+    // Filter to visible points (same optimization as single-color path).
+    final visible = _visibleLinePoints(series);
+    final visiblePoints = visible.points;
+    final visibleIndices = visible.originalIndices;
 
     if (visiblePoints.length < 2) return;
 
@@ -4223,6 +4197,15 @@ class SeriesElement implements DataHitElement {
     LineInterpolation interpolation,
     double tension,
   ) {
+    if (allPoints
+        .sublist(startIndex, endIndex + 1)
+        .any((point) => !_isFinitePlotPoint(point))) {
+      return _buildPathFromFiniteRuns(
+        allPoints.sublist(startIndex, endIndex + 1),
+        interpolation,
+        tension,
+      );
+    }
     final path = Path();
 
     // Move to first point in region
@@ -4240,6 +4223,63 @@ class SeriesElement implements DataHitElement {
     );
     return path;
   }
+
+  Path _buildPathFromFiniteRuns(
+    List<Offset> points,
+    LineInterpolation interpolation,
+    double tension, {
+    bool? containsNonFinitePoint,
+  }) {
+    final path = Path();
+    if (points.isEmpty) return path;
+    final hasNonFinitePoint =
+        containsNonFinitePoint ??
+        points.any((point) => !_isFinitePlotPoint(point));
+    if (!hasNonFinitePoint) {
+      path.moveTo(points.first.dx, points.first.dy);
+      InterpolationGeometry.addPathSegments<Offset>(
+        path: path,
+        points: points,
+        interpolation: interpolation,
+        getX: (point) => point.dx,
+        getY: (point) => point.dy,
+        tension: tension,
+      );
+      return path;
+    }
+    for (final run in _finitePlotPointRuns(points)) {
+      path.moveTo(run.first.dx, run.first.dy);
+      InterpolationGeometry.addPathSegments<Offset>(
+        path: path,
+        points: run,
+        interpolation: interpolation,
+        getX: (point) => point.dx,
+        getY: (point) => point.dy,
+        tension: tension,
+      );
+    }
+    return path;
+  }
+
+  Iterable<List<Offset>> _finitePlotPointRuns(List<Offset> points) sync* {
+    var start = 0;
+    while (start < points.length) {
+      while (start < points.length && !_isFinitePlotPoint(points[start])) {
+        start++;
+      }
+      if (start >= points.length) return;
+
+      var end = start + 1;
+      while (end < points.length && _isFinitePlotPoint(points[end])) {
+        end++;
+      }
+      yield points.sublist(start, end);
+      start = end;
+    }
+  }
+
+  bool _isFinitePlotPoint(Offset point) =>
+      point.dx.isFinite && point.dy.isFinite;
 
   /// Gets the current opacity based on selection/hover state.
   double _getOpacity() {
@@ -6370,6 +6410,7 @@ class SeriesElement implements DataHitElement {
     // Pass 1: background pills — drawn first so markers appear on top of them.
     if (paintLabels && labelConfig.background != null) {
       for (int i = 0; i < transformedPoints.length; i++) {
+        if (!_isFinitePlotPoint(transformedPoints[i])) continue;
         final originalIndex = originalIndices?[i] ?? i;
         if (originalIndex < series.points.length) {
           _paintDataPointLabelBackground(
@@ -6388,6 +6429,7 @@ class SeriesElement implements DataHitElement {
     // Pass 2: marker circles — always on top of background pills.
     for (int i = 0; i < transformedPoints.length; i++) {
       final plotPos = transformedPoints[i];
+      if (!_isFinitePlotPoint(plotPos)) continue;
       final originalIndex = originalIndices?[i] ?? i;
       final targetIndex = _targetIndexForRenderIndex(originalIndex);
       if (isThisSeriesHovered && targetIndex == hoveredMarker!.markerIndex) {
@@ -6404,6 +6446,7 @@ class SeriesElement implements DataHitElement {
     // Pass 3: label text — floats above markers.
     if (paintLabels) {
       for (int i = 0; i < transformedPoints.length; i++) {
+        if (!_isFinitePlotPoint(transformedPoints[i])) continue;
         final originalIndex = originalIndices?[i] ?? i;
         if (originalIndex < series.points.length) {
           _paintDataPointLabelText(
@@ -6431,28 +6474,31 @@ class SeriesElement implements DataHitElement {
       final AreaChartSeries s => s.inlineLabel,
       _ => null,
     };
-    if (config == null || transformedPoints.length < 2) return;
+    if (config == null) return;
+    final finitePoints = transformedPoints
+        .where(_isFinitePlotPoint)
+        .toList(growable: false);
+    if (finitePoints.length < 2) return;
 
     final double anchorX = switch (config.position) {
-      SeriesLabelPosition.left => transformedPoints.first.dx,
+      SeriesLabelPosition.left => finitePoints.first.dx,
       SeriesLabelPosition.center =>
-        (transformedPoints.first.dx + transformedPoints.last.dx) / 2,
-      SeriesLabelPosition.right => transformedPoints.last.dx,
+        (finitePoints.first.dx + finitePoints.last.dx) / 2,
+      SeriesLabelPosition.right => finitePoints.last.dx,
     };
 
     double? interpolatedY;
-    for (int i = 0; i < transformedPoints.length - 1; i++) {
-      final a = transformedPoints[i];
-      final b = transformedPoints[i + 1];
+    for (int i = 0; i < finitePoints.length - 1; i++) {
+      final a = finitePoints[i];
+      final b = finitePoints[i + 1];
       if (anchorX >= a.dx && anchorX <= b.dx) {
         final t = (b.dx == a.dx) ? 0.0 : (anchorX - a.dx) / (b.dx - a.dx);
         interpolatedY = a.dy + t * (b.dy - a.dy);
         break;
       }
     }
-    if (interpolatedY == null &&
-        (anchorX - transformedPoints.last.dx).abs() < 1.0) {
-      interpolatedY = transformedPoints.last.dy;
+    if (interpolatedY == null && (anchorX - finitePoints.last.dx).abs() < 1.0) {
+      interpolatedY = finitePoints.last.dy;
     }
     if (interpolatedY == null) return;
 

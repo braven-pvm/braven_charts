@@ -35,6 +35,51 @@ void main() {
       },
     );
 
+    test('bezier close-point clusters remain x-monotonic at every tension', () {
+      final points = const [
+        ChartDataPoint(x: 14, y: 48),
+        ChartDataPoint(x: 19, y: 55),
+        ChartDataPoint(x: 24, y: 62),
+        ChartDataPoint(x: 28.5, y: 82),
+        ChartDataPoint(x: 32.8, y: 94),
+        ChartDataPoint(x: 35.9, y: 116),
+        ChartDataPoint(x: 36, y: 138),
+        ChartDataPoint(x: 36.08, y: 136),
+        ChartDataPoint(x: 57.5, y: 113),
+      ];
+
+      for (final tension in const [0.0, 0.1, 0.25, 0.7, 1.0]) {
+        for (var startIndex = 0; startIndex < points.length - 1; startIndex++) {
+          final segment = InterpolationGeometry.cubicSegmentFor<ChartDataPoint>(
+            points: points,
+            startIndex: startIndex,
+            interpolation: LineInterpolation.bezier,
+            getX: (point) => point.x,
+            getY: (point) => point.y,
+            tension: tension,
+          );
+
+          expect(segment, isNotNull);
+          final cubic = segment!;
+          expect(cubic.control1X, inInclusiveRange(cubic.startX, cubic.endX));
+          expect(cubic.control2X, inInclusiveRange(cubic.startX, cubic.endX));
+          expect(cubic.control1X, lessThanOrEqualTo(cubic.control2X));
+
+          var previousX = cubic.startX;
+          for (var step = 1; step <= 100; step++) {
+            final x = cubic.evaluateX(step / 100);
+            expect(
+              x,
+              greaterThanOrEqualTo(previousX - 1e-10),
+              reason:
+                  'segment $startIndex reversed X at tension $tension and step $step',
+            );
+            previousX = x;
+          }
+        }
+      }
+    });
+
     test('monotone interpolation stays within the segment y-range', () {
       final points = const [
         ChartDataPoint(x: 0, y: 0),

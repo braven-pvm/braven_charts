@@ -193,6 +193,8 @@ void main() {
       expect(find.text('Spotlight'), findsWidgets);
       expect(find.text('Forecast'), findsWidgets);
       expect(find.text('Synchronized'), findsWidgets);
+      expect(find.text('Data gaps'), findsWidgets);
+      expect(find.text('Close points'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -209,6 +211,95 @@ void main() {
       );
       expect(chart.series, hasLength(3));
       expect(chart.normalizationMode, NormalizationMode.perSeries);
+    },
+  );
+
+  testWidgets(
+    'Line Data gaps keeps finite runs visible and omits Source generation',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final dataGaps = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Data gaps'),
+      );
+      await tester.ensureVisible(dataGaps);
+      await tester.pumpAndSettle();
+      await tester.tap(dataGaps);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final series = chart.series.whereType<LineChartSeries>().toList();
+      expect(series, hasLength(2));
+      expect(series.first.points.where((point) => point.isValid), hasLength(7));
+      expect(series.last.points.where((point) => point.isValid), hasLength(7));
+      expect(
+        find.text(
+          '2 sensor streams · 4 invalid samples shown as gaps · finite observations remain interactive',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+          matching: find.text('Source'),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Line Close points guards Bezier geometry beside a linear reference',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final closePoints = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Close points'),
+      );
+      await tester.ensureVisible(closePoints);
+      await tester.pumpAndSettle();
+      await tester.tap(closePoints);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final series = chart.series.whereType<LineChartSeries>().toList();
+      expect(series, hasLength(2));
+      expect(series.first.interpolation, LineInterpolation.linear);
+      expect(series.last.interpolation, LineInterpolation.bezier);
+      expect(series.last.tension, 0.25);
+      expect(
+        series.last.points[6].x - series.last.points[5].x,
+        closeTo(0.1, 1e-9),
+      );
+      expect(
+        series.last.points[7].x - series.last.points[6].x,
+        closeTo(0.08, 1e-9),
+      );
+      expect(
+        series.last.points[8].x - series.last.points[7].x,
+        closeTo(0.06, 1e-9),
+      );
+      expect(
+        series.last.points[14].x - series.last.points[13].x,
+        closeTo(0.03, 1e-9),
+      );
+      expect(series.last.points, hasLength(18));
+      expect(
+        find.text(
+          'Bézier vs linear reference · 2 close clusters · 11 clustered samples · tension 0.25',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('line-close-points-tension')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 
