@@ -368,7 +368,7 @@ final class HeatmapAnimationStyle {
 /// A native Cartesian matrix whose independent measured value is encoded by
 /// colour.
 ///
-/// [x] and [y] remain spatial coordinates. [HeatmapDataPoint.value] is not
+/// `x` and `y` remain spatial coordinates. [HeatmapDataPoint.value] is not
 /// substituted into either axis, which keeps colour-scale semantics available
 /// to rendering, interaction, tables, and generated source.
 ///

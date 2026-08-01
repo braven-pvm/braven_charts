@@ -1803,8 +1803,9 @@ class ChartSelectionConfig {
 
   /// Optional row or column expansion for selected Heatmap marks.
   ///
-  /// Expansion never links separate Heatmap series. The default [cell]
-  /// preserves ordinary mark-selection behaviour.
+  /// Expansion never links separate Heatmap series. The default
+  /// [HeatmapSelectionExpansion.cell] preserves ordinary mark-selection
+  /// behaviour.
   final HeatmapSelectionExpansion heatmapExpansion;
 
   /// Default set operation for a completed selection gesture.

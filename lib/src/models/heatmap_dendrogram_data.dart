@@ -31,7 +31,7 @@ enum HeatmapDendrogramDistanceScale {
 
 /// One normalized line segment in a portable dendrogram layout.
 ///
-/// [category] coordinates follow the accepted cluster leaf order. [distance]
+/// `category` coordinates follow the accepted cluster leaf order. `distance`
 /// coordinates run from zero at leaves to one at the root.
 @immutable
 final class HeatmapDendrogramSegment {
