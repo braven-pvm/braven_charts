@@ -3125,7 +3125,21 @@ class SeriesElement implements DataHitElement {
     canvas.clipRect(plotBounds);
     final fill = Paint()..style = PaintingStyle.fill;
     final border = Paint()..style = PaintingStyle.stroke;
-    final coordinateBounds = _heatmapCoordinateBounds(heatmap);
+    final revealProgress = _effectiveRevealProgress;
+    final animation = heatmap.animation;
+    final hasActiveReveal =
+        animation.entranceMode != HeatmapEntranceMode.none &&
+        revealProgress < 1;
+    if (hasActiveReveal && revealProgress <= 0) {
+      canvas.restore();
+      return;
+    }
+    final coordinateBounds =
+        hasActiveReveal &&
+            animation.entranceOrder != HeatmapEntranceOrder.simultaneous &&
+            animation.staggerFraction > 0
+        ? _heatmapCoordinateBounds(heatmap)
+        : null;
     for (final index in visibleHeatmapPointIndices) {
       final cell = heatmap.cellAt(index);
       if (_isHiddenByHeatmapValueFilter(heatmap, cell)) continue;
@@ -3133,11 +3147,9 @@ class SeriesElement implements DataHitElement {
       if (!rect.overlaps(plotBounds) || rect.isEmpty) continue;
       var color = _heatmapCellColor(heatmap, cell);
       if (color == null || color.a == 0) continue;
-      final cellProgress = _heatmapCellRevealProgress(
-        heatmap,
-        cell,
-        coordinateBounds,
-      );
+      final cellProgress = hasActiveReveal
+          ? _heatmapCellRevealProgress(heatmap, cell, coordinateBounds)
+          : 1.0;
       if (cellProgress <= 0) continue;
       if (heatmap.animation.entranceMode == HeatmapEntranceMode.scale &&
           cellProgress < 1) {
@@ -3232,7 +3244,7 @@ class SeriesElement implements DataHitElement {
   double _heatmapCellRevealProgress(
     HeatmapChartSeries heatmap,
     HeatmapDataPoint cell,
-    (double, double, double, double) coordinateBounds,
+    (double, double, double, double)? coordinateBounds,
   ) {
     final progress = _effectiveRevealProgress;
     final animation = heatmap.animation;
@@ -3245,16 +3257,9 @@ class SeriesElement implements DataHitElement {
       return progress;
     }
 
-    final x = _normalizedCoordinate(
-      cell.x,
-      coordinateBounds.$1,
-      coordinateBounds.$2,
-    );
-    final y = _normalizedCoordinate(
-      cell.y,
-      coordinateBounds.$3,
-      coordinateBounds.$4,
-    );
+    final bounds = coordinateBounds!;
+    final x = _normalizedCoordinate(cell.x, bounds.$1, bounds.$2);
+    final y = _normalizedCoordinate(cell.y, bounds.$3, bounds.$4);
     final order = switch (animation.entranceOrder) {
       HeatmapEntranceOrder.simultaneous => 0.0,
       HeatmapEntranceOrder.row => y,

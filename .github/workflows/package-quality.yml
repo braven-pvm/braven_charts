@@ -64,7 +64,20 @@ jobs:
         run: flutter analyze lib
 
       - name: Run package tests
-        run: flutter test
+        run: |
+          mapfile -t TEST_TARGETS < <(find test -type f -name '*_test.dart' ! -path 'test/benchmarks/*' | sort)
+          flutter test "${TEST_TARGETS[@]}"
+
+      # Wall-clock frame budgets are meaningful only when they are not racing
+      # the functional suite or inheriting runtime state from another benchmark.
+      # Keep every benchmark and its existing threshold, but execute each file
+      # in its own serial Flutter process so a failure describes that measured
+      # path rather than cross-benchmark contention or GC state.
+      - name: Run package performance benchmarks
+        run: |
+          while IFS= read -r benchmark; do
+            flutter test "$benchmark" --concurrency=1
+          done < <(find test/benchmarks -type f -name '*_test.dart' | sort)
 
       - name: Upload golden failure diagnostics
         if: failure()
