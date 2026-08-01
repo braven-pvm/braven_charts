@@ -72,15 +72,14 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> _documentedButNotParsed = <String, String>{
   'action':
       'modify_chart protocol key. ChartConfigBuilder only parses create_chart; '
-          'modify_chart is dispatched by the agent host, not by this parser.',
+      'modify_chart is dispatched by the agent host, not by this parser.',
   'parameters':
       'modify_chart protocol key — the action-specific payload, opaque to the '
-          'builder for the same reason as `action`.',
+      'builder for the same reason as `action`.',
   'analysis_type':
       'explain_data protocol key. explain_data returns analysis, never a '
-          'chart, so no config is built from it.',
-  'series_ids':
-      'explain_data protocol key, scoping the analysis; same reason.',
+      'chart, so no config is built from it.',
+  'series_ids': 'explain_data protocol key, scoping the analysis; same reason.',
 };
 
 /// Parsed by `ChartConfigBuilder`, absent from the tool schema.
@@ -112,11 +111,16 @@ const Map<String, String> _parsedButNotDocumented = <String, String>{};
 /// The list may SHRINK (a class gains a `copyWith` and gets annotated); it may
 /// not grow unnoticed.
 ///
-/// Now EMPTY: all 22 classes that once lived here (the `Bar*Style` /
+/// The original 22 classes that once lived here (the `Bar*Style` /
 /// `Candlestick*Style` / `Scatter*Config` families) gained a `copyWith` and a
 /// `@chartSurface` annotation in convergence slice 3a, so they are modelled in
-/// the surface manifest and no longer construction targets outside it.
-const Set<String> _builderTargetsOutsideSurfaceModel = <String>{};
+/// the surface manifest and are no longer construction targets outside it.
+/// `HeatmapCellBounds` is deliberately a validated data-value object rather
+/// than mutable chart configuration; the builder constructs it from the
+/// already-modelled optional `HeatmapDataPoint.bounds` payload.
+const Set<String> _builderTargetsOutsideSurfaceModel = <String>{
+  'HeatmapCellBounds',
+};
 
 /// Types the builder names that are not config at all — the widget it builds,
 /// its own result type, and Flutter/dart:core values.
@@ -130,10 +134,10 @@ const Set<String> _nonConfigConstructions = <String>{
 
 /// The AI config builder's source.
 String get _builderSource => File(
-      '${Directory.current.path}${Platform.pathSeparator}lib'
-      '${Platform.pathSeparator}src${Platform.pathSeparator}ai'
-      '${Platform.pathSeparator}chart_config_builder.dart',
-    ).readAsStringSync();
+  '${Directory.current.path}${Platform.pathSeparator}lib'
+  '${Platform.pathSeparator}src${Platform.pathSeparator}ai'
+  '${Platform.pathSeparator}chart_config_builder.dart',
+).readAsStringSync();
 
 /// Every key of every `properties` map in the tool schemas, flattened.
 Set<String> _documentedKeys() {
@@ -161,29 +165,29 @@ Set<String> _documentedKeys() {
 
 /// String literals in a MAP-SUBSCRIPT position — definitely parsed.
 Set<String> _parsedKeys(String source) => <String>{
-      for (final match
-          in RegExp(r"""[A-Za-z_][A-Za-z0-9_]*\??\[\s*'([a-z0-9_]+)'\s*\]""")
-              .allMatches(source))
-        match.group(1)!,
-      for (final match
-          in RegExp(r"""containsKey\(\s*'([a-z0-9_]+)'\s*\)""")
-              .allMatches(source))
-        match.group(1)!,
-    };
+  for (final match in RegExp(
+    r"""[A-Za-z_][A-Za-z0-9_]*\??\[\s*'([a-z0-9_]+)'\s*\]""",
+  ).allMatches(source))
+    match.group(1)!,
+  for (final match in RegExp(
+    r"""containsKey\(\s*'([a-z0-9_]+)'\s*\)""",
+  ).allMatches(source))
+    match.group(1)!,
+};
 
 /// Every snake_case literal the builder names — plausibly known.
 Set<String> _mentionedKeys(String source) => <String>{
-      for (final match
-          in RegExp(r"""'([a-z][a-z0-9_]*)'""").allMatches(source))
-        match.group(1)!,
-    };
+  for (final match in RegExp(r"""'([a-z][a-z0-9_]*)'""").allMatches(source))
+    match.group(1)!,
+};
 
 /// Stems of the `prefix:`-style helpers, which build keys at runtime.
 Set<String> _keyPrefixes(String source) => <String>{
-      for (final match
-          in RegExp(r"""prefix:\s*'([a-z][a-z0-9_]*)'""").allMatches(source))
-        match.group(1)!,
-    };
+  for (final match in RegExp(
+    r"""prefix:\s*'([a-z][a-z0-9_]*)'""",
+  ).allMatches(source))
+    match.group(1)!,
+};
 
 void main() {
   late Set<String> documented;
@@ -205,29 +209,40 @@ void main() {
 
   test('the extraction produced plausible sets', () {
     // A regex that silently stopped matching would make both gates vacuous.
-    expect(documented, hasLength(greaterThan(200)),
-        reason: 'the schema walk found almost no properties');
-    expect(parsed, hasLength(greaterThan(150)),
-        reason: 'the subscript scan found almost no keys — the builder was '
-            'probably restructured away from literal map reads, and this '
-            'file needs a new extraction method');
-    expect(parsed.difference(mentioned), isEmpty,
-        reason: 'every subscripted key must also be a mentioned literal — '
-            'the generous set is not a superset of the conservative one, so '
-            'one of the two regexes is wrong');
+    expect(
+      documented,
+      hasLength(greaterThan(200)),
+      reason: 'the schema walk found almost no properties',
+    );
+    expect(
+      parsed,
+      hasLength(greaterThan(150)),
+      reason:
+          'the subscript scan found almost no keys — the builder was '
+          'probably restructured away from literal map reads, and this '
+          'file needs a new extraction method',
+    );
+    expect(
+      parsed.difference(mentioned),
+      isEmpty,
+      reason:
+          'every subscripted key must also be a mentioned literal — '
+          'the generous set is not a superset of the conservative one, so '
+          'one of the two regexes is wrong',
+    );
     expect(documented, contains('chart_type'));
     expect(parsed, contains('chart_type'));
   });
 
   test('FORWARD: every documented key is known to ChartConfigBuilder', () {
     final gaps = documented.where((key) => !isKnownToBuilder(key)).toSet();
-    final unexpected = gaps.difference(_documentedButNotParsed.keys.toSet())
-        .toList()
-      ..sort();
+    final unexpected =
+        gaps.difference(_documentedButNotParsed.keys.toSet()).toList()..sort();
     expect(
       unexpected,
       isEmpty,
-      reason: 'NEW forward drift: these keys are documented to LLM callers '
+      reason:
+          'NEW forward drift: these keys are documented to LLM callers '
           'but ChartConfigBuilder never names them, so setting them does '
           'nothing and reports no error. Either parse them, remove them from '
           'the schema, or pin them in _documentedButNotParsed with a '
@@ -236,28 +251,29 @@ void main() {
   });
 
   test('FORWARD: the pinned forward gaps are all still real', () {
-    final stale = _documentedButNotParsed.keys
-        .where((key) => !documented.contains(key) || isKnownToBuilder(key))
-        .toList()
-      ..sort();
+    final stale =
+        _documentedButNotParsed.keys
+            .where((key) => !documented.contains(key) || isKnownToBuilder(key))
+            .toList()
+          ..sort();
     expect(
       stale,
       isEmpty,
-      reason: 'these forward gaps were fixed but are still pinned. Delete '
+      reason:
+          'these forward gaps were fixed but are still pinned. Delete '
           'them from _documentedButNotParsed:\n${stale.join('\n')}',
     );
   });
 
-  test('REVERSE: every key the builder parses is documented in the schema',
-      () {
+  test('REVERSE: every key the builder parses is documented in the schema', () {
     final gaps = parsed.difference(documented);
-    final unexpected = gaps.difference(_parsedButNotDocumented.keys.toSet())
-        .toList()
-      ..sort();
+    final unexpected =
+        gaps.difference(_parsedButNotDocumented.keys.toSet()).toList()..sort();
     expect(
       unexpected,
       isEmpty,
-      reason: 'NEW reverse drift: ChartConfigBuilder reads these keys but the '
+      reason:
+          'NEW reverse drift: ChartConfigBuilder reads these keys but the '
           'tool schema never offers them, so an LLM cannot discover chart '
           'styling this package already supports. Document them in '
           'chart_tool_schema.dart, or pin them in _parsedButNotDocumented '
@@ -266,14 +282,16 @@ void main() {
   });
 
   test('REVERSE: the pinned reverse gaps are all still real', () {
-    final stale = _parsedButNotDocumented.keys
-        .where((key) => !parsed.contains(key) || documented.contains(key))
-        .toList()
-      ..sort();
+    final stale =
+        _parsedButNotDocumented.keys
+            .where((key) => !parsed.contains(key) || documented.contains(key))
+            .toList()
+          ..sort();
     expect(
       stale,
       isEmpty,
-      reason: 'these reverse gaps were fixed but are still pinned. Delete '
+      reason:
+          'these reverse gaps were fixed but are still pinned. Delete '
           'them from _parsedButNotDocumented:\n${stale.join('\n')}',
     );
   });
@@ -281,15 +299,17 @@ void main() {
   test('every candlestick style key the builder parses stays documented', () {
     // Regression guard for the closed reverse gap: the ten candlestick style
     // keys the builder subscripts must remain discoverable in the tool schema.
-    final undocumentedCandlestick = parsed
-        .difference(documented)
-        .where((key) => key.startsWith('candlestick_'))
-        .toList()
-      ..sort();
+    final undocumentedCandlestick =
+        parsed
+            .difference(documented)
+            .where((key) => key.startsWith('candlestick_'))
+            .toList()
+          ..sort();
     expect(
       undocumentedCandlestick,
       isEmpty,
-      reason: 'candlestick style keys must stay advertised in create_chart '
+      reason:
+          'candlestick style keys must stay advertised in create_chart '
           'style.properties; these are parsed but not documented:\n'
           '${undocumentedCandlestick.join('\n')}',
     );
@@ -325,9 +345,9 @@ void main() {
     // on a normalized form, which is the most favourable possible mapping.
     String normalize(String name) => name.toLowerCase().replaceAll('_', '');
     final modelledNormalized = modelled.map(normalize).toSet();
-    final covered =
-        parsed.where((key) => modelledNormalized.contains(normalize(key)))
-            .length;
+    final covered = parsed
+        .where((key) => modelledNormalized.contains(normalize(key)))
+        .length;
     // ignore: avoid_print
     print(
       '\n[ai mirror drift]\n'
@@ -354,16 +374,20 @@ void main() {
 
   test('the builder\'s unmodelled construction targets have not grown', () {
     final constructed = <String>{
-      for (final match
-          in RegExp(r'\b([A-Z][A-Za-z0-9_]*)\s*\(').allMatches(_builderSource))
+      for (final match in RegExp(
+        r'\b([A-Z][A-Za-z0-9_]*)\s*\(',
+      ).allMatches(_builderSource))
         match.group(1)!,
     };
-    final outside = constructed
-        .where((name) =>
-            !ChartToolSchema.surfaceDefinitions.containsKey(name) &&
-            !_nonConfigConstructions.contains(name))
-        .toList()
-      ..sort();
+    final outside =
+        constructed
+            .where(
+              (name) =>
+                  !ChartToolSchema.surfaceDefinitions.containsKey(name) &&
+                  !_nonConfigConstructions.contains(name),
+            )
+            .toList()
+          ..sort();
 
     // ignore: avoid_print
     print(
@@ -380,7 +404,8 @@ void main() {
     expect(
       grown,
       isEmpty,
-      reason: 'the builder now constructs config classes the surface model '
+      reason:
+          'the builder now constructs config classes the surface model '
           'cannot see, beyond the reviewed set. Give them a copyWith and '
           '@chartSurface, or pin them in '
           '_builderTargetsOutsideSurfaceModel:\n${grown.join('\n')}',
