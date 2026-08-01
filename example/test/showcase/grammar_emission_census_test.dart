@@ -361,7 +361,7 @@ void main() {
 /// `page -> [tuples, with a verdict, emitting]`, measured 2026-07-31 on
 /// `feature/grammar-cartesian-foundation`.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
-  'Line': <int>[13, 10, 3],
+  'Line': <int>[15, 12, 3],
   'Area': <int>[9, 9, 3],
   'Scatter': <int>[29, 27, 6],
   'BarLab': <int>[28, 28, 0],
@@ -381,11 +381,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[27, 111],
+  _Family.cartesian: <int>[27, 113],
   _Family.radial: <int>[31, 55],
 };
 
-const int _expectedWithVerdict = 166;
+const int _expectedWithVerdict = 168;
 const int _expectedEmitting = 58;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
