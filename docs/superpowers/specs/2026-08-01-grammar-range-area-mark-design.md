@@ -24,9 +24,9 @@ What it *does* close is the **selection lab's Range Area family**, whose bands d
 
 `lib/src/grammar/series_axis_unbinding.dart` enumerates five Cartesian families and returns `null` for everything else — its docstring names range-area explicitly. The generator maps `null` to "series unchanged", so on a legacy single-axis chart (which every Range Area page state is) the *lowered* band keeps `yAxisId` + inline `yAxisConfig` while the *captured* band has neither. `_firstMismatch` then refuses **every** range-area chart, through the generic residual tail that names no field.
 
-`BravenPlot._legacySingleAxisSeries` has the same gap: it returns `null` for the whole plot on an un-unbindable family, so a `geomRangeArea` chain would mount **multi-axis** and re-extract a document carrying `series[*].axisId` + `inlineAxis` the captured chart does not have.
+`BravenPlot._legacySingleAxisSeries` inherits the same gap through the same helper: it calls `seriesWithoutAxisBinding` and returns `null` for the whole plot on any family the helper cannot unbind, so a `geomRangeArea` chain would mount **multi-axis** and re-extract a document carrying `series[*].axisId` + `inlineAxis` the captured chart does not have.
 
-The fix is a one-line arm in each — `RangeAreaChartSeries.copyWith` already exposes `clearYAxisId`/`clearYAxisConfig`. It is called out here because a mark built without it would be complete, correct, and close **zero** panes.
+**The fix is one arm, in the one shared helper** — `RangeAreaChartSeries.copyWith` already exposes `clearYAxisId`/`clearYAxisConfig`, and both callers pick it up at once. That is exactly what the file was split out to guarantee, and it is why this is a two-line change rather than two changes that could drift. It is called out here because a mark built without it would be complete, correct, and close **zero** panes.
 
 ## Architecture
 
@@ -57,7 +57,9 @@ The fix is a one-line arm in each — `RangeAreaChartSeries.copyWith` already ex
 
 `ChartConfigDartEmitter._emitRangeAreaLabelConfig` emits `value`, `labels` and `boundaryGap` but **never `formatter`, and raises no warning**. Because the mark carries `labelConfig` verbatim, the round-trip proof compares that instance against itself — the documented passthrough caveat — so **the proof structurally cannot catch the loss**.
 
-Fixed in this slice by emitting a `// formatter:` placeholder plus a `runtimeValueOmitted` warning, matching what donut already does. **Owner-decided:** fix rather than inherit, since the mark would otherwise ship on a known silent-drop path and the fixture would have to leave `formatter` null to keep the warning list empty — quietly hiding the gap. It touches the Config emitter (BC-0048's territory), so it is called out in the PR.
+The **drift gate cannot catch it either**, and for a nameable reason: `formatter` is omitted from the generated surface manifest (`'Omitted from this schema: formatter (callback — no JSON form)'`), so `source_emitter_drift_test`'s class-aware slice never lists it as a property `RangeAreaLabelConfig` should emit. Callback fields sit in the blind spot of both mechanisms at once — which is what let this survive.
+
+Fixed in this slice by emitting a `// formatter:` placeholder plus a `runtimeValueOmitted` warning, matching what data-point labels and bar labels already do. **Owner-decided:** fix rather than inherit, since the mark would otherwise ship on a known silent-drop path and the fixture would have to leave `formatter` null to keep the warning list empty — quietly hiding the gap. It touches the Config emitter (BC-0048's territory), so it is called out in the PR.
 
 ### E. The BC-0046 obligation
 
@@ -78,7 +80,7 @@ Three constraints from the pattern:
 
 ## Slices
 
-1. **`RangeAreaMark` + lowering** — the mark on `SeriesMark`, the `geomRangeArea` verb, `_lowerRangeArea` with gap semantics and the `invalidRangeAreaRow` translation, plus the two `seriesWithoutAxisBinding` / `_legacySingleAxisSeries` arms. Absorbs the 11 sealed-switch sites.
+1. **`RangeAreaMark` + lowering** — the mark on `SeriesMark`, the `geomRangeArea` verb, `_lowerRangeArea` with gap semantics and the `invalidRangeAreaRow` translation, plus the single `seriesWithoutAxisBinding` arm that unblocks both callers. Absorbs the sealed-switch sites.
 2. **Emitter reversal** — `_planGeometry` arm, the `_fillRows` arm, `_emitGeometry` verb + arguments, new **public seams** over the existing private `_emitRangeArea*` renderers so the two forms cannot disagree.
 3. **The formatter placeholder** — `_emitRangeAreaLabelConfig` gains the `// formatter:` placeholder and `runtimeValueOmitted` warning, pinned by its own test.
 4. **Acceptance and gates** — the maximal whole-list shape; a mounted-page gate for the selection lab's Range Area family; census expectations updated (`_expectedPerPage['Selection']`, `_expectedPerFamily[cartesian]`, `_expectedEmitting`), and the `'no range-area mark'` bucket reconciled.
