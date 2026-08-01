@@ -20,6 +20,7 @@ void main() {
       expect(data.segments, hasLength(6));
       expect(data.nodes, hasLength(5));
       expect(data.nodes.where((node) => node.isLeaf), hasLength(3));
+      expect(data.nodes.where((node) => node.isTerminal), hasLength(3));
       expect(
         data.nodes.singleWhere((node) => node.id == 'column:0,1'),
         const HeatmapDendrogramNode(
@@ -65,6 +66,8 @@ void main() {
       expect(restored.sourceLabels, source.sourceLabels);
       expect(restored.leafOrder, source.leafOrder);
       expect(restored.labels, source.labels);
+      expect(restored.visibleGroups, source.visibleGroups);
+      expect(restored.collapseState, source.collapseState);
       expect(restored.maximumDistance, source.maximumDistance);
       expect(
         restored.segments.map((segment) => segment.toJson()),
@@ -134,6 +137,90 @@ void main() {
       expect(data.labels, ['Alpha', 'Beta']);
       expect(data.sourceLabels, ['Alpha', 'Beta', 'Gamma']);
       expect(data.segments, hasLength(3));
+    });
+
+    test('projects collapsed branches as source-preserving terminals', () {
+      final data = HeatmapDendrogramData(
+        root: _root(distance: 4),
+        sourceLabels: const ['Alpha', 'Beta', 'Gamma'],
+        axis: HeatmapDendrogramAxis.columns,
+        collapseState: HeatmapHierarchyCollapseState(
+          collapsedNodeIds: const ['column:0,1'],
+        ),
+        collapsedLabels: const {'column:0,1': 'Alpha and Beta'},
+      );
+
+      expect(data.leafOrder, [0, 1, 2]);
+      expect(data.labels, ['Alpha and Beta', 'Gamma']);
+      expect(data.visibleGroups.first.sourceIndices, [0, 1]);
+      expect(data.nodes, hasLength(3));
+      expect(data.segments, hasLength(3));
+      expect(
+        data.nodes.singleWhere((node) => node.id == 'column:0,1'),
+        const HeatmapDendrogramNode(
+          id: 'column:0,1',
+          category: 0.25,
+          distance: 0,
+          mergeDistance: 2,
+          memberCount: 2,
+          isTerminal: true,
+        ),
+      );
+      expect(
+        data.nodes.map((node) => node.id),
+        isNot(contains('column:leaf:0')),
+      );
+      expect(data.visibleGroupForNode('column:0,1')?.label, 'Alpha and Beta');
+    });
+
+    test('round-trips collapse state and projected visible groups', () {
+      final source = HeatmapDendrogramData(
+        root: _root(distance: 4),
+        sourceLabels: const ['Alpha', 'Beta', 'Gamma'],
+        axis: HeatmapDendrogramAxis.rows,
+        collapseState: HeatmapHierarchyCollapseState(
+          collapsedNodeIds: const ['column:0,1'],
+        ),
+      );
+
+      final restored = HeatmapDendrogramData.fromJson(source.toJson());
+
+      expect(restored.collapseState, source.collapseState);
+      expect(restored.visibleGroups, source.visibleGroups);
+      expect(restored.nodes, source.nodes);
+      expect(restored.segments, hasLength(3));
+    });
+
+    test('hydrates legacy geometry without projected hierarchy fields', () {
+      final source = HeatmapDendrogramData(
+        root: _root(distance: 4),
+        sourceLabels: const ['Alpha', 'Beta', 'Gamma'],
+        axis: HeatmapDendrogramAxis.columns,
+      );
+      final legacyJson = Map<String, dynamic>.from(source.toJson())
+        ..remove('visibleGroups')
+        ..remove('collapseState');
+      legacyJson['nodes'] = [
+        for (final node in legacyJson['nodes'] as List)
+          Map<String, dynamic>.from(node as Map)..remove('isTerminal'),
+      ];
+
+      final restored = HeatmapDendrogramData.fromJson(legacyJson);
+
+      expect(
+        restored.collapseState,
+        const HeatmapHierarchyCollapseState.empty(),
+      );
+      expect(restored.labels, source.labels);
+      expect(restored.visibleGroups, source.visibleGroups);
+      expect(
+        restored.nodes.every((node) => node.isTerminal == node.isLeaf),
+        isTrue,
+      );
+      expect(
+        restored.segments.map((segment) => segment.toJson()),
+        source.segments.map((segment) => segment.toJson()),
+      );
     });
 
     test('rejects a hierarchy outside the source-label set', () {

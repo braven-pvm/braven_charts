@@ -1,8 +1,9 @@
 // Copyright 2026 Braven Charts contributors
 // SPDX-License-Identifier: MIT
 
-import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
@@ -357,6 +358,75 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('collapsed merge nodes render as matrix-facing terminals', (
+    tester,
+  ) async {
+    final root = HeatmapClusterNode.fromJson(const {
+      'id': 'axis:0,1,2',
+      'distance': 2,
+      'memberIndices': [0, 1, 2],
+      'left': {
+        'id': 'axis:0,1',
+        'distance': 1,
+        'memberIndices': [0, 1],
+        'left': {
+          'id': 'axis:leaf:0',
+          'distance': 0,
+          'memberIndices': [0],
+          'leafIndex': 0,
+        },
+        'right': {
+          'id': 'axis:leaf:1',
+          'distance': 0,
+          'memberIndices': [1],
+          'leafIndex': 1,
+        },
+      },
+      'right': {
+        'id': 'axis:leaf:2',
+        'distance': 0,
+        'memberIndices': [2],
+        'leafIndex': 2,
+      },
+    });
+    final data = HeatmapDendrogramData(
+      root: root,
+      sourceLabels: const ['Alpha', 'Beta', 'Gamma'],
+      axis: HeatmapDendrogramAxis.columns,
+      collapseState: HeatmapHierarchyCollapseState(
+        collapsedNodeIds: ['axis:0,1'],
+      ),
+      collapsedLabels: const {'axis:0,1': 'Alpha and Beta'},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 240,
+          height: 100,
+          child: HeatmapDendrogram(
+            data: data,
+            style: const HeatmapDendrogramStyle(
+              showLeafMarkers: true,
+              showLeafLabels: true,
+              levelOfDetailMode: HeatmapDendrogramLevelOfDetailMode.disabled,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final terminal = data.nodes.singleWhere((node) => node.id == 'axis:0,1');
+    expect(terminal.isTerminal, isTrue);
+    expect(terminal.isLeaf, isFalse);
+    expect(data.labels, ['Alpha and Beta', 'Gamma']);
+    expect(
+      find.bySemanticsLabel('Column dendrogram, 2 categories'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('bounds marker and label presentation in both orientations', (
     tester,
   ) async {
@@ -522,6 +592,195 @@ void main() {
     expect(_pixelAt(rowPixels, 100, 76, 40), _isRed);
     expect(_pixelAt(rowPixels, 100, 82, 40), _isWhite);
   });
+
+  testWidgets('durable branch selection highlights the complete merge glyph', (
+    tester,
+  ) async {
+    final root = HeatmapClusterNode.fromJson(const {
+      'id': 'axis:0,1',
+      'distance': 1,
+      'memberIndices': [0, 1],
+      'left': {
+        'id': 'axis:leaf:0',
+        'distance': 0,
+        'memberIndices': [0],
+        'leafIndex': 0,
+      },
+      'right': {
+        'id': 'axis:leaf:1',
+        'distance': 0,
+        'memberIndices': [1],
+        'leafIndex': 1,
+      },
+    });
+    final data = HeatmapDendrogramData(
+      root: root,
+      sourceLabels: const ['First', 'Second'],
+      axis: HeatmapDendrogramAxis.columns,
+    );
+    const size = Size(120, 80);
+    const style = HeatmapDendrogramStyle(
+      branchColor: Colors.transparent,
+      showLeafBaseline: false,
+      showLeafTicks: false,
+      elbowRadius: 16,
+    );
+    final layout = HeatmapDendrogramLayout(
+      data: data,
+      size: size,
+      edgeInset: style.branchWidth / 2,
+    );
+    final selectedSegment = layout.segments.firstWhere(
+      (segment) => segment.segment.id.endsWith(':join'),
+    );
+    final siblingSegment = layout.segments.firstWhere(
+      (segment) =>
+          segment.segment.nodeId == selectedSegment.segment.nodeId &&
+          segment.segment.id != selectedSegment.segment.id,
+    );
+    final siblingMidpoint = Offset(
+      (siblingSegment.start.dx + siblingSegment.end.dx) / 2,
+      (siblingSegment.start.dy + siblingSegment.end.dy) / 2,
+    );
+    final leftSegment = layout.segments.firstWhere(
+      (segment) => segment.segment.id.endsWith(':left'),
+    );
+    final joinSegment = layout.segments.firstWhere(
+      (segment) => segment.segment.id.endsWith(':join'),
+    );
+    final firstElbow = joinSegment.start;
+    final firstRadius = math.min(
+      style.elbowRadius,
+      math.min(
+            (leftSegment.start - firstElbow).distance,
+            (joinSegment.end - firstElbow).distance,
+          ) /
+          2,
+    );
+    final beforeFirst =
+        firstElbow +
+        (leftSegment.start - firstElbow) *
+            (firstRadius / (leftSegment.start - firstElbow).distance);
+    final afterFirst =
+        firstElbow +
+        (joinSegment.end - firstElbow) *
+            (firstRadius / (joinSegment.end - firstElbow).distance);
+    final firstCurveMidpoint = Offset(
+      (beforeFirst.dx + 2 * firstElbow.dx + afterFirst.dx) / 4,
+      (beforeFirst.dy + 2 * firstElbow.dy + afterFirst.dy) / 4,
+    );
+    final boundaryKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.red,
+          ).copyWith(primary: Colors.red),
+        ),
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: RepaintBoundary(
+            key: boundaryKey,
+            child: ColoredBox(
+              color: Colors.white,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: _SelectedBranchDendrogram(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final boundary =
+        boundaryKey.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+    final image = await tester.runAsync(() => boundary.toImage(pixelRatio: 1));
+    final pixels = (await tester.runAsync(
+      () => image!.toByteData(format: ui.ImageByteFormat.rawRgba),
+    ))!;
+
+    expect(
+      _pixelAt(
+        pixels,
+        size.width.toInt(),
+        siblingMidpoint.dx.round(),
+        siblingMidpoint.dy.round(),
+      ),
+      _isMaterialRed,
+    );
+    expect(
+      _pixelAt(
+        pixels,
+        size.width.toInt(),
+        firstCurveMidpoint.dx.round(),
+        firstCurveMidpoint.dy.round(),
+      ),
+      _isMaterialRed,
+    );
+    expect(
+      _pixelAt(
+        pixels,
+        size.width.toInt(),
+        firstElbow.dx.round(),
+        firstElbow.dy.round(),
+      ),
+      isNot(_isMaterialRed),
+    );
+  });
+}
+
+class _SelectedBranchDendrogram extends StatelessWidget {
+  const _SelectedBranchDendrogram();
+
+  @override
+  Widget build(BuildContext context) {
+    final root = HeatmapClusterNode.fromJson(const {
+      'id': 'axis:0,1',
+      'distance': 1,
+      'memberIndices': [0, 1],
+      'left': {
+        'id': 'axis:leaf:0',
+        'distance': 0,
+        'memberIndices': [0],
+        'leafIndex': 0,
+      },
+      'right': {
+        'id': 'axis:leaf:1',
+        'distance': 0,
+        'memberIndices': [1],
+        'leafIndex': 1,
+      },
+    });
+    final data = HeatmapDendrogramData(
+      root: root,
+      sourceLabels: const ['First', 'Second'],
+      axis: HeatmapDendrogramAxis.columns,
+    );
+    final join = data.segments.firstWhere(
+      (segment) => segment.id.endsWith(':join'),
+    );
+    return HeatmapDendrogram(
+      data: data,
+      style: const HeatmapDendrogramStyle(
+        branchColor: Colors.transparent,
+        showLeafBaseline: false,
+        showLeafTicks: false,
+        elbowRadius: 16,
+      ),
+      interactionState: HeatmapDendrogramInteractionState(
+        selectedTarget: HeatmapDendrogramTargetIdentity(
+          kind: HeatmapDendrogramHitKind.branch,
+          axis: HeatmapDendrogramAxis.columns,
+          nodeId: join.nodeId,
+          segmentId: join.id,
+        ),
+      ),
+    );
+  }
 }
 
 Map<String, dynamic> _balancedRootJson(int start, int end) {
@@ -556,6 +815,11 @@ Color _pixelAt(ByteData bytes, int width, int x, int y) {
 final _isRed = predicate<Color>(
   (color) => color.r > 0.8 && color.g < 0.2 && color.b < 0.2,
   'is a red marker pixel',
+);
+
+final _isMaterialRed = predicate<Color>(
+  (color) => color.r > 0.9 && color.g < 0.35 && color.b < 0.3,
+  'is a Material red selection pixel',
 );
 
 final _isWhite = predicate<Color>(

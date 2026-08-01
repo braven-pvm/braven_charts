@@ -168,6 +168,7 @@ export 'src/models/heatmap_cluster_data.dart';
 export 'src/models/heatmap_contour_data.dart';
 export 'src/models/heatmap_data_point.dart';
 export 'src/models/heatmap_dendrogram_data.dart';
+export 'src/models/heatmap_hierarchy_projection.dart';
 export 'src/models/heatmap_density_data.dart';
 export 'src/models/heatmap_histogram_data.dart';
 export 'src/models/heatmap_viewport_source.dart';
@@ -230,6 +231,7 @@ export 'src/widgets/dialogs/annotation_color_palette.dart'
 export 'src/widgets/chart_legend.dart';
 export 'src/widgets/heatmap_color_legend.dart';
 export 'src/widgets/heatmap_dendrogram.dart';
+export 'src/widgets/heatmap_dendrogram_interaction.dart';
 export 'src/widgets/scatter_marginal_composition.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
