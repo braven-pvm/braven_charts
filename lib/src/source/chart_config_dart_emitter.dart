@@ -2320,6 +2320,17 @@ class ChartConfigDartEmitter {
       });
       writer.writeLine('),');
       _numberIf(writer, 'boundaryGap', config.boundaryGap, 4);
+      if (config.formatter != null) {
+        writer.writeLine(
+          '// formatter: (details) => ..., // Supply application formatting.',
+        );
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'A Range Area label formatter callback was omitted. Provide it from your application.',
+          path: '\$.series[$seriesIndex].labelConfig.formatter',
+        );
+      }
     });
     writer.writeLine('),');
   }
