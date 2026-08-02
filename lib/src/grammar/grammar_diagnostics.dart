@@ -62,6 +62,12 @@ enum GrammarDiagnosticCode {
   /// A Heatmap row could not produce one valid, uniquely identified cell.
   invalidHeatmapRow,
 
+  /// A range-area row broke the band's ordering or interval invariants.
+  invalidRangeAreaRow,
+
+  /// A range-area geom supplied only one of the two interval bounds at a row.
+  incompleteRangeAreaInterval,
+
   /// A facade geom was built without an x or y encoding to inherit.
   ///
   /// Raised by the chained `BravenChart` facade, never by `spec.lower()` — a
@@ -293,6 +299,29 @@ final class GrammarSpecException implements Exception {
     GrammarDiagnosticCode.invalidCandlestickRow,
     'Row $rowIndex of the candlestick mark "$markId" is not a valid candle: '
     '$reason',
+  );
+
+  /// A range-area row broke the band's ordering or interval invariants.
+  factory GrammarSpecException.invalidRangeAreaRow(
+    String markId,
+    int rowIndex,
+    String reason,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidRangeAreaRow,
+    'Row $rowIndex of the range-area mark "$markId" is not a valid interval: '
+    '$reason',
+  );
+
+  /// A range-area row supplied one bound and not the other.
+  factory GrammarSpecException.incompleteRangeAreaInterval(
+    String markId,
+    int rowIndex,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.incompleteRangeAreaInterval,
+    'Row $rowIndex of the range-area mark "$markId" supplied one of low/high '
+    'and not the other. Return null from BOTH to express a gap, or give the '
+    'row a complete interval — a half-specified interval has no defensible '
+    'reading.',
   );
 
   /// A facade geom was built without an x or y encoding to inherit.

@@ -70,43 +70,57 @@ FacetRange? globalRange<T>(PlotSpec<T> spec, List<T> rows, FacetAxis axis) {
 }
 
 /// The position accessors of [mark] that contribute to [axis].
-List<FieldAccessor<T, num>> _axisAccessors<T>(Mark<T> mark, FacetAxis axis) =>
-    switch (mark) {
-      LineMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
-        axis == FacetAxis.x ? x : y,
-      ],
-      AreaMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
-        axis == FacetAxis.x ? x : y,
-      ],
-      BarMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
-        axis == FacetAxis.x ? x : y,
-      ],
-      ScatterMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
-        axis == FacetAxis.x ? x : y,
-      ],
-      HeatmapMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
-        axis == FacetAxis.x ? x : y,
-      ],
-      CandlestickMark<T>(
-        :final x,
-        :final open,
-        :final high,
-        :final low,
-        :final close,
-      ) =>
-        axis == FacetAxis.x
-            ? <FieldAccessor<T, num>>[x]
-            : <FieldAccessor<T, num>>[open, high, low, close],
-      TrendMark<T>() ||
-      ThresholdMark<T>() ||
-      BandMark<T>() ||
-      PointMark<T>() ||
-      // Radial geoms have no Cartesian position, so they contribute nothing to
-      // a shared Cartesian facet range. In practice a faceted radial spec is
-      // rejected up front (facetedRadialUnsupported); this keeps the switch
-      // exhaustive and defensive regardless.
-      RadialMark<T>() => const <Never>[],
-    };
+List<FieldAccessor<T, num>> _axisAccessors<T>(
+  Mark<T> mark,
+  FacetAxis axis,
+) => switch (mark) {
+  LineMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+    axis == FacetAxis.x ? x : y,
+  ],
+  AreaMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+    axis == FacetAxis.x ? x : y,
+  ],
+  BarMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+    axis == FacetAxis.x ? x : y,
+  ],
+  ScatterMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+    axis == FacetAxis.x ? x : y,
+  ],
+  HeatmapMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+    axis == FacetAxis.x ? x : y,
+  ],
+  CandlestickMark<T>(
+    :final x,
+    :final open,
+    :final high,
+    :final low,
+    :final close,
+  ) =>
+    axis == FacetAxis.x
+        ? <FieldAccessor<T, num>>[x]
+        : <FieldAccessor<T, num>>[open, high, low, close],
+  RangeAreaMark<T>(:final x, :final low, :final high) =>
+    axis == FacetAxis.x
+        ? <FieldAccessor<T, num>>[x]
+        : <FieldAccessor<T, num>>[
+            // A facet's shared range is a MIN/MAX sweep, so a gap must
+            // contribute a value that cannot widen it. Collapsing a gap onto
+            // the other bound does exactly that; when both are null the row
+            // is a gap on both sides and contributes 0-width at 0, matching
+            // the placeholder `RangeAreaDataPoint.gap` itself stores.
+            (row) => low(row) ?? high(row) ?? 0,
+            (row) => high(row) ?? low(row) ?? 0,
+          ],
+  TrendMark<T>() ||
+  ThresholdMark<T>() ||
+  BandMark<T>() ||
+  PointMark<T>() ||
+  // Radial geoms have no Cartesian position, so they contribute nothing to
+  // a shared Cartesian facet range. In practice a faceted radial spec is
+  // rejected up front (facetedRadialUnsupported); this keeps the switch
+  // exhaustive and defensive regardless.
+  RadialMark<T>() => const <Never>[],
+};
 
 /// The auto grid width for [panelCount] panels: `ceil(sqrt(n))`, min 1.
 int autoColumns(int panelCount) =>

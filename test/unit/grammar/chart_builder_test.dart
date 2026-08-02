@@ -1374,4 +1374,108 @@ void main() {
       expect(widget, isA<BravenPlot<Sample>>());
     });
   });
+
+  group('geomRangeArea', () {
+    test('constructs a RangeAreaMark carrying every native field', () {
+      final spec = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            id: 'band',
+            low: (row) => row.low,
+            high: (row) => row.high,
+            name: 'Recovery',
+            color: const Color(0xFF2563EB),
+            unit: 'score',
+            interpolation: LineInterpolation.monotone,
+            tension: 0.4,
+            fillOpacity: 0.22,
+            borderMode: RangeAreaBorderMode.closed,
+            connectGaps: true,
+            showBoundaryMarkers: true,
+            markerRadius: 4,
+            hitTestMode: RangeAreaHitTestMode.nearestBoundary,
+          )
+          .toSpec();
+
+      final mark = spec.marks.single as RangeAreaMark<_RangeRow>;
+      expect(mark.id, 'band');
+      expect(mark.name, 'Recovery');
+      expect(mark.color, const Color(0xFF2563EB));
+      expect(mark.unit, 'score');
+      expect(mark.interpolation, LineInterpolation.monotone);
+      expect(mark.tension, 0.4);
+      expect(mark.fillOpacity, 0.22);
+      expect(mark.borderMode, RangeAreaBorderMode.closed);
+      expect(mark.connectGaps, isTrue);
+      expect(mark.showBoundaryMarkers, isTrue);
+      expect(mark.markerRadius, 4);
+      expect(mark.hitTestMode, RangeAreaHitTestMode.nearestBoundary);
+      expect(mark.low(_rangeRows.first), 1);
+      expect(mark.high(_rangeRows.first), 3);
+    });
+
+    test('inherits the chart-wide x accessor', () {
+      final spec = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(low: (row) => row.low, high: (row) => row.high)
+          .toSpec();
+
+      final mark = spec.marks.single as RangeAreaMark<_RangeRow>;
+      expect(mark.x(_rangeRows.last), 1);
+      // Every config field left unset stays null: null is "the series
+      // default", resolved once at lowering, so the mark never carries a
+      // second copy of a default that could drift from the class.
+      expect(mark.interpolation, isNull);
+      expect(mark.fillOpacity, isNull);
+      expect(mark.labelConfig, isNull);
+      expect(mark.upperBoundaryStyle, isNull);
+    });
+
+    test('a band with no x anywhere is refused by name', () {
+      expect(
+        () => BravenChart.of(
+          _rangeRows,
+        ).geomRangeArea(low: (row) => row.low, high: (row) => row.high),
+        throwsA(
+          isA<GrammarSpecException>()
+              .having(
+                (e) => e.code,
+                'code',
+                GrammarDiagnosticCode.missingEncoding,
+              )
+              .having((e) => e.message, 'message', contains('geomRangeArea')),
+        ),
+      );
+    });
+
+    test('a band is a geometry, so a trend may name it as its source', () {
+      // `_geometryIds` (the builder) and `geometryIds` (the lowering) answer
+      // the same question — "which marks lower to a series?" — and MUST agree.
+      // A band lowers to a RangeAreaChartSeries, so it is a valid trend source
+      // in both, and the trend is fitted over the band's midpoints exactly as a
+      // hand-authored TrendAnnotation on that series would be.
+      final chart = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            id: 'band',
+            low: (row) => row.low,
+            high: (row) => row.high,
+          )
+          .trend(of: 'band');
+
+      expect(chart.toSpec().marks, hasLength(2));
+    });
+  });
 }
+
+class _RangeRow {
+  const _RangeRow(this.x, this.low, this.high);
+  final double x;
+  final double? low;
+  final double? high;
+}
+
+const List<_RangeRow> _rangeRows = <_RangeRow>[
+  _RangeRow(0, 1, 3),
+  _RangeRow(1, 2, 4),
+];

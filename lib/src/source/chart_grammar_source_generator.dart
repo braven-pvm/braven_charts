@@ -3469,6 +3469,15 @@ class _GrammarChainEmitter {
       ScatterMark<_SourceRow>() => 'geomPoint',
       CandlestickMark<_SourceRow>() => 'geomCandlestick',
       HeatmapMark<_SourceRow>() => 'geomHeatmap',
+      // Unreachable today: `_isEmittableFamily` still refuses
+      // `RangeAreaChartSeries`, so the planner never builds a range-area plan
+      // and no `RangeAreaMark` can reach this switch. The arm exists because
+      // the hierarchy is sealed; the real `geomRangeArea` reversal lands with
+      // the emitter slice, which lifts that gate at the same time.
+      RangeAreaMark<_SourceRow>() => throw StateError(
+        'unreachable: a range-area mark reached _emitGeometry before the '
+        'emitter reverses range-area series',
+      ),
       TrendMark<_SourceRow>() => 'trend',
       // Reference marks lower to annotations and are emitted as their own chain
       // verbs, never through _emitGeometry, which only ever sees a geometry plan.
@@ -3601,6 +3610,8 @@ class _GrammarChainEmitter {
         case HeatmapMark<_SourceRow>():
           _config.emitHeatmapOptions(writer, plan.series as HeatmapChartSeries);
           _absorbConfigWarnings();
+        case RangeAreaMark<_SourceRow>():
+          break; // unreachable: the verb switch above already threw.
         case TrendMark<_SourceRow>():
           break;
         case ThresholdMark<_SourceRow>() ||

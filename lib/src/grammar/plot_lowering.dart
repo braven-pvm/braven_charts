@@ -26,6 +26,8 @@ import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
@@ -151,6 +153,13 @@ final HeatmapChartSeries _heatmapDefaults = HeatmapChartSeries(
 );
 const ScatterCategoryEncoding _categoryDefaults = ScatterCategoryEncoding(
   categories: <ScatterCategoryStyle>[],
+);
+
+/// Not `const`: `RangeAreaChartSeries` validates in its constructor body. Read
+/// only for its DEFAULTS, so the empty point list is deliberate.
+final RangeAreaChartSeries _rangeAreaDefaults = RangeAreaChartSeries(
+  id: '',
+  points: const <RangeAreaDataPoint>[],
 );
 
 /// `BarChartSeries` requires one of width-percent or width-pixels, and has no
@@ -335,7 +344,8 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           spec.marks[index] is AreaMark<T> ||
           spec.marks[index] is BarMark<T> ||
           spec.marks[index] is ScatterMark<T> ||
-          spec.marks[index] is CandlestickMark<T>)
+          spec.marks[index] is CandlestickMark<T> ||
+          spec.marks[index] is RangeAreaMark<T>)
         markIds[index],
   };
 
@@ -402,6 +412,15 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         final axis = _bindAxis(mark, markId, axes, axesById, boundAxisIds);
         boundAxes[index] = axis;
         _validateHeatmapConfiguration(mark, markId, axis);
+      case RangeAreaMark<T>():
+        boundAxes[index] = _bindAxis(
+          mark,
+          markId,
+          axes,
+          axesById,
+          boundAxisIds,
+        );
+        _validatePointKeys(mark.pointKey, markId, spec.data);
       case BarMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
@@ -486,6 +505,8 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         series.add(_lowerCandlestick(mark, markId, axis!, spec.data));
       case HeatmapMark<T>():
         series.add(_lowerHeatmap(mark, markId, axis!, spec.xAxis, spec.data));
+      case RangeAreaMark<T>():
+        series.add(_lowerRangeArea(mark, markId, axis!, spec.data));
       case TrendMark<T>():
         annotations.add(_lowerTrend(mark, markId));
       case ThresholdMark<T>():
@@ -586,6 +607,22 @@ void _validateLogPositive<T>(
     case HeatmapMark<T>():
       if (xLog) check(mark.x);
       if (yLog) check(mark.y);
+    case RangeAreaMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) {
+        // A gap positions nothing, so it cannot be non-positive. The bounds of
+        // a real interval both land on the Y scale and are both checked.
+        for (final row in data) {
+          final low = mark.low(row);
+          final high = mark.high(row);
+          if (low != null && low <= 0) {
+            throw GrammarSpecException.nonPositiveLogValue(markId, low);
+          }
+          if (high != null && high <= 0) {
+            throw GrammarSpecException.nonPositiveLogValue(markId, high);
+          }
+        }
+      }
     case TrendMark<T>() ||
         ThresholdMark<T>() ||
         BandMark<T>() ||
@@ -1158,6 +1195,93 @@ CandlestickChartSeries _lowerCandlestick<T>(
     yAxisId: axis.id,
     yAxisConfig: axis,
   );
+}
+
+/// Materializes a range-area band.
+///
+/// Two row shapes are legal and one is not: both bounds present is an interval,
+/// both absent is a gap, exactly one present is an authoring error. The
+/// constructor's own `ArgumentError`s — a non-finite bound, `high < low`, an x
+/// that did not increase — are translated to `invalidRangeAreaRow` so a grammar
+/// author gets a grammar diagnostic naming the row rather than a raw model
+/// error, exactly as `_lowerCandlestick` does.
+RangeAreaChartSeries _lowerRangeArea<T>(
+  RangeAreaMark<T> mark,
+  String id,
+  YAxisConfig axis,
+  List<T> data,
+) {
+  final points = <RangeAreaDataPoint>[];
+  for (var index = 0; index < data.length; index++) {
+    final row = data[index];
+    final x = mark.x(row).toDouble();
+    final low = mark.low(row);
+    final high = mark.high(row);
+    if ((low == null) != (high == null)) {
+      throw GrammarSpecException.incompleteRangeAreaInterval(id, index);
+    }
+    try {
+      points.add(
+        low == null
+            ? RangeAreaDataPoint.gap(
+                x: x,
+                label: _pointText(mark.label, row),
+                pointKey: _pointText(mark.pointKey, row),
+              )
+            : RangeAreaDataPoint(
+                x: x,
+                low: low.toDouble(),
+                high: high!.toDouble(),
+                label: _pointText(mark.label, row),
+                pointKey: _pointText(mark.pointKey, row),
+              ),
+      );
+    } on ArgumentError catch (error) {
+      throw GrammarSpecException.invalidRangeAreaRow(
+        id,
+        index,
+        '${error.name ?? 'value'} ${error.message}.',
+      );
+    }
+  }
+  try {
+    return RangeAreaChartSeries(
+      id: id,
+      name: mark.name,
+      points: points,
+      color: mark.color,
+      unit: mark.unit,
+      yAxisId: axis.id,
+      yAxisConfig: axis,
+      interpolation: mark.interpolation ?? _rangeAreaDefaults.interpolation,
+      tension: mark.tension ?? _rangeAreaDefaults.tension,
+      fillOpacity: mark.fillOpacity ?? _rangeAreaDefaults.fillOpacity,
+      borderMode: mark.borderMode ?? _rangeAreaDefaults.borderMode,
+      upperBoundaryStyle:
+          mark.upperBoundaryStyle ?? _rangeAreaDefaults.upperBoundaryStyle,
+      lowerBoundaryStyle:
+          mark.lowerBoundaryStyle ?? _rangeAreaDefaults.lowerBoundaryStyle,
+      connectGaps: mark.connectGaps ?? _rangeAreaDefaults.connectGaps,
+      showBoundaryMarkers:
+          mark.showBoundaryMarkers ?? _rangeAreaDefaults.showBoundaryMarkers,
+      markerRadius: mark.markerRadius ?? _rangeAreaDefaults.markerRadius,
+      labelConfig: mark.labelConfig ?? _rangeAreaDefaults.labelConfig,
+      hitTestMode: mark.hitTestMode ?? _rangeAreaDefaults.hitTestMode,
+    );
+  } on ArgumentError catch (error) {
+    // The series constructor re-validates the WHOLE band — the strictly
+    // increasing x rule lives here, not on the point — so the ordering failure
+    // surfaces from this call, not the loop above. `ArgumentError.name` carries
+    // the offending index as `points[3].x`; the row number is recovered from it
+    // so the diagnostic still names a row.
+    final name = error.name ?? '';
+    final match = RegExp(r'points\[(\d+)\]').firstMatch(name);
+    throw GrammarSpecException.invalidRangeAreaRow(
+      id,
+      match == null ? 0 : int.parse(match.group(1)!),
+      '$name ${error.message}.',
+    );
+  }
 }
 
 /// Materializes a trend annotation. The source-mark and window validation has

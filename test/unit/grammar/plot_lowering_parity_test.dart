@@ -1981,4 +1981,230 @@ void main() {
       expect(capped.message, contains('50'));
     });
   });
+
+  group('range area lowering', () {
+    test('lowers to a RangeAreaChartSeries carrying every native field', () {
+      final lowered = BravenChart.of(_bandRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            id: 'band',
+            low: (row) => row.low,
+            high: (row) => row.high,
+            name: 'Recovery',
+            color: const Color(0xFF2563EB),
+            unit: 'score',
+            interpolation: LineInterpolation.monotone,
+            tension: 0.4,
+            fillOpacity: 0.22,
+            borderMode: RangeAreaBorderMode.closed,
+            upperBoundaryStyle: const RangeAreaBoundaryStyle(strokeWidth: 2),
+            lowerBoundaryStyle: const RangeAreaBoundaryStyle(glowRadius: 3),
+            connectGaps: true,
+            showBoundaryMarkers: true,
+            markerRadius: 4,
+            labelConfig: const RangeAreaLabelConfig(
+              value: RangeAreaLabelValue.both,
+            ),
+            hitTestMode: RangeAreaHitTestMode.nearestBoundary,
+          )
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as RangeAreaChartSeries;
+      expect(series.id, 'band');
+      expect(series.name, 'Recovery');
+      expect(series.color, const Color(0xFF2563EB));
+      expect(series.unit, 'score');
+      expect(series.interpolation, LineInterpolation.monotone);
+      expect(series.tension, 0.4);
+      expect(series.fillOpacity, 0.22);
+      expect(series.borderMode, RangeAreaBorderMode.closed);
+      expect(series.upperBoundaryStyle.strokeWidth, 2);
+      expect(series.lowerBoundaryStyle.glowRadius, 3);
+      expect(series.connectGaps, isTrue);
+      expect(series.showBoundaryMarkers, isTrue);
+      expect(series.markerRadius, 4);
+      expect(series.labelConfig.value, RangeAreaLabelValue.both);
+      expect(series.hitTestMode, RangeAreaHitTestMode.nearestBoundary);
+      expect(series.intervals.first.low, 1);
+      expect(series.intervals.first.high, 3);
+    });
+
+    test('an unset field lowers to the series default, not to a copy of it', () {
+      // The assertion is against a FRESHLY CONSTRUCTED series, so it tracks the
+      // class rather than restating today's literals. A default that changed on
+      // RangeAreaChartSeries and not in the lowering fails here.
+      final reference = RangeAreaChartSeries(
+        id: 'reference',
+        points: <RangeAreaDataPoint>[RangeAreaDataPoint(x: 0, low: 1, high: 3)],
+      );
+
+      final lowered = BravenChart.of(_bandRows)
+          .x((row) => row.x)
+          .geomRangeArea(low: (row) => row.low, high: (row) => row.high)
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as RangeAreaChartSeries;
+      expect(series.interpolation, reference.interpolation);
+      expect(series.tension, reference.tension);
+      expect(series.fillOpacity, reference.fillOpacity);
+      expect(series.borderMode, reference.borderMode);
+      expect(series.upperBoundaryStyle, reference.upperBoundaryStyle);
+      expect(series.lowerBoundaryStyle, reference.lowerBoundaryStyle);
+      expect(series.connectGaps, reference.connectGaps);
+      expect(series.showBoundaryMarkers, reference.showBoundaryMarkers);
+      expect(series.markerRadius, reference.markerRadius);
+      expect(series.labelConfig, reference.labelConfig);
+      expect(series.hitTestMode, reference.hitTestMode);
+    });
+
+    test('both bounds null lowers that row to a gap', () {
+      const rows = <_BandRow>[
+        _BandRow(0, 1, 3),
+        _BandRow(1, null, null),
+        _BandRow(2, 2, 4),
+      ];
+
+      final lowered = BravenChart.of(rows)
+          .x((row) => row.x)
+          .geomRangeArea(low: (row) => row.low, high: (row) => row.high)
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as RangeAreaChartSeries;
+      expect(series.hasGaps, isTrue);
+      expect(series.intervals.map((i) => i.isGap), <bool>[false, true, false]);
+      expect(series.intervals[1].x, 2 - 1); // the gap keeps its own x
+    });
+
+    test('exactly one bound null is refused by NAME with the row index', () {
+      const rows = <_BandRow>[_BandRow(0, 1, 3), _BandRow(1, 2, null)];
+
+      expect(
+        () => BravenChart.of(rows)
+            .x((row) => row.x)
+            .geomRangeArea(
+              id: 'band',
+              low: (row) => row.low,
+              high: (row) => row.high,
+            )
+            .toSpec()
+            .lower(),
+        throwsA(
+          isA<GrammarSpecException>()
+              .having(
+                (e) => e.code,
+                'code',
+                GrammarDiagnosticCode.incompleteRangeAreaInterval,
+              )
+              .having((e) => e.message, 'message', contains('Row 1'))
+              .having((e) => e.message, 'message', contains('"band"')),
+        ),
+      );
+    });
+
+    test('unsorted rows are refused by NAME, not as a raw ArgumentError', () {
+      const rows = <_BandRow>[_BandRow(1, 1, 3), _BandRow(0, 2, 4)];
+
+      expect(
+        () => BravenChart.of(rows)
+            .x((row) => row.x)
+            .geomRangeArea(
+              id: 'band',
+              low: (row) => row.low,
+              high: (row) => row.high,
+            )
+            .toSpec()
+            .lower(),
+        throwsA(
+          isA<GrammarSpecException>().having(
+            (e) => e.code,
+            'code',
+            GrammarDiagnosticCode.invalidRangeAreaRow,
+          ),
+        ),
+      );
+    });
+
+    test(
+      'high < low is refused by NAME rather than escaping as ArgumentError',
+      () {
+        const rows = <_BandRow>[_BandRow(0, 5, 1)];
+
+        expect(
+          () => BravenChart.of(rows)
+              .x((row) => row.x)
+              .geomRangeArea(
+                id: 'band',
+                low: (row) => row.low,
+                high: (row) => row.high,
+              )
+              .toSpec()
+              .lower(),
+          throwsA(
+            isA<GrammarSpecException>().having(
+              (e) => e.code,
+              'code',
+              GrammarDiagnosticCode.invalidRangeAreaRow,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('per-point label and key reach the lowered points', () {
+      final lowered = BravenChart.of(_bandRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            low: (row) => row.low,
+            high: (row) => row.high,
+            label: (row) => 'point-${row.x.toInt()}',
+            pointKey: (row) => 'key-${row.x.toInt()}',
+          )
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as RangeAreaChartSeries;
+      expect(series.intervals.first.label, 'point-0');
+      expect(series.intervals.first.pointKey, 'key-0');
+    });
+
+    test(
+      'a duplicate point key is refused, as on every other Cartesian mark',
+      () {
+        expect(
+          () => BravenChart.of(_bandRows)
+              .x((row) => row.x)
+              .geomRangeArea(
+                id: 'band',
+                low: (row) => row.low,
+                high: (row) => row.high,
+                pointKey: (row) => 'same',
+              )
+              .toSpec()
+              .lower(),
+          throwsA(
+            isA<GrammarSpecException>().having(
+              (e) => e.code,
+              'code',
+              GrammarDiagnosticCode.duplicatePointKey,
+            ),
+          ),
+        );
+      },
+    );
+  });
 }
+
+class _BandRow {
+  const _BandRow(this.x, this.low, this.high);
+  final double x;
+  final double? low;
+  final double? high;
+}
+
+const List<_BandRow> _bandRows = <_BandRow>[
+  _BandRow(0, 1, 3),
+  _BandRow(1, 2, 4),
+];

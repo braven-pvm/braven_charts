@@ -33,6 +33,12 @@ import '../models/polar_column_chart_series.dart'
         PolarColumnTargetMarkerStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
+import '../models/range_area_style.dart'
+    show
+        RangeAreaBorderMode,
+        RangeAreaBoundaryStyle,
+        RangeAreaHitTestMode,
+        RangeAreaLabelConfig;
 import 'channel.dart';
 
 /// One geometry (or one derived statistic) in a [PlotSpec].
@@ -900,6 +906,176 @@ final class CandlestickMark<T> extends SeriesMark<T> {
 
   @override
   String toString() => 'CandlestickMark(id: $id, name: $name)';
+}
+
+/// A filled band between paired `low`/`high` values at each `x`.
+///
+/// ## Gaps
+///
+/// [low] and [high] are `FieldAccessor<T, num?>`, not `num`, because
+/// `RangeAreaDataPoint.gap` is a real point with no interval and a TOTAL
+/// accessor cannot express one. Both null at a row lowers to
+/// `RangeAreaDataPoint.gap`; exactly one null is an authoring error and raises
+/// `GrammarDiagnosticCode.incompleteRangeAreaInterval` rather than guessing a
+/// bound. This mirrors `PolarMark.intervalLow`/`intervalHigh`.
+///
+/// ## No channels
+///
+/// Deliberate, not an omission. The range-area painter reads no per-point
+/// colour: it paints from the series colour, [fillOpacity], the two boundary
+/// styles and the theme, and `RangeAreaScreenPoint` carries only the interval
+/// geometry. A `colorBy` or size channel would be accepted and then ignored, so
+/// none is offered.
+///
+/// ## What this mark does NOT carry
+///
+/// `pathAnimation` and `fillGradient` are roadmap 1d: they are named refusals on
+/// [AreaMark] today and must stay symmetric across the Cartesian families rather
+/// than being fixed here for one of them. `isXOrdered` is absent because
+/// `RangeAreaChartSeries` hard-codes it `true` in its constructor — exactly as
+/// `CandlestickChartSeries` does — so a knob would be a lie.
+///
+/// Every config field is nullable and null means "the `RangeAreaChartSeries`
+/// default". The defaults live on the series class alone and are resolved once
+/// at lowering, so the mark cannot carry a stale copy of one.
+final class RangeAreaMark<T> extends SeriesMark<T> {
+  /// Creates a range-area band geometry.
+  const RangeAreaMark({
+    required this.x,
+    required this.low,
+    required this.high,
+    super.id,
+    super.name,
+    super.color,
+    super.yAxisId,
+    super.unit,
+    this.label,
+    this.pointKey,
+    this.interpolation,
+    this.tension,
+    this.fillOpacity,
+    this.borderMode,
+    this.upperBoundaryStyle,
+    this.lowerBoundaryStyle,
+    this.connectGaps,
+    this.showBoundaryMarkers,
+    this.markerRadius,
+    this.labelConfig,
+    this.hitTestMode,
+  });
+
+  /// Horizontal position accessor. Values must be finite and strictly
+  /// increasing across the data list.
+  final FieldAccessor<T, num> x;
+
+  /// Lower bound accessor. Null at a row means "no interval here" — see the
+  /// class docstring.
+  final FieldAccessor<T, num?> low;
+
+  /// Upper bound accessor. Null at a row means "no interval here".
+  final FieldAccessor<T, num?> high;
+
+  /// Per-point label accessor (`ChartDataPoint.label`). Null leaves every point
+  /// unlabelled; an accessor returning null — or `''`, treated the same — leaves
+  /// that one point unlabelled.
+  final FieldAccessor<T, String?>? label;
+
+  /// Per-point stable identity accessor (`ChartDataPoint.pointKey`).
+  ///
+  /// Must be unique among the KEYED points of one series: a repeat raises
+  /// `GrammarDiagnosticCode.duplicatePointKey`.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Boundary path interpolation. Null keeps the series default.
+  final LineInterpolation? interpolation;
+
+  /// Curve tension in `[0, 1]`. Null keeps the series default.
+  final double? tension;
+
+  /// Fill opacity in `[0, 1]`. Null keeps the series default.
+  final double? fillOpacity;
+
+  /// Which boundaries are stroked. Null keeps the series default.
+  final RangeAreaBorderMode? borderMode;
+
+  /// Upper boundary stroke styling. Null keeps the series default.
+  final RangeAreaBoundaryStyle? upperBoundaryStyle;
+
+  /// Lower boundary stroke styling. Null keeps the series default.
+  final RangeAreaBoundaryStyle? lowerBoundaryStyle;
+
+  /// Whether to bridge gaps rather than break the band. Null keeps the series
+  /// default.
+  final bool? connectGaps;
+
+  /// Whether to draw a marker at each boundary point. Null keeps the series
+  /// default.
+  final bool? showBoundaryMarkers;
+
+  /// Boundary marker radius in logical pixels. Null keeps the series default.
+  final double? markerRadius;
+
+  /// Interval label configuration. Null keeps the series default.
+  final RangeAreaLabelConfig? labelConfig;
+
+  /// Which region is interactive. Null keeps the series default.
+  final RangeAreaHitTestMode? hitTestMode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RangeAreaMark<T> &&
+          other.x == x &&
+          other.low == low &&
+          other.high == high &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.label == label &&
+          other.pointKey == pointKey &&
+          other.interpolation == interpolation &&
+          other.tension == tension &&
+          other.fillOpacity == fillOpacity &&
+          other.borderMode == borderMode &&
+          other.upperBoundaryStyle == upperBoundaryStyle &&
+          other.lowerBoundaryStyle == lowerBoundaryStyle &&
+          other.connectGaps == connectGaps &&
+          other.showBoundaryMarkers == showBoundaryMarkers &&
+          other.markerRadius == markerRadius &&
+          other.labelConfig == labelConfig &&
+          other.hitTestMode == hitTestMode;
+
+  // `Object.hashAll` rather than `Object.hash`: this mark has 22 fields and
+  // `Object.hash` takes at most 20 positional arguments.
+  @override
+  int get hashCode => Object.hashAll(<Object?>[
+    x,
+    low,
+    high,
+    id,
+    name,
+    color,
+    yAxisId,
+    unit,
+    label,
+    pointKey,
+    interpolation,
+    tension,
+    fillOpacity,
+    borderMode,
+    upperBoundaryStyle,
+    lowerBoundaryStyle,
+    connectGaps,
+    showBoundaryMarkers,
+    markerRadius,
+    labelConfig,
+    hitTestMode,
+  ]);
+
+  @override
+  String toString() => 'RangeAreaMark(id: $id, name: $name)';
 }
 
 /// A statistical trend derived from another mark's lowered series.
