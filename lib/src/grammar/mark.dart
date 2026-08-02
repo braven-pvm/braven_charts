@@ -1047,7 +1047,7 @@ final class RangeAreaMark<T> extends SeriesMark<T> {
           other.labelConfig == labelConfig &&
           other.hitTestMode == hitTestMode;
 
-  // `Object.hashAll` rather than `Object.hash`: this mark has 22 fields and
+  // `Object.hashAll` rather than `Object.hash`: this mark has 21 fields and
   // `Object.hash` takes at most 20 positional arguments.
   @override
   int get hashCode => Object.hashAll(<Object?>[

@@ -2105,7 +2105,14 @@ void main() {
     });
 
     test('unsorted rows are refused by NAME, not as a raw ArgumentError', () {
-      const rows = <_BandRow>[_BandRow(1, 1, 3), _BandRow(0, 2, 4)];
+      // The offending row is index 2, NOT 0: the row number in the message has
+      // to come from the constructor's `points[N]` name, so a lowering that
+      // fell back to a default index would report the wrong row here.
+      const rows = <_BandRow>[
+        _BandRow(0, 1, 3),
+        _BandRow(5, 2, 4),
+        _BandRow(1, 2, 4),
+      ];
 
       expect(
         () => BravenChart.of(rows)
@@ -2118,11 +2125,14 @@ void main() {
             .toSpec()
             .lower(),
         throwsA(
-          isA<GrammarSpecException>().having(
-            (e) => e.code,
-            'code',
-            GrammarDiagnosticCode.invalidRangeAreaRow,
-          ),
+          isA<GrammarSpecException>()
+              .having(
+                (e) => e.code,
+                'code',
+                GrammarDiagnosticCode.invalidRangeAreaRow,
+              )
+              .having((e) => e.message, 'message', contains('Row 2'))
+              .having((e) => e.message, 'message', isNot(contains('Row 0'))),
         ),
       );
     });
@@ -2152,6 +2162,73 @@ void main() {
         );
       },
     );
+
+    // A styling argument the series refuses is NOT a bad row. The band's rows
+    // below are all valid, so a diagnostic that names a row — or claims the
+    // band holds an invalid interval — would be describing something that did
+    // not happen.
+    void expectStyleRefusal(
+      BravenChart<_BandRow> chart, {
+      required String parameter,
+    }) {
+      expect(
+        () => chart.toSpec().lower(),
+        throwsA(
+          isA<GrammarSpecException>()
+              .having(
+                (e) => e.code,
+                'code',
+                GrammarDiagnosticCode.invalidRangeAreaStyle,
+              )
+              .having((e) => e.message, 'message', contains(parameter))
+              .having((e) => e.message, 'message', contains('"band"'))
+              .having(
+                (e) => e.message,
+                'message',
+                isNot(contains('is not a valid interval')),
+              )
+              .having((e) => e.message, 'message', isNot(contains('Row '))),
+        ),
+      );
+    }
+
+    test('an out-of-range tension is refused as a STYLE failure, not a row', () {
+      expectStyleRefusal(
+        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
+          id: 'band',
+          low: (row) => row.low,
+          high: (row) => row.high,
+          tension: 5,
+        ),
+        parameter: 'tension',
+      );
+    });
+
+    test('an out-of-range fillOpacity is refused as a STYLE failure', () {
+      expectStyleRefusal(
+        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
+          id: 'band',
+          low: (row) => row.low,
+          high: (row) => row.high,
+          fillOpacity: 1.5,
+        ),
+        parameter: 'fillOpacity',
+      );
+    });
+
+    test('an odd-length boundary dashPattern is refused as a STYLE failure', () {
+      expectStyleRefusal(
+        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
+          id: 'band',
+          low: (row) => row.low,
+          high: (row) => row.high,
+          upperBoundaryStyle: const RangeAreaBoundaryStyle(
+            dashPattern: <double>[4],
+          ),
+        ),
+        parameter: 'upperBoundaryStyle.dashPattern',
+      );
+    });
 
     test('per-point label and key reach the lowered points', () {
       final lowered = BravenChart.of(_bandRows)

@@ -1204,7 +1204,9 @@ CandlestickChartSeries _lowerCandlestick<T>(
 /// constructor's own `ArgumentError`s — a non-finite bound, `high < low`, an x
 /// that did not increase — are translated to `invalidRangeAreaRow` so a grammar
 /// author gets a grammar diagnostic naming the row rather than a raw model
-/// error, exactly as `_lowerCandlestick` does.
+/// error, exactly as `_lowerCandlestick` does. The series also refuses styling
+/// arguments (tension, fillOpacity, a boundary style, ...); those name no row
+/// and become `invalidRangeAreaStyle`.
 RangeAreaChartSeries _lowerRangeArea<T>(
   RangeAreaMark<T> mark,
   String id,
@@ -1269,16 +1271,32 @@ RangeAreaChartSeries _lowerRangeArea<T>(
       hitTestMode: mark.hitTestMode ?? _rangeAreaDefaults.hitTestMode,
     );
   } on ArgumentError catch (error) {
-    // The series constructor re-validates the WHOLE band — the strictly
-    // increasing x rule lives here, not on the point — so the ordering failure
-    // surfaces from this call, not the loop above. `ArgumentError.name` carries
-    // the offending index as `points[3].x`; the row number is recovered from it
-    // so the diagnostic still names a row.
+    // The series constructor re-validates the WHOLE band, so two unrelated
+    // families of failure arrive here and `ArgumentError.name` is what tells
+    // them apart.
+    //
+    // Row rules — the strictly increasing x rule lives on the series, not on
+    // the point — name the offender `points[3]` / `points[3].x`, so the row
+    // number is recovered from the name and the diagnostic still names a row.
+    //
+    // Styling rules (tension, fillOpacity, markerRadius, the fill gradient,
+    // either boundary style, the path animation) name a PARAMETER instead.
+    // Those say nothing about any row, so they get their own diagnostic:
+    // inventing a row index for them would name a row that is perfectly valid
+    // and a category of failure that did not happen. A named diagnostic rather
+    // than a rethrown ArgumentError, because a grammar author should never see
+    // a raw model error escape lowering — the same trade `_guardPolar` makes.
     final name = error.name ?? '';
     final match = RegExp(r'points\[(\d+)\]').firstMatch(name);
+    if (match == null) {
+      throw GrammarSpecException.invalidRangeAreaStyle(
+        id,
+        _authorityDetail(error),
+      );
+    }
     throw GrammarSpecException.invalidRangeAreaRow(
       id,
-      match == null ? 0 : int.parse(match.group(1)!),
+      int.parse(match.group(1)!),
       '$name ${error.message}.',
     );
   }

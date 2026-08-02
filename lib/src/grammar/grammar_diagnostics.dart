@@ -68,6 +68,12 @@ enum GrammarDiagnosticCode {
   /// A range-area geom supplied only one of the two interval bounds at a row.
   incompleteRangeAreaInterval,
 
+  /// A range-area geom set a styling argument the band's own validator refuses
+  /// — an out-of-range tension, fillOpacity or markerRadius, an unrenderable
+  /// fill gradient, a boundary style the band rejects, or an impossible path
+  /// animation. A whole-band failure, not a row's.
+  invalidRangeAreaStyle,
+
   /// A facade geom was built without an x or y encoding to inherit.
   ///
   /// Raised by the chained `BravenChart` facade, never by `spec.lower()` — a
@@ -322,6 +328,21 @@ final class GrammarSpecException implements Exception {
     'and not the other. Return null from BOTH to express a gap, or give the '
     'row a complete interval — a half-specified interval has no defensible '
     'reading.',
+  );
+
+  /// A range-area geom set a styling argument the band refuses.
+  ///
+  /// [detail] is the authority's own sentence (`RangeAreaChartSeries`, or the
+  /// boundary style it delegates to), which already names the parameter — so
+  /// this diagnostic names the MARK and quotes it rather than restating rules
+  /// it does not own.
+  factory GrammarSpecException.invalidRangeAreaStyle(
+    String markId,
+    String detail,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidRangeAreaStyle,
+    'The range-area mark "$markId" set a styling argument the band cannot '
+    'honor. $detail',
   );
 
   /// A facade geom was built without an x or y encoding to inherit.
