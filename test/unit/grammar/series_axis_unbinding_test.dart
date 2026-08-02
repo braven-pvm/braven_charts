@@ -24,6 +24,7 @@ import 'package:braven_charts/src/models/candlestick_chart_series.dart';
 import 'package:braven_charts/src/models/candlestick_data_point.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
+import 'package:braven_charts/src/models/radial_bar_chart_series.dart';
 import 'package:braven_charts/src/models/range_area_chart_series.dart';
 import 'package:braven_charts/src/models/range_area_data_point.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
@@ -92,6 +93,18 @@ void main() {
           yAxisId: 'y',
           yAxisConfig: axis,
         ),
+        RangeAreaChartSeries(
+          id: 'range',
+          points: <RangeAreaDataPoint>[
+            RangeAreaDataPoint(x: 0, low: 1, high: 3),
+            RangeAreaDataPoint(x: 1, low: 2, high: 4),
+          ],
+          name: 'range series',
+          color: const Color(0xFF2563EB),
+          unit: 'W',
+          yAxisId: 'y',
+          yAxisConfig: axis,
+        ),
       ];
 
       for (final series in bound) {
@@ -118,15 +131,15 @@ void main() {
     });
 
     test('returns null for a family that cannot express an unbound series', () {
-      // `RangeAreaChartSeries` has no grammar mark yet (roadmap item 1b adds
-      // one). Until its `copyWith` can clear the binding, the answer must stay
-      // null so BOTH callers keep failing closed instead of one of them
-      // guessing.
-      final series = RangeAreaChartSeries(
-        id: 'range',
-        points: <RangeAreaDataPoint>[RangeAreaDataPoint(x: 0, low: 1, high: 2)],
-        yAxisId: 'y',
-        yAxisConfig: axis,
+      // `RadialBarChartSeries` measures against no Y axis at all — it does not
+      // even take `yAxisId` — and its `copyWith` has no clear flags. It is the
+      // shape the null answer exists for: both callers must keep failing closed
+      // rather than one of them guessing.
+      final series = RadialBarChartSeries(
+        id: 'radial-bar',
+        points: const <ChartDataPoint>[
+          ChartDataPoint(x: 0, y: 1, label: 'category'),
+        ],
       );
 
       expect(seriesWithoutAxisBinding(series), isNull);
