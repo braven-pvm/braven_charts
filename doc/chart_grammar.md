@@ -224,7 +224,7 @@ below is the **Cartesian** half of that hierarchy; the sealed `RadialMark<T>`
 subtree — `PieMark<T>`, `DonutMark<T>` and `PolarMark<T>` — lowers to the radial
 series families and is covered under [Radial geometries](#radial-geometries). A
 spec holds one half or the other, never both (`mixedCoordinateSystems`). Within
-the Cartesian half the first five lower to a series and the last four to
+the Cartesian half the first six lower to a series and the last four to
 annotations:
 
 | Mark | Lowers to |
@@ -234,6 +234,7 @@ annotations:
 | `BarMark<T>` | `BarChartSeries` |
 | `ScatterMark<T>` | `ScatterChartSeries` |
 | `CandlestickMark<T>` | `CandlestickChartSeries` |
+| `RangeAreaMark<T>` *(V2.0)* | `RangeAreaChartSeries` — see [Bands](#bands-geomrangearea) |
 | `TrendMark<T>` | `TrendAnnotation` bound to its source series |
 | `ThresholdMark<T>` *(V2.0)* | `ThresholdAnnotation` — a reference line at a value |
 | `BandMark<T>` *(V2.0)* | `RangeAnnotation` — a 1-D shaded band |
@@ -341,6 +342,51 @@ DataPointLabelConfig? dataPointLabels, // → *ChartSeries.dataPointLabels
 // on geomBar:
 BarLabelStyle? labelStyle,           // → BarChartSeries.labelStyle
 ```
+
+#### Bands: `geomRangeArea`
+
+A filled band between paired bounds, lowering to `RangeAreaChartSeries`. It sits
+beside `geomCandlestick` as the second Cartesian geometry with **no single `y`**:
+
+```dart
+BravenChart<T> geomRangeArea({
+  required FieldAccessor<T, num?> low,
+  required FieldAccessor<T, num?> high,
+  FieldAccessor<T, num>? x,            // defaults to the chart-wide .x
+  String? id, String? name, Color? color, String? unit, String? yAxisId,
+  FieldAccessor<T, String?>? label,
+  FieldAccessor<T, String?>? pointKey,
+  // Every styling argument left null keeps the RangeAreaChartSeries default:
+  LineInterpolation? interpolation, double? tension, double? fillOpacity,
+  RangeAreaBorderMode? borderMode,
+  RangeAreaBoundaryStyle? upperBoundaryStyle,
+  RangeAreaBoundaryStyle? lowerBoundaryStyle,
+  bool? connectGaps, bool? showBoundaryMarkers, double? markerRadius,
+  RangeAreaLabelConfig? labelConfig,
+  RangeAreaHitTestMode? hitTestMode,
+});
+```
+
+- **`low` and `high` are NULLABLE accessors**, unlike every other Cartesian
+  encoding. `RangeAreaDataPoint.gap` is a real point with no interval, and a
+  total `FieldAccessor<T, num>` cannot express one. Returning null from **both**
+  at a row lowers it to `RangeAreaDataPoint.gap`; returning null from exactly
+  **one** raises `incompleteRangeAreaInterval` naming the row, because a
+  half-specified interval has no defensible reading. This mirrors
+  `PolarMark.intervalLow` / `intervalHigh`.
+- **A band's rows must be strictly increasing in `x`, and `high >= low`.** Those
+  are `RangeAreaChartSeries`' own invariants; the lowering translates its raw
+  `ArgumentError`s into `invalidRangeAreaRow` naming the offending row, exactly
+  as `geomCandlestick` does with `invalidCandlestickRow`.
+- **No channels.** Deliberate: the range-area painter reads no per-point colour
+  — it paints from the series colour, `fillOpacity`, the two boundary styles and
+  the theme — so a `colorBy` or size channel would be accepted and then ignored.
+- **`pathAnimation` and `fillGradient` are not carried**, matching `AreaMark`;
+  both are deferred to the same roadmap item that fixes them for every Cartesian
+  family at once. A captured band using either is refused **by name** rather than
+  emitted without it. `isXOrdered` is absent because `RangeAreaChartSeries`
+  hard-codes it `true` in its constructor, exactly as `CandlestickChartSeries`
+  does, so a knob would be a lie.
 
 #### Radial geometries
 
@@ -539,13 +585,19 @@ Three rules worth calling out:
   `ChartDataPoint` documents NaN/infinite coordinates and exposes `isValid`,
   the pipeline already skips invalid points, and that *is* how a gap in a line
   is expressed — rejecting them would make the grammar stricter than the API
-  it lowers onto. Candlesticks are the exception, because
-  `CandlestickDataPoint` rejects them itself: those rows raise
-  `invalidCandlestickRow` with the row index instead of leaking an
-  `ArgumentError` from deeper in the pipeline.
+  it lowers onto. Candlesticks and range-area bands are the exceptions, because
+  `CandlestickDataPoint` and `RangeAreaDataPoint` reject them themselves: those
+  rows raise `invalidCandlestickRow` / `invalidRangeAreaRow` with the row index
+  instead of leaking an `ArgumentError` from deeper in the pipeline.
 - **A candle is a unit.** `geomCandlestick` requires `open`, `high`, `low` and
   `close` together; there is no per-channel candlestick geometry to compose,
   and rows must be strictly ordered on x.
+- **A band is a unit too, but its gap is a row shape.** `geomRangeArea` requires
+  `low` and `high` together, and rows must be strictly ordered on x. Unlike a
+  candle, its bounds are *nullable*: both null is a gap
+  (`RangeAreaDataPoint.gap`), exactly one null raises
+  `incompleteRangeAreaInterval`. See
+  [Bands: `geomRangeArea`](#bands-geomrangearea).
 
 ### Empty data is a state, not a mistake
 
@@ -700,7 +752,8 @@ runtime-only bindings.
 | Case | Outcome |
 | --- | --- |
 | A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the **Blocked** radial rows that follow — read them together before reading this row as "every radial chart emits". |
-| A radial family with no grammar geometry — radial bar, gauge, range area | **Blocked**, naming each series and its family: no mark reverses it. |
+| A radial family with no grammar geometry — radial bar, gauge | **Blocked**, naming each series and its family: no mark reverses it. |
+| A range-area band | **EMITTED** *(V2.0)* as `geomRangeArea(low:, high:)`, carrying the interval bounds, the per-point label and key, and the range-area-native styling (interpolation, tension, fill opacity, border mode, both boundary styles, gap connection, boundary markers, marker radius, label config and hit-test mode). A gap row travels as two `null` bounds and comes back a gap. A band carrying `fillGradient` or `pathAnimation` is **Blocked** naming that field — the mark does not carry either, matching `AreaMark`. |
 | A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **EMITTED** *(V2.0)* as `geomDonut(ringIds: {...})` — an explicit ring-key→series-id map, so a composition that chose its ids independently of its ring names keeps them. The emitter consults it **only when the `'<markId>-<ring>'` pattern fails** to recover a markId, so a conforming composition takes the original path and emits exactly the text it emitted before. The map is keyed by the BARE ring key and is ALL OR NOTHING: naming some rings and not others raises `partialRingIds`, a key naming no ring raises `unknownRingKey`, and a non-empty map with no `ring:` raises `perRingOverrideOnRinglessDonut`. |
 | A concentric composition whose rings are **unnamed or share a name** | **Blocked**, naming each series and its name: the ring key *is* the series name, so no `ring:` channel could bucket those rows apart — every row would fall into one ring. |
 | A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
@@ -740,9 +793,9 @@ unchanged.
 
 ## Added in V2.0
 
-Three families of authoring — the three most common charts V1 could only
-diagnose — now round-trip. Each is a `Mark`/`PlotSpec` field lowering onto
-config the pipeline already understood (details under *V2.0 verbs* above):
+Several families of authoring — the charts V1 could only diagnose — now
+round-trip. Each is a `Mark`/`PlotSpec` field lowering onto config the pipeline
+already understood (details under *V2.0 verbs* above):
 
 - **Non-trend reference annotation marks.** `.threshold(value:)`,
   `.band(start:, end:)` and `.pointAt(seriesId:, dataPointIndex:)` lower to
@@ -751,6 +804,16 @@ config the pipeline already understood (details under *V2.0 verbs* above):
   and `.legend(...)` are carried on `PlotSpec` and forwarded by `BravenPlot`.
 - **Per-mark data-point markers and inline labels.** `showDataPointMarkers`
   and `dataPointLabels` on `geomLine`/`geomArea`, and `labelStyle` on `geomBar`.
+- **Range-area bands.** `geomRangeArea(low:, high:)` lowers to
+  `RangeAreaChartSeries` and reverses back out of a captured chart. Its bounds
+  are nullable so a gap has a row shape; `pathAnimation` and `fillGradient` stay
+  named refusals, as on `AreaMark`. Verified on the MOUNTED page —
+  `example/test/showcase/selection_showcase_range_area_grammar_test.dart` pumps
+  the selection lab, selects its Range Area family through the real picker and
+  runs the generator on the live document, which emits a complete, warning-free
+  chain for both bands and the centre line. The `RangeAreaChartsPage`'s seven
+  presets still refuse, and by name: every band there carries a non-default
+  `pathAnimation` and six of seven a `fillGradient`.
 - **Radial geometries.** `geomPie`, `geomDonut` (with the `ring:` channel for a
   concentric composition and `concentric:` for its configuration) and
   `geomPolar`, plus the spec-level `.polarConfig(...)`. Multi-series polar
@@ -761,8 +824,8 @@ config the pipeline already understood (details under *V2.0 verbs* above):
 
   - **Every radial Workbench Grammar pane whose family HAS a geometry emits a
     real chain** instead of a diagnostic — pie, donut, concentric donut and
-    polar column. (Radial bar, gauge and range area have no `geom*` verb at
-    all; their panes still show a named diagnostic.)
+    polar column. (Radial bar and gauge have no `geom*` verb at all; their
+    panes still show a named diagnostic.)
   - **Polar: all eight showcase presentations** (standard, rose, partial,
     layered, grouped, stacked, references, intervals), each verified against
     `polar_column_page.dart`'s own `_buildSeriesList` / `_buildPolarConfig`
@@ -846,8 +909,8 @@ config the pipeline already understood (details under *V2.0 verbs* above):
     single-donut control that emits.
 
   What stays refused in the radial families is narrow, and mostly named: a
-  radial-bar, gauge or range-area chart (no grammar geometry at all), a
-  concentric composition whose rings are unnamed or share a name (the ring key
+  radial-bar or gauge chart (no grammar geometry at all), a concentric
+  composition whose rings are unnamed or share a name (the ring key
   *is* the series name), a concentric composition whose rings disagree on
   `donutStyle` / `selectionStyle` / `unit` / `sliceRadiusConfig` /
   `sliceGroupingConfig` or in which any ring carries a series `color` or a
@@ -865,10 +928,11 @@ config the pipeline already understood (details under *V2.0 verbs* above):
 
 Deferred deliberately, so the V1 mark list stays closed:
 
-- **The radial families with no geometry.** Radial bar, gauge and range area
-  have no `geom*` verb; author them with their config APIs. (Pie, Donut,
+- **The radial families with no geometry.** Radial bar and gauge have no
+  `geom*` verb; author them with their config APIs. (Pie, Donut,
   Concentric Donut and Polar Column ARE grammar geometries as of V2.0 — see
-  *Radial geometries* above.) Faceting a radial spec is refused by name
+  *Radial geometries* above; Range Area is Cartesian and IS one — see
+  *Bands: `geomRangeArea`* above.) Faceting a radial spec is refused by name
   (`facetedRadialUnsupported`).
 - **Faceting / small multiples.** These lower to *multiple* widgets plus a
   `ChartInteractionGroupController`, which is a different shape from

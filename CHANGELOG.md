@@ -57,6 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the axis sentence. Only a chart that binds SOME series and not others
   still reaches that refusal — an all-unbound chart refused for some OTHER
   reason is no longer told to change a binding that was never the problem.
+- A Range Area grammar geometry: `BravenChart.geomRangeArea(low:, high:)`,
+  lowering to a real `RangeAreaChartSeries` and reversed back into generated
+  Dart source. `low`/`high` are nullable accessors — returning null from both
+  at a row expresses a gap (`RangeAreaDataPoint.gap`); returning null from
+  exactly one raises `incompleteRangeAreaInterval`. The mark carries the
+  range-area-native fields (interpolation, tension, fill opacity, border mode,
+  both boundary styles, gap connection, boundary markers, marker radius, label
+  configuration and hit-test mode); `fillGradient` and `pathAnimation` are not
+  carried and a band using either is refused by name rather than emitted
+  without it.
 
 ### Changed
 
@@ -201,6 +211,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   built-in legend path, including reusable `ChartLegend` widgets and explicit
   canvas `LegendAnnotation`s, rather than only affecting automatically
   generated legends.
+- The generated config source no longer drops a `RangeAreaLabelConfig.formatter`
+  silently. A live formatter now emits a `// formatter:` placeholder and a
+  `source_runtime_value_omitted` warning, matching how bar and data-point label
+  formatters are already reported.
+
 ### Heatmaps
 
 - A complete native Cartesian Heatmap family. `HeatmapDataPoint` keeps X, Y,
