@@ -207,6 +207,27 @@ class ChartConfigDartEmitter {
   void emitBarLabelStyle(DartSourceWriter writer, BarLabelStyle style) =>
       _emitBarLabelStyle(writer, style, 0);
 
+  /// Writes `<argument>: RangeAreaBoundaryStyle(...)` — the field body the
+  /// `geomRangeArea` verb hands to its `upperBoundaryStyle:` /
+  /// `lowerBoundaryStyle:` arguments, which are the config form's argument names
+  /// too. Writes NOTHING for the family default (unless `includeDefaultValues`),
+  /// so the caller can pass it unconditionally.
+  void emitRangeAreaBoundaryStyle(
+    DartSourceWriter writer,
+    String argument,
+    RangeAreaBoundaryStyle style,
+  ) => _emitRangeAreaBoundaryStyle(writer, argument, style);
+
+  /// Writes `labelConfig: RangeAreaLabelConfig(...)` — the same body the config
+  /// form emits, including the `formatter:` placeholder and its
+  /// `runtimeValueOmitted` warning. [seriesIndex] only addresses that warning's
+  /// JSON path.
+  void emitRangeAreaLabelConfig(
+    DartSourceWriter writer,
+    RangeAreaLabelConfig config,
+    int seriesIndex,
+  ) => _emitRangeAreaLabelConfig(writer, config, seriesIndex);
+
   /// Writes `<argument>: PieChartStyle(...)` / `<argument>: DonutChartStyle(...)`
   /// — the field body the radial geometry verbs (`geomPie`/`geomDonut`) hand to
   /// their `style:` argument, the same nested-config rendering the config form's
@@ -604,7 +625,7 @@ class ChartConfigDartEmitter {
         case AreaChartSeries():
           _emitAreaOptions(writer, series);
         case RangeAreaChartSeries():
-          _emitRangeAreaOptions(writer, series);
+          _emitRangeAreaOptions(writer, series, seriesIndex);
         case HeatmapChartSeries():
           emitHeatmapOptions(writer, series);
         case ScatterChartSeries():
@@ -1970,6 +1991,7 @@ class ChartConfigDartEmitter {
   void _emitRangeAreaOptions(
     DartSourceWriter writer,
     RangeAreaChartSeries series,
+    int seriesIndex,
   ) {
     _enumIf(
       writer,
@@ -2006,7 +2028,7 @@ class ChartConfigDartEmitter {
       defaultValue: false,
     );
     _numberIf(writer, 'markerRadius', series.markerRadius, 3);
-    _emitRangeAreaLabelConfig(writer, series.labelConfig);
+    _emitRangeAreaLabelConfig(writer, series.labelConfig, seriesIndex);
     _enumIf(
       writer,
       'hitTestMode',
@@ -2239,6 +2261,7 @@ class ChartConfigDartEmitter {
   void _emitRangeAreaLabelConfig(
     DartSourceWriter writer,
     RangeAreaLabelConfig config,
+    int seriesIndex,
   ) {
     if (!options.includeDefaultValues &&
         config == const RangeAreaLabelConfig()) {
