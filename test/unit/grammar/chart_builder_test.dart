@@ -1451,19 +1451,70 @@ void main() {
     test('a band is a geometry, so a trend may name it as its source', () {
       // `_geometryIds` (the builder) and `geometryIds` (the lowering) answer
       // the same question — "which marks lower to a series?" — and MUST agree.
-      // A band lowers to a RangeAreaChartSeries, so it is a valid trend source
-      // in both, and the trend is fitted over the band's midpoints exactly as a
-      // hand-authored TrendAnnotation on that series would be.
-      final chart = BravenChart.of(_rangeRows)
+      // Stopping at `toSpec()` would only exercise the builder's half: the
+      // builder accepts the trend source, and the LOWERING then independently
+      // re-validates it, so this has to run all the way through `lower()` for
+      // the two sets to be pinned against each other.
+      final lowered = BravenChart.of(_rangeRows)
           .x((row) => row.x)
           .geomRangeArea(
             id: 'band',
             low: (row) => row.low,
             high: (row) => row.high,
           )
-          .trend(of: 'band');
+          .trend(of: 'band')
+          .toSpec()
+          .lower();
 
-      expect(chart.toSpec().marks, hasLength(2));
+      expect(lowered.series.single, isA<RangeAreaChartSeries>());
+      expect(lowered.series.single.id, 'band');
+      final trend = lowered.annotations.single;
+      expect(trend, isA<TrendAnnotation>());
+      expect((trend as TrendAnnotation).seriesId, 'band');
+      expect(trend.trendType, TrendType.linear);
+    });
+
+    test('a gap in the trended band is not an observation at zero', () {
+      // A `RangeAreaDataPoint.gap` carries a finite `y` of 0 only because
+      // `ChartDataPoint` has no nullable Y. Fitted over the lowered series it
+      // must count for nothing, or a hole in the band reads as a measurement
+      // on the axis and drags the line down.
+      List<ChartSeries> loweredSeriesFor(List<_RangeRow> rows) {
+        return BravenChart.of(rows)
+            .x((row) => row.x)
+            .geomRangeArea(
+              id: 'band',
+              low: (row) => row.low,
+              high: (row) => row.high,
+            )
+            .trend(of: 'band')
+            .toSpec()
+            .lower()
+            .series;
+      }
+
+      final gapped = loweredSeriesFor(_gappedRangeRows).single;
+      final gapFree = loweredSeriesFor(_gapFreeRangeRows).single;
+
+      expect(gapped.points, hasLength(_gappedRangeRows.length));
+
+      double? flat(double x) => 50;
+      final gappedStatistics = TrendStatisticsCalculator.calculate(
+        points: gapped.points,
+        predict: flat,
+      );
+      final gapFreeStatistics = TrendStatisticsCalculator.calculate(
+        points: gapFree.points,
+        predict: flat,
+      );
+
+      expect(gappedStatistics.sampleCount, _gapFreeRangeRows.length);
+      expect(gappedStatistics.sampleCount, gapFreeStatistics.sampleCount);
+      expect(gappedStatistics.rSquared, gapFreeStatistics.rSquared);
+      expect(
+        gappedStatistics.pearsonCorrelation,
+        gapFreeStatistics.pearsonCorrelation,
+      );
     });
   });
 }
@@ -1478,4 +1529,21 @@ class _RangeRow {
 const List<_RangeRow> _rangeRows = <_RangeRow>[
   _RangeRow(0, 1, 3),
   _RangeRow(1, 2, 4),
+];
+
+/// A flat band at midpoint 50 with the x = 2 row punched out as a gap.
+const List<_RangeRow> _gappedRangeRows = <_RangeRow>[
+  _RangeRow(0, 40, 60),
+  _RangeRow(1, 40, 60),
+  _RangeRow(2, null, null),
+  _RangeRow(3, 40, 60),
+  _RangeRow(4, 40, 60),
+];
+
+/// The same band with the x = 2 row deleted outright.
+const List<_RangeRow> _gapFreeRangeRows = <_RangeRow>[
+  _RangeRow(0, 40, 60),
+  _RangeRow(1, 40, 60),
+  _RangeRow(3, 40, 60),
+  _RangeRow(4, 40, 60),
 ];

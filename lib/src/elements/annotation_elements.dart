@@ -17,6 +17,7 @@ import '../models/data_range.dart';
 import '../models/enums.dart';
 import '../models/legend_style.dart';
 import '../rendering/scatter_marker_path.dart';
+import '../statistics/fit_observations.dart';
 import '../statistics/linear_regression_intervals.dart';
 import '../statistics/loess_smoother.dart';
 import '../statistics/trend_statistics.dart';
@@ -2609,9 +2610,10 @@ class TrendAnnotationElement extends ChartElement {
   void _calculateTrendPoints() {
     _trendEquation = null;
     _intervals = null;
-    final dataPoints = series.points
-        .where((point) => point.x.isFinite && point.y.isFinite)
-        .toList(growable: false);
+    // A Range Area gap is a hole in the band, not an observation at zero, so
+    // `fitObservations` drops it. Fitting over `series.points` directly would
+    // pull the line toward the axis at every gap.
+    final dataPoints = fitObservations(series.points);
     if (dataPoints.isEmpty) {
       _trendPoints = [];
       _statistics = TrendStatisticsCalculator.calculate(

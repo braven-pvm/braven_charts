@@ -1,14 +1,15 @@
 import 'dart:math' as math;
 
 import '../models/chart_data_point.dart';
+import 'fit_observations.dart';
 
 /// Deterministic locally weighted linear regression for chart trend overlays.
 ///
 /// The implementation uses a tricube distance kernel and optional Tukey
-/// bisquare robustness passes. Inputs are sorted, non-finite coordinates are
-/// ignored, and very dense datasets are sampled evenly before fitting so a
-/// trend annotation cannot accidentally introduce quadratic work over an
-/// unbounded source series.
+/// bisquare robustness passes. Inputs are sorted, non-finite coordinates and
+/// Range Area gaps are ignored, and very dense datasets are sampled evenly
+/// before fitting so a trend annotation cannot accidentally introduce
+/// quadratic work over an unbounded source series.
 class LoessSmoother {
   const LoessSmoother({
     this.span = 0.5,
@@ -37,7 +38,7 @@ class LoessSmoother {
     final finite = <_IndexedPoint>[];
     var sourceIndex = 0;
     for (final point in source) {
-      if (point.x.isFinite && point.y.isFinite) {
+      if (isFitObservation(point)) {
         finite.add(_IndexedPoint(point, sourceIndex));
       }
       sourceIndex++;

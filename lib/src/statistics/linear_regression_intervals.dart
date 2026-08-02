@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import '../models/chart_data_point.dart';
+import 'fit_observations.dart';
 
 /// One sampled point from an ordinary least-squares uncertainty envelope.
 class LinearRegressionIntervalPoint {
@@ -59,9 +60,7 @@ abstract final class LinearRegressionIntervalCalculator {
   }) {
     assert(confidenceLevel > 0 && confidenceLevel < 1);
     assert(sampleCount >= 2);
-    final finite = points
-        .where((point) => point.x.isFinite && point.y.isFinite)
-        .toList(growable: false);
+    final finite = fitObservations(points);
     if (finite.length < 3) return null;
 
     final n = finite.length;
