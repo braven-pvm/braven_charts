@@ -37,7 +37,8 @@
 /// | a customised PolarChartConfig | emitted as .polarConfig(...) |
 /// | a polar series carrying per-category column colors, targets or intervals, or the rose preset | emitted as geomPolar row-channels + `rose: true` |
 /// | a non-default ConcentricDonutConfig | emitted as geomDonut(concentric: ...) |
-/// | a radial-bar, gauge or range-area family (no grammar geometry) | blocked — no mark reverses it |
+/// | a range-area family | emitted as geomRangeArea(low:, high:), carrying the band's native config; a gap travels as a row whose two bounds are both null |
+/// | a radial-bar or gauge family (no grammar geometry) | blocked — no mark reverses it |
 /// | a concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | emitted as `geomDonut(ringIds: {...})` — `DonutMark` carries an explicit ring-key→series-id map, consulted ONLY when the id pattern fails to recover a markId, so a conforming composition emits unchanged |
 /// | a concentric composition whose rings are unnamed or share a name | blocked — the ring key IS the series name, so no `ring:` channel could bucket those rows apart |
 /// | a concentric composition whose rings DIVERGE in `donutStyle`, `selectionStyle`, `unit`, `sliceRadiusConfig` or `sliceGroupingConfig`, or in which ANY ring carries a series `color` | blocked — `DonutMark` holds ONE of each for the whole composition and `_lowerConcentricRings` stamps it onto every ring, and unlike the single-donut `_lowerDonut` beside it never passes `mark.color` at all. Sharing a NON-DEFAULT value is fine; divergence is not, and no ring may carry a series colour even when every ring carries the same one. These reach the author through the catch-all row below rather than a reason of their own — a gap, since an author can hit them from ordinary config-form Dart |
@@ -129,6 +130,8 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -325,6 +328,21 @@ class _GeometryPlan {
   final ChartSeries series;
   final Map<String, _Field> accessors;
 }
+
+/// The captured value, or null when it IS the family default.
+///
+/// A mark field of null means "the series default", so mapping a defaulted
+/// capture back to null is what keeps a plain band emitting no styling
+/// arguments — and keeps the re-lowered series identical to the captured one,
+/// since the lowering resolves that same default.
+V? _defaultedOrNull<V>(V value, V fallback) => value == fallback ? null : value;
+
+/// Read only for its DEFAULTS. Not `const`: the constructor validates in its
+/// body.
+final RangeAreaChartSeries _rangeAreaEmitDefaults = RangeAreaChartSeries(
+  id: '',
+  points: const <RangeAreaDataPoint>[],
+);
 
 /// A planned donut center together with the document site it was CAPTURED
 /// from.
@@ -599,10 +617,9 @@ class _GrammarChainEmitter {
     if (unsupportedFamilies.isNotEmpty) {
       block(
         'Grammar chain not emitted: the grammar layer has geometries for line, '
-        'area, bar, scatter, candlestick, heatmap, pie, donut and polar-column '
-        'series, '
-        'but not for these — a radial-bar, gauge or range-area family has no '
-        'mark to reverse it: ${unsupportedFamilies.join(', ')}.',
+        'area, bar, scatter, candlestick, range area, heatmap, pie, donut '
+        'and polar-column series, but not for these — a radial-bar or gauge '
+        'family has no mark to reverse it: ${unsupportedFamilies.join(', ')}.',
         path: r'$.series[*].type',
       );
       return null;
@@ -1726,9 +1743,9 @@ class _GrammarChainEmitter {
   // Gates
   // =========================================================================
 
-  /// Whether a grammar geometry exists that reverses [series]. Widens the old
-  /// Cartesian-only gate to Heatmap and the radial families the grammar now
-  /// lowers (pie, donut, polar-column). Radial-bar, gauge and range-area stay
+  /// Whether a grammar geometry exists that reverses [series]. Covers the five
+  /// Cartesian families, range area, heatmap, and the radial families the
+  /// grammar lowers (pie, donut, polar-column). Radial-bar and gauge stay
   /// refused — they have no `geom*` verb and no `Mark` subtype.
   bool _isEmittableFamily(ChartSeries series) => switch (series) {
     CandlestickChartSeries() => true,
@@ -1737,6 +1754,7 @@ class _GrammarChainEmitter {
     AreaChartSeries() => true,
     BarChartSeries() => true,
     HeatmapChartSeries() => true,
+    RangeAreaChartSeries() => true,
     PieChartSeries() => true,
     DonutChartSeries() => true,
     PolarColumnChartSeries() => true,
@@ -2089,6 +2107,7 @@ class _GrammarChainEmitter {
     ScatterChartSeries() => 'scatter',
     CandlestickChartSeries() => 'candlestick',
     HeatmapChartSeries() => 'heatmap',
+    RangeAreaChartSeries() => 'range-area',
     _ => 'V1',
   };
 
@@ -2182,6 +2201,16 @@ class _GrammarChainEmitter {
         // Every Heatmap field, including explicit missing cells and stable
         // identities, is carried by HeatmapMark.
         break;
+      case RangeAreaChartSeries():
+        final actual = lowered as RangeAreaChartSeries;
+        // Roadmap 1d, and named rather than dropped: the mark deliberately does
+        // not carry either, so a band using one must say WHICH.
+        if (expected.fillGradient != actual.fillGradient) {
+          return 'a fill gradient';
+        }
+        if (expected.pathAnimation != actual.pathAnimation) {
+          return 'a path animation';
+        }
     }
     return null;
   }
@@ -2542,6 +2571,100 @@ class _GrammarChainEmitter {
             low: _number(low),
             close: _number(close),
             timestamp: stamp == null ? null : _stamp(stamp),
+          ),
+        );
+
+      case RangeAreaChartSeries():
+        // OPTIONAL number slots, not plain numbers: a `RangeAreaDataPoint.gap`
+        // has no interval at all, and a synthesised 0 there is a real value on
+        // the Y scale. Both bounds null at a row is exactly what
+        // `_lowerRangeArea` reads back as a gap.
+        final low = _addField(
+          _suffixed(base, 'low'),
+          _FieldKind.optionalNumber,
+        );
+        final high = _addField(
+          _suffixed(base, 'high'),
+          _FieldKind.optionalNumber,
+        );
+        accessors
+          ..['low'] = low
+          ..['high'] = high;
+        final label = _planPointText(
+          series,
+          base,
+          'label',
+          accessors,
+          (point) => point.label,
+        );
+        final pointKey = _planPointText(
+          series,
+          base,
+          'pointKey',
+          accessors,
+          (point) => point.pointKey,
+        );
+        return _GeometryPlan(
+          series: series,
+          accessors: accessors,
+          mark: RangeAreaMark<_SourceRow>(
+            id: id,
+            name: name,
+            color: color,
+            unit: unit,
+            yAxisId: yAxisId,
+            x: x,
+            low: _nullableNumber(low),
+            high: _nullableNumber(high),
+            label: label,
+            pointKey: pointKey,
+            // Null when the captured value IS the family default, so a plain
+            // band emits none of these. The comparisons read the defaults off a
+            // freshly built series rather than restating literals here.
+            interpolation: _defaultedOrNull(
+              series.interpolation,
+              _rangeAreaEmitDefaults.interpolation,
+            ),
+            tension: _defaultedOrNull(
+              series.tension,
+              _rangeAreaEmitDefaults.tension,
+            ),
+            fillOpacity: _defaultedOrNull(
+              series.fillOpacity,
+              _rangeAreaEmitDefaults.fillOpacity,
+            ),
+            borderMode: _defaultedOrNull(
+              series.borderMode,
+              _rangeAreaEmitDefaults.borderMode,
+            ),
+            upperBoundaryStyle: _defaultedOrNull(
+              series.upperBoundaryStyle,
+              _rangeAreaEmitDefaults.upperBoundaryStyle,
+            ),
+            lowerBoundaryStyle: _defaultedOrNull(
+              series.lowerBoundaryStyle,
+              _rangeAreaEmitDefaults.lowerBoundaryStyle,
+            ),
+            connectGaps: _defaultedOrNull(
+              series.connectGaps,
+              _rangeAreaEmitDefaults.connectGaps,
+            ),
+            showBoundaryMarkers: _defaultedOrNull(
+              series.showBoundaryMarkers,
+              _rangeAreaEmitDefaults.showBoundaryMarkers,
+            ),
+            markerRadius: _defaultedOrNull(
+              series.markerRadius,
+              _rangeAreaEmitDefaults.markerRadius,
+            ),
+            labelConfig: _defaultedOrNull(
+              series.labelConfig,
+              _rangeAreaEmitDefaults.labelConfig,
+            ),
+            hitTestMode: _defaultedOrNull(
+              series.hitTestMode,
+              _rangeAreaEmitDefaults.hitTestMode,
+            ),
           ),
         );
 
@@ -2952,6 +3075,15 @@ class _GrammarChainEmitter {
             if (label != null) {
               row.optionalStrings[label.slot] = point.label;
             }
+          case RangeAreaChartSeries():
+            final interval = series.intervalAt(index);
+            // A gap leaves BOTH slots null — that is the shape `_lowerRangeArea`
+            // reads back as `RangeAreaDataPoint.gap`. The default `ChartSeries`
+            // arm below would write `point.y`, which for a gap is the model's
+            // zero placeholder, silently turning every gap into a real interval
+            // at zero.
+            row.optionalNumbers[plan.accessors['low']!.slot] = interval.low;
+            row.optionalNumbers[plan.accessors['high']!.slot] = interval.high;
           case ChartSeries():
             row.numbers[plan.accessors['y']!.slot] = series.points[index].y;
         }
@@ -3469,15 +3601,7 @@ class _GrammarChainEmitter {
       ScatterMark<_SourceRow>() => 'geomPoint',
       CandlestickMark<_SourceRow>() => 'geomCandlestick',
       HeatmapMark<_SourceRow>() => 'geomHeatmap',
-      // Unreachable today: `_isEmittableFamily` still refuses
-      // `RangeAreaChartSeries`, so the planner never builds a range-area plan
-      // and no `RangeAreaMark` can reach this switch. The arm exists because
-      // the hierarchy is sealed; the real `geomRangeArea` reversal lands with
-      // the emitter slice, which lifts that gate at the same time.
-      RangeAreaMark<_SourceRow>() => throw StateError(
-        'unreachable: a range-area mark reached _emitGeometry before the '
-        'emitter reverses range-area series',
-      ),
+      RangeAreaMark<_SourceRow>() => 'geomRangeArea',
       TrendMark<_SourceRow>() => 'trend',
       // Reference marks lower to annotations and are emitted as their own chain
       // verbs, never through _emitGeometry, which only ever sees a geometry plan.
@@ -3511,6 +3635,11 @@ class _GrammarChainEmitter {
           if (missing != null) {
             writer.namedArgument('missing', missing.accessor());
           }
+        // BEFORE the `case _:` default, which writes `y:` — a band has no y at
+        // all, and `plan.accessors['y']` would null-assert.
+        case RangeAreaMark<_SourceRow>():
+          writer.namedArgument('low', plan.accessors['low']!.accessor());
+          writer.namedArgument('high', plan.accessors['high']!.accessor());
         case _:
           writer.namedArgument('y', plan.accessors['y']!.accessor());
       }
@@ -3611,7 +3740,58 @@ class _GrammarChainEmitter {
           _config.emitHeatmapOptions(writer, plan.series as HeatmapChartSeries);
           _absorbConfigWarnings();
         case RangeAreaMark<_SourceRow>():
-          break; // unreachable: the verb switch above already threw.
+          // Emission order mirrors `_emitRangeAreaOptions` so the config form
+          // and the grammar form read alike.
+          if (mark.interpolation != null) {
+            writer.namedArgument(
+              'interpolation',
+              'LineInterpolation.${mark.interpolation!.name}',
+            );
+          }
+          _optionalNumber(writer, 'tension', mark.tension);
+          _optionalNumber(writer, 'fillOpacity', mark.fillOpacity);
+          if (mark.borderMode != null) {
+            writer.namedArgument(
+              'borderMode',
+              'RangeAreaBorderMode.${mark.borderMode!.name}',
+            );
+          }
+          if (mark.upperBoundaryStyle != null) {
+            _config.emitRangeAreaBoundaryStyle(
+              writer,
+              'upperBoundaryStyle',
+              mark.upperBoundaryStyle!,
+            );
+            _absorbConfigWarnings();
+          }
+          if (mark.lowerBoundaryStyle != null) {
+            _config.emitRangeAreaBoundaryStyle(
+              writer,
+              'lowerBoundaryStyle',
+              mark.lowerBoundaryStyle!,
+            );
+            _absorbConfigWarnings();
+          }
+          if (mark.connectGaps != null) {
+            writer.namedArgument('connectGaps', '${mark.connectGaps}');
+          }
+          if (mark.showBoundaryMarkers != null) {
+            writer.namedArgument(
+              'showBoundaryMarkers',
+              '${mark.showBoundaryMarkers}',
+            );
+          }
+          _optionalNumber(writer, 'markerRadius', mark.markerRadius);
+          if (mark.labelConfig != null) {
+            _config.emitRangeAreaLabelConfig(writer, mark.labelConfig!, 0);
+            _absorbConfigWarnings();
+          }
+          if (mark.hitTestMode != null) {
+            writer.namedArgument(
+              'hitTestMode',
+              'RangeAreaHitTestMode.${mark.hitTestMode!.name}',
+            );
+          }
         case TrendMark<_SourceRow>():
           break;
         case ThresholdMark<_SourceRow>() ||

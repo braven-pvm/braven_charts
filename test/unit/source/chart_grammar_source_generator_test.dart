@@ -6381,6 +6381,163 @@ void main() {
       // lowering refuses a mark that sets both.
       expect(generated.source, isNot(contains('center: DonutCenterContent(')));
     });
+
+    testWidgets('a range-area band round-trips through a geomRangeArea chain', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(tester, (controller) {
+          return BravenChartPlus(
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                name: 'Recovery',
+                color: const Color(0xFF2563EB),
+                interpolation: LineInterpolation.monotone,
+                fillOpacity: 0.16,
+                showBoundaryMarkers: true,
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 42, high: 62, pointKey: 'r0'),
+                  RangeAreaDataPoint(x: 1, low: 44, high: 66, pointKey: 'r1'),
+                ],
+              ),
+            ],
+            bravenChartController: controller,
+          );
+        }),
+      );
+
+      expect(generated.source, contains('= BravenChart.of('));
+      expect(generated.source, contains('.geomRangeArea('));
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('a range-area gap survives the reversal as a gap', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(tester, (controller) {
+          return BravenChartPlus(
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 1, high: 3),
+                  RangeAreaDataPoint.gap(x: 1),
+                  RangeAreaDataPoint(x: 2, low: 2, high: 4),
+                ],
+              ),
+            ],
+            bravenChartController: controller,
+          );
+        }),
+      );
+
+      // The proof compares the re-lowered band against the captured one, so a
+      // gap that came back as an interval would BLOCK rather than emit. That
+      // the chain exists at all is the assertion; the null literals confirm the
+      // row shape a reader would copy.
+      expect(generated.source, contains('.geomRangeArea('));
+      expect(generated.source, contains('null'));
+      expect(generated.warnings, isEmpty);
+    });
+
+    testWidgets('a band carrying a 1d field is refused BY NAME', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(tester, (controller) {
+          return BravenChartPlus(
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                pathAnimation: const PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                ),
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 1, high: 3),
+                  RangeAreaDataPoint(x: 1, low: 2, high: 4),
+                ],
+              ),
+            ],
+            bravenChartController: controller,
+          );
+        }),
+      );
+
+      expect(generated.source, isNot(contains('= BravenChart.of(')));
+      expect(
+        generated.warnings.single.message,
+        contains('a path animation'),
+        reason:
+            'a field the mark deliberately does not carry must be named, not '
+            'dropped: ${generated.warnings.map((w) => w.message).join('\n')}',
+      );
+    });
+
+    testWidgets('a band carrying a fill gradient is refused BY NAME', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(tester, (controller) {
+          return BravenChartPlus(
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                fillGradient: const AreaGradient(
+                  colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+                ),
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 1, high: 3),
+                  RangeAreaDataPoint(x: 1, low: 2, high: 4),
+                ],
+              ),
+            ],
+            bravenChartController: controller,
+          );
+        }),
+      );
+
+      expect(generated.source, isNot(contains('= BravenChart.of(')));
+      expect(generated.warnings.single.message, contains('a fill gradient'));
+    });
+
+    testWidgets('a band beside a line on a legacy single-axis chart emits', (
+      tester,
+    ) async {
+      // The regression guard for the blocker this slice opened with. Both series
+      // are unbound, so the chain must mount the LEGACY single-axis shape; a
+      // range area that could not be unbound would refuse here through a tail
+      // that names no field.
+      final generated = generateGrammar(
+        await snapshotOf(tester, (controller) {
+          return BravenChartPlus(
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 1, high: 3),
+                  RangeAreaDataPoint(x: 1, low: 2, high: 4),
+                ],
+              ),
+              LineChartSeries(
+                id: 'centre',
+                points: const <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 2),
+                  ChartDataPoint(x: 1, y: 3),
+                ],
+              ),
+            ],
+            bravenChartController: controller,
+          );
+        }),
+      );
+
+      expect(generated.source, contains('.geomRangeArea('));
+      expect(generated.source, contains('.geomLine('));
+      expect(generated.warnings, isEmpty);
+    });
   });
 
   // =========================================================================
@@ -9228,7 +9385,10 @@ void main() {
       // Radial-bar and gauge have neither a RadialMark subtype nor a geom* verb,
       // so they stay refused — but with an ACCURATE reason naming the missing
       // geometry, NOT the stale "Cartesian-only in V1" copy (pie/donut/polar now
-      // emit).
+      // emit). Range area LEFT this list with `geomRangeArea`, so the sentence
+      // must no longer name it among the families with no mark — a reason that
+      // lists a family the emitter now reverses is exactly the stale copy this
+      // case exists to catch.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -9247,9 +9407,10 @@ void main() {
       expect(
         blockedReason(generated),
         allOf(
-          contains('radial-bar, gauge or range-area'),
+          contains('radial-bar or gauge'),
           contains('RadialBarChartSeries'),
           contains('rings'),
+          isNot(contains('or range-area family has no mark')),
         ),
       );
       expect(blockedReason(generated), isNot(contains('Cartesian-only in V1')));
