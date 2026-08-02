@@ -74,13 +74,12 @@ void main() {
     );
 
     expect(extracted, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
-    final warning =
-        (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>).warnings
-            .singleWhere(
-              (entry) =>
-                  entry.path ==
-                  r'$.series.band.labelConfig.labels.formatter',
-            );
+    final warning = (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>)
+        .warnings
+        .singleWhere(
+          (entry) =>
+              entry.path == r'$.series.band.labelConfig.labels.formatter',
+        );
     expect(warning.code, ChartArtifactDiagnosticCodes.runtimeBindingRequired);
   });
 
@@ -106,7 +105,10 @@ void main() {
     final generated =
         ChartDartSourceGenerator.generate(snapshot.value)
             as ChartArtifactSuccess<ChartGeneratedSource>;
-    expect(generated.value.source, contains('labelConfig: RangeAreaLabelConfig('));
+    expect(
+      generated.value.source,
+      contains('labelConfig: RangeAreaLabelConfig('),
+    );
   });
 
   testWidgets('a band with NO formatter extracts without a warning', (
@@ -164,7 +166,5 @@ Future<ChartArtifactResult<ChartDocumentSnapshot>> _extract(
   );
   await tester.pumpAndSettle();
 
-  return controller.extractSourceDocument(
-    const ChartDocumentExtractOptions(),
-  );
+  return controller.extractSourceDocument(const ChartDocumentExtractOptions());
 }

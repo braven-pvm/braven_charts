@@ -107,11 +107,9 @@ void main() {
     final series = _band(upperBoundaryStyle: style);
 
     final writer = DartSourceWriter();
-    _emitter(series).emitRangeAreaBoundaryStyle(
-      writer,
-      'upperBoundaryStyle',
-      style,
-    );
+    _emitter(
+      series,
+    ).emitRangeAreaBoundaryStyle(writer, 'upperBoundaryStyle', style);
 
     expect(
       _blockFrom(_configSource(series), writer.toString()),
@@ -169,9 +167,8 @@ String _blockFrom(String source, String expected) {
   final block = actual
       .sublist(start, start + wanted.length)
       .map(
-        (line) => line.length < outerIndent ? line : line.substring(
-          outerIndent,
-        ),
+        (line) =>
+            line.length < outerIndent ? line : line.substring(outerIndent),
       );
   return '${block.join('\n')}\n';
 }

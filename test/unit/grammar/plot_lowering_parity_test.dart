@@ -2192,43 +2192,55 @@ void main() {
       );
     }
 
-    test('an out-of-range tension is refused as a STYLE failure, not a row', () {
-      expectStyleRefusal(
-        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
-          id: 'band',
-          low: (row) => row.low,
-          high: (row) => row.high,
-          tension: 5,
-        ),
-        parameter: 'tension',
-      );
-    });
+    test(
+      'an out-of-range tension is refused as a STYLE failure, not a row',
+      () {
+        expectStyleRefusal(
+          BravenChart.of(_bandRows)
+              .x((row) => row.x)
+              .geomRangeArea(
+                id: 'band',
+                low: (row) => row.low,
+                high: (row) => row.high,
+                tension: 5,
+              ),
+          parameter: 'tension',
+        );
+      },
+    );
 
     test('an out-of-range fillOpacity is refused as a STYLE failure', () {
       expectStyleRefusal(
-        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
-          id: 'band',
-          low: (row) => row.low,
-          high: (row) => row.high,
-          fillOpacity: 1.5,
-        ),
+        BravenChart.of(_bandRows)
+            .x((row) => row.x)
+            .geomRangeArea(
+              id: 'band',
+              low: (row) => row.low,
+              high: (row) => row.high,
+              fillOpacity: 1.5,
+            ),
         parameter: 'fillOpacity',
       );
     });
 
-    test('an odd-length boundary dashPattern is refused as a STYLE failure', () {
-      expectStyleRefusal(
-        BravenChart.of(_bandRows).x((row) => row.x).geomRangeArea(
-          id: 'band',
-          low: (row) => row.low,
-          high: (row) => row.high,
-          upperBoundaryStyle: const RangeAreaBoundaryStyle(
-            dashPattern: <double>[4],
-          ),
-        ),
-        parameter: 'upperBoundaryStyle.dashPattern',
-      );
-    });
+    test(
+      'an odd-length boundary dashPattern is refused as a STYLE failure',
+      () {
+        expectStyleRefusal(
+          BravenChart.of(_bandRows)
+              .x((row) => row.x)
+              .geomRangeArea(
+                id: 'band',
+                low: (row) => row.low,
+                high: (row) => row.high,
+                upperBoundaryStyle: const RangeAreaBoundaryStyle(
+                  dashPattern: <double>[4],
+                ),
+              ),
+          parameter: 'upperBoundaryStyle.dashPattern',
+        );
+      },
+    );
 
     test('per-point label and key reach the lowered points', () {
       final lowered = BravenChart.of(_bandRows)

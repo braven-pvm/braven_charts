@@ -139,25 +139,22 @@ void main() {
       expect(gapped.equation, gapFree.equation);
     });
 
-    test(
-      'TrendStatisticsCalculator ignores gaps when handed band points',
-      () {
-        double? flat(double x) => 50;
-        final gapped = TrendStatisticsCalculator.calculate(
-          points: _gappedBand,
-          predict: flat,
-        );
-        final gapFree = TrendStatisticsCalculator.calculate(
-          points: _gapFreeBand,
-          predict: flat,
-        );
+    test('TrendStatisticsCalculator ignores gaps when handed band points', () {
+      double? flat(double x) => 50;
+      final gapped = TrendStatisticsCalculator.calculate(
+        points: _gappedBand,
+        predict: flat,
+      );
+      final gapFree = TrendStatisticsCalculator.calculate(
+        points: _gapFreeBand,
+        predict: flat,
+      );
 
-        expect(gapped.sampleCount, 9);
-        expect(gapped.sampleCount, gapFree.sampleCount);
-        expect(gapped.rSquared, gapFree.rSquared);
-        expect(gapped.pearsonCorrelation, gapFree.pearsonCorrelation);
-      },
-    );
+      expect(gapped.sampleCount, 9);
+      expect(gapped.sampleCount, gapFree.sampleCount);
+      expect(gapped.rSquared, gapFree.rSquared);
+      expect(gapped.pearsonCorrelation, gapFree.pearsonCorrelation);
+    });
 
     test('LoessSmoother drops gaps from its input', () {
       final gapped = LoessSmoother(span: 0.8).smooth(_gappedBand);
