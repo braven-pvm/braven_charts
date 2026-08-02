@@ -1059,20 +1059,24 @@ RangeAreaChartSeries _lowerRangeArea<T>(
 }
 ```
 
-**(h)** In `lib/src/grammar/facet_partition.dart`, add an arm to `_axisAccessors`. A band's Y extent is BOTH bounds, and a gap contributes nothing — but the switch's return type is `List<FieldAccessor<T, num>>` (total accessors), which a nullable bound cannot satisfy. Wrap them so a gap reads as the band's own x-position value rather than crashing:
+**(h)** In `lib/src/grammar/facet_partition.dart`, add an arm to `_axisAccessors`. A band's Y extent is BOTH bounds, and a gap contributes nothing — but the switch's return type is `List<FieldAccessor<T, num>>` (total accessors), which a nullable bound cannot satisfy. Wrap them so a gap returns the file's existing "skip me" sentinel, `double.nan`, which `globalRange` already discards (`if (!value.isFinite) continue;`). Do NOT fall back to `0`: every real number widens a min/max sweep, so a `0` fallback drags a `100..200` band's shared axis down to `0..200`, and a `-200..-100` band's up to `-200..0`.
 
 ```dart
       RangeAreaMark<T>(:final x, :final low, :final high) =>
         axis == FacetAxis.x
             ? <FieldAccessor<T, num>>[x]
             : <FieldAccessor<T, num>>[
-                // A facet's shared range is a MIN/MAX sweep, so a gap must
-                // contribute a value that cannot widen it. Collapsing a gap onto
-                // the other bound does exactly that; when both are null the row
-                // is a gap on both sides and contributes 0-width at 0, matching
-                // the placeholder `RangeAreaDataPoint.gap` itself stores.
-                (row) => low(row) ?? high(row) ?? 0,
-                (row) => high(row) ?? low(row) ?? 0,
+                // A GAP (both bounds null) positions nothing, so it must
+                // contribute nothing to the sweep. There is no in-band
+                // sentinel that can express that, so a gap returns NaN — the
+                // same "skip me" convention `globalRange` already applies.
+                //
+                // A HALF-null row is not a gap, it is an authoring error
+                // (`incompleteRangeAreaInterval`); faceting runs BEFORE
+                // lowering, so the cross-fallbacks keep the one bound it does
+                // carry.
+                (row) => low(row) ?? high(row) ?? double.nan,
+                (row) => high(row) ?? low(row) ?? double.nan,
               ],
 ```
 
