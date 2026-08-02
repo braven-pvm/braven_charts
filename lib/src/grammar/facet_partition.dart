@@ -84,6 +84,9 @@ List<FieldAccessor<T, num>> _axisAccessors<T>(Mark<T> mark, FacetAxis axis) =>
       ScatterMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
         axis == FacetAxis.x ? x : y,
       ],
+      HeatmapMark<T>(:final x, :final y) => <FieldAccessor<T, num>>[
+        axis == FacetAxis.x ? x : y,
+      ],
       CandlestickMark<T>(
         :final x,
         :final open,

@@ -129,6 +129,32 @@ class PublicSurfaceVisualCheckTest(unittest.TestCase):
                 html,
             )
 
+    def test_readme_wait_requires_decoded_settled_media(self) -> None:
+        class Driver:
+            def __init__(self) -> None:
+                self.script_timeout: float | None = None
+                self.async_script = ""
+
+            def execute_script(self, script: str) -> bool:
+                self.assertions = script
+                return True
+
+            def set_script_timeout(self, timeout: float) -> None:
+                self.script_timeout = timeout
+
+            def execute_async_script(self, script: str) -> bool:
+                self.async_script = script
+                return True
+
+        driver = Driver()
+
+        visual._wait_for_surface(driver, "readme", 7.0)  # type: ignore[arg-type]
+
+        self.assertEqual(driver.script_timeout, 7.0)
+        self.assertIn("image.naturalWidth > 0", driver.assertions)
+        self.assertIn("image.decode()", driver.async_script)
+        self.assertEqual(driver.async_script.count("requestAnimationFrame"), 2)
+
     def test_primary_showcase_catalog_surfaces_are_visually_gated(self) -> None:
         self.assertEqual(
             visual.FLUTTER_SURFACES,

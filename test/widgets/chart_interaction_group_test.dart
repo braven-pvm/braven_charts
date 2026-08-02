@@ -574,6 +574,80 @@ void main() {
       closeTo(renderBox.transform!.dataYMax, 1e-9),
     );
   });
+
+  testWidgets('retains synchronized viewport when series snapshot changes', (
+    tester,
+  ) async {
+    final group = ChartInteractionGroupController();
+    addTearDown(group.dispose);
+    const expectedViewport = ChartXViewport(min: 999699.5, max: 999999.5);
+    group.setViewport(expectedViewport);
+    late StateSetter updateHost;
+    var series = const <ChartSeries>[
+      LineChartSeries(
+        id: 'snapshot',
+        points: [
+          ChartDataPoint(x: 999700, y: 1),
+          ChartDataPoint(x: 999800, y: 2),
+          ChartDataPoint(x: 999999, y: 3),
+        ],
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 640,
+          height: 320,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              updateHost = setState;
+              return BravenChartPlus(
+                interactionGroupController: group,
+                interactionGroupOptions: const ChartInteractionGroupOptions(
+                  synchronizeCursor: false,
+                  synchronizeViewport: true,
+                  synchronizeSelection: false,
+                ),
+                showLegend: false,
+                xAxisConfig: const XAxisConfig(min: -0.5, max: 999999.5),
+                series: series,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    ChartRenderBox renderBox() =>
+        _chartRenderFinder().evaluate().single.renderObject! as ChartRenderBox;
+    expect(renderBox().transform!.dataXMin, closeTo(999699.5, 1e-9));
+    expect(renderBox().transform!.dataXMax, closeTo(999999.5, 1e-9));
+
+    updateHost(() {
+      series = const <ChartSeries>[
+        LineChartSeries(
+          id: 'snapshot',
+          points: [
+            ChartDataPoint(x: 999700, y: 4),
+            ChartDataPoint(x: 999800, y: 5),
+            ChartDataPoint(x: 999999, y: 6),
+          ],
+        ),
+      ];
+    });
+    await tester.pumpAndSettle();
+
+    expect(group.viewport, expectedViewport);
+    expect(renderBox().transform!.dataXMin, closeTo(999699.5, 1e-9));
+    expect(renderBox().transform!.dataXMax, closeTo(999999.5, 1e-9));
+
+    renderBox().zoomChart(1.5, animate: false);
+    await tester.pump();
+    expect(renderBox().transform!.dataXRange, closeTo(200, 1e-6));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _host(

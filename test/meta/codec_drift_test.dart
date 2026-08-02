@@ -285,6 +285,7 @@ const List<String> _seriesClasses = <String>[
   'LineChartSeries',
   'AreaChartSeries',
   'RangeAreaChartSeries',
+  'HeatmapChartSeries',
   'ScatterChartSeries',
   'BarChartSeries',
   'CandlestickChartSeries',
@@ -318,6 +319,7 @@ const List<String> _pointClasses = <String>[
   'ChartDataPoint',
   'CandlestickDataPoint',
   'RangeAreaDataPoint',
+  'HeatmapDataPoint',
 ];
 
 /// DECODE delegation: a class whose decoded set includes another's because its

@@ -15,6 +15,9 @@ import '../models/chart_type.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_color_scale.dart';
+import '../models/heatmap_data_point.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
@@ -241,6 +244,8 @@ class ChartConfigBuilder {
         ? _parseCandlestickPoints(dataList)
         : style == SeriesStyle.rangeArea
         ? _parseRangeAreaPoints(dataList)
+        : style == SeriesStyle.heatmap
+        ? _parseHeatmapPoints(dataList)
         : dataList.indexed.map((entry) {
             final (index, d) = entry;
             final pointJson = d as Map<String, dynamic>;
@@ -373,6 +378,14 @@ class ChartConfigBuilder {
         'Gauge is not yet part of the agentic chart schema; construct '
         'GaugeChartSeries through the public API.',
       ),
+      SeriesStyle.heatmap => _buildHeatmapSeries(
+        id: id,
+        name: name ?? id,
+        points: points.cast<HeatmapDataPoint>(),
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        seriesJson: json,
+      ),
       SeriesStyle.candlestick => CandlestickChartSeries(
         id: id,
         name: name ?? id,
@@ -417,6 +430,430 @@ class ChartConfigBuilder {
     for (var index = 0; index < data.length; index++)
       _parseRangeAreaPoint(data[index], index),
   ];
+
+  static List<HeatmapDataPoint> _parseHeatmapPoints(List<dynamic> data) => [
+    for (var index = 0; index < data.length; index++)
+      _parseHeatmapPoint(data[index], index),
+  ];
+
+  static HeatmapDataPoint _parseHeatmapPoint(dynamic value, int index) {
+    if (value is! Map<String, dynamic>) {
+      throw FormatException('Heatmap data point $index must be an object.');
+    }
+
+    double requiredNumber(String key) {
+      final number = value[key];
+      if (number is! num || !number.isFinite) {
+        throw FormatException(
+          'Heatmap data point $index requires a finite numeric $key.',
+        );
+      }
+      return number.toDouble();
+    }
+
+    final x = requiredNumber('x');
+    final y = requiredNumber('y');
+    final missing = value['missing'];
+    if (missing != null && missing is! bool) {
+      throw FormatException(
+        'Heatmap data point $index missing must be a boolean.',
+      );
+    }
+    final pointKey = _parseOptionalPointKey(value, index);
+    final label = value['label'];
+    if (label != null && label is! String) {
+      throw FormatException(
+        'Heatmap data point $index label must be a string.',
+      );
+    }
+    final timestamp = _parseOptionalTimestamp(
+      value['timestamp'],
+      family: 'Heatmap',
+      index: index,
+    );
+    final boundsValue = value['bounds'];
+    HeatmapCellBounds? bounds;
+    if (boundsValue != null) {
+      if (boundsValue is! Map<String, dynamic>) {
+        throw FormatException(
+          'Heatmap data point $index bounds must be an object.',
+        );
+      }
+
+      double requiredBound(String key) {
+        final number = boundsValue[key];
+        if (number is! num || !number.isFinite) {
+          throw FormatException(
+            'Heatmap data point $index bounds require a finite numeric $key.',
+          );
+        }
+        return number.toDouble();
+      }
+
+      bounds = HeatmapCellBounds(
+        xMinimum: requiredBound('x_minimum'),
+        xMaximum: requiredBound('x_maximum'),
+        yMinimum: requiredBound('y_minimum'),
+        yMaximum: requiredBound('y_maximum'),
+      );
+    }
+
+    if (missing == true) {
+      if (value.containsKey('value')) {
+        throw FormatException(
+          'Heatmap missing cell $index cannot include a value.',
+        );
+      }
+      return HeatmapDataPoint.missing(
+        x: x,
+        y: y,
+        pointKey: pointKey,
+        timestamp: timestamp,
+        label: label as String?,
+        bounds: bounds,
+      );
+    }
+
+    return HeatmapDataPoint(
+      x: x,
+      y: y,
+      value: requiredNumber('value'),
+      pointKey: pointKey,
+      timestamp: timestamp,
+      label: label as String?,
+      bounds: bounds,
+    );
+  }
+
+  static HeatmapChartSeries _buildHeatmapSeries({
+    required String id,
+    required String name,
+    required List<HeatmapDataPoint> points,
+    required String? unit,
+    required YAxisConfig? yAxisConfig,
+    required Map<String, dynamic> seriesJson,
+  }) {
+    final scaleJson = seriesJson['heatmap_color_scale'];
+    if (scaleJson is! Map<String, dynamic>) {
+      throw const FormatException(
+        'Heatmap series require a heatmap_color_scale object.',
+      );
+    }
+    return HeatmapChartSeries(
+      id: id,
+      name: name,
+      points: points,
+      colorScale: _parseHeatmapColorScale(scaleJson),
+      unit: unit,
+      yAxisConfig: yAxisConfig,
+      cellWidth: _finiteNumber(
+        seriesJson['heatmap_cell_width'],
+        'heatmap_cell_width',
+        fallback: 1,
+      ),
+      cellHeight: _finiteNumber(
+        seriesJson['heatmap_cell_height'],
+        'heatmap_cell_height',
+        fallback: 1,
+      ),
+      gapFraction: _finiteNumber(
+        seriesJson['heatmap_gap_fraction'],
+        'heatmap_gap_fraction',
+        fallback: 0.06,
+      ),
+      borderColor: switch (seriesJson['heatmap_border_color']) {
+        final String value => _requiredColor(value, 'heatmap_border_color'),
+        null => const Color(0x26FFFFFF),
+        _ => throw const FormatException(
+          'heatmap_border_color must be a color string.',
+        ),
+      },
+      borderWidth: _finiteNumber(
+        seriesJson['heatmap_border_width'],
+        'heatmap_border_width',
+        fallback: 0,
+      ),
+      cornerRadius: _finiteNumber(
+        seriesJson['heatmap_corner_radius'],
+        'heatmap_corner_radius',
+        fallback: 0,
+      ),
+      showCellLabels: _booleanValue(
+        seriesJson['heatmap_show_cell_labels'],
+        'heatmap_show_cell_labels',
+        fallback: false,
+      ),
+      cellLabelColor: switch (seriesJson['heatmap_cell_label_color']) {
+        final String value => _requiredColor(value, 'heatmap_cell_label_color'),
+        null => null,
+        _ => throw const FormatException(
+          'heatmap_cell_label_color must be a color string.',
+        ),
+      },
+      cellLabelFontSize: _finiteNumber(
+        seriesJson['heatmap_cell_label_font_size'],
+        'heatmap_cell_label_font_size',
+        fallback: 11,
+      ),
+      emptyValueStyle: _parseHeatmapEmptyValueStyle(
+        seriesJson['heatmap_empty_value_style'],
+      ),
+      valueFilter: _parseHeatmapValueFilter(seriesJson['heatmap_value_filter']),
+    );
+  }
+
+  static HeatmapValueFilter? _parseHeatmapValueFilter(Object? value) {
+    if (value == null) return null;
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException('heatmap_value_filter must be an object.');
+    }
+    final mode = switch (value['mode']) {
+      null || 'dim' => HeatmapValueFilterMode.dim,
+      'hide' => HeatmapValueFilterMode.hide,
+      _ => throw const FormatException(
+        'heatmap_value_filter.mode must be dim or hide.',
+      ),
+    };
+    return HeatmapValueFilter(
+      minimumValue: _finiteNumber(
+        value['minimum_value'],
+        'heatmap_value_filter.minimum_value',
+      ),
+      maximumValue: _finiteNumber(
+        value['maximum_value'],
+        'heatmap_value_filter.maximum_value',
+      ),
+      mode: mode,
+      excludedOpacity: _finiteNumber(
+        value['excluded_opacity'],
+        'heatmap_value_filter.excluded_opacity',
+        fallback: 0.14,
+      ),
+    );
+  }
+
+  static HeatmapEmptyValueStyle? _parseHeatmapEmptyValueStyle(Object? value) {
+    if (value == null) return null;
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException(
+        'heatmap_empty_value_style must be an object.',
+      );
+    }
+    return HeatmapEmptyValueStyle(
+      value: _finiteNumber(
+        value['value'],
+        'heatmap_empty_value_style.value',
+        fallback: 0,
+      ),
+      fillColor: switch (value['fill_color']) {
+        final String color => _requiredColor(
+          color,
+          'heatmap_empty_value_style.fill_color',
+        ),
+        null => const Color(0xFFE5E7EB),
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.fill_color must be a color string.',
+        ),
+      },
+      borderColor: switch (value['border_color']) {
+        final String color => _requiredColor(
+          color,
+          'heatmap_empty_value_style.border_color',
+        ),
+        null => null,
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.border_color must be a color string.',
+        ),
+      },
+      borderWidth: _optionalFiniteNumber(
+        value['border_width'],
+        'heatmap_empty_value_style.border_width',
+      ),
+      showLabel: _booleanValue(
+        value['show_label'],
+        'heatmap_empty_value_style.show_label',
+        fallback: false,
+      ),
+      showInLegend: _booleanValue(
+        value['show_in_legend'],
+        'heatmap_empty_value_style.show_in_legend',
+        fallback: true,
+      ),
+      legendLabel: switch (value['legend_label']) {
+        final String label => label,
+        null => 'No activity',
+        _ => throw const FormatException(
+          'heatmap_empty_value_style.legend_label must be a string.',
+        ),
+      },
+    );
+  }
+
+  static HeatmapColorScale _parseHeatmapColorScale(Map<String, dynamic> json) {
+    final type = json['type'];
+    if (type is! String) {
+      throw const FormatException(
+        'heatmap_color_scale.type must be sequential, diverging, or threshold.',
+      );
+    }
+    final missingColor = switch (json['missing_color']) {
+      final String value => _requiredColor(
+        value,
+        'heatmap_color_scale.missing_color',
+      ),
+      null => const Color(0x00000000),
+      _ => throw const FormatException(
+        'heatmap_color_scale.missing_color must be a color string.',
+      ),
+    };
+    final label = switch (json['label']) {
+      final String value => value,
+      null => 'Value',
+      _ => throw const FormatException(
+        'heatmap_color_scale.label must be a string.',
+      ),
+    };
+    final unit = switch (json['unit']) {
+      final String value => value,
+      null => null,
+      _ => throw const FormatException(
+        'heatmap_color_scale.unit must be a string.',
+      ),
+    };
+    final showLegend = _booleanValue(
+      json['show_legend'],
+      'heatmap_color_scale.show_legend',
+      fallback: true,
+    );
+    final reverse = _booleanValue(
+      json['reverse'],
+      'heatmap_color_scale.reverse',
+      fallback: false,
+    );
+
+    return switch (type.toLowerCase()) {
+      'sequential' => HeatmapColorScale.sequential(
+        colors: _colorList(json['colors'], 'heatmap_color_scale.colors'),
+        minimumValue: _optionalFiniteNumber(
+          json['minimum'],
+          'heatmap_color_scale.minimum',
+        ),
+        maximumValue: _optionalFiniteNumber(
+          json['maximum'],
+          'heatmap_color_scale.maximum',
+        ),
+        reverse: reverse,
+        clamp: _booleanValue(
+          json['clamp'],
+          'heatmap_color_scale.clamp',
+          fallback: true,
+        ),
+        missingColor: missingColor,
+        label: label,
+        unit: unit,
+        showLegend: showLegend,
+      ),
+      'diverging' => HeatmapColorScale.diverging(
+        lowColor: _requiredHeatmapColor(json, 'low_color'),
+        midpointColor: _requiredHeatmapColor(json, 'midpoint_color'),
+        highColor: _requiredHeatmapColor(json, 'high_color'),
+        midpoint: _finiteNumber(
+          json['midpoint'],
+          'heatmap_color_scale.midpoint',
+        ),
+        minimumValue: _optionalFiniteNumber(
+          json['minimum'],
+          'heatmap_color_scale.minimum',
+        ),
+        maximumValue: _optionalFiniteNumber(
+          json['maximum'],
+          'heatmap_color_scale.maximum',
+        ),
+        reverse: reverse,
+        clamp: _booleanValue(
+          json['clamp'],
+          'heatmap_color_scale.clamp',
+          fallback: true,
+        ),
+        missingColor: missingColor,
+        label: label,
+        unit: unit,
+        showLegend: showLegend,
+      ),
+      'threshold' => HeatmapColorScale.threshold(
+        thresholds: _numberList(
+          json['thresholds'],
+          'heatmap_color_scale.thresholds',
+        ),
+        colors: _colorList(json['colors'], 'heatmap_color_scale.colors'),
+        bandLabels: _stringList(
+          json['band_labels'],
+          'heatmap_color_scale.band_labels',
+        ),
+        missingColor: missingColor,
+        label: label,
+        unit: unit,
+        showLegend: showLegend,
+        reverse: reverse,
+      ),
+      _ => throw FormatException(
+        'Unsupported heatmap_color_scale.type "$type".',
+      ),
+    };
+  }
+
+  static Color _requiredHeatmapColor(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! String) {
+      throw FormatException('heatmap_color_scale.$key must be a color string.');
+    }
+    return _requiredColor(value, 'heatmap_color_scale.$key');
+  }
+
+  static List<Color> _colorList(dynamic value, String field) {
+    if (value is! List || value.any((item) => item is! String)) {
+      throw FormatException('$field must be an array of color strings.');
+    }
+    return [for (final item in value) _requiredColor(item as String, field)];
+  }
+
+  static List<double> _numberList(dynamic value, String field) {
+    if (value is! List || value.any((item) => item is! num || !item.isFinite)) {
+      throw FormatException('$field must be an array of finite numbers.');
+    }
+    return [for (final item in value) (item as num).toDouble()];
+  }
+
+  static List<String> _stringList(dynamic value, String field) {
+    if (value == null) return const [];
+    if (value is! List || value.any((item) => item is! String)) {
+      throw FormatException('$field must be an array of strings.');
+    }
+    return value.cast<String>();
+  }
+
+  static double _finiteNumber(dynamic value, String field, {double? fallback}) {
+    if (value == null && fallback != null) return fallback;
+    if (value is! num || !value.isFinite) {
+      throw FormatException('$field must be a finite number.');
+    }
+    return value.toDouble();
+  }
+
+  static double? _optionalFiniteNumber(dynamic value, String field) =>
+      value == null ? null : _finiteNumber(value, field);
+
+  static bool _booleanValue(
+    dynamic value,
+    String field, {
+    required bool fallback,
+  }) {
+    if (value == null) return fallback;
+    if (value is! bool) {
+      throw FormatException('$field must be a boolean.');
+    }
+    return value;
+  }
 
   static RangeAreaDataPoint _parseRangeAreaPoint(dynamic value, int index) {
     if (value is! Map<String, dynamic>) {
@@ -1489,6 +1926,7 @@ class ChartConfigBuilder {
       'scatter' => SeriesStyle.scatter,
       'rangearea' || 'range_area' || 'range-area' => SeriesStyle.rangeArea,
       'candlestick' => SeriesStyle.candlestick,
+      'heatmap' => SeriesStyle.heatmap,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,
       _ => SeriesStyle.line, // Default to line
@@ -1503,6 +1941,7 @@ class ChartConfigBuilder {
       'scatter' => SeriesStyle.scatter,
       'rangearea' || 'range_area' || 'range-area' => SeriesStyle.rangeArea,
       'candlestick' => SeriesStyle.candlestick,
+      'heatmap' => SeriesStyle.heatmap,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,
       _ => null,

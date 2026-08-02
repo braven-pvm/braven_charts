@@ -46,6 +46,9 @@ import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/gauge_chart_config.dart';
 import '../models/gauge_chart_series.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_color_scale.dart';
+import '../models/heatmap_data_point.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/path_animation_style.dart';
@@ -537,6 +540,7 @@ class ChartConfigDartEmitter {
       ScatterChartSeries() => 'ScatterChartSeries',
       AreaChartSeries() => 'AreaChartSeries',
       RangeAreaChartSeries() => 'RangeAreaChartSeries',
+      HeatmapChartSeries() => 'HeatmapChartSeries',
       BarChartSeries() => 'BarChartSeries',
       PieChartSeries() => 'PieChartSeries',
       DonutChartSeries() => 'DonutChartSeries',
@@ -565,7 +569,8 @@ class ChartConfigDartEmitter {
       if (series is! PolarColumnChartSeries &&
           series is! RadialBarChartSeries &&
           series is! CandlestickChartSeries &&
-          series is! RangeAreaChartSeries) {
+          series is! RangeAreaChartSeries &&
+          series is! HeatmapChartSeries) {
         _valueIf(
           writer,
           'isXOrdered',
@@ -600,6 +605,8 @@ class ChartConfigDartEmitter {
           _emitAreaOptions(writer, series);
         case RangeAreaChartSeries():
           _emitRangeAreaOptions(writer, series);
+        case HeatmapChartSeries():
+          emitHeatmapOptions(writer, series);
         case ScatterChartSeries():
           _numberIf(writer, 'markerRadius', series.markerRadius, 5);
           _enumIf(
@@ -737,6 +744,10 @@ class ChartConfigDartEmitter {
       _emitCandlestickPoint(writer, point);
       return;
     }
+    if (point is HeatmapDataPoint) {
+      _emitHeatmapPoint(writer, point);
+      return;
+    }
     writer.writeLine('ChartDataPoint(');
     writer.indented(() {
       writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
@@ -795,6 +806,66 @@ class ChartConfigDartEmitter {
         _emitSegmentStyle(writer, point.segmentStyle!);
       }
       if (!point.isGap && point.pointStyle != null) {
+        _emitPointStyle(writer, point.pointStyle!);
+      }
+      if (point.metadata != null && point.metadata!.isNotEmpty) {
+        writer.namedArgument('metadata', _dynamicLiteral(point.metadata!));
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitHeatmapPoint(DartSourceWriter writer, HeatmapDataPoint point) {
+    writer.writeLine(
+      point.isMissing ? 'HeatmapDataPoint.missing(' : 'HeatmapDataPoint(',
+    );
+    writer.indented(() {
+      writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
+      writer.namedArgument('y', DartSourceWriter.numberLiteral(point.y));
+      if (point.bounds case final bounds?) {
+        writer.writeLine('bounds: HeatmapCellBounds(');
+        writer.indented(() {
+          writer.namedArgument(
+            'xMinimum',
+            DartSourceWriter.numberLiteral(bounds.xMinimum),
+          );
+          writer.namedArgument(
+            'xMaximum',
+            DartSourceWriter.numberLiteral(bounds.xMaximum),
+          );
+          writer.namedArgument(
+            'yMinimum',
+            DartSourceWriter.numberLiteral(bounds.yMinimum),
+          );
+          writer.namedArgument(
+            'yMaximum',
+            DartSourceWriter.numberLiteral(bounds.yMaximum),
+          );
+        });
+        writer.writeLine('),');
+      }
+      if (!point.isMissing) {
+        writer.namedArgument(
+          'value',
+          DartSourceWriter.numberLiteral(point.value!),
+        );
+        _optionalNumber(writer, 'magnitude', point.magnitude);
+        _optionalNumber(writer, 'colorValue', point.colorValue);
+        _optionalNumber(writer, 'opacityValue', point.opacityValue);
+        _optionalString(writer, 'categoryValue', point.categoryValue);
+      }
+      _optionalString(writer, 'pointKey', point.pointKey);
+      if (point.timestamp != null) {
+        writer.namedArgument(
+          'timestamp',
+          'DateTime.parse(${DartSourceWriter.stringLiteral(point.timestamp!.toIso8601String())})',
+        );
+      }
+      _optionalString(writer, 'label', point.label);
+      if (!point.isMissing && point.segmentStyle != null) {
+        _emitSegmentStyle(writer, point.segmentStyle!);
+      }
+      if (!point.isMissing && point.pointStyle != null) {
         _emitPointStyle(writer, point.pointStyle!);
       }
       if (point.metadata != null && point.metadata!.isNotEmpty) {
@@ -1944,6 +2015,205 @@ class ChartConfigDartEmitter {
       defaultName: 'band',
     );
     _emitPathAnimationStyle(writer, series.pathAnimation);
+  }
+
+  /// Writes the Heatmap-specific constructor fields.
+  ///
+  /// This is a public seam for the grammar-chain emitter so CONFIG and GRAMMAR
+  /// source cannot drift in how they spell colour scales and cell styling.
+  void emitHeatmapOptions(DartSourceWriter writer, HeatmapChartSeries series) {
+    _emitHeatmapColorScale(writer, series.colorScale);
+    _numberIf(writer, 'cellWidth', series.cellWidth, 1);
+    _numberIf(writer, 'cellHeight', series.cellHeight, 1);
+    _numberIf(writer, 'gapFraction', series.gapFraction, 0.06);
+    _colorIf(
+      writer,
+      'borderColor',
+      series.borderColor,
+      const Color(0x26FFFFFF),
+    );
+    _numberIf(writer, 'borderWidth', series.borderWidth, 0);
+    _numberIf(writer, 'cornerRadius', series.cornerRadius, 0);
+    _valueIf(
+      writer,
+      'showCellLabels',
+      series.showCellLabels,
+      defaultValue: false,
+    );
+    _optionalColor(writer, 'cellLabelColor', series.cellLabelColor);
+    _numberIf(writer, 'cellLabelFontSize', series.cellLabelFontSize, 11);
+    _emitHeatmapEmptyValueStyle(writer, series.emptyValueStyle);
+    _emitHeatmapValueFilter(writer, series.valueFilter);
+    _emitHeatmapAnimationStyle(writer, series.animation);
+  }
+
+  void _emitHeatmapEmptyValueStyle(
+    DartSourceWriter writer,
+    HeatmapEmptyValueStyle? style,
+  ) {
+    if (style == null) return;
+    writer.writeLine('emptyValueStyle: HeatmapEmptyValueStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'value', style.value, 0);
+      _colorIf(writer, 'fillColor', style.fillColor, const Color(0xFFE5E7EB));
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _optionalNumber(writer, 'borderWidth', style.borderWidth);
+      _valueIf(writer, 'showLabel', style.showLabel, defaultValue: false);
+      _valueIf(writer, 'showInLegend', style.showInLegend, defaultValue: true);
+      if (options.includeDefaultValues || style.legendLabel != 'No activity') {
+        writer.namedArgument(
+          'legendLabel',
+          DartSourceWriter.stringLiteral(style.legendLabel),
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitHeatmapValueFilter(
+    DartSourceWriter writer,
+    HeatmapValueFilter? filter,
+  ) {
+    if (filter == null) return;
+    writer.writeLine('valueFilter: HeatmapValueFilter(');
+    writer.indented(() {
+      writer.namedArgument(
+        'minimumValue',
+        DartSourceWriter.numberLiteral(filter.minimumValue),
+      );
+      writer.namedArgument(
+        'maximumValue',
+        DartSourceWriter.numberLiteral(filter.maximumValue),
+      );
+      _enumIf(
+        writer,
+        'mode',
+        'HeatmapValueFilterMode',
+        filter.mode.name,
+        defaultName: 'dim',
+      );
+      _numberIf(writer, 'excludedOpacity', filter.excludedOpacity, 0.14);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitHeatmapAnimationStyle(
+    DartSourceWriter writer,
+    HeatmapAnimationStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const HeatmapAnimationStyle()) {
+      return;
+    }
+    writer.writeLine('animation: HeatmapAnimationStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'entranceMode',
+        'HeatmapEntranceMode',
+        style.entranceMode.name,
+        defaultName: 'fade',
+      );
+      _enumIf(
+        writer,
+        'entranceOrder',
+        'HeatmapEntranceOrder',
+        style.entranceOrder.name,
+        defaultName: 'row',
+      );
+      _numberIf(writer, 'entranceScale', style.entranceScale, 0.82);
+      _numberIf(writer, 'staggerFraction', style.staggerFraction, 0.55);
+      _valueIf(
+        writer,
+        'animateDataUpdates',
+        style.animateDataUpdates,
+        defaultValue: true,
+      );
+      _emitPathAnimationTiming(writer, 'entranceTiming', style.entranceTiming);
+      _emitPathAnimationTiming(
+        writer,
+        'dataUpdateTiming',
+        style.dataUpdateTiming,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitHeatmapColorScale(
+    DartSourceWriter writer,
+    HeatmapColorScale scale,
+  ) {
+    writer.writeLine('colorScale: HeatmapColorScale.${scale.type.name}(');
+    writer.indented(() {
+      switch (scale.type) {
+        case HeatmapColorScaleType.sequential:
+          _emitColorList(writer, 'colors', scale.colors);
+        case HeatmapColorScaleType.diverging:
+          writer.namedArgument(
+            'lowColor',
+            DartSourceWriter.colorLiteral(scale.colors[0]),
+          );
+          writer.namedArgument(
+            'midpointColor',
+            DartSourceWriter.colorLiteral(scale.colors[1]),
+          );
+          writer.namedArgument(
+            'highColor',
+            DartSourceWriter.colorLiteral(scale.colors[2]),
+          );
+          writer.namedArgument(
+            'midpoint',
+            DartSourceWriter.numberLiteral(scale.midpoint!),
+          );
+        case HeatmapColorScaleType.threshold:
+          writer.namedArgument(
+            'thresholds',
+            '[${scale.thresholds.map(DartSourceWriter.numberLiteral).join(', ')}]',
+          );
+          _emitColorList(writer, 'colors', scale.colors);
+          if (scale.bandLabels.isNotEmpty) {
+            writer.namedArgument(
+              'bandLabels',
+              '[${scale.bandLabels.map(DartSourceWriter.stringLiteral).join(', ')}]',
+            );
+          }
+      }
+      if (scale.type != HeatmapColorScaleType.threshold) {
+        _optionalNumber(writer, 'minimumValue', scale.minimumValue);
+        _optionalNumber(writer, 'maximumValue', scale.maximumValue);
+        _valueIf(writer, 'clamp', scale.clamp, defaultValue: true);
+      }
+      _valueIf(writer, 'reverse', scale.reverse, defaultValue: false);
+      _colorIf(
+        writer,
+        'missingColor',
+        scale.missingColor,
+        const Color(0x00000000),
+      );
+      if (options.includeDefaultValues || scale.label != 'Value') {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(scale.label),
+        );
+      }
+      _optionalString(writer, 'unit', scale.unit);
+      _valueIf(writer, 'showLegend', scale.showLegend, defaultValue: true);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitColorList(
+    DartSourceWriter writer,
+    String argument,
+    List<Color> colors,
+  ) {
+    writer.writeLine('$argument: [');
+    writer.indented(() {
+      for (final color in colors) {
+        writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
+      }
+    });
+    writer.writeLine('],');
   }
 
   void _emitRangeAreaBoundaryStyle(
@@ -4377,10 +4647,11 @@ class ChartConfigDartEmitter {
     writer.writeLine('),');
   }
 
-  /// Writes `categoryAxis: CategoryAxisConfig(...)` when the x-axis carries a
-  /// category configuration. The x-axis codec captures and round-trips this
-  /// sub-config, so omitting it here silently dropped the entire category
-  /// setup (labels, density, rotation) of a categorical chart.
+  /// Writes `categoryAxis: CategoryAxisConfig(...)` for either Cartesian axis.
+  ///
+  /// Axis codecs are responsible for carrying this sub-configuration into the
+  /// source snapshot. Once present, omitting it here would silently drop label
+  /// identity, density, rotation, and viewport behavior.
   void _emitCategoryAxisConfig(
     DartSourceWriter writer,
     CategoryAxisConfig? config,
@@ -4469,6 +4740,7 @@ class ChartConfigDartEmitter {
     if (axis.tickCount != null) {
       writer.namedArgument('tickCount', axis.tickCount.toString());
     }
+    _emitCategoryAxisConfig(writer, axis.categoryAxis);
     _valueIf(
       writer,
       'showMinorTicks',
@@ -5539,6 +5811,14 @@ class ChartConfigDartEmitter {
           writer.namedArgument(
             'scope',
             'ChartSelectionScope.${interaction.selection.scope.name}',
+          );
+        }
+        if (interaction.selection.heatmapExpansion !=
+            HeatmapSelectionExpansion.cell) {
+          writer.namedArgument(
+            'heatmapExpansion',
+            'HeatmapSelectionExpansion.'
+                '${interaction.selection.heatmapExpansion.name}',
           );
         }
         if (interaction.selection.operation !=

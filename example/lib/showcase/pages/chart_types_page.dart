@@ -32,7 +32,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-cartesian-grid'),
-            chartTypes: showcaseChartTypes.take(6).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(7).toList(growable: false),
             maxColumns: 4,
             onOpenChartType: onOpenChartType,
           ),
@@ -46,7 +46,7 @@ class ChartTypesPage extends StatelessWidget {
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-radial-grid'),
             chartTypes: showcaseChartTypes
-                .skip(6)
+                .skip(7)
                 .take(3)
                 .toList(growable: false),
             maxColumns: 3,
@@ -61,7 +61,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-polar-grid'),
-            chartTypes: showcaseChartTypes.skip(9).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(10).toList(growable: false),
             maxColumns: 3,
             onOpenChartType: onOpenChartType,
           ),
@@ -175,7 +175,7 @@ class _OverviewIntroduction extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Use trends for change, areas for magnitude, Range Area for paired intervals, bars for categories, scatter plots for relationships, partition-radial charts for shares, and polar axes for cyclical magnitude.',
+                  'Use trends for change, areas for magnitude, Range Area for paired intervals, bars for categories, scatter plots for relationships, Heatmaps for measured matrices, partition-radial charts for shares, and polar axes for cyclical magnitude.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     height: 1.45,
@@ -276,6 +276,11 @@ class _SelectionGuide extends StatelessWidget {
                   icon: Icons.scatter_plot_outlined,
                   title: 'Independent observations',
                   body: 'Start with scatter.',
+                ),
+                _GuideItem(
+                  icon: Icons.grid_on_outlined,
+                  title: 'Two categorical dimensions',
+                  body: 'Start with Heatmap.',
                 ),
                 _GuideItem(
                   icon: Icons.donut_large_outlined,

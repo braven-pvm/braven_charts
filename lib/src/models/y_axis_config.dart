@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../meta/chart_surface.dart';
 import 'axis_scale_type.dart';
+import 'category_axis_config.dart';
 import 'y_axis_position.dart';
 
 /// Controls where crosshair Y-value labels appear when hovering over the chart.
@@ -198,30 +199,28 @@ class YAxisConfig {
     this.scaleType = AxisScaleType.linear,
     this.logBase = 10,
     this.labelFormatter,
+    this.categoryAxis,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
-  })  : id = '',
-        // ignore: deprecated_member_use_from_same_package
-        position = (position == YAxisPosition.leftOuter)
-            ? YAxisPosition.left
-            // ignore: deprecated_member_use_from_same_package
-            : (position == YAxisPosition.rightOuter)
-                ? YAxisPosition.right
-                : position,
-        // Raw `position` parameter intentionally used: leftOuter/rightOuter never equal hidden,
-        // so the result is identical to checking the normalised this.position.
-        visible = position == YAxisPosition.hidden ? false : visible,
-        assert(minWidth >= 0, 'minWidth must be non-negative'),
-        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
-        assert(
-          min == null || max == null || min < max,
-          'min must be less than max',
-        ),
-        assert(
-          tickCount == null || tickCount >= 2,
-          'tickCount must be >= 2',
-        );
+  }) : id = '',
+       // ignore: deprecated_member_use_from_same_package
+       position = (position == YAxisPosition.leftOuter)
+           ? YAxisPosition.left
+           // ignore: deprecated_member_use_from_same_package
+           : (position == YAxisPosition.rightOuter)
+           ? YAxisPosition.right
+           : position,
+       // Raw `position` parameter intentionally used: leftOuter/rightOuter never equal hidden,
+       // so the result is identical to checking the normalised this.position.
+       visible = position == YAxisPosition.hidden ? false : visible,
+       assert(minWidth >= 0, 'minWidth must be non-negative'),
+       assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
+       assert(
+         min == null || max == null || min < max,
+         'min must be less than max',
+       ),
+       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 
   /// Internal constructor with explicit ID.
   ///
@@ -253,6 +252,7 @@ class YAxisConfig {
     this.scaleType = AxisScaleType.linear,
     this.logBase = 10,
     this.labelFormatter,
+    this.categoryAxis,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
@@ -291,6 +291,7 @@ class YAxisConfig {
     AxisScaleType scaleType = AxisScaleType.linear,
     double logBase = 10,
     YAxisLabelFormatter? labelFormatter,
+    CategoryAxisConfig? categoryAxis,
     bool showMinorTicks = false,
     int minorTickCount = 4,
     double minorTickLength = 3.0,
@@ -303,10 +304,7 @@ class YAxisConfig {
       min == null || max == null || min < max,
       'min must be less than max',
     );
-    assert(
-      tickCount == null || tickCount >= 2,
-      'tickCount must be >= 2',
-    );
+    assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
     return YAxisConfig._internal(
       id: id,
       position: position,
@@ -333,6 +331,7 @@ class YAxisConfig {
       scaleType: scaleType,
       logBase: logBase,
       labelFormatter: labelFormatter,
+      categoryAxis: categoryAxis,
       showMinorTicks: showMinorTicks,
       minorTickCount: minorTickCount,
       minorTickLength: minorTickLength,
@@ -525,6 +524,19 @@ class YAxisConfig {
   /// If null, uses default number formatting with [unit] suffix if provided.
   final YAxisLabelFormatter? labelFormatter;
 
+  /// Optional first-class category metadata for integer Y values.
+  ///
+  /// Category labels take precedence over [labelFormatter] at exact category
+  /// centres. Numeric formatting remains available between categories for
+  /// annotations and viewport interaction.
+  final CategoryAxisConfig? categoryAxis;
+
+  /// Whether this axis resolves integer Y values as named categories.
+  bool get isCategorical => categoryAxis?.categories.isNotEmpty ?? false;
+
+  /// Returns the category at [value], if [value] is an exact category centre.
+  String? categoryLabelFor(double value) => categoryAxis?.labelFor(value);
+
   // ========== Minor Ticks ==========
 
   /// Whether to show minor (unlabelled) tick marks between major ticks.
@@ -583,6 +595,8 @@ class YAxisConfig {
     AxisScaleType? scaleType,
     double? logBase,
     YAxisLabelFormatter? labelFormatter,
+    CategoryAxisConfig? categoryAxis,
+    bool clearCategoryAxis = false,
     bool? showMinorTicks,
     int? minorTickCount,
     double? minorTickLength,
@@ -614,6 +628,9 @@ class YAxisConfig {
       scaleType: scaleType ?? this.scaleType,
       logBase: logBase ?? this.logBase,
       labelFormatter: labelFormatter ?? this.labelFormatter,
+      categoryAxis: clearCategoryAxis
+          ? null
+          : (categoryAxis ?? this.categoryAxis),
       showMinorTicks: showMinorTicks ?? this.showMinorTicks,
       minorTickCount: minorTickCount ?? this.minorTickCount,
       minorTickLength: minorTickLength ?? this.minorTickLength,
@@ -649,6 +666,7 @@ class YAxisConfig {
         other.scaleType == scaleType &&
         other.logBase == logBase &&
         other.labelFormatter == labelFormatter &&
+        other.categoryAxis == categoryAxis &&
         other.showMinorTicks == showMinorTicks &&
         other.minorTickCount == minorTickCount &&
         other.minorTickLength == minorTickLength;
@@ -656,35 +674,36 @@ class YAxisConfig {
 
   @override
   int get hashCode => Object.hashAll([
-        id,
-        position,
-        color,
-        label,
-        unit,
-        min,
-        max,
-        renderMin,
-        renderMax,
-        visible,
-        showAxisLine,
-        showTicks,
-        showTickLabels,
-        showCrosshairLabel,
-        crosshairLabelPosition,
-        labelDisplay,
-        minWidth,
-        maxWidth,
-        tickLabelPadding,
-        axisLabelPadding,
-        axisMargin,
-        tickCount,
-        scaleType,
-        logBase,
-        labelFormatter,
-        showMinorTicks,
-        minorTickCount,
-        minorTickLength,
-      ]);
+    id,
+    position,
+    color,
+    label,
+    unit,
+    min,
+    max,
+    renderMin,
+    renderMax,
+    visible,
+    showAxisLine,
+    showTicks,
+    showTickLabels,
+    showCrosshairLabel,
+    crosshairLabelPosition,
+    labelDisplay,
+    minWidth,
+    maxWidth,
+    tickLabelPadding,
+    axisLabelPadding,
+    axisMargin,
+    tickCount,
+    scaleType,
+    logBase,
+    labelFormatter,
+    categoryAxis,
+    showMinorTicks,
+    minorTickCount,
+    minorTickLength,
+  ]);
 
   @override
   String toString() {
@@ -712,6 +731,7 @@ class YAxisConfig {
         'tickCount: $tickCount, '
         'scaleType: $scaleType, '
         'logBase: $logBase, '
+        'categoryAxis: $categoryAxis, '
         'showMinorTicks: $showMinorTicks, '
         'minorTickCount: $minorTickCount, '
         'minorTickLength: $minorTickLength'

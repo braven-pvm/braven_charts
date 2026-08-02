@@ -439,8 +439,33 @@ def _wait_for_surface(
         wait.until(
             lambda current: current.execute_script(
                 "return document.readyState === 'complete' && "
-                "[...document.images].every((image) => image.complete)"
+                "[...document.images].every((image) => "
+                "image.complete && image.naturalWidth > 0) && "
+                "(!document.fonts || document.fonts.status === 'loaded')"
             )
+        )
+        # `HTMLImageElement.complete` becomes true before Chrome necessarily
+        # finishes decoding and laying out the image. Await decoding and two
+        # animation frames so table geometry is sampled from the settled
+        # layout rather than an intermittent intrinsic-size transition.
+        driver.set_script_timeout(timeout_seconds)
+        driver.execute_async_script(
+            """
+            const done = arguments[arguments.length - 1];
+            const images = [...document.images];
+            Promise.all([
+              document.fonts ? document.fonts.ready : Promise.resolve(),
+              ...images.map((image) =>
+                typeof image.decode === 'function'
+                  ? image.decode().catch(() => undefined)
+                  : Promise.resolve()
+              ),
+            ])
+              .then(() => new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve))
+              ))
+              .then(() => done(true), (error) => done(String(error)));
+            """
         )
     elif surface in FLUTTER_SURFACES:
         wait.until(lambda current: current.title == "Braven Charts Showcase")

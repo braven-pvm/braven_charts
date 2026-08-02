@@ -98,6 +98,7 @@ same radial interaction contract.
             'bar',
             'scatter',
             'candlestick',
+            'heatmap',
             'pie',
             'donut',
           ],
@@ -140,6 +141,7 @@ same radial interaction contract.
                   'bar',
                   'scatter',
                   'candlestick',
+                  'heatmap',
                   'pie',
                   'donut',
                 ],
@@ -286,6 +288,110 @@ same radial interaction contract.
                 'description':
                     'Radial-only unit for the optional radius metric (for example, "km²").',
               },
+              'heatmap_color_scale': {
+                'type': 'object',
+                'description':
+                    'Heatmap-only numeric color mapping. Required for Heatmap series.',
+                'properties': {
+                  'type': {
+                    'type': 'string',
+                    'enum': ['sequential', 'diverging', 'threshold'],
+                  },
+                  'colors': {
+                    'type': 'array',
+                    'minItems': 1,
+                    'items': {'type': 'string'},
+                    'description':
+                        'Sequential ramp colors, or threshold band colors.',
+                  },
+                  'low_color': {
+                    'type': 'string',
+                    'description': 'Diverging scale low color.',
+                  },
+                  'midpoint_color': {
+                    'type': 'string',
+                    'description': 'Diverging scale midpoint color.',
+                  },
+                  'high_color': {
+                    'type': 'string',
+                    'description': 'Diverging scale high color.',
+                  },
+                  'midpoint': {
+                    'type': 'number',
+                    'description': 'Diverging scale semantic midpoint.',
+                  },
+                  'thresholds': {
+                    'type': 'array',
+                    'items': {'type': 'number'},
+                    'description':
+                        'Strictly increasing threshold boundaries. Supply one more color than thresholds.',
+                  },
+                  'band_labels': {
+                    'type': 'array',
+                    'items': {'type': 'string'},
+                    'description':
+                        'Optional threshold label for every color band.',
+                  },
+                  'minimum': {'type': 'number'},
+                  'maximum': {'type': 'number'},
+                  'reverse': {'type': 'boolean'},
+                  'clamp': {'type': 'boolean'},
+                  'missing_color': {'type': 'string'},
+                  'label': {'type': 'string'},
+                  'unit': {'type': 'string'},
+                  'show_legend': {'type': 'boolean'},
+                },
+                'required': ['type'],
+              },
+              'heatmap_empty_value_style': {
+                'type': 'object',
+                'description':
+                    'Optional Heatmap-only presentation for a real finite value such as zero activity. This is separate from missing cells.',
+                'properties': {
+                  'value': {'type': 'number'},
+                  'fill_color': {'type': 'string'},
+                  'border_color': {'type': 'string'},
+                  'border_width': {'type': 'number', 'minimum': 0},
+                  'show_label': {'type': 'boolean'},
+                  'show_in_legend': {'type': 'boolean'},
+                  'legend_label': {'type': 'string', 'minLength': 1},
+                },
+              },
+              'heatmap_value_filter': {
+                'type': 'object',
+                'description':
+                    'Optional inclusive Heatmap measured-value window. Source cells remain intact; excluded cells are dimmed or hidden from paint and hit testing.',
+                'properties': {
+                  'minimum_value': {'type': 'number'},
+                  'maximum_value': {'type': 'number'},
+                  'mode': {
+                    'type': 'string',
+                    'enum': ['dim', 'hide'],
+                  },
+                  'excluded_opacity': {
+                    'type': 'number',
+                    'minimum': 0,
+                    'maximum': 1,
+                  },
+                },
+                'required': ['minimum_value', 'maximum_value'],
+              },
+              'heatmap_cell_width': {'type': 'number', 'exclusiveMinimum': 0},
+              'heatmap_cell_height': {'type': 'number', 'exclusiveMinimum': 0},
+              'heatmap_gap_fraction': {
+                'type': 'number',
+                'minimum': 0,
+                'exclusiveMaximum': 1,
+              },
+              'heatmap_border_color': {'type': 'string'},
+              'heatmap_border_width': {'type': 'number', 'minimum': 0},
+              'heatmap_corner_radius': {'type': 'number', 'minimum': 0},
+              'heatmap_show_cell_labels': {'type': 'boolean'},
+              'heatmap_cell_label_color': {'type': 'string'},
+              'heatmap_cell_label_font_size': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+              },
               'data': {
                 'type': 'array',
                 'description': 'Array of data points',
@@ -301,6 +407,33 @@ same radial interaction contract.
                       'type': 'number',
                       'description':
                           'Y-axis value for Cartesian charts. For Pie and Donut, this is a finite non-negative contribution.',
+                    },
+                    'value': {
+                      'type': 'number',
+                      'description':
+                          'Heatmap-only independent measured value encoded by color. Required unless missing is true.',
+                    },
+                    'missing': {
+                      'type': 'boolean',
+                      'description':
+                          'Heatmap-only explicit missing cell. When true, omit value; the X/Y cell identity remains present.',
+                    },
+                    'bounds': {
+                      'type': 'object',
+                      'description':
+                          'Heatmap-only explicit rectangular cell bounds. Representative x and y must fall inside this rectangle.',
+                      'properties': {
+                        'x_minimum': {'type': 'number'},
+                        'x_maximum': {'type': 'number'},
+                        'y_minimum': {'type': 'number'},
+                        'y_maximum': {'type': 'number'},
+                      },
+                      'required': [
+                        'x_minimum',
+                        'x_maximum',
+                        'y_minimum',
+                        'y_maximum',
+                      ],
                     },
                     'open': {
                       'type': 'number',

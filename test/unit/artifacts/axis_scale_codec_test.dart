@@ -58,6 +58,34 @@ void main() {
       expect(back.scaleType, AxisScaleType.linear);
       expect(back.logBase, 10);
     });
+
+    test('Y axis categorical configuration round-trips losslessly', () {
+      const categoryAxis = CategoryAxisConfig(
+        categories: ['Monday', 'Tuesday', 'Wednesday'],
+        labelDensity: CategoryLabelDensity.showAll,
+        labelOverflow: CategoryLabelOverflow.ellipsis,
+        minimumCategoryExtent: 38,
+        maximumLabelExtent: 92,
+        maxLabelLines: 1,
+        labelRotationDegrees: -20,
+        autoViewport: false,
+      );
+      final axis = YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Day',
+        categoryAxis: categoryAxis,
+      ).copyWith(id: 'weekday');
+
+      final document = _success(ChartAxisDocumentCodec.encodeYAxis(axis));
+      final back = _success(
+        ChartAxisDocumentCodec.decodeYAxis(
+          ChartAxisDocument.fromJson(document.toJson()),
+        ),
+      );
+
+      expect(document.categories, categoryAxis.categories);
+      expect(back.categoryAxis, categoryAxis);
+    });
   });
 }
 

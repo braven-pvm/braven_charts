@@ -29,6 +29,11 @@ enum ChartTableAuxiliaryField {
   stackEnd,
   waterfallCumulative,
   normalizedShare,
+  heatmapRowCoordinate,
+  heatmapXMinimum,
+  heatmapXMaximum,
+  heatmapYMinimum,
+  heatmapYMaximum,
 }
 
 extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
@@ -48,6 +53,11 @@ extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
     ChartTableAuxiliaryField.stackEnd => 'Stack end',
     ChartTableAuxiliaryField.waterfallCumulative => 'Running total',
     ChartTableAuxiliaryField.normalizedShare => 'Share',
+    ChartTableAuxiliaryField.heatmapRowCoordinate => 'Y',
+    ChartTableAuxiliaryField.heatmapXMinimum => 'X min',
+    ChartTableAuxiliaryField.heatmapXMaximum => 'X max',
+    ChartTableAuxiliaryField.heatmapYMinimum => 'Y min',
+    ChartTableAuxiliaryField.heatmapYMaximum => 'Y max',
   };
 
   /// Unit that replaces the source series unit for this derived measure.
@@ -462,6 +472,23 @@ class ChartTableModel {
     final gaugeSeries = selected
         .where((series) => series.type == 'gauge')
         .toList();
+    final heatmapSeries = selected
+        .where((series) => series.type == 'heatmap')
+        .toList();
+    if (heatmapSeries.isNotEmpty &&
+        selected.any(
+          (series) => series.type != 'heatmap' && series.type != 'line',
+        )) {
+      throw UnsupportedError(
+        'Heatmap tables only support Line contour overlays.',
+      );
+    }
+    final hasHeatmapOverlays =
+        heatmapSeries.isNotEmpty && heatmapSeries.length != selected.length;
+    final hasMultipleHeatmaps = heatmapSeries.length > 1;
+    final hasIrregularHeatmap = heatmapSeries.any(
+      _heatmapSeriesHasExplicitBounds,
+    );
     if (gaugeSeries.length > 1) {
       throw UnsupportedError(
         'Gauge table projection supports exactly one measurement.',
@@ -503,7 +530,10 @@ class ChartTableModel {
         ? ChartTableProjectionKind.pie
         : polarSeries.isNotEmpty
         ? ChartTableProjectionKind.polar
-        : options.rowLayout == ChartTableRowLayout.long
+        : hasHeatmapOverlays ||
+              hasMultipleHeatmaps ||
+              hasIrregularHeatmap ||
+              options.rowLayout == ChartTableRowLayout.long
         ? ChartTableProjectionKind.cartesianLong
         : ChartTableProjectionKind.cartesianWide;
     final xFormatter =
@@ -551,6 +581,9 @@ class ChartTableModel {
         malformed:
             formatterDocument != null && formatterDocument is! JsonObjectValue,
       );
+      final heatmapYFormatter = series.type == 'heatmap'
+          ? _categoryFormatter(axis?.categories ?? const [])
+          : null;
       final hidden = hiddenIds.contains(series.id);
       unitsBySeries[series.id] = unit;
       formattersBySeries[series.id] = yFormatter;
@@ -618,7 +651,14 @@ class ChartTableModel {
         final rangeArea = series.type == 'rangeArea'
             ? _rangeAreaValues(point)
             : null;
-        final y = rangeArea?.isGap == true ? double.nan : point.y.asDouble;
+        final heatmap = series.type == 'heatmap'
+            ? _heatmapCellValues(point)
+            : null;
+        final y = heatmap != null
+            ? heatmap.value ?? double.nan
+            : rangeArea?.isGap == true
+            ? double.nan
+            : point.y.asDouble;
         final reference = ChartTablePointReference(
           seriesId: series.id,
           pointIndex: pointIndex,
@@ -635,20 +675,60 @@ class ChartTableModel {
                       : 'No category')
                 : _displayNumber(x, xFormatter),
             yRaw: y,
-            yDisplay: _displayNumber(y, yFormatter),
+            yDisplay: heatmap?.isMissing == true
+                ? 'Missing'
+                : _displayNumber(y, yFormatter),
             unit: unit,
             timestamp: point.timestamp,
             label: point.label,
             categoryValue: point.categoryValue,
-            isValid: x.isFinite && y.isFinite,
+            isValid:
+                x.isFinite &&
+                y.isFinite &&
+                (heatmap == null || !heatmap.isMissing),
             hiddenSeries: hidden,
             metadata: options.includeMetadata ? point.metadata : null,
-            auxiliaryValues: _auxiliaryValuesForPoint(
-              series,
-              pointIndex,
-              formatter: yFormatter,
-              stackValue: stackComposition[(series.id, pointIndex)],
-            ),
+            auxiliaryValues: {
+              ..._auxiliaryValuesForPoint(
+                series,
+                pointIndex,
+                formatter: yFormatter,
+                stackValue: stackComposition[(series.id, pointIndex)],
+              ),
+              if (heatmap != null)
+                ChartTableAuxiliaryField
+                    .heatmapRowCoordinate: ChartTableAuxiliaryValue(
+                  raw: point.y.asDouble,
+                  display: _displayNumber(point.y.asDouble, heatmapYFormatter),
+                  isValid: point.y.asDouble.isFinite,
+                ),
+              if (heatmap?.bounds case final bounds?) ...{
+                ChartTableAuxiliaryField.heatmapXMinimum:
+                    ChartTableAuxiliaryValue(
+                      raw: bounds.xMinimum,
+                      display: _displayNumber(bounds.xMinimum, xFormatter),
+                      isValid: bounds.xMinimum.isFinite,
+                    ),
+                ChartTableAuxiliaryField.heatmapXMaximum:
+                    ChartTableAuxiliaryValue(
+                      raw: bounds.xMaximum,
+                      display: _displayNumber(bounds.xMaximum, xFormatter),
+                      isValid: bounds.xMaximum.isFinite,
+                    ),
+                ChartTableAuxiliaryField
+                    .heatmapYMinimum: ChartTableAuxiliaryValue(
+                  raw: bounds.yMinimum,
+                  display: _displayNumber(bounds.yMinimum, heatmapYFormatter),
+                  isValid: bounds.yMinimum.isFinite,
+                ),
+                ChartTableAuxiliaryField
+                    .heatmapYMaximum: ChartTableAuxiliaryValue(
+                  raw: bounds.yMaximum,
+                  display: _displayNumber(bounds.yMaximum, heatmapYFormatter),
+                  isValid: bounds.yMaximum.isFinite,
+                ),
+              },
+            },
           ),
         );
       }
@@ -666,7 +746,15 @@ class ChartTableModel {
             viewState: viewState,
             options: options,
           );
-    final projectedSeriesColumns = candlestickSeries.isEmpty
+    final projectedSeriesColumns =
+        heatmapSeries.isNotEmpty &&
+            projectionKind == ChartTableProjectionKind.cartesianWide
+        ? _heatmapMatrixColumns(
+            longRows,
+            unit: heatmapSeries.single.unit,
+            hidden: hiddenIds.contains(heatmapSeries.single.id),
+          )
+        : candlestickSeries.isEmpty
         ? seriesColumns
         : <ChartTableSeriesColumn>[
             seriesColumns.firstWhere(
@@ -686,13 +774,18 @@ class ChartTableModel {
           ? 'Category'
           : projectionKind == ChartTableProjectionKind.gauge
           ? 'Metric'
+          : heatmapSeries.isNotEmpty &&
+                projectionKind == ChartTableProjectionKind.cartesianWide
+          ? 'Y \\ X'
           : _xColumnLabel(document.xAxis),
       projectionKind: projectionKind,
       options: options,
       series: projectedSeriesColumns,
       longRows: longRows,
       wideRows: projectionKind == ChartTableProjectionKind.cartesianWide
-          ? _pivotExactX(longRows, seriesColumns)
+          ? heatmapSeries.isNotEmpty
+                ? _pivotHeatmapMatrix(longRows, projectedSeriesColumns)
+                : _pivotExactX(longRows, seriesColumns)
           : const [],
       pieRows: pieRows,
       polarRows: polarRows,
@@ -1378,6 +1471,17 @@ Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
       ChartTableAuxiliaryField.rangeSpan,
     };
   }
+  if (series.type == 'heatmap') {
+    return Set.unmodifiable({
+      ChartTableAuxiliaryField.heatmapRowCoordinate,
+      if (_heatmapSeriesHasExplicitBounds(series)) ...{
+        ChartTableAuxiliaryField.heatmapXMinimum,
+        ChartTableAuxiliaryField.heatmapXMaximum,
+        ChartTableAuxiliaryField.heatmapYMinimum,
+        ChartTableAuxiliaryField.heatmapYMaximum,
+      },
+    });
+  }
   if (series.type == 'scatter') {
     return Set.unmodifiable({
       if (series.style?.values['sizeEncoding'] is JsonObjectValue)
@@ -1781,6 +1885,166 @@ double? _chartNumber(JsonValue? value) {
   } on FormatException {
     return null;
   }
+}
+
+typedef _HeatmapTableBounds = ({
+  double xMinimum,
+  double xMaximum,
+  double yMinimum,
+  double yMaximum,
+});
+
+({double? value, bool isMissing, _HeatmapTableBounds? bounds})
+_heatmapCellValues(ChartPointDocument point) {
+  final extension = point.extensions['heatmap.cell.v1'];
+  if (extension is! JsonObjectValue) {
+    throw const FormatException(
+      'Heatmap table cells require heatmap.cell.v1 source values.',
+    );
+  }
+  final rawMissing = extension.values['isMissing']?.toJson();
+  if (rawMissing is! bool) {
+    throw const FormatException(
+      'Heatmap table cells require an explicit missing-state flag.',
+    );
+  }
+  final bounds = _heatmapTableBounds(extension.values['bounds']);
+  final rawValue = _chartNumber(extension.values['value']);
+  if (rawMissing) {
+    if (extension.values.containsKey('value')) {
+      throw const FormatException(
+        'Explicitly missing Heatmap table cells cannot carry a value.',
+      );
+    }
+    return (value: null, isMissing: true, bounds: bounds);
+  }
+  if (rawValue == null || !rawValue.isFinite) {
+    throw const FormatException(
+      'Measured Heatmap table cells require a finite value.',
+    );
+  }
+  return (value: rawValue, isMissing: false, bounds: bounds);
+}
+
+bool _heatmapSeriesHasExplicitBounds(ChartSeriesDocument series) {
+  final payload = series.data;
+  if (series.type != 'heatmap' || payload is! InlineChartDataPayload) {
+    return false;
+  }
+  return payload.points.any((point) {
+    final extension = point.extensions['heatmap.cell.v1'];
+    return extension is JsonObjectValue &&
+        extension.values['bounds'] is JsonObjectValue;
+  });
+}
+
+_HeatmapTableBounds? _heatmapTableBounds(JsonValue? value) {
+  if (value == null || value is JsonNullValue) return null;
+  if (value is! JsonObjectValue) {
+    throw const FormatException('Heatmap table cell bounds must be an object.');
+  }
+  final xMinimum = _chartNumber(value.values['xMinimum']);
+  final xMaximum = _chartNumber(value.values['xMaximum']);
+  final yMinimum = _chartNumber(value.values['yMinimum']);
+  final yMaximum = _chartNumber(value.values['yMaximum']);
+  if (xMinimum == null ||
+      xMaximum == null ||
+      yMinimum == null ||
+      yMaximum == null ||
+      !xMinimum.isFinite ||
+      !xMaximum.isFinite ||
+      !yMinimum.isFinite ||
+      !yMaximum.isFinite ||
+      xMinimum >= xMaximum ||
+      yMinimum >= yMaximum) {
+    throw const FormatException(
+      'Heatmap table cell bounds require finite positive extents.',
+    );
+  }
+  return (
+    xMinimum: xMinimum,
+    xMaximum: xMaximum,
+    yMinimum: yMinimum,
+    yMaximum: yMaximum,
+  );
+}
+
+String _heatmapColumnId(double x) {
+  final encoded = canonicalJsonEncode(
+    ChartNumberDocument.fromDouble(x).toJson(),
+  );
+  return 'heatmap-x:${Uri.encodeComponent(encoded)}';
+}
+
+List<ChartTableSeriesColumn> _heatmapMatrixColumns(
+  List<ChartTableLongRow> longRows, {
+  required String? unit,
+  required bool hidden,
+}) {
+  final byX = <double, String>{};
+  for (final row in longRows) {
+    byX.putIfAbsent(row.xRaw, () => row.xDisplay);
+  }
+  final coordinates = byX.keys.toList()..sort();
+  return [
+    for (final x in coordinates)
+      ChartTableSeriesColumn(
+        seriesId: _heatmapColumnId(x),
+        seriesName: byX[x]!,
+        unit: unit,
+        hidden: hidden,
+      ),
+  ];
+}
+
+List<ChartTableWideRow> _pivotHeatmapMatrix(
+  List<ChartTableLongRow> longRows,
+  List<ChartTableSeriesColumn> columns,
+) {
+  final rows = <double, _MutableWideRow>{};
+  for (final row in longRows) {
+    final rowCoordinate =
+        row.auxiliaryValues[ChartTableAuxiliaryField.heatmapRowCoordinate];
+    if (rowCoordinate == null) {
+      throw const FormatException(
+        'Heatmap matrix rows require their canonical Y coordinate.',
+      );
+    }
+    final wide = rows.putIfAbsent(
+      rowCoordinate.raw,
+      () => _MutableWideRow(
+        rowId: 'heatmap-y:${Uri.encodeComponent(rowCoordinate.display)}',
+        xRaw: rowCoordinate.raw,
+        xDisplay: rowCoordinate.display,
+      ),
+    );
+    wide.cells[_heatmapColumnId(row.xRaw)] = ChartTableWideCell(
+      reference: row.reference,
+      yRaw: row.yRaw,
+      yDisplay: row.yDisplay,
+      unit: row.unit,
+      timestamp: row.timestamp,
+      label: row.label,
+      categoryValue: row.categoryValue,
+      isValid: row.isValid,
+      metadata: row.metadata,
+    );
+  }
+  final knownIds = columns.map((column) => column.seriesId).toSet();
+  final ordered = rows.values.toList()
+    ..sort((left, right) => left.xRaw.compareTo(right.xRaw));
+  return [
+    for (final row in ordered)
+      ChartTableWideRow(
+        rowId: row.rowId,
+        xRaw: row.xRaw,
+        xDisplay: row.xDisplay,
+        cells: {
+          for (final entry in row.cells.entries)
+            if (knownIds.contains(entry.key)) entry.key: entry.value,
+        },
+      ),
+  ];
 }
 
 List<ChartTableWideRow> _pivotExactX(

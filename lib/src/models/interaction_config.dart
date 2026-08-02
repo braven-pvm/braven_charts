@@ -1261,6 +1261,22 @@ enum ChartSelectionScope {
   markOrWholeSeries,
 }
 
+/// Matrix-aware expansion applied to selected Heatmap marks.
+///
+/// This policy is deliberately independent from [ChartSelectionScope]. It is
+/// only consulted when the generic scope resolves individual marks, keeping
+/// category and whole-series semantics unchanged for every chart family.
+enum HeatmapSelectionExpansion {
+  /// Keep only the acquired Heatmap cells.
+  cell,
+
+  /// Expand acquired cells to their complete source-series rows.
+  row,
+
+  /// Expand acquired cells to their complete source-series columns.
+  column,
+}
+
 extension ChartSelectionScopeCapabilities on ChartSelectionScope {
   /// Whether hover and activation target individual data marks.
   bool get includesMarks =>
@@ -1756,6 +1772,7 @@ class ChartSelectionConfig {
   const ChartSelectionConfig({
     this.acquisitionMode = ChartSelectionAcquisitionMode.point,
     this.scope = ChartSelectionScope.mark,
+    this.heatmapExpansion = HeatmapSelectionExpansion.cell,
     this.operation = ChartSelectionOperation.replace,
     this.dragActivation = ChartSelectionDragActivation.primaryButton,
     this.clearOnBackgroundTap = true,
@@ -1783,6 +1800,13 @@ class ChartSelectionConfig {
 
   /// Semantic target resolved after [acquisitionMode] acquires a hit.
   final ChartSelectionScope scope;
+
+  /// Optional row or column expansion for selected Heatmap marks.
+  ///
+  /// Expansion never links separate Heatmap series. The default
+  /// [HeatmapSelectionExpansion.cell] preserves ordinary mark-selection
+  /// behaviour.
+  final HeatmapSelectionExpansion heatmapExpansion;
 
   /// Default set operation for a completed selection gesture.
   final ChartSelectionOperation operation;
@@ -1855,6 +1879,7 @@ class ChartSelectionConfig {
   ChartSelectionConfig copyWith({
     ChartSelectionAcquisitionMode? acquisitionMode,
     ChartSelectionScope? scope,
+    HeatmapSelectionExpansion? heatmapExpansion,
     ChartSelectionOperation? operation,
     ChartSelectionDragActivation? dragActivation,
     bool? clearOnBackgroundTap,
@@ -1869,6 +1894,7 @@ class ChartSelectionConfig {
   }) => ChartSelectionConfig(
     acquisitionMode: acquisitionMode ?? this.acquisitionMode,
     scope: scope ?? this.scope,
+    heatmapExpansion: heatmapExpansion ?? this.heatmapExpansion,
     operation: operation ?? this.operation,
     dragActivation: dragActivation ?? this.dragActivation,
     clearOnBackgroundTap: clearOnBackgroundTap ?? this.clearOnBackgroundTap,
@@ -1893,6 +1919,7 @@ class ChartSelectionConfig {
       other is ChartSelectionConfig &&
           other.acquisitionMode == acquisitionMode &&
           other.scope == scope &&
+          other.heatmapExpansion == heatmapExpansion &&
           other.operation == operation &&
           other.dragActivation == dragActivation &&
           other.clearOnBackgroundTap == clearOnBackgroundTap &&
@@ -1911,6 +1938,7 @@ class ChartSelectionConfig {
   int get hashCode => Object.hash(
     acquisitionMode,
     scope,
+    heatmapExpansion,
     operation,
     dragActivation,
     clearOnBackgroundTap,

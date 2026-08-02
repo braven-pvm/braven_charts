@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -449,6 +450,11 @@ void main() {
         ),
       );
     }
+    await _captureChartType(
+      tester,
+      outputDirectory: outputDirectory,
+      asset: _heatmapCalendarAsset(),
+    );
 
     await _captureChartTypeStrip(
       tester,
@@ -1215,6 +1221,11 @@ Future<void> _captureFamilyPairs(
       secondary: 'candlestick_market_structure.png',
     ),
     (
+      output: 'family_heatmap_pair.png',
+      primary: 'chart_type_heatmap.png',
+      secondary: 'heatmap_calendar.png',
+    ),
+    (
       output: 'family_pie_pair.png',
       primary: 'chart_type_pie.png',
       secondary: 'pie_revenue_contribution.png',
@@ -1491,6 +1502,9 @@ List<_ChartTypeAsset> _chartTypeAssets() {
   );
   final candlestickTheme = ChartTheme.dark.copyWith(
     backgroundColor: const Color(0xFF101827),
+  );
+  final heatmapTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFF4FBFC),
   );
   final concentricTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFFBF8FF),
@@ -1898,6 +1912,47 @@ List<_ChartTypeAsset> _chartTypeAssets() {
       ],
     ),
     _ChartTypeAsset(
+      label: 'Heatmap',
+      fileName: 'chart_type_heatmap.png',
+      theme: heatmapTheme,
+      headerColor: const Color(0xFFD8F3F5),
+      headerTextColor: const Color(0xFF155E75),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      series: [
+        HeatmapChartSeries(
+          id: 'heatmap',
+          name: 'Activity',
+          points: [
+            for (var row = 0; row < 6; row++)
+              for (var column = 0; column < 10; column++)
+                HeatmapDataPoint(
+                  x: column.toDouble(),
+                  y: row.toDouble(),
+                  value:
+                      48 +
+                      36 *
+                          math.sin((column + row * 0.65) / 2.1) *
+                          math.cos((row - column * 0.18) / 1.8),
+                  pointKey: 'heatmap-$row-$column',
+                ),
+          ],
+          colorScale: HeatmapColorScale.diverging(
+            lowColor: const Color(0xFF0E7490),
+            midpointColor: const Color(0xFFE0F2FE),
+            highColor: const Color(0xFFF97316),
+            midpoint: 48,
+          ),
+          gapFraction: 0.08,
+          cornerRadius: 2,
+          borderColor: const Color(0x33FFFFFF),
+          borderWidth: 0.7,
+          animation: const HeatmapAnimationStyle(
+            entranceMode: HeatmapEntranceMode.none,
+          ),
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
       label: 'Pie',
       fileName: 'chart_type_pie.png',
       theme: pieTheme,
@@ -2167,6 +2222,50 @@ List<_ChartTypeAsset> _chartTypeAssets() {
     ),
   ];
 }
+
+_ChartTypeAsset _heatmapCalendarAsset() => _ChartTypeAsset(
+  label: 'Calendar Heatmap',
+  fileName: 'heatmap_calendar.png',
+  theme: ChartTheme.light.copyWith(backgroundColor: const Color(0xFFFFFBEB)),
+  headerColor: const Color(0xFFFEF3C7),
+  headerTextColor: const Color(0xFF92400E),
+  grid: const GridConfig(horizontal: false, vertical: false),
+  series: [
+    HeatmapChartSeries(
+      id: 'calendar-heatmap',
+      name: 'Daily temperature',
+      points: [
+        for (var index = 0; index < 35; index++)
+          if (index < 2 || index > 31)
+            HeatmapDataPoint.missing(
+              x: (index % 7).toDouble(),
+              y: (index ~/ 7).toDouble(),
+              pointKey: 'calendar-$index',
+            )
+          else
+            HeatmapDataPoint(
+              x: (index % 7).toDouble(),
+              y: (index ~/ 7).toDouble(),
+              value: 18 + 6 * math.sin(index / 3.2) + 2 * math.cos(index / 1.7),
+              pointKey: 'calendar-$index',
+            ),
+      ],
+      colorScale: HeatmapColorScale.sequential(
+        colors: const [Color(0xFFDBEAFE), Color(0xFFFEF3C7), Color(0xFFF97316)],
+        missingColor: const Color(0xFFE5E7EB),
+      ),
+      showCellLabels: true,
+      cellLabelFontSize: 9,
+      gapFraction: 0.08,
+      cornerRadius: 3,
+      borderColor: const Color(0x44FFFFFF),
+      borderWidth: 0.8,
+      animation: const HeatmapAnimationStyle(
+        entranceMode: HeatmapEntranceMode.none,
+      ),
+    ),
+  ],
+);
 
 _ChartTypeAsset _radialBarSignedAsset() => _ChartTypeAsset(
   label: 'Signed Radial Bar',

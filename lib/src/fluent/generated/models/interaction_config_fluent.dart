@@ -477,6 +477,10 @@ extension ChartSelectionConfigFluent on ChartSelectionConfig {
   ChartSelectionConfig withScope(ChartSelectionScope value) =>
       copyWith(scope: value);
 
+  /// Replaces [ChartSelectionConfig.heatmapExpansion] with [value].
+  ChartSelectionConfig withHeatmapExpansion(HeatmapSelectionExpansion value) =>
+      copyWith(heatmapExpansion: value);
+
   /// Replaces [ChartSelectionConfig.operation] with [value].
   ChartSelectionConfig withOperation(ChartSelectionOperation value) =>
       copyWith(operation: value);

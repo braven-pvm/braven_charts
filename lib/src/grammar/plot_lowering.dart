@@ -17,6 +17,9 @@ import '../models/concentric_donut_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_color_scale.dart';
+import '../models/heatmap_data_point.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
@@ -137,6 +140,14 @@ const BarChartSeries _barDefaults = BarChartSeries(
 const ScatterChartSeries _scatterDefaults = ScatterChartSeries(
   id: '',
   points: <ChartDataPoint>[],
+);
+final HeatmapChartSeries _heatmapDefaults = HeatmapChartSeries(
+  id: '',
+  points: const <HeatmapDataPoint>[],
+  colorScale: HeatmapColorScale.sequential(
+    colors: const <Color>[Color(0xFF000000), Color(0xFFFFFFFF)],
+    showLegend: false,
+  ),
 );
 const ScatterCategoryEncoding _categoryDefaults = ScatterCategoryEncoding(
   categories: <ScatterCategoryStyle>[],
@@ -285,6 +296,28 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
     );
   }
 
+  final heatmapIds = <String>[];
+  final otherGeometryIds = <String>[];
+  for (var index = 0; index < spec.marks.length; index++) {
+    final mark = spec.marks[index];
+    if (mark is HeatmapMark<T>) {
+      heatmapIds.add(markIds[index]);
+    } else if (mark is LineMark<T> ||
+        mark is AreaMark<T> ||
+        mark is BarMark<T> ||
+        mark is ScatterMark<T> ||
+        mark is CandlestickMark<T>) {
+      otherGeometryIds.add(markIds[index]);
+    }
+  }
+  if (heatmapIds.length > 1 ||
+      (heatmapIds.isNotEmpty && otherGeometryIds.isNotEmpty)) {
+    throw GrammarSpecException.unsupportedHeatmapComposition(
+      heatmapIds,
+      otherGeometryIds,
+    );
+  }
+
   if (spec.transposed) {
     for (var index = 0; index < spec.marks.length; index++) {
       if (spec.marks[index] is! BarMark<T>) {
@@ -365,6 +398,10 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
           axesById,
           boundAxisIds,
         );
+      case HeatmapMark<T>():
+        final axis = _bindAxis(mark, markId, axes, axesById, boundAxisIds);
+        boundAxes[index] = axis;
+        _validateHeatmapConfiguration(mark, markId, axis);
       case BarMark<T>():
         boundAxes[index] = _bindAxis(
           mark,
@@ -447,6 +484,8 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
         series.add(_lowerScatter(mark, markId, axis!, spec.data));
       case CandlestickMark<T>():
         series.add(_lowerCandlestick(mark, markId, axis!, spec.data));
+      case HeatmapMark<T>():
+        series.add(_lowerHeatmap(mark, markId, axis!, spec.xAxis, spec.data));
       case TrendMark<T>():
         annotations.add(_lowerTrend(mark, markId));
       case ThresholdMark<T>():
@@ -544,6 +583,9 @@ void _validateLogPositive<T>(
         check(mark.low);
         check(mark.close);
       }
+    case HeatmapMark<T>():
+      if (xLog) check(mark.x);
+      if (yLog) check(mark.y);
     case TrendMark<T>() ||
         ThresholdMark<T>() ||
         BandMark<T>() ||
@@ -552,6 +594,40 @@ void _validateLogPositive<T>(
       // These bind no geometry axis of their own; nothing to position on a
       // log scale here.
       break;
+  }
+}
+
+void _validateHeatmapConfiguration<T>(
+  HeatmapMark<T> mark,
+  String markId,
+  YAxisConfig axis,
+) {
+  try {
+    HeatmapChartSeries(
+      id: markId,
+      points: const <HeatmapDataPoint>[],
+      colorScale: mark.colorScale,
+      yAxisId: axis.id,
+      yAxisConfig: axis,
+      unit: mark.unit,
+      cellWidth: mark.cellWidth ?? _heatmapDefaults.cellWidth,
+      cellHeight: mark.cellHeight ?? _heatmapDefaults.cellHeight,
+      gapFraction: mark.gapFraction ?? _heatmapDefaults.gapFraction,
+      borderColor: mark.borderColor ?? _heatmapDefaults.borderColor,
+      borderWidth: mark.borderWidth ?? _heatmapDefaults.borderWidth,
+      cornerRadius: mark.cornerRadius ?? _heatmapDefaults.cornerRadius,
+      showCellLabels: mark.showCellLabels ?? _heatmapDefaults.showCellLabels,
+      cellLabelColor: mark.cellLabelColor,
+      cellLabelFontSize:
+          mark.cellLabelFontSize ?? _heatmapDefaults.cellLabelFontSize,
+      emptyValueStyle: mark.emptyValueStyle,
+      valueFilter: mark.valueFilter,
+    );
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidHeatmapConfiguration(
+      markId,
+      '${error.name ?? 'value'} ${error.message}.',
+    );
   }
 }
 
@@ -950,6 +1026,90 @@ ScatterChartSeries _lowerScatter<T>(
             showLegend: _categoryDefaults.showLegend,
           ),
   );
+}
+
+HeatmapChartSeries _lowerHeatmap<T>(
+  HeatmapMark<T> mark,
+  String id,
+  YAxisConfig axis,
+  XAxisConfig? xAxis,
+  List<T> data,
+) {
+  final points = <HeatmapDataPoint>[];
+  final identities = <HeatmapCellIdentity>{};
+  for (var index = 0; index < data.length; index++) {
+    final row = data[index];
+    try {
+      final x = mark.x(row).toDouble();
+      final y = mark.y(row).toDouble();
+      final pointKey = mark.pointKey?.call(row);
+      final label = mark.label?.call(row);
+      final point = mark.missing?.call(row) ?? false
+          ? HeatmapDataPoint.missing(
+              x: x,
+              y: y,
+              pointKey: pointKey,
+              label: label,
+            )
+          : HeatmapDataPoint(
+              x: x,
+              y: y,
+              value: mark.value(row).toDouble(),
+              pointKey: pointKey,
+              label: label,
+            );
+      if (!identities.add(point.identity)) {
+        throw GrammarSpecException.invalidHeatmapRow(
+          id,
+          index,
+          'cell identity ${point.identity} duplicates an earlier row.',
+        );
+      }
+      points.add(point);
+    } on GrammarSpecException {
+      rethrow;
+    } on ArgumentError catch (error) {
+      throw GrammarSpecException.invalidHeatmapRow(
+        id,
+        index,
+        '${error.name ?? 'value'} ${error.message}.',
+      );
+    }
+  }
+
+  final series = HeatmapChartSeries(
+    id: id,
+    name: mark.name,
+    points: points,
+    colorScale: mark.colorScale,
+    yAxisId: axis.id,
+    yAxisConfig: axis,
+    unit: mark.unit,
+    cellWidth: mark.cellWidth ?? _heatmapDefaults.cellWidth,
+    cellHeight: mark.cellHeight ?? _heatmapDefaults.cellHeight,
+    gapFraction: mark.gapFraction ?? _heatmapDefaults.gapFraction,
+    borderColor: mark.borderColor ?? _heatmapDefaults.borderColor,
+    borderWidth: mark.borderWidth ?? _heatmapDefaults.borderWidth,
+    cornerRadius: mark.cornerRadius ?? _heatmapDefaults.cornerRadius,
+    showCellLabels: mark.showCellLabels ?? _heatmapDefaults.showCellLabels,
+    cellLabelColor: mark.cellLabelColor,
+    cellLabelFontSize:
+        mark.cellLabelFontSize ?? _heatmapDefaults.cellLabelFontSize,
+    emptyValueStyle: mark.emptyValueStyle,
+    valueFilter: mark.valueFilter,
+  );
+  try {
+    series.validateCategoryCoordinates(
+      xAxis: xAxis?.categoryAxis,
+      yAxis: axis.categoryAxis,
+    );
+  } on ArgumentError catch (error) {
+    throw GrammarSpecException.invalidHeatmapConfiguration(
+      id,
+      '${error.name ?? 'categoryAxis'} ${error.message}.',
+    );
+  }
+  return series;
 }
 
 CandlestickChartSeries _lowerCandlestick<T>(

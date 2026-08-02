@@ -1,6 +1,7 @@
 import '../../artifacts/chart_view_state.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/chart_series.dart';
+import '../../models/heatmap_chart_series.dart';
 import '../../models/interaction_config.dart';
 import '../../models/polar_chart_config.dart';
 import '../../models/polar_column_chart_series.dart';
@@ -31,6 +32,7 @@ class ChartSelectionResolver {
     required ChartSelectionScope scope,
     required Iterable<ChartDataHit> hits,
     required Iterable<ChartSeries> series,
+    HeatmapSelectionExpansion heatmapExpansion = HeatmapSelectionExpansion.cell,
     PolarChartConfig? polarChartConfig,
   }) {
     final acquiredHits = hits.toList(growable: false);
@@ -56,7 +58,12 @@ class ChartSelectionResolver {
       switch (scope) {
         case ChartSelectionScope.mark:
         case ChartSelectionScope.markOrWholeSeries:
-          _addRepresentedRefs(refs, hit, sourceSeries);
+          if (sourceSeries is HeatmapChartSeries &&
+              heatmapExpansion != HeatmapSelectionExpansion.cell) {
+            _addExpandedHeatmapRefs(refs, hit, sourceSeries, heatmapExpansion);
+          } else {
+            _addRepresentedRefs(refs, hit, sourceSeries);
+          }
           break;
         case ChartSelectionScope.category:
           if (_usesLabelCategoryIdentity(sourceSeries)) {
@@ -109,6 +116,44 @@ class ChartSelectionResolver {
     for (final pointIndex in hit.effectiveSourcePointIndices) {
       if (pointIndex < 0 || pointIndex >= sourceSeries.points.length) continue;
       refs.add(ChartPointRef(seriesId: hit.seriesId, pointIndex: pointIndex));
+    }
+  }
+
+  static void _addExpandedHeatmapRefs(
+    Set<ChartPointRef> refs,
+    ChartDataHit hit,
+    HeatmapChartSeries sourceSeries,
+    HeatmapSelectionExpansion expansion,
+  ) {
+    final coordinates = <double>{};
+    for (final pointIndex in hit.effectiveSourcePointIndices) {
+      if (pointIndex < 0 || pointIndex >= sourceSeries.cells.length) continue;
+      final cell = sourceSeries.cellAt(pointIndex);
+      coordinates.add(
+        expansion == HeatmapSelectionExpansion.row ? cell.y : cell.x,
+      );
+    }
+    if (coordinates.isEmpty) return;
+
+    final filter = sourceSeries.valueFilter;
+    for (
+      var pointIndex = 0;
+      pointIndex < sourceSeries.cells.length;
+      pointIndex++
+    ) {
+      final cell = sourceSeries.cellAt(pointIndex);
+      final coordinate = expansion == HeatmapSelectionExpansion.row
+          ? cell.y
+          : cell.x;
+      if (!coordinates.contains(coordinate)) continue;
+      if (filter != null &&
+          filter.mode == HeatmapValueFilterMode.hide &&
+          !filter.includes(cell)) {
+        continue;
+      }
+      refs.add(
+        ChartPointRef(seriesId: sourceSeries.id, pointIndex: pointIndex),
+      );
     }
   }
 

@@ -131,7 +131,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Twelve chart guides, grouped by visual grammar'),
+        find.text('Thirteen chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -157,6 +157,10 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('chart-type-card-gauge')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-heatmap-charts')),
         findsOneWidget,
       );
 
@@ -311,6 +315,32 @@ void main() {
     expect(
       _gridContains<EquipmentRiskScatterCard>(tester, scatterGrid),
       isTrue,
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Three matrix stories, one measured colour channel'),
+      800,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(
+      find.byKey(const ValueKey('gallery-heatmap-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-heatmap-compositions'), 3);
+    final heatmapCharts = tester
+        .widgetList<BravenChartPlus>(
+          find.descendant(
+            of: find.byKey(const ValueKey('gallery-heatmap-compositions')),
+            matching: find.byType(BravenChartPlus),
+          ),
+        )
+        .toList();
+    expect(heatmapCharts, hasLength(3));
+    expect(
+      heatmapCharts.expand((chart) => chart.series),
+      everyElement(isA<HeatmapChartSeries>()),
     );
 
     await tester.scrollUntilVisible(

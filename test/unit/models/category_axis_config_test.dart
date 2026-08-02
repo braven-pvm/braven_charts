@@ -32,5 +32,18 @@ void main() {
       expect(copy.maxLabelLines, 3);
       expect(copy.autoViewport, isFalse);
     });
+
+    test('validates durable non-empty category identity', () {
+      const valid = CategoryAxisConfig(categories: ['North', 'South']);
+      expect(valid.validate, returnsNormally);
+
+      const empty = CategoryAxisConfig(categories: ['North', '  ']);
+      expect(empty.validate, throwsArgumentError);
+
+      const duplicate = CategoryAxisConfig(
+        categories: ['North', 'South', 'North'],
+      );
+      expect(duplicate.validate, throwsArgumentError);
+    });
   });
 }

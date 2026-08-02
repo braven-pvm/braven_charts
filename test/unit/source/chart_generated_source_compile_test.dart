@@ -77,6 +77,28 @@ void main() {
           entranceMode: PathEntranceAnimationMode.reveal,
         ),
       );
+      final heatmap = HeatmapChartSeries(
+        id: 'availability',
+        name: 'Availability',
+        unit: '%',
+        points: [
+          HeatmapDataPoint(x: 0, y: 0, value: 99.8, pointKey: 'api-morning'),
+          HeatmapDataPoint.missing(x: 1, y: 0, pointKey: 'api-evening'),
+        ],
+        colorScale: HeatmapColorScale.diverging(
+          lowColor: const Color(0xFFDC2626),
+          midpointColor: const Color(0xFFF59E0B),
+          highColor: const Color(0xFF16A34A),
+          midpoint: 99,
+          minimumValue: 95,
+          maximumValue: 100,
+          missingColor: const Color(0xFFCBD5E1),
+          label: 'Availability',
+          unit: '%',
+        ),
+        showCellLabels: true,
+        cornerRadius: 3,
+      );
       final snapshot = ChartDocumentSnapshot(
         document: ChartDocument(
           documentId: 'generated-source-compile',
@@ -86,6 +108,7 @@ void main() {
             _success(ChartSeriesDocumentCodec.encode(series)).value,
             _success(ChartSeriesDocumentCodec.encode(scatter)).value,
             _success(ChartSeriesDocumentCodec.encode(range)).value,
+            _success(ChartSeriesDocumentCodec.encode(heatmap)).value,
           ],
           annotations: [
             _success(
@@ -822,6 +845,12 @@ void main() {
 }
 
 ChartArtifactSuccess<T> _success<T>(ChartArtifactResult<T> result) {
-  expect(result, isA<ChartArtifactSuccess<T>>());
+  expect(
+    result,
+    isA<ChartArtifactSuccess<T>>(),
+    reason: result is ChartArtifactFailure<T>
+        ? '${result.error.code}: ${result.error.message}'
+        : null,
+  );
   return result as ChartArtifactSuccess<T>;
 }

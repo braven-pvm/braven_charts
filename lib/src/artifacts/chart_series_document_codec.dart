@@ -13,6 +13,9 @@ import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/gauge_chart_series.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_color_scale.dart';
+import '../models/heatmap_data_point.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
@@ -168,6 +171,8 @@ abstract final class ChartSeriesDocumentCodec {
           },
           requiredCapabilities: {
             'series.${_typeOf(series)}',
+            if (series is HeatmapChartSeries) 'series.heatmap.cell.v1',
+            if (series is HeatmapChartSeries) 'series.heatmap.color-scale.v1',
             if (series is RangeAreaChartSeries) 'series.rangeArea.interval.v1',
             if (series is CandlestickChartSeries) 'series.candlestick.ohlc.v1',
             if (series is CandlestickChartSeries &&
@@ -347,6 +352,7 @@ abstract final class ChartSeriesDocumentCodec {
           .map(switch (document.type) {
             'candlestick' => _decodeCandlestickPoint,
             'rangeArea' => _decodeRangeAreaPoint,
+            'heatmap' => _decodeHeatmapPoint,
             _ => _decodePoint,
           })
           .toList(growable: false);
@@ -585,6 +591,43 @@ abstract final class ChartSeriesDocumentCodec {
           hitTestMode: _enum(style, 'hitTestMode', RangeAreaHitTestMode.values),
           pathAnimation: _decodePathAnimation(
             _optionalMap(style, 'pathAnimation'),
+          ),
+        ),
+        'heatmap' => HeatmapChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points.cast<HeatmapDataPoint>(),
+          colorScale: _decodeHeatmapColorScale(
+            _map(style, 'heatmapColorScale'),
+          ),
+          metadata: metadata,
+          annotations: annotations,
+          yAxisId: document.axisId,
+          yAxisConfig: axis,
+          unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
+          cellWidth: _double(style, 'heatmapCellWidth'),
+          cellHeight: _double(style, 'heatmapCellHeight'),
+          gapFraction: _double(style, 'heatmapGapFraction'),
+          borderColor: _color(style, 'heatmapBorderColor'),
+          borderWidth: _double(style, 'heatmapBorderWidth'),
+          cornerRadius: _double(style, 'heatmapCornerRadius'),
+          showCellLabels: _bool(style, 'heatmapShowCellLabels'),
+          cellLabelColor: _optionalColor(
+            style['heatmapCellLabelColor'],
+            r'$.style.heatmapCellLabelColor',
+          ),
+          cellLabelFontSize: _double(style, 'heatmapCellLabelFontSize'),
+          emptyValueStyle: _decodeHeatmapEmptyValueStyle(
+            _optionalMap(style, 'heatmapEmptyValueStyle'),
+          ),
+          valueFilter: _decodeHeatmapValueFilter(
+            _optionalMap(style, 'heatmapValueFilter'),
+          ),
+          animation: _decodeHeatmapAnimation(
+            _optionalMap(style, 'heatmapAnimation'),
           ),
         ),
         'bar' => BarChartSeries(
@@ -881,6 +924,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   ScatterChartSeries() => 'scatter',
   AreaChartSeries() => 'area',
   RangeAreaChartSeries() => 'rangeArea',
+  HeatmapChartSeries() => 'heatmap',
   BarChartSeries() => 'bar',
   CandlestickChartSeries() => 'candlestick',
   PieChartSeries() => 'pie',
@@ -893,6 +937,7 @@ String _typeOf(ChartSeries series) => switch (series) {
 
 const _candlestickPointExtensionKey = 'candlestick.ohlc.v1';
 const _rangeAreaPointExtensionKey = 'rangeArea.interval.v1';
+const _heatmapPointExtensionKey = 'heatmap.cell.v1';
 
 ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
     ChartPointDocument(
@@ -961,8 +1006,84 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
               'high': _number(point.high!),
             },
           }, path: r'$.data.points[$index].extensions.rangeArea'),
+        if (point is HeatmapDataPoint)
+          _heatmapPointExtensionKey: _jsonObject({
+            'isMissing': point.isMissing,
+            if (!point.isMissing) 'value': _number(point.value!),
+            if (point.bounds case final bounds?)
+              'bounds': {
+                'xMinimum': _number(bounds.xMinimum),
+                'xMaximum': _number(bounds.xMaximum),
+                'yMinimum': _number(bounds.yMinimum),
+                'yMaximum': _number(bounds.yMaximum),
+              },
+          }, path: r'$.data.points[$index].extensions.heatmap'),
       },
     );
+
+HeatmapDataPoint _decodeHeatmapPoint(ChartPointDocument point) {
+  final extension = point.extensions[_heatmapPointExtensionKey];
+  if (extension is! JsonObjectValue) {
+    throw const _UnsupportedModelException(
+      'Heatmap points require a heatmap.cell.v1 object extension.',
+      r'$.data.point.extensions.heatmap.cell.v1',
+    );
+  }
+  final values = _objectMap(extension);
+  final isMissing = _bool(values, 'isMissing');
+  final bounds = _decodeHeatmapCellBounds(values['bounds']);
+  if (isMissing) {
+    if (values.containsKey('value')) {
+      throw const _UnsupportedModelException(
+        'Explicitly missing Heatmap cells cannot carry a measured value.',
+        r'$.data.point.extensions.heatmap.cell.v1.value',
+      );
+    }
+    return HeatmapDataPoint.missing(
+      x: point.x.asDouble,
+      y: point.y.asDouble,
+      bounds: bounds,
+      pointKey: point.pointKey,
+      timestamp: point.timestamp,
+      label: point.label,
+      metadata: _dynamicMap(point.metadata),
+    );
+  }
+  final common = _decodePoint(point);
+  return HeatmapDataPoint(
+    x: common.x,
+    y: common.y,
+    value: _double(values, 'value'),
+    bounds: bounds,
+    pointKey: common.pointKey,
+    magnitude: common.magnitude,
+    colorValue: common.colorValue,
+    opacityValue: common.opacityValue,
+    categoryValue: common.categoryValue,
+    timestamp: common.timestamp,
+    label: common.label,
+    metadata: common.metadata,
+    segmentStyle: common.segmentStyle,
+    pointStyle: common.pointStyle,
+  );
+}
+
+HeatmapCellBounds? _decodeHeatmapCellBounds(Object? value) {
+  if (value == null) return null;
+  if (value is! Map) {
+    throw const _UnsupportedModelException(
+      'Heatmap cell bounds must be an object.',
+      r'$.data.point.extensions.heatmap.cell.v1.bounds',
+    );
+  }
+  final values = Map<String, Object?>.from(value);
+  return HeatmapCellBounds(
+    xMinimum: _double(values, 'xMinimum'),
+    xMaximum: _double(values, 'xMaximum'),
+    yMinimum: _double(values, 'yMinimum'),
+    yMaximum: _double(values, 'yMaximum'),
+  );
+}
 
 ChartDataPoint _decodePoint(ChartPointDocument point) {
   final segmentStyle = _objectMap(point.segmentStyle);
@@ -1254,6 +1375,25 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['labelConfig'] = _encodeRangeAreaLabelConfig(series.labelConfig)
         ..['hitTestMode'] = series.hitTestMode.name
         ..['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
+    case HeatmapChartSeries():
+      result
+        ..['heatmapColorScale'] = _encodeHeatmapColorScale(series.colorScale)
+        ..['heatmapCellWidth'] = _number(series.cellWidth)
+        ..['heatmapCellHeight'] = _number(series.cellHeight)
+        ..['heatmapGapFraction'] = _number(series.gapFraction)
+        ..['heatmapBorderColor'] = series.borderColor.toARGB32()
+        ..['heatmapBorderWidth'] = _number(series.borderWidth)
+        ..['heatmapCornerRadius'] = _number(series.cornerRadius)
+        ..['heatmapShowCellLabels'] = series.showCellLabels
+        ..['heatmapCellLabelColor'] = series.cellLabelColor?.toARGB32()
+        ..['heatmapCellLabelFontSize'] = _number(series.cellLabelFontSize)
+        ..['heatmapEmptyValueStyle'] = series.emptyValueStyle == null
+            ? null
+            : _encodeHeatmapEmptyValueStyle(series.emptyValueStyle!)
+        ..['heatmapValueFilter'] = series.valueFilter == null
+            ? null
+            : _encodeHeatmapValueFilter(series.valueFilter!)
+        ..['heatmapAnimation'] = _encodeHeatmapAnimation(series.animation);
     case BarChartSeries():
       result
         ..['barWidthPercent'] = series.barWidthPercent == null
@@ -1449,6 +1589,89 @@ Map<String, Object?> _encodeSeriesStyle(
   }
   result.removeWhere((_, value) => value == null);
   return result;
+}
+
+Map<String, Object?> _encodeHeatmapColorScale(HeatmapColorScale scale) => {
+  'type': scale.type.name,
+  'colors': [for (final color in scale.colors) color.toARGB32()],
+  if (scale.thresholds.isNotEmpty)
+    'thresholds': [for (final value in scale.thresholds) _number(value)],
+  if (scale.bandLabels.isNotEmpty) 'bandLabels': scale.bandLabels,
+  if (scale.minimumValue != null) 'minimumValue': _number(scale.minimumValue!),
+  if (scale.maximumValue != null) 'maximumValue': _number(scale.maximumValue!),
+  if (scale.midpoint != null) 'midpoint': _number(scale.midpoint!),
+  'reverse': scale.reverse,
+  'clamp': scale.clamp,
+  'missingColor': scale.missingColor.toARGB32(),
+  'label': scale.label,
+  if (scale.unit != null) 'unit': scale.unit,
+  'showLegend': scale.showLegend,
+};
+
+HeatmapColorScale _decodeHeatmapColorScale(Map<String, Object?> value) {
+  final type = _enum(value, 'type', HeatmapColorScaleType.values);
+  final colors = _requiredList(value, 'colors')
+      .map(
+        (color) => _optionalColor(color, r'$.style.heatmapColorScale.colors')!,
+      )
+      .toList(growable: false);
+  final missingColor = _optionalColor(
+    value['missingColor'],
+    r'$.style.heatmapColorScale.missingColor',
+  )!;
+  final label = _string(value, 'label');
+  final unit = _optionalString(value['unit']);
+  final showLegend = _bool(value, 'showLegend');
+  final reverse = _bool(value, 'reverse');
+  return switch (type) {
+    HeatmapColorScaleType.sequential => HeatmapColorScale.sequential(
+      colors: colors,
+      minimumValue: _optionalDouble(value['minimumValue']),
+      maximumValue: _optionalDouble(value['maximumValue']),
+      reverse: reverse,
+      clamp: _bool(value, 'clamp'),
+      missingColor: missingColor,
+      label: label,
+      unit: unit,
+      showLegend: showLegend,
+    ),
+    HeatmapColorScaleType.diverging => HeatmapColorScale.diverging(
+      lowColor: colors[0],
+      midpointColor: colors[1],
+      highColor: colors[2],
+      midpoint: _double(value, 'midpoint'),
+      minimumValue: _optionalDouble(value['minimumValue']),
+      maximumValue: _optionalDouble(value['maximumValue']),
+      reverse: reverse,
+      clamp: _bool(value, 'clamp'),
+      missingColor: missingColor,
+      label: label,
+      unit: unit,
+      showLegend: showLegend,
+    ),
+    HeatmapColorScaleType.threshold => HeatmapColorScale.threshold(
+      thresholds: [
+        for (final threshold in _requiredList(value, 'thresholds'))
+          _optionalDouble(threshold) ??
+              (throw const FormatException(
+                'Heatmap thresholds must be finite chart numbers.',
+              )),
+      ],
+      colors: colors,
+      bandLabels: [
+        for (final bandLabel in _requiredList(value, 'bandLabels'))
+          _requiredStringValue(
+            bandLabel,
+            r'$.style.heatmapColorScale.bandLabels',
+          ),
+      ],
+      missingColor: missingColor,
+      label: label,
+      unit: unit,
+      showLegend: showLegend,
+      reverse: reverse,
+    ),
+  };
 }
 
 Map<String, Object?> _encodeCandlestickPointStyle(
@@ -1788,6 +2011,95 @@ Map<String, Object?> _encodePathAnimationTiming(PathAnimationTiming timing) => {
   if (timing.duration case final duration?)
     'durationMicros': duration.inMicroseconds,
 };
+
+Map<String, Object?> _encodeHeatmapEmptyValueStyle(
+  HeatmapEmptyValueStyle style,
+) => {
+  'value': _number(style.value),
+  'fillColor': style.fillColor.toARGB32(),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  if (style.borderWidth != null) 'borderWidth': _number(style.borderWidth!),
+  'showLabel': style.showLabel,
+  'showInLegend': style.showInLegend,
+  'legendLabel': style.legendLabel,
+};
+
+HeatmapEmptyValueStyle? _decodeHeatmapEmptyValueStyle(
+  Map<String, Object?>? value,
+) => value == null
+    ? null
+    : HeatmapEmptyValueStyle(
+        value: _double(value, 'value'),
+        fillColor: _color(value, 'fillColor'),
+        borderColor: _optionalColor(
+          value['borderColor'],
+          r'$.style.heatmapEmptyValueStyle.borderColor',
+        ),
+        borderWidth: _optionalDouble(value['borderWidth']),
+        showLabel: _bool(value, 'showLabel'),
+        showInLegend: _bool(value, 'showInLegend'),
+        legendLabel: _string(value, 'legendLabel'),
+      );
+
+Map<String, Object?> _encodeHeatmapValueFilter(HeatmapValueFilter filter) => {
+  'minimumValue': _number(filter.minimumValue),
+  'maximumValue': _number(filter.maximumValue),
+  'mode': filter.mode.name,
+  'excludedOpacity': _number(filter.excludedOpacity),
+};
+
+HeatmapValueFilter? _decodeHeatmapValueFilter(Map<String, Object?>? value) =>
+    value == null
+    ? null
+    : HeatmapValueFilter(
+        minimumValue: _double(value, 'minimumValue'),
+        maximumValue: _double(value, 'maximumValue'),
+        mode: _enum(value, 'mode', HeatmapValueFilterMode.values),
+        excludedOpacity: _double(value, 'excludedOpacity'),
+      );
+
+Map<String, Object?> _encodeHeatmapAnimation(HeatmapAnimationStyle style) => {
+  'entranceMode': style.entranceMode.name,
+  'entranceOrder': style.entranceOrder.name,
+  'entranceScale': _number(style.entranceScale),
+  'staggerFraction': _number(style.staggerFraction),
+  'animateDataUpdates': style.animateDataUpdates,
+  if (style.entranceTiming != const PathAnimationTiming())
+    'entranceTiming': _encodePathAnimationTiming(style.entranceTiming),
+  if (style.dataUpdateTiming != const PathAnimationTiming())
+    'dataUpdateTiming': _encodePathAnimationTiming(style.dataUpdateTiming),
+};
+
+HeatmapAnimationStyle _decodeHeatmapAnimation(Map<String, Object?>? value) {
+  if (value == null) return const HeatmapAnimationStyle();
+  return HeatmapAnimationStyle(
+    entranceMode:
+        _optionalEnum(
+          value['entranceMode'],
+          HeatmapEntranceMode.values,
+          r'$.style.heatmapAnimation.entranceMode',
+        ) ??
+        HeatmapEntranceMode.fade,
+    entranceOrder:
+        _optionalEnum(
+          value['entranceOrder'],
+          HeatmapEntranceOrder.values,
+          r'$.style.heatmapAnimation.entranceOrder',
+        ) ??
+        HeatmapEntranceOrder.row,
+    entranceScale: _optionalDouble(value['entranceScale']) ?? 0.82,
+    staggerFraction: _optionalDouble(value['staggerFraction']) ?? 0.55,
+    animateDataUpdates: _optionalBool(value['animateDataUpdates']) ?? true,
+    entranceTiming: _decodePathAnimationTiming(
+      _optionalMap(value, 'entranceTiming'),
+      r'$.style.heatmapAnimation.entranceTiming',
+    ),
+    dataUpdateTiming: _decodePathAnimationTiming(
+      _optionalMap(value, 'dataUpdateTiming'),
+      r'$.style.heatmapAnimation.dataUpdateTiming',
+    ),
+  );
+}
 
 PathAnimationStyle _decodePathAnimation(Map<String, Object?>? value) {
   if (value == null) return const PathAnimationStyle();
@@ -4009,10 +4321,22 @@ Map<String, Object?> _map(Map<String, Object?> map, String key) {
 Map<String, Object?>? _optionalMap(Map<String, Object?> map, String key) =>
     map[key] == null ? null : _map(map, key);
 
+List<Object?> _requiredList(Map<String, Object?> map, String key) {
+  final value = map[key];
+  if (value is List<Object?>) return value;
+  if (value is List) return List<Object?>.from(value);
+  throw FormatException('Expected list at $key.');
+}
+
 String _string(Map<String, Object?> map, String key) {
   final value = map[key];
   if (value is String) return value;
   throw FormatException('Expected string at $key.');
+}
+
+String _requiredStringValue(Object? value, String path) {
+  if (value is String) return value;
+  throw FormatException('Expected string at $path.');
 }
 
 String? _optionalString(Object? value) {

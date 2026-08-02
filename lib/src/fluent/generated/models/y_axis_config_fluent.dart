@@ -89,6 +89,13 @@ extension YAxisConfigFluent on YAxisConfig {
   /// Replaces [YAxisConfig.logBase] with [value].
   YAxisConfig withLogBase(double value) => copyWith(logBase: value);
 
+  /// Replaces [YAxisConfig.categoryAxis] with [value].
+  YAxisConfig withCategoryAxis(CategoryAxisConfig value) =>
+      copyWith(categoryAxis: value);
+
+  /// Clears [YAxisConfig.categoryAxis] to `null`.
+  YAxisConfig clearCategoryAxis() => copyWith(clearCategoryAxis: true);
+
   /// Replaces [YAxisConfig.showMinorTicks] with [value].
   YAxisConfig withShowMinorTicks(bool value) => copyWith(showMinorTicks: value);
 

@@ -100,4 +100,34 @@ void main() {
     expect(hits, isNotEmpty);
     expect(element.selectionCandidateCount, lessThan(32));
   });
+
+  test('Heatmap rectangle acquisition uses rendered cell overlap', () {
+    final element = SeriesElement(
+      series: HeatmapChartSeries(
+        id: 'matrix',
+        points: [
+          HeatmapDataPoint(x: 0, y: 0, value: 10),
+          HeatmapDataPoint(x: 1, y: 0, value: 20),
+        ],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [Color(0xFFFFFFFF), Color(0xFF0000FF)],
+        ),
+      ),
+      transform: const ChartTransform(
+        dataXMin: -0.5,
+        dataXMax: 1.5,
+        dataYMin: -0.5,
+        dataYMax: 0.5,
+        plotWidth: 200,
+        plotHeight: 100,
+      ),
+    );
+
+    final hits = element.dataHitsInPlotRect(
+      const Rect.fromLTRB(95, 20, 105, 30),
+    );
+
+    expect(hits.map((hit) => hit.pointIndex), [0, 1]);
+    expect(element.selectionCandidateCount, 2);
+  });
 }

@@ -90,6 +90,7 @@ void main() {
         selection: ChartSelectionConfig(
           acquisitionMode: ChartSelectionAcquisitionMode.lasso,
           scope: ChartSelectionScope.markOrWholeSeries,
+          heatmapExpansion: HeatmapSelectionExpansion.row,
           operation: ChartSelectionOperation.subtract,
           dragActivation: ChartSelectionDragActivation.shiftPrimaryButton,
           clearOnBackgroundTap: false,

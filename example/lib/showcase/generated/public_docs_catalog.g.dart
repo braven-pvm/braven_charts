@@ -66,7 +66,7 @@ const publicDocsFlutterConstraint = ">=3.35.0";
 const publicDocsFeatures = <PublicDocsFeatureEntry>[
   (
     id: "chart-families",
-    title: "Twelve chart families",
+    title: "Thirteen chart families",
     summary:
         "Build Cartesian, financial, radial, and polar charts in one native renderer.",
     page: "chart-types",
@@ -271,6 +271,38 @@ const publicDocsChartFamilies = <PublicDocsChartFamilyEntry>[
     ),
   ),
   (
+    id: "heatmap",
+    label: "Heatmap",
+    group: "Cartesian",
+    summary: "Measured values across a matrix",
+    bestFor:
+        "Activity patterns, calendars, correlation matrices, and dense measured fields",
+    page: "heatmap-charts",
+    guideId: "heatmap",
+    pairAsset: "doc/screenshots/family_heatmap_pair.png",
+    apiSymbols: <String>[
+      "HeatmapChartSeries",
+      "HeatmapDataPoint",
+      "HeatmapColorScale",
+    ],
+    primaryExample: (
+      title: "Heatmap chart family",
+      asset: "doc/screenshots/chart_type_heatmap.png",
+      page: "heatmap-charts",
+      preset: null,
+      view: null,
+      animated: false,
+    ),
+    secondaryExample: (
+      title: "Calendar temperature matrix",
+      asset: "doc/screenshots/heatmap_calendar.png",
+      page: "heatmap-charts",
+      preset: "calendar",
+      view: null,
+      animated: false,
+    ),
+  ),
+  (
     id: "pie",
     label: "Pie",
     group: "Partition radial",
@@ -469,6 +501,15 @@ const publicDocsHostedGuides = <PublicDocsHostedGuideEntry>[
         "Plot typed open-high-low-close observations with financial overlays and interaction.",
     sourcePath: "doc/candlestick_charts.md",
     path: "chart-families/candlestick/",
+  ),
+  (
+    id: "heatmap",
+    title: "Heatmap charts",
+    group: "Chart families",
+    summary:
+        "Encode a third measured value across categorical or numeric Cartesian matrices.",
+    sourcePath: "doc/heatmap_charts.md",
+    path: "chart-families/heatmap/",
   ),
   (
     id: "pie",

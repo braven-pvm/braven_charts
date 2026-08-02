@@ -12,6 +12,7 @@ import '../widgets/cartesian_release_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/gauge_gallery_cards.dart';
+import '../widgets/heatmap_gallery_cards.dart';
 import '../widgets/pie_gallery_cards.dart';
 import '../widgets/polar_column_gallery_cards.dart';
 import '../widgets/radial_bar_gallery_cards.dart';
@@ -174,10 +175,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Twelve chart guides, grouped by visual grammar',
+              title: 'Thirteen chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 12,
+              count: 13,
             ),
           ),
           SliverToBoxAdapter(
@@ -294,6 +295,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(scatterGalleryCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'HEATMAP COMPOSITIONS',
+              title: 'Three matrix stories, one measured colour channel',
+              subtitle:
+                  'Compare recurring activity, a temperature rhythm around a stable midpoint, and operational thresholds with explicit missing cells.',
+              count: 3,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-heatmap-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 460,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(heatmapGalleryCards),
             ),
           ),
           const SliverToBoxAdapter(

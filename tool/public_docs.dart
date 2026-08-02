@@ -71,7 +71,10 @@ void main(List<String> arguments) {
     return;
   }
 
-  final generatedCatalog = _generateDartCatalog(root, catalog);
+  final generatedCatalog = _formatGeneratedDart(
+    root,
+    _generateDartCatalog(root, catalog),
+  );
   final readmeSections = <String, String>{
     'FEATURES': _generateFeatures(catalog),
     'FAMILIES': _generateFamilies(catalog),
@@ -153,6 +156,32 @@ void main(List<String> arguments) {
   );
 }
 
+String _formatGeneratedDart(Directory root, String source) {
+  final temporaryDirectory = Directory.systemTemp.createTempSync(
+    'braven-public-docs-',
+  );
+  final temporaryFile = temporaryDirectory.file('public_docs_catalog.g.dart');
+  try {
+    temporaryFile.writeAsStringSync(source);
+    final result = Process.runSync(
+      Platform.resolvedExecutable,
+      ['format', temporaryFile.path],
+      workingDirectory: root.path,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
+    );
+    if (result.exitCode != 0) {
+      _fail(
+        'Could not format generated public documentation catalog:\n'
+        '${result.stderr}',
+      );
+    }
+    return temporaryFile.readAsStringSync();
+  } finally {
+    temporaryDirectory.deleteSync(recursive: true);
+  }
+}
+
 Map<String, dynamic> _readJsonObject(File file) {
   if (!file.existsSync()) {
     _fail('Missing ${file.path}.');
@@ -199,8 +228,8 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   if (features.length != 6) {
     errors.add('features must contain exactly 6 evergreen groups.');
   }
-  if (families.length != 12) {
-    errors.add('chartFamilies must contain exactly 12 built-in families.');
+  if (families.length != 13) {
+    errors.add('chartFamilies must contain exactly 13 built-in families.');
   }
   _validateFamilyCountCopy(root, families, errors);
   if (gallery.length < 12 || gallery.length > 18) {
@@ -574,6 +603,7 @@ void _validateFamilyCountCopy(
     10 => 'ten',
     11 => 'eleven',
     12 => 'twelve',
+    13 => 'thirteen',
     _ => '$count',
   };
   final countTitle = '${countWord[0].toUpperCase()}${countWord.substring(1)}';

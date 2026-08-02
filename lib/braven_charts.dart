@@ -91,6 +91,7 @@ export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
 export 'src/controllers/chart_interaction_group_controller.dart'
     hide ChartInteractionGroupParticipant;
+export 'src/controllers/heatmap_viewport_controller.dart';
 // Coordinates
 export 'src/coordinates/chart_transform.dart';
 // Comparison
@@ -160,6 +161,16 @@ export 'src/models/gauge_chart_series.dart';
 export 'src/models/gauge_center_builder.dart';
 export 'src/models/enums.dart';
 export 'src/models/grid_config.dart';
+export 'src/models/heatmap_color_scale.dart';
+export 'src/models/heatmap_chart_series.dart';
+export 'src/models/heatmap_shared_color_domain.dart';
+export 'src/models/heatmap_cluster_data.dart';
+export 'src/models/heatmap_contour_data.dart';
+export 'src/models/heatmap_data_point.dart';
+export 'src/models/heatmap_dendrogram_data.dart';
+export 'src/models/heatmap_density_data.dart';
+export 'src/models/heatmap_histogram_data.dart';
+export 'src/models/heatmap_viewport_source.dart';
 export 'src/models/histogram_chart_data.dart';
 export 'src/models/interaction_callbacks.dart';
 export 'src/models/interaction_config.dart';
@@ -217,6 +228,8 @@ export 'src/streaming/streaming_controller.dart';
 export 'src/widgets/dialogs/annotation_color_palette.dart'
     show ChartColorPalette;
 export 'src/widgets/chart_legend.dart';
+export 'src/widgets/heatmap_color_legend.dart';
+export 'src/widgets/heatmap_dendrogram.dart';
 export 'src/widgets/scatter_marginal_composition.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';

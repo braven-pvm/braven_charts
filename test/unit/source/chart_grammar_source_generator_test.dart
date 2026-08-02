@@ -95,6 +95,68 @@ DateTime sampleStamp(Sample row) =>
 String? sampleZoneLabel(Sample row) => row.zone;
 String? samplePointKey(Sample row) => 'p${row.t.toInt()}';
 
+class HeatmapSample {
+  const HeatmapSample({
+    required this.x,
+    required this.y,
+    required this.value,
+    required this.missing,
+    this.pointKey,
+    this.label,
+  });
+
+  final double x;
+  final double y;
+  final double value;
+  final bool missing;
+  final String? pointKey;
+  final String? label;
+}
+
+double heatmapX(HeatmapSample row) => row.x;
+double heatmapY(HeatmapSample row) => row.y;
+double heatmapValue(HeatmapSample row) => row.value;
+bool heatmapMissing(HeatmapSample row) => row.missing;
+String? heatmapPointKey(HeatmapSample row) => row.pointKey;
+String? heatmapLabel(HeatmapSample row) => row.label;
+
+const heatmapRows = <HeatmapSample>[
+  HeatmapSample(
+    x: 0,
+    y: 0,
+    value: -4,
+    missing: false,
+    pointKey: 'monday-morning',
+    label: 'Cold',
+  ),
+  HeatmapSample(
+    x: 1,
+    y: 0,
+    value: 0,
+    missing: true,
+    pointKey: 'tuesday-morning',
+  ),
+  HeatmapSample(x: 0, y: 1, value: 7, missing: false, label: 'Warm'),
+];
+
+final heatmapScale = HeatmapColorScale.diverging(
+  lowColor: const Color(0xFF2563EB),
+  midpointColor: const Color(0xFFFFFFFF),
+  highColor: const Color(0xFFDC2626),
+  midpoint: 0,
+  minimumValue: -10,
+  maximumValue: 10,
+  missingColor: const Color(0xFFE5E7EB),
+  label: 'Temperature',
+  unit: '°C',
+);
+const heatmapEmptyValueStyle = HeatmapEmptyValueStyle(
+  fillColor: Color(0xFFE5E7EB),
+  borderColor: Color(0xFFD1D5DB),
+  borderWidth: 0.8,
+  legendLabel: 'No readings',
+);
+
 const rows = <Sample>[
   Sample(
     t: 0,
@@ -2435,6 +2497,78 @@ void main() {
   });
 
   group('round trip', () {
+    testWidgets(
+      'shape 0: Heatmap keeps missing cells, identity, labels, and styling',
+      (tester) async {
+        await expectRoundTrip(
+          tester,
+          name: 'heatmap',
+          fragments: <String>[
+            'final bool temperatureMissing;',
+            'final String? temperaturePointKey;',
+            'final String? temperatureLabel;',
+            'temperaturePointKey: null,',
+            '.geomHeatmap(',
+            'value: (row) => row.temperatureValue,',
+            'missing: (row) => row.temperatureMissing,',
+            'pointKey: (row) => row.temperaturePointKey,',
+            'label: (row) => row.temperatureLabel,',
+            'colorScale: HeatmapColorScale.diverging(',
+            'emptyValueStyle: HeatmapEmptyValueStyle(',
+            "legendLabel: 'No readings',",
+            'cellWidth: 0.9,',
+            'showCellLabels: true,',
+          ],
+          original: (controller) => BravenChart.of(heatmapRows)
+              .x(heatmapX, label: 'Day')
+              .y(heatmapY, label: 'Hour')
+              .geomHeatmap(
+                value: heatmapValue,
+                missing: heatmapMissing,
+                pointKey: heatmapPointKey,
+                label: heatmapLabel,
+                colorScale: heatmapScale,
+                emptyValueStyle: heatmapEmptyValueStyle,
+                name: 'Temperature',
+                unit: '°C',
+                cellWidth: 0.9,
+                cellHeight: 0.8,
+                gapFraction: 0.12,
+                borderColor: const Color(0xFF334155),
+                borderWidth: 1.5,
+                cornerRadius: 3,
+                showCellLabels: true,
+                cellLabelColor: const Color(0xFF111827),
+                cellLabelFontSize: 12,
+              )
+              .build(bravenChartController: controller),
+          rebuilt: (controller) => BravenChart.of(heatmapRows)
+              .x(heatmapX, label: 'Day')
+              .y(heatmapY, label: 'Hour')
+              .geomHeatmap(
+                value: heatmapValue,
+                missing: heatmapMissing,
+                pointKey: heatmapPointKey,
+                label: heatmapLabel,
+                colorScale: heatmapScale,
+                emptyValueStyle: heatmapEmptyValueStyle,
+                name: 'Temperature',
+                unit: '°C',
+                cellWidth: 0.9,
+                cellHeight: 0.8,
+                gapFraction: 0.12,
+                borderColor: const Color(0xFF334155),
+                borderWidth: 1.5,
+                cornerRadius: 3,
+                showCellLabels: true,
+                cellLabelColor: const Color(0xFF111827),
+                cellLabelFontSize: 12,
+              )
+              .build(bravenChartController: controller),
+        );
+      },
+    );
+
     testWidgets('shape 1: a single line', (tester) async {
       // The twin declares the axis but does NOT bind the mark to it, because
       // that is what the emitter writes: a chart with one axis and no explicit

@@ -58,58 +58,64 @@ class _ChartSourceViewState extends State<ChartSourceView> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (widget.onFormChanged != null) _buildFormToggle(context),
-              Text(
-                'Dart · '
-                '${isGrammar ? 'Grammar chain' : 'Effective configuration'} · '
-                '${source.seriesCount} series · '
-                '${source.pointCount} ${source.pointCount == 1 ? 'point' : 'points'}',
-                style: theme.textTheme.labelLarge,
-              ),
-              if (source.warnings.isNotEmpty)
-                _SourceStatus(
-                  icon: Icons.info_outline,
-                  label:
-                      '${source.warnings.length} ${source.warnings.length == 1 ? 'warning' : 'warnings'}',
-                  color: colors.tertiary,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (widget.onFormChanged != null)
+                  _buildFormToggle(
+                    context,
+                    compact: constraints.maxWidth < 480,
+                  ),
+                Text(
+                  'Dart · '
+                  '${isGrammar ? 'Grammar chain' : 'Effective configuration'} · '
+                  '${source.seriesCount} series · '
+                  '${source.pointCount} ${source.pointCount == 1 ? 'point' : 'points'}',
+                  style: theme.textTheme.labelLarge,
                 ),
-              if (widget.isStale)
-                _SourceStatus(
-                  icon: Icons.update_outlined,
-                  label: 'Chart changed',
-                  color: colors.tertiary,
-                ),
-              IconButton(
-                tooltip: _wrapLines ? 'Disable line wrapping' : 'Wrap lines',
-                onPressed: () => setState(() => _wrapLines = !_wrapLines),
-                icon: Icon(
-                  _wrapLines ? Icons.wrap_text : Icons.horizontal_rule,
-                ),
-              ),
-              if (widget.isStale && widget.onRefresh != null)
-                TextButton.icon(
-                  onPressed: widget.isRefreshing ? null : widget.onRefresh,
-                  icon: widget.isRefreshing
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                  label: Text(
-                    widget.isRefreshing ? 'Refreshing…' : 'Refresh source',
+                if (source.warnings.isNotEmpty)
+                  _SourceStatus(
+                    icon: Icons.info_outline,
+                    label:
+                        '${source.warnings.length} ${source.warnings.length == 1 ? 'warning' : 'warnings'}',
+                    color: colors.tertiary,
+                  ),
+                if (widget.isStale)
+                  _SourceStatus(
+                    icon: Icons.update_outlined,
+                    label: 'Chart changed',
+                    color: colors.tertiary,
+                  ),
+                IconButton(
+                  tooltip: _wrapLines ? 'Disable line wrapping' : 'Wrap lines',
+                  onPressed: () => setState(() => _wrapLines = !_wrapLines),
+                  icon: Icon(
+                    _wrapLines ? Icons.wrap_text : Icons.horizontal_rule,
                   ),
                 ),
-              FilledButton.tonalIcon(
-                onPressed: () => _copySource(context),
-                icon: const Icon(Icons.copy_all_outlined),
-                label: const Text('Copy code'),
-              ),
-            ],
+                if (widget.isStale && widget.onRefresh != null)
+                  TextButton.icon(
+                    onPressed: widget.isRefreshing ? null : widget.onRefresh,
+                    icon: widget.isRefreshing
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(
+                      widget.isRefreshing ? 'Refreshing…' : 'Refresh source',
+                    ),
+                  ),
+                FilledButton.tonalIcon(
+                  onPressed: () => _copySource(context),
+                  icon: const Icon(Icons.copy_all_outlined),
+                  label: const Text('Copy code'),
+                ),
+              ],
+            ),
           ),
         ),
         const Divider(height: 1),
@@ -131,11 +137,7 @@ class _ChartSourceViewState extends State<ChartSourceView> {
               // The grammar source is Beta: pin the pill to the top-right of the
               // code window so it persists over the scrolling code.
               if (isGrammar)
-                const Positioned(
-                  top: 10,
-                  right: 12,
-                  child: _GrammarBetaChip(),
-                ),
+                const Positioned(top: 10, right: 12, child: _GrammarBetaChip()),
             ],
           ),
         ),
@@ -143,38 +145,42 @@ class _ChartSourceViewState extends State<ChartSourceView> {
     );
   }
 
-  Widget _buildFormToggle(BuildContext context) =>
-      SegmentedButton<ChartSourceForm>(
-        key: const ValueKey('chart-source-form-toggle'),
-        showSelectedIcon: false,
-        style: const ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        segments: const <ButtonSegment<ChartSourceForm>>[
-          ButtonSegment<ChartSourceForm>(
-            value: ChartSourceForm.config,
-            label: Text('Config'),
-            tooltip: 'The BravenChartPlus configuration this chart is',
-          ),
-          ButtonSegment<ChartSourceForm>(
-            value: ChartSourceForm.grammar,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text('Grammar'),
-                SizedBox(width: 6),
-                _GrammarBetaChip(),
-              ],
-            ),
-            tooltip:
-                'The BravenChart.of(rows) chain that rebuilds this chart (Beta)',
-          ),
-        ],
-        selected: <ChartSourceForm>{widget.form},
-        onSelectionChanged: (selection) =>
-            widget.onFormChanged?.call(selection.first),
-      );
+  Widget _buildFormToggle(
+    BuildContext context, {
+    required bool compact,
+  }) => SegmentedButton<ChartSourceForm>(
+    key: const ValueKey('chart-source-form-toggle'),
+    showSelectedIcon: false,
+    style: const ButtonStyle(
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    segments: <ButtonSegment<ChartSourceForm>>[
+      const ButtonSegment<ChartSourceForm>(
+        value: ChartSourceForm.config,
+        label: Text('Config'),
+        tooltip: 'The BravenChartPlus configuration this chart is',
+      ),
+      ButtonSegment<ChartSourceForm>(
+        value: ChartSourceForm.grammar,
+        label: compact
+            ? const Text('Grammar')
+            : const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text('Grammar'),
+                  SizedBox(width: 6),
+                  _GrammarBetaChip(),
+                ],
+              ),
+        tooltip:
+            'The BravenChart.of(rows) chain that rebuilds this chart (Beta)',
+      ),
+    ],
+    selected: <ChartSourceForm>{widget.form},
+    onSelectionChanged: (selection) =>
+        widget.onFormChanged?.call(selection.first),
+  );
 
   Future<void> _copySource(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: widget.generated.source));

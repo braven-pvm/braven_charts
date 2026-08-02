@@ -21,7 +21,12 @@ class ShowcaseChartType {
     required this.highlights,
   });
 
-  final ChartType type;
+  /// Optional convenience-constructor family.
+  ///
+  /// Heatmap is a native Cartesian [SeriesStyle] with its own typed series,
+  /// rather than a `ChartType` convenience constructor, so its catalogue
+  /// entry intentionally leaves this unset.
+  final ChartType? type;
   final String label;
   final String slug;
   final String summary;
@@ -31,7 +36,10 @@ class ShowcaseChartType {
   final List<String> highlights;
 
   /// Stable test and automation suffix, including composition variants.
-  String get cardKeySuffix => slug == '${type.name}-charts' ? type.name : slug;
+  String get cardKeySuffix =>
+      type != null && slug == '${type!.name}-charts' ? type!.name : slug;
+
+  bool get isHeatmap => slug == 'heatmap-charts';
 }
 
 const showcaseChartTypes = <ShowcaseChartType>[
@@ -94,6 +102,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     icon: Icons.candlestick_chart,
     accent: Color(0xFF0F766E),
     highlights: ['OHLC', 'Hollow + filled', 'Cartesian overlays'],
+  ),
+  ShowcaseChartType(
+    type: null,
+    label: 'Heatmap',
+    slug: 'heatmap-charts',
+    summary: 'Measured values across a matrix',
+    bestFor: 'Activity patterns, correlation, calendars, and dense fields',
+    icon: Icons.grid_on_outlined,
+    accent: Color(0xFF0891B2),
+    highlights: ['3 colour scales', 'Missing cells', 'Viewport indexed'],
   ),
   ShowcaseChartType(
     type: ChartType.pie,
@@ -262,12 +280,13 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
       baseTheme.backgroundColor,
     );
 
+    final previewSeries = _previewSeries(
+      chartType,
+      scatterEntranceProgress: scatterEntranceProgress,
+    );
     final preview = BravenChartPlus(
       key: ValueKey('chart-type-preview-${chartType.cardKeySuffix}'),
-      series: _previewSeries(
-        chartType,
-        scatterEntranceProgress: scatterEntranceProgress,
-      ),
+      series: previewSeries,
       concentricDonutConfig: chartType.slug == 'concentric-donut'
           ? const ConcentricDonutConfig(
               innerRadiusFactor: 0.45,
@@ -513,14 +532,14 @@ class ChartTypeCatalogStrip extends StatelessWidget {
       children: [
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.take(6).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(7).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.skip(6).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(7).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
@@ -659,6 +678,44 @@ List<ChartSeries> _previewSeries(
             duration: Duration(milliseconds: 500),
           ),
         ),
+      ),
+    ];
+  }
+
+  if (chartType.isHeatmap) {
+    const values = <List<double>>[
+      [18, 24, 31, 42, 58, 71, 64],
+      [22, 28, 36, 51, 69, 84, 76],
+      [15, 21, 33, 47, 63, 79, 68],
+      [11, 19, 29, 44, 60, 73, 66],
+    ];
+    return [
+      HeatmapChartSeries(
+        id: 'catalog-heatmap',
+        name: 'Activity',
+        points: [
+          for (var row = 0; row < values.length; row++)
+            for (var column = 0; column < values[row].length; column++)
+              HeatmapDataPoint(
+                x: column.toDouble(),
+                y: row.toDouble(),
+                value: values[row][column],
+                pointKey: 'catalog-heatmap-$row-$column',
+              ),
+        ],
+        colorScale: HeatmapColorScale.sequential(
+          colors: const [
+            Color(0xFFE0F2FE),
+            Color(0xFF67E8F9),
+            Color(0xFF0891B2),
+            Color(0xFF164E63),
+          ],
+          minimumValue: 0,
+          maximumValue: 100,
+          showLegend: false,
+        ),
+        gapFraction: 0.12,
+        cornerRadius: 2,
       ),
     ];
   }
@@ -1212,6 +1269,7 @@ List<ChartSeries> _previewSeries(
         style: const SolidGaugeStyle(cornerRadius: 8),
       ),
     ],
+    null => const <ChartSeries>[],
   };
 }
 

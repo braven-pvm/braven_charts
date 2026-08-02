@@ -201,6 +201,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   built-in legend path, including reusable `ChartLegend` widgets and explicit
   canvas `LegendAnnotation`s, rather than only affecting automatically
   generated legends.
+### Heatmaps
+
+- A complete native Cartesian Heatmap family. `HeatmapDataPoint` keeps X, Y,
+  and the independently measured colour value in one typed cell, while
+  `HeatmapDataPoint.missing` preserves explicit matrix positions without
+  encoding absence as zero or NaN.
+- `HeatmapColorScale` with validated sequential, diverging, and threshold
+  mappings, automatic or explicit domains, semantic midpoint, palette
+  reversal, clamping, missing-cell colour, formatter descriptors, and a
+  reusable `HeatmapColorLegend`.
+- Multiple Heatmap series in one native Cartesian chart, with independent
+  units, colour domains, palettes, filters, keyboard identity, artifacts,
+  generated Source, AI configuration, and lossless long-form Data projection.
+  `HeatmapColorLegendGroup` presents and controls the visible colour axes in a
+  compact horizontal or vertical surface.
+- `HeatmapChartSeries` cell geometry, gaps, borders, corners, density-aware
+  contrast labels, typed hit identity, hover/tap selection, keyboard
+  row/column traversal, bounded dense-matrix semantics, Cartesian zoom/pan,
+  X/Y scrollbars, and ordinary chart annotations.
+- Native Heatmap rectangle selection based on rendered cell overlap, with
+  portable `HeatmapSelectionExpansion` policies for touched cells, complete
+  source rows, or complete source columns and a dedicated live review preset.
+- Optional `HeatmapCellBounds` for unequal axis-aligned cells. Explicit
+  rectangles now drive data extents, indexed viewport culling, painting, hit
+  testing, semantics, selection, artifacts, generated Dart, AI configuration,
+  and lossless Workbench Data fields without changing the regular-grid path.
+- Reduced-motion-aware Heatmap entrance animation with fade or scale and
+  simultaneous, row, column, or radial ordering. Compatible mounted updates
+  interpolate measured values by stable cell identity.
+- Complete portable Heatmap surfaces: inline and columnar artifacts,
+  hydration, matrix and long Data projections, CSV, deterministic generated
+  Dart, Chart Grammar, fluent modifiers, strict tool-driven configuration,
+  and Chart/Data/Split/Source Workbench support.
+- A dedicated Heatmap showcase and hosted guide with labelled activity,
+  day/hour temperature, service thresholds, calendar missing cells, diverging
+  correlation, and dense sparse viewport examples, plus Chart Types, Gallery,
+  mobile, and native pub.dev capture integration.
+- Permanent Heatmap rendering benchmarks and focused model, scale, geometry,
+  interaction, accessibility, animation, artifact, table, source, Workbench,
+  compact, desktop, and golden regression coverage.
+- Viewport-backed Heatmap matrices through `HeatmapTileSource`,
+  `HeatmapMatrixDomain`, and `HeatmapViewportController`. Hosts can load only
+  the regular matrix tiles needed by the current viewport, use bounded
+  overscan and deterministic LRU caching, reject stale asynchronous results,
+  and publish an ordinary immutable Heatmap snapshot without adding source
+  fetching to the render loop. Workbench Data, Split, Source, capture, and
+  artifacts intentionally describe the current resident snapshot.
+
+### Changed
+
+- Public catalog, generated README, hosted documentation, feature matrix, API
+  overview, package description, and native chart-family media now describe
+  thirteen built-in chart families.
+
+### Notes
+
+- Heatmap compositions accept one or more Heatmap series and optional Line
+  overlays, but do not mix with other Cartesian mark families. Aggregation,
+  streamed cell mutation, image-backed tiles, arbitrary cell polygons, and
+  treemap/mosaic/vector/geographic families remain explicitly scoped to later
+  work.
 
 ## 0.16.0 - 2026-07-29
 

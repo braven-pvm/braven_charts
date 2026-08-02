@@ -109,8 +109,8 @@ abstract final class ChartAxisDocumentCodec {
             CrosshairLabelPosition.values,
           ),
           labelDisplay: _enum(document.labelDisplay, AxisLabelDisplay.values),
-        scaleType: _enum(document.scaleType, AxisScaleType.values),
-        logBase: document.logBase,
+          scaleType: _enum(document.scaleType, AxisScaleType.values),
+          logBase: document.logBase,
           minHeight: document.layoutMinimum?.asDouble ?? 0,
           maxHeight: document.layoutMaximum?.asDouble ?? 60,
           tickLabelPadding: document.tickLabelPadding?.asDouble ?? 4,
@@ -195,6 +195,26 @@ abstract final class ChartAxisDocumentCodec {
         showMinorTicks: axis.showMinorTicks,
         minorTickCount: axis.minorTickCount,
         minorTickLength: ChartNumberDocument.fromDouble(axis.minorTickLength),
+        categories: axis.categoryAxis?.categories ?? const [],
+        categoryLabelDensity: axis.categoryAxis?.labelDensity.name ?? 'auto',
+        categoryLabelOverflow: axis.categoryAxis?.labelOverflow.name ?? 'wrap',
+        categoryMinimumExtent: axis.categoryAxis == null
+            ? null
+            : ChartNumberDocument.fromDouble(
+                axis.categoryAxis!.minimumCategoryExtent,
+              ),
+        categoryMaximumLabelExtent: axis.categoryAxis == null
+            ? null
+            : ChartNumberDocument.fromDouble(
+                axis.categoryAxis!.maximumLabelExtent,
+              ),
+        categoryMaxLabelLines: axis.categoryAxis?.maxLabelLines ?? 2,
+        categoryLabelRotationDegrees: axis.categoryAxis == null
+            ? null
+            : ChartNumberDocument.fromDouble(
+                axis.categoryAxis!.labelRotationDegrees,
+              ),
+        categoryAutoViewport: axis.categoryAxis?.autoViewport ?? true,
         formatter: formatter,
       ),
     );
@@ -236,6 +256,27 @@ abstract final class ChartAxisDocumentCodec {
         showMinorTicks: document.showMinorTicks,
         minorTickCount: document.minorTickCount,
         minorTickLength: document.minorTickLength?.asDouble ?? 3,
+        categoryAxis: document.categories.isEmpty
+            ? null
+            : CategoryAxisConfig(
+                categories: document.categories,
+                labelDensity: _enum(
+                  document.categoryLabelDensity,
+                  CategoryLabelDensity.values,
+                ),
+                labelOverflow: _enum(
+                  document.categoryLabelOverflow,
+                  CategoryLabelOverflow.values,
+                ),
+                minimumCategoryExtent:
+                    document.categoryMinimumExtent?.asDouble ?? 42,
+                maximumLabelExtent:
+                    document.categoryMaximumLabelExtent?.asDouble ?? 104,
+                maxLabelLines: document.categoryMaxLabelLines,
+                labelRotationDegrees:
+                    document.categoryLabelRotationDegrees?.asDouble ?? 0,
+                autoViewport: document.categoryAutoViewport,
+              ),
         labelFormatter: formatter,
       );
       return ChartArtifactSuccess(

@@ -9,6 +9,9 @@ import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart' show LineInterpolation;
 import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
+import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
+import '../models/heatmap_chart_series.dart'
+    show HeatmapEmptyValueStyle, HeatmapValueFilter;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -41,8 +44,9 @@ import 'channel.dart';
 /// ## Geometry families
 ///
 /// Cartesian geometries — [LineMark], [AreaMark], [BarMark], [ScatterMark],
-/// [CandlestickMark] and [TrendMark] — plus the radial [RadialMark] family
-/// ([PieMark], [DonutMark], [PolarMark]). A spec is either Cartesian or radial:
+/// [HeatmapMark], [CandlestickMark] and [TrendMark] — plus the radial
+/// [RadialMark] family ([PieMark], [DonutMark], [PolarMark]). A spec is either
+/// Cartesian or radial:
 /// a [RadialMark] lowers through the radial branch of `spec.lower()`, may share
 /// the spec with no other mark, and honors no Cartesian axis/grid option.
 /// Faceting, log/time scale objects and string-column data adapters remain V2.
@@ -695,6 +699,136 @@ final class ScatterMark<T> extends SeriesMark<T> {
 
   @override
   String toString() => 'ScatterMark(id: $id, name: $name)';
+}
+
+/// One Cartesian matrix cell per row, with colour encoding an independent
+/// measured value.
+///
+/// Heatmap is intentionally not a scatter colour channel: X and Y remain
+/// spatial coordinates while [value] owns a dedicated [HeatmapColorScale].
+/// Phase 1 permits one Heatmap geometry per plot plus reference annotations.
+final class HeatmapMark<T> extends Mark<T> {
+  /// Creates a Heatmap geometry.
+  const HeatmapMark({
+    required this.x,
+    required this.y,
+    required this.value,
+    required this.colorScale,
+    super.id,
+    super.name,
+    super.yAxisId,
+    this.missing,
+    this.pointKey,
+    this.label,
+    this.unit,
+    this.cellWidth,
+    this.cellHeight,
+    this.gapFraction,
+    this.borderColor,
+    this.borderWidth,
+    this.cornerRadius,
+    this.showCellLabels,
+    this.cellLabelColor,
+    this.cellLabelFontSize,
+    this.emptyValueStyle,
+    this.valueFilter,
+  });
+
+  /// Horizontal cell-centre accessor.
+  final FieldAccessor<T, num> x;
+
+  /// Vertical cell-centre accessor.
+  final FieldAccessor<T, num> y;
+
+  /// Independent measured value encoded by [colorScale].
+  final FieldAccessor<T, num> value;
+
+  /// Optional explicit missing-cell channel.
+  ///
+  /// A missing row keeps its X/Y and optional [pointKey]/[label], but [value]
+  /// is not read and no numeric value is manufactured.
+  final FieldAccessor<T, bool>? missing;
+
+  /// Optional stable identity accessor for update/selection continuity.
+  final FieldAccessor<T, String?>? pointKey;
+
+  /// Optional cell label accessor.
+  final FieldAccessor<T, String?>? label;
+
+  /// Native numeric colour mapping.
+  final HeatmapColorScale colorScale;
+
+  /// Unit shown with measured values.
+  final String? unit;
+
+  /// Optional cell and label presentation overrides.
+  final double? cellWidth;
+  final double? cellHeight;
+  final double? gapFraction;
+  final Color? borderColor;
+  final double? borderWidth;
+  final double? cornerRadius;
+  final bool? showCellLabels;
+  final Color? cellLabelColor;
+  final double? cellLabelFontSize;
+  final HeatmapEmptyValueStyle? emptyValueStyle;
+  final HeatmapValueFilter? valueFilter;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HeatmapMark<T> &&
+          other.x == x &&
+          other.y == y &&
+          other.value == value &&
+          other.missing == missing &&
+          other.pointKey == pointKey &&
+          other.label == label &&
+          other.colorScale == colorScale &&
+          other.id == id &&
+          other.name == name &&
+          other.yAxisId == yAxisId &&
+          other.unit == unit &&
+          other.cellWidth == cellWidth &&
+          other.cellHeight == cellHeight &&
+          other.gapFraction == gapFraction &&
+          other.borderColor == borderColor &&
+          other.borderWidth == borderWidth &&
+          other.cornerRadius == cornerRadius &&
+          other.showCellLabels == showCellLabels &&
+          other.cellLabelColor == cellLabelColor &&
+          other.cellLabelFontSize == cellLabelFontSize &&
+          other.emptyValueStyle == emptyValueStyle &&
+          other.valueFilter == valueFilter;
+
+  @override
+  int get hashCode => Object.hashAll(<Object?>[
+    x,
+    y,
+    value,
+    missing,
+    pointKey,
+    label,
+    colorScale,
+    id,
+    name,
+    yAxisId,
+    unit,
+    cellWidth,
+    cellHeight,
+    gapFraction,
+    borderColor,
+    borderWidth,
+    cornerRadius,
+    showCellLabels,
+    cellLabelColor,
+    cellLabelFontSize,
+    emptyValueStyle,
+    valueFilter,
+  ]);
+
+  @override
+  String toString() => 'HeatmapMark(id: $id, name: $name)';
 }
 
 /// An open-high-low-close candle per row.

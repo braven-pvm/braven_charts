@@ -53,6 +53,15 @@ enum GrammarDiagnosticCode {
   /// A candlestick row violated the OHLC invariants or ordering.
   invalidCandlestickRow,
 
+  /// Heatmap Phase 1 received multiple matrix series or a mixed geometry.
+  unsupportedHeatmapComposition,
+
+  /// A Heatmap mark declared invalid cell or label presentation.
+  invalidHeatmapConfiguration,
+
+  /// A Heatmap row could not produce one valid, uniquely identified cell.
+  invalidHeatmapRow,
+
   /// A facade geom was built without an x or y encoding to inherit.
   ///
   /// Raised by the chained `BravenChart` facade, never by `spec.lower()` — a
@@ -293,6 +302,37 @@ final class GrammarSpecException implements Exception {
         '$verb() has no $channel encoding. Pass $channel: (row) => ..., or '
         'set a chart-wide default with .$channel(...) before this geom.',
       );
+
+  /// Heatmap Phase 1 received an unsupported series composition.
+  factory GrammarSpecException.unsupportedHeatmapComposition(
+    Iterable<String> heatmapIds,
+    Iterable<String> otherGeometryIds,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.unsupportedHeatmapComposition,
+    'Heatmap Phase 1 supports exactly one Heatmap geometry plus reference '
+    'annotations. Heatmap marks: ${_list(heatmapIds)}; other geometries: '
+    '${_list(otherGeometryIds)}. Split these geometries into separate charts.',
+  );
+
+  /// A Heatmap mark declared invalid cell or label presentation.
+  factory GrammarSpecException.invalidHeatmapConfiguration(
+    String markId,
+    String reason,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidHeatmapConfiguration,
+    'The Heatmap mark "$markId" has invalid presentation configuration: '
+    '$reason',
+  );
+
+  /// A Heatmap row could not produce one valid cell.
+  factory GrammarSpecException.invalidHeatmapRow(
+    String markId,
+    int rowIndex,
+    String reason,
+  ) => GrammarSpecException(
+    GrammarDiagnosticCode.invalidHeatmapRow,
+    'Row $rowIndex of the Heatmap mark "$markId" is not a valid cell: $reason',
+  );
 
   /// A faceted spec reached a single-panel path.
   factory GrammarSpecException.facetedSpecNotLowerable() =>

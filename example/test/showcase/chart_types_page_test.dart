@@ -23,7 +23,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-cartesian-grid')),
       findsOneWidget,
     );
-    expect(find.byType(BravenChartPlus), findsNWidgets(6));
+    expect(find.byType(BravenChartPlus), findsNWidgets(7));
     for (final family in [
       'Line',
       'Area',
@@ -31,6 +31,7 @@ void main() {
       'Bar',
       'Scatter',
       'Candlestick',
+      'Heatmap',
     ]) {
       expect(find.text(family), findsOneWidget);
     }
@@ -43,6 +44,11 @@ void main() {
     expect(rangeArea.series.whereType<RangeAreaChartSeries>(), hasLength(1));
     expect(rangeArea.series.whereType<LineChartSeries>(), hasLength(1));
     expect(rangeArea.series.whereType<AreaChartSeries>(), isEmpty);
+    final heatmap = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-heatmap-charts')),
+    );
+    expect(heatmap.series.single, isA<HeatmapChartSeries>());
+    expect((heatmap.series.single as HeatmapChartSeries).cells, hasLength(28));
     final lineWidth = tester
         .getSize(find.byKey(const ValueKey('chart-type-card-line')))
         .width;
@@ -57,7 +63,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(showcaseChartTypes, hasLength(12));
+    expect(showcaseChartTypes, hasLength(13));
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(3));
     for (final family in ['Pie', 'Donut', 'Concentric Donut']) {
       expect(find.text(family), findsOneWidget);
@@ -107,6 +113,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chart-type-card-candlestick')));
     await tester.pump();
     expect(selectedSlug, 'candlestick-charts');
+
+    await tester.tap(
+      find.byKey(const ValueKey('chart-type-card-heatmap-charts')),
+    );
+    await tester.pump();
+    expect(selectedSlug, 'heatmap-charts');
 
     await tester.drag(
       find.byKey(const ValueKey('chart-types-overview')),
