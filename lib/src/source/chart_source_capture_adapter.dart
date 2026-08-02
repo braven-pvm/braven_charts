@@ -14,6 +14,8 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
+import '../models/range_area_chart_series.dart';
+import '../models/range_area_style.dart';
 
 /// Builds source-only extraction options for runtime-owned chart values.
 ///
@@ -297,6 +299,35 @@ abstract final class ChartSourceCaptureAdapter {
             fontWeight: labels.fontWeight,
             showUnit: labels.showUnit,
             padding: labels.padding,
+          ),
+        );
+      // Range Area carries TWO formatters and the codec refuses both: its own
+      // low/high-aware `labelConfig.formatter` and the nested generic
+      // `labelConfig.labels.formatter` that the shared data-point switch in
+      // `ChartSeriesDocumentCodec` reads for this family too. One arm strips
+      // whichever are live, warning once per path.
+      case RangeAreaChartSeries(labelConfig: final config)
+          when config.formatter != null || config.labels.formatter != null:
+        if (config.formatter != null) {
+          warn(
+            '\$.series.${series.id}.labelConfig.formatter',
+            'The Range Area label formatter',
+          );
+        }
+        if (config.labels.formatter != null) {
+          warn(
+            '\$.series.${series.id}.labelConfig.labels.formatter',
+            'The data-point label formatter',
+          );
+        }
+        // Rebuilt rather than copied: `RangeAreaLabelConfig.copyWith` merges
+        // `formatter` with `??` and exposes no clear flag, so a formatter can
+        // be replaced through it but never removed.
+        return series.copyWith(
+          labelConfig: RangeAreaLabelConfig(
+            value: config.value,
+            labels: _withoutLabelFormatter(config.labels),
+            boundaryGap: config.boundaryGap,
           ),
         );
       default:
