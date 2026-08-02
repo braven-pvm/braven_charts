@@ -195,6 +195,16 @@ void main() {
       expect(chart.xAxisConfig?.min, -0.5);
       expect(chart.xAxisConfig?.max, 999999.5);
 
+      expect(find.text('Start live cell stream'), findsOneWidget);
+      await tester.tap(find.text('Start live cell stream'));
+      await tester.pump(const Duration(milliseconds: 25));
+      expect(find.text('Stop live cell stream'), findsOneWidget);
+      expect(find.text('1'), findsWidgets);
+      expect(find.text('24 cells / 1 frames'), findsOneWidget);
+      await tester.tap(find.text('Stop live cell stream'));
+      await tester.pump();
+      expect(find.text('Start live cell stream'), findsOneWidget);
+
       final renderBox =
           find
                   .descendant(
@@ -253,6 +263,23 @@ void main() {
       expect(
         table.wideRows.fold<int>(0, (count, row) => count + row.cells.length),
         updatedSeries.points.length,
+      );
+
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      final sourceWorkbench = tester.widget<BravenChartWorkbench>(
+        workbenchFinder,
+      );
+      expect(sourceWorkbench.workbenchController!.sourceIsStale, isFalse);
+      expect(
+        sourceWorkbench.workbenchController!.generatedSource!.source,
+        contains('${updatedSeries.points.length} points omitted'),
+      );
+      expect(
+        sourceWorkbench.workbenchController!.generatedSource!.source,
+        contains("'snapshotSemantics': 'resident-cells-only'"),
       );
       expect(tester.takeException(), isNull);
     },

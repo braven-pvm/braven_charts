@@ -59,6 +59,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
   _ProceduralMassiveHeatmapSource? _viewportSource;
   HeatmapViewportController? _viewportController;
   ChartInteractionGroupController? _viewportGroupController;
+  Timer? _viewportMutationTimer;
+  bool _streamViewportMutations = false;
+  int _viewportMutationRevision = 0;
+  int _viewportMutationTick = 0;
 
   _HeatmapPreset _preset = _HeatmapPreset.activity;
   HeatmapSelectionExpansion _heatmapSelectionExpansion =
@@ -347,6 +351,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
 
   @override
   void dispose() {
+    _viewportMutationTimer?.cancel();
     _viewportController?.dispose();
     _viewportGroupController?.dispose();
     _chartController.dispose();
@@ -413,6 +418,63 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     if (controller == null || viewport == null) return;
     controller.clearCache();
     unawaited(controller.loadViewport(viewport));
+  }
+
+  void _toggleViewportMutationStream() {
+    if (_streamViewportMutations) {
+      _stopViewportMutationStream();
+      setState(() {});
+      return;
+    }
+    setState(() => _streamViewportMutations = true);
+    _viewportMutationTimer = Timer.periodic(
+      const Duration(milliseconds: 80),
+      (_) => _publishViewportMutationFrame(),
+    );
+    _publishViewportMutationFrame();
+  }
+
+  void _stopViewportMutationStream() {
+    _viewportMutationTimer?.cancel();
+    _viewportMutationTimer = null;
+    _streamViewportMutations = false;
+  }
+
+  void _publishViewportMutationFrame() {
+    final source = _viewportSource;
+    final controller = _viewportController;
+    final viewport = controller?.snapshot.viewport;
+    if (!mounted ||
+        !_streamViewportMutations ||
+        source == null ||
+        controller == null ||
+        viewport == null) {
+      return;
+    }
+    final minimumColumn = viewport.minimumX.ceil().clamp(
+      0,
+      source.domain.columnCount - 1,
+    );
+    final maximumColumn = viewport.maximumX.floor().clamp(
+      minimumColumn,
+      source.domain.columnCount - 1,
+    );
+    final visibleColumnCount = maximumColumn - minimumColumn + 1;
+    final column = minimumColumn + _viewportMutationTick % visibleColumnCount;
+    final mutations = <HeatmapMutation>[];
+    for (var row = 0; row < source.domain.rowCount; row++) {
+      final cell = source.liveCell(column, row, _viewportMutationTick);
+      source.upsert(column, row, cell);
+      mutations.add(HeatmapCellUpsert(column: column, row: row, cell: cell));
+    }
+    _viewportMutationTick++;
+    _viewportMutationRevision++;
+    controller.applyMutationBatch(
+      HeatmapMutationBatch(
+        revision: _viewportMutationRevision,
+        mutations: mutations,
+      ),
+    );
   }
 
   @override
@@ -583,6 +645,16 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                 label: 'Clear cache and reload',
                 icon: Icons.cached_outlined,
                 onPressed: _reloadMassiveViewport,
+              ),
+              ActionButton(
+                key: const ValueKey('heatmap-toggle-live-mutations'),
+                label: _streamViewportMutations
+                    ? 'Stop live cell stream'
+                    : 'Start live cell stream',
+                icon: _streamViewportMutations
+                    ? Icons.stop_circle_outlined
+                    : Icons.play_circle_outline,
+                onPressed: _toggleViewportMutationStream,
               ),
             ],
           ),
@@ -1794,12 +1866,23 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                 value:
                     '${snapshot.generation}${snapshot.isLoading ? ' · loading' : ''}',
               ),
+              _ViewportMetric(
+                label: 'Live revision',
+                value: diagnostics.lastMutationRevision < 0
+                    ? 'Not started'
+                    : '${diagnostics.lastMutationRevision}',
+              ),
+              _ViewportMetric(
+                label: 'Live publish',
+                value:
+                    '${diagnostics.cellMutationsApplied} cells / ${diagnostics.mutationPublications} frames',
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             error == null
-                ? 'Pan or zoom to request bounded tiles. Data, Split, and Source expose only the current immutable resident snapshot.'
+                ? 'Pan or zoom to request bounded tiles, or start the live stream to patch resident cells through ordered mutation batches. Data, Split, and Source expose only the current immutable snapshot.'
                 : '$error · Narrow the viewport or return to the latest window.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: error == null
@@ -2506,6 +2589,9 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       selected: _preset == preset,
       onSelected: (_) {
         _clearMatrixSelection();
+        if (preset != _HeatmapPreset.viewportSource) {
+          _stopViewportMutationStream();
+        }
         if (preset == _HeatmapPreset.viewportSource) {
           _ensureViewportSource();
         }
@@ -3955,6 +4041,8 @@ class _ViewportMetric extends StatelessWidget {
 }
 
 class _ProceduralMassiveHeatmapSource implements HeatmapTileSource {
+  static const int _maximumLiveCellOverrides = 12288;
+
   @override
   final HeatmapMatrixDomain domain = HeatmapMatrixDomain(
     columnCount: 1000000,
@@ -3966,6 +4054,30 @@ class _ProceduralMassiveHeatmapSource implements HeatmapTileSource {
 
   @override
   int get tileRowCount => 24;
+
+  final Map<(int, int), HeatmapDataPoint> _liveCells = {};
+
+  void upsert(int column, int row, HeatmapDataPoint cell) {
+    final key = (column, row);
+    if (!_liveCells.containsKey(key) &&
+        _liveCells.length >= _maximumLiveCellOverrides) {
+      _liveCells.remove(_liveCells.keys.first);
+    }
+    _liveCells[key] = cell;
+  }
+
+  HeatmapDataPoint liveCell(int column, int row, int tick) {
+    final pulse = math.sin(tick * 0.28 + row * 0.52) * 28;
+    final value = (_valueAt(column, row) + pulse).clamp(0, 100).toDouble();
+    return HeatmapDataPoint(
+      x: domain.xForColumn(column),
+      y: domain.yForRow(row),
+      value: value,
+      pointKey: 'massive-$row-$column',
+      label: 'Live signal ${row + 1} · source column $column',
+      metadata: {'sourceColumn': column, 'sourceRow': row, 'liveTick': tick},
+    );
+  }
 
   @override
   Future<HeatmapTile> loadTile(HeatmapTileRequest request) async {
@@ -3979,14 +4091,15 @@ class _ProceduralMassiveHeatmapSource implements HeatmapTileSource {
             column < request.columnEndExclusive;
             column++
           )
-            HeatmapDataPoint(
-              x: domain.xForColumn(column),
-              y: domain.yForRow(row),
-              value: _valueAt(column, row),
-              pointKey: 'massive-$row-$column',
-              label: 'Signal ${row + 1} · source column $column',
-              metadata: {'sourceColumn': column, 'sourceRow': row},
-            ),
+            _liveCells[(column, row)] ??
+                HeatmapDataPoint(
+                  x: domain.xForColumn(column),
+                  y: domain.yForRow(row),
+                  value: _valueAt(column, row),
+                  pointKey: 'massive-$row-$column',
+                  label: 'Signal ${row + 1} · source column $column',
+                  metadata: {'sourceColumn': column, 'sourceRow': row},
+                ),
       ],
     );
   }
@@ -4026,6 +4139,7 @@ class _HeatmapCoverageStrip extends StatelessWidget {
             _CoverageItem(label: 'Deterministic matrix clustering'),
             _CoverageItem(label: 'Viewport culling + indexed hit'),
             _CoverageItem(label: 'Async viewport-backed matrix'),
+            _CoverageItem(label: 'Ordered live cell mutation'),
           ],
         ),
       ),

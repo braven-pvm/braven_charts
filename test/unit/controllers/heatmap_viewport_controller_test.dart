@@ -100,6 +100,18 @@ void main() {
       expect(partial.rowEndExclusive, 17);
       expect(partial.maximumCellCount, 21);
     });
+
+    test('maps a regular cell to its stable tile', () {
+      expect(
+        domain.tileKeyForCell(29, 31, tileColumnCount: 10, tileRowCount: 8),
+        const HeatmapTileKey(column: 2, row: 3),
+      );
+      expect(
+        () =>
+            domain.tileKeyForCell(100, 0, tileColumnCount: 10, tileRowCount: 8),
+        throwsRangeError,
+      );
+    });
   });
 
   group('HeatmapViewportController', () {
@@ -335,8 +347,154 @@ void main() {
         HeatmapTileKey(column: 2, row: 0),
       ]);
     });
+
+    test(
+      'coalesces ordered cell mutations into one immutable publication',
+      () async {
+        final source = _MutableTileSource();
+        final controller = HeatmapViewportController(
+          source: source,
+          overscanColumns: 0,
+          overscanRows: 0,
+          mutationPublishDuration: const Duration(milliseconds: 10),
+        );
+        addTearDown(controller.dispose);
+        await controller.loadViewport(_viewportForTile(0, 0));
+        var notifications = 0;
+        controller.addListener(() => notifications++);
+
+        final first = HeatmapDataPoint(x: 2, y: 3, value: 40, pointKey: '3:2');
+        source.upsert(2, 3, first);
+        expect(
+          controller.applyMutationBatch(
+            HeatmapMutationBatch(
+              revision: 1,
+              mutations: [HeatmapCellUpsert(column: 2, row: 3, cell: first)],
+            ),
+          ),
+          isTrue,
+        );
+        final second = first.copyWith(value: 88);
+        source.upsert(2, 3, second);
+        controller.applyMutationBatch(
+          HeatmapMutationBatch(
+            revision: 2,
+            mutations: [HeatmapCellUpsert(column: 2, row: 3, cell: second)],
+          ),
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(notifications, 1);
+        expect(_cellAt(controller.snapshot.cells, 2, 3).value, 88);
+        expect(controller.diagnostics.lastMutationRevision, 2);
+        expect(controller.diagnostics.mutationBatchesAccepted, 2);
+        expect(controller.diagnostics.cellMutationsApplied, 2);
+        expect(controller.diagnostics.mutationPublications, 1);
+      },
+    );
+
+    test('ignores stale revisions and supports sparse cell removal', () async {
+      final source = _MutableTileSource();
+      final controller = HeatmapViewportController(
+        source: source,
+        overscanColumns: 0,
+        overscanRows: 0,
+        mutationPublishDuration: Duration.zero,
+      );
+      addTearDown(controller.dispose);
+      await controller.loadViewport(_viewportForTile(0, 0));
+
+      source.remove(4, 5);
+      expect(
+        controller.applyMutationBatch(
+          HeatmapMutationBatch(
+            revision: 7,
+            mutations: const [HeatmapCellRemoval(column: 4, row: 5)],
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        controller.applyMutationBatch(
+          HeatmapMutationBatch(
+            revision: 7,
+            mutations: const [HeatmapCellRemoval(column: 1, row: 1)],
+          ),
+        ),
+        isFalse,
+      );
+
+      expect(
+        controller.snapshot.cells.where((cell) => cell.x == 4 && cell.y == 5),
+        isEmpty,
+      );
+      expect(controller.diagnostics.staleMutationBatchesIgnored, 1);
+    });
+
+    test('overlays a mutation on a tile that was already loading', () async {
+      final source = _ControlledTileSource();
+      final controller = HeatmapViewportController(
+        source: source,
+        overscanColumns: 0,
+        overscanRows: 0,
+        mutationPublishDuration: Duration.zero,
+      );
+      addTearDown(controller.dispose);
+
+      final loading = controller.loadViewport(_viewportForTile(0, 0));
+      final cell = HeatmapDataPoint(x: 2, y: 3, value: 777, pointKey: '3:2');
+      controller.applyMutationBatch(
+        HeatmapMutationBatch(
+          revision: 1,
+          mutations: [HeatmapCellUpsert(column: 2, row: 3, cell: cell)],
+        ),
+      );
+      source.complete(const HeatmapTileKey(column: 0, row: 0));
+      await loading;
+
+      expect(_cellAt(controller.snapshot.cells, 2, 3).value, 777);
+    });
+
+    test('visible tile invalidation reloads current source truth', () async {
+      final source = _MutableTileSource();
+      final controller = HeatmapViewportController(
+        source: source,
+        overscanColumns: 0,
+        overscanRows: 0,
+        mutationPublishDuration: Duration.zero,
+      );
+      addTearDown(controller.dispose);
+      await controller.loadViewport(_viewportForTile(0, 0));
+      expect(_cellAt(controller.snapshot.cells, 2, 3).value, 5);
+      source.upsert(
+        2,
+        3,
+        HeatmapDataPoint(x: 2, y: 3, value: 99, pointKey: '3:2'),
+      );
+
+      controller.applyMutationBatch(
+        HeatmapMutationBatch(
+          revision: 1,
+          mutations: const [
+            HeatmapTileInvalidation(HeatmapTileKey(column: 0, row: 0)),
+          ],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(source.totalLoads, 2);
+      expect(_cellAt(controller.snapshot.cells, 2, 3).value, 99);
+    });
   });
 }
+
+HeatmapDataPoint _cellAt(
+  Iterable<HeatmapDataPoint> cells,
+  double x,
+  double y,
+) => cells.singleWhere((cell) => cell.x == x && cell.y == y);
 
 HeatmapViewportRequest _viewportForTile(int column, int row) =>
     HeatmapViewportRequest(
@@ -368,6 +526,42 @@ class _ProceduralTileSource implements HeatmapTileSource {
     loadCounts.update(request.key, (count) => count + 1, ifAbsent: () => 1);
     if (request.key == failureKey) throw StateError('tile failed');
     return _tileFor(domain, request);
+  }
+}
+
+class _MutableTileSource extends _ProceduralTileSource {
+  final Map<(int, int), HeatmapDataPoint?> _changes = {};
+
+  void upsert(int column, int row, HeatmapDataPoint cell) {
+    _changes[(column, row)] = cell;
+  }
+
+  void remove(int column, int row) {
+    _changes[(column, row)] = null;
+  }
+
+  @override
+  Future<HeatmapTile> loadTile(HeatmapTileRequest request) async {
+    final base = await super.loadTile(request);
+    final cells = <(int, int), HeatmapDataPoint>{
+      for (final cell in base.cells) (cell.x.round(), cell.y.round()): cell,
+    };
+    for (final entry in _changes.entries) {
+      final (column, row) = entry.key;
+      if (column < request.columnStart ||
+          column >= request.columnEndExclusive ||
+          row < request.rowStart ||
+          row >= request.rowEndExclusive) {
+        continue;
+      }
+      final cell = entry.value;
+      if (cell == null) {
+        cells.remove(entry.key);
+      } else {
+        cells[entry.key] = cell;
+      }
+    }
+    return HeatmapTile(key: request.key, cells: cells.values.toList());
   }
 }
 

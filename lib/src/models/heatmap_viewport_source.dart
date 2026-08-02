@@ -140,6 +140,22 @@ final class HeatmapMatrixDomain {
     return yOrigin + row * cellHeight;
   }
 
+  /// Resolves the stable tile containing one regular-matrix cell.
+  HeatmapTileKey tileKeyForCell(
+    int column,
+    int row, {
+    required int tileColumnCount,
+    required int tileRowCount,
+  }) {
+    _validateIndex(column, columnCount, 'column');
+    _validateIndex(row, rowCount, 'row');
+    _validateTileDimensions(tileColumnCount, tileRowCount);
+    return HeatmapTileKey(
+      column: column ~/ tileColumnCount,
+      row: row ~/ tileRowCount,
+    );
+  }
+
   late final HeatmapViewportBounds fullBounds = HeatmapViewportBounds(
     minimumX: xOrigin - cellWidth / 2,
     maximumX: xOrigin + (columnCount - 0.5) * cellWidth,
@@ -367,4 +383,55 @@ abstract interface class HeatmapTileSource {
   int get tileRowCount;
 
   Future<HeatmapTile> loadTile(HeatmapTileRequest request);
+}
+
+/// One typed change to a host-owned regular Heatmap matrix.
+sealed class HeatmapMutation {
+  const HeatmapMutation();
+}
+
+/// Inserts or replaces the cell at [column], [row].
+final class HeatmapCellUpsert extends HeatmapMutation {
+  const HeatmapCellUpsert({
+    required this.column,
+    required this.row,
+    required this.cell,
+  });
+
+  final int column;
+  final int row;
+  final HeatmapDataPoint cell;
+}
+
+/// Removes the cell at [column], [row] from sparse matrix residency.
+final class HeatmapCellRemoval extends HeatmapMutation {
+  const HeatmapCellRemoval({required this.column, required this.row});
+
+  final int column;
+  final int row;
+}
+
+/// Invalidates one complete source tile and reloads it when visible.
+final class HeatmapTileInvalidation extends HeatmapMutation {
+  const HeatmapTileInvalidation(this.key);
+
+  final HeatmapTileKey key;
+}
+
+/// An ordered, immutable batch applied after the host updates its tile source.
+final class HeatmapMutationBatch {
+  HeatmapMutationBatch({
+    required this.revision,
+    required List<HeatmapMutation> mutations,
+  }) : mutations = List<HeatmapMutation>.unmodifiable(mutations) {
+    if (revision < 0) {
+      throw ArgumentError.value(revision, 'revision', 'must be non-negative');
+    }
+    if (mutations.isEmpty) {
+      throw ArgumentError.value(mutations, 'mutations', 'must not be empty');
+    }
+  }
+
+  final int revision;
+  final List<HeatmapMutation> mutations;
 }
