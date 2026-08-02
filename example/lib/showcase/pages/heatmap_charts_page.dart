@@ -108,6 +108,16 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
   _ClusterFocus _clusterFocus = _ClusterFocus.full;
   bool _showRowDendrogram = true;
   bool _showColumnDendrogram = true;
+  bool _enableDendrogramInteraction = true;
+  HeatmapDendrogramInteractionState _rowDendrogramInteraction =
+      const HeatmapDendrogramInteractionState();
+  HeatmapDendrogramInteractionState _columnDendrogramInteraction =
+      const HeatmapDendrogramInteractionState();
+  HeatmapHierarchyCollapseState _rowHierarchyCollapse =
+      const HeatmapHierarchyCollapseState.empty();
+  HeatmapHierarchyCollapseState _columnHierarchyCollapse =
+      const HeatmapHierarchyCollapseState.empty();
+  HeatmapHierarchyReducer _hierarchyReducer = HeatmapHierarchyReducer.mean;
   HeatmapDendrogramDistanceScale _dendrogramDistanceScale =
       HeatmapDendrogramDistanceScale.structural;
   double _dendrogramExtent = 88;
@@ -981,6 +991,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
           onChanged: (value) => setState(() {
             _applyClusterOrder = value;
             if (!value) _clusterFocus = _ClusterFocus.full;
+            _clearClusterProjection();
           }),
         ),
         EnumOption<_ClusterFocus>(
@@ -996,6 +1007,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
           onChanged: (value) => setState(() {
             _applyClusterOrder = true;
             _clusterFocus = value;
+            _clearClusterProjection();
           }),
         ),
         EnumOption<HeatmapClusterAxisMode>(
@@ -1013,7 +1025,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
             HeatmapClusterAxisMode.columns => 'Columns',
             HeatmapClusterAxisMode.both => 'Rows + columns',
           },
-          onChanged: (value) => setState(() => _clusterAxisMode = value),
+          onChanged: (value) => setState(() {
+            _clusterAxisMode = value;
+            _clearClusterProjection();
+          }),
         ),
         EnumOption<HeatmapClusterDistance>(
           key: const ValueKey('heatmap-cluster-distance'),
@@ -1024,7 +1039,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
             HeatmapClusterDistance.euclidean => 'Euclidean',
             HeatmapClusterDistance.correlation => 'Correlation',
           },
-          onChanged: (value) => setState(() => _clusterDistance = value),
+          onChanged: (value) => setState(() {
+            _clusterDistance = value;
+            _clearClusterProjection();
+          }),
         ),
         EnumOption<HeatmapClusterLinkage>(
           key: const ValueKey('heatmap-cluster-linkage'),
@@ -1036,7 +1054,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
             HeatmapClusterLinkage.complete => 'Complete',
             HeatmapClusterLinkage.single => 'Single',
           },
-          onChanged: (value) => setState(() => _clusterLinkage = value),
+          onChanged: (value) => setState(() {
+            _clusterLinkage = value;
+            _clearClusterProjection();
+          }),
         ),
         EnumOption<HeatmapClusterMissingValueMode>(
           key: const ValueKey('heatmap-cluster-missing-values'),
@@ -1048,8 +1069,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
               'Ignore unmatched dimensions',
             HeatmapClusterMissingValueMode.zero => 'Substitute zero',
           },
-          onChanged: (value) =>
-              setState(() => _clusterMissingValueMode = value),
+          onChanged: (value) => setState(() {
+            _clusterMissingValueMode = value;
+            _clearClusterProjection();
+          }),
         ),
         BoolOption(
           key: const ValueKey('heatmap-cluster-show-row-dendrogram'),
@@ -1065,11 +1088,73 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
           value: _showColumnDendrogram,
           onChanged: (value) => setState(() => _showColumnDendrogram = value),
         ),
+        BoolOption(
+          key: const ValueKey('heatmap-cluster-dendrogram-interaction'),
+          label: 'Hierarchy interaction',
+          subtitle: 'Hover or tap visible nodes and branches.',
+          value: _enableDendrogramInteraction,
+          onChanged: (value) => setState(() {
+            _enableDendrogramInteraction = value;
+            if (!value) _clearDendrogramInteraction();
+          }),
+        ),
+        if (_rowDendrogramInteraction.selectedTarget != null ||
+            _columnDendrogramInteraction.selectedTarget != null)
+          ActionButton(
+            key: const ValueKey('heatmap-clear-dendrogram-selection'),
+            label: 'Clear hierarchy selection',
+            icon: Icons.deselect_outlined,
+            onPressed: () => setState(_clearDendrogramInteraction),
+          ),
+        if (_selectedCollapsibleHierarchyTarget case final target?)
+          ActionButton(
+            key: const ValueKey('heatmap-collapse-selected-hierarchy'),
+            label: 'Collapse selected branch',
+            icon: Icons.unfold_less_outlined,
+            isPrimary: true,
+            onPressed: () => setState(() => _collapseHierarchyTarget(target)),
+          ),
+        if (_selectedCollapsedHierarchyTarget case final target?)
+          ActionButton(
+            key: const ValueKey('heatmap-expand-selected-hierarchy'),
+            label: 'Expand selected group',
+            icon: Icons.unfold_more_outlined,
+            isPrimary: true,
+            onPressed: () => setState(() => _expandHierarchyTarget(target)),
+          ),
+        if (_hasCollapsedHierarchyGroups)
+          ActionButton(
+            key: const ValueKey('heatmap-expand-all-hierarchy'),
+            label: 'Expand all groups',
+            icon: Icons.open_in_full_outlined,
+            onPressed: () => setState(_clearClusterProjection),
+          ),
+        EnumOption<HeatmapHierarchyReducer>(
+          key: const ValueKey('heatmap-cluster-hierarchy-reducer'),
+          label: 'Collapsed-cell reducer',
+          subtitle: 'How a collapsed row or column group combines values.',
+          value: _hierarchyReducer,
+          values: HeatmapHierarchyReducer.values,
+          labelBuilder: (value) => switch (value) {
+            HeatmapHierarchyReducer.mean => 'Mean',
+            HeatmapHierarchyReducer.sum => 'Sum',
+            HeatmapHierarchyReducer.minimum => 'Minimum',
+            HeatmapHierarchyReducer.maximum => 'Maximum',
+          },
+          onChanged: (value) => setState(() => _hierarchyReducer = value),
+        ),
         if (_clusterHierarchyIsVisible)
           InfoBox(
             message:
                 'Hierarchy view keeps the ${_clusterFocusLabel.toLowerCase()} '
                 'fixed so the matrix, labels, and both trees remain aligned. '
+                'Hover or tap an enabled hierarchy to inspect its stable '
+                'node or branch identity. Tab into a hierarchy, use the arrow '
+                'keys to move between visible nodes, Enter or Space to '
+                'select, and Escape to clear. Selection only inspects; use '
+                'the explicit collapse or expand action to change the visible '
+                'matrix. Collapsed cells use the selected reducer and retain '
+                'all original row, column, and point identities. '
                 'Initial focus prunes accepted subtrees before layout; it does '
                 'not recluster values. Hide both '
                 'dendrograms to restore zoom, pan, and the X scrollbar.',
@@ -2065,6 +2150,18 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                             data: columnData,
                             style: dendrogramStyle,
                             padding: const EdgeInsets.only(top: 4),
+                            interactionState: _columnDendrogramInteraction,
+                            onInteractionStateChanged:
+                                _enableDendrogramInteraction
+                                ? (value) => setState(() {
+                                    _columnDendrogramInteraction = value;
+                                    if (value.selectedTarget != null) {
+                                      _rowDendrogramInteraction =
+                                          _rowDendrogramInteraction
+                                              .withSelectedTarget(null);
+                                    }
+                                  })
+                                : null,
                           ),
                         ),
                       ],
@@ -2090,6 +2187,17 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                     child: HeatmapDendrogram(
                       data: rowData,
                       style: dendrogramStyle,
+                      interactionState: _rowDendrogramInteraction,
+                      onInteractionStateChanged: _enableDendrogramInteraction
+                          ? (value) => setState(() {
+                              _rowDendrogramInteraction = value;
+                              if (value.selectedTarget != null) {
+                                _columnDendrogramInteraction =
+                                    _columnDendrogramInteraction
+                                        .withSelectedTarget(null);
+                              }
+                            })
+                          : null,
                     ),
                   ),
                 ),
@@ -2159,6 +2267,89 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     if (_preset != _HeatmapPreset.clustered) return false;
     return (_showRowDendrogram && _rowDendrogramData != null) ||
         (_showColumnDendrogram && _columnDendrogramData != null);
+  }
+
+  void _clearDendrogramInteraction() {
+    _rowDendrogramInteraction = const HeatmapDendrogramInteractionState();
+    _columnDendrogramInteraction = const HeatmapDendrogramInteractionState();
+  }
+
+  void _clearClusterProjection() {
+    _rowHierarchyCollapse = const HeatmapHierarchyCollapseState.empty();
+    _columnHierarchyCollapse = const HeatmapHierarchyCollapseState.empty();
+    _clearDendrogramInteraction();
+  }
+
+  bool get _hasCollapsedHierarchyGroups =>
+      _rowHierarchyCollapse.collapsedNodeIds.isNotEmpty ||
+      _columnHierarchyCollapse.collapsedNodeIds.isNotEmpty;
+
+  HeatmapDendrogramTargetIdentity? get _selectedHierarchyTarget =>
+      _rowDendrogramInteraction.selectedTarget ??
+      _columnDendrogramInteraction.selectedTarget;
+
+  HeatmapDendrogramTargetIdentity? get _selectedCollapsibleHierarchyTarget {
+    final target = _selectedHierarchyTarget;
+    if (target == null ||
+        _collapseStateFor(target.axis).isCollapsed(target.nodeId)) {
+      return null;
+    }
+    final node = _hierarchyNodeFor(target.axis, target.nodeId);
+    return node == null || node.isLeaf ? null : target;
+  }
+
+  HeatmapDendrogramTargetIdentity? get _selectedCollapsedHierarchyTarget {
+    final target = _selectedHierarchyTarget;
+    return target != null &&
+            _collapseStateFor(target.axis).isCollapsed(target.nodeId)
+        ? target
+        : null;
+  }
+
+  HeatmapHierarchyCollapseState _collapseStateFor(HeatmapDendrogramAxis axis) =>
+      axis == HeatmapDendrogramAxis.rows
+      ? _rowHierarchyCollapse
+      : _columnHierarchyCollapse;
+
+  HeatmapClusterNode? _hierarchyNodeFor(
+    HeatmapDendrogramAxis axis,
+    String nodeId,
+  ) {
+    final focused = _focusedClusterData;
+    final root = axis == HeatmapDendrogramAxis.rows
+        ? focused.rowRoot
+        : focused.columnRoot;
+    return _findHierarchyNode(root, nodeId);
+  }
+
+  HeatmapClusterNode? _findHierarchyNode(
+    HeatmapClusterNode? node,
+    String nodeId,
+  ) {
+    if (node == null) return null;
+    if (node.id == nodeId) return node;
+    return _findHierarchyNode(node.left, nodeId) ??
+        _findHierarchyNode(node.right, nodeId);
+  }
+
+  void _collapseHierarchyTarget(HeatmapDendrogramTargetIdentity target) {
+    if (target.axis == HeatmapDendrogramAxis.rows) {
+      _rowHierarchyCollapse = _rowHierarchyCollapse.collapse(target.nodeId);
+    } else {
+      _columnHierarchyCollapse = _columnHierarchyCollapse.collapse(
+        target.nodeId,
+      );
+    }
+    _clearDendrogramInteraction();
+  }
+
+  void _expandHierarchyTarget(HeatmapDendrogramTargetIdentity target) {
+    if (target.axis == HeatmapDendrogramAxis.rows) {
+      _rowHierarchyCollapse = _rowHierarchyCollapse.expand(target.nodeId);
+    } else {
+      _columnHierarchyCollapse = _columnHierarchyCollapse.expand(target.nodeId);
+    }
+    _clearDendrogramInteraction();
   }
 
   Widget _buildPresetPicker() {
@@ -2441,6 +2632,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
           ? {
               ..._clusterData.metadata,
               ..._focusedClusterData.metadata,
+              ..._clusterHierarchyProjection.metadata,
               ...?_rowDendrogramData?.metadata,
               ...?_columnDendrogramData?.metadata,
               ..._dendrogramStyleMetadata,
@@ -2699,6 +2891,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       sourceLabels: focused.source.sourceRowLabels,
       axis: HeatmapDendrogramAxis.rows,
       distanceScale: _dendrogramDistanceScale,
+      collapseState: _rowHierarchyCollapse,
     );
   }
 
@@ -2711,8 +2904,17 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       sourceLabels: focused.source.sourceColumnLabels,
       axis: HeatmapDendrogramAxis.columns,
       distanceScale: _dendrogramDistanceScale,
+      collapseState: _columnHierarchyCollapse,
     );
   }
+
+  HeatmapHierarchyMatrixProjection get _clusterHierarchyProjection =>
+      HeatmapHierarchyMatrixProjection(
+        source: _focusedClusterData,
+        rowCollapseState: _rowHierarchyCollapse,
+        columnCollapseState: _columnHierarchyCollapse,
+        reducer: _hierarchyReducer,
+      );
 
   HeatmapDendrogramStyle get _dendrogramStyle => HeatmapDendrogramStyle(
     branchColor: _dendrogramBranchColor,
@@ -2796,7 +2998,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       ];
     }
     if (_preset == _HeatmapPreset.clustered) {
-      return _focusedClusterData.cells;
+      return _clusterHierarchyProjection.cells;
     }
     if (_preset == _HeatmapPreset.irregular) {
       const intervals =
@@ -3368,10 +3570,11 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _HeatmapPreset.contours =>
       '480 weighted observations · ${_contourLevels.length} contour levels · ${_densityKernel.name} kernel',
     _HeatmapPreset.clustered =>
-      '${_focusedClusterData.rowOrder.length} × ${_focusedClusterData.columnOrder.length} matrix · '
+      '${_clusterHierarchyProjection.rowGroups.length} × ${_clusterHierarchyProjection.columnGroups.length} matrix · '
           '${_clusterFocusLabel.toLowerCase()} · '
           '${_effectiveClusterAxisMode.name} order · '
-          '${_clusterDistance.name} · ${_clusterLinkage.name} linkage',
+          '${_clusterDistance.name} · ${_clusterLinkage.name} linkage · '
+          '${_hierarchyReducer.name} collapse reducer',
     _HeatmapPreset.colourAxes =>
       '2 Heatmap series · independent ms and % domains · independently filterable legends',
     _HeatmapPreset.smallMultiples =>
@@ -3420,7 +3623,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _HeatmapPreset.histogram => _histogramYAxis.labels,
     _HeatmapPreset.density => _densityYAxis.labels,
     _HeatmapPreset.contours => _densityYAxis.labels,
-    _HeatmapPreset.clustered => _focusedClusterData.rowLabels,
+    _HeatmapPreset.clustered => _clusterHierarchyProjection.rowLabels,
     _HeatmapPreset.colourAxes => const ['Error rate', 'Latency'],
     _HeatmapPreset.smallMultiples => const ['Mon', 'Tue', 'Wed', 'Thu'],
     _HeatmapPreset.dense => const [],
@@ -3467,7 +3670,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _HeatmapPreset.histogram => _histogramXAxis.labels,
     _HeatmapPreset.density => _densityXAxis.labels,
     _HeatmapPreset.contours => _densityXAxis.labels,
-    _HeatmapPreset.clustered => _focusedClusterData.columnLabels,
+    _HeatmapPreset.clustered => _clusterHierarchyProjection.columnLabels,
     _HeatmapPreset.colourAxes => const ['00', '04', '08', '12', '16', '20'],
     _HeatmapPreset.smallMultiples => const ['00', '06', '12', '18', '24'],
     _HeatmapPreset.irregular => const [],

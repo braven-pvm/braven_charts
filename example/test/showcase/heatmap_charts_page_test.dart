@@ -886,8 +886,10 @@ void main() {
       expect(find.text('Distance'), findsOneWidget);
       expect(find.text('Linkage'), findsOneWidget);
       expect(find.text('Missing values'), findsOneWidget);
+      expect(find.text('Collapsed-cell reducer'), findsOneWidget);
       expect(find.text('Show row dendrogram'), findsOneWidget);
       expect(find.text('Show column dendrogram'), findsOneWidget);
+      expect(find.text('Hierarchy interaction'), findsOneWidget);
       expect(find.text('Branch spacing'), findsOneWidget);
       expect(find.text('Branch extent'), findsOneWidget);
       expect(find.text('Branch stroke'), findsOneWidget);
@@ -970,9 +972,16 @@ void main() {
       expect(
         find.text(
           'Hierarchy view keeps the full hierarchy fixed so the matrix, '
-          'labels, and both trees remain aligned. Initial focus prunes '
-          'accepted subtrees before layout; it does not recluster values. '
-          'Hide both dendrograms to restore zoom, pan, and the X scrollbar.',
+          'labels, and both trees remain aligned. Hover or tap an enabled '
+          'hierarchy to inspect its stable node or branch identity. Tab into '
+          'a hierarchy, use the arrow keys to move between visible nodes, '
+          'Enter or Space to select, and Escape to clear. Selection only '
+          'inspects; use the explicit collapse or expand action to change the '
+          'visible matrix. Collapsed cells use the selected reducer and '
+          'retain all original row, column, and point identities. Initial '
+          'focus prunes accepted subtrees before layout; it does not '
+          'recluster values. Hide both dendrograms to restore zoom, pan, and '
+          'the X scrollbar.',
         ),
         findsOneWidget,
       );
@@ -1030,6 +1039,7 @@ void main() {
       );
       expect(series.metadata, contains('heatmapDendrogramRow'));
       expect(series.metadata, contains('heatmapDendrogramColumn'));
+      expect(series.metadata, containsPair('heatmapHierarchyReducer', 'mean'));
       expect(
         series.metadata?['heatmapDendrogramRow'],
         containsPair('distanceScale', 'structural'),
@@ -1075,6 +1085,86 @@ void main() {
           maxLabelCharacters: 12,
         ),
       );
+      expect(
+        tester
+            .widgetList<HeatmapDendrogram>(find.byType(HeatmapDendrogram))
+            .every((widget) => widget.onInteractionStateChanged != null),
+        isTrue,
+      );
+
+      final columnDendrogram = tester
+          .widgetList<HeatmapDendrogram>(find.byType(HeatmapDendrogram))
+          .first;
+      columnDendrogram.onInteractionStateChanged!(
+        HeatmapDendrogramInteractionState(
+          selectedTarget: HeatmapDendrogramTargetIdentity(
+            kind: HeatmapDendrogramHitKind.node,
+            axis: HeatmapDendrogramAxis.columns,
+            nodeId: columnDendrogram.data.rootId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('heatmap-collapse-selected-hierarchy')),
+        findsOneWidget,
+      );
+      tester
+          .widget<ActionButton>(
+            find.byKey(const ValueKey('heatmap-collapse-selected-hierarchy')),
+          )
+          .onPressed();
+      await tester.pumpAndSettle();
+      series = mountedSeries();
+      expect(series.points, hasLength(8));
+      expect(
+        series.metadata?['heatmapHierarchyColumnCollapseState'],
+        containsPair('collapsedNodeIds', [columnDendrogram.data.rootId]),
+      );
+      expect(
+        series.points.every(
+          (point) =>
+              point.metadata?['heatmapHierarchySourceColumnIndices'] is List &&
+              (point.metadata!['heatmapHierarchySourceColumnIndices'] as List)
+                      .length ==
+                  8,
+        ),
+        isTrue,
+      );
+
+      tester
+          .widget<EnumOption<HeatmapHierarchyReducer>>(
+            find.byKey(const ValueKey('heatmap-cluster-hierarchy-reducer')),
+          )
+          .onChanged(HeatmapHierarchyReducer.sum);
+      await tester.pumpAndSettle();
+      expect(
+        mountedSeries().metadata,
+        containsPair('heatmapHierarchyReducer', 'sum'),
+      );
+
+      tester
+          .widget<ActionButton>(
+            find.byKey(const ValueKey('heatmap-expand-all-hierarchy')),
+          )
+          .onPressed();
+      await tester.pumpAndSettle();
+      series = mountedSeries();
+      expect(series.points, hasLength(64));
+
+      final hierarchyInteractionOption = tester.widget<BoolOption>(
+        find.byKey(const ValueKey('heatmap-cluster-dendrogram-interaction')),
+      );
+      hierarchyInteractionOption.onChanged(false);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<HeatmapDendrogram>(find.byType(HeatmapDendrogram))
+            .every((widget) => widget.onInteractionStateChanged == null),
+        isTrue,
+      );
+      hierarchyInteractionOption.onChanged(true);
+      await tester.pumpAndSettle();
       expect(
         series.points.first.metadata?['heatmapClusterSourceRowLabel'],
         isNotNull,
@@ -1373,6 +1463,26 @@ void main() {
           .onChanged(HeatmapClusterAxisMode.both);
       await tester.pumpAndSettle();
 
+      final currentColumnDendrogram = tester
+          .widgetList<HeatmapDendrogram>(find.byType(HeatmapDendrogram))
+          .first;
+      currentColumnDendrogram.onInteractionStateChanged!(
+        HeatmapDendrogramInteractionState(
+          selectedTarget: HeatmapDendrogramTargetIdentity(
+            kind: HeatmapDendrogramHitKind.node,
+            axis: HeatmapDendrogramAxis.columns,
+            nodeId: currentColumnDendrogram.data.rootId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<ActionButton>(
+            find.byKey(const ValueKey('heatmap-collapse-selected-hierarchy')),
+          )
+          .onPressed();
+      await tester.pumpAndSettle();
+
       final switcher = find.byKey(
         const ValueKey('chart-workbench-mode-switcher'),
       );
@@ -1387,7 +1497,13 @@ void main() {
       expect(source, contains("'heatmapClusterConfig':"));
       expect(source, contains("'heatmapClusterRowOrder':"));
       expect(source, contains("'heatmapClusterFocusRowOrder':"));
-      expect(source, contains("'heatmapClusterSourceRowLabel':"));
+      expect(source, contains("'heatmapHierarchyReducer': 'sum'"));
+      expect(source, contains("'heatmapHierarchyColumnCollapseState':"));
+      expect(source, contains("'collapsedNodeIds':"));
+      expect(source, contains(currentColumnDendrogram.data.rootId));
+      expect(source, contains("'heatmapHierarchySourceColumnIndices':"));
+      expect(source, contains("'heatmapHierarchySourceColumnLabels':"));
+      expect(source, contains("'heatmapHierarchySourcePointKeys':"));
       expect(source, contains("'heatmapDendrogramRowStyle':"));
       expect(source, contains("'branchCap': 'square'"));
       expect(source, contains("'elbowRadius': 12.0"));

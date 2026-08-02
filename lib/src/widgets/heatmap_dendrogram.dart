@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/heatmap_dendrogram_data.dart';
+import 'heatmap_dendrogram_interaction.dart';
 
 /// Shape painted at a dendrogram leaf or merge anchor.
 enum HeatmapDendrogramMarkerShape {
@@ -625,12 +627,21 @@ class HeatmapDendrogram extends StatelessWidget {
     this.style = const HeatmapDendrogramStyle(),
     this.padding = EdgeInsets.zero,
     this.semanticLabel,
+    this.interactionState = const HeatmapDendrogramInteractionState(),
+    this.onInteractionStateChanged,
+    this.nodeHitRadius = 12,
+    this.branchHitRadius = 6,
   });
 
   final HeatmapDendrogramData data;
   final HeatmapDendrogramStyle style;
   final EdgeInsetsGeometry padding;
   final String? semanticLabel;
+  final HeatmapDendrogramInteractionState interactionState;
+  final ValueChanged<HeatmapDendrogramInteractionState>?
+  onInteractionStateChanged;
+  final double nodeHitRadius;
+  final double branchHitRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -653,32 +664,503 @@ class HeatmapDendrogram extends StatelessWidget {
         semanticLabel ??
         '${data.axis == HeatmapDendrogramAxis.rows ? 'Row' : 'Column'} '
             'dendrogram, ${data.labels.length} categories';
+    final isInteractive = onInteractionStateChanged != null;
     return Semantics(
       container: true,
       image: true,
       label: label,
+      hint: isInteractive
+          ? 'Use arrow keys to inspect hierarchy nodes, Enter or Space to '
+                'select, and Escape to clear.'
+          : null,
+      focusable: isInteractive,
       child: Padding(
         padding: padding,
-        child: CustomPaint(
-          key: ValueKey('heatmap-${data.axis.name}-dendrogram-canvas'),
-          painter: _HeatmapDendrogramPainter(
-            data: data,
-            style: style,
-            branchColor: branchColor,
-            baselineColor: baselineColor,
-            tickColor: tickColor,
-            leafMarkerColor: leafMarkerColor,
-            leafMarkerBorderColor: leafMarkerBorderColor,
-            mergeMarkerColor: mergeMarkerColor,
-            mergeMarkerBorderColor: mergeMarkerBorderColor,
-            labelColor: labelColor,
-            labelBackgroundColor: labelBackgroundColor,
-          ),
-          child: const SizedBox.expand(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.biggest;
+            final layout = _interactionLayout(size);
+            final hitMap = HeatmapDendrogramHitTestMap(layout: layout);
+            final canvas = CustomPaint(
+              key: ValueKey('heatmap-${data.axis.name}-dendrogram-canvas'),
+              painter: _HeatmapDendrogramPainter(
+                data: data,
+                style: style,
+                branchColor: branchColor,
+                baselineColor: baselineColor,
+                tickColor: tickColor,
+                leafMarkerColor: leafMarkerColor,
+                leafMarkerBorderColor: leafMarkerBorderColor,
+                mergeMarkerColor: mergeMarkerColor,
+                mergeMarkerBorderColor: mergeMarkerBorderColor,
+                labelColor: labelColor,
+                labelBackgroundColor: labelBackgroundColor,
+              ),
+              foregroundPainter: _HeatmapDendrogramInteractionPainter(
+                layout: layout,
+                state: interactionState,
+                color: Theme.of(context).colorScheme.primary,
+                elbowRadius: style.elbowRadius,
+                branchCap: style.branchCap,
+                branchJoin: style.branchJoin,
+              ),
+              child: const SizedBox.expand(),
+            );
+            if (!isInteractive || size.isEmpty) {
+              return canvas;
+            }
+            return Focus(
+              canRequestFocus: true,
+              onFocusChange: (hasFocus) {
+                if (!hasFocus) _updateFocus(null);
+              },
+              onKeyEvent: (node, event) => _handleKeyEvent(event, layout),
+              child: Builder(
+                builder: (focusContext) => MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onHover: (event) => _updateHover(
+                    hitMap.hitTest(
+                      event.localPosition,
+                      nodeRadius: nodeHitRadius,
+                      branchRadius: branchHitRadius,
+                    ),
+                  ),
+                  onExit: (_) => _updateHover(null),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) {
+                      _activatePointer(
+                        hitMap.hitTest(
+                          details.localPosition,
+                          nodeRadius: nodeHitRadius,
+                          branchRadius: branchHitRadius,
+                        ),
+                      );
+                      Focus.of(focusContext).requestFocus();
+                    },
+                    child: canvas,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
+
+  HeatmapDendrogramLayout _interactionLayout(Size size) =>
+      HeatmapDendrogramLayout(
+        data: data,
+        size: size,
+        edgeInset: _styleEdge,
+        automaticLevelOfDetail:
+            style.levelOfDetailMode ==
+            HeatmapDendrogramLevelOfDetailMode.automatic,
+        minimumBranchLength: style.minimumBranchLength,
+      );
+
+  double get _styleEdge =>
+      [
+        style.branchWidth,
+        if (style.showLeafBaseline) style.baselineWidth,
+        if (style.showLeafTicks) style.tickWidth,
+      ].reduce((left, right) => left > right ? left : right) /
+      2;
+
+  void _updateHover(HeatmapDendrogramHitTarget? hit) {
+    final target = hit?.identity;
+    if (target == interactionState.hoveredTarget) return;
+    onInteractionStateChanged!(interactionState.withHoveredTarget(target));
+  }
+
+  KeyEventResult _handleKeyEvent(
+    KeyEvent event,
+    HeatmapDendrogramLayout layout,
+  ) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      _updateFocus(_nextKeyboardTarget(layout, key));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      final target =
+          interactionState.focusedTarget ?? _initialKeyboardTarget(layout);
+      if (target != null) {
+        final selected = target == interactionState.selectedTarget
+            ? null
+            : target;
+        onInteractionStateChanged!(
+          interactionState
+              .withFocusedTarget(target)
+              .withSelectedTarget(selected),
+        );
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      onInteractionStateChanged!(
+        interactionState.withFocusedTarget(null).withSelectedTarget(null),
+      );
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  HeatmapDendrogramTargetIdentity? _nextKeyboardTarget(
+    HeatmapDendrogramLayout layout,
+    LogicalKeyboardKey key,
+  ) {
+    if (layout.nodes.isEmpty) return null;
+    final current = interactionState.focusedTarget;
+    final currentNode = current == null
+        ? null
+        : layout.nodes
+              .where((candidate) => candidate.node.id == current.nodeId)
+              .firstOrNull;
+    if (currentNode == null) return _initialKeyboardTarget(layout);
+    final direction = switch (key) {
+      LogicalKeyboardKey.arrowLeft => const Offset(-1, 0),
+      LogicalKeyboardKey.arrowRight => const Offset(1, 0),
+      LogicalKeyboardKey.arrowUp => const Offset(0, -1),
+      LogicalKeyboardKey.arrowDown => const Offset(0, 1),
+      _ => Offset.zero,
+    };
+    HeatmapDendrogramProjectedNode? best;
+    var bestScore = double.infinity;
+    for (final candidate in layout.nodes) {
+      if (candidate.node.id == currentNode.node.id) continue;
+      final delta = candidate.position - currentNode.position;
+      final forward = delta.dx * direction.dx + delta.dy * direction.dy;
+      if (forward <= 0.5) continue;
+      final perpendicular = (delta.dx * direction.dy - delta.dy * direction.dx)
+          .abs();
+      final score = forward + perpendicular * 2;
+      if (score < bestScore ||
+          (score == bestScore &&
+              candidate.node.id.compareTo(best?.node.id ?? '') < 0)) {
+        best = candidate;
+        bestScore = score;
+      }
+    }
+    return best == null ? current : _nodeIdentity(layout, best.node.id);
+  }
+
+  HeatmapDendrogramTargetIdentity? _initialKeyboardTarget(
+    HeatmapDendrogramLayout layout,
+  ) {
+    if (layout.nodes.isEmpty) return null;
+    final ordered = [...layout.nodes]
+      ..sort((left, right) {
+        final category = left.node.category.compareTo(right.node.category);
+        if (category != 0) return category;
+        final distance = left.node.distance.compareTo(right.node.distance);
+        if (distance != 0) return distance;
+        return left.node.id.compareTo(right.node.id);
+      });
+    return _nodeIdentity(layout, ordered.first.node.id);
+  }
+
+  HeatmapDendrogramTargetIdentity _nodeIdentity(
+    HeatmapDendrogramLayout layout,
+    String nodeId,
+  ) => HeatmapDendrogramTargetIdentity(
+    kind: HeatmapDendrogramHitKind.node,
+    axis: layout.data.axis,
+    nodeId: nodeId,
+  );
+
+  void _updateFocus(HeatmapDendrogramTargetIdentity? target) {
+    if (target == interactionState.focusedTarget) return;
+    onInteractionStateChanged!(interactionState.withFocusedTarget(target));
+  }
+
+  void _activatePointer(HeatmapDendrogramHitTarget? hit) {
+    final target = hit?.identity;
+    final selected = target == interactionState.selectedTarget ? null : target;
+    onInteractionStateChanged!(
+      HeatmapDendrogramInteractionState(
+        hoveredTarget: interactionState.hoveredTarget,
+        focusedTarget: target,
+        selectedTarget: selected,
+      ),
+    );
+  }
+}
+
+final class _HeatmapDendrogramInteractionPainter extends CustomPainter {
+  const _HeatmapDendrogramInteractionPainter({
+    required this.layout,
+    required this.state,
+    required this.color,
+    required this.elbowRadius,
+    required this.branchCap,
+    required this.branchJoin,
+  });
+
+  final HeatmapDendrogramLayout layout;
+  final HeatmapDendrogramInteractionState state;
+  final Color color;
+  final double elbowRadius;
+  final StrokeCap branchCap;
+  final StrokeJoin branchJoin;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final selectedTarget = state.selectedTarget;
+    final focusedTarget = state.focusedTarget == selectedTarget
+        ? null
+        : state.focusedTarget;
+    final hoveredTarget =
+        state.hoveredTarget == selectedTarget ||
+            state.hoveredTarget == focusedTarget
+        ? null
+        : state.hoveredTarget;
+    _paintSelectedTarget(canvas, selectedTarget);
+    _paintTransientTarget(
+      canvas,
+      focusedTarget,
+      color.withValues(alpha: 0.86),
+      3,
+      6,
+    );
+    _paintTransientTarget(
+      canvas,
+      hoveredTarget,
+      color.withValues(alpha: 0.58),
+      2,
+      5,
+    );
+  }
+
+  void _paintSelectedTarget(
+    Canvas canvas,
+    HeatmapDendrogramTargetIdentity? target,
+  ) {
+    if (target == null || target.axis != layout.data.axis) return;
+    if (target.kind == HeatmapDendrogramHitKind.node) {
+      final node = layout.nodes
+          .where((projected) => projected.node.id == target.nodeId)
+          .firstOrNull;
+      if (node == null) return;
+      _paintNodeRing(
+        canvas,
+        node.position,
+        color.withValues(alpha: 0.16),
+        radius: 8,
+        width: 6,
+      );
+      _paintNodeRing(
+        canvas,
+        node.position,
+        color.withValues(alpha: 0.96),
+        radius: 6,
+        width: 2,
+      );
+      return;
+    }
+
+    // A branch target represents the merge node, not merely the individual
+    // line segment that won hit testing. Highlight the complete visible merge
+    // glyph so durable selection communicates the selected cluster while
+    // hover remains precise to the pointer's segment.
+    final segments = layout.segments
+        .where((projected) => projected.segment.nodeId == target.nodeId)
+        .toList(growable: false);
+    if (segments.isEmpty) return;
+    final path = _projectedMergePath(segments, elbowRadius: elbowRadius);
+    _paintBranchPath(canvas, path, color.withValues(alpha: 0.16), width: 7);
+    _paintBranchPath(canvas, path, color.withValues(alpha: 0.96), width: 2.5);
+  }
+
+  void _paintTransientTarget(
+    Canvas canvas,
+    HeatmapDendrogramTargetIdentity? target,
+    Color targetColor,
+    double branchWidth,
+    double nodeRadius,
+  ) {
+    if (target == null || target.axis != layout.data.axis) return;
+    final paint = Paint()
+      ..color = targetColor
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = branchWidth;
+    if (target.kind == HeatmapDendrogramHitKind.node) {
+      final matches = layout.nodes.where(
+        (projected) => projected.node.id == target.nodeId,
+      );
+      if (matches.isEmpty) return;
+      canvas.drawCircle(matches.first.position, nodeRadius, paint);
+      return;
+    }
+    final matches = layout.segments.where(
+      (projected) => projected.segment.id == target.segmentId,
+    );
+    if (matches.isEmpty) return;
+    final segment = matches.first;
+    canvas.drawLine(segment.start, segment.end, paint);
+  }
+
+  void _paintBranchPath(
+    Canvas canvas,
+    Path path,
+    Color segmentColor, {
+    required double width,
+  }) {
+    final paint = Paint()
+      ..color = segmentColor
+      ..style = PaintingStyle.stroke
+      ..strokeCap = branchCap
+      ..strokeJoin = branchJoin
+      ..strokeWidth = width;
+    canvas.drawPath(path, paint);
+  }
+
+  void _paintNodeRing(
+    Canvas canvas,
+    Offset center,
+    Color ringColor, {
+    required double radius,
+    required double width,
+  }) {
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = ringColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = width,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_HeatmapDendrogramInteractionPainter oldDelegate) =>
+      oldDelegate.layout.data != layout.data ||
+      oldDelegate.layout.size != layout.size ||
+      oldDelegate.layout.edgeInset != layout.edgeInset ||
+      oldDelegate.layout.automaticLevelOfDetail !=
+          layout.automaticLevelOfDetail ||
+      oldDelegate.layout.minimumBranchLength != layout.minimumBranchLength ||
+      oldDelegate.state != state ||
+      oldDelegate.color != color ||
+      oldDelegate.elbowRadius != elbowRadius ||
+      oldDelegate.branchCap != branchCap ||
+      oldDelegate.branchJoin != branchJoin;
+}
+
+Path _projectedMergePath(
+  List<HeatmapDendrogramProjectedSegment> segments, {
+  required double elbowRadius,
+}) {
+  final path = Path();
+  final left = _projectedSegmentWithSuffix(segments, ':left');
+  final right = _projectedSegmentWithSuffix(segments, ':right');
+  final join = _projectedSegmentWithSuffix(segments, ':join');
+  if (left != null && right != null && join != null) {
+    _appendDendrogramMergePath(
+      path,
+      start: left.start,
+      firstElbow: join.start,
+      secondElbow: join.end,
+      end: right.start,
+      elbowRadius: elbowRadius,
+    );
+    return path;
+  }
+  for (final segment in segments) {
+    path
+      ..moveTo(segment.start.dx, segment.start.dy)
+      ..lineTo(segment.end.dx, segment.end.dy);
+  }
+  return path;
+}
+
+HeatmapDendrogramProjectedSegment? _projectedSegmentWithSuffix(
+  List<HeatmapDendrogramProjectedSegment> segments,
+  String suffix,
+) => segments
+    .where((segment) => segment.segment.id.endsWith(suffix))
+    .firstOrNull;
+
+void _appendDendrogramMergePath(
+  Path path, {
+  required Offset start,
+  required Offset firstElbow,
+  required Offset secondElbow,
+  required Offset end,
+  required double elbowRadius,
+}) {
+  if (elbowRadius == 0) {
+    path
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(firstElbow.dx, firstElbow.dy)
+      ..lineTo(secondElbow.dx, secondElbow.dy)
+      ..lineTo(end.dx, end.dy);
+    return;
+  }
+  final firstRadius = elbowRadius
+      .clamp(
+        0.0,
+        _shorterDendrogramDistance(start, firstElbow, firstElbow, secondElbow) /
+            2,
+      )
+      .toDouble();
+  final secondRadius = elbowRadius
+      .clamp(
+        0.0,
+        _shorterDendrogramDistance(firstElbow, secondElbow, secondElbow, end) /
+            2,
+      )
+      .toDouble();
+  final beforeFirst = _dendrogramPointTowards(firstElbow, start, firstRadius);
+  final afterFirst = _dendrogramPointTowards(
+    firstElbow,
+    secondElbow,
+    firstRadius,
+  );
+  final beforeSecond = _dendrogramPointTowards(
+    secondElbow,
+    firstElbow,
+    secondRadius,
+  );
+  final afterSecond = _dendrogramPointTowards(secondElbow, end, secondRadius);
+  path
+    ..moveTo(start.dx, start.dy)
+    ..lineTo(beforeFirst.dx, beforeFirst.dy)
+    ..quadraticBezierTo(
+      firstElbow.dx,
+      firstElbow.dy,
+      afterFirst.dx,
+      afterFirst.dy,
+    )
+    ..lineTo(beforeSecond.dx, beforeSecond.dy)
+    ..quadraticBezierTo(
+      secondElbow.dx,
+      secondElbow.dy,
+      afterSecond.dx,
+      afterSecond.dy,
+    )
+    ..lineTo(end.dx, end.dy);
+}
+
+double _shorterDendrogramDistance(Offset a, Offset b, Offset c, Offset d) {
+  final first = (a - b).distance;
+  final second = (c - d).distance;
+  return first < second ? first : second;
+}
+
+Offset _dendrogramPointTowards(Offset origin, Offset target, double distance) {
+  final delta = target - origin;
+  final length = delta.distance;
+  if (length == 0 || distance == 0) return origin;
+  return origin + delta * (distance / length);
 }
 
 final class _HeatmapDendrogramPainter extends CustomPainter {
@@ -709,6 +1191,8 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
   final Color labelBackgroundColor;
   Size? _cachedBranchPathSize;
   Path? _cachedBranchPath;
+  Size? _cachedLayoutSize;
+  HeatmapDendrogramLayout? _cachedLayout;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -735,7 +1219,7 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
     if (style.showLeafMarkers &&
         (!_usesAutomaticLevelOfDetail ||
             leafSpacing >= style.minimumLeafMarkerSpacing)) {
-      final leaves = data.nodes.where((node) => node.isLeaf).toList()
+      final leaves = data.nodes.where((node) => node.isTerminal).toList()
         ..sort((a, b) => a.category.compareTo(b.category));
       for (final node in leaves) {
         _paintLeafMarker(
@@ -756,7 +1240,7 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
       }
     }
     if (style.showMergeMarkers) {
-      final merges = data.nodes.where((node) => !node.isLeaf).toList()
+      final merges = data.nodes.where((node) => !node.isTerminal).toList()
         ..sort((a, b) {
           final distance = b.distance.compareTo(a.distance);
           return distance != 0 ? distance : a.category.compareTo(b.category);
@@ -871,7 +1355,7 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
   void _paintLabels(Canvas canvas, Size size) {
     if (!style.showLeafLabels && !style.showMergeDistanceLabels) return;
     if (style.showLeafLabels) {
-      final leaves = data.nodes.where((node) => node.isLeaf).toList()
+      final leaves = data.nodes.where((node) => node.isTerminal).toList()
         ..sort((a, b) => a.category.compareTo(b.category));
       for (final node in _sampleLabels(leaves, size)) {
         _paintBoundedLabel(
@@ -883,12 +1367,12 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
             distance: node.distance,
           ),
           markerRadius: style.showLeafMarkers ? style.leafMarkerRadius : 0,
-          text: data.sourceLabels[node.leafIndex!],
+          text: data.visibleGroupForNode(node.id)!.label,
         );
       }
     }
     if (style.showMergeDistanceLabels) {
-      final merges = data.nodes.where((node) => !node.isLeaf).toList()
+      final merges = data.nodes.where((node) => !node.isTerminal).toList()
         ..sort((a, b) {
           final distance = b.distance.compareTo(a.distance);
           return distance != 0 ? distance : a.category.compareTo(b.category);
@@ -1017,6 +1501,10 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
       return _cachedBranchPath!;
     }
     final path = Path();
+    final layout = _layout(size);
+    final visibleSegmentIds = {
+      for (final segment in layout.segments) segment.segment.id,
+    };
     final segmentsByNode = <String, List<HeatmapDendrogramSegment>>{};
     for (final segment in data.segments) {
       (segmentsByNode[segment.nodeId] ??= []).add(segment);
@@ -1026,13 +1514,13 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
       final right = _segmentWithSuffix(segments, ':right');
       final join = _segmentWithSuffix(segments, ':join');
       if (left != null && right != null && join != null) {
-        if (_branchIsVisible(size, [left, join, right])) {
+        if (visibleSegmentIds.contains(left.id)) {
           _addBranchPath(path, size, left: left, right: right, join: join);
         }
         continue;
       }
       for (final segment in segments) {
-        if (_segmentIsVisible(size, segment)) {
+        if (visibleSegmentIds.contains(segment.id)) {
           _addSegment(path, size, segment);
         }
       }
@@ -1040,30 +1528,6 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
     _cachedBranchPathSize = size;
     _cachedBranchPath = path;
     return path;
-  }
-
-  bool _branchIsVisible(Size size, List<HeatmapDendrogramSegment> segments) {
-    if (!_usesAutomaticLevelOfDetail || style.minimumBranchLength == 0) {
-      return true;
-    }
-    return segments.any((segment) => _segmentIsVisible(size, segment));
-  }
-
-  bool _segmentIsVisible(Size size, HeatmapDendrogramSegment segment) {
-    if (!_usesAutomaticLevelOfDetail || style.minimumBranchLength == 0) {
-      return true;
-    }
-    final start = _offset(
-      size,
-      category: segment.startCategory,
-      distance: segment.startDistance,
-    );
-    final end = _offset(
-      size,
-      category: segment.endCategory,
-      distance: segment.endDistance,
-    );
-    return (end - start).distance >= style.minimumBranchLength;
   }
 
   void _addSegment(Path path, Size size, HeatmapDendrogramSegment segment) {
@@ -1109,60 +1573,14 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
       category: right.startCategory,
       distance: right.startDistance,
     );
-    if (style.elbowRadius == 0) {
-      path
-        ..moveTo(start.dx, start.dy)
-        ..lineTo(firstElbow.dx, firstElbow.dy)
-        ..lineTo(secondElbow.dx, secondElbow.dy)
-        ..lineTo(end.dx, end.dy);
-      return;
-    }
-    final firstRadius = style.elbowRadius
-        .clamp(
-          0.0,
-          _shorterDistance(start, firstElbow, firstElbow, secondElbow) / 2,
-        )
-        .toDouble();
-    final secondRadius = style.elbowRadius
-        .clamp(
-          0.0,
-          _shorterDistance(firstElbow, secondElbow, secondElbow, end) / 2,
-        )
-        .toDouble();
-    final beforeFirst = _pointTowards(firstElbow, start, firstRadius);
-    final afterFirst = _pointTowards(firstElbow, secondElbow, firstRadius);
-    final beforeSecond = _pointTowards(secondElbow, firstElbow, secondRadius);
-    final afterSecond = _pointTowards(secondElbow, end, secondRadius);
-    path
-      ..moveTo(start.dx, start.dy)
-      ..lineTo(beforeFirst.dx, beforeFirst.dy)
-      ..quadraticBezierTo(
-        firstElbow.dx,
-        firstElbow.dy,
-        afterFirst.dx,
-        afterFirst.dy,
-      )
-      ..lineTo(beforeSecond.dx, beforeSecond.dy)
-      ..quadraticBezierTo(
-        secondElbow.dx,
-        secondElbow.dy,
-        afterSecond.dx,
-        afterSecond.dy,
-      )
-      ..lineTo(end.dx, end.dy);
-  }
-
-  double _shorterDistance(Offset a, Offset b, Offset c, Offset d) {
-    final first = (a - b).distance;
-    final second = (c - d).distance;
-    return first < second ? first : second;
-  }
-
-  Offset _pointTowards(Offset origin, Offset target, double distance) {
-    final delta = target - origin;
-    final length = delta.distance;
-    if (length == 0 || distance == 0) return origin;
-    return origin + delta * (distance / length);
+    _appendDendrogramMergePath(
+      path,
+      start: start,
+      firstElbow: firstElbow,
+      secondElbow: secondElbow,
+      end: end,
+      elbowRadius: style.elbowRadius,
+    );
   }
 
   void _paintLeafGuides(Canvas canvas, Size size) {
@@ -1251,20 +1669,22 @@ final class _HeatmapDendrogramPainter extends CustomPainter {
     Size size, {
     required double category,
     required double distance,
-  }) {
-    final edge = _edge;
-    final width = size.width - 2 * edge;
-    final height = size.height - 2 * edge;
-    return switch (data.axis) {
-      HeatmapDendrogramAxis.columns => Offset(
-        edge + category * width,
-        edge + (1 - distance) * height,
-      ),
-      HeatmapDendrogramAxis.rows => Offset(
-        edge + (1 - distance) * width,
-        edge + (1 - category) * height,
-      ),
-    };
+  }) => _layout(size).project(category: category, distance: distance);
+
+  HeatmapDendrogramLayout _layout(Size size) {
+    if (_cachedLayoutSize == size && _cachedLayout != null) {
+      return _cachedLayout!;
+    }
+    final layout = HeatmapDendrogramLayout(
+      data: data,
+      size: size,
+      edgeInset: _edge,
+      automaticLevelOfDetail: _usesAutomaticLevelOfDetail,
+      minimumBranchLength: style.minimumBranchLength,
+    );
+    _cachedLayoutSize = size;
+    _cachedLayout = layout;
+    return layout;
   }
 
   @override

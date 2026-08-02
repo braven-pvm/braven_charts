@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'heatmap_cluster_data.dart';
+import 'heatmap_hierarchy_projection.dart';
 
 /// Matrix axis represented by a Heatmap dendrogram.
 enum HeatmapDendrogramAxis {
@@ -118,7 +119,8 @@ final class HeatmapDendrogramNode {
     required this.mergeDistance,
     required this.memberCount,
     this.leafIndex,
-  });
+    bool? isTerminal,
+  }) : isTerminal = isTerminal ?? leafIndex != null;
 
   factory HeatmapDendrogramNode.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
@@ -127,13 +129,15 @@ final class HeatmapDendrogramNode {
     final mergeDistance = json['mergeDistance'];
     final memberCount = json['memberCount'];
     final leafIndex = json['leafIndex'];
+    final isTerminal = json['isTerminal'];
     if (id is! String ||
         id.isEmpty ||
         category is! num ||
         distance is! num ||
         mergeDistance is! num ||
         memberCount is! int ||
-        (leafIndex != null && leafIndex is! int)) {
+        (leafIndex != null && leafIndex is! int) ||
+        (isTerminal != null && isTerminal is! bool)) {
       throw const FormatException('Invalid Heatmap dendrogram node');
     }
     final node = HeatmapDendrogramNode(
@@ -143,6 +147,7 @@ final class HeatmapDendrogramNode {
       mergeDistance: mergeDistance.toDouble(),
       memberCount: memberCount,
       leafIndex: leafIndex as int?,
+      isTerminal: isTerminal as bool?,
     );
     node._validate();
     return node;
@@ -166,6 +171,12 @@ final class HeatmapDendrogramNode {
   /// Source-leaf index, or `null` when this is a merge node.
   final int? leafIndex;
 
+  /// Whether this node is a visible terminal in the projected hierarchy.
+  ///
+  /// Original source leaves and explicitly collapsed merge nodes are both
+  /// terminals. [isLeaf] distinguishes the former from the latter.
+  final bool isTerminal;
+
   /// Whether this anchor represents one source leaf.
   bool get isLeaf => leafIndex != null;
 
@@ -176,6 +187,7 @@ final class HeatmapDendrogramNode {
     'mergeDistance': mergeDistance,
     'memberCount': memberCount,
     if (leafIndex != null) 'leafIndex': leafIndex,
+    if (isTerminal != isLeaf) 'isTerminal': isTerminal,
   };
 
   void _validate() {
@@ -189,6 +201,7 @@ final class HeatmapDendrogramNode {
         !mergeDistance.isFinite ||
         mergeDistance < 0 ||
         memberCount <= 0 ||
+        (isLeaf && !isTerminal) ||
         (leafIndex != null && leafIndex! < 0)) {
       throw const FormatException('Invalid Heatmap dendrogram node values');
     }
@@ -203,7 +216,8 @@ final class HeatmapDendrogramNode {
           other.distance == distance &&
           other.mergeDistance == mergeDistance &&
           other.memberCount == memberCount &&
-          other.leafIndex == leafIndex;
+          other.leafIndex == leafIndex &&
+          other.isTerminal == isTerminal;
 
   @override
   int get hashCode => Object.hash(
@@ -213,6 +227,7 @@ final class HeatmapDendrogramNode {
     mergeDistance,
     memberCount,
     leafIndex,
+    isTerminal,
   );
 }
 
@@ -225,6 +240,9 @@ final class HeatmapDendrogramData {
     required HeatmapDendrogramAxis axis,
     HeatmapDendrogramDistanceScale distanceScale =
         HeatmapDendrogramDistanceScale.proportional,
+    HeatmapHierarchyCollapseState collapseState =
+        const HeatmapHierarchyCollapseState.empty(),
+    Map<String, String> collapsedLabels = const {},
   }) {
     if (sourceLabels.isEmpty ||
         sourceLabels.any((label) => label.isEmpty) ||
@@ -235,7 +253,13 @@ final class HeatmapDendrogramData {
         'must contain unique, non-empty labels',
       );
     }
-    final leafOrder = root.leafOrder;
+    final projection = HeatmapHierarchyProjection(
+      root: root,
+      sourceLabels: sourceLabels,
+      collapseState: collapseState,
+      collapsedLabels: collapsedLabels,
+    );
+    final leafOrder = projection.sourceOrder;
     if (leafOrder.isEmpty ||
         leafOrder.toSet().length != leafOrder.length ||
         leafOrder.any((index) => index < 0 || index >= sourceLabels.length)) {
@@ -244,19 +268,32 @@ final class HeatmapDendrogramData {
       );
     }
 
+    final terminalNodeIds = {
+      for (final group in projection.visibleGroups) group.nodeId,
+    };
     final heightByNodeId = <String, int>{};
-    final maximumHeight = _collectHeights(root, heightByNodeId);
+    final maximumHeight = _collectProjectedHeights(
+      root,
+      terminalNodeIds,
+      heightByNodeId,
+    );
     final maximumDistance = _maximumDistance(root);
-    final leafPositions = <int, double>{
-      for (var position = 0; position < leafOrder.length; position++)
-        leafOrder[position]: (position + 0.5) / leafOrder.length,
+    final terminalPositions = <String, double>{
+      for (
+        var position = 0;
+        position < projection.visibleGroups.length;
+        position++
+      )
+        projection.visibleGroups[position].nodeId:
+            (position + 0.5) / projection.visibleGroups.length,
     };
     final segments = <HeatmapDendrogramSegment>[];
     final nodes = <HeatmapDendrogramNode>[];
 
     _layoutNode(
       root,
-      leafPositions: leafPositions,
+      terminalNodeIds: terminalNodeIds,
+      terminalPositions: terminalPositions,
       heightByNodeId: heightByNodeId,
       maximumHeight: maximumHeight,
       maximumDistance: maximumDistance,
@@ -272,8 +309,10 @@ final class HeatmapDendrogramData {
       sourceLabels: List<String>.unmodifiable(sourceLabels),
       leafOrder: List<int>.unmodifiable(leafOrder),
       labels: List<String>.unmodifiable([
-        for (final sourceIndex in leafOrder) sourceLabels[sourceIndex],
+        for (final group in projection.visibleGroups) group.label,
       ]),
+      visibleGroups: projection.visibleGroups,
+      collapseState: collapseState,
       maximumDistance: maximumDistance,
       segments: List<HeatmapDendrogramSegment>.unmodifiable(segments),
       nodes: List<HeatmapDendrogramNode>.unmodifiable(nodes),
@@ -290,6 +329,8 @@ final class HeatmapDendrogramData {
     final maximumDistance = json['maximumDistance'];
     final segments = json['segments'];
     final nodes = json['nodes'];
+    final visibleGroups = json['visibleGroups'];
+    final collapseState = json['collapseState'];
     if (axisName is! String ||
         (distanceScaleName != null && distanceScaleName is! String) ||
         rootId is! String ||
@@ -304,7 +345,11 @@ final class HeatmapDendrogramData {
         segments is! List ||
         segments.any((value) => value is! Map) ||
         nodes is! List ||
-        nodes.any((value) => value is! Map)) {
+        nodes.any((value) => value is! Map) ||
+        (visibleGroups != null &&
+            (visibleGroups is! List ||
+                visibleGroups.any((value) => value is! Map))) ||
+        (collapseState != null && collapseState is! Map)) {
       throw const FormatException('Invalid Heatmap dendrogram data');
     }
     final axis = HeatmapDendrogramAxis.values
@@ -321,6 +366,35 @@ final class HeatmapDendrogramData {
     if (distanceScale == null) {
       throw const FormatException('Invalid Heatmap dendrogram distance scale');
     }
+    final parsedNodes = List<HeatmapDendrogramNode>.unmodifiable([
+      for (final value in nodes)
+        HeatmapDendrogramNode.fromJson(Map<String, dynamic>.from(value as Map)),
+    ]);
+    final parsedVisibleGroups = visibleGroups == null
+        ? List<HeatmapHierarchyVisibleGroup>.unmodifiable([
+            for (var position = 0; position < leafOrder.length; position++)
+              HeatmapHierarchyVisibleGroup(
+                nodeId: parsedNodes
+                    .singleWhere(
+                      (node) => node.leafIndex == leafOrder[position],
+                    )
+                    .id,
+                label: labels[position] as String,
+                sourceIndices: [leafOrder[position] as int],
+                mergeDistance: parsedNodes
+                    .singleWhere(
+                      (node) => node.leafIndex == leafOrder[position],
+                    )
+                    .mergeDistance,
+                isCollapsed: false,
+              ),
+          ])
+        : List<HeatmapHierarchyVisibleGroup>.unmodifiable([
+            for (final value in visibleGroups)
+              HeatmapHierarchyVisibleGroup.fromJson(
+                Map<String, dynamic>.from(value as Map),
+              ),
+          ]);
     final data = HeatmapDendrogramData._(
       axis: axis,
       distanceScale: distanceScale,
@@ -328,6 +402,12 @@ final class HeatmapDendrogramData {
       sourceLabels: List<String>.unmodifiable(sourceLabels.cast<String>()),
       leafOrder: List<int>.unmodifiable(leafOrder.cast<int>()),
       labels: List<String>.unmodifiable(labels.cast<String>()),
+      visibleGroups: parsedVisibleGroups,
+      collapseState: collapseState == null
+          ? const HeatmapHierarchyCollapseState.empty()
+          : HeatmapHierarchyCollapseState.fromJson(
+              Map<String, dynamic>.from(collapseState as Map),
+            ),
       maximumDistance: maximumDistance.toDouble(),
       segments: List<HeatmapDendrogramSegment>.unmodifiable([
         for (final value in segments)
@@ -335,12 +415,7 @@ final class HeatmapDendrogramData {
             Map<String, dynamic>.from(value as Map),
           ),
       ]),
-      nodes: List<HeatmapDendrogramNode>.unmodifiable([
-        for (final value in nodes)
-          HeatmapDendrogramNode.fromJson(
-            Map<String, dynamic>.from(value as Map),
-          ),
-      ]),
+      nodes: parsedNodes,
     );
     data._validate();
     return data;
@@ -353,6 +428,8 @@ final class HeatmapDendrogramData {
     required this.sourceLabels,
     required this.leafOrder,
     required this.labels,
+    required this.visibleGroups,
+    required this.collapseState,
     required this.maximumDistance,
     required this.segments,
     required this.nodes,
@@ -364,9 +441,15 @@ final class HeatmapDendrogramData {
   final List<String> sourceLabels;
   final List<int> leafOrder;
   final List<String> labels;
+  final List<HeatmapHierarchyVisibleGroup> visibleGroups;
+  final HeatmapHierarchyCollapseState collapseState;
   final double maximumDistance;
   final List<HeatmapDendrogramSegment> segments;
   final List<HeatmapDendrogramNode> nodes;
+
+  /// Returns the visible terminal group represented by [nodeId].
+  HeatmapHierarchyVisibleGroup? visibleGroupForNode(String nodeId) =>
+      visibleGroups.where((group) => group.nodeId == nodeId).firstOrNull;
 
   Map<String, dynamic> toJson() => {
     'axis': axis.name,
@@ -375,6 +458,8 @@ final class HeatmapDendrogramData {
     'sourceLabels': sourceLabels,
     'leafOrder': leafOrder,
     'labels': labels,
+    'visibleGroups': [for (final group in visibleGroups) group.toJson()],
+    'collapseState': collapseState.toJson(),
     'maximumDistance': maximumDistance,
     'segments': [for (final segment in segments) segment.toJson()],
     'nodes': [for (final node in nodes) node.toJson()],
@@ -389,13 +474,16 @@ final class HeatmapDendrogramData {
   void _validate() {
     if (rootId.isEmpty ||
         sourceLabels.isEmpty ||
-        labels.length != leafOrder.length ||
+        labels.length != visibleGroups.length ||
         leafOrder.isEmpty ||
         !maximumDistance.isFinite ||
         maximumDistance < 0 ||
         sourceLabels.any((label) => label.isEmpty) ||
         labels.any((label) => label.isEmpty) ||
         sourceLabels.toSet().length != sourceLabels.length ||
+        visibleGroups.isEmpty ||
+        visibleGroups.map((group) => group.nodeId).toSet().length !=
+            visibleGroups.length ||
         leafOrder.toSet().length != leafOrder.length ||
         leafOrder.any((index) => index < 0 || index >= sourceLabels.length)) {
       throw const FormatException('Invalid Heatmap dendrogram values');
@@ -405,7 +493,7 @@ final class HeatmapDendrogramData {
     }
     if (nodes.isEmpty ||
         nodes.map((node) => node.id).toSet().length != nodes.length ||
-        nodes.where((node) => node.isLeaf).length != leafOrder.length) {
+        nodes.where((node) => node.isTerminal).length != visibleGroups.length) {
       throw const FormatException('Invalid Heatmap dendrogram node set');
     }
     for (final node in nodes) {
@@ -416,16 +504,39 @@ final class HeatmapDendrogramData {
         throw const FormatException('Invalid Heatmap dendrogram leaf node');
       }
     }
+    for (var index = 0; index < visibleGroups.length; index++) {
+      final group = visibleGroups[index];
+      if (group.label != labels[index] ||
+          group.sourceIndices.any(
+            (sourceIndex) =>
+                sourceIndex < 0 || !leafOrder.contains(sourceIndex),
+          ) ||
+          !nodes.any((node) => node.id == group.nodeId && node.isTerminal)) {
+        throw const FormatException('Invalid Heatmap dendrogram visible group');
+      }
+    }
   }
 }
 
-int _collectHeights(HeatmapClusterNode node, Map<String, int> heightByNodeId) {
-  if (node.isLeaf) {
+int _collectProjectedHeights(
+  HeatmapClusterNode node,
+  Set<String> terminalNodeIds,
+  Map<String, int> heightByNodeId,
+) {
+  if (terminalNodeIds.contains(node.id)) {
     heightByNodeId[node.id] = 0;
     return 0;
   }
-  final leftHeight = _collectHeights(node.left!, heightByNodeId);
-  final rightHeight = _collectHeights(node.right!, heightByNodeId);
+  final leftHeight = _collectProjectedHeights(
+    node.left!,
+    terminalNodeIds,
+    heightByNodeId,
+  );
+  final rightHeight = _collectProjectedHeights(
+    node.right!,
+    terminalNodeIds,
+    heightByNodeId,
+  );
   final height = 1 + (leftHeight > rightHeight ? leftHeight : rightHeight);
   heightByNodeId[node.id] = height;
   return height;
@@ -440,7 +551,8 @@ double _maximumDistance(HeatmapClusterNode node) {
 
 _DendrogramAnchor _layoutNode(
   HeatmapClusterNode node, {
-  required Map<int, double> leafPositions,
+  required Set<String> terminalNodeIds,
+  required Map<String, double> terminalPositions,
   required Map<String, int> heightByNodeId,
   required int maximumHeight,
   required double maximumDistance,
@@ -448,8 +560,8 @@ _DendrogramAnchor _layoutNode(
   required List<HeatmapDendrogramSegment> segments,
   required List<HeatmapDendrogramNode> nodes,
 }) {
-  if (node.isLeaf) {
-    final category = leafPositions[node.leafIndex]!;
+  if (terminalNodeIds.contains(node.id)) {
+    final category = terminalPositions[node.id]!;
     nodes.add(
       HeatmapDendrogramNode(
         id: node.id,
@@ -458,6 +570,7 @@ _DendrogramAnchor _layoutNode(
         mergeDistance: node.distance,
         memberCount: node.memberIndices.length,
         leafIndex: node.leafIndex,
+        isTerminal: true,
       ),
     );
     return _DendrogramAnchor(category: category, distance: 0);
@@ -465,7 +578,8 @@ _DendrogramAnchor _layoutNode(
 
   final left = _layoutNode(
     node.left!,
-    leafPositions: leafPositions,
+    terminalNodeIds: terminalNodeIds,
+    terminalPositions: terminalPositions,
     heightByNodeId: heightByNodeId,
     maximumHeight: maximumHeight,
     maximumDistance: maximumDistance,
@@ -475,7 +589,8 @@ _DendrogramAnchor _layoutNode(
   );
   final right = _layoutNode(
     node.right!,
-    leafPositions: leafPositions,
+    terminalNodeIds: terminalNodeIds,
+    terminalPositions: terminalPositions,
     heightByNodeId: heightByNodeId,
     maximumHeight: maximumHeight,
     maximumDistance: maximumDistance,
@@ -499,6 +614,7 @@ _DendrogramAnchor _layoutNode(
       distance: distance,
       mergeDistance: node.distance,
       memberCount: node.memberIndices.length,
+      isTerminal: false,
     ),
   );
 
