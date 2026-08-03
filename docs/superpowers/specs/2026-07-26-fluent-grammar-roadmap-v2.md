@@ -88,10 +88,35 @@ Every showcase workbench page (all 15) shows a **faithful, round-tripping** gram
 
 **Measured position (2026-07-31 re-census, after 1c′). The census is now a COMMITTED TEST — `example/test/showcase/grammar_emission_census_test.dart` — so this section is re-derivable rather than re-discoverable.** It mounts all 16 pages behind the 15 `BravenChartWorkbench` mount sites, walks every state each page's own picker offers, reads each chart's live document off that chart's own controller with the workbench's OWN `documentOptions`, and runs the generator. Every number below is an assertion in that file, per page and per family, so drift fails a test instead of ageing quietly.
 
+> **SUPERSEDED THE SAME DAY, AND THE CORRECTION WAS NEVER FOLDED IN HERE.**
+> The 59/28 below was published before `851e9eca test(showcase): reconcile
+> Workbench grammar census` (2026-07-31, hours later) found a **16th mount
+> site** and corrected a MISCOUNT: one `Workbench` state and all three shadow
+> hydration tiles had been recorded as emitting when they actually refuse on a
+> data-point marker radius. That commit moved `_expectedEmitting` **59 → 58**
+> and Cartesian **28 → 27** *in the committed test*, while this document kept
+> the pre-correction figure.
+>
+> The consequence is worth stating, because it cost a later recon real time:
+> BC-0038 then took emitting 58 → 59 and Cartesian 27 → 28 — exactly the +1 it
+> was designed to deliver — but measured against THIS table it looked like the
+> new emitter had vanished. The census test is the source of truth; this
+> section is a snapshot, and a snapshot that is not re-derived ages into a
+> booby trap. **Read the pinned constants in the test, not this table.**
+
 | | Tuples | With a verdict | Emitting | Refused |
 |---|---|---|---|---|
-| **All** | **181** | **166** | **59** | **107** |
-| Cartesian | — | 111 | **28** | 83 |
+| **All (as published, superseded)** | **181** | **166** | ~~59~~ **58** | **108** |
+| Cartesian | — | 111 | ~~28~~ **27** | 84 |
+| Radial | — | 55 | **31** | 24 |
+
+**Current, measured 2026-08-03 on master `b60ec846`** (after BC-0038 and the
+heatmap family):
+
+| | Tuples | With a verdict | Emitting | Refused |
+|---|---|---|---|---|
+| **All** | **~201** | **~184** | **59** | **~125** |
+| Cartesian | — | **129** | **28** | **101** |
 | Radial | — | 55 | **31** | 24 |
 
 - **Cartesian: 28 of 111 emit, up from 0 before 1c′.** On the exact denominator 1c′ was sized against — 100 Cartesian states, `ValueSummaryPage` and `ChartGrammarPage` both outside it — the number is **20 of 100 against a prediction of 21**, reproduced exactly by this instrument.
