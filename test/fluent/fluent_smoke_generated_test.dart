@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 149 of 151 classes have a synthesizable subject: every verb they
+// 151 of 153 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1922 verbs total; 13 of them have an argument type with no
+// 1987 verbs total; 13 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 149;
+const int _executedClasses = 151;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
@@ -6565,6 +6565,238 @@ void _smokePointStyle(_Verb verb, PointStyle subject) {
   );
 }
 
+/// Smoke coverage for [SeriesCalloutSpec]'s 29 executable verb(s).
+void _smokeSeriesCalloutSpec(_Verb verb, SeriesCalloutSpec subject) {
+  verb('SeriesCalloutSpecFluent.withShow', () => subject.withShow(true));
+  verb('SeriesCalloutSpecFluent.clearShow', () => subject.clearShow());
+  verb('SeriesCalloutSpecFluent.withLabel', () => subject.withLabel('y'));
+  verb('SeriesCalloutSpecFluent.clearLabel', () => subject.clearLabel());
+  verb(
+    'SeriesCalloutSpecFluent.withAnchor',
+    () => subject.withAnchor(SeriesCalloutAnchor.values.first),
+  );
+  verb('SeriesCalloutSpecFluent.clearAnchor', () => subject.clearAnchor());
+  verb('SeriesCalloutSpecFluent.withAnchorX', () => subject.withAnchorX(1.0));
+  verb('SeriesCalloutSpecFluent.clearAnchorX', () => subject.clearAnchorX());
+  verb('SeriesCalloutSpecFluent.withPriority', () => subject.withPriority(0));
+  verb(
+    'SeriesCalloutSpecFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('SeriesCalloutSpecFluent.clearColor', () => subject.clearColor());
+  verb(
+    'SeriesCalloutSpecFluent.withTextStyle',
+    () => subject.withTextStyle(const TextStyle()),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearTextStyle',
+    () => subject.clearTextStyle(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withBackgroundColor',
+    () => subject.withBackgroundColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withConnectorWidth',
+    () => subject.withConnectorWidth(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearConnectorWidth',
+    () => subject.clearConnectorWidth(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withConnectorOpacity',
+    () => subject.withConnectorOpacity(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearConnectorOpacity',
+    () => subject.clearConnectorOpacity(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withConnectorGlow',
+    () => subject.withConnectorGlow(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearConnectorGlow',
+    () => subject.clearConnectorGlow(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withBackgroundOpacity',
+    () => subject.withBackgroundOpacity(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearBackgroundOpacity',
+    () => subject.clearBackgroundOpacity(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withBorderWidth',
+    () => subject.withBorderWidth(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearBorderWidth',
+    () => subject.clearBorderWidth(),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.withBorderRadius',
+    () => subject.withBorderRadius(1.0),
+  );
+  verb(
+    'SeriesCalloutSpecFluent.clearBorderRadius',
+    () => subject.clearBorderRadius(),
+  );
+}
+
+/// Smoke coverage for [SeriesCalloutConfig]'s 36 executable verb(s).
+void _smokeSeriesCalloutConfig(_Verb verb, SeriesCalloutConfig subject) {
+  verb(
+    'SeriesCalloutConfigFluent.withEnabled',
+    () => subject.withEnabled(false),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withShowByDefault',
+    () => subject.withShowByDefault(true),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withSide',
+    () => subject.withSide(SeriesCalloutSide.right),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withAnchor',
+    () => subject.withAnchor(SeriesCalloutAnchor.lastVisible),
+  );
+  verb('SeriesCalloutConfigFluent.withAnchorX', () => subject.withAnchorX(1.0));
+  verb('SeriesCalloutConfigFluent.clearAnchorX', () => subject.clearAnchorX());
+  verb(
+    'SeriesCalloutConfigFluent.withConnector',
+    () => subject.withConnector(SeriesCalloutConnector.elbow),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPacking',
+    () => subject.withPacking(SeriesCalloutPacking.followAnchors),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withLaneWidth',
+    () => subject.withLaneWidth(156),
+  );
+  verb('SeriesCalloutConfigFluent.withInset', () => subject.withInset(8));
+  verb(
+    'SeriesCalloutConfigFluent.withMinimumGap',
+    () => subject.withMinimumGap(6),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withMaximumVisible',
+    () => subject.withMaximumVisible(12),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withConnectorColor',
+    () => subject.withConnectorColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.clearConnectorColor',
+    () => subject.clearConnectorColor(),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withConnectorWidth',
+    () => subject.withConnectorWidth(1.25),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withConnectorOpacity',
+    () => subject.withConnectorOpacity(1),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withConnectorGlow',
+    () => subject.withConnectorGlow(0),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withAnchorRadius',
+    () => subject.withAnchorRadius(3),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withLabelPadding',
+    () => subject.withLabelPadding(EdgeInsets.zero),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withLabelStyle',
+    () => subject.withLabelStyle(const TextStyle()),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withBackgroundColor',
+    () => subject.withBackgroundColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.clearBackgroundColor',
+    () => subject.clearBackgroundColor(),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withBackgroundOpacity',
+    () => subject.withBackgroundOpacity(1),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withBorderColor',
+    () => subject.withBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.clearBorderColor',
+    () => subject.clearBorderColor(),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withBorderWidth',
+    () => subject.withBorderWidth(1),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withBorderRadius',
+    () => subject.withBorderRadius(5),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelBackgroundColor',
+    () => subject.withPanelBackgroundColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.clearPanelBackgroundColor',
+    () => subject.clearPanelBackgroundColor(),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelOpacity',
+    () => subject.withPanelOpacity(1),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelBorderColor',
+    () => subject.withPanelBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.clearPanelBorderColor',
+    () => subject.clearPanelBorderColor(),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelBorderWidth',
+    () => subject.withPanelBorderWidth(0),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelBorderRadius',
+    () => subject.withPanelBorderRadius(6),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withPanelPadding',
+    () => subject.withPanelPadding(const EdgeInsets.all(6)),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withSeries',
+    () => subject.withSeries(const {}),
+  );
+}
+
 /// Smoke coverage for [SeriesLabelBackground]'s 7 executable verb(s).
 void _smokeSeriesLabelBackground(_Verb verb, SeriesLabelBackground subject) {
   verb(
@@ -9180,6 +9412,24 @@ void main() {
         reason: 'generated PointStyleFluent verb(s) threw',
       );
     });
+    test('SeriesCalloutSpec', () {
+      final subject = _subject(() => SeriesCalloutSpec());
+      if (subject == null) return;
+      expect(
+        _record(_smokeSeriesCalloutSpec, subject),
+        isEmpty,
+        reason: 'generated SeriesCalloutSpecFluent verb(s) threw',
+      );
+    });
+    test('SeriesCalloutConfig', () {
+      final subject = _subject(() => SeriesCalloutConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeSeriesCalloutConfig, subject),
+        isEmpty,
+        reason: 'generated SeriesCalloutConfigFluent verb(s) threw',
+      );
+    });
     test('SeriesLabelBackground', () {
       final subject = _subject(
         () => SeriesLabelBackground(color: const Color(0xFF2196F3)),
@@ -9662,7 +9912,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 149);
+    expect(_executedClasses, 151);
     expect(_skippedClasses, 2);
     expect(_compileOnlyCases, hasLength(8));
     expect(_compileOnlyVerbs, hasLength(13));

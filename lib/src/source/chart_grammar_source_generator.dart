@@ -133,6 +133,7 @@ import '../models/polar_column_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
+import '../models/series_callout_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_config_dart_emitter.dart';
@@ -1806,6 +1807,9 @@ class _GrammarChainEmitter {
     }
     if (configuration.legendStyle != configuration.theme.legendStyle) {
       lost.add('legendStyle');
+    }
+    if (configuration.seriesCallouts != const SeriesCalloutConfig()) {
+      lost.add('seriesCallouts');
     }
     // concentricDonutConfig and polarChartConfig are NO LONGER listed here: the
     // grammar carries both (`geomDonut(concentric:)` and `.polarConfig(...)`),

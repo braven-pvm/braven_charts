@@ -234,6 +234,7 @@ abstract final class ChartSourceCaptureAdapter {
       polarChartConfig: source.polarChartConfig,
       radialBarChartConfig: source.radialBarChartConfig,
       gaugeChartConfig: source.gaugeChartConfig,
+      seriesCallouts: source.seriesCallouts,
       selectionSnapshot: source.selectionSnapshot,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,

@@ -28,6 +28,7 @@ import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_config.dart';
 import '../models/radial_bar_chart_series.dart';
+import '../models/series_callout_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_annotation_document_codec.dart';
@@ -95,6 +96,7 @@ class HydratedChartConfiguration {
     this.polarChartConfig,
     this.radialBarChartConfig,
     this.gaugeChartConfig,
+    this.seriesCallouts = const SeriesCalloutConfig(),
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes),
@@ -146,6 +148,9 @@ class HydratedChartConfiguration {
 
   /// Plot-level pane, ticks, zones, and center fallback restored for Gauge.
   final GaugeChartConfig? gaugeChartConfig;
+
+  /// Collision-aware label-callout policy restored with the chart document.
+  final SeriesCalloutConfig seriesCallouts;
 
   YAxisConfig? get primaryYAxis {
     for (final axis in axes) {
@@ -420,6 +425,7 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
             ),
       grid: config.grid,
       legendStyle: config.legendStyle,
+      seriesCallouts: config.seriesCallouts,
       showLegend: config.showLegend,
       concentricDonutConfig:
           config.concentricDonutConfig ?? const ConcentricDonutConfig(),
@@ -873,6 +879,12 @@ abstract final class ChartDocumentHydrator {
         ChartConfigurationDocumentCodec.decodeGrid(document.grid),
         warnings,
       );
+      final seriesCallouts = _requireValue(
+        ChartConfigurationDocumentCodec.decodeSeriesCallouts(
+          document.configuration,
+        ),
+        warnings,
+      );
       final normalization = document.normalization == null
           ? NormalizationMode.none
           : _requireValue(
@@ -965,6 +977,7 @@ abstract final class ChartDocumentHydrator {
           polarChartConfig: polarChartConfig,
           radialBarChartConfig: radialBarChartConfig,
           gaugeChartConfig: gaugeChartConfig,
+          seriesCallouts: seriesCallouts,
         ),
         warnings: warnings,
       );

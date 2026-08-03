@@ -4,6 +4,75 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartDartSourceGenerator', () {
+    test('emits durable series callout configuration and overrides', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            LineChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: const [ChartDataPoint(x: 0, y: 100)],
+            ),
+            seriesCallouts: const SeriesCalloutConfig(
+              enabled: true,
+              side: SeriesCalloutSide.left,
+              anchor: SeriesCalloutAnchor.maximumVisible,
+              packing: SeriesCalloutPacking.compact,
+              connectorColor: Color(0xFF0F766E),
+              connectorOpacity: 0.7,
+              connectorGlow: 5,
+              backgroundOpacity: 0.85,
+              borderWidth: 2,
+              panelBackgroundColor: Color(0xFFEDE9FE),
+              panelOpacity: 0.5,
+              panelBorderColor: Color(0xFF8B5CF6),
+              panelBorderWidth: 1.5,
+              panelBorderRadius: 9,
+              panelPadding: EdgeInsets.fromLTRB(4, 6, 8, 10),
+              series: {
+                'power': SeriesCalloutSpec(
+                  show: true,
+                  label: 'Peak power',
+                  priority: 8,
+                  connectorWidth: 3,
+                  connectorGlow: 2,
+                  backgroundOpacity: 0.75,
+                  borderRadius: 11,
+                ),
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('seriesCallouts: SeriesCalloutConfig('),
+      );
+      expect(generated.source, contains('enabled: true,'));
+      expect(generated.source, contains('side: SeriesCalloutSide.left,'));
+      expect(
+        generated.source,
+        contains('anchor: SeriesCalloutAnchor.maximumVisible,'),
+      );
+      expect(generated.source, contains("'power': SeriesCalloutSpec("));
+      expect(generated.source, contains("label: 'Peak power',"));
+      expect(generated.source, contains('connectorOpacity: 0.7,'));
+      expect(
+        generated.source,
+        contains('packing: SeriesCalloutPacking.compact,'),
+      );
+      expect(generated.source, contains('connectorGlow: 5.0,'));
+      expect(generated.source, contains('panelBorderWidth: 1.5,'));
+      expect(
+        generated.source,
+        contains('panelPadding: EdgeInsets.fromLTRB(4.0, 6.0, 8.0, 10.0),'),
+      );
+      expect(generated.source, contains('connectorWidth: 3.0,'));
+      expect(generated.source, contains('connectorGlow: 2.0,'));
+      expect(generated.source, contains('backgroundOpacity: 0.75,'));
+    });
+
     test('generates deterministic direct Dart for a line chart', () {
       final snapshot = _snapshot(
         LineChartSeries(
@@ -2451,6 +2520,7 @@ ChartDocumentSnapshot _snapshot(
   List<ChartSeries> additionalSeries = const [],
   ConcentricDonutConfig? concentricDonutConfig,
   PolarChartConfig? polarChartConfig,
+  SeriesCalloutConfig seriesCallouts = const SeriesCalloutConfig(),
   String? title,
   List<ChartAnnotation> annotations = const [],
   ChartTheme? theme,
@@ -2511,6 +2581,13 @@ ChartDocumentSnapshot _snapshot(
               .values,
         if (polarChartConfig != null)
           ...(ChartConfigurationDocumentCodec.encodePolarChart(polarChartConfig)
+                  as ChartArtifactSuccess<JsonObjectValue>)
+              .value
+              .values,
+        if (seriesCallouts != const SeriesCalloutConfig())
+          ...(ChartConfigurationDocumentCodec.encodeSeriesCallouts(
+                    seriesCallouts,
+                  )
                   as ChartArtifactSuccess<JsonObjectValue>)
               .value
               .values,

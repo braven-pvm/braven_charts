@@ -9,6 +9,7 @@ import '../models/normalization_mode.dart';
 import '../models/pie_chart_config.dart';
 import '../models/polar_chart_config.dart';
 import '../models/radial_bar_chart_config.dart';
+import '../models/series_callout_config.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_configuration_documents.dart';
 import 'chart_data_payload.dart';
@@ -20,6 +21,259 @@ typedef ChartLegendConfiguration = ({bool visible, LegendStyle style});
 
 /// Audited adapters for portable chart-level built-in configuration models.
 abstract final class ChartConfigurationDocumentCodec {
+  /// Encodes the chart-level collision-aware series callout policy.
+  static ChartArtifactResult<JsonObjectValue> encodeSeriesCallouts(
+    SeriesCalloutConfig config,
+  ) {
+    const path = r'$.configuration.seriesCallouts';
+    try {
+      return ChartArtifactSuccess(
+        value: JsonObjectValue({
+          'seriesCallouts': JsonValue.fromJson({
+            'enabled': config.enabled,
+            'showByDefault': config.showByDefault,
+            'side': config.side.name,
+            'anchor': config.anchor.name,
+            if (config.anchorX != null) 'anchorX': config.anchorX,
+            'connector': config.connector.name,
+            'packing': config.packing.name,
+            'laneWidth': config.laneWidth,
+            'inset': config.inset,
+            'minimumGap': config.minimumGap,
+            'maximumVisible': config.maximumVisible,
+            if (config.connectorColor != null)
+              'connectorColor': config.connectorColor!.toARGB32(),
+            'connectorWidth': config.connectorWidth,
+            'connectorOpacity': config.connectorOpacity,
+            'connectorGlow': config.connectorGlow,
+            'anchorRadius': config.anchorRadius,
+            'labelPadding': {
+              'left': config.labelPadding.left,
+              'top': config.labelPadding.top,
+              'right': config.labelPadding.right,
+              'bottom': config.labelPadding.bottom,
+            },
+            'labelStyle': ChartStyleDocumentCodec.encodeTextStyle(
+              config.labelStyle,
+            ).toJson(),
+            if (config.backgroundColor != null)
+              'backgroundColor': config.backgroundColor!.toARGB32(),
+            'backgroundOpacity': config.backgroundOpacity,
+            if (config.borderColor != null)
+              'borderColor': config.borderColor!.toARGB32(),
+            'borderWidth': config.borderWidth,
+            'borderRadius': config.borderRadius,
+            if (config.panelBackgroundColor != null)
+              'panelBackgroundColor': config.panelBackgroundColor!.toARGB32(),
+            'panelOpacity': config.panelOpacity,
+            if (config.panelBorderColor != null)
+              'panelBorderColor': config.panelBorderColor!.toARGB32(),
+            'panelBorderWidth': config.panelBorderWidth,
+            'panelBorderRadius': config.panelBorderRadius,
+            'panelPadding': {
+              'left': config.panelPadding.left,
+              'top': config.panelPadding.top,
+              'right': config.panelPadding.right,
+              'bottom': config.panelPadding.bottom,
+            },
+            'series': {
+              for (final entry in config.series.entries)
+                entry.key: _encodeSeriesCalloutSpec(entry.value),
+            },
+          }, path: path),
+        }),
+      );
+    } on Object catch (error) {
+      return _seriesCalloutConfigurationFailure(error, path);
+    }
+  }
+
+  static Map<String, Object?> _encodeSeriesCalloutSpec(
+    SeriesCalloutSpec spec,
+  ) => {
+    if (spec.show != null) 'show': spec.show,
+    if (spec.label != null) 'label': spec.label,
+    if (spec.anchor != null) 'anchor': spec.anchor!.name,
+    if (spec.anchorX != null) 'anchorX': spec.anchorX,
+    'priority': spec.priority,
+    if (spec.color != null) 'color': spec.color!.toARGB32(),
+    if (spec.textStyle != null)
+      'textStyle': ChartStyleDocumentCodec.encodeTextStyle(
+        spec.textStyle!,
+      ).toJson(),
+    if (spec.backgroundColor != null)
+      'backgroundColor': spec.backgroundColor!.toARGB32(),
+    if (spec.borderColor != null) 'borderColor': spec.borderColor!.toARGB32(),
+    if (spec.connectorWidth != null) 'connectorWidth': spec.connectorWidth,
+    if (spec.connectorOpacity != null)
+      'connectorOpacity': spec.connectorOpacity,
+    if (spec.connectorGlow != null) 'connectorGlow': spec.connectorGlow,
+    if (spec.backgroundOpacity != null)
+      'backgroundOpacity': spec.backgroundOpacity,
+    if (spec.borderWidth != null) 'borderWidth': spec.borderWidth,
+    if (spec.borderRadius != null) 'borderRadius': spec.borderRadius,
+  };
+
+  /// Decodes the optional chart-level series callout policy.
+  static ChartArtifactResult<SeriesCalloutConfig> decodeSeriesCallouts(
+    JsonObjectValue configuration,
+  ) {
+    const path = r'$.configuration.seriesCallouts';
+    final raw = configuration.values['seriesCallouts'];
+    if (raw == null) {
+      return ChartArtifactSuccess(value: const SeriesCalloutConfig());
+    }
+    if (raw is! JsonObjectValue) {
+      return _seriesCalloutConfigurationFailure(
+        'Series callout configuration must be an object.',
+        path,
+      );
+    }
+    try {
+      final map = raw.toJson() as Map<String, Object?>;
+      final padding = _requiredMap(map, 'labelPadding', path);
+      final panelPadding = map['panelPadding'] == null
+          ? null
+          : _requiredMap(map, 'panelPadding', path);
+      final seriesMap = _requiredMap(map, 'series', path);
+      final series = <String, SeriesCalloutSpec>{};
+      for (final entry in seriesMap.entries) {
+        if (entry.value is! Map) {
+          throw _ConfigurationFormatException(
+            'Series override must be an object.',
+            '$path.series.${entry.key}',
+          );
+        }
+        final spec = (entry.value as Map).cast<String, Object?>();
+        series[entry.key] = SeriesCalloutSpec(
+          show: spec['show'] as bool?,
+          label: spec['label'] as String?,
+          anchor: _optionalEnum(
+            spec,
+            'anchor',
+            SeriesCalloutAnchor.values,
+            '$path.series.${entry.key}',
+          ),
+          anchorX: _optionalDouble(
+            spec,
+            'anchorX',
+            '$path.series.${entry.key}',
+          ),
+          priority: _requiredInt(spec, 'priority', '$path.series.${entry.key}'),
+          color: _optionalConfigurationColor(spec['color']),
+          textStyle: spec['textStyle'] == null
+              ? null
+              : ChartStyleDocumentCodec.decodeTextStyle(
+                  JsonValue.fromJson(spec['textStyle']) as JsonObjectValue,
+                ),
+          backgroundColor: _optionalConfigurationColor(spec['backgroundColor']),
+          borderColor: _optionalConfigurationColor(spec['borderColor']),
+          connectorWidth: _optionalDouble(
+            spec,
+            'connectorWidth',
+            '$path.series.${entry.key}',
+          ),
+          connectorOpacity: _optionalDouble(
+            spec,
+            'connectorOpacity',
+            '$path.series.${entry.key}',
+          ),
+          connectorGlow: _optionalDouble(
+            spec,
+            'connectorGlow',
+            '$path.series.${entry.key}',
+          ),
+          backgroundOpacity: _optionalDouble(
+            spec,
+            'backgroundOpacity',
+            '$path.series.${entry.key}',
+          ),
+          borderWidth: _optionalDouble(
+            spec,
+            'borderWidth',
+            '$path.series.${entry.key}',
+          ),
+          borderRadius: _optionalDouble(
+            spec,
+            'borderRadius',
+            '$path.series.${entry.key}',
+          ),
+        );
+      }
+      return ChartArtifactSuccess(
+        value: SeriesCalloutConfig(
+          enabled: _requiredBool(map, 'enabled', path),
+          showByDefault: _requiredBool(map, 'showByDefault', path),
+          side: _requiredEnum(map, 'side', SeriesCalloutSide.values, path),
+          anchor: _requiredEnum(
+            map,
+            'anchor',
+            SeriesCalloutAnchor.values,
+            path,
+          ),
+          anchorX: _optionalDouble(map, 'anchorX', path),
+          connector: _requiredEnum(
+            map,
+            'connector',
+            SeriesCalloutConnector.values,
+            path,
+          ),
+          packing:
+              _optionalEnum(
+                map,
+                'packing',
+                SeriesCalloutPacking.values,
+                path,
+              ) ??
+              SeriesCalloutPacking.followAnchors,
+          laneWidth: _requiredDouble(map, 'laneWidth', path),
+          inset: _requiredDouble(map, 'inset', path),
+          minimumGap: _requiredDouble(map, 'minimumGap', path),
+          maximumVisible: _requiredInt(map, 'maximumVisible', path),
+          connectorColor: _optionalConfigurationColor(map['connectorColor']),
+          connectorWidth: _requiredDouble(map, 'connectorWidth', path),
+          connectorOpacity: _requiredDouble(map, 'connectorOpacity', path),
+          connectorGlow: _optionalDouble(map, 'connectorGlow', path) ?? 0,
+          anchorRadius: _requiredDouble(map, 'anchorRadius', path),
+          labelPadding: EdgeInsets.fromLTRB(
+            _requiredDouble(padding, 'left', '$path.labelPadding'),
+            _requiredDouble(padding, 'top', '$path.labelPadding'),
+            _requiredDouble(padding, 'right', '$path.labelPadding'),
+            _requiredDouble(padding, 'bottom', '$path.labelPadding'),
+          ),
+          labelStyle: ChartStyleDocumentCodec.decodeTextStyle(
+            JsonValue.fromJson(map['labelStyle']) as JsonObjectValue,
+          ),
+          backgroundColor: _optionalConfigurationColor(map['backgroundColor']),
+          backgroundOpacity: _requiredDouble(map, 'backgroundOpacity', path),
+          borderColor: _optionalConfigurationColor(map['borderColor']),
+          borderWidth: _requiredDouble(map, 'borderWidth', path),
+          borderRadius: _requiredDouble(map, 'borderRadius', path),
+          panelBackgroundColor: _optionalConfigurationColor(
+            map['panelBackgroundColor'],
+          ),
+          panelOpacity: _requiredDouble(map, 'panelOpacity', path),
+          panelBorderColor: _optionalConfigurationColor(
+            map['panelBorderColor'],
+          ),
+          panelBorderWidth: _requiredDouble(map, 'panelBorderWidth', path),
+          panelBorderRadius: _requiredDouble(map, 'panelBorderRadius', path),
+          panelPadding: panelPadding == null
+              ? const EdgeInsets.all(6)
+              : EdgeInsets.fromLTRB(
+                  _requiredDouble(panelPadding, 'left', '$path.panelPadding'),
+                  _requiredDouble(panelPadding, 'top', '$path.panelPadding'),
+                  _requiredDouble(panelPadding, 'right', '$path.panelPadding'),
+                  _requiredDouble(panelPadding, 'bottom', '$path.panelPadding'),
+                ),
+          series: series,
+        ),
+      );
+    } on Object catch (error) {
+      return _seriesCalloutConfigurationFailure(error, path);
+    }
+  }
+
   static ChartGridDocument encodeGrid(GridConfig config) => ChartGridDocument(
     horizontal: config.horizontal,
     vertical: config.vertical,
@@ -1396,6 +1650,25 @@ ChartArtifactFailure<T> _gaugeConfigurationFailure<T>(
   error: ChartArtifactError(
     code: ChartArtifactDiagnosticCodes.invalidArtifact,
     message: 'Invalid Gauge chart configuration: $error',
+    path: path,
+  ),
+);
+
+Color? _optionalConfigurationColor(Object? value) {
+  if (value == null) return null;
+  if (value is! int) {
+    throw const FormatException('Color must be an ARGB integer.');
+  }
+  return Color(value);
+}
+
+ChartArtifactFailure<T> _seriesCalloutConfigurationFailure<T>(
+  Object error,
+  String path,
+) => ChartArtifactFailure(
+  error: ChartArtifactError(
+    code: ChartArtifactDiagnosticCodes.invalidArtifact,
+    message: 'Invalid series callout configuration: $error',
     path: path,
   ),
 );

@@ -147,6 +147,7 @@ export 'src/models/chart_style_value.dart';
 export 'src/models/chart_data_point.dart';
 export 'src/models/data_point_label_config.dart';
 export 'src/models/series_inline_label_config.dart';
+export 'src/models/series_callout_config.dart';
 export 'src/models/chart_series.dart';
 export 'src/models/chart_state_config.dart';
 export 'src/models/chart_selection_result.dart';

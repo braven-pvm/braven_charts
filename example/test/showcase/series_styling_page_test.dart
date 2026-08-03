@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('series styling introduces four layers around one stage', (
+  testWidgets('series styling introduces five layers around one stage', (
     tester,
   ) async {
     final pixelRatio = tester.view.devicePixelRatio;
@@ -27,6 +27,7 @@ void main() {
     for (final name in [
       'appearance',
       'inlineLabels',
+      'callouts',
       'pointLabels',
       'conditional',
     ]) {
@@ -54,6 +55,68 @@ void main() {
     expect(find.text('Series Appearance'), findsWidgets);
     expect(find.text('Glow Radius'), findsOneWidget);
     expect(find.text('Chart Options'), findsOneWidget);
+  });
+
+  testWidgets('series callouts expose global policy and per-series opt-out', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SeriesStylingPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+
+    await tester.tap(
+      find.byKey(const ValueKey('series-styling-pattern-callouts')),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    var chart = _mainChart(tester, 'callouts');
+    expect(chart.series, hasLength(7));
+    expect(chart.seriesCallouts.enabled, isTrue);
+    expect(chart.seriesCallouts.anchor, SeriesCalloutAnchor.xValue);
+    expect(chart.seriesCallouts.showsSeries('recovery'), isTrue);
+    expect(chart.seriesCallouts.specFor('build').label, 'Build · primary');
+    expect(chart.seriesCallouts.panelBackgroundColor, isNotNull);
+    expect(chart.seriesCallouts.panelBorderWidth, 1);
+    expect(chart.seriesCallouts.specFor('build').connectorWidth, 2.5);
+    expect(chart.seriesCallouts.specFor('build').connectorGlow, 4);
+    expect(find.text('Label Lane'), findsOneWidget);
+    expect(find.text('Label packing'), findsOneWidget);
+    expect(find.text('Label style'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Connectors & lane panel'),
+      500,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Connectors & lane panel'), findsOneWidget);
+    expect(find.text('Connector glow'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Per-series overrides'),
+      500,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Per-series overrides'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Hide Recovery'),
+      500,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Hide Recovery'), findsOneWidget);
+
+    final recoveryToggle = find.widgetWithText(SwitchListTile, 'Hide Recovery');
+    await tester.ensureVisible(recoveryToggle);
+    await tester.pumpAndSettle();
+    await tester.tap(recoveryToggle);
+    await tester.pump();
+
+    chart = _mainChart(tester, 'callouts');
+    expect(chart.seriesCallouts.enabled, isTrue);
+    expect(chart.seriesCallouts.showsSeries('build'), isTrue);
+    expect(chart.seriesCallouts.showsSeries('recovery'), isFalse);
   });
 
   testWidgets('label layers expose inline and data-point configuration', (

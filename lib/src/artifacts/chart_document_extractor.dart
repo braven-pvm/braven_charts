@@ -22,6 +22,7 @@ import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
 import '../models/radial_bar_chart_config.dart';
 import '../models/range_area_data_point.dart';
+import '../models/series_callout_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../layout/polar_column_composition.dart';
@@ -346,6 +347,7 @@ class ChartDocumentExtractionSource {
     this.polarChartConfig,
     this.radialBarChartConfig,
     this.gaugeChartConfig,
+    this.seriesCallouts = const SeriesCalloutConfig(),
     this.selectionSnapshot,
   }) : allSeries = List.unmodifiable(allSeries),
        visibleSeries = List.unmodifiable(visibleSeries),
@@ -374,6 +376,7 @@ class ChartDocumentExtractionSource {
   final PolarChartConfig? polarChartConfig;
   final RadialBarChartConfig? radialBarChartConfig;
   final GaugeChartConfig? gaugeChartConfig;
+  final SeriesCalloutConfig seriesCallouts;
   final Color backgroundColor;
   final bool showToolbar;
   final bool interactiveAnnotations;
@@ -493,6 +496,16 @@ abstract final class ChartDocumentExtractor {
         warnings,
       );
       final configurationValues = <String, JsonValue>{};
+      if (source.seriesCallouts != const SeriesCalloutConfig()) {
+        configurationValues.addAll(
+          _requireValue(
+            ChartConfigurationDocumentCodec.encodeSeriesCallouts(
+              source.seriesCallouts,
+            ),
+            warnings,
+          ).values,
+        );
+      }
       if (source.concentricDonutConfig case final concentricConfig?) {
         configurationValues.addAll(
           _requireValue(
