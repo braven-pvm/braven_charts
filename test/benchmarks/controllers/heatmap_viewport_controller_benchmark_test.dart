@@ -49,6 +49,57 @@ void main() {
   });
 
   test(
+    '24M-cell source reuses one resident tile set across 100 pans',
+    () async {
+      final source = _BenchmarkTileSource();
+      final controller = HeatmapViewportController(
+        source: source,
+        overscanColumns: 32,
+        overscanRows: 0,
+        maxCachedTiles: 12,
+        maxTilesPerViewport: 8,
+        debounceDuration: Duration.zero,
+      );
+      addTearDown(controller.dispose);
+      await controller.loadViewport(
+        const HeatmapViewportRequest(
+          minimumX: 128.0,
+          maximumX: 427.0,
+          minimumY: -0.5,
+          maximumY: 23.5,
+        ),
+      );
+      final residentCells = controller.snapshot.cells;
+
+      final stopwatch = Stopwatch()..start();
+      for (var step = 0; step < 100; step++) {
+        final offset = (step % 20) * 0.25;
+        await controller.loadViewport(
+          HeatmapViewportRequest(
+            minimumX: 128.0 + offset,
+            maximumX: 427.0 + offset,
+            minimumY: -0.5,
+            maximumY: 23.5,
+          ),
+        );
+      }
+      stopwatch.stop();
+
+      final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+      // ignore: avoid_print
+      print(
+        'Heatmap resident snapshot reuse (100 same-tile pans): '
+        '${elapsedMs.toStringAsFixed(3)}ms, '
+        '${controller.diagnostics.residentSnapshotReuses} reuses',
+      );
+      expect(controller.diagnostics.residentSnapshotReuses, 100);
+      expect(identical(controller.snapshot.cells, residentCells), isTrue);
+      expect(source.loadCount, lessThanOrEqualTo(4));
+      expect(elapsedMs, lessThan(100));
+    },
+  );
+
+  test(
     '2400 streamed cell updates coalesce without growing residency',
     () async {
       final source = _BenchmarkTileSource();

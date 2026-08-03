@@ -27,8 +27,10 @@ import 'artifacts/resolved_chart_data.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
 import 'controllers/chart_interaction_group_controller.dart';
+import 'controllers/heatmap_raster_viewport_controller.dart';
 import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
+import 'elements/heatmap_raster_element.dart';
 import 'elements/gauge_series_element.dart';
 import 'elements/pie_series_element.dart';
 import 'elements/polar_column_series_element.dart';
@@ -226,6 +228,9 @@ class BravenChartPlus extends StatefulWidget {
     this.streamingConfig,
     this.streamingController,
     this.liveStreamController,
+    this.heatmapRasterViewportController,
+    this.heatmapRasterOpacity = 1,
+    this.heatmapRasterFilterQuality = ui.FilterQuality.low,
     this.controller,
     this.interactionConfig,
     this.contextActionsBuilder,
@@ -267,6 +272,7 @@ class BravenChartPlus extends StatefulWidget {
     this.bravenChartController,
     this.interactionGroupController,
     this.interactionGroupOptions = const ChartInteractionGroupOptions(),
+    this.resetViewportBounds,
     this.onSeriesDeselected,
     this.onAxisSwapped,
     // ==================== MULTI-AXIS PARAMETERS ====================
@@ -1153,6 +1159,18 @@ class BravenChartPlus extends StatefulWidget {
   /// Configures the state shown when loading has finished without data.
   final ChartEmptyStateConfig emptyStateConfig;
 
+  /// Optional controller for bounded, decoded image-backed Heatmap tiles.
+  ///
+  /// The controller remains the sole owner of acquisition, caching, and
+  /// disposal. The chart borrows its immutable mounted snapshot for paint.
+  final HeatmapRasterViewportController? heatmapRasterViewportController;
+
+  /// Opacity applied to image-backed Heatmap tiles.
+  final double heatmapRasterOpacity;
+
+  /// Sampling quality used when raster tiles are scaled by the viewport.
+  final ui.FilterQuality heatmapRasterFilterQuality;
+
   /// Widget to display while loading data.
   ///
   /// When provided, this replaces the indicator selected by [loadingConfig].
@@ -1239,6 +1257,14 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Cursor and viewport capabilities for this grouped chart.
   final ChartInteractionGroupOptions interactionGroupOptions;
+
+  /// Optional bounded Cartesian viewport restored by the Home and R shortcuts.
+  ///
+  /// When null, reset fits the chart's complete configured data domain. Supply
+  /// this when that domain is conceptual or remotely backed and only a bounded
+  /// resident window can be rendered at once. The restored bounds are emitted
+  /// through the normal viewport callback and synchronization group.
+  final ChartBoundsDocument? resetViewportBounds;
 
   /// Called when a series is deselected (tap again or tap empty space).
   final void Function(String seriesId)? onSeriesDeselected;
@@ -1686,6 +1712,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     widget.liveStreamController?.effectiveDataRevision.addListener(
       _onLiveDocumentSourceChanged,
     );
+    widget.heatmapRasterViewportController?.addListener(
+      _onHeatmapRasterViewportChanged,
+    );
 
     // Initialize internal annotation controller if user didn't provide one
     // This allows static annotations to be editable/draggable
@@ -1893,6 +1922,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
 
+    if (widget.heatmapRasterViewportController !=
+        oldWidget.heatmapRasterViewportController) {
+      oldWidget.heatmapRasterViewportController?.removeListener(
+        _onHeatmapRasterViewportChanged,
+      );
+      widget.heatmapRasterViewportController?.addListener(
+        _onHeatmapRasterViewportChanged,
+      );
+      _rebuildElements();
+    }
+
     if (widget.bravenChartController != oldWidget.bravenChartController) {
       oldWidget.bravenChartController?.detach(this);
       widget.bravenChartController?.attach(
@@ -2001,6 +2041,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.polarChartConfig != oldWidget.polarChartConfig ||
         widget.radialBarChartConfig != oldWidget.radialBarChartConfig ||
         widget.gaugeChartConfig != oldWidget.gaugeChartConfig ||
+        widget.heatmapRasterOpacity != oldWidget.heatmapRasterOpacity ||
+        widget.heatmapRasterFilterQuality !=
+            oldWidget.heatmapRasterFilterQuality ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
@@ -2032,6 +2075,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       !identical(widget.annotationController, oldWidget.annotationController) ||
       !identical(widget.controller, oldWidget.controller) ||
       !identical(widget.liveStreamController, oldWidget.liveStreamController) ||
+      !identical(
+        widget.heatmapRasterViewportController,
+        oldWidget.heatmapRasterViewportController,
+      ) ||
+      widget.heatmapRasterOpacity != oldWidget.heatmapRasterOpacity ||
+      widget.heatmapRasterFilterQuality !=
+          oldWidget.heatmapRasterFilterQuality ||
       widget.theme != oldWidget.theme ||
       widget.xAxisConfig != oldWidget.xAxisConfig ||
       widget.yAxis != oldWidget.yAxis ||
@@ -2127,6 +2177,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     widget.liveStreamController?.effectiveDataRevision.removeListener(
       _onLiveDocumentSourceChanged,
     );
+    widget.heatmapRasterViewportController?.removeListener(
+      _onHeatmapRasterViewportChanged,
+    );
     _effectiveAnnotationController?.removeListener(
       _onAnnotationControllerUpdate,
     );
@@ -2182,6 +2235,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     setState(() {
       _rebuildElements(detectIncomingAnimations: true);
     });
+  }
+
+  void _onHeatmapRasterViewportChanged() {
+    if (!mounted) return;
+    setState(_rebuildElements);
+    _scheduleEffectiveDocumentRevisionPublish();
   }
 
   bool get _autoScrollEnabled {
@@ -2453,7 +2512,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       return;
     }
 
-    renderBox.resetView();
+    final resetBounds = widget.resetViewportBounds;
+    final restoredBoundedViewport =
+        resetBounds != null &&
+        renderBox.restoreVisibleDataBounds(
+          xMin: resetBounds.xMin,
+          xMax: resetBounds.xMax,
+          yMin: resetBounds.yMin,
+          yMax: resetBounds.yMax,
+          notifyViewportChanged: true,
+        );
+    if (!restoredBoundedViewport) {
+      renderBox.resetView();
+    }
     if (_activeScatterClusterDrillSeriesId != null && mounted) {
       setState(() => _activeScatterClusterDrillSeriesId = null);
     }
@@ -2541,8 +2612,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final liveController = includeDirectStream
         ? widget.liveStreamController
         : null;
+    final baseSeries = <ChartSeries>[...widget.series];
+    final rasterSemanticSeries =
+        widget.heatmapRasterViewportController?.snapshot.semanticSeries;
+    if (rasterSemanticSeries != null) {
+      if (baseSeries.any((series) => series.id == rasterSemanticSeries.id)) {
+        throw StateError(
+          'Heatmap raster semantic series id "${rasterSemanticSeries.id}" '
+          'collides with a caller-provided chart series id',
+        );
+      }
+      baseSeries.add(rasterSemanticSeries);
+    }
     return ResolvedChartData.resolve(
-      baseSeries: widget.series,
+      baseSeries: baseSeries,
       hiddenSeriesIds: _hiddenSeriesIds,
       controllerSeries: widget.controller?.getAllSeries(),
       controllerRevision: widget.controller?.revision ?? 0,
@@ -2588,6 +2671,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   _ChartEffectiveRevisionToken _captureEffectiveRevisionToken() {
     final live = widget.liveStreamController;
+    final rasterSnapshot = widget.heatmapRasterViewportController?.snapshot;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     final transform = renderBox?.transform;
@@ -2619,6 +2703,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         ),
         _effectiveAnnotationController?.selectedAnnotationId,
         _legendCustomPosition,
+        rasterSnapshot?.generation ?? 0,
+        rasterSnapshot?.isLoading ?? false,
+        Object.hashAll(
+          rasterSnapshot?.mountedTiles.map((tile) => tile.key) ?? const [],
+        ),
+        rasterSnapshot?.semanticCells.length ?? 0,
       ),
     );
   }
@@ -3240,6 +3330,27 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       annotations: _resolveEffectiveAnnotations(),
     );
 
+    final rasterController = widget.heatmapRasterViewportController;
+    if (rasterController != null) {
+      final rasterBounds = rasterController.source.domain.fullBounds;
+      final hasFiniteSeriesData = _effectiveDataSeries.any(
+        (series) => series.points.any((point) => point.isValid),
+      );
+      dataBounds = hasFiniteSeriesData
+          ? DataBounds(
+              xMin: math.min(dataBounds.xMin, rasterBounds.minimumX),
+              xMax: math.max(dataBounds.xMax, rasterBounds.maximumX),
+              yMin: math.min(dataBounds.yMin, rasterBounds.minimumY),
+              yMax: math.max(dataBounds.yMax, rasterBounds.maximumY),
+            )
+          : DataBounds(
+              xMin: rasterBounds.minimumX,
+              xMax: rasterBounds.maximumX,
+              yMin: rasterBounds.minimumY,
+              yMax: rasterBounds.maximumY,
+            );
+    }
+
     final configuredCategoryXAxis = widget.xAxisConfig?.categoryAxis;
     var configuredCategoryYAxis = widget.yAxis?.categoryAxis;
     var configuredCategoryYMin = widget.yAxis?.min;
@@ -3357,6 +3468,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Removed excessive debugPrint (element generator executing)
 
       // Generate series elements from effective series (with streaming data)
+      final rasterSnapshot = widget.heatmapRasterViewportController?.snapshot;
       final List<ChartElement> elements;
       if (_layoutKind == ChartLayoutKind.partitionRadial) {
         elements = _buildRadialElements(transform);
@@ -3398,8 +3510,25 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                   ?.selection
                   .completeSeriesSelectionStrokeScale ??
               1.5,
+          suppressedBasePaintSeriesIds: {
+            if (rasterSnapshot?.semanticSeries case final semanticSeries?)
+              semanticSeries.id,
+          },
           textDirection: _textDirection,
         ).cast<ChartElement>().toList();
+      }
+
+      if (_layoutKind == ChartLayoutKind.cartesian &&
+          rasterSnapshot != null &&
+          rasterSnapshot.hasMountedTiles) {
+        elements.add(
+          HeatmapRasterElement(
+            snapshot: rasterSnapshot,
+            transform: transform,
+            opacity: widget.heatmapRasterOpacity,
+            filterQuality: widget.heatmapRasterFilterQuality,
+          ),
+        );
       }
 
       // Convert annotations to elements
@@ -10561,7 +10690,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           : _effectiveDataSeries.any(
               (series) => series.points.any((point) => point.isValid),
             );
-      final mustKeepRenderBoxMounted = widget.liveStreamController != null;
+      final mustKeepRenderBoxMounted =
+          widget.liveStreamController != null ||
+          widget.heatmapRasterViewportController != null;
       if (!hasData && !mustKeepRenderBoxMounted) {
         content = ChartEmptyStateView(
           key: const ValueKey<String>('braven_chart_empty_state'),

@@ -369,10 +369,69 @@ full-domain X/Y axis bounds keep pan and zoom stable while resident points
 change. No future, transport, or cache mutation enters `ChartRenderBox`; the
 existing Heatmap index remains the only renderer-side culling path.
 
-Workbench Data, Split, Source, CSV, capture, and artifacts describe the current
-resident snapshot. The provider and conceptual non-resident cells are not
-serialized. See the `Massive matrix` preset on the Heatmap showcase for a
-24-million-cell procedural domain with resident-cell and cache diagnostics.
+Workbench Data, Split, Source, CSV, capture, and previews describe the current
+resident snapshot. Artifacts may additionally opt into a portable
+`HeatmapViewportProviderDescriptor`: it records only a stable provider ID,
+target series ID, JSON-safe arguments, and the initial viewport. The provider,
+credentials, transport, cache, subscriptions, mutations, and conceptual
+non-resident cells are never serialized.
+
+Register the matching host factory explicitly when hydrating the artifact:
+
+```dart
+final bindings = ChartRuntimeBindings(
+  heatmapViewportProviders: HeatmapViewportProviderRegistry(
+    factories: {
+      'app.telemetry.matrix.v1': (descriptor, residentTemplate) {
+        return HeatmapViewportProviderRuntime(
+          controller: HeatmapViewportController(
+            source: telemetrySourceFor(descriptor.arguments),
+          ),
+        );
+      },
+    },
+  ),
+);
+```
+
+An unregistered provider fails closed with `runtime_binding_required`.
+Hydration creates a fresh runtime for each mounted chart, loads the descriptor's
+initial viewport, forwards later viewport changes, and disposes an owned
+controller. Home or R restores that bounded initial viewport rather than
+requesting the complete conceptual axis domain. Provider load failures retain
+the last resident snapshot. See the `Massive matrix` preset on the Heatmap
+showcase for a 24-million-cell procedural domain with resident-cell, cache, and
+portable-provider diagnostics.
+
+Image-backed tiles are a separate presentation path rather than an alternate
+encoding of `HeatmapDataPoint`. The host owns acquisition and decode, while
+`HeatmapRasterViewportController` owns byte-budgeted caching, generation
+ordering, atomic mounted snapshots, fallback retention, and exact-once
+disposal. `BravenChartPlus.heatmapRasterViewportController` borrows the
+controller's immutable mounted snapshot and paints each ready
+`HeatmapRasterImageResource` at its finite source-space bounds under the
+ordinary Cartesian transform and plot clip. The renderer never loads, caches,
+or disposes a resource. `heatmapRasterOpacity` and
+`heatmapRasterFilterQuality` control only the borrowed paint presentation.
+Exact cell interaction, accessibility, Workbench Data/Source, and export
+remain available only from bounded canonical cells supplied alongside the
+pixels. `HeatmapRasterSemanticDescriptor` turns those host aggregates into one
+ordinary immutable resident `HeatmapChartSeries`; the same series is the
+truthful generated-Dart and `cell` fallback surface.
+
+Portable raster artifacts opt in with one
+`HeatmapRasterViewportProviderDescriptor`. It contains provider/layer identity,
+a bounded initial viewport, JSON-safe source arguments, raster presentation,
+and an explicit `cell` or `hardFailure` fallback. The host registers a fresh
+runtime factory through
+`ChartRuntimeBindings.heatmapRasterViewportProviders`. Raster bytes, decoded
+handles, caches, transports, credentials, callbacks, and mutation history do
+not enter the document. See the `Raster tiles` preset for a 512-million-cell
+deep-signal spectrogram whose initial viewport mounts 12 decoded tiles and
+1,536 bounded semantic aggregates; pan, zoom, reset, Workbench, and portable
+provider metadata all use the standard Cartesian contracts.
+The complete decision boundary and implementation gates are recorded in
+[`2026-08-02-heatmap-image-backed-tile-boundary-design.md`](../docs/superpowers/specs/2026-08-02-heatmap-image-backed-tile-boundary-design.md).
 
 ## Advanced analysis and hierarchy composition
 
@@ -435,6 +494,7 @@ table below calls out a narrower contract.
 | Irregular cells | Explicit rectangles retain exact cell identity and participate in the same semantics and hit-testing contract | Bounded indexed query over 10,000 explicit rectangles | `Irregular cells` |
 | Calendar empty values | Finite zero cells remain selectable and independently styled; missing cells remain absent | Retained renderer checks preserve zero/missing identity | `Contribution calendar` |
 | Viewport-backed matrix | Only the current immutable resident snapshot enters rendering, semantics, Workbench, and artifacts; non-resident conceptual cells are intentionally absent | 100 moving windows over a conceptual 24-million-cell source, bounded to 12,288 resident cells | `Massive matrix` |
+| Image-backed raster tiles | Decoded images are controller-owned and borrowed for clipped Cartesian paint; exact data, semantics, and artifacts require a separate canonical companion | Six independently decoded tiles spanning one 96 x 48 source domain | `Raster tiles` |
 
 The focused benchmark sources live under `test/benchmarks`, while widget-level
 assistive behavior is covered by
@@ -448,9 +508,11 @@ on the target device and release renderer.
 The core Heatmap renderer does not aggregate raw samples, estimate density,
 cluster rows or columns, or own dendrogram layout. Those remain explicit
 preparation and host-composition steps. It supports axis-aligned rectangular
-cells, host-owned regular-matrix tile loading, and multiple independently
-scaled Heatmap series, but does not stream cell mutations or image tiles,
-support arbitrary cell polygons, or implement
+cells, host-owned regular-matrix tile loading and mutation, and multiple
+independently scaled Heatmap series. Image-backed tiles can provide a bounded
+Cartesian presentation layer, but they do not infer semantic cells from pixels
+and are not yet portable-provider hydrated. Heatmap does not support arbitrary
+cell polygons or implement
 treemap, mosaic, vector-field, and geographic chart families.
 
 The regression envelope currently covers deterministic clustering of a

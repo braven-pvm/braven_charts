@@ -171,7 +171,7 @@ void main() {
       expect(controller.snapshot.cacheTileCount, 2);
     });
 
-    test('publishes every resident cell for an all-cache viewport', () async {
+    test('reuses every resident cell for an all-cache viewport', () async {
       final source = _ProceduralTileSource();
       final controller = HeatmapViewportController(
         source: source,
@@ -203,8 +203,49 @@ void main() {
       ]);
       expect(controller.snapshot.cells, hasLength(200));
       expect(source.totalLoads, 2);
-      expect(controller.diagnostics.cacheHits, 2);
+      expect(controller.diagnostics.cacheHits, 0);
+      expect(controller.diagnostics.residentSnapshotReuses, 1);
     });
+
+    test(
+      'reuses immutable resident cells while moving inside one tile set',
+      () async {
+        final source = _ProceduralTileSource();
+        final controller = HeatmapViewportController(
+          source: source,
+          overscanColumns: 0,
+          overscanRows: 0,
+        );
+        addTearDown(controller.dispose);
+
+        const firstViewport = HeatmapViewportRequest(
+          minimumX: -0.4,
+          maximumX: 19.4,
+          minimumY: -0.4,
+          maximumY: 9.4,
+        );
+        const shiftedViewport = HeatmapViewportRequest(
+          minimumX: 0.6,
+          maximumX: 18.6,
+          minimumY: 0.2,
+          maximumY: 8.8,
+        );
+        await controller.loadViewport(firstViewport);
+        final residentCells = controller.snapshot.cells;
+        final loadingStates = <bool>[];
+        controller.addListener(() {
+          loadingStates.add(controller.snapshot.isLoading);
+        });
+
+        await controller.loadViewport(shiftedViewport);
+
+        expect(controller.snapshot.viewport, shiftedViewport);
+        expect(identical(controller.snapshot.cells, residentCells), isTrue);
+        expect(source.totalLoads, 2);
+        expect(controller.diagnostics.residentSnapshotReuses, 1);
+        expect(loadingStates, const [false]);
+      },
+    );
 
     test(
       'deduplicates in-flight loads and rejects stale publication',

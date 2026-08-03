@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../braven_chart_plus.dart';
@@ -17,6 +20,8 @@ import '../models/gauge_center_builder.dart';
 import '../models/gauge_chart_config.dart';
 import '../models/gauge_chart_series.dart';
 import '../models/interaction_config.dart';
+import '../models/heatmap_chart_series.dart';
+import '../models/heatmap_viewport_source.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
@@ -40,6 +45,8 @@ import 'chart_runtime_bindings.dart';
 import 'chart_series_document_codec.dart';
 import 'chart_theme_document_codec.dart';
 import 'chart_view_state.dart';
+import 'heatmap_viewport_provider_binding.dart';
+import 'heatmap_raster_viewport_provider_binding.dart';
 import 'json_value.dart';
 
 /// Controls theme and durable-view-state behavior during hydration.
@@ -76,6 +83,9 @@ class HydratedChartConfiguration {
     required this.normalizationMode,
     required this.backgroundColor,
     required this.runtimeBindings,
+    Iterable<HeatmapViewportProviderDescriptor> heatmapViewportProviders =
+        const [],
+    this.heatmapRasterViewportProvider,
     this.viewState,
     this.title,
     this.subtitle,
@@ -87,7 +97,8 @@ class HydratedChartConfiguration {
     this.gaugeChartConfig,
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
-       axes = List.unmodifiable(axes);
+       axes = List.unmodifiable(axes),
+       heatmapViewportProviders = List.unmodifiable(heatmapViewportProviders);
 
   /// Fresh immutable series models ready for [BravenChartPlus].
   final List<ChartSeries> series;
@@ -110,6 +121,12 @@ class HydratedChartConfiguration {
 
   /// Explicit host behavior used by the restored chart.
   final ChartRuntimeBindings runtimeBindings;
+
+  /// Portable provider descriptors resolved by [runtimeBindings] per mount.
+  final List<HeatmapViewportProviderDescriptor> heatmapViewportProviders;
+
+  /// Portable image-backed provider resolved by [runtimeBindings] per mount.
+  final HeatmapRasterViewportProviderDescriptor? heatmapRasterViewportProvider;
 
   /// Captured view state, unless disabled by [ChartHydrationOptions].
   final ChartViewState? viewState;
@@ -181,6 +198,9 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
   late AnnotationController _annotationController;
   late BravenChartController _bravenController;
   late bool _ownsBravenController;
+  late List<ChartSeries> _runtimeSeries;
+  final Map<String, _MountedHeatmapViewportProvider> _heatmapProviders = {};
+  _MountedHeatmapRasterViewportProvider? _heatmapRasterProvider;
 
   @override
   void initState() {
@@ -190,6 +210,7 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
     );
     _ownsBravenController = widget.bravenChartController == null;
     _bravenController = widget.bravenChartController ?? BravenChartController();
+    _initializeHeatmapProviders();
     _scheduleViewStateRestore();
   }
 
@@ -209,6 +230,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       _annotationController = AnnotationController(
         initialAnnotations: widget.configuration.annotations,
       );
+      _disposeHeatmapProviders();
+      _initializeHeatmapProviders();
       restoreState = true;
     }
     if (restoreState) _scheduleViewStateRestore();
@@ -221,8 +244,136 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
     });
   }
 
+  void _initializeHeatmapProviders() {
+    _runtimeSeries = widget.configuration.series;
+    final registry =
+        widget.configuration.runtimeBindings.heatmapViewportProviders;
+    for (final descriptor in widget.configuration.heatmapViewportProviders) {
+      final template = widget.configuration.series
+          .whereType<HeatmapChartSeries>()
+          .singleWhere((series) => series.id == descriptor.seriesId);
+      final factory = registry.resolve(descriptor.providerId)!;
+      final runtime = factory(descriptor, template);
+      final mounted = _MountedHeatmapViewportProvider(
+        descriptor: descriptor,
+        template: template,
+        runtime: runtime,
+      );
+      _heatmapProviders[descriptor.seriesId] = mounted;
+      runtime.controller.addListener(_handleHeatmapProviderChanged);
+    }
+    final rasterDescriptor = widget.configuration.heatmapRasterViewportProvider;
+    if (rasterDescriptor != null) {
+      final rasterRegistry =
+          widget.configuration.runtimeBindings.heatmapRasterViewportProviders;
+      final rasterFactory = rasterRegistry.resolve(rasterDescriptor.providerId);
+      if (rasterFactory != null) {
+        final semanticTemplate = rasterDescriptor.semanticSeriesId == null
+            ? null
+            : widget.configuration.series
+                  .whereType<HeatmapChartSeries>()
+                  .singleWhere(
+                    (series) => series.id == rasterDescriptor.semanticSeriesId,
+                  );
+        final runtime = rasterFactory(rasterDescriptor, semanticTemplate);
+        final runtimeSemanticId =
+            runtime.controller.semanticDescriptor?.seriesId;
+        if (runtimeSemanticId != rasterDescriptor.semanticSeriesId) {
+          throw StateError(
+            'Heatmap raster provider "${rasterDescriptor.providerId}" '
+            'returned semantic series "$runtimeSemanticId"; expected '
+            '"${rasterDescriptor.semanticSeriesId}".',
+          );
+        }
+        _heatmapRasterProvider = _MountedHeatmapRasterViewportProvider(
+          descriptor: rasterDescriptor,
+          runtime: runtime,
+        );
+      }
+    }
+    _materializeHeatmapProviderSeries();
+    if (_heatmapProviders.isNotEmpty || _heatmapRasterProvider != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        for (final provider in _heatmapProviders.values) {
+          unawaited(
+            provider.runtime.controller.loadViewport(
+              provider.descriptor.initialViewport,
+            ),
+          );
+        }
+        if (_heatmapRasterProvider case final provider?) {
+          unawaited(
+            provider.runtime.controller.loadViewport(
+              provider.descriptor.initialViewport,
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  void _handleHeatmapProviderChanged() {
+    if (!mounted) return;
+    setState(_materializeHeatmapProviderSeries);
+  }
+
+  void _materializeHeatmapProviderSeries() {
+    final rasterSemanticSeriesId =
+        _heatmapRasterProvider?.descriptor.semanticSeriesId;
+    _runtimeSeries = [
+      for (final series in widget.configuration.series)
+        // A mounted raster controller supplies the refreshed semantic
+        // companion. Keeping the captured fallback would collide with that
+        // canonical series ID inside BravenChartPlus.
+        if (series.id != rasterSemanticSeriesId)
+          if (_heatmapProviders[series.id] case final provider?)
+            _materializeProviderSeries(provider)
+          else
+            series,
+    ];
+  }
+
+  ChartSeries _materializeProviderSeries(
+    _MountedHeatmapViewportProvider provider,
+  ) {
+    final snapshot = provider.runtime.controller.snapshot;
+    if (snapshot.generation == 0 || snapshot.cells.isEmpty) {
+      return provider.template;
+    }
+    return snapshot.materializeSeries(provider.template);
+  }
+
+  void _handleProviderViewportChanged(Map<String, double> visibleBounds) {
+    widget.configuration.interaction.onViewportChanged?.call(visibleBounds);
+    final request = HeatmapViewportRequest.fromVisibleBounds(visibleBounds);
+    for (final provider in _heatmapProviders.values) {
+      provider.runtime.controller.requestViewport(request);
+    }
+    if (_heatmapRasterProvider case final provider?) {
+      unawaited(provider.runtime.controller.loadViewport(request));
+    }
+  }
+
+  void _disposeHeatmapProviders() {
+    for (final provider in _heatmapProviders.values) {
+      provider.runtime.controller.removeListener(_handleHeatmapProviderChanged);
+      if (provider.runtime.disposeController) {
+        provider.runtime.controller.dispose();
+      }
+    }
+    _heatmapProviders.clear();
+    if (_heatmapRasterProvider case final provider?) {
+      if (provider.runtime.disposeController) {
+        provider.runtime.controller.dispose();
+      }
+      _heatmapRasterProvider = null;
+    }
+  }
+
   @override
   void dispose() {
+    _disposeHeatmapProviders();
     _annotationController.dispose();
     if (_ownsBravenController) _bravenController.dispose();
     super.dispose();
@@ -232,15 +383,41 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
   Widget build(BuildContext context) {
     final config = widget.configuration;
     final bindings = config.runtimeBindings;
+    final providerInitialViewport =
+        _heatmapRasterProvider?.descriptor.initialViewport ??
+        (_heatmapProviders.isEmpty
+            ? null
+            : _heatmapProviders.values.first.descriptor.initialViewport);
+    final hasViewportProvider =
+        _heatmapProviders.isNotEmpty || _heatmapRasterProvider != null;
+    final interaction = !hasViewportProvider
+        ? config.interaction
+        : config.interaction.copyWith(
+            onViewportChanged: _handleProviderViewportChanged,
+          );
     return BravenChartPlus(
       key: ObjectKey(_runtimeIdentity),
-      series: config.series,
+      series: _runtimeSeries,
+      heatmapRasterViewportController:
+          _heatmapRasterProvider?.runtime.controller,
+      heatmapRasterOpacity: _heatmapRasterProvider?.descriptor.opacity ?? 1,
+      heatmapRasterFilterQuality: _rasterFilterQuality(
+        _heatmapRasterProvider?.descriptor.filterQuality,
+      ),
       annotationController: _annotationController,
       bravenChartController: _bravenController,
       xAxisConfig: config.xAxis,
       yAxis: config.primaryYAxis,
       theme: config.theme,
-      interactionConfig: config.interaction,
+      interactionConfig: interaction,
+      resetViewportBounds: providerInitialViewport == null
+          ? null
+          : ChartBoundsDocument(
+              xMin: providerInitialViewport.minimumX,
+              xMax: providerInitialViewport.maximumX,
+              yMin: providerInitialViewport.minimumY,
+              yMax: providerInitialViewport.maximumY,
+            ),
       grid: config.grid,
       legendStyle: config.legendStyle,
       showLegend: config.showLegend,
@@ -263,8 +440,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       height: config.height,
       title: config.title,
       subtitle: config.subtitle,
-      showXScrollbar: config.interaction.showXScrollbar,
-      showYScrollbar: config.interaction.showYScrollbar,
+      showXScrollbar: interaction.showXScrollbar,
+      showYScrollbar: interaction.showYScrollbar,
       onPointTap: bindings.onPointTap,
       onPointHover: bindings.onPointHover,
       onBackgroundTap: bindings.onBackgroundTap,
@@ -275,6 +452,37 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
     );
   }
 }
+
+final class _MountedHeatmapViewportProvider {
+  const _MountedHeatmapViewportProvider({
+    required this.descriptor,
+    required this.template,
+    required this.runtime,
+  });
+
+  final HeatmapViewportProviderDescriptor descriptor;
+  final HeatmapChartSeries template;
+  final HeatmapViewportProviderRuntime runtime;
+}
+
+final class _MountedHeatmapRasterViewportProvider {
+  const _MountedHeatmapRasterViewportProvider({
+    required this.descriptor,
+    required this.runtime,
+  });
+
+  final HeatmapRasterViewportProviderDescriptor descriptor;
+  final HeatmapRasterViewportProviderRuntime runtime;
+}
+
+ui.FilterQuality _rasterFilterQuality(
+  HeatmapRasterProviderFilterQuality? quality,
+) => switch (quality ?? HeatmapRasterProviderFilterQuality.low) {
+  HeatmapRasterProviderFilterQuality.none => ui.FilterQuality.none,
+  HeatmapRasterProviderFilterQuality.low => ui.FilterQuality.low,
+  HeatmapRasterProviderFilterQuality.medium => ui.FilterQuality.medium,
+  HeatmapRasterProviderFilterQuality.high => ui.FilterQuality.high,
+};
 
 /// Pure artifact/document hydration into supported public chart models.
 abstract final class ChartDocumentHydrator {
@@ -300,6 +508,8 @@ abstract final class ChartDocumentHydrator {
     'series.heatmap',
     'series.heatmap.cell.v1',
     'series.heatmap.color-scale.v1',
+    HeatmapViewportProviderDescriptor.capabilityId,
+    HeatmapRasterViewportProviderDescriptor.capabilityId,
     'series.candlestick',
     'series.candlestick.ohlc.v1',
     'series.candlestick.motion.v1',
@@ -598,6 +808,18 @@ abstract final class ChartDocumentHydrator {
             index,
           ),
       ];
+      final heatmapViewportProviders = _decodeHeatmapViewportProviders(
+        document,
+        series,
+        runtimeBindings,
+      );
+      final heatmapRasterViewportProvider =
+          _decodeHeatmapRasterViewportProvider(
+            document,
+            series,
+            heatmapViewportProviders,
+            runtimeBindings,
+          );
       final annotations = [
         for (final item in document.annotations)
           _decodeAnnotation(item, runtimeBindings.extensions, warnings),
@@ -732,6 +954,8 @@ abstract final class ChartDocumentHydrator {
               ? theme.backgroundColor
               : Color(layout.backgroundColor!),
           runtimeBindings: runtimeBindings,
+          heatmapViewportProviders: heatmapViewportProviders,
+          heatmapRasterViewportProvider: heatmapRasterViewportProvider,
           viewState: options.restoreViewState ? viewState : null,
           title: document.title,
           subtitle: document.subtitle,
@@ -776,6 +1000,217 @@ abstract final class ChartDocumentHydrator {
       ChartAxisDocumentCodec.decodeYAxis(document, formatter: formatter),
       warnings,
     );
+  }
+
+  static List<HeatmapViewportProviderDescriptor>
+  _decodeHeatmapViewportProviders(
+    ChartDocument document,
+    List<ChartSeries> series,
+    ChartRuntimeBindings runtimeBindings,
+  ) {
+    final raw = document.configuration.values['heatmapViewportProviders'];
+    final declaresCapability = document.requiredCapabilities.contains(
+      HeatmapViewportProviderDescriptor.capabilityId,
+    );
+    if (raw == null) {
+      if (declaresCapability) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap viewport provider capability requires provider descriptors.',
+            path: r'$.document.configuration.heatmapViewportProviders',
+          ),
+          [],
+        );
+      }
+      return const [];
+    }
+    if (!declaresCapability) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+          message:
+              'Heatmap viewport provider descriptors require series.heatmap.viewport-provider.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (raw is! JsonArrayValue) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Heatmap viewport providers must be an array.',
+          path: r'$.document.configuration.heatmapViewportProviders',
+        ),
+        [],
+      );
+    }
+    final seriesById = {for (final item in series) item.id: item};
+    final seenSeriesIds = <String>{};
+    final descriptors = <HeatmapViewportProviderDescriptor>[];
+    for (var index = 0; index < raw.values.length; index++) {
+      final value = raw.values[index];
+      if (value is! JsonObjectValue) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message: 'Heatmap viewport provider must be an object.',
+            path:
+                r'$.document.configuration.heatmapViewportProviders['
+                '$index]',
+          ),
+          const [],
+        );
+      }
+      final descriptor = HeatmapViewportProviderDescriptor.fromDocument(value);
+      if (!seenSeriesIds.add(descriptor.seriesId)) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap series "${descriptor.seriesId}" has more than one viewport provider.',
+            path:
+                r'$.document.configuration.heatmapViewportProviders['
+                '$index].seriesId',
+          ),
+          const [],
+        );
+      }
+      if (seriesById[descriptor.seriesId] is! HeatmapChartSeries) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap viewport provider target "${descriptor.seriesId}" is not a decoded Heatmap series.',
+            path:
+                r'$.document.configuration.heatmapViewportProviders['
+                '$index].seriesId',
+          ),
+          const [],
+        );
+      }
+      if (!runtimeBindings.heatmapViewportProviders.contains(
+        descriptor.providerId,
+      )) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+            message:
+                'Heatmap viewport provider "${descriptor.providerId}" is not registered by the host.',
+            path:
+                r'$.document.configuration.heatmapViewportProviders['
+                '$index].providerId',
+          ),
+          const [],
+        );
+      }
+      descriptors.add(descriptor);
+    }
+    return List.unmodifiable(descriptors);
+  }
+
+  static HeatmapRasterViewportProviderDescriptor?
+  _decodeHeatmapRasterViewportProvider(
+    ChartDocument document,
+    List<ChartSeries> series,
+    List<HeatmapViewportProviderDescriptor> cellProviders,
+    ChartRuntimeBindings runtimeBindings,
+  ) {
+    final raw = document.configuration.values['heatmapRasterViewportProvider'];
+    final declaresCapability = document.requiredCapabilities.contains(
+      HeatmapRasterViewportProviderDescriptor.capabilityId,
+    );
+    if (raw == null) {
+      if (declaresCapability) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap raster provider capability requires a provider descriptor.',
+            path: r'$.document.configuration.heatmapRasterViewportProvider',
+          ),
+          [],
+        );
+      }
+      return null;
+    }
+    if (!declaresCapability) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+          message:
+              'Heatmap raster provider descriptor requires series.heatmap.raster-provider.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (raw is! JsonObjectValue) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Heatmap raster viewport provider must be an object.',
+          path: r'$.document.configuration.heatmapRasterViewportProvider',
+        ),
+        [],
+      );
+    }
+
+    final descriptor = HeatmapRasterViewportProviderDescriptor.fromDocument(
+      raw,
+    );
+    final semanticSeriesId = descriptor.semanticSeriesId;
+    if (semanticSeriesId != null) {
+      final target = series.where(
+        (candidate) => candidate.id == semanticSeriesId,
+      );
+      if (target.length != 1 || target.single is! HeatmapChartSeries) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap raster semantic target "$semanticSeriesId" is not one decoded Heatmap series.',
+            path:
+                r'$.document.configuration.heatmapRasterViewportProvider.semanticSeriesId',
+          ),
+          const [],
+        );
+      }
+      if (cellProviders.any(
+        (provider) => provider.seriesId == semanticSeriesId,
+      )) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Heatmap series "$semanticSeriesId" cannot use cell and raster viewport providers together.',
+            path:
+                r'$.document.configuration.heatmapRasterViewportProvider.semanticSeriesId',
+          ),
+          const [],
+        );
+      }
+    }
+
+    final hasRuntime = runtimeBindings.heatmapRasterViewportProviders.contains(
+      descriptor.providerId,
+    );
+    if (!hasRuntime &&
+        descriptor.fallback == HeatmapRasterProviderFallback.hardFailure) {
+      throw _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+          message:
+              'Heatmap raster viewport provider "${descriptor.providerId}" is not registered by the host.',
+          path:
+              r'$.document.configuration.heatmapRasterViewportProvider.providerId',
+        ),
+        const [],
+      );
+    }
+    return descriptor;
   }
 
   static ChartSeries _decodeSeries(

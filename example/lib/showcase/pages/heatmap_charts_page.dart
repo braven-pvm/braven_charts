@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ enum _HeatmapPreset {
   smallMultiples,
   dense,
   viewportSource,
+  rasterTiles,
 }
 
 enum _HeatmapPalette { ocean, forest, sunset, viridis, graphite }
@@ -38,6 +40,8 @@ enum _ContourDetail { coarse, detailed }
 enum _ContourGeometry { exact, smooth }
 
 enum _ClusterFocus { full, primary, secondary }
+
+enum _RasterReviewState { idle, loading, ready, retainedFallback, failed }
 
 class HeatmapChartsPage extends StatefulWidget {
   const HeatmapChartsPage({super.key});
@@ -59,6 +63,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
   _ProceduralMassiveHeatmapSource? _viewportSource;
   HeatmapViewportController? _viewportController;
   ChartInteractionGroupController? _viewportGroupController;
+  _ProceduralRasterHeatmapSource? _rasterSource;
+  HeatmapRasterViewportController? _rasterController;
+  ChartInteractionGroupController? _rasterGroupController;
+  Timer? _rasterViewportTimer;
   Timer? _viewportMutationTimer;
   bool _streamViewportMutations = false;
   int _viewportMutationRevision = 0;
@@ -346,14 +354,19 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     }
     if (_preset == _HeatmapPreset.viewportSource) {
       _ensureViewportSource();
+    } else if (_preset == _HeatmapPreset.rasterTiles) {
+      _ensureRasterSource();
     }
   }
 
   @override
   void dispose() {
     _viewportMutationTimer?.cancel();
+    _rasterViewportTimer?.cancel();
     _viewportController?.dispose();
     _viewportGroupController?.dispose();
+    _rasterController?.dispose();
+    _rasterGroupController?.dispose();
     _chartController.dispose();
     _workbenchController.dispose();
     super.dispose();
@@ -378,6 +391,184 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _resetMassiveViewport(loadImmediately: true);
   }
 
+  void _ensureRasterSource() {
+    if (_rasterController != null) return;
+    final source = _ProceduralRasterHeatmapSource();
+    final controller = HeatmapRasterViewportController(
+      source: source,
+      semanticDescriptor: HeatmapRasterSemanticDescriptor(
+        seriesId: 'raster-spectrogram-resident',
+        name: 'Visible spectrogram aggregates',
+        unit: '%',
+        metadata: const {
+          'aggregation': 'sampled-mean',
+          'semanticColumnsPerTile': 16,
+          'semanticRowsPerTile': 8,
+        },
+        colorScale: source.semanticColorScale,
+      ),
+      maxCachedTiles: 48,
+      maxDecodedBytes: 8 * 1024 * 1024,
+      maxTilesPerViewport: 24,
+    );
+    final groupController = ChartInteractionGroupController();
+    _rasterSource = source;
+    _rasterController = controller;
+    _rasterGroupController = groupController;
+    controller.addListener(_handleRasterSnapshotChanged);
+    final viewport = _initialRasterViewport(source);
+    groupController.setViewport(
+      ChartXViewport(min: viewport.minimumX, max: viewport.maximumX),
+    );
+    unawaited(controller.loadViewport(viewport));
+  }
+
+  HeatmapViewportRequest _initialRasterViewport(
+    _ProceduralRasterHeatmapSource source,
+  ) {
+    final finalTileColumn =
+        (source.domain.columnCount - 1) ~/ source.tileColumnCount;
+    final firstTileColumn = math.max(0, finalTileColumn - 2);
+    final firstColumn = firstTileColumn * source.tileColumnCount;
+    return HeatmapViewportRequest(
+      minimumX:
+          source.domain.xForColumn(firstColumn) - source.domain.cellWidth / 2,
+      maximumX: source.domain.fullBounds.maximumX,
+      minimumY: source.domain.fullBounds.minimumY,
+      maximumY: source.domain.fullBounds.maximumY,
+    );
+  }
+
+  HeatmapViewportRequest _rasterReviewViewport(
+    _ProceduralRasterHeatmapSource source, {
+    required int tileWindowsBeforeLatest,
+  }) {
+    final finalTileColumn =
+        (source.domain.columnCount - 1) ~/ source.tileColumnCount;
+    final finalWindowStart = math.max(0, finalTileColumn - 2);
+    final firstTileColumn = math.max(
+      0,
+      finalWindowStart - tileWindowsBeforeLatest * 3,
+    );
+    final firstColumn = firstTileColumn * source.tileColumnCount;
+    final finalColumnExclusive = math.min(
+      source.domain.columnCount,
+      (firstTileColumn + 3) * source.tileColumnCount,
+    );
+    return HeatmapViewportRequest(
+      minimumX:
+          source.domain.xForColumn(firstColumn) - source.domain.cellWidth / 2,
+      maximumX:
+          source.domain.xForColumn(finalColumnExclusive - 1) +
+          source.domain.cellWidth / 2,
+      minimumY: source.domain.fullBounds.minimumY,
+      maximumY: source.domain.fullBounds.maximumY,
+    );
+  }
+
+  Future<void> _reviewRasterLoading() async {
+    final source = _rasterSource;
+    final controller = _rasterController;
+    if (source == null || controller == null) return;
+    source.delayNextBatch(const Duration(milliseconds: 650));
+    final viewport = _rasterReviewViewport(source, tileWindowsBeforeLatest: 1);
+    await _loadRasterViewportAndAdopt(viewport);
+  }
+
+  Future<void> _reviewRasterRetainedFailure() async {
+    final source = _rasterSource;
+    final controller = _rasterController;
+    if (source == null || controller == null) return;
+    source
+      ..delayNextBatch(const Duration(milliseconds: 320))
+      ..failNextLoad();
+    final viewport = _rasterReviewViewport(source, tileWindowsBeforeLatest: 2);
+    await _loadRasterViewportAndAdopt(viewport);
+  }
+
+  Future<void> _retryRasterViewport() async {
+    final controller = _rasterController;
+    final viewport = controller?.snapshot.requestedViewport;
+    if (controller == null || viewport == null) return;
+    await _loadRasterViewportAndAdopt(viewport);
+  }
+
+  Future<void> _returnRasterToLatest() async {
+    final source = _rasterSource;
+    if (source == null) return;
+    final viewport = _initialRasterViewport(source);
+    await _loadRasterViewportAndAdopt(viewport);
+  }
+
+  Future<void> _loadRasterViewportAndAdopt(
+    HeatmapViewportRequest viewport,
+  ) async {
+    final controller = _rasterController;
+    final groupController = _rasterGroupController;
+    if (controller == null || groupController == null) return;
+    await controller.loadViewport(viewport);
+    if (!mounted) return;
+    final snapshot = controller.snapshot;
+    if (snapshot.error != null || snapshot.mountedViewport != viewport) return;
+    groupController.setViewport(
+      ChartXViewport(min: viewport.minimumX, max: viewport.maximumX),
+    );
+  }
+
+  ChartBoundsDocument? get _rasterResetViewportBounds {
+    final source = _rasterSource;
+    if (source == null) return null;
+    final viewport = _initialRasterViewport(source);
+    return ChartBoundsDocument(
+      xMin: viewport.minimumX,
+      xMax: viewport.maximumX,
+      yMin: viewport.minimumY,
+      yMax: viewport.maximumY,
+    );
+  }
+
+  HeatmapRasterViewportProviderDescriptor?
+  get _rasterViewportProviderDescriptor {
+    final source = _rasterSource;
+    if (source == null) return null;
+    return HeatmapRasterViewportProviderDescriptor(
+      providerId: 'showcase.deep-signal-spectrogram.v1',
+      layerId: 'deep-signal-spectrogram',
+      semanticSeriesId: 'raster-spectrogram-resident',
+      initialViewport: _initialRasterViewport(source),
+      fallback: HeatmapRasterProviderFallback.cell,
+      filterQuality: HeatmapRasterProviderFilterQuality.low,
+      arguments: {
+        'matrixColumns': JsonNumberValue(source.domain.columnCount),
+        'matrixRows': JsonNumberValue(source.domain.rowCount),
+        'tileColumns': JsonNumberValue(source.tileColumnCount),
+        'tileRows': JsonNumberValue(source.tileRowCount),
+        'semanticColumnsPerTile': JsonNumberValue(
+          source.semanticColumnsPerTile,
+        ),
+        'semanticRowsPerTile': JsonNumberValue(source.semanticRowsPerTile),
+      },
+    );
+  }
+
+  void _handleRasterViewportChanged(Map<String, double> visibleBounds) {
+    final controller = _rasterController;
+    if (controller == null) return;
+    final viewport = HeatmapViewportRequest.fromVisibleBounds(visibleBounds);
+    final snapshot = controller.snapshot;
+    if (!snapshot.isLoading && snapshot.mountedViewport == viewport) return;
+    _rasterViewportTimer?.cancel();
+    _rasterViewportTimer = Timer(
+      const Duration(milliseconds: 55),
+      () => unawaited(controller.loadViewport(viewport)),
+    );
+  }
+
+  void _handleRasterSnapshotChanged() {
+    if (!mounted || _preset != _HeatmapPreset.rasterTiles) return;
+    setState(() {});
+  }
+
   void _handleViewportSnapshotChanged() {
     if (!mounted || _preset != _HeatmapPreset.viewportSource) return;
     setState(() {});
@@ -388,14 +579,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     final controller = _viewportController;
     final groupController = _viewportGroupController;
     if (source == null || controller == null || groupController == null) return;
-    final maximumX = source.domain.fullBounds.maximumX;
-    final minimumX = maximumX - 300;
-    final viewport = HeatmapViewportRequest(
-      minimumX: minimumX,
-      maximumX: maximumX,
-      minimumY: source.domain.fullBounds.minimumY,
-      maximumY: source.domain.fullBounds.maximumY,
-    );
+    final viewport = _initialMassiveViewport(source);
     groupController.setViewport(
       ChartXViewport(min: viewport.minimumX, max: viewport.maximumX),
     );
@@ -404,6 +588,47 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     } else {
       controller.requestViewport(viewport);
     }
+  }
+
+  HeatmapViewportRequest _initialMassiveViewport(
+    _ProceduralMassiveHeatmapSource source,
+  ) {
+    final maximumX = source.domain.fullBounds.maximumX;
+    return HeatmapViewportRequest(
+      minimumX: maximumX - 300,
+      maximumX: maximumX,
+      minimumY: source.domain.fullBounds.minimumY,
+      maximumY: source.domain.fullBounds.maximumY,
+    );
+  }
+
+  HeatmapViewportProviderDescriptor? get _massiveViewportProviderDescriptor {
+    final source = _viewportSource;
+    if (source == null) return null;
+    return HeatmapViewportProviderDescriptor(
+      providerId: 'showcase.heatmap.procedural-matrix.v1',
+      seriesId: 'heatmap-viewport-source',
+      initialViewport: _initialMassiveViewport(source),
+      arguments: {
+        'model': const JsonStringValue('procedural-signal-v1'),
+        'columnCount': JsonNumberValue(source.domain.columnCount),
+        'rowCount': JsonNumberValue(source.domain.rowCount),
+        'tileColumnCount': JsonNumberValue(source.tileColumnCount),
+        'tileRowCount': JsonNumberValue(source.tileRowCount),
+      },
+    );
+  }
+
+  ChartBoundsDocument? get _massiveResetViewportBounds {
+    final source = _viewportSource;
+    if (source == null) return null;
+    final viewport = _initialMassiveViewport(source);
+    return ChartBoundsDocument(
+      xMin: viewport.minimumX,
+      xMax: viewport.maximumX,
+      yMin: viewport.minimumY,
+      yMax: viewport.maximumY,
+    );
   }
 
   void _handleMassiveViewportChanged(Map<String, double> visibleBounds) {
@@ -529,6 +754,10 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                     const SizedBox(height: 12),
                     _buildViewportSourceStatus(),
                   ],
+                  if (_preset == _HeatmapPreset.rasterTiles) ...[
+                    const SizedBox(height: 12),
+                    _buildRasterSourceStatus(),
+                  ],
                   if (_preset == _HeatmapPreset.selection) ...[
                     const SizedBox(height: 12),
                     AnimatedBuilder(
@@ -586,18 +815,31 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                               documentId: 'heatmap-${_preset.name}-showcase',
                               includeViewState: true,
                               dataStorage: ChartDataStorage.inlineColumns,
-                              interactionBindingDescriptors:
-                                  _preset == _HeatmapPreset.viewportSource
+                              interactionBindingDescriptors: switch (_preset) {
+                                _HeatmapPreset.viewportSource => {
+                                  ChartInteractionDocumentCodec
+                                      .viewportChangedBinding: JsonObjectValue(
+                                    const {
+                                      'id': JsonStringValue(
+                                        'showcase.heatmap.viewport-source.viewportChanged',
+                                      ),
+                                    },
+                                  ),
+                                },
+                                _ => const {},
+                              },
+                              heatmapViewportProviderDescriptors:
+                                  _preset == _HeatmapPreset.viewportSource &&
+                                      _massiveViewportProviderDescriptor != null
                                   ? {
-                                      ChartInteractionDocumentCodec
-                                              .viewportChangedBinding:
-                                          JsonObjectValue(const {
-                                            'id': JsonStringValue(
-                                              'showcase.heatmap.viewportSource.viewportChanged',
-                                            ),
-                                          }),
+                                      'heatmap-viewport-source':
+                                          _massiveViewportProviderDescriptor!,
                                     }
                                   : const {},
+                              heatmapRasterViewportProviderDescriptor:
+                                  _preset == _HeatmapPreset.rasterTiles
+                                  ? _rasterViewportProviderDescriptor
+                                  : null,
                             ),
                             tableOptions: const ChartTableOptions(
                               includeMetadata: true,
@@ -655,6 +897,38 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                     ? Icons.stop_circle_outlined
                     : Icons.play_circle_outline,
                 onPressed: _toggleViewportMutationStream,
+              ),
+            ],
+          ),
+        if (_preset == _HeatmapPreset.rasterTiles)
+          OptionSection(
+            key: const ValueKey('heatmap-raster-review-options'),
+            title: 'Raster lifecycle',
+            icon: Icons.image_outlined,
+            children: [
+              ActionButton(
+                key: const ValueKey('heatmap-raster-review-loading'),
+                label: 'Review retained loading',
+                icon: Icons.hourglass_top_outlined,
+                onPressed: () => unawaited(_reviewRasterLoading()),
+              ),
+              ActionButton(
+                key: const ValueKey('heatmap-raster-review-failure'),
+                label: 'Review retained failure',
+                icon: Icons.cloud_off_outlined,
+                onPressed: () => unawaited(_reviewRasterRetainedFailure()),
+              ),
+              ActionButton(
+                key: const ValueKey('heatmap-raster-retry'),
+                label: 'Retry requested window',
+                icon: Icons.refresh_outlined,
+                onPressed: () => unawaited(_retryRasterViewport()),
+              ),
+              ActionButton(
+                key: const ValueKey('heatmap-raster-return-latest'),
+                label: 'Return to latest window',
+                icon: Icons.last_page_outlined,
+                onPressed: () => unawaited(_returnRasterToLatest()),
               ),
             ],
           ),
@@ -1669,17 +1943,35 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       key: ValueKey('heatmap-chart-${_preset.name}'),
       bravenChartController: controller,
       series: _chartSeries,
-      interactionGroupController: _preset == _HeatmapPreset.viewportSource
-          ? _viewportGroupController
+      heatmapRasterViewportController: _preset == _HeatmapPreset.rasterTiles
+          ? _rasterController
           : null,
+      heatmapRasterFilterQuality: ui.FilterQuality.low,
+      interactionGroupController: switch (_preset) {
+        _HeatmapPreset.viewportSource => _viewportGroupController,
+        _HeatmapPreset.rasterTiles => _rasterGroupController,
+        _ => null,
+      },
       interactionGroupOptions: const ChartInteractionGroupOptions(
         synchronizeCursor: false,
         synchronizeViewport: true,
         synchronizeSelection: false,
       ),
+      resetViewportBounds: switch (_preset) {
+        _HeatmapPreset.viewportSource => _massiveResetViewportBounds,
+        _HeatmapPreset.rasterTiles => _rasterResetViewportBounds,
+        _ => null,
+      },
       showLegend: false,
       grid: const GridConfig(horizontal: false, vertical: false),
-      xAxisConfig: _preset == _HeatmapPreset.viewportSource
+      xAxisConfig: _preset == _HeatmapPreset.rasterTiles
+          ? XAxisConfig(
+              label: 'Acquisition sample',
+              min: _rasterSource?.domain.fullBounds.minimumX ?? -0.5,
+              max: _rasterSource?.domain.fullBounds.maximumX ?? 999999.5,
+              tickCount: 7,
+            )
+          : _preset == _HeatmapPreset.viewportSource
           ? XAxisConfig(
               label: 'Source column',
               min: _viewportSource?.domain.fullBounds.minimumX ?? -0.5,
@@ -1713,7 +2005,15 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                 minimumCategoryExtent: 42,
               ),
             ),
-      yAxis: _preset == _HeatmapPreset.viewportSource
+      yAxis: _preset == _HeatmapPreset.rasterTiles
+          ? YAxisConfig(
+              position: YAxisPosition.left,
+              label: 'Frequency bin',
+              min: _rasterSource?.domain.fullBounds.minimumY ?? -0.5,
+              max: _rasterSource?.domain.fullBounds.maximumY ?? 511.5,
+              tickCount: 7,
+            )
+          : _preset == _HeatmapPreset.viewportSource
           ? YAxisConfig(
               position: YAxisPosition.left,
               label: 'Signal row',
@@ -1759,9 +2059,11 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
         enablePan:
             !showsClusterHierarchy && _preset != _HeatmapPreset.selection,
         enableSelection: _preset == _HeatmapPreset.selection,
-        onViewportChanged: _preset == _HeatmapPreset.viewportSource
-            ? _handleMassiveViewportChanged
-            : null,
+        onViewportChanged: switch (_preset) {
+          _HeatmapPreset.viewportSource => _handleMassiveViewportChanged,
+          _HeatmapPreset.rasterTiles => _handleRasterViewportChanged,
+          _ => null,
+        },
         selection: _preset == _HeatmapPreset.selection
             ? ChartSelectionConfig(
                 acquisitionMode: ChartSelectionAcquisitionMode.rectangle,
@@ -1810,7 +2112,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
             rampExtent: 210,
             onValueFilterChanged: _updateColourAxisFilter,
           )
-        else
+        else if (heatmapSeries.isNotEmpty)
           HeatmapColorLegend(series: heatmapSeries.single),
       ],
     );
@@ -1862,9 +2164,17 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                 value: '${diagnostics.loadsStarted} / ${diagnostics.cacheHits}',
               ),
               _ViewportMetric(
+                label: 'Resident reuses',
+                value: '${diagnostics.residentSnapshotReuses}',
+              ),
+              _ViewportMetric(
                 label: 'Generation',
                 value:
                     '${snapshot.generation}${snapshot.isLoading ? ' · loading' : ''}',
+              ),
+              const _ViewportMetric(
+                label: 'Portable provider',
+                value: 'procedural-matrix.v1',
               ),
               _ViewportMetric(
                 label: 'Live revision',
@@ -1882,8 +2192,104 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
           const SizedBox(height: 8),
           Text(
             error == null
-                ? 'Pan or zoom to request bounded tiles, or start the live stream to patch resident cells through ordered mutation batches. Data, Split, and Source expose only the current immutable snapshot.'
+                ? 'Pan or zoom to request bounded tiles, or start the live stream to patch resident cells through ordered mutation batches. The artifact carries a portable provider descriptor; Data and Source still expose only the current immutable resident snapshot.'
                 : '$error · Narrow the viewport or return to the latest window.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: error == null
+                  ? theme.colorScheme.onSurfaceVariant
+                  : theme.colorScheme.onErrorContainer,
+              fontWeight: error == null ? null : FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRasterSourceStatus() {
+    final source = _rasterSource;
+    final controller = _rasterController;
+    if (source == null || controller == null) return const SizedBox.shrink();
+    final snapshot = controller.snapshot;
+    final diagnostics = snapshot.diagnostics;
+    final theme = Theme.of(context);
+    final error = snapshot.error;
+    final reviewState = switch ((
+      snapshot.isLoading,
+      snapshot.hasMountedTiles,
+      error != null,
+    )) {
+      (true, _, _) => _RasterReviewState.loading,
+      (false, true, true) => _RasterReviewState.retainedFallback,
+      (false, false, true) => _RasterReviewState.failed,
+      (false, true, false) => _RasterReviewState.ready,
+      _ => _RasterReviewState.idle,
+    };
+    final reviewLabel = switch (reviewState) {
+      _RasterReviewState.idle => 'Idle',
+      _RasterReviewState.loading =>
+        snapshot.hasMountedTiles
+            ? 'Loading · previous viewport retained'
+            : 'Loading',
+      _RasterReviewState.ready => 'Ready',
+      _RasterReviewState.retainedFallback => 'Retained fallback',
+      _RasterReviewState.failed => 'Failed · no mounted viewport',
+    };
+    return Container(
+      key: const ValueKey('heatmap-raster-source-status'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: error == null
+            ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.45)
+            : theme.colorScheme.errorContainer.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _ViewportMetric(label: 'State', value: reviewLabel),
+              _ViewportMetric(
+                label: 'Logical signal',
+                value: '${source.logicalCellCount ~/ 1000000}M samples',
+              ),
+              _ViewportMetric(
+                label: 'Mounted tiles',
+                value:
+                    '${snapshot.mountedTiles.length}/${snapshot.requestedTileKeys.length}',
+              ),
+              _ViewportMetric(
+                label: 'Decoded cache',
+                value:
+                    '${(diagnostics.decodedCacheBytes / (1024 * 1024)).toStringAsFixed(1)} MiB',
+              ),
+              _ViewportMetric(
+                label: 'Semantic cells',
+                value: '${snapshot.semanticCells.length}',
+              ),
+              _ViewportMetric(
+                label: 'Loads / hits',
+                value: '${diagnostics.loadsStarted} / ${diagnostics.cacheHits}',
+              ),
+              _ViewportMetric(
+                label: 'Generation',
+                value:
+                    '${snapshot.generation}${snapshot.isLoading ? ' · loading' : ''}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            snapshot.isLoading && snapshot.hasMountedTiles
+                ? 'The requested viewport is loading while the last complete raster and semantic companion remain mounted. Publication is atomic; the chart never shows a partial tile batch.'
+                : error == null
+                ? 'A 512-channel, one-million-sample spectrogram is decoded only for the visible time window. Each tile also carries bounded, honest aggregate cells for tooltips, selection, accessibility, Data, and Source; no semantic value is inferred from pixels.'
+                : snapshot.hasMountedTiles
+                ? '$error · The previous complete viewport remains interactive. Retry the requested window or return to latest.'
+                : '$error · No complete viewport has mounted; the artifact-defined cell fallback remains available to a hydrated host.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: error == null
                   ? theme.colorScheme.onSurfaceVariant
@@ -2535,6 +2941,11 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                   'Massive matrix',
                   Icons.dataset_outlined,
                 ),
+                _choice(
+                  _HeatmapPreset.rasterTiles,
+                  'Raster tiles',
+                  Icons.image_outlined,
+                ),
               ],
             ),
             const SizedBox(height: 9),
@@ -2572,6 +2983,8 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                   'A 30,000-cell sparse field paints and hits only the visible viewport.',
                 _HeatmapPreset.viewportSource =>
                   'A host-owned async tile source keeps a 24-million-cell matrix bounded to the current resident viewport.',
+                _HeatmapPreset.rasterTiles =>
+                  'A massive spectrogram stays bounded to decoded image tiles for the current Cartesian viewport.',
               },
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -2594,6 +3007,8 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
         }
         if (preset == _HeatmapPreset.viewportSource) {
           _ensureViewportSource();
+        } else if (preset == _HeatmapPreset.rasterTiles) {
+          _ensureRasterSource();
         }
         setState(() {
           _preset = preset;
@@ -2605,6 +3020,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
               preset != _HeatmapPreset.contours &&
               preset != _HeatmapPreset.dense &&
               preset != _HeatmapPreset.viewportSource &&
+              preset != _HeatmapPreset.rasterTiles &&
               preset != _HeatmapPreset.contributions;
           if (preset == _HeatmapPreset.contributions) {
             _palette = _HeatmapPalette.forest;
@@ -2823,7 +3239,9 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     ];
   }
 
-  List<ChartSeries> get _chartSeries => _preset == _HeatmapPreset.colourAxes
+  List<ChartSeries> get _chartSeries => _preset == _HeatmapPreset.rasterTiles
+      ? const []
+      : _preset == _HeatmapPreset.colourAxes
       ? _colourAxisSeries
       : [
           _series,
@@ -3395,6 +3813,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       _HeatmapPreset.smallMultiples => const <List<double>>[],
       _HeatmapPreset.dense => const <List<double>>[],
       _HeatmapPreset.viewportSource => const <List<double>>[],
+      _HeatmapPreset.rasterTiles => const <List<double>>[],
     };
     return [
       for (var row = 0; row < values.length; row++)
@@ -3614,6 +4033,14 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       unit: '%',
       showLegend: _showColorLegend,
     ),
+    _HeatmapPreset.rasterTiles => HeatmapColorScale.sequential(
+      colors: _sequentialColors,
+      minimumValue: 0,
+      maximumValue: 100,
+      label: 'Raster intensity',
+      unit: '%',
+      showLegend: false,
+    ),
   };
 
   String get _title => switch (_preset) {
@@ -3633,6 +4060,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _HeatmapPreset.smallMultiples => 'Service latency by time window',
     _HeatmapPreset.dense => 'Dense signal viewport',
     _HeatmapPreset.viewportSource => 'Viewport-backed massive matrix',
+    _HeatmapPreset.rasterTiles => 'Deep signal spectrogram',
   };
 
   String get _subtitle => switch (_preset) {
@@ -3669,6 +4097,8 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       '30,000 source positions · sparse gaps · viewport-indexed rendering',
     _HeatmapPreset.viewportSource =>
       '24,000,000 conceptual cells · async tiles · bounded resident snapshot',
+    _HeatmapPreset.rasterTiles =>
+      '512,000,000 logical samples · image-backed viewport tiles · Cartesian pan and zoom',
   };
 
   List<String> get _rowLabels => switch (_preset) {
@@ -3714,6 +4144,7 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
     _HeatmapPreset.smallMultiples => const ['Mon', 'Tue', 'Wed', 'Thu'],
     _HeatmapPreset.dense => const [],
     _HeatmapPreset.viewportSource => const [],
+    _HeatmapPreset.rasterTiles => const [],
   };
 
   List<String> get _columnLabels => switch (_preset) {
@@ -4111,6 +4542,254 @@ class _ProceduralMassiveHeatmapSource implements HeatmapTileSource {
     return (50 + primary * 25 + secondary * 16 + pulse * 9)
         .clamp(0, 100)
         .toDouble();
+  }
+}
+
+class _ProceduralRasterHeatmapSource implements HeatmapRasterTileSource {
+  static const int _imageWidth = 256;
+  static const int _imageHeight = 128;
+  static const int _semanticColumnsPerTile = 16;
+  static const int _semanticRowsPerTile = 8;
+  static const List<Color> _colors = [
+    Color(0xFF071D49),
+    Color(0xFF0E7490),
+    Color(0xFF22D3EE),
+    Color(0xFFFDE68A),
+    Color(0xFFF97316),
+  ];
+
+  @override
+  final HeatmapMatrixDomain domain = HeatmapMatrixDomain(
+    columnCount: 1000000,
+    rowCount: 512,
+  );
+
+  int get logicalCellCount => domain.columnCount * domain.rowCount;
+
+  int get semanticColumnsPerTile => _semanticColumnsPerTile;
+
+  int get semanticRowsPerTile => _semanticRowsPerTile;
+
+  int _delayedLoadsRemaining = 0;
+  Duration _nextBatchDelay = Duration.zero;
+  bool _failNextLoad = false;
+
+  void delayNextBatch(Duration delay) {
+    _nextBatchDelay = delay;
+    _delayedLoadsRemaining = 24;
+  }
+
+  void failNextLoad() => _failNextLoad = true;
+
+  HeatmapColorScale get semanticColorScale => HeatmapColorScale.sequential(
+    colors: _colors,
+    minimumValue: 0,
+    maximumValue: 100,
+    label: 'Signal intensity',
+    unit: '%',
+    showLegend: false,
+  );
+
+  @override
+  int get tileColumnCount => 8192;
+
+  @override
+  int get tileRowCount => 128;
+
+  @override
+  Future<HeatmapRasterTile> loadTile(HeatmapTileRequest request) async {
+    final delayed = _delayedLoadsRemaining > 0;
+    if (delayed) _delayedLoadsRemaining--;
+    await Future<void>.delayed(
+      delayed ? _nextBatchDelay : const Duration(milliseconds: 18),
+    );
+    if (_failNextLoad) {
+      _failNextLoad = false;
+      throw StateError(
+        'Review failure: the upstream spectrogram tile was unavailable',
+      );
+    }
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    final paint = ui.Paint();
+
+    for (var imageRow = 0; imageRow < _imageHeight; imageRow++) {
+      final row =
+          request.rowStart +
+          ((imageRow + 0.5) * request.rowCount / _imageHeight).floor();
+      for (var imageColumn = 0; imageColumn < _imageWidth; imageColumn++) {
+        final column =
+            request.columnStart +
+            ((imageColumn + 0.5) * request.columnCount / _imageWidth).floor();
+        final value = _valueAt(column, row);
+        paint.color = _colorAt(value);
+        canvas.drawRect(
+          ui.Rect.fromLTWH(
+            imageColumn.toDouble(),
+            (_imageHeight - imageRow - 1).toDouble(),
+            1,
+            1,
+          ),
+          paint,
+        );
+      }
+    }
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(_imageWidth, _imageHeight);
+    picture.dispose();
+    return HeatmapRasterTile(
+      key: request.key,
+      bounds: HeatmapViewportBounds(
+        minimumX: domain.xForColumn(request.columnStart) - domain.cellWidth / 2,
+        maximumX:
+            domain.xForColumn(request.columnEndExclusive - 1) +
+            domain.cellWidth / 2,
+        minimumY: domain.yForRow(request.rowStart) - domain.cellHeight / 2,
+        maximumY:
+            domain.yForRow(request.rowEndExclusive - 1) + domain.cellHeight / 2,
+      ),
+      resource: HeatmapRasterImageResource(image: image),
+      semanticCells: _semanticCellsFor(request),
+    );
+  }
+
+  List<HeatmapDataPoint> _semanticCellsFor(HeatmapTileRequest request) {
+    final cells = <HeatmapDataPoint>[];
+    for (
+      var semanticRow = 0;
+      semanticRow < _semanticRowsPerTile;
+      semanticRow++
+    ) {
+      final rowStart =
+          request.rowStart +
+          semanticRow * request.rowCount ~/ _semanticRowsPerTile;
+      final rowEndExclusive =
+          request.rowStart +
+          (semanticRow + 1) * request.rowCount ~/ _semanticRowsPerTile;
+      if (rowStart >= rowEndExclusive) continue;
+      for (
+        var semanticColumn = 0;
+        semanticColumn < _semanticColumnsPerTile;
+        semanticColumn++
+      ) {
+        final columnStart =
+            request.columnStart +
+            semanticColumn * request.columnCount ~/ _semanticColumnsPerTile;
+        final columnEndExclusive =
+            request.columnStart +
+            (semanticColumn + 1) *
+                request.columnCount ~/
+                _semanticColumnsPerTile;
+        if (columnStart >= columnEndExclusive) continue;
+        final xMinimum = domain.xForColumn(columnStart) - domain.cellWidth / 2;
+        final xMaximum =
+            domain.xForColumn(columnEndExclusive - 1) + domain.cellWidth / 2;
+        final yMinimum = domain.yForRow(rowStart) - domain.cellHeight / 2;
+        final yMaximum =
+            domain.yForRow(rowEndExclusive - 1) + domain.cellHeight / 2;
+        final value = _aggregateValue(
+          columnStart: columnStart,
+          columnEndExclusive: columnEndExclusive,
+          rowStart: rowStart,
+          rowEndExclusive: rowEndExclusive,
+        );
+        cells.add(
+          HeatmapDataPoint(
+            x: (xMinimum + xMaximum) / 2,
+            y: (yMinimum + yMaximum) / 2,
+            value: value * 100,
+            bounds: HeatmapCellBounds(
+              xMinimum: xMinimum,
+              xMaximum: xMaximum,
+              yMinimum: yMinimum,
+              yMaximum: yMaximum,
+            ),
+            pointKey:
+                'spectrogram-${request.key.column}-${request.key.row}-$semanticColumn-$semanticRow',
+            label:
+                'Samples $columnStart–${columnEndExclusive - 1} · bins $rowStart–${rowEndExclusive - 1}',
+            metadata: {
+              'aggregation': 'sampled-mean',
+              'sourceColumnStart': columnStart,
+              'sourceColumnEndExclusive': columnEndExclusive,
+              'sourceRowStart': rowStart,
+              'sourceRowEndExclusive': rowEndExclusive,
+              'rasterTileColumn': request.key.column,
+              'rasterTileRow': request.key.row,
+            },
+          ),
+        );
+      }
+    }
+    return List.unmodifiable(cells);
+  }
+
+  double _aggregateValue({
+    required int columnStart,
+    required int columnEndExclusive,
+    required int rowStart,
+    required int rowEndExclusive,
+  }) {
+    var total = 0.0;
+    var sampleCount = 0;
+    for (var rowSample = 0; rowSample < 3; rowSample++) {
+      final row = math.min(
+        rowEndExclusive - 1,
+        rowStart +
+            ((rowSample + 0.5) * (rowEndExclusive - rowStart) / 3).floor(),
+      );
+      for (var columnSample = 0; columnSample < 3; columnSample++) {
+        final column = math.min(
+          columnEndExclusive - 1,
+          columnStart +
+              ((columnSample + 0.5) * (columnEndExclusive - columnStart) / 3)
+                  .floor(),
+        );
+        total += _valueAt(column, row);
+        sampleCount++;
+      }
+    }
+    return total / sampleCount;
+  }
+
+  double _valueAt(int column, int row) {
+    final y = row / (domain.rowCount - 1);
+    final time = column / 9500;
+    final primaryFrequency =
+        0.25 + math.sin(time * 0.83) * 0.10 + math.sin(time * 0.17) * 0.08;
+    final secondaryFrequency = 0.62 + math.sin(time * 1.31 + 0.8) * 0.09;
+    final primary = math.exp(-math.pow(y - primaryFrequency, 2) / 0.0018);
+    final harmonic = math.exp(-math.pow(y - secondaryFrequency, 2) / 0.0032);
+    final transientEnvelope = math.pow(
+      math.max(0.0, math.sin(time * 2.4 + 0.6)),
+      8,
+    );
+    final transient =
+        transientEnvelope *
+        math.exp(
+          -math.pow(y - (0.42 + math.sin(time * 0.47) * 0.18), 2) / 0.024,
+        );
+    final lowFrequencyBed = math.exp(-math.pow(y - 0.08, 2) / 0.012);
+    final texture =
+        (math.sin(column * 0.013 + row * 0.19) +
+            math.cos(column * 0.0047 - row * 0.11)) *
+        0.025;
+    return (0.035 +
+            primary * 0.62 +
+            harmonic * 0.38 +
+            transient * 0.55 +
+            lowFrequencyBed * 0.15 +
+            texture)
+        .clamp(0, 1)
+        .toDouble();
+  }
+
+  Color _colorAt(double value) {
+    final scaled = value * (_colors.length - 1);
+    final lower = scaled.floor().clamp(0, _colors.length - 1);
+    final upper = (lower + 1).clamp(0, _colors.length - 1);
+    return Color.lerp(_colors[lower], _colors[upper], scaled - lower)!;
   }
 }
 

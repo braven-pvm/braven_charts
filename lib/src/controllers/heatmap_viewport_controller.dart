@@ -19,6 +19,7 @@ final class HeatmapViewportDiagnostics {
     required this.inFlightJoins,
     required this.loadsStarted,
     required this.stalePublicationsRejected,
+    this.residentSnapshotReuses = 0,
     required this.lastMutationRevision,
     required this.mutationBatchesAccepted,
     required this.staleMutationBatchesIgnored,
@@ -32,6 +33,13 @@ final class HeatmapViewportDiagnostics {
   final int inFlightJoins;
   final int loadsStarted;
   final int stalePublicationsRejected;
+
+  /// Viewport publications that reused the already resident immutable cells.
+  ///
+  /// These requests moved inside the same complete cached tile set, so no
+  /// source load, cell materialization, or loading-state publication was
+  /// required.
+  final int residentSnapshotReuses;
   final int lastMutationRevision;
   final int mutationBatchesAccepted;
   final int staleMutationBatchesIgnored;
@@ -53,6 +61,17 @@ final class HeatmapViewportSnapshot {
     this.stackTrace,
   }) : requestedTiles = List<HeatmapTileKey>.unmodifiable(requestedTiles),
        cells = List<HeatmapDataPoint>.unmodifiable(cells);
+
+  HeatmapViewportSnapshot._retained({
+    required this.generation,
+    required this.viewport,
+    required this.requestedTiles,
+    required this.cells,
+    required this.isLoading,
+    required this.cacheTileCount,
+    required this.diagnostics,
+  }) : error = null,
+       stackTrace = null;
 
   factory HeatmapViewportSnapshot.empty() => HeatmapViewportSnapshot(
     generation: 0,
@@ -184,6 +203,7 @@ final class HeatmapViewportController extends ChangeNotifier {
   int _inFlightJoins = 0;
   int _loadsStarted = 0;
   int _stalePublicationsRejected = 0;
+  int _residentSnapshotReuses = 0;
   int _lastMutationRevision = -1;
   int _mutationBatchesAccepted = 0;
   int _staleMutationBatchesIgnored = 0;
@@ -319,6 +339,28 @@ final class HeatmapViewportController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    final canReuseResidentSnapshot =
+        !_snapshot.isLoading &&
+        !_snapshot.hasError &&
+        listEquals(tileKeys, _snapshot.requestedTiles) &&
+        tileKeys.every(_cache.containsKey) &&
+        !_pendingVisibleInvalidations.any(tileKeys.contains);
+    if (canReuseResidentSnapshot) {
+      _residentSnapshotReuses++;
+      _snapshot = HeatmapViewportSnapshot._retained(
+        generation: generation,
+        viewport: viewport,
+        requestedTiles: _snapshot.requestedTiles,
+        cells: _snapshot.cells,
+        isLoading: false,
+        cacheTileCount: _cache.length,
+        diagnostics: _diagnostics,
+      );
+      notifyListeners();
+      return;
+    }
+
     _snapshot = HeatmapViewportSnapshot(
       generation: generation,
       viewport: viewport,
@@ -641,6 +683,7 @@ final class HeatmapViewportController extends ChangeNotifier {
     inFlightJoins: _inFlightJoins,
     loadsStarted: _loadsStarted,
     stalePublicationsRejected: _stalePublicationsRejected,
+    residentSnapshotReuses: _residentSnapshotReuses,
     lastMutationRevision: _lastMutationRevision,
     mutationBatchesAccepted: _mutationBatchesAccepted,
     staleMutationBatchesIgnored: _staleMutationBatchesIgnored,

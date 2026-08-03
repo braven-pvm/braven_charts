@@ -160,6 +160,9 @@ class RenderOrder {
   /// Range annotations (shaded background regions).
   static const int rangeAnnotation = 0;
 
+  /// Image-backed Cartesian tiles, above ranges but below data series.
+  static const int rasterTile = 1;
+
   // ============================================================================
   // DATA (2-3) - Chart data elements
   // ============================================================================

@@ -70,6 +70,7 @@ class DataConverter {
     double dataPointSelectionScale = 2.67,
     double completeSeriesHoverStrokeScale = 1.75,
     double completeSeriesSelectionStrokeScale = 1.5,
+    Set<String> suppressedBasePaintSeriesIds = const {},
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
     TextDirection textDirection = TextDirection.ltr,
@@ -128,6 +129,7 @@ class DataConverter {
         completeSeriesHoverStrokeScale: completeSeriesHoverStrokeScale,
         completeSeriesSelectionStrokeScale: completeSeriesSelectionStrokeScale,
         textDirection: textDirection,
+        paintBaseSeries: !suppressedBasePaintSeriesIds.contains(s.id),
       );
     }).toList();
   }

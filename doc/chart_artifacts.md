@@ -288,6 +288,24 @@ matching implementation explicitly through `ChartRuntimeBindings`:
 - `ChartTooltipRegistry` resolves tooltip builders.
 - `ChartExtensionRegistry` resolves explicitly registered series, annotation,
   and other extension codecs.
+- `HeatmapViewportProviderRegistry` resolves portable viewport-backed Heatmap
+  provider IDs to fresh host-owned source/controller runtimes. The descriptor
+  may carry JSON-safe query arguments, but never credentials or executable
+  transport behavior.
+- `HeatmapRasterViewportProviderRegistry` resolves one portable image-backed
+  Heatmap layer to a fresh host-owned raster controller. Its descriptor carries
+  only provider/layer identity, a bounded initial viewport, JSON-safe
+  arguments, paint presentation, and a named fallback.
+
+Image-backed Heatmap artifacts do not serialize decoded bytes, `ui.Image`
+handles, tile caches, transports, credentials, callbacks, or controller
+instances. A raster-only chart therefore has no invented Data/Source payload.
+When the provider supplies a bounded semantic companion, the artifact captures
+that one canonical Heatmap series and may declare `cell` fallback; without a
+truthful fallback, an unavailable provider fails with
+`runtime_binding_required`. Generated Dart describes the canonical resident
+cells, while the portable document additionally retains the host-resolvable
+raster-provider descriptor.
 
 An unregistered formatter falls back to its safe fallback pattern and returns a
 warning. An extension or callback that is required but not registered fails

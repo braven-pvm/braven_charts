@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/heatmap_raster_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/heatmap_charts_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -126,6 +128,7 @@ void main() {
       'Small multiples',
       'Dense viewport',
       'Massive matrix',
+      'Raster tiles',
     ]) {
       expect(find.text(label), findsOneWidget);
     }
@@ -170,6 +173,231 @@ void main() {
   });
 
   testWidgets(
+    'Raster tile preset paints a controller-owned Cartesian background',
+    (tester) async {
+      await pumpPage(tester);
+
+      await tester.tap(find.text('Raster tiles'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Deep signal spectrogram'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('heatmap-raster-source-status')),
+        findsOneWidget,
+      );
+      expect(find.text('512M samples'), findsOneWidget);
+      expect(find.text('12/12'), findsOneWidget);
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('heatmap-chart-rasterTiles')),
+      );
+      expect(chart.series, isEmpty);
+      expect(chart.heatmapRasterViewportController, isNotNull);
+      expect(chart.interactionGroupController, isNotNull);
+      expect(chart.resetViewportBounds?.xMin, 983039.5);
+      expect(chart.resetViewportBounds?.xMax, 999999.5);
+      expect(
+        chart.heatmapRasterViewportController!.snapshot.mountedTiles,
+        hasLength(12),
+      );
+      expect(
+        chart.heatmapRasterViewportController!.snapshot.semanticCells,
+        hasLength(1536),
+      );
+      expect(
+        chart.heatmapRasterViewportController!.snapshot.semanticSeries!.id,
+        'raster-spectrogram-resident',
+      );
+      expect(
+        chart.heatmapRasterViewportController!.snapshot.semanticSeries!.points,
+        hasLength(1536),
+      );
+      expect(chart.xAxisConfig?.min, -0.5);
+      expect(chart.xAxisConfig?.max, 999999.5);
+      expect(chart.yAxis?.min, -0.5);
+      expect(chart.yAxis?.max, 511.5);
+
+      final renderBox =
+          find
+                  .descendant(
+                    of: find.byKey(const ValueKey('heatmap-chart-rasterTiles')),
+                    matching: find.byWidgetPredicate(
+                      (widget) =>
+                          widget.runtimeType.toString() == '_ChartRenderWidget',
+                    ),
+                  )
+                  .evaluate()
+                  .single
+                  .renderObject!
+              as ChartRenderBox;
+      renderBox.zoomChart(1.5, animate: false);
+      renderBox.panChart(36, 12);
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(renderBox.transform!.dataXMax, lessThan(999999.5));
+      expect(
+        chart
+            .heatmapRasterViewportController!
+            .snapshot
+            .requestedViewport!
+            .maximumX,
+        lessThan(999999.5),
+      );
+      expect(
+        chart.heatmapRasterViewportController!.snapshot.mountedTiles.length,
+        lessThanOrEqualTo(24),
+      );
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await tester.pumpAndSettle();
+      var workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('heatmap-workbench')),
+      );
+      expect(
+        workbench.workbenchController!.tableState.error,
+        isNull,
+        reason: workbench.workbenchController!.tableState.error == null
+            ? null
+            : '${workbench.workbenchController!.tableState.error!.code}: '
+                  '${workbench.workbenchController!.tableState.error!.message}',
+      );
+      expect(workbench.workbenchController!.tableModel!.series, hasLength(1));
+      expect(
+        workbench.workbenchController!.tableModel!.longRows,
+        hasLength(
+          chart.heatmapRasterViewportController!.snapshot.semanticCells.length,
+        ),
+      );
+      expect(
+        workbench.workbenchController!.tableModel!.rowCount,
+        greaterThan(0),
+      );
+      final rasterProvider =
+          HeatmapRasterViewportProviderDescriptor.fromDocument(
+            workbench
+                    .workbenchController!
+                    .tableSnapshot!
+                    .document
+                    .configuration
+                    .values['heatmapRasterViewportProvider']
+                as JsonObjectValue,
+          );
+      expect(
+        workbench
+            .workbenchController!
+            .tableSnapshot!
+            .document
+            .requiredCapabilities,
+        contains(HeatmapRasterViewportProviderDescriptor.capabilityId),
+      );
+      expect(
+        workbench
+            .workbenchController!
+            .tableSnapshot!
+            .document
+            .interaction
+            .requiredBindings,
+        isEmpty,
+      );
+      expect(rasterProvider.providerId, 'showcase.deep-signal-spectrogram.v1');
+      expect(rasterProvider.fallback, HeatmapRasterProviderFallback.cell);
+      expect(rasterProvider.arguments['matrixColumns']?.toJson(), 1000000);
+      expect(rasterProvider.arguments['matrixRows']?.toJson(), 512);
+      expect(rasterProvider.arguments['semanticColumnsPerTile']?.toJson(), 16);
+
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await tester.pumpAndSettle();
+      workbench = tester.widget<BravenChartWorkbench>(
+        find.byKey(const ValueKey('heatmap-workbench')),
+      );
+      final generated = workbench.workbenchController!.generatedSource!;
+      expect(generated.source, contains("id: 'raster-spectrogram-resident'"));
+      expect(generated.source, contains("'aggregation': 'sampled-mean'"));
+      expect(workbench.workbenchController!.sourceIsStale, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Raster lifecycle keeps the previous viewport through loading and failure',
+    (tester) async {
+      await pumpPage(tester);
+
+      await tester.tap(find.text('Raster tiles'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready'), findsOneWidget);
+
+      HeatmapRasterElement rasterElement() {
+        final renderBox = tester.allRenderObjects
+            .whereType<ChartRenderBox>()
+            .singleWhere(
+              (box) => box.debugElements
+                  .whereType<HeatmapRasterElement>()
+                  .isNotEmpty,
+            );
+        final element = renderBox.debugElements
+            .whereType<HeatmapRasterElement>()
+            .single;
+        expect(
+          element.bounds.overlaps(
+            Rect.fromLTWH(0, 0, renderBox.plotWidth, renderBox.plotHeight),
+          ),
+          isTrue,
+          reason: 'the retained raster must remain inside the visible plot',
+        );
+        return element;
+      }
+
+      final initialElement = rasterElement();
+
+      await tester.tap(find.text('Review retained loading'));
+      await tester.pump();
+      expect(find.text('Loading · previous viewport retained'), findsOneWidget);
+      expect(find.text('12/12'), findsOneWidget);
+      expect(
+        rasterElement().snapshot.mountedViewport,
+        initialElement.snapshot.mountedViewport,
+      );
+      await tester.pump(const Duration(milliseconds: 750));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready'), findsOneWidget);
+
+      final readyElement = rasterElement();
+
+      await tester.tap(find.text('Review retained failure'));
+      await tester.pump();
+      expect(find.text('Loading · previous viewport retained'), findsOneWidget);
+      expect(
+        rasterElement().snapshot.mountedViewport,
+        readyElement.snapshot.mountedViewport,
+      );
+      await tester.pump(const Duration(milliseconds: 420));
+      await tester.pumpAndSettle();
+      expect(find.text('Retained fallback'), findsOneWidget);
+      expect(
+        find.textContaining('upstream spectrogram tile was unavailable'),
+        findsOneWidget,
+      );
+      expect(find.text('12/12'), findsOneWidget);
+      expect(
+        rasterElement().snapshot.mountedViewport,
+        readyElement.snapshot.mountedViewport,
+      );
+
+      await tester.tap(find.text('Retry requested window'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Massive matrix keeps the renderer and Workbench on a bounded snapshot',
     (tester) async {
       await pumpPage(tester);
@@ -183,6 +411,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('24M cells'), findsOneWidget);
+      expect(find.text('Portable provider'), findsOneWidget);
+      expect(find.text('procedural-matrix.v1'), findsOneWidget);
       expect(find.text('Return to latest window'), findsOneWidget);
 
       final chart = tester.widget<BravenChartPlus>(
@@ -224,9 +454,28 @@ void main() {
       expect(renderBox.transform!.dataXMax, closeTo(999999.5, 1e-9));
 
       renderBox.zoomChart(1.5, animate: false);
+      renderBox.panChart(-80, 0);
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 30));
       await tester.pumpAndSettle();
+      expect(
+        find.textContaining('exceeding the configured limit'),
+        findsNothing,
+      );
+      expect(find.textContaining('Bad state:'), findsNothing);
+
+      await tester.tap(
+        find.byKey(const ValueKey('heatmap-chart-viewportSource')),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 30));
+      await tester.pumpAndSettle();
+
+      expect(renderBox.transform!.dataXMin, closeTo(999699.5, 1e-9));
+      expect(renderBox.transform!.dataXMax, closeTo(999999.5, 1e-9));
+      expect(renderBox.transform!.dataYMin, closeTo(-0.5, 1e-9));
+      expect(renderBox.transform!.dataYMax, closeTo(23.5, 1e-9));
       expect(
         find.textContaining('exceeding the configured limit'),
         findsNothing,
@@ -263,6 +512,35 @@ void main() {
       expect(
         table.wideRows.fold<int>(0, (count, row) => count + row.cells.length),
         updatedSeries.points.length,
+      );
+      final document = workbenchController.tableSnapshot!.document;
+      expect(
+        document.requiredCapabilities,
+        contains(HeatmapViewportProviderDescriptor.capabilityId),
+      );
+      final configuration =
+          document.configuration.toJson() as Map<String, Object?>;
+      final providerDocuments =
+          configuration['heatmapViewportProviders']! as List<Object?>;
+      expect(providerDocuments, hasLength(1));
+      expect(
+        providerDocuments.single,
+        isA<Map<String, Object?>>()
+            .having(
+              (value) => value['providerId'],
+              'providerId',
+              'showcase.heatmap.procedural-matrix.v1',
+            )
+            .having(
+              (value) => value['seriesId'],
+              'seriesId',
+              'heatmap-viewport-source',
+            ),
+      );
+      expect(
+        configuration['interactionBindings'],
+        isNull,
+        reason: 'The provider descriptor owns viewport restoration.',
       );
 
       await tester.tap(

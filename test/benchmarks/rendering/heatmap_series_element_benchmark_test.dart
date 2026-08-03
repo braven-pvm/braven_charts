@@ -34,6 +34,26 @@ void main() {
       expect(result.p95Micros, lessThan(_frameBudgetMicros));
     });
 
+    test('viewport-backed matrix resident snapshot stays within one frame', () {
+      final element = _element(
+        columns: 512,
+        rows: 24,
+        transform: _transform(xMin: 211.5, xMax: 511.5, yMin: -0.5, yMax: 23.5),
+        gapFraction: 0.06,
+        cornerRadius: 3,
+      );
+
+      final result = _measure(() => _paint(element));
+
+      _printResult(
+        'Viewport-backed Heatmap (12,288 resident / 300 x 24 viewport)',
+        result,
+        detail: '${element.visibleHeatmapPointIndices.length} paint candidates',
+      );
+      expect(element.visibleHeatmapPointIndices, hasLength(7248));
+      expect(result.p95Micros, lessThan(_frameBudgetMicros));
+    });
+
     test('10K cells with a durable hide filter stay within one frame', () {
       final element = _element(
         columns: 100,
@@ -109,6 +129,8 @@ SeriesElement _element({
   bool showLabels = false,
   HeatmapValueFilter? valueFilter,
   ChartTransform? transform,
+  double gapFraction = 0.04,
+  double cornerRadius = 1.5,
 }) {
   final cells = [
     for (var row = 0; row < rows; row++)
@@ -129,8 +151,8 @@ SeriesElement _element({
       showCellLabels: showLabels,
       valueFilter: valueFilter,
       borderWidth: 0.5,
-      gapFraction: 0.04,
-      cornerRadius: 1.5,
+      gapFraction: gapFraction,
+      cornerRadius: cornerRadius,
     ),
     transform:
         transform ??

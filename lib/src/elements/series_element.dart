@@ -277,6 +277,7 @@ class SeriesElement implements DataHitElement {
     this.completeSeriesHoverStrokeScale = 1.75,
     this.completeSeriesSelectionStrokeScale = 1.5,
     this.textDirection = TextDirection.ltr,
+    this.paintBaseSeries = true,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _isHovered = isHovered,
@@ -366,6 +367,14 @@ class SeriesElement implements DataHitElement {
 
   /// Ambient reading direction used by canvas value labels.
   final TextDirection textDirection;
+
+  /// Whether this element paints its normal data-series presentation.
+  ///
+  /// A raster-backed Heatmap can keep one canonical bounded series for exact
+  /// interaction, accessibility, Data, and Source while a separate raster
+  /// element owns the visible pixels. Interaction overlays remain available
+  /// even when this base presentation is suppressed.
+  final bool paintBaseSeries;
 
   /// Leading-edge reveal progress for path-based Cartesian series.
   final double revealProgress;
@@ -2917,7 +2926,7 @@ class SeriesElement implements DataHitElement {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (series.isEmpty) return;
+    if (series.isEmpty || !paintBaseSeries) return;
 
     final reveal = _effectiveRevealProgress;
     if (reveal <= 0) return;
@@ -7142,6 +7151,7 @@ class SeriesElement implements DataHitElement {
       completeSeriesHoverStrokeScale: completeSeriesHoverStrokeScale,
       completeSeriesSelectionStrokeScale: completeSeriesSelectionStrokeScale,
       textDirection: textDirection,
+      paintBaseSeries: paintBaseSeries,
     );
   }
 }
