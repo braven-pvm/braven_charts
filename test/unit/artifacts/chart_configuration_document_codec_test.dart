@@ -160,6 +160,84 @@ void main() {
   });
 
   group('ChartConfigurationDocumentCodec', () {
+    test('round-trips global and per-series callout configuration', () {
+      const source = SeriesCalloutConfig(
+        enabled: true,
+        showByDefault: false,
+        side: SeriesCalloutSide.left,
+        anchor: SeriesCalloutAnchor.xValue,
+        anchorX: 42,
+        connector: SeriesCalloutConnector.straight,
+        packing: SeriesCalloutPacking.compact,
+        laneWidth: 190,
+        inset: 11,
+        minimumGap: 9,
+        maximumVisible: 7,
+        connectorColor: Color(0xFF0F766E),
+        connectorWidth: 2,
+        connectorOpacity: 0.72,
+        connectorGlow: 6,
+        anchorRadius: 4,
+        labelPadding: EdgeInsets.fromLTRB(10, 6, 12, 7),
+        labelStyle: TextStyle(
+          color: Color(0xFF102030),
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+        backgroundColor: Color(0xFFF8FAFC),
+        backgroundOpacity: 0.88,
+        borderColor: Color(0xFF334155),
+        borderWidth: 1.5,
+        borderRadius: 8,
+        panelBackgroundColor: Color(0xFFEDE9FE),
+        panelOpacity: 0.52,
+        panelBorderColor: Color(0xFF8B5CF6),
+        panelBorderWidth: 2,
+        panelBorderRadius: 10,
+        panelPadding: EdgeInsets.fromLTRB(4, 6, 8, 10),
+        series: {
+          'power': SeriesCalloutSpec(
+            show: true,
+            label: 'Build effort',
+            anchor: SeriesCalloutAnchor.maximumVisible,
+            priority: 10,
+            color: Color(0xFF2563EB),
+            textStyle: TextStyle(fontStyle: FontStyle.italic),
+            backgroundColor: Color(0xFFEFF6FF),
+            borderColor: Color(0xFF60A5FA),
+            connectorWidth: 3,
+            connectorOpacity: 0.65,
+            connectorGlow: 4,
+            backgroundOpacity: 0.76,
+            borderWidth: 2.5,
+            borderRadius: 12,
+          ),
+          'recovery': SeriesCalloutSpec(show: false),
+        },
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodeSeriesCallouts(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodeSeriesCallouts(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('missing callout configuration restores the disabled default', () {
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodeSeriesCallouts(
+          JsonObjectValue({}),
+        ),
+      );
+
+      expect(decoded, const SeriesCalloutConfig());
+    });
+
     test('round-trips complete grid configuration', () {
       const source = GridConfig(
         horizontal: false,

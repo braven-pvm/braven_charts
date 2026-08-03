@@ -10,7 +10,13 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-enum _StylingPattern { appearance, inlineLabels, pointLabels, conditional }
+enum _StylingPattern {
+  appearance,
+  inlineLabels,
+  callouts,
+  pointLabels,
+  conditional,
+}
 
 enum _AppearanceType { line, area }
 
@@ -49,6 +55,39 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
   bool _inlineBackground = true;
   double _inlineBackgroundOpacity = 0.9;
   bool _inlineBorder = false;
+
+  SeriesCalloutSide _calloutSide = SeriesCalloutSide.right;
+  SeriesCalloutAnchor _calloutAnchor = SeriesCalloutAnchor.xValue;
+  SeriesCalloutConnector _calloutConnector = SeriesCalloutConnector.elbow;
+  SeriesCalloutPacking _calloutPacking = SeriesCalloutPacking.followAnchors;
+  double _calloutAnchorX = 44;
+  double _calloutLaneWidth = 152;
+  double _calloutGap = 6;
+  double _calloutFontSize = 11;
+  FontWeight _calloutFontWeight = FontWeight.w600;
+  Color? _calloutTextColor;
+  Color? _calloutBackgroundColor = const Color(0xFFFFFFFF);
+  double _calloutBackgroundOpacity = 0.94;
+  Color? _calloutBorderColor;
+  double _calloutBorderWidth = 1;
+  double _calloutBorderRadius = 5;
+  Color? _calloutConnectorColor;
+  double _calloutConnectorWidth = 1.25;
+  double _calloutConnectorOpacity = 1;
+  double _calloutConnectorGlow = 0;
+  Color? _calloutPanelBackgroundColor = const Color(0xFFF5F3FF);
+  double _calloutPanelOpacity = 0.48;
+  Color? _calloutPanelBorderColor = const Color(0xFFC4B5FD);
+  double _calloutPanelBorderWidth = 1;
+  double _calloutPanelBorderRadius = 8;
+  double _calloutPanelPadding = 6;
+  int _calloutMaximumVisible = 7;
+  bool _hideRecoveryCallout = false;
+  bool _customizeBuildCallout = true;
+  Color? _buildCalloutColor = const Color(0xFF312E81);
+  Color? _buildCalloutBackgroundColor = const Color(0xFFEDE9FE);
+  double _buildCalloutConnectorWidth = 2.5;
+  double _buildCalloutConnectorGlow = 4;
 
   bool _showPointLabels = true;
   DataPointLabelPosition _pointLabelPosition = DataPointLabelPosition.above;
@@ -120,7 +159,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return ChartPageLayout(
       title: 'Series Styling',
       subtitle:
-          'Control whole series, inline labels, data-point labels, and conditional segments or points',
+          'Control whole series, inline and callout labels, data-point labels, and conditional segments or points',
       optionsChildren: _buildOptions(),
       chart: _buildWorkspace(),
       bottomPanel: _buildStatusPanel(),
@@ -176,7 +215,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
       builder: (context, constraints) {
         const gap = 12.0;
         final width = constraints.maxWidth >= 920
-            ? (constraints.maxWidth - gap * 3) / 4
+            ? (constraints.maxWidth - gap * 4) / 5
             : 200.0;
         return SingleChildScrollView(
           key: const ValueKey('series-styling-ribbon'),
@@ -232,6 +271,17 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
         enableZoom: false,
         enablePan: false,
       ),
+      seriesCallouts: pattern == _StylingPattern.callouts
+          ? const SeriesCalloutConfig(
+              enabled: true,
+              anchor: SeriesCalloutAnchor.lastVisible,
+              laneWidth: 70,
+              labelStyle: TextStyle(fontSize: 7, fontWeight: FontWeight.w600),
+              labelPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              minimumGap: 2,
+              anchorRadius: 1.5,
+            )
+          : const SeriesCalloutConfig(),
     );
   }
 
@@ -289,6 +339,9 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
             crosshair: CrosshairConfig.tracking(interpolate: true),
             tooltip: const TooltipConfig(enabled: true),
           ),
+          seriesCallouts: _selectedPattern == _StylingPattern.callouts
+              ? _calloutConfig()
+              : const SeriesCalloutConfig(),
         ),
       ),
     );
@@ -301,10 +354,103 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return switch (pattern) {
       _StylingPattern.appearance => _appearanceSeries(preview: preview),
       _StylingPattern.inlineLabels => _inlineLabelSeries(preview: preview),
+      _StylingPattern.callouts => _calloutSeries(preview: preview),
       _StylingPattern.pointLabels => _pointLabelSeries(preview: preview),
       _StylingPattern.conditional => [_conditionalSeries(preview: preview)],
     };
   }
+
+  List<ChartSeries> _calloutSeries({required bool preview}) {
+    const colors = [
+      _indigo,
+      _red,
+      _green,
+      _orange,
+      Color(0xFF8B5CF6),
+      Color(0xFF0891B2),
+      Color(0xFFE11D8A),
+    ];
+    const names = [
+      'Build',
+      'Capacity',
+      'Readiness',
+      'Demand',
+      'Forecast',
+      'Recovery',
+      'Target',
+    ];
+    return [
+      for (var seriesIndex = 0; seriesIndex < names.length; seriesIndex++)
+        LineChartSeries(
+          id: names[seriesIndex].toLowerCase(),
+          name: names[seriesIndex],
+          color: colors[seriesIndex],
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: preview ? 1 : 2,
+          points: [
+            for (var pointIndex = 0; pointIndex < 14; pointIndex++)
+              ChartDataPoint(
+                x: pointIndex * 5,
+                y:
+                    34 +
+                    seriesIndex * 5.2 +
+                    17 * math.sin(pointIndex * 0.46 + seriesIndex * 0.52) +
+                    pointIndex * 0.8,
+              ),
+          ],
+        ),
+    ];
+  }
+
+  SeriesCalloutConfig _calloutConfig() => SeriesCalloutConfig(
+    enabled: true,
+    side: _calloutSide,
+    anchor: _calloutAnchor,
+    anchorX: _calloutAnchorX,
+    connector: _calloutConnector,
+    packing: _calloutPacking,
+    laneWidth: _calloutLaneWidth,
+    minimumGap: _calloutGap,
+    maximumVisible: _calloutMaximumVisible,
+    connectorColor: _calloutConnectorColor,
+    connectorWidth: _calloutConnectorWidth,
+    connectorOpacity: _calloutConnectorOpacity,
+    connectorGlow: _calloutConnectorGlow,
+    labelStyle: TextStyle(
+      fontSize: _calloutFontSize,
+      fontWeight: _calloutFontWeight,
+      color: _calloutTextColor,
+    ),
+    backgroundColor: _calloutBackgroundColor,
+    backgroundOpacity: _calloutBackgroundOpacity,
+    borderColor: _calloutBorderColor,
+    borderWidth: _calloutBorderWidth,
+    borderRadius: _calloutBorderRadius,
+    panelBackgroundColor: _calloutPanelBackgroundColor,
+    panelOpacity: _calloutPanelOpacity,
+    panelBorderColor: _calloutPanelBorderColor,
+    panelBorderWidth: _calloutPanelBorderWidth,
+    panelBorderRadius: _calloutPanelBorderRadius,
+    panelPadding: EdgeInsets.all(_calloutPanelPadding),
+    series: {
+      'build': SeriesCalloutSpec(
+        label: 'Build · primary',
+        priority: 10,
+        color: _customizeBuildCallout ? _buildCalloutColor : null,
+        backgroundColor: _customizeBuildCallout
+            ? _buildCalloutBackgroundColor
+            : null,
+        connectorWidth: _customizeBuildCallout
+            ? _buildCalloutConnectorWidth
+            : null,
+        connectorGlow: _customizeBuildCallout
+            ? _buildCalloutConnectorGlow
+            : null,
+      ),
+      'target': const SeriesCalloutSpec(priority: 8),
+      'recovery': SeriesCalloutSpec(show: !_hideRecoveryCallout),
+    },
+  );
 
   List<ChartSeries> _appearanceSeries({required bool preview}) {
     final glow = preview ? 3.0 : _lineGlow;
@@ -727,6 +873,332 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
           ],
         ),
       ],
+      _StylingPattern.callouts => [
+        OptionSection(
+          title: 'Callout layout',
+          icon: Icons.label_important_outline,
+          children: [
+            EnumOption<SeriesCalloutSide>(
+              label: 'Label Lane',
+              value: _calloutSide,
+              values: SeriesCalloutSide.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _calloutSide = value),
+            ),
+            EnumOption<SeriesCalloutAnchor>(
+              label: 'Anchor Strategy',
+              value: _calloutAnchor,
+              values: SeriesCalloutAnchor.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _calloutAnchor = value),
+            ),
+            EnumOption<SeriesCalloutPacking>(
+              label: 'Label packing',
+              value: _calloutPacking,
+              values: SeriesCalloutPacking.values,
+              labelBuilder: (value) => switch (value) {
+                SeriesCalloutPacking.followAnchors => 'Follow anchors',
+                SeriesCalloutPacking.compact => 'Compact stack',
+              },
+              onChanged: (value) => setState(() => _calloutPacking = value),
+            ),
+            if (_calloutAnchor == SeriesCalloutAnchor.xValue)
+              SliderOption(
+                label: 'Anchor X',
+                value: _calloutAnchorX,
+                min: 0,
+                max: 65,
+                divisions: 13,
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _calloutAnchorX = value),
+              ),
+            SliderOption(
+              label: 'Lane Width',
+              value: _calloutLaneWidth,
+              min: 92,
+              max: 240,
+              divisions: 37,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _calloutLaneWidth = value),
+            ),
+            SliderOption(
+              label: 'Minimum Gap',
+              value: _calloutGap,
+              min: 0,
+              max: 20,
+              divisions: 20,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _calloutGap = value),
+            ),
+            SliderOption(
+              label: 'Maximum Labels',
+              value: _calloutMaximumVisible.toDouble(),
+              min: 2,
+              max: 7,
+              divisions: 5,
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _calloutMaximumVisible = value.round()),
+            ),
+          ],
+        ),
+        OptionSection(
+          title: 'Label style',
+          icon: Icons.text_fields_outlined,
+          children: [
+            SliderOption(
+              label: 'Font Size',
+              value: _calloutFontSize,
+              min: 8,
+              max: 18,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _calloutFontSize = value),
+            ),
+            EnumOption<FontWeight>(
+              label: 'Font Weight',
+              value: _calloutFontWeight,
+              values: _fontWeights,
+              labelBuilder: _fontWeightLabel,
+              onChanged: (value) => setState(() => _calloutFontWeight = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-text-color',
+              label: 'Text color',
+              subtitle: 'Clear for automatic contrast',
+              value: _calloutTextColor,
+              customColorFallback: Colors.black87,
+              onChanged: (value) => setState(() => _calloutTextColor = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-background-color',
+              label: 'Label background',
+              subtitle: 'Clear to inherit the chart background',
+              value: _calloutBackgroundColor,
+              customColorFallback: Colors.white,
+              onChanged: (value) =>
+                  setState(() => _calloutBackgroundColor = value),
+            ),
+            SliderOption(
+              label: 'Background opacity',
+              value: _calloutBackgroundOpacity,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _calloutBackgroundOpacity = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-border-color',
+              label: 'Label border',
+              subtitle: 'Clear to derive it from the connector color',
+              value: _calloutBorderColor,
+              customColorFallback: _indigo,
+              onChanged: (value) => setState(() => _calloutBorderColor = value),
+            ),
+            SliderOption(
+              label: 'Border width',
+              value: _calloutBorderWidth,
+              min: 0,
+              max: 4,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 2,
+              onChanged: (value) => setState(() => _calloutBorderWidth = value),
+            ),
+            SliderOption(
+              label: 'Corner radius',
+              value: _calloutBorderRadius,
+              min: 0,
+              max: 16,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _calloutBorderRadius = value),
+            ),
+          ],
+        ),
+        OptionSection(
+          title: 'Connectors & lane panel',
+          icon: Icons.polyline_outlined,
+          children: [
+            EnumOption<SeriesCalloutConnector>(
+              label: 'Connector',
+              value: _calloutConnector,
+              values: SeriesCalloutConnector.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _calloutConnector = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-connector-color',
+              label: 'Connector color',
+              subtitle: 'Clear to inherit each series color',
+              value: _calloutConnectorColor,
+              customColorFallback: _indigo,
+              onChanged: (value) =>
+                  setState(() => _calloutConnectorColor = value),
+            ),
+            SliderOption(
+              label: 'Connector width',
+              value: _calloutConnectorWidth,
+              min: 0.5,
+              max: 5,
+              divisions: 18,
+              suffix: 'px',
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _calloutConnectorWidth = value),
+            ),
+            SliderOption(
+              label: 'Connector opacity',
+              value: _calloutConnectorOpacity,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _calloutConnectorOpacity = value),
+            ),
+            SliderOption(
+              label: 'Connector glow',
+              value: _calloutConnectorGlow,
+              min: 0,
+              max: 12,
+              divisions: 24,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) =>
+                  setState(() => _calloutConnectorGlow = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-panel-fill',
+              label: 'Panel background',
+              subtitle: 'Clear for a transparent lane',
+              value: _calloutPanelBackgroundColor,
+              customColorFallback: const Color(0xFFF5F3FF),
+              onChanged: (value) =>
+                  setState(() => _calloutPanelBackgroundColor = value),
+            ),
+            SliderOption(
+              label: 'Panel opacity',
+              value: _calloutPanelOpacity,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _calloutPanelOpacity = value),
+            ),
+            PaletteColorOption(
+              keyPrefix: 'callout-panel-border',
+              label: 'Panel border',
+              subtitle: 'Clear to remove its outline',
+              value: _calloutPanelBorderColor,
+              customColorFallback: const Color(0xFFC4B5FD),
+              onChanged: (value) =>
+                  setState(() => _calloutPanelBorderColor = value),
+            ),
+            SliderOption(
+              label: 'Panel border width',
+              value: _calloutPanelBorderWidth,
+              min: 0,
+              max: 4,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _calloutPanelBorderWidth = value),
+            ),
+            SliderOption(
+              label: 'Panel padding',
+              value: _calloutPanelPadding,
+              min: 0,
+              max: 24,
+              divisions: 24,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _calloutPanelPadding = value),
+            ),
+            SliderOption(
+              label: 'Panel corner radius',
+              value: _calloutPanelBorderRadius,
+              min: 0,
+              max: 24,
+              divisions: 24,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _calloutPanelBorderRadius = value),
+            ),
+          ],
+        ),
+        OptionSection(
+          title: 'Per-series overrides',
+          icon: Icons.tune_outlined,
+          children: [
+            BoolOption(
+              label: 'Customize Build',
+              subtitle: 'Override its connector and label presentation',
+              value: _customizeBuildCallout,
+              onChanged: (value) =>
+                  setState(() => _customizeBuildCallout = value),
+            ),
+            if (_customizeBuildCallout) ...[
+              PaletteColorOption(
+                keyPrefix: 'build-callout-color',
+                label: 'Build connector color',
+                value: _buildCalloutColor,
+                customColorFallback: const Color(0xFF312E81),
+                onChanged: (value) =>
+                    setState(() => _buildCalloutColor = value),
+              ),
+              PaletteColorOption(
+                keyPrefix: 'build-callout-background',
+                label: 'Build label background',
+                value: _buildCalloutBackgroundColor,
+                customColorFallback: const Color(0xFFEDE9FE),
+                onChanged: (value) =>
+                    setState(() => _buildCalloutBackgroundColor = value),
+              ),
+              SliderOption(
+                label: 'Build connector width',
+                value: _buildCalloutConnectorWidth,
+                min: 0.5,
+                max: 5,
+                divisions: 18,
+                suffix: 'px',
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _buildCalloutConnectorWidth = value),
+              ),
+              SliderOption(
+                label: 'Build connector glow',
+                value: _buildCalloutConnectorGlow,
+                min: 0,
+                max: 12,
+                divisions: 24,
+                suffix: 'px',
+                decimalPlaces: 1,
+                onChanged: (value) =>
+                    setState(() => _buildCalloutConnectorGlow = value),
+              ),
+            ],
+            BoolOption(
+              label: 'Hide Recovery',
+              subtitle: 'Per-series opt-out while global callouts stay enabled',
+              value: _hideRecoveryCallout,
+              onChanged: (value) =>
+                  setState(() => _hideRecoveryCallout = value),
+            ),
+          ],
+        ),
+      ],
       _StylingPattern.pointLabels => [
         OptionSection(
           title: 'Data Point Labels',
@@ -932,6 +1404,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return switch (pattern) {
       _StylingPattern.appearance => 'Series appearance',
       _StylingPattern.inlineLabels => 'Inline labels',
+      _StylingPattern.callouts => 'Series callouts',
       _StylingPattern.pointLabels => 'Point labels',
       _StylingPattern.conditional => 'Conditional styling',
     };
@@ -941,6 +1414,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return switch (pattern) {
       _StylingPattern.appearance => 'Stroke · fill · glow · markers',
       _StylingPattern.inlineLabels => 'Anchored series identity',
+      _StylingPattern.callouts => 'Shared label lane · connectors',
       _StylingPattern.pointLabels => 'Values · units · formatter',
       _StylingPattern.conditional => 'Segments and individual points',
     };
@@ -950,6 +1424,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return switch (pattern) {
       _StylingPattern.appearance => 'Whole-series appearance',
       _StylingPattern.inlineLabels => 'Labels anchored to series geometry',
+      _StylingPattern.callouts => 'Collision-aware labels for dense series',
       _StylingPattern.pointLabels => 'Lactate values at every sample',
       _StylingPattern.conditional => 'Data-driven styling overrides',
     };
@@ -961,6 +1436,8 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
         '${_appearanceType.name} · ${_interpolation.name} · ${_lineGlow.toStringAsFixed(0)} px glow',
       _StylingPattern.inlineLabels =>
         '${_inlinePosition.name} anchor · ${_inlineBackground ? 'background pill' : 'text only'}',
+      _StylingPattern.callouts =>
+        '${_calloutSide.name} lane · ${_calloutAnchor.name} · $_calloutMaximumVisible labels',
       _StylingPattern.pointLabels =>
         '${_pointLabelPosition.name} · ${_pointLabelShowUnit ? 'unit visible' : 'value only'} · ${_pointMarkerStyle.name} markers',
       _StylingPattern.conditional =>
@@ -974,6 +1451,8 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
         'Switch between line and area, then combine interpolation, stroke width, glow, fill opacity, and marker treatment. Theme and interaction controls remain independent.',
       _StylingPattern.inlineLabels =>
         'Move the label anchor from left to right, offset it vertically, and add a pill or series-colored border. Labels follow the rendered series instead of occupying a separate legend.',
+      _StylingPattern.callouts =>
+        'Move the shared lane, change anchor semantics, and reduce its capacity to exercise collision handling. Hide Recovery to prove one series can opt out without disabling global callouts.',
       _StylingPattern.pointLabels =>
         'Change label position, unit display, formatter, background, and marker style. Labels are configured once on the series and formatted from each ChartDataPoint.',
       _StylingPattern.conditional =>
@@ -985,6 +1464,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return switch (pattern) {
       _StylingPattern.appearance => 'Series fields',
       _StylingPattern.inlineLabels => 'InlineLabel',
+      _StylingPattern.callouts => 'SeriesCallouts',
       _StylingPattern.pointLabels => 'PointLabels',
       _StylingPattern.conditional => 'Segment/Point',
     };
@@ -1152,6 +1632,7 @@ class _StylingGuide extends StatelessWidget {
     return switch (pattern) {
       _StylingPattern.appearance => Icons.auto_awesome_outlined,
       _StylingPattern.inlineLabels => Icons.label_outline,
+      _StylingPattern.callouts => Icons.label_important_outline,
       _StylingPattern.pointLabels => Icons.pin_outlined,
       _StylingPattern.conditional => Icons.format_color_fill_outlined,
     };
@@ -1163,6 +1644,8 @@ class _StylingGuide extends StatelessWidget {
         'Define the default visual identity once on the series: type, interpolation, stroke, fill, glow, and marker treatment.',
       _StylingPattern.inlineLabels =>
         'Attach identity directly to series geometry with configurable anchor, typography, offset, background, and border.',
+      _StylingPattern.callouts =>
+        'Coordinate direct labels across every visible series so one shared lane can resolve anchors, priority, connectors, and collisions.',
       _StylingPattern.pointLabels =>
         'Render formatted values from each point with independent label placement, units, typography, background, and marker style.',
       _StylingPattern.conditional =>
@@ -1176,6 +1659,8 @@ class _StylingGuide extends StatelessWidget {
         'strokeWidth · interpolation · lineGlow · fillOpacity · dataPointMarkerStyle',
       _StylingPattern.inlineLabels =>
         'SeriesInlineLabelConfig · SeriesLabelBackground · SeriesLabelPosition',
+      _StylingPattern.callouts =>
+        'SeriesCalloutConfig · SeriesCalloutSpec · SeriesCalloutAnchor',
       _StylingPattern.pointLabels =>
         'DataPointLabelConfig(position, showUnit, formatter, background)',
       _StylingPattern.conditional =>

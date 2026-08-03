@@ -148,6 +148,38 @@ void main() {
     },
   );
 
+  testWidgets('round-trips chart-level and per-series callout policy', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_calloutHost(controller));
+    await tester.pump();
+
+    final captured = await _capture(tester, controller.extractArtifact());
+    final artifact = (captured as ChartArtifactSuccess<ChartArtifact>).value;
+    final json =
+        (ChartArtifactJsonCodec.encode(artifact)
+                as ChartArtifactSuccess<String>)
+            .value;
+    final hydrated =
+        (ChartDocumentHydrator.hydrateJson(json)
+                as ChartArtifactSuccess<HydratedChartConfiguration>)
+            .value;
+
+    expect(hydrated.seriesCallouts.enabled, isTrue);
+    expect(hydrated.seriesCallouts.side, SeriesCalloutSide.left);
+    expect(
+      hydrated.seriesCallouts.specFor('power'),
+      const SeriesCalloutSpec(
+        label: 'Peak power',
+        anchor: SeriesCalloutAnchor.maximumVisible,
+        priority: 9,
+      ),
+    );
+    expect(hydrated.seriesCallouts.showsSeries('recovery'), isFalse);
+  });
+
   test('detached controller returns chart_not_attached', () async {
     final controller = BravenChartController();
     addTearDown(controller.dispose);
@@ -196,6 +228,43 @@ Widget _pieHost(BravenChartController controller) => MaterialApp(
             unit: 'USD',
             values: const {'Subscriptions': 42, 'Services': 31, 'Hardware': 27},
             pieStyle: const PieChartStyle(selectionExplodeOffset: 10),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
+Widget _calloutHost(BravenChartController controller) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 520,
+      height: 320,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        showLegend: false,
+        seriesCallouts: const SeriesCalloutConfig(
+          enabled: true,
+          side: SeriesCalloutSide.left,
+          series: {
+            'power': SeriesCalloutSpec(
+              label: 'Peak power',
+              anchor: SeriesCalloutAnchor.maximumVisible,
+              priority: 9,
+            ),
+            'recovery': SeriesCalloutSpec(show: false),
+          },
+        ),
+        series: const [
+          LineChartSeries(
+            id: 'power',
+            name: 'Power',
+            points: [ChartDataPoint(x: 1, y: 10), ChartDataPoint(x: 2, y: 20)],
+          ),
+          AreaChartSeries(
+            id: 'recovery',
+            name: 'Recovery',
+            points: [ChartDataPoint(x: 1, y: 8), ChartDataPoint(x: 2, y: 12)],
           ),
         ],
       ),

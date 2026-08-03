@@ -63,6 +63,7 @@ import '../models/radial_selection_style.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/range_area_style.dart';
+import '../models/series_callout_config.dart';
 import '../models/scatter_marker_style.dart';
 import '../models/scatter_render_config.dart';
 import '../models/segment_style.dart';
@@ -433,6 +434,7 @@ class ChartConfigDartEmitter {
         defaultValue: true,
       );
       _emitLegendStyle(body, configuration.legendStyle);
+      _emitSeriesCallouts(body, configuration.seriesCallouts);
       _valueIf(
         body,
         'showToolbar',
@@ -6827,6 +6829,143 @@ class ChartConfigDartEmitter {
       );
       _numberIf(writer, 'opacity', style.opacity, 1);
       _offsetIf(writer, 'offset', style.offset, Offset.zero);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitSeriesCallouts(
+    DartSourceWriter writer,
+    SeriesCalloutConfig config,
+  ) {
+    if (!options.includeDefaultValues &&
+        config == const SeriesCalloutConfig()) {
+      return;
+    }
+    writer.writeLine('seriesCallouts: SeriesCalloutConfig(');
+    writer.indented(() {
+      _valueIf(writer, 'enabled', config.enabled, defaultValue: false);
+      _valueIf(
+        writer,
+        'showByDefault',
+        config.showByDefault,
+        defaultValue: true,
+      );
+      _enumIf(
+        writer,
+        'side',
+        'SeriesCalloutSide',
+        config.side.name,
+        defaultName: 'right',
+      );
+      _enumIf(
+        writer,
+        'anchor',
+        'SeriesCalloutAnchor',
+        config.anchor.name,
+        defaultName: 'lastVisible',
+      );
+      _optionalNumber(writer, 'anchorX', config.anchorX);
+      _enumIf(
+        writer,
+        'connector',
+        'SeriesCalloutConnector',
+        config.connector.name,
+        defaultName: 'elbow',
+      );
+      _enumIf(
+        writer,
+        'packing',
+        'SeriesCalloutPacking',
+        config.packing.name,
+        defaultName: 'followAnchors',
+      );
+      _numberIf(writer, 'laneWidth', config.laneWidth, 156);
+      _numberIf(writer, 'inset', config.inset, 8);
+      _numberIf(writer, 'minimumGap', config.minimumGap, 6);
+      _numberIf(writer, 'maximumVisible', config.maximumVisible, 12);
+      _optionalColor(writer, 'connectorColor', config.connectorColor);
+      _numberIf(writer, 'connectorWidth', config.connectorWidth, 1.25);
+      _numberIf(writer, 'connectorOpacity', config.connectorOpacity, 1);
+      _numberIf(writer, 'connectorGlow', config.connectorGlow, 0);
+      _numberIf(writer, 'anchorRadius', config.anchorRadius, 3);
+      _edgeInsetsIf(
+        writer,
+        'labelPadding',
+        config.labelPadding,
+        const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      );
+      if (options.includeDefaultValues ||
+          config.labelStyle !=
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)) {
+        _emitTextStyle(writer, 'labelStyle', config.labelStyle);
+      }
+      _optionalColor(writer, 'backgroundColor', config.backgroundColor);
+      _numberIf(writer, 'backgroundOpacity', config.backgroundOpacity, 1);
+      _optionalColor(writer, 'borderColor', config.borderColor);
+      _numberIf(writer, 'borderWidth', config.borderWidth, 1);
+      _numberIf(writer, 'borderRadius', config.borderRadius, 5);
+      _optionalColor(
+        writer,
+        'panelBackgroundColor',
+        config.panelBackgroundColor,
+      );
+      _numberIf(writer, 'panelOpacity', config.panelOpacity, 1);
+      _optionalColor(writer, 'panelBorderColor', config.panelBorderColor);
+      _numberIf(writer, 'panelBorderWidth', config.panelBorderWidth, 0);
+      _numberIf(writer, 'panelBorderRadius', config.panelBorderRadius, 6);
+      _edgeInsetsIf(
+        writer,
+        'panelPadding',
+        config.panelPadding,
+        const EdgeInsets.all(6),
+      );
+      if (config.series.isNotEmpty) {
+        writer.writeLine('series: {');
+        writer.indented(() {
+          for (final entry in config.series.entries) {
+            writer.writeLine(
+              '${DartSourceWriter.stringLiteral(entry.key)}: SeriesCalloutSpec(',
+            );
+            writer.indented(() {
+              final spec = entry.value;
+              if (spec.show != null) {
+                writer.namedArgument('show', spec.show.toString());
+              }
+              _optionalString(writer, 'label', spec.label);
+              if (spec.anchor != null) {
+                writer.namedArgument(
+                  'anchor',
+                  'SeriesCalloutAnchor.${spec.anchor!.name}',
+                );
+              }
+              _optionalNumber(writer, 'anchorX', spec.anchorX);
+              _numberIf(writer, 'priority', spec.priority, 0);
+              _optionalColor(writer, 'color', spec.color);
+              if (spec.textStyle != null) {
+                _emitTextStyle(writer, 'textStyle', spec.textStyle!);
+              }
+              _optionalColor(writer, 'backgroundColor', spec.backgroundColor);
+              _optionalColor(writer, 'borderColor', spec.borderColor);
+              _optionalNumber(writer, 'connectorWidth', spec.connectorWidth);
+              _optionalNumber(
+                writer,
+                'connectorOpacity',
+                spec.connectorOpacity,
+              );
+              _optionalNumber(writer, 'connectorGlow', spec.connectorGlow);
+              _optionalNumber(
+                writer,
+                'backgroundOpacity',
+                spec.backgroundOpacity,
+              );
+              _optionalNumber(writer, 'borderWidth', spec.borderWidth);
+              _optionalNumber(writer, 'borderRadius', spec.borderRadius);
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('},');
+      }
     });
     writer.writeLine('),');
   }

@@ -168,6 +168,7 @@ developer task.
 - [Tracking and value display](https://braven-pvm.github.io/braven_charts/guides/tracking-and-value-display/) — Compose crosshairs, tooltips, markers, and persistent value summaries.
 - [Mobile interaction](https://braven-pvm.github.io/braven_charts/guides/mobile-interaction/) — Keep scrolling natural, inspect with a hold, and opt into short-tap selection only where it fits.
 - [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, linked data, and persistent X/Y brushes.
+- [Series label callouts](https://braven-pvm.github.io/braven_charts/guides/series-label-callouts/) — Anchor, prioritize, style, and selectively hide dense line and area labels.
 - [Zoom, pan, and navigators](https://braven-pvm.github.io/braven_charts/guides/zoom-pan-and-navigators/) — Control viewports directly or through a reusable full-domain navigator.
 - [Annotations](https://braven-pvm.github.io/braven_charts/?page=annotations) — Add and edit point, range, threshold, text, trend, and pin overlays.
 - [Axes and normalization](https://braven-pvm.github.io/braven_charts/?page=multi-axis) — Configure independent axes, visible slots, formatting, and normalization.

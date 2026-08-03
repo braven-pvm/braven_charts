@@ -69,6 +69,7 @@ export 'src/fluent/generated/models/range_area_style_fluent.dart';
 export 'src/fluent/generated/models/scatter_marker_style_fluent.dart';
 export 'src/fluent/generated/models/scatter_render_config_fluent.dart';
 export 'src/fluent/generated/models/segment_style_fluent.dart';
+export 'src/fluent/generated/models/series_callout_config_fluent.dart';
 export 'src/fluent/generated/models/series_inline_label_config_fluent.dart';
 export 'src/fluent/generated/models/streaming_config_fluent.dart';
 export 'src/fluent/generated/models/x_axis_config_fluent.dart';

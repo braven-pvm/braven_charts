@@ -82,6 +82,7 @@ import 'models/heatmap_chart_series.dart';
 import 'models/heatmap_data_point.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
+import 'models/series_callout_config.dart';
 import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
 import 'models/polar_chart_config.dart';
@@ -241,6 +242,7 @@ class BravenChartPlus extends StatefulWidget {
     this.subtitle,
     this.showLegend = true,
     this.legendStyle,
+    this.seriesCallouts = const SeriesCalloutConfig(),
     this.radialLegendItemBuilder,
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
@@ -1065,6 +1067,12 @@ class BravenChartPlus extends StatefulWidget {
   /// )
   /// ```
   final LegendStyle? legendStyle;
+
+  /// Collision-aware direct labels connected to Line and Area series.
+  ///
+  /// This chart-wide policy sits beside the legend configuration. Use
+  /// [SeriesCalloutConfig.series] for stable per-series overrides.
+  final SeriesCalloutConfig seriesCallouts;
 
   /// Builds the visible contents of each Pie or Donut legend item.
   ///
@@ -2096,6 +2104,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       widget.showYScrollbar != oldWidget.showYScrollbar ||
       widget.showLegend != oldWidget.showLegend ||
       widget.legendStyle != oldWidget.legendStyle ||
+      widget.seriesCallouts != oldWidget.seriesCallouts ||
       widget.showToolbar != oldWidget.showToolbar ||
       widget.interactiveAnnotations != oldWidget.interactiveAnnotations ||
       widget.persistentRangeAnnotationHandles !=
@@ -3046,6 +3055,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           resolved.allSeries.whereType<GaugeChartSeries>().isNotEmpty
           ? widget.gaugeChartConfig
           : null,
+      seriesCallouts: widget.seriesCallouts,
       selectionSnapshot: ChartSelectionSnapshot(
         expression: _selectionExpressionForSnapshot(),
         revision: _effectiveDocumentRevision,
@@ -11643,6 +11653,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               : widget.yAxis,
                           axislessPlotInsets: widget.axislessPlotInsets,
                           theme: widget.theme,
+                          seriesCallouts: widget.seriesCallouts,
                           tooltipsEnabled:
                               (effectiveInteractionConfig?.enabled ?? true) &&
                               (effectiveInteractionConfig?.tooltip.enabled ??
@@ -12544,6 +12555,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.primaryYAxisConfig,
     this.axislessPlotInsets = ChartRenderBox.axislessPlotInsets,
     this.theme,
+    this.seriesCallouts = const SeriesCalloutConfig(),
     required this.tooltipsEnabled,
     this.selectedTooltipSeriesId,
     this.selectedTooltipPointIndex,
@@ -12593,6 +12605,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final YAxisConfig? primaryYAxisConfig;
   final EdgeInsets axislessPlotInsets;
   final ChartTheme? theme;
+  final SeriesCalloutConfig seriesCallouts;
 
   /// Grid configuration for controlling grid line visibility and styling.
   final GridConfig? gridConfig;
@@ -12634,6 +12647,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         coordinator: coordinator,
         elementGenerator: elementGenerator,
         theme: theme,
+        seriesCallouts: seriesCallouts,
         tooltipsEnabled: tooltipsEnabled,
         selectedTooltipSeriesId: selectedTooltipSeriesId,
         selectedTooltipPointIndex: selectedTooltipPointIndex,
@@ -12687,6 +12701,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
       ..setAxislessPlotInsets(axislessPlotInsets)
       ..setTheme(theme)
+      ..setSeriesCallouts(seriesCallouts)
       ..setTooltipsEnabled(tooltipsEnabled)
       ..setSelectedTooltipPoint(
         seriesId: selectedTooltipSeriesId,

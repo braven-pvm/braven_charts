@@ -22,6 +22,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system
 - [guides/line-style-comparison.md](guides/line-style-comparison.md) - Line interpolation styles
+- [guides/series-callouts.md](guides/series-callouts.md) - Collision-aware line and area series labels
 - [guides/annotation_quick_reference.md](guides/annotation_quick_reference.md) - Annotation quick reference
 - [guides/annotation_persistence_guide.md](guides/annotation_persistence_guide.md) - Annotation persistence
 - [guides/chart-artifacts.md](guides/chart-artifacts.md) - Portable chart save, restore, external payloads, tables, and hashing

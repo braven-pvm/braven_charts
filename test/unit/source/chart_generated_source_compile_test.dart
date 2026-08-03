@@ -187,6 +187,21 @@ void main() {
               ),
             ),
           ).value,
+          configuration: _success(
+            ChartConfigurationDocumentCodec.encodeSeriesCallouts(
+              const SeriesCalloutConfig(
+                enabled: true,
+                side: SeriesCalloutSide.left,
+                series: {
+                  'power': SeriesCalloutSpec(
+                    label: 'Peak power',
+                    priority: 5,
+                    color: Color(0xFF60A5FA),
+                  ),
+                },
+              ),
+            ),
+          ).value,
         ),
         viewState: ChartViewState(
           visibleBounds: const ChartBoundsDocument(

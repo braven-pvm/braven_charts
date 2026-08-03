@@ -211,6 +211,9 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'SeriesLabelBackground': [
     [_seriesFile, '_encodeInlineLabel'],
   ],
+  'SeriesCalloutSpec': [
+    [_configFile, '_encodeSeriesCalloutSpec'],
+  ],
   'PolarThreshold': [
     [_configFile, 'encodePolarChart'],
   ],

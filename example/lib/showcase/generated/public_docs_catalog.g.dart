@@ -485,6 +485,15 @@ const publicDocsHostedGuides = <PublicDocsHostedGuideEntry>[
     path: "chart-families/range-area/",
   ),
   (
+    id: "series-callouts",
+    title: "Series label callouts",
+    group: "Interaction and display",
+    summary:
+        "Label dense line and area series through one collision-aware shared lane.",
+    sourcePath: "docs/guides/series-callouts.md",
+    path: "series-label-callouts/",
+  ),
+  (
     id: "bar",
     title: "Bar charts",
     group: "Chart families",
@@ -706,6 +715,17 @@ const publicDocsGuides = <PublicDocsGuideEntry>[
         "Select points, ranges, categories, series, linked data, and persistent X/Y brushes.",
     page: "selection",
     guideId: null,
+    apiPath: null,
+    snippet: null,
+  ),
+  (
+    id: "series-callouts",
+    title: "Series label callouts",
+    group: "Interaction and display",
+    summary:
+        "Anchor, prioritize, style, and selectively hide dense line and area labels.",
+    page: "series-styling",
+    guideId: "series-callouts",
     apiPath: null,
     snippet: null,
   ),

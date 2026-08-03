@@ -53,6 +53,7 @@ import '../models/heatmap_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/range_area_chart_series.dart';
+import '../models/series_callout_config.dart';
 import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
 import '../models/x_axis_position.dart';
@@ -70,6 +71,7 @@ import 'modules/event_handler_manager.dart';
 import 'modules/multi_axis_manager.dart';
 import 'modules/scrollbar_manager.dart';
 import 'modules/series_cache_manager.dart';
+import 'modules/series_callout_renderer.dart';
 import 'modules/streaming_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/tooltip_renderer.dart';
@@ -117,6 +119,7 @@ class ChartRenderBox extends RenderBox {
     List<ChartElement>? elements,
     ElementGenerator? elementGenerator,
     ChartTheme? theme,
+    SeriesCalloutConfig seriesCallouts = const SeriesCalloutConfig(),
     bool tooltipsEnabled = true,
     String? selectedTooltipSeriesId,
     int? selectedTooltipPointIndex,
@@ -147,6 +150,7 @@ class ChartRenderBox extends RenderBox {
     EdgeInsets axislessInsets = axislessPlotInsets,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
+       _seriesCallouts = seriesCallouts,
        _tooltipsEnabled = tooltipsEnabled,
        _selectedTooltipSeriesId = selectedTooltipSeriesId,
        _selectedTooltipPointIndex = selectedTooltipPointIndex,
@@ -280,6 +284,11 @@ class ChartRenderBox extends RenderBox {
 
   /// Current theme for the chart (colors, styles, etc.)
   ChartTheme? _theme;
+
+  SeriesCalloutConfig _seriesCallouts;
+
+  final SeriesCalloutRenderer _seriesCalloutRenderer =
+      const SeriesCalloutRenderer();
 
   /// Grid configuration for controlling grid line visibility.
   GridConfig? _gridConfig;
@@ -1623,6 +1632,13 @@ class ChartRenderBox extends RenderBox {
     _theme = theme;
     _seriesCacheManager.invalidate(); // Invalidate cache - theme changed
     _invalidateTrackingResolution(); // Tracked colors may resolve differently
+    markNeedsPaint();
+  }
+
+  /// Updates the shared direct-label lane without invalidating series paths.
+  void setSeriesCallouts(SeriesCalloutConfig config) {
+    if (_seriesCallouts == config) return;
+    _seriesCallouts = config;
     markNeedsPaint();
   }
 
@@ -4965,6 +4981,19 @@ class ChartRenderBox extends RenderBox {
     // Paint streaming data on top of cached static series. This avoids cache
     // thrashing at 60fps while maintaining high performance.
     _paintStreamingElements(canvas, _plotArea.size);
+
+    // Direct series callouts depend on every visible series and the current
+    // transform, so they deliberately paint in the live overlay layer rather
+    // than being recorded into each independently cached series picture.
+    _seriesCalloutRenderer.paint(
+      canvas: canvas,
+      plotSize: _plotArea.size,
+      seriesElements: _elements.whereType<SeriesElement>().toList(),
+      config: _seriesCallouts,
+      theme: _theme ?? ChartTheme.light,
+      textScaleFactor: _textScaleFactor,
+      textDirection: _textDirection,
+    );
 
     // LAYER 2: Foreground annotations (handles, points, text, thresholds, etc.)
     // These paint AFTER series so they appear on top of data lines
