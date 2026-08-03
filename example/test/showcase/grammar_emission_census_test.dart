@@ -375,6 +375,9 @@ void main() {
 /// failure: every band on that page carries a non-default `pathAnimation` and
 /// six of seven a `fillGradient`, both roadmap 1d and both named refusals on
 /// `AreaMark` today, so the mark closes none of its presets.
+/// Re-measured again 2026-08-03 on
+/// `feature/BC-0050-heatmap-live-ingestion`, where the raster Heatmap preset
+/// added one non-emitting Cartesian workbench with a truthful verdict.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[15, 12, 3],
   'Area': <int>[9, 9, 3],
@@ -382,7 +385,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'BarLab': <int>[28, 28, 0],
   'Candlestick': <int>[10, 8, 0],
   'RangeArea': <int>[7, 7, 0],
-  'Heatmap': <int>[18, 15, 0],
+  'Heatmap': <int>[19, 16, 0],
   'ValueSummary': <int>[8, 6, 4],
   'Selection': <int>[10, 10, 8],
   'Workbench': <int>[5, 2, 1],
@@ -397,11 +400,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[28, 128],
+  _Family.cartesian: <int>[28, 129],
   _Family.radial: <int>[31, 55],
 };
 
-const int _expectedWithVerdict = 183;
+const int _expectedWithVerdict = 184;
 const int _expectedEmitting = 59;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
