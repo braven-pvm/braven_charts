@@ -122,6 +122,36 @@ Workbench, data table, artifact, and generated-source contracts. See
   in-flight loads, rejects stale publication, maintains a bounded LRU cache,
   and materializes the current resident cells as an ordinary immutable
   `HeatmapChartSeries`.
+- `HeatmapViewportProviderDescriptor` gives artifacts a portable provider ID,
+  target series ID, JSON-safe arguments, and initial viewport without
+  serializing a source or credentials. Hosts register fresh runtime factories
+  through `ChartRuntimeBindings.heatmapViewportProviders`; missing providers
+  fail hydration with `runtime_binding_required`.
+- `HeatmapRasterTileSource` is the host boundary for decoded image tiles.
+  `HeatmapRasterViewportController` publishes complete immutable mounted
+  snapshots under tile-count and decoded-byte LRU budgets, rejects stale
+  generations, retains the last complete fallback, and owns exact-once
+  resource disposal. `HeatmapRasterImageResource` wraps a decoded `ui.Image`.
+- `BravenChartPlus.heatmapRasterViewportController` paints mounted raster tiles
+  below ordinary Cartesian series at their finite data-space bounds. The chart
+  borrows resources and never acquires, caches, or disposes them;
+  `heatmapRasterOpacity` and `heatmapRasterFilterQuality` customize sampling
+  only. Raster pixels do not create Data, Source, selection, or accessibility
+  semantics by themselves.
+- `HeatmapRasterSemanticDescriptor` lets each complete raster tile accompany
+  its pixels with bounded canonical aggregate cells. The raster controller
+  exposes those cells as one ordinary immutable `HeatmapChartSeries`, so exact
+  Workbench, export, interaction, and accessibility behavior never depends on
+  reversing pixel colours.
+- `HeatmapRasterViewportProviderDescriptor` carries a stable provider and layer
+  ID, initial viewport, JSON-safe arguments, paint presentation, and an
+  explicit `cell` or `hardFailure` fallback. Hosts reconnect it through
+  `ChartRuntimeBindings.heatmapRasterViewportProviders`; bytes, decoded image
+  handles, caches, transports, credentials, and callbacks are never serialized.
+- `BravenChartPlus.resetViewportBounds` optionally makes the Home and R reset
+  shortcuts restore a bounded Cartesian window instead of the complete axis
+  domain. Hydrated Heatmap viewport providers bind their descriptor's initial
+  viewport automatically.
 
 Heatmap is a native Cartesian family and uses the ordinary numeric or
 categorical X/Y axes, annotations, zoom, pan, scrollbars, tracking, tooltip,
@@ -140,9 +170,10 @@ identity and reduced motion resolves immediately.
 For a conceptual matrix that should not remain fully resident, the host keeps
 explicit X/Y axis bounds from `HeatmapMatrixDomain`, forwards visible bounds
 to `HeatmapViewportController`, and renders its current snapshot. Source
-futures never run in the render object. Workbench and portable output preserve
-the resident snapshot rather than serializing the provider or claiming that
-the complete conceptual matrix is present.
+futures never run in the render object. Workbench Data/Source and preview
+output preserve the resident snapshot rather than claiming that the complete
+conceptual matrix is present; an artifact can separately carry the portable
+provider descriptor needed to reconnect that snapshot in an allowlisted host.
 
 Artifacts preserve inline or columnar cells, explicit missing state and cell
 bounds,

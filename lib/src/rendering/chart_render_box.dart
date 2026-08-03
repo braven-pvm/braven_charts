@@ -4911,8 +4911,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     for (final element in backgroundElements) {
-      if (_transform != null && element is RangeAnnotationElement) {
+      if (_transform != null && element is CartesianTransformElement) {
         element.updateTransform(_transform!);
+      }
+      if (_transform != null && element is RangeAnnotationElement) {
         // For perSeries mode: update axis bounds for correct Y-value normalization
         if (backgroundSeriesBounds != null &&
             backgroundSeriesBounds.isNotEmpty &&

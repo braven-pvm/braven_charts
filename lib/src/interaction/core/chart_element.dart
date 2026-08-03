@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import '../../models/chart_series.dart';
+import '../../coordinates/chart_transform.dart';
 import 'data_hit.dart';
 import 'element_types.dart';
 
@@ -141,6 +142,14 @@ abstract interface class DataSeriesElement implements ChartElement {
 
   /// Number of transported points used by lightweight cache validation.
   int get pointCount;
+}
+
+/// A plot-local element whose geometry follows the live Cartesian transform.
+///
+/// Background layers use this narrow contract to follow pan and zoom without
+/// forcing the render box to know their concrete type.
+abstract interface class CartesianTransformElement implements ChartElement {
+  void updateTransform(ChartTransform transform);
 }
 
 /// Data-series element that can resolve precise per-datum interactions.

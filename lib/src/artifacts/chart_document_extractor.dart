@@ -15,6 +15,7 @@ import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/grid_config.dart';
 import '../models/gauge_chart_config.dart';
+import '../models/heatmap_chart_series.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
@@ -38,6 +39,8 @@ import 'chart_series_document_codec.dart';
 import 'chart_theme_document_codec.dart';
 import 'chart_view_state.dart';
 import 'json_value.dart';
+import 'heatmap_viewport_provider_binding.dart';
+import 'heatmap_raster_viewport_provider_binding.dart';
 import 'radial_formatter_document_descriptors.dart';
 
 /// Selects which resolved data projection is copied into a chart document.
@@ -130,6 +133,8 @@ class ChartDocumentExtractOptions {
     this.xAxisFormatterDescriptor,
     this.yAxisFormatterDescriptors = const {},
     this.interactionBindingDescriptors = const {},
+    this.heatmapViewportProviderDescriptors = const {},
+    this.heatmapRasterViewportProviderDescriptor,
     this.radialFormatterDescriptors = const {},
     this.concentricCenterFormatterDescriptor,
     this.maxSnapshotAttempts = 3,
@@ -173,6 +178,18 @@ class ChartDocumentExtractOptions {
   /// its policy.
   final Map<String, JsonObjectValue> interactionBindingDescriptors;
 
+  /// Portable viewport-provider descriptors keyed by Heatmap series ID.
+  ///
+  /// Supplying a descriptor declares that the provider runtime owns viewport
+  /// refresh behavior for that series. The source's `onViewportChanged`
+  /// callback is therefore not captured as a second runtime binding.
+  final Map<String, HeatmapViewportProviderDescriptor>
+  heatmapViewportProviderDescriptors;
+
+  /// Portable descriptor for the chart's optional image-backed Heatmap layer.
+  final HeatmapRasterViewportProviderDescriptor?
+  heatmapRasterViewportProviderDescriptor;
+
   /// Portable numeric formatter descriptors keyed by radial series ID.
   ///
   /// A descriptor is required for each custom radial formatter present on the
@@ -197,12 +214,17 @@ class ChartDocumentExtractOptions {
     JsonObjectValue? xAxisFormatterDescriptor,
     Map<String, JsonObjectValue>? yAxisFormatterDescriptors,
     Map<String, JsonObjectValue>? interactionBindingDescriptors,
+    Map<String, HeatmapViewportProviderDescriptor>?
+    heatmapViewportProviderDescriptors,
+    HeatmapRasterViewportProviderDescriptor?
+    heatmapRasterViewportProviderDescriptor,
     Map<String, RadialFormatterDocumentDescriptors>? radialFormatterDescriptors,
     JsonObjectValue? concentricCenterFormatterDescriptor,
     int? maxSnapshotAttempts,
     bool clearThemeReference = false,
     bool clearXAxisFormatterDescriptor = false,
     bool clearConcentricCenterFormatterDescriptor = false,
+    bool clearHeatmapRasterViewportProviderDescriptor = false,
   }) => ChartDocumentExtractOptions(
     documentId: documentId ?? this.documentId,
     dataScope: dataScope ?? this.dataScope,
@@ -220,6 +242,14 @@ class ChartDocumentExtractOptions {
         yAxisFormatterDescriptors ?? this.yAxisFormatterDescriptors,
     interactionBindingDescriptors:
         interactionBindingDescriptors ?? this.interactionBindingDescriptors,
+    heatmapViewportProviderDescriptors:
+        heatmapViewportProviderDescriptors ??
+        this.heatmapViewportProviderDescriptors,
+    heatmapRasterViewportProviderDescriptor:
+        clearHeatmapRasterViewportProviderDescriptor
+        ? null
+        : (heatmapRasterViewportProviderDescriptor ??
+              this.heatmapRasterViewportProviderDescriptor),
     radialFormatterDescriptors:
         radialFormatterDescriptors ?? this.radialFormatterDescriptors,
     concentricCenterFormatterDescriptor:
@@ -374,6 +404,15 @@ abstract final class ChartDocumentExtractor {
         ChartDataScope.visibleViewport => _visibleViewportSeries(source),
         ChartDataScope.selection => selectionProjection!.series,
       };
+      final heatmapProviderDescriptors = _validatedHeatmapProviderDescriptors(
+        sourceSeries,
+        options.heatmapViewportProviderDescriptors,
+      );
+      final heatmapRasterProviderDescriptor =
+          _validatedHeatmapRasterProviderDescriptor(
+            sourceSeries,
+            options.heatmapRasterViewportProviderDescriptor,
+          );
       final seriesDocuments = [
         for (final series in sourceSeries)
           _requireValue(
@@ -440,6 +479,9 @@ abstract final class ChartDocumentExtractor {
         ChartInteractionDocumentCodec.encode(
           source.interaction,
           runtimeBindingDescriptors: options.interactionBindingDescriptors,
+          viewportChangedManagedByProvider:
+              heatmapProviderDescriptors.isNotEmpty ||
+              heatmapRasterProviderDescriptor != null,
         ),
         warnings,
       );
@@ -489,6 +531,16 @@ abstract final class ChartDocumentExtractor {
           ).values,
         );
       }
+      if (heatmapProviderDescriptors.isNotEmpty) {
+        configurationValues['heatmapViewportProviders'] = JsonArrayValue([
+          for (final descriptor in heatmapProviderDescriptors)
+            descriptor.toDocument(),
+        ]);
+      }
+      if (heatmapRasterProviderDescriptor != null) {
+        configurationValues['heatmapRasterViewportProvider'] =
+            heatmapRasterProviderDescriptor.toDocument();
+      }
       final configuration = JsonObjectValue(configurationValues);
       final requiredCapabilities = <String>{
         for (final series in seriesDocuments) ...series.requiredCapabilities,
@@ -519,6 +571,10 @@ abstract final class ChartDocumentExtractor {
         if (source.interaction.valueSummary !=
             const CartesianValueSummaryConfig())
           'chart.cartesian.value-summary.v1',
+        if (heatmapProviderDescriptors.isNotEmpty)
+          HeatmapViewportProviderDescriptor.capabilityId,
+        if (heatmapRasterProviderDescriptor != null)
+          HeatmapRasterViewportProviderDescriptor.capabilityId,
       };
       final viewState = options.includeViewState
           ? options.dataScope == ChartDataScope.selection
@@ -1307,6 +1363,67 @@ abstract final class ChartDocumentExtractor {
     if (axis == null) return null;
     final axisId = axis.id.isEmpty ? '${series.id}_axis' : axis.id;
     return options.yAxisFormatterDescriptors[axisId];
+  }
+
+  static List<HeatmapViewportProviderDescriptor>
+  _validatedHeatmapProviderDescriptors(
+    List<ChartSeries> sourceSeries,
+    Map<String, HeatmapViewportProviderDescriptor> descriptors,
+  ) {
+    if (descriptors.isEmpty) return const [];
+    final seriesById = {for (final series in sourceSeries) series.id: series};
+    final result = <HeatmapViewportProviderDescriptor>[];
+    for (final entry in descriptors.entries) {
+      final descriptor = entry.value;
+      if (entry.key != descriptor.seriesId) {
+        throw FormatException(
+          'Heatmap provider descriptor key "${entry.key}" must match '
+          'seriesId "${descriptor.seriesId}".',
+        );
+      }
+      final series = seriesById[descriptor.seriesId];
+      if (series == null) {
+        throw FormatException(
+          'Heatmap provider descriptor targets omitted or unknown series '
+          '"${descriptor.seriesId}".',
+        );
+      }
+      if (series is! HeatmapChartSeries) {
+        throw FormatException(
+          'Heatmap provider descriptor target "${descriptor.seriesId}" '
+          'must be a HeatmapChartSeries.',
+        );
+      }
+      result.add(descriptor);
+    }
+    result.sort((left, right) => left.seriesId.compareTo(right.seriesId));
+    return List.unmodifiable(result);
+  }
+
+  static HeatmapRasterViewportProviderDescriptor?
+  _validatedHeatmapRasterProviderDescriptor(
+    List<ChartSeries> sourceSeries,
+    HeatmapRasterViewportProviderDescriptor? descriptor,
+  ) {
+    if (descriptor == null) return null;
+    final semanticSeriesId = descriptor.semanticSeriesId;
+    if (semanticSeriesId == null) return descriptor;
+    final semanticSeries = sourceSeries
+        .where((series) => series.id == semanticSeriesId)
+        .firstOrNull;
+    if (semanticSeries == null) {
+      throw FormatException(
+        'Heatmap raster provider semantic series "$semanticSeriesId" is '
+        'omitted or unknown.',
+      );
+    }
+    if (semanticSeries is! HeatmapChartSeries) {
+      throw FormatException(
+        'Heatmap raster provider semantic series "$semanticSeriesId" must '
+        'be a HeatmapChartSeries.',
+      );
+    }
+    return descriptor;
   }
 
   static List<ChartDataPoint> _pointsInViewport(

@@ -38,6 +38,7 @@ abstract final class ChartInteractionDocumentCodec {
   static ChartArtifactResult<ChartInteractionDocument> encode(
     InteractionConfig config, {
     Map<String, JsonObjectValue> runtimeBindingDescriptors = const {},
+    bool viewportChangedManagedByProvider = false,
   }) {
     final warnings = <ChartArtifactWarning>[];
     try {
@@ -76,7 +77,10 @@ abstract final class ChartInteractionDocumentCodec {
       capture(selectionChangedBinding, config.onSelectionChanged != null);
       capture(zoomChangedBinding, config.onZoomChanged != null);
       capture(panChangedBinding, config.onPanChanged != null);
-      capture(viewportChangedBinding, config.onViewportChanged != null);
+      capture(
+        viewportChangedBinding,
+        config.onViewportChanged != null && !viewportChangedManagedByProvider,
+      );
       capture(crosshairChangedBinding, config.onCrosshairChanged != null);
       capture(tooltipChangedBinding, config.onTooltipChanged != null);
       capture(keyboardActionBinding, config.onKeyboardAction != null);

@@ -60,6 +60,20 @@ extension ChartDocumentExtractOptionsFluent on ChartDocumentExtractOptions {
     Map<String, JsonObjectValue> value,
   ) => copyWith(interactionBindingDescriptors: value);
 
+  /// Replaces [ChartDocumentExtractOptions.heatmapViewportProviderDescriptors] with [value].
+  ChartDocumentExtractOptions withHeatmapViewportProviderDescriptors(
+    Map<String, HeatmapViewportProviderDescriptor> value,
+  ) => copyWith(heatmapViewportProviderDescriptors: value);
+
+  /// Replaces [ChartDocumentExtractOptions.heatmapRasterViewportProviderDescriptor] with [value].
+  ChartDocumentExtractOptions withHeatmapRasterViewportProviderDescriptor(
+    HeatmapRasterViewportProviderDescriptor value,
+  ) => copyWith(heatmapRasterViewportProviderDescriptor: value);
+
+  /// Clears [ChartDocumentExtractOptions.heatmapRasterViewportProviderDescriptor] to `null`.
+  ChartDocumentExtractOptions clearHeatmapRasterViewportProviderDescriptor() =>
+      copyWith(clearHeatmapRasterViewportProviderDescriptor: true);
+
   /// Replaces [ChartDocumentExtractOptions.radialFormatterDescriptors] with [value].
   ChartDocumentExtractOptions withRadialFormatterDescriptors(
     Map<String, RadialFormatterDocumentDescriptors> value,

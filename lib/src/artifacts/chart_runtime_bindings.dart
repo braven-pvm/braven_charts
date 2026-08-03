@@ -7,6 +7,8 @@ import '../models/interaction_config.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_annotation_document.dart';
 import 'chart_data_payload.dart';
+import 'heatmap_viewport_provider_binding.dart';
+import 'heatmap_raster_viewport_provider_binding.dart';
 import 'json_value.dart';
 
 typedef ChartValueFormatter =
@@ -194,6 +196,9 @@ class ChartRuntimeBindings {
     this.tooltips = const ChartTooltipRegistry(),
     this.callbacks = const ChartCallbackRegistry(),
     this.extensions = const ChartExtensionRegistry(),
+    this.heatmapViewportProviders = const HeatmapViewportProviderRegistry(),
+    this.heatmapRasterViewportProviders =
+        const HeatmapRasterViewportProviderRegistry(),
     this.onPointTap,
     this.onPointHover,
     this.onBackgroundTap,
@@ -207,6 +212,12 @@ class ChartRuntimeBindings {
   final ChartTooltipRegistry tooltips;
   final ChartCallbackRegistry callbacks;
   final ChartExtensionRegistry extensions;
+
+  /// Host factories for portable viewport-backed Heatmap descriptors.
+  final HeatmapViewportProviderRegistry heatmapViewportProviders;
+
+  /// Host factories for portable image-backed Heatmap descriptors.
+  final HeatmapRasterViewportProviderRegistry heatmapRasterViewportProviders;
   final void Function(ChartDataPoint point, String seriesId)? onPointTap;
   final void Function(ChartDataPoint? point, String? seriesId)? onPointHover;
   final void Function(Offset position)? onBackgroundTap;

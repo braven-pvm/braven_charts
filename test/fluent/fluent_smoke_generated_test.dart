@@ -8,7 +8,7 @@
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1919 verbs total; 12 of them have an argument type with no
+// 1922 verbs total; 13 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -67,7 +67,7 @@ const int _executedClasses = 149;
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
 
-/// Smoke coverage for [ChartDocumentExtractOptions]'s 14 executable verb(s).
+/// Smoke coverage for [ChartDocumentExtractOptions]'s 16 executable verb(s).
 void _smokeChartDocumentExtractOptions(
   _Verb verb,
   ChartDocumentExtractOptions subject,
@@ -119,6 +119,14 @@ void _smokeChartDocumentExtractOptions(
     () => subject.withInteractionBindingDescriptors(const {}),
   );
   verb(
+    'ChartDocumentExtractOptionsFluent.withHeatmapViewportProviderDescriptors',
+    () => subject.withHeatmapViewportProviderDescriptors(const {}),
+  );
+  verb(
+    'ChartDocumentExtractOptionsFluent.clearHeatmapRasterViewportProviderDescriptor',
+    () => subject.clearHeatmapRasterViewportProviderDescriptor(),
+  );
+  verb(
     'ChartDocumentExtractOptionsFluent.withRadialFormatterDescriptors',
     () => subject.withRadialFormatterDescriptors(const {}),
   );
@@ -132,15 +140,17 @@ void _smokeChartDocumentExtractOptions(
   );
 }
 
-/// Compile-only coverage for [ChartDocumentExtractOptions]'s 2 verb(s)
+/// Compile-only coverage for [ChartDocumentExtractOptions]'s 3 verb(s)
 /// whose argument type has no synthesizable value.
 void _compileChartDocumentExtractOptions(
   ChartDocumentExtractOptions subject,
   JsonObjectValue a0,
-  JsonObjectValue a1,
+  HeatmapRasterViewportProviderDescriptor a1,
+  JsonObjectValue a2,
 ) {
   subject.withXAxisFormatterDescriptor(a0);
-  subject.withConcentricCenterFormatterDescriptor(a1);
+  subject.withHeatmapRasterViewportProviderDescriptor(a1);
+  subject.withConcentricCenterFormatterDescriptor(a2);
 }
 
 /// Smoke coverage for [AnnotationStyle]'s 10 executable verb(s).
@@ -7790,6 +7800,7 @@ const List<Function> _compileOnlyCases = <Function>[
 /// Verbs that cannot be executed, recorded rather than silently dropped.
 const List<String> _compileOnlyVerbs = <String>[
   'ChartDocumentExtractOptionsFluent.withXAxisFormatterDescriptor — no synthesizable value for JsonObjectValue',
+  'ChartDocumentExtractOptionsFluent.withHeatmapRasterViewportProviderDescriptor — no synthesizable value for HeatmapRasterViewportProviderDescriptor',
   'ChartDocumentExtractOptionsFluent.withConcentricCenterFormatterDescriptor — no synthesizable value for JsonObjectValue',
   'CandlestickDataPointFluent.withCandlestickStyle — no synthesizable value for CandlestickPointStyle',
   'ScatterChartSeriesFluent.withSizeEncoding — no synthesizable value for ScatterSizeEncoding',
@@ -9654,6 +9665,6 @@ void main() {
     expect(_executedClasses, 149);
     expect(_skippedClasses, 2);
     expect(_compileOnlyCases, hasLength(8));
-    expect(_compileOnlyVerbs, hasLength(12));
+    expect(_compileOnlyVerbs, hasLength(13));
   });
 }

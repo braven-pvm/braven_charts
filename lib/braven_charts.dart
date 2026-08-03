@@ -68,6 +68,8 @@ export 'src/artifacts/chart_document_extractor.dart'
         ChartDocumentSnapshot;
 export 'src/artifacts/chart_interaction_document_codec.dart';
 export 'src/artifacts/chart_runtime_bindings.dart';
+export 'src/artifacts/heatmap_viewport_provider_binding.dart';
+export 'src/artifacts/heatmap_raster_viewport_provider_binding.dart';
 export 'src/artifacts/radial_formatter_document_descriptors.dart';
 export 'src/artifacts/chart_preview.dart';
 export 'src/artifacts/chart_preview_capture.dart';
@@ -92,6 +94,7 @@ export 'src/controllers/chart_controller.dart';
 export 'src/controllers/chart_interaction_group_controller.dart'
     hide ChartInteractionGroupParticipant;
 export 'src/controllers/heatmap_viewport_controller.dart';
+export 'src/controllers/heatmap_raster_viewport_controller.dart';
 // Coordinates
 export 'src/coordinates/chart_transform.dart';
 // Comparison
@@ -172,6 +175,7 @@ export 'src/models/heatmap_hierarchy_projection.dart';
 export 'src/models/heatmap_density_data.dart';
 export 'src/models/heatmap_histogram_data.dart';
 export 'src/models/heatmap_viewport_source.dart';
+export 'src/models/heatmap_raster_viewport_source.dart';
 export 'src/models/histogram_chart_data.dart';
 export 'src/models/interaction_callbacks.dart';
 export 'src/models/interaction_config.dart';
