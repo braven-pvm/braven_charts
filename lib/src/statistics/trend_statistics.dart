@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import '../models/chart_data_point.dart';
+import 'fit_observations.dart';
 
 /// Statistical diagnostics associated with a rendered trend annotation.
 class TrendStatistics {
@@ -15,7 +16,10 @@ class TrendStatistics {
     this.spearmanCorrelation,
   });
 
-  /// Number of source observations with finite X and Y values.
+  /// Number of source observations the fit was trained on.
+  ///
+  /// Counts only points that pass `isFitObservation`: finite X and Y, and not
+  /// a Range Area gap (whose Y is a zero placeholder, not a measurement).
   final int sampleCount;
 
   /// Human-readable parametric equation, when the trend has one.
@@ -38,9 +42,7 @@ abstract final class TrendStatisticsCalculator {
     required double? Function(double x) predict,
     String? equation,
   }) {
-    final finite = points
-        .where((point) => point.x.isFinite && point.y.isFinite)
-        .toList(growable: false);
+    final finite = fitObservations(points);
     final xValues = [for (final point in finite) point.x];
     final yValues = [for (final point in finite) point.y];
 

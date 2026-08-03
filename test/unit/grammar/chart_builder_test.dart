@@ -1374,4 +1374,176 @@ void main() {
       expect(widget, isA<BravenPlot<Sample>>());
     });
   });
+
+  group('geomRangeArea', () {
+    test('constructs a RangeAreaMark carrying every native field', () {
+      final spec = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            id: 'band',
+            low: (row) => row.low,
+            high: (row) => row.high,
+            name: 'Recovery',
+            color: const Color(0xFF2563EB),
+            unit: 'score',
+            interpolation: LineInterpolation.monotone,
+            tension: 0.4,
+            fillOpacity: 0.22,
+            borderMode: RangeAreaBorderMode.closed,
+            connectGaps: true,
+            showBoundaryMarkers: true,
+            markerRadius: 4,
+            hitTestMode: RangeAreaHitTestMode.nearestBoundary,
+          )
+          .toSpec();
+
+      final mark = spec.marks.single as RangeAreaMark<_RangeRow>;
+      expect(mark.id, 'band');
+      expect(mark.name, 'Recovery');
+      expect(mark.color, const Color(0xFF2563EB));
+      expect(mark.unit, 'score');
+      expect(mark.interpolation, LineInterpolation.monotone);
+      expect(mark.tension, 0.4);
+      expect(mark.fillOpacity, 0.22);
+      expect(mark.borderMode, RangeAreaBorderMode.closed);
+      expect(mark.connectGaps, isTrue);
+      expect(mark.showBoundaryMarkers, isTrue);
+      expect(mark.markerRadius, 4);
+      expect(mark.hitTestMode, RangeAreaHitTestMode.nearestBoundary);
+      expect(mark.low(_rangeRows.first), 1);
+      expect(mark.high(_rangeRows.first), 3);
+    });
+
+    test('inherits the chart-wide x accessor', () {
+      final spec = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(low: (row) => row.low, high: (row) => row.high)
+          .toSpec();
+
+      final mark = spec.marks.single as RangeAreaMark<_RangeRow>;
+      expect(mark.x(_rangeRows.last), 1);
+      // Every config field left unset stays null: null is "the series
+      // default", resolved once at lowering, so the mark never carries a
+      // second copy of a default that could drift from the class.
+      expect(mark.interpolation, isNull);
+      expect(mark.fillOpacity, isNull);
+      expect(mark.labelConfig, isNull);
+      expect(mark.upperBoundaryStyle, isNull);
+    });
+
+    test('a band with no x anywhere is refused by name', () {
+      expect(
+        () => BravenChart.of(
+          _rangeRows,
+        ).geomRangeArea(low: (row) => row.low, high: (row) => row.high),
+        throwsA(
+          isA<GrammarSpecException>()
+              .having(
+                (e) => e.code,
+                'code',
+                GrammarDiagnosticCode.missingEncoding,
+              )
+              .having((e) => e.message, 'message', contains('geomRangeArea')),
+        ),
+      );
+    });
+
+    test('a band is a geometry, so a trend may name it as its source', () {
+      // `_geometryIds` (the builder) and `geometryIds` (the lowering) answer
+      // the same question — "which marks lower to a series?" — and MUST agree.
+      // Stopping at `toSpec()` would only exercise the builder's half: the
+      // builder accepts the trend source, and the LOWERING then independently
+      // re-validates it, so this has to run all the way through `lower()` for
+      // the two sets to be pinned against each other.
+      final lowered = BravenChart.of(_rangeRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            id: 'band',
+            low: (row) => row.low,
+            high: (row) => row.high,
+          )
+          .trend(of: 'band')
+          .toSpec()
+          .lower();
+
+      expect(lowered.series.single, isA<RangeAreaChartSeries>());
+      expect(lowered.series.single.id, 'band');
+      final trend = lowered.annotations.single;
+      expect(trend, isA<TrendAnnotation>());
+      expect((trend as TrendAnnotation).seriesId, 'band');
+      expect(trend.trendType, TrendType.linear);
+    });
+
+    test('a gap in the trended band is not an observation at zero', () {
+      // A `RangeAreaDataPoint.gap` carries a finite `y` of 0 only because
+      // `ChartDataPoint` has no nullable Y. Fitted over the lowered series it
+      // must count for nothing, or a hole in the band reads as a measurement
+      // on the axis and drags the line down.
+      List<ChartSeries> loweredSeriesFor(List<_RangeRow> rows) {
+        return BravenChart.of(rows)
+            .x((row) => row.x)
+            .geomRangeArea(
+              id: 'band',
+              low: (row) => row.low,
+              high: (row) => row.high,
+            )
+            .trend(of: 'band')
+            .toSpec()
+            .lower()
+            .series;
+      }
+
+      final gapped = loweredSeriesFor(_gappedRangeRows).single;
+      final gapFree = loweredSeriesFor(_gapFreeRangeRows).single;
+
+      expect(gapped.points, hasLength(_gappedRangeRows.length));
+
+      double? flat(double x) => 50;
+      final gappedStatistics = TrendStatisticsCalculator.calculate(
+        points: gapped.points,
+        predict: flat,
+      );
+      final gapFreeStatistics = TrendStatisticsCalculator.calculate(
+        points: gapFree.points,
+        predict: flat,
+      );
+
+      expect(gappedStatistics.sampleCount, _gapFreeRangeRows.length);
+      expect(gappedStatistics.sampleCount, gapFreeStatistics.sampleCount);
+      expect(gappedStatistics.rSquared, gapFreeStatistics.rSquared);
+      expect(
+        gappedStatistics.pearsonCorrelation,
+        gapFreeStatistics.pearsonCorrelation,
+      );
+    });
+  });
 }
+
+class _RangeRow {
+  const _RangeRow(this.x, this.low, this.high);
+  final double x;
+  final double? low;
+  final double? high;
+}
+
+const List<_RangeRow> _rangeRows = <_RangeRow>[
+  _RangeRow(0, 1, 3),
+  _RangeRow(1, 2, 4),
+];
+
+/// A flat band at midpoint 50 with the x = 2 row punched out as a gap.
+const List<_RangeRow> _gappedRangeRows = <_RangeRow>[
+  _RangeRow(0, 40, 60),
+  _RangeRow(1, 40, 60),
+  _RangeRow(2, null, null),
+  _RangeRow(3, 40, 60),
+  _RangeRow(4, 40, 60),
+];
+
+/// The same band with the x = 2 row deleted outright.
+const List<_RangeRow> _gapFreeRangeRows = <_RangeRow>[
+  _RangeRow(0, 40, 60),
+  _RangeRow(1, 40, 60),
+  _RangeRow(3, 40, 60),
+  _RangeRow(4, 40, 60),
+];

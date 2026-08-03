@@ -22,6 +22,7 @@ library;
 
 import '../models/candlestick_chart_series.dart';
 import '../models/chart_series.dart';
+import '../models/range_area_chart_series.dart';
 
 /// [series] rebuilt without `yAxisId` or `yAxisConfig`, or null when its family
 /// cannot express an unbound series.
@@ -31,10 +32,10 @@ import '../models/chart_series.dart';
 /// that can. Rebuilding here rather than adding a base-class clear keeps the
 /// capability out of the config surface entirely.
 ///
-/// The five families listed are the Cartesian ones the grammar reverses. Every
-/// other family — radial, gauge, range-area — returns null: a family that has
-/// no `clearYAxisId` cannot be unbound, and guessing is how the two callers
-/// would silently disagree.
+/// The six families listed are the ones the grammar reverses — the five
+/// Cartesian geometries plus range area. Every other family — radial, gauge,
+/// radial bar — returns null: a family that has no `clearYAxisId` cannot be
+/// unbound, and guessing is how the two callers would silently disagree.
 ChartSeries? seriesWithoutAxisBinding(ChartSeries series) => switch (series) {
   LineChartSeries() => series.copyWith(
     clearYAxisId: true,
@@ -53,6 +54,10 @@ ChartSeries? seriesWithoutAxisBinding(ChartSeries series) => switch (series) {
     clearYAxisConfig: true,
   ),
   CandlestickChartSeries() => series.copyWith(
+    clearYAxisId: true,
+    clearYAxisConfig: true,
+  ),
+  RangeAreaChartSeries() => series.copyWith(
     clearYAxisId: true,
     clearYAxisConfig: true,
   ),

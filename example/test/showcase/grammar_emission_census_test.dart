@@ -367,7 +367,14 @@ void main() {
 }
 
 /// `page -> [tuples, with a verdict, emitting]`, measured 2026-08-01 on
-/// `feature/BC-0043-heatmap-histogram`.
+/// `feature/BC-0043-heatmap-histogram`, then re-measured 2026-08-02 on
+/// `feature/grammar-range-area` where `RangeAreaMark` moved `Selection` from
+/// 7 emitting to 8.
+///
+/// `RangeArea` stays `[7, 7, 0]`, and that is the honest number rather than a
+/// failure: every band on that page carries a non-default `pathAnimation` and
+/// six of seven a `fillGradient`, both roadmap 1d and both named refusals on
+/// `AreaMark` today, so the mark closes none of its presets.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[15, 12, 3],
   'Area': <int>[9, 9, 3],
@@ -377,7 +384,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'RangeArea': <int>[7, 7, 0],
   'Heatmap': <int>[18, 15, 0],
   'ValueSummary': <int>[8, 6, 4],
-  'Selection': <int>[10, 10, 7],
+  'Selection': <int>[10, 10, 8],
   'Workbench': <int>[5, 2, 1],
   'Grammar': <int>[12, 9, 8],
   'Pie': <int>[6, 6, 6],
@@ -390,12 +397,12 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[27, 128],
+  _Family.cartesian: <int>[28, 128],
   _Family.radial: <int>[31, 55],
 };
 
 const int _expectedWithVerdict = 183;
-const int _expectedEmitting = 58;
+const int _expectedEmitting = 59;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than
@@ -797,7 +804,11 @@ String _blockerBucket(String detail) {
     if (detail.contains(entry.key)) return entry.value;
   }
   if (detail.contains('has no mark to reverse it')) {
-    if (detail.contains('RangeAreaChartSeries')) return 'no range-area mark';
+    // No `RangeAreaChartSeries` bucket: `RangeAreaMark` reverses that family
+    // now, so a band that still refuses names the FIELD it carries — a fill
+    // gradient or a path animation, both roadmap 1d — through the `named` map
+    // above. Keeping a bucket here that nothing can reach would read as an
+    // outstanding family gap that no longer exists.
     if (detail.contains('RadialBarChartSeries')) return 'no radial-bar mark';
     if (detail.contains('GaugeChartSeries')) return 'no gauge mark';
     return 'no mark for this family';

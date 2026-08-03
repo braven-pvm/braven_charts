@@ -32,6 +32,12 @@ import '../models/polar_column_chart_series.dart'
         PolarColumnTargetMarkerStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
+import '../models/range_area_style.dart'
+    show
+        RangeAreaBorderMode,
+        RangeAreaBoundaryStyle,
+        RangeAreaHitTestMode,
+        RangeAreaLabelConfig;
 import '../models/scatter_marker_style.dart'
     show
         ScatterCategoryStyle,
@@ -227,7 +233,8 @@ final class BravenChart<T> {
             mark is AreaMark<T> ||
             mark is BarMark<T> ||
             mark is ScatterMark<T> ||
-            mark is CandlestickMark<T>,
+            mark is CandlestickMark<T> ||
+            mark is RangeAreaMark<T>,
       )
       .map((mark) => mark.id!);
 
@@ -584,6 +591,73 @@ final class BravenChart<T> {
       name: name,
       color: color,
       unit: unit,
+      yAxisId: yAxisId,
+    ),
+  );
+
+  /// Appends a filled band between paired [low] and [high] values.
+  ///
+  /// [low] and [high] are NULLABLE accessors: returning null from BOTH at a row
+  /// lowers that row to `RangeAreaDataPoint.gap`, which is how a break in the
+  /// band is expressed. Returning null from exactly one is an authoring error
+  /// (`incompleteRangeAreaInterval`) — a half-specified interval has no
+  /// defensible reading.
+  ///
+  /// [unit] is the measure unit of this series' values (`ChartSeries.unit`),
+  /// used when formatting them in tooltips and labels. It is the series' own
+  /// unit, not the Y axis' — declare that on the axis.
+  ///
+  /// [label] names each POINT (`ChartDataPoint.label`); [pointKey] gives each
+  /// point a stable identity for selection. Keys must be unique among one
+  /// mark's keyed rows.
+  ///
+  /// Every styling argument left null keeps the `RangeAreaChartSeries` default.
+  /// A band's rows must be strictly increasing in `x`; unsorted rows raise
+  /// `invalidRangeAreaRow` naming the offending index.
+  BravenChart<T> geomRangeArea({
+    required FieldAccessor<T, num?> low,
+    required FieldAccessor<T, num?> high,
+    FieldAccessor<T, num>? x,
+    String? id,
+    String? name,
+    Color? color,
+    String? unit,
+    FieldAccessor<T, String?>? label,
+    FieldAccessor<T, String?>? pointKey,
+    LineInterpolation? interpolation,
+    double? tension,
+    double? fillOpacity,
+    RangeAreaBorderMode? borderMode,
+    RangeAreaBoundaryStyle? upperBoundaryStyle,
+    RangeAreaBoundaryStyle? lowerBoundaryStyle,
+    bool? connectGaps,
+    bool? showBoundaryMarkers,
+    double? markerRadius,
+    RangeAreaLabelConfig? labelConfig,
+    RangeAreaHitTestMode? hitTestMode,
+    String? yAxisId,
+  }) => _append(
+    RangeAreaMark<T>(
+      id: _idFor(id),
+      x: _resolveX('geomRangeArea', x),
+      low: low,
+      high: high,
+      name: name,
+      color: color,
+      unit: unit,
+      label: label,
+      pointKey: pointKey,
+      interpolation: interpolation,
+      tension: tension,
+      fillOpacity: fillOpacity,
+      borderMode: borderMode,
+      upperBoundaryStyle: upperBoundaryStyle,
+      lowerBoundaryStyle: lowerBoundaryStyle,
+      connectGaps: connectGaps,
+      showBoundaryMarkers: showBoundaryMarkers,
+      markerRadius: markerRadius,
+      labelConfig: labelConfig,
+      hitTestMode: hitTestMode,
       yAxisId: yAxisId,
     ),
   );

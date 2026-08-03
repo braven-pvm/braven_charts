@@ -39,6 +39,25 @@ double sampleHigh(Sample row) => row.high;
 double sampleLow(Sample row) => row.low;
 double sampleClose(Sample row) => row.close;
 
+/// A range-area row: both bounds nullable, so a row can be a GAP.
+class Band {
+  const Band({required this.time, this.low, this.high});
+  final double time;
+  final double? low;
+  final double? high;
+}
+
+double bandTime(Band row) => row.time;
+num? bandLow(Band row) => row.low;
+num? bandHigh(Band row) => row.high;
+
+PlotSpec<Band> bandSpec(List<Band> rows) => PlotSpec<Band>(
+  data: rows,
+  marks: const <Mark<Band>>[
+    RangeAreaMark<Band>(x: bandTime, low: bandLow, high: bandHigh),
+  ],
+);
+
 const rows = <Sample>[
   Sample(time: 0, power: 180, zone: 'easy'),
   Sample(time: 1, power: 260, zone: 'hard'),
@@ -49,7 +68,11 @@ const rows = <Sample>[
 void main() {
   group('distinctFacetValues', () {
     test('returns first-seen order and dedups, including a null value', () {
-      expect(distinctFacetValues(rows, sampleZone), <Object?>['easy', 'hard', null]);
+      expect(distinctFacetValues(rows, sampleZone), <Object?>[
+        'easy',
+        'hard',
+        null,
+      ]);
     });
 
     test('an empty row list yields no values', () {
@@ -81,8 +104,24 @@ void main() {
 
     test('candlestick y-range spans low..high across rows', () {
       const candles = <Sample>[
-        Sample(time: 0, power: 0, zone: 'a', open: 10, high: 14, low: 9, close: 12),
-        Sample(time: 1, power: 0, zone: 'a', open: 12, high: 18, low: 8, close: 15),
+        Sample(
+          time: 0,
+          power: 0,
+          zone: 'a',
+          open: 10,
+          high: 14,
+          low: 9,
+          close: 12,
+        ),
+        Sample(
+          time: 1,
+          power: 0,
+          zone: 'a',
+          open: 12,
+          high: 18,
+          low: 8,
+          close: 15,
+        ),
       ];
       const spec = PlotSpec<Sample>(
         data: candles,
@@ -122,6 +161,71 @@ void main() {
       final range = globalRange(spec, gapped, FacetAxis.y)!;
       expect(range.min, 180);
       expect(range.max, 260);
+    });
+
+    test('range-area y-range spans low..high across rows', () {
+      const bands = <Band>[
+        Band(time: 0, low: 120, high: 180),
+        Band(time: 1, low: 100, high: 200),
+        Band(time: 2, low: 140, high: 160),
+      ];
+      final range = globalRange(bandSpec(bands), bands, FacetAxis.y)!;
+      expect(range.min, 100);
+      expect(range.max, 200);
+    });
+
+    test('a range-area GAP contributes nothing to the shared y range', () {
+      const bands = <Band>[
+        Band(time: 0, low: 120, high: 180),
+        Band(time: 1),
+        Band(time: 2, low: 100, high: 200),
+      ];
+      final range = globalRange(bandSpec(bands), bands, FacetAxis.y)!;
+      // Identical to the gapless band above: the gap must not drag the shared
+      // axis down to zero.
+      expect(range.min, 100);
+      expect(range.max, 200);
+    });
+
+    test('a gap in an all-NEGATIVE band does not acquire 0 as its max', () {
+      const bands = <Band>[
+        Band(time: 0, low: -180, high: -120),
+        Band(time: 1),
+        Band(time: 2, low: -200, high: -100),
+      ];
+      final range = globalRange(bandSpec(bands), bands, FacetAxis.y)!;
+      expect(range.min, -200);
+      expect(range.max, -100);
+    });
+
+    test('range-area x-range ignores the bounds entirely', () {
+      const bands = <Band>[
+        Band(time: 0, low: 120, high: 180),
+        Band(time: 1),
+        Band(time: 4, low: 100, high: 200),
+      ];
+      final range = globalRange(bandSpec(bands), bands, FacetAxis.x)!;
+      expect(range.min, 0);
+      expect(range.max, 4);
+    });
+
+    test('a HALF-null row contributes the one bound it does carry', () {
+      const bands = <Band>[
+        Band(time: 0, low: 120, high: 180),
+        Band(time: 1, high: 240),
+        Band(time: 2, low: 90),
+      ];
+      // Such a spec is rejected at lowering (incompleteRangeAreaInterval), but
+      // faceting runs BEFORE lowering, so the sweep still has to answer. The
+      // author typed 240 and 90; they are real values, so they count.
+      final range = globalRange(bandSpec(bands), bands, FacetAxis.y)!;
+      expect(range.min, 90);
+      expect(range.max, 240);
+    });
+
+    test('a band that is ALL gaps yields no y range at all', () {
+      const bands = <Band>[Band(time: 0), Band(time: 1)];
+      expect(globalRange(bandSpec(bands), bands, FacetAxis.y), isNull);
     });
   });
 

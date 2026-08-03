@@ -184,7 +184,10 @@ void main() {
     final source = workbench.generatedSource!.source;
     expect(source, isNot(contains('= BravenChart.of(')));
     expect(source, isNot(contains('Cartesian-only in V1')));
-    expect(source, contains('radial-bar, gauge or range-area'));
+    // Range area LEFT this list with `geomRangeArea`, so a reason that still
+    // named it would be the same stale copy the line above guards against.
+    expect(source, contains('radial-bar or gauge'));
+    expect(source, isNot(contains('or range-area family has no mark')));
     expect(source, contains('RadialBarChartSeries'));
     expect(
       workbench.generatedSource!.completeness,

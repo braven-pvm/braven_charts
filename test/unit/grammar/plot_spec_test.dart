@@ -54,6 +54,7 @@ String geomOf(Mark<Sample> mark) => switch (mark) {
   ScatterMark<Sample>() => 'scatter',
   HeatmapMark<Sample>() => 'heatmap',
   CandlestickMark<Sample>() => 'candlestick',
+  RangeAreaMark<Sample>() => 'rangeArea',
   TrendMark<Sample>() => 'trend',
   ThresholdMark<Sample>() => 'threshold',
   BandMark<Sample>() => 'band',
@@ -79,6 +80,13 @@ const _candle = CandlestickMark<Sample>(
   high: sampleHigh,
   low: sampleLow,
   close: sampleClose,
+);
+// `sampleLow`/`sampleHigh` return `double`, which is a subtype of the `num?`
+// the band's nullable bound accessors declare, so the same tear-offs serve.
+const _rangeArea = RangeAreaMark<Sample>(
+  x: sampleTime,
+  low: sampleLow,
+  high: sampleHigh,
 );
 const _trend = TrendMark<Sample>(sourceMarkId: 'mark-0');
 const _threshold = ThresholdMark<Sample>(value: 250);
@@ -182,6 +190,7 @@ void main() {
       expect(geomOf(_scatter), 'scatter');
       expect(geomOf(_heatmap), 'heatmap');
       expect(geomOf(_candle), 'candlestick');
+      expect(geomOf(_rangeArea), 'rangeArea');
       expect(geomOf(_trend), 'trend');
       expect(geomOf(_threshold), 'threshold');
       expect(geomOf(_band), 'band');
