@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
@@ -43,8 +44,43 @@ enum _ClusterFocus { full, primary, secondary }
 
 enum _RasterReviewState { idle, loading, ready, retainedFallback, failed }
 
+_HeatmapPreset? _heatmapPresetFromSlug(String? value) {
+  final normalized = value?.trim().toLowerCase().replaceAll(
+    RegExp(r'[^a-z0-9]'),
+    '',
+  );
+  if (normalized == null || normalized.isEmpty) return null;
+
+  for (final preset in _HeatmapPreset.values) {
+    if (preset.name.toLowerCase() == normalized) return preset;
+  }
+
+  return switch (normalized) {
+    'activitymatrix' => _HeatmapPreset.activity,
+    'matrixselection' => _HeatmapPreset.selection,
+    'irregularcells' => _HeatmapPreset.irregular,
+    'servicehealth' => _HeatmapPreset.threshold,
+    'calendarmonth' => _HeatmapPreset.calendar,
+    'contributioncalendar' => _HeatmapPreset.contributions,
+    '2dhistogram' => _HeatmapPreset.histogram,
+    'densityraster' => _HeatmapPreset.density,
+    'densitycontours' => _HeatmapPreset.contours,
+    'clusteredmatrix' => _HeatmapPreset.clustered,
+    'colouraxes' || 'coloraxes' => _HeatmapPreset.colourAxes,
+    'smallmultiples' => _HeatmapPreset.smallMultiples,
+    'denseviewport' => _HeatmapPreset.dense,
+    'massivematrix' => _HeatmapPreset.viewportSource,
+    'rastertiles' => _HeatmapPreset.rasterTiles,
+    _ => null,
+  };
+}
+
 class HeatmapChartsPage extends StatefulWidget {
-  const HeatmapChartsPage({super.key});
+  const HeatmapChartsPage({super.key, this.initialPreset});
+
+  /// Optional direct-route/test preset. Hosted links otherwise read `preset`
+  /// from [Uri.base] and accept both enum names and the labels' URL slugs.
+  final String? initialPreset;
 
   @override
   State<HeatmapChartsPage> createState() => _HeatmapChartsPageState();
@@ -339,17 +375,14 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
   @override
   void initState() {
     super.initState();
-    final requestedPreset = Uri.base.queryParameters['preset']
-        ?.toLowerCase()
-        .replaceAll('-', '');
-    for (final preset in _HeatmapPreset.values) {
-      if (preset.name.toLowerCase() == requestedPreset) {
-        _preset = preset;
-        if (preset == _HeatmapPreset.contributions) {
-          _palette = _HeatmapPalette.forest;
-          _showValues = false;
-        }
-        break;
+    final requestedPreset = _heatmapPresetFromSlug(
+      widget.initialPreset ?? Uri.base.queryParameters['preset'],
+    );
+    if (requestedPreset != null) {
+      _preset = requestedPreset;
+      if (requestedPreset == _HeatmapPreset.contributions) {
+        _palette = _HeatmapPalette.forest;
+        _showValues = false;
       }
     }
     if (_preset == _HeatmapPreset.viewportSource) {
@@ -1252,6 +1285,17 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
                 icon: Icons.autorenew,
                 onPressed: () => setState(() => _dataRevision++),
               ),
+          ],
+        ),
+        OptionSection(
+          key: const ValueKey('heatmap-performance-audit-options'),
+          title: 'Performance audit',
+          icon: Icons.monitor_heart_outlined,
+          children: [
+            _HeatmapPerformanceProbe(
+              key: ValueKey('heatmap-performance-${_preset.name}'),
+              scenarioLabel: _title,
+            ),
           ],
         ),
       ],
@@ -3089,8 +3133,11 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
         showCellLabels: false,
         gapFraction: _gapFraction,
         cornerRadius: _cornerRadius,
-        borderColor: const Color(0x22FFFFFF),
-        borderWidth: 0.5,
+        // The configured gap already separates the thousands of resident
+        // cells. Avoid adding an equivalent stroked RRect path to the dense
+        // viewport's retained GPU picture.
+        borderColor: Colors.transparent,
+        borderWidth: 0,
         metadata: const {
           'sourceMode': 'viewport-backed',
           'snapshotSemantics': 'resident-cells-only',
@@ -4384,6 +4431,305 @@ class _HeatmapChartsPageState extends State<HeatmapChartsPage> {
       return 2 - wrapped / 1.5707963267948966;
     }
     return wrapped / 1.5707963267948966 - 4;
+  }
+}
+
+/// Passive browser/device timings for the currently selected Heatmap preset.
+///
+/// This widget owns its sampling state so the twice-per-second diagnostics
+/// refresh never rebuilds the chart, its workbench, or the enclosing page.
+class _HeatmapPerformanceProbe extends StatefulWidget {
+  const _HeatmapPerformanceProbe({super.key, required this.scenarioLabel});
+
+  final String scenarioLabel;
+
+  @override
+  State<_HeatmapPerformanceProbe> createState() =>
+      _HeatmapPerformanceProbeState();
+}
+
+class _HeatmapPerformanceProbeState extends State<_HeatmapPerformanceProbe>
+    with SingleTickerProviderStateMixin {
+  static const _frameBudget = Duration(microseconds: 16667);
+  static const _maxSamples = 180;
+  static const _metricsRefreshInterval = Duration(milliseconds: 500);
+  static const _samplingDuration = Duration(seconds: 4);
+
+  final List<FrameTiming> _frameTimings = [];
+  DateTime _lastMetricsRefresh = DateTime.fromMillisecondsSinceEpoch(0);
+  late final AnimationController _samplingController;
+  bool _isSampling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _samplingController = AnimationController(
+      vsync: this,
+      duration: _samplingDuration,
+    )..addStatusListener(_handleSamplingStatus);
+    SchedulerBinding.instance.addTimingsCallback(_recordTimings);
+  }
+
+  void _recordTimings(List<FrameTiming> timings) {
+    if (!mounted || !_isSampling || timings.isEmpty) return;
+    _frameTimings.addAll(timings);
+    if (_frameTimings.length > _maxSamples) {
+      _frameTimings.removeRange(0, _frameTimings.length - _maxSamples);
+    }
+    final now = DateTime.now();
+    if (now.difference(_lastMetricsRefresh) < _metricsRefreshInterval) return;
+    _lastMetricsRefresh = now;
+    setState(() {});
+  }
+
+  void _startSample() {
+    _samplingController.stop();
+    setState(() {
+      _frameTimings.clear();
+      _lastMetricsRefresh = DateTime.now();
+      _isSampling = true;
+    });
+    // The controller deliberately has no visual listener. Its ticker requests
+    // a continuous frame cadence while the user exercises the chart, without
+    // rebuilding either this diagnostics widget or the chart subtree.
+    _samplingController.forward(from: 0);
+  }
+
+  void _handleSamplingStatus(AnimationStatus status) {
+    if (!mounted || status != AnimationStatus.completed) return;
+    setState(() => _isSampling = false);
+  }
+
+  void _reset() {
+    _samplingController.stop();
+    setState(() {
+      _frameTimings.clear();
+      _lastMetricsRefresh = DateTime.now();
+      _isSampling = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    SchedulerBinding.instance.removeTimingsCallback(_recordTimings);
+    _samplingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final frameP95 = _percentileMs(
+      _frameTimings.map((timing) => timing.totalSpan),
+    );
+    final buildP95 = _percentileMs(
+      _frameTimings.map((timing) => timing.buildDuration),
+    );
+    final rasterP95 = _percentileMs(
+      _frameTimings.map((timing) => timing.rasterDuration),
+    );
+    final gapP95 = _percentileMs(_frameGaps());
+    final slowFrames = _frameTimings
+        .where((timing) => timing.totalSpan > _frameBudget)
+        .length;
+    final jankPercent = _frameTimings.isEmpty
+        ? null
+        : slowFrames / _frameTimings.length * 100;
+    final presentedFps = gapP95 == null || gapP95 <= 0 ? null : 1000 / gapP95;
+
+    return Semantics(
+      container: true,
+      label: 'Heatmap rolling performance diagnostics',
+      child: Column(
+        key: const ValueKey('heatmap-performance-probe'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${widget.scenarioLabel} · ${_isSampling
+                ? 'sampling'
+                : _frameTimings.isEmpty
+                ? 'ready'
+                : 'sample complete'} · ${_frameTimings.length}/$_maxSamples rendered frames',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('run-heatmap-performance'),
+                  onPressed: _isSampling ? null : _startSample,
+                  icon: Icon(
+                    _isSampling ? Icons.timelapse : Icons.play_arrow,
+                    size: 18,
+                  ),
+                  label: Text(_isSampling ? 'Sampling…' : 'Run 4 s sample'),
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                key: const ValueKey('reset-heatmap-performance'),
+                tooltip: 'Clear Heatmap performance sample',
+                onPressed: _reset,
+                icon: const Icon(Icons.restart_alt, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final metricWidth = math.max(
+                96.0,
+                (constraints.maxWidth - 8) / 2,
+              );
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Frame p95',
+                    value: _formatMilliseconds(frameP95),
+                    color: _timingColor(colors, frameP95, 16.67),
+                  ),
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Frame gap p95',
+                    value: _formatMilliseconds(gapP95),
+                    color: _timingColor(colors, gapP95, 20),
+                  ),
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Presented FPS',
+                    value: presentedFps == null
+                        ? '—'
+                        : presentedFps.toStringAsFixed(1),
+                    color: presentedFps == null
+                        ? colors.onSurface
+                        : presentedFps >= 55
+                        ? Colors.green.shade700
+                        : presentedFps >= 45
+                        ? Colors.orange.shade800
+                        : colors.error,
+                  ),
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Jank >16.7ms',
+                    value: jankPercent == null
+                        ? '—'
+                        : '${jankPercent.toStringAsFixed(0)}%',
+                    color: jankPercent == null
+                        ? colors.onSurface
+                        : jankPercent <= 1
+                        ? Colors.green.shade700
+                        : jankPercent <= 5
+                        ? Colors.orange.shade800
+                        : colors.error,
+                  ),
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Build p95',
+                    value: _formatMilliseconds(buildP95),
+                  ),
+                  _HeatmapDiagnosticMetric(
+                    width: metricWidth,
+                    label: 'Raster p95',
+                    value: _formatMilliseconds(rasterP95),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start the controlled sample, then replay an update or pan/zoom '
+            'the chart while it runs. Idle time is excluded. These are '
+            'device-, browser-, and build-specific measurements, not portable '
+            'package claims.',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double? _percentileMs(Iterable<Duration> durations) {
+    final values = durations.map((duration) => duration.inMicroseconds).toList()
+      ..sort();
+    if (values.isEmpty) return null;
+    final index = ((values.length - 1) * 0.95).ceil();
+    return values[index] / 1000;
+  }
+
+  List<Duration> _frameGaps() {
+    if (_frameTimings.length < 2) return const [];
+    final gaps = <Duration>[];
+    for (var index = 1; index < _frameTimings.length; index++) {
+      final previous = _frameTimings[index - 1].timestampInMicroseconds(
+        ui.FramePhase.vsyncStart,
+      );
+      final current = _frameTimings[index].timestampInMicroseconds(
+        ui.FramePhase.vsyncStart,
+      );
+      final gap = current - previous;
+      if (gap > 0) gaps.add(Duration(microseconds: gap));
+    }
+    return gaps;
+  }
+
+  String _formatMilliseconds(double? value) {
+    if (value == null) return '—';
+    if (value < 0.1) return '<0.1ms';
+    return '${value.toStringAsFixed(1)}ms';
+  }
+
+  Color _timingColor(ColorScheme colors, double? value, double budget) {
+    if (value == null) return colors.onSurface;
+    if (value <= budget) return Colors.green.shade700;
+    if (value <= budget * 1.5) return Colors.orange.shade800;
+    return colors.error;
+  }
+}
+
+class _HeatmapDiagnosticMetric extends StatelessWidget {
+  const _HeatmapDiagnosticMetric({
+    required this.width,
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final double width;
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelSmall),
+          const SizedBox(height: 1),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

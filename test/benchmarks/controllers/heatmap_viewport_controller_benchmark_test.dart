@@ -4,6 +4,8 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../heatmap_benchmark_support.dart';
+
 void main() {
   test('24M-cell source keeps 100 moving viewport loads bounded', () async {
     final source = _BenchmarkTileSource();
@@ -18,8 +20,10 @@ void main() {
     addTearDown(controller.dispose);
 
     final stopwatch = Stopwatch()..start();
+    final loadSamples = <int>[];
     for (var step = 0; step < 100; step++) {
       final minimumX = step * 97.0;
+      final loadStopwatch = Stopwatch()..start();
       await controller.loadViewport(
         HeatmapViewportRequest(
           minimumX: minimumX,
@@ -28,6 +32,8 @@ void main() {
           maximumY: 23.5,
         ),
       );
+      loadStopwatch.stop();
+      loadSamples.add(loadStopwatch.elapsedMicroseconds);
       expect(controller.snapshot.cells.length, lessThanOrEqualTo(12288));
       expect(controller.snapshot.requestedTiles.length, lessThanOrEqualTo(8));
       expect(controller.snapshot.cacheTileCount, lessThanOrEqualTo(12));
@@ -35,12 +41,19 @@ void main() {
     stopwatch.stop();
 
     final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+    final loadDistribution = HeatmapBenchmarkDistribution.fromMicroseconds(
+      loadSamples,
+    );
     // ignore: avoid_print
     print(
       'Heatmap viewport controller '
       '(24,000,000 conceptual cells / 100 moving windows): '
       '${elapsedMs.toStringAsFixed(3)}ms, '
       '${source.loadCount} tile loads',
+    );
+    printHeatmapDistribution(
+      'Heatmap regular moving-window load latency',
+      loadDistribution,
     );
     expect(controller.snapshot.hasError, isFalse);
     expect(controller.snapshot.cells, isNotEmpty);
@@ -72,8 +85,10 @@ void main() {
       final residentCells = controller.snapshot.cells;
 
       final stopwatch = Stopwatch()..start();
+      final panSamples = <int>[];
       for (var step = 0; step < 100; step++) {
         final offset = (step % 20) * 0.25;
+        final panStopwatch = Stopwatch()..start();
         await controller.loadViewport(
           HeatmapViewportRequest(
             minimumX: 128.0 + offset,
@@ -82,15 +97,24 @@ void main() {
             maximumY: 23.5,
           ),
         );
+        panStopwatch.stop();
+        panSamples.add(panStopwatch.elapsedMicroseconds);
       }
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+      final panDistribution = HeatmapBenchmarkDistribution.fromMicroseconds(
+        panSamples,
+      );
       // ignore: avoid_print
       print(
         'Heatmap resident snapshot reuse (100 same-tile pans): '
         '${elapsedMs.toStringAsFixed(3)}ms, '
         '${controller.diagnostics.residentSnapshotReuses} reuses',
+      );
+      printHeatmapDistribution(
+        'Heatmap same-tile pan latency',
+        panDistribution,
       );
       expect(controller.diagnostics.residentSnapshotReuses, 100);
       expect(identical(controller.snapshot.cells, residentCells), isTrue);
@@ -122,7 +146,9 @@ void main() {
       );
 
       final stopwatch = Stopwatch()..start();
+      final mutationSamples = <int>[];
       for (var revision = 1; revision <= 100; revision++) {
+        final mutationStopwatch = Stopwatch()..start();
         controller.applyMutationBatch(
           HeatmapMutationBatch(
             revision: revision,
@@ -141,16 +167,24 @@ void main() {
             ],
           ),
         );
+        mutationStopwatch.stop();
+        mutationSamples.add(mutationStopwatch.elapsedMicroseconds);
       }
       stopwatch.stop();
       await Future<void>.delayed(const Duration(milliseconds: 40));
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+      final mutationDistribution =
+          HeatmapBenchmarkDistribution.fromMicroseconds(mutationSamples);
       // ignore: avoid_print
       print(
         'Heatmap live controller (2400 updates): '
         '${elapsedMs.toStringAsFixed(3)}ms, '
         '${controller.diagnostics.mutationPublications} publication',
+      );
+      printHeatmapDistribution(
+        'Heatmap 24-cell mutation-batch latency',
+        mutationDistribution,
       );
       expect(controller.diagnostics.mutationBatchesAccepted, 100);
       expect(controller.diagnostics.cellMutationsApplied, 2400);

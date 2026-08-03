@@ -4,6 +4,8 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../heatmap_benchmark_support.dart';
+
 void main() {
   test('48 by 32 matrix clusters both axes promptly', () {
     const rowCount = 48;
@@ -22,26 +24,28 @@ void main() {
           ),
     ];
 
-    final stopwatch = Stopwatch()..start();
-    final result = HeatmapMatrixClusterData(
-      rowLabels: [for (var row = 0; row < rowCount; row++) 'Row $row'],
-      columnLabels: [
-        for (var column = 0; column < columnCount; column++) 'Column $column',
-      ],
-      cells: cells,
-    );
-    stopwatch.stop();
+    final rowLabels = [for (var row = 0; row < rowCount; row++) 'Row $row'];
+    final columnLabels = [
+      for (var column = 0; column < columnCount; column++) 'Column $column',
+    ];
+    late HeatmapMatrixClusterData result;
+    final distribution = measureHeatmapSync(() {
+      result = HeatmapMatrixClusterData(
+        rowLabels: rowLabels,
+        columnLabels: columnLabels,
+        cells: cells,
+      );
+    });
 
-    final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-    // ignore: avoid_print
-    print(
+    printHeatmapDistribution(
       'Heatmap clustering (48 rows / 32 columns / 1,536 cells): '
-      '${elapsedMs.toStringAsFixed(3)}ms',
+      'transform',
+      distribution,
     );
     expect(result.cells, hasLength(rowCount * columnCount));
     expect(result.rowRoot, isNotNull);
     expect(result.columnRoot, isNotNull);
-    expect(elapsedMs, lessThan(1500));
+    expect(distribution.p95Millis, lessThan(1500));
   });
 
   test('96 by 64 matrix and 512-leaf hierarchy remain bounded', () {
@@ -61,41 +65,48 @@ void main() {
           ),
     ];
 
-    final clusterStopwatch = Stopwatch()..start();
-    final result = HeatmapMatrixClusterData(
-      rowLabels: [for (var row = 0; row < rowCount; row++) 'Row $row'],
-      columnLabels: [
-        for (var column = 0; column < columnCount; column++) 'Column $column',
-      ],
-      cells: cells,
-    );
-    clusterStopwatch.stop();
+    final rowLabels = [for (var row = 0; row < rowCount; row++) 'Row $row'];
+    final columnLabels = [
+      for (var column = 0; column < columnCount; column++) 'Column $column',
+    ];
+    late HeatmapMatrixClusterData result;
+    final clusterDistribution = measureHeatmapSync(() {
+      result = HeatmapMatrixClusterData(
+        rowLabels: rowLabels,
+        columnLabels: columnLabels,
+        cells: cells,
+      );
+    });
 
     final hierarchyRoot = HeatmapClusterNode.fromJson(
       _balancedRootJson(0, 512),
     );
-    final layoutStopwatch = Stopwatch()..start();
-    final hierarchy = HeatmapDendrogramData(
-      root: hierarchyRoot,
-      sourceLabels: [for (var index = 0; index < 512; index++) 'Leaf $index'],
-      axis: HeatmapDendrogramAxis.columns,
-      distanceScale: HeatmapDendrogramDistanceScale.structural,
-    );
-    layoutStopwatch.stop();
+    final sourceLabels = [
+      for (var index = 0; index < 512; index++) 'Leaf $index',
+    ];
+    late HeatmapDendrogramData hierarchy;
+    final layoutDistribution = measureHeatmapSync(() {
+      hierarchy = HeatmapDendrogramData(
+        root: hierarchyRoot,
+        sourceLabels: sourceLabels,
+        axis: HeatmapDendrogramAxis.columns,
+        distanceScale: HeatmapDendrogramDistanceScale.structural,
+      );
+    });
 
-    final clusterMs = clusterStopwatch.elapsedMicroseconds / 1000;
-    final layoutMs = layoutStopwatch.elapsedMicroseconds / 1000;
-    // ignore: avoid_print
-    print(
-      'Heatmap scale benchmark (96 x 64 / 6,144 cells): '
-      '${clusterMs.toStringAsFixed(3)}ms; '
-      '512-leaf dendrogram layout: ${layoutMs.toStringAsFixed(3)}ms',
+    printHeatmapDistribution(
+      'Heatmap scale benchmark (96 x 64 / 6,144 cells)',
+      clusterDistribution,
+    );
+    printHeatmapDistribution(
+      'Heatmap 512-leaf dendrogram layout',
+      layoutDistribution,
     );
     expect(result.cells, hasLength(rowCount * columnCount));
     expect(hierarchy.nodes, hasLength(1023));
     expect(hierarchy.segments, hasLength(1533));
-    expect(clusterMs, lessThan(4000));
-    expect(layoutMs, lessThan(250));
+    expect(clusterDistribution.p95Millis, lessThan(4000));
+    expect(layoutDistribution.p95Millis, lessThan(250));
   });
 }
 

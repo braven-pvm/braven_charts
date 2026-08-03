@@ -523,6 +523,7 @@ arbitrary massive matrix can be retained or clustered synchronously.
 
 ## Related documentation
 
+- [Heatmap release performance audit](../docs/superpowers/plans/2026-08-03-heatmap-release-performance-audit.md)
 - [Chart types](../docs/guides/chart-types.md)
 - [Feature coverage matrix](feature_matrix.md)
 - [Portable chart artifacts](chart_artifacts.md)

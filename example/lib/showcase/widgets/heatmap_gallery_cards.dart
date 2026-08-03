@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 const heatmapGalleryCards = <Widget>[
   _ActivityHeatmapGalleryCard(),
   _TemperatureHeatmapGalleryCard(),
+  _CorrelationHeatmapGalleryCard(),
   _ServiceHeatmapGalleryCard(),
 ];
 
@@ -156,6 +157,51 @@ class _ServiceHeatmapGalleryCard extends StatelessWidget {
       rows: const ['Web', 'API', 'Jobs', 'Store'],
       xLabel: 'Check',
       yLabel: 'Service',
+    );
+  }
+}
+
+class _CorrelationHeatmapGalleryCard extends StatelessWidget {
+  const _CorrelationHeatmapGalleryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    const values = <List<double>>[
+      [1.00, 0.82, 0.74, -0.61, -0.48, -0.55],
+      [0.82, 1.00, 0.79, -0.52, -0.43, -0.49],
+      [0.74, 0.79, 1.00, -0.57, -0.39, -0.46],
+      [-0.61, -0.52, -0.57, 1.00, 0.88, 0.81],
+      [-0.48, -0.43, -0.39, 0.88, 1.00, 0.76],
+      [-0.55, -0.49, -0.46, 0.81, 0.76, 1.00],
+    ];
+    final series = HeatmapChartSeries(
+      id: 'gallery-heatmap-correlation',
+      name: 'Relationship',
+      points: _matrixPoints('correlation', values),
+      colorScale: HeatmapColorScale.diverging(
+        lowColor: const Color(0xFF2563EB),
+        midpointColor: const Color(0xFFF8FAFC),
+        highColor: const Color(0xFFEA580C),
+        midpoint: 0,
+        minimumValue: -1,
+        maximumValue: 1,
+        label: 'Correlation',
+      ),
+      showCellLabels: true,
+      cellLabelFontSize: 9.5,
+      gapFraction: 0.08,
+      cornerRadius: 2,
+    );
+    const metrics = ['Revenue', 'Conv.', 'Active', 'Errors', 'Load', 'Latency'];
+    return _HeatmapGalleryCard(
+      key: const ValueKey('gallery-heatmap-correlation'),
+      title: 'Product correlation',
+      subtitle: 'Positive and inverse relationships around a neutral midpoint',
+      series: series,
+      columns: metrics,
+      rows: metrics,
+      xLabel: 'Observed metric',
+      yLabel: 'Product signal',
     );
   }
 }

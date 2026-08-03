@@ -1268,6 +1268,22 @@ class ChartRenderBox extends RenderBox {
   ui.Picture? get debugSeriesCachePicture => _seriesCacheManager.cachedPicture;
 
   @visibleForTesting
+  bool get debugCanReuseDenseHeatmapInteractionPicture =>
+      _canUseDenseHeatmapInteractionCache &&
+      _seriesCacheManager.canDrawForTransform(
+        elements: _elements,
+        currentTransform: _transform,
+      );
+
+  @visibleForTesting
+  bool get debugDenseHeatmapInteractionCacheEligible =>
+      _canUseDenseHeatmapInteractionCache;
+
+  @visibleForTesting
+  bool get debugInteractionPictureContainsViewport => _seriesCacheManager
+      .canDrawForTransform(elements: _elements, currentTransform: _transform);
+
+  @visibleForTesting
   bool get debugSelectionBrushKeyboardFocused => _selectionBrushKeyboardFocused;
 
   /// Records only the persistent-brush overlay for focused performance tests.
@@ -4029,6 +4045,14 @@ class ChartRenderBox extends RenderBox {
   /// - canvas: Canvas to paint series elements (already clipped to plot area)
   /// - size: Size of the plot area (for element paint calls)
   void _paintSeriesLayerContent(ui.Canvas canvas, Size size) {
+    _paintSeriesLayerContentForTransform(canvas, size, _transform);
+  }
+
+  void _paintSeriesLayerContentForTransform(
+    ui.Canvas canvas,
+    Size size,
+    ChartTransform? renderTransform,
+  ) {
     // Note: Canvas is already clipped to plot area by SeriesCacheManager
 
     // Paint series elements only (filter out overlays, handles, etc.)
@@ -4072,7 +4096,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint each series with current transform
     for (final series in seriesElements) {
-      if (_transform != null && series is SeriesElement) {
+      if (renderTransform != null && series is SeriesElement) {
         series.setBarLabelLayoutCoordinator(barLabelLayout);
         series.setDataPointLabelLayoutCoordinator(dataPointLabelLayout);
         // CRITICAL: Update transform before painting (enables path caching!)
@@ -4085,7 +4109,7 @@ class ChartRenderBox extends RenderBox {
             final axisRange = axisBounds[axisId]!;
             final axisConfig = axisConfigsById?[axisId];
             // Create transform with per-axis Y bounds for proper normalization
-            final perSeriesTransform = _transform!.copyWith(
+            final perSeriesTransform = renderTransform.copyWith(
               dataYMin: axisRange.min,
               dataYMax: axisRange.max,
               yScaleType: axisConfig?.scaleType,
@@ -4094,11 +4118,11 @@ class ChartRenderBox extends RenderBox {
             series.updateTransform(perSeriesTransform);
           } else {
             // Fallback: No axis binding found, use global transform
-            series.updateTransform(_transform!);
+            series.updateTransform(renderTransform);
           }
         } else {
           // Single-axis mode: Use global transform
-          series.updateTransform(_transform!);
+          series.updateTransform(renderTransform);
         }
       }
       series.paint(canvas, size);
@@ -4118,6 +4142,45 @@ class ChartRenderBox extends RenderBox {
     // NOTE: Streaming elements are NOT painted here - they're painted
     // separately in _paintStreamingElements() to avoid cache thrashing.
     // Static series are cached in Picture, streaming data is painted fresh.
+  }
+
+  bool get _canUseDenseHeatmapInteractionCache {
+    final transform = _transform;
+    if (transform == null ||
+        transform.transposed ||
+        transform.xScaleType == AxisScaleType.log ||
+        transform.yScaleType == AxisScaleType.log ||
+        _multiAxisManager.isMultiAxisNormalizationActive()) {
+      return false;
+    }
+
+    final seriesElements = _elements.whereType<DataSeriesElement>().toList();
+    return seriesElements.isNotEmpty &&
+        seriesElements.every(
+          (element) =>
+              element is SeriesElement &&
+              element.series is HeatmapChartSeries &&
+              element.pointCount >= 2048 &&
+              !(element.series as HeatmapChartSeries).showCellLabels,
+        );
+  }
+
+  ChartTransform _expandedHeatmapInteractionTransform(
+    ChartTransform transform,
+  ) {
+    // One half-viewport on every side keeps ordinary pan gestures inside one
+    // stable Picture without turning a bounded cache into an unbounded scene.
+    const overscanFraction = 0.5;
+    final extraX = transform.dataXRange * overscanFraction;
+    final extraY = transform.dataYRange * overscanFraction;
+    return transform.copyWith(
+      dataXMin: transform.dataXMin - extraX,
+      dataXMax: transform.dataXMax + extraX,
+      dataYMin: transform.dataYMin - extraY,
+      dataYMax: transform.dataYMax + extraY,
+      plotWidth: transform.plotWidth * (1 + 2 * overscanFraction),
+      plotHeight: transform.plotHeight * (1 + 2 * overscanFraction),
+    );
   }
 
   /// Paints streaming elements directly without caching.
@@ -4956,10 +5019,49 @@ class ChartRenderBox extends RenderBox {
     );
     // [DEBUG OUTPUT REMOVED] Cache hit/miss - was firing at 60fps
 
+    var seriesLayerPainted = false;
     if (cacheValid) {
       // Cache hit! Draw cached Picture (fast path ~0.1ms)
       canvas.drawPicture(_seriesCacheManager.cachedPicture!);
-    } else {
+      seriesLayerPainted = true;
+    } else if (coordinator.isPanningOrZooming &&
+        _canUseDenseHeatmapInteractionCache) {
+      seriesLayerPainted = _seriesCacheManager.drawForTransform(
+        canvas: canvas,
+        elements: _elements,
+        currentTransform: _transform,
+      );
+
+      if (!seriesLayerPainted && !_seriesCacheManager.isDirty) {
+        final currentTransform = _transform!;
+        final pictureTransform = _expandedHeatmapInteractionTransform(
+          currentTransform,
+        );
+        _seriesCacheManager.generatePicture(
+          elements: _elements,
+          plotAreaSize: Size(
+            pictureTransform.plotWidth,
+            pictureTransform.plotHeight,
+          ),
+          currentTransform: currentTransform,
+          pictureTransform: pictureTransform,
+          painter: (pictureCanvas, pictureSize) {
+            _paintSeriesLayerContentForTransform(
+              pictureCanvas,
+              pictureSize,
+              pictureTransform,
+            );
+          },
+        );
+        seriesLayerPainted = _seriesCacheManager.drawForTransform(
+          canvas: canvas,
+          elements: _elements,
+          currentTransform: currentTransform,
+        );
+      }
+    }
+
+    if (!seriesLayerPainted) {
       // Cache miss - regenerate Picture from current data/transform
       // [DEBUG OUTPUT REMOVED] Picture regeneration - fires on data updates
 

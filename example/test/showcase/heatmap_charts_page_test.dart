@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(WidgetTester tester, {String? initialPreset}) async {
     tester.view.physicalSize = const Size(1600, 1100);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -21,11 +21,26 @@ void main() {
       MaterialApp(
         home: ChartWorkbenchScope(
           controller: workbenchGroup,
-          child: const Scaffold(body: HeatmapChartsPage()),
+          child: Scaffold(
+            body: HeatmapChartsPage(initialPreset: initialPreset),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  for (final (:slug, :title) in const [
+    (slug: 'density-contours', title: 'Customer density contours'),
+    (slug: 'clustered-matrix', title: 'Clustered product signals'),
+    (slug: 'massive-matrix', title: 'Viewport-backed massive matrix'),
+  ]) {
+    testWidgets('Heatmap direct route resolves $slug', (tester) async {
+      await pumpPage(tester, initialPreset: slug);
+
+      expect(find.text(title), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   }
 
   testWidgets('Heatmap guide exposes chart, matrix data, split, and source', (
@@ -74,6 +89,43 @@ void main() {
     expect(find.byType(ChartSourceView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Heatmap guide exposes isolated session performance diagnostics',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('options-panel-search-toggle')),
+      );
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('options-panel-search')),
+        'Performance audit',
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('heatmap-performance-audit-options')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('heatmap-performance-probe')),
+        findsOneWidget,
+      );
+      expect(find.text('Frame p95'), findsOneWidget);
+      expect(find.text('Frame gap p95'), findsOneWidget);
+      expect(find.text('Jank >16.7ms'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('run-heatmap-performance')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('reset-heatmap-performance')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Heatmap preset changes refresh the mounted source', (
     tester,
