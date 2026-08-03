@@ -111,7 +111,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Activity patterns, correlation, calendars, and dense fields',
     icon: Icons.grid_on_outlined,
     accent: Color(0xFF0891B2),
-    highlights: ['3 colour scales', 'Missing cells', 'Viewport indexed'],
+    highlights: ['Sequential + diverging', 'Missing cells', 'Viewport-backed'],
   ),
   ShowcaseChartType(
     type: ChartType.pie,

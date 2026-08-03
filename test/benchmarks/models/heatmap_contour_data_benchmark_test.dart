@@ -4,6 +4,8 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../heatmap_benchmark_support.dart';
+
 void main() {
   test('five contour levels traverse a 32 by 24 density raster promptly', () {
     final density = HeatmapDensityData(
@@ -22,22 +24,20 @@ void main() {
       bandwidthY: 6,
     );
 
-    final stopwatch = Stopwatch()..start();
-    final contours = HeatmapContourData.fromDensity(
-      density,
-      levels: const [0.15, 0.3, 0.45, 0.6, 0.75],
-    );
-    stopwatch.stop();
+    late HeatmapContourData contours;
+    final distribution = measureHeatmapSync(() {
+      contours = HeatmapContourData.fromDensity(
+        density,
+        levels: const [0.15, 0.3, 0.45, 0.6, 0.75],
+      );
+    });
 
-    final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-    // ignore: avoid_print
-    print(
-      'Heatmap contour transform '
-      '(768 cells / 5 levels): '
-      '${elapsedMs.toStringAsFixed(3)}ms',
+    printHeatmapDistribution(
+      'Heatmap contour transform (768 cells / 5 levels)',
+      distribution,
     );
     expect(contours.paths, isNotEmpty);
     expect(contours.paths.expand((path) => path.points), isNotEmpty);
-    expect(elapsedMs, lessThan(500));
+    expect(distribution.p95Millis, lessThan(500));
   });
 }

@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart' show Size, Offset;
 
 import '../../coordinates/chart_transform.dart';
 import '../../interaction/core/chart_element.dart';
+import '../../models/axis_scale_type.dart';
 
 /// Callback type for painting series elements.
 ///
@@ -45,6 +46,13 @@ class SeriesCacheManager {
   /// Transform state when cache was last generated.
   ChartTransform? _cachedTransform;
 
+  /// Transform used to record coordinates inside [_cachedPicture].
+  ///
+  /// This normally matches [_cachedTransform]. A caller may deliberately
+  /// record an overscanned picture for a smaller viewport, however, so the
+  /// two transforms must remain distinct.
+  ChartTransform? _pictureTransform;
+
   /// Hash of series data when cache was last generated.
   int _cachedSeriesHash = 0;
 
@@ -66,6 +74,91 @@ class SeriesCacheManager {
   void dispose() {
     _cachedPicture?.dispose();
     _cachedPicture = null;
+    _cachedTransform = null;
+    _pictureTransform = null;
+  }
+
+  /// Whether the current clean picture can be mapped to [currentTransform].
+  ///
+  /// This is intentionally a low-level cache primitive. Callers remain
+  /// responsible for limiting transformed reuse to series whose interaction
+  /// preview is safe (currently dense Heatmaps only).
+  bool canDrawForTransform({
+    required List<ChartElement> elements,
+    required ChartTransform? currentTransform,
+  }) {
+    final pictureTransform = _pictureTransform;
+    if (_cachedPicture == null ||
+        _isDirty ||
+        currentTransform == null ||
+        pictureTransform == null ||
+        currentTransform.transposed ||
+        pictureTransform.transposed ||
+        currentTransform.xScaleType != pictureTransform.xScaleType ||
+        currentTransform.yScaleType != pictureTransform.yScaleType ||
+        currentTransform.xLogBase != pictureTransform.xLogBase ||
+        currentTransform.yLogBase != pictureTransform.yLogBase ||
+        currentTransform.invertY != pictureTransform.invertY ||
+        _calculateSeriesHash(elements) != _cachedSeriesHash) {
+      return false;
+    }
+
+    // Affine picture reuse is exact only for the linear coordinate mapping.
+    // Time axes use that same mapping in ChartTransform.
+    if (currentTransform.xScaleType == AxisScaleType.log ||
+        currentTransform.yScaleType == AxisScaleType.log) {
+      return false;
+    }
+
+    const epsilon = 1e-9;
+    return currentTransform.dataXMin >= pictureTransform.dataXMin - epsilon &&
+        currentTransform.dataXMax <= pictureTransform.dataXMax + epsilon &&
+        currentTransform.dataYMin >= pictureTransform.dataYMin - epsilon &&
+        currentTransform.dataYMax <= pictureTransform.dataYMax + epsilon;
+  }
+
+  /// Draws the cached picture mapped into [currentTransform].
+  ///
+  /// Returns false when the cached picture is not compatible with the target
+  /// transform or does not contain its full data viewport.
+  bool drawForTransform({
+    required ui.Canvas canvas,
+    required List<ChartElement> elements,
+    required ChartTransform? currentTransform,
+  }) {
+    if (!canDrawForTransform(
+      elements: elements,
+      currentTransform: currentTransform,
+    )) {
+      return false;
+    }
+
+    final target = currentTransform!;
+    final source = _pictureTransform!;
+    final scaleX =
+        (target.plotWidth / target.dataXRange) /
+        (source.plotWidth / source.dataXRange);
+    final scaleY =
+        (target.plotHeight / target.dataYRange) /
+        (source.plotHeight / source.dataYRange);
+    final translateX =
+        (source.dataXMin - target.dataXMin) *
+        target.plotWidth /
+        target.dataXRange;
+    final translateY = target.invertY
+        ? (target.dataYMax - source.dataYMax) *
+              target.plotHeight /
+              target.dataYRange
+        : (source.dataYMin - target.dataYMin) *
+              target.plotHeight /
+              target.dataYRange;
+
+    canvas.save();
+    canvas.translate(translateX, translateY);
+    canvas.scale(scaleX, scaleY);
+    canvas.drawPicture(_cachedPicture!);
+    canvas.restore();
+    return true;
   }
 
   /// Checks if the cache is valid and can be reused.
@@ -80,6 +173,13 @@ class SeriesCacheManager {
     required ChartTransform? currentTransform,
   }) {
     if (_cachedPicture == null || _isDirty) {
+      return false;
+    }
+
+    // An overscanned interaction picture must always be mapped through
+    // drawForTransform(), even when the viewport that requested it has not
+    // changed since recording.
+    if (_pictureTransform != _cachedTransform) {
       return false;
     }
 
@@ -113,6 +213,7 @@ class SeriesCacheManager {
     required List<ChartElement> elements,
     required Size plotAreaSize,
     required ChartTransform? currentTransform,
+    ChartTransform? pictureTransform,
     required SeriesPainter painter,
   }) {
     // Dispose old picture before creating new one
@@ -135,6 +236,7 @@ class SeriesCacheManager {
     _cachedPicture = picture;
     _cachedSeriesHash = _calculateSeriesHash(elements);
     _cachedTransform = currentTransform?.copyWith();
+    _pictureTransform = (pictureTransform ?? currentTransform)?.copyWith();
     _isDirty = false;
 
     return picture;

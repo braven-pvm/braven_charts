@@ -5,6 +5,8 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../heatmap_benchmark_support.dart';
+
 void main() {
   test(
     '512M-cell raster source keeps 100 moving viewport loads bounded',
@@ -20,8 +22,10 @@ void main() {
       addTearDown(controller.dispose);
 
       final stopwatch = Stopwatch()..start();
+      final loadSamples = <int>[];
       for (var step = 0; step < 100; step++) {
         final firstColumn = step * 4096.0;
+        final loadStopwatch = Stopwatch()..start();
         await controller.loadViewport(
           HeatmapViewportRequest(
             minimumX: firstColumn - 0.5,
@@ -30,6 +34,8 @@ void main() {
             maximumY: 511.5,
           ),
         );
+        loadStopwatch.stop();
+        loadSamples.add(loadStopwatch.elapsedMicroseconds);
         final snapshot = controller.snapshot;
         expect(snapshot.mountedTiles.length, lessThanOrEqualTo(16));
         expect(snapshot.requestedTileKeys.length, lessThanOrEqualTo(24));
@@ -44,6 +50,9 @@ void main() {
 
       final diagnostics = controller.snapshot.diagnostics;
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+      final loadDistribution = HeatmapBenchmarkDistribution.fromMicroseconds(
+        loadSamples,
+      );
       // ignore: avoid_print
       print(
         'Heatmap raster viewport controller '
@@ -53,6 +62,10 @@ void main() {
         '${diagnostics.cacheHits} cache hits, '
         '${diagnostics.evictions} evictions, '
         '${diagnostics.decodedCacheBytes} decoded bytes',
+      );
+      printHeatmapDistribution(
+        'Heatmap raster moving-window load latency',
+        loadDistribution,
       );
       expect(controller.snapshot.error, isNull);
       expect(source.loadCount, lessThan(240));
@@ -88,8 +101,10 @@ void main() {
         .toList(growable: false);
 
     final stopwatch = Stopwatch()..start();
+    final panSamples = <int>[];
     for (var step = 0; step < 100; step++) {
       final offset = (step % 20) * 0.25;
+      final panStopwatch = Stopwatch()..start();
       await controller.loadViewport(
         HeatmapViewportRequest(
           minimumX: 983039.5 + offset,
@@ -98,17 +113,26 @@ void main() {
           maximumY: 511.5,
         ),
       );
+      panStopwatch.stop();
+      panSamples.add(panStopwatch.elapsedMicroseconds);
       expect(controller.snapshot.semanticCells, hasLength(1536));
     }
     stopwatch.stop();
 
     final diagnostics = controller.snapshot.diagnostics;
     final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
+    final panDistribution = HeatmapBenchmarkDistribution.fromMicroseconds(
+      panSamples,
+    );
     // ignore: avoid_print
     print(
       'Heatmap raster same-residency reuse (100 pans): '
       '${elapsedMs.toStringAsFixed(3)}ms, '
       '${diagnostics.cacheHits} cache hits',
+    );
+    printHeatmapDistribution(
+      'Heatmap raster same-residency pan latency',
+      panDistribution,
     );
     expect(source.loadCount, initialLoadCount);
     expect(diagnostics.cacheHits, 1200);

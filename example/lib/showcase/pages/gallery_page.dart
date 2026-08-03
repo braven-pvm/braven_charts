@@ -300,10 +300,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'HEATMAP COMPOSITIONS',
-              title: 'Three matrix stories, one measured colour channel',
+              title: 'Four matrix stories, one measured colour channel',
               subtitle:
-                  'Compare recurring activity, a temperature rhythm around a stable midpoint, and operational thresholds with explicit missing cells.',
-              count: 3,
+                  'Compare recurring activity, temperature rhythm, diverging relationships, and operational thresholds with explicit missing cells.',
+              count: 4,
             ),
           ),
           SliverPadding(

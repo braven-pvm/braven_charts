@@ -318,7 +318,7 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('Three matrix stories, one measured colour channel'),
+      find.text('Four matrix stories, one measured colour channel'),
       800,
       scrollable: galleryScrollable,
     );
@@ -328,7 +328,7 @@ void main() {
       find.byKey(const ValueKey('gallery-heatmap-compositions')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-heatmap-compositions'), 3);
+    expect(_gridCount(tester, 'gallery-heatmap-compositions'), 4);
     final heatmapCharts = tester
         .widgetList<BravenChartPlus>(
           find.descendant(
@@ -337,10 +337,17 @@ void main() {
           ),
         )
         .toList();
-    expect(heatmapCharts, hasLength(3));
+    expect(heatmapCharts, hasLength(4));
     expect(
       heatmapCharts.expand((chart) => chart.series),
       everyElement(isA<HeatmapChartSeries>()),
+    );
+    expect(
+      heatmapCharts
+          .expand((chart) => chart.series)
+          .whereType<HeatmapChartSeries>()
+          .map((series) => series.colorScale.type),
+      contains(HeatmapColorScaleType.diverging),
     );
 
     await tester.scrollUntilVisible(

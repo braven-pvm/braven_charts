@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
-import 'package:braven_charts/src/interaction/core/chart_element.dart';
 import 'package:braven_charts/src/rendering/modules/series_cache_manager.dart';
 
 void main() {
@@ -151,10 +150,7 @@ void main() {
 
       test('isValid returns false when no picture exists', () {
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isFalse,
         );
       });
@@ -170,10 +166,7 @@ void main() {
         cacheManager.invalidate();
 
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isFalse,
         );
       });
@@ -187,10 +180,7 @@ void main() {
         );
 
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isTrue,
         );
       });
@@ -213,12 +203,90 @@ void main() {
         );
 
         expect(
-          cacheManager.isValid(
+          cacheManager.isValid(elements: [], currentTransform: newTransform),
+          isFalse,
+        );
+      });
+
+      test('overscanned picture is reusable only inside its data bounds', () {
+        const pictureTransform = ChartTransform(
+          dataXMin: -50,
+          dataXMax: 150,
+          dataYMin: -50,
+          dataYMax: 150,
+          plotWidth: 1600,
+          plotHeight: 1200,
+        );
+        cacheManager.generatePicture(
+          elements: [],
+          plotAreaSize: const Size(1600, 1200),
+          currentTransform: transform,
+          pictureTransform: pictureTransform,
+          painter: (canvas, size) {},
+        );
+
+        expect(
+          cacheManager.isValid(elements: [], currentTransform: transform),
+          isFalse,
+        );
+        expect(
+          cacheManager.canDrawForTransform(
             elements: [],
-            currentTransform: newTransform,
+            currentTransform: const ChartTransform(
+              dataXMin: 25,
+              dataXMax: 125,
+              dataYMin: 0,
+              dataYMax: 100,
+              plotWidth: 800,
+              plotHeight: 600,
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          cacheManager.canDrawForTransform(
+            elements: [],
+            currentTransform: const ChartTransform(
+              dataXMin: 75,
+              dataXMax: 175,
+              dataYMin: 0,
+              dataYMax: 100,
+              plotWidth: 800,
+              plotHeight: 600,
+            ),
           ),
           isFalse,
         );
+      });
+
+      test('drawForTransform maps a compatible overscanned picture', () {
+        const pictureTransform = ChartTransform(
+          dataXMin: -50,
+          dataXMax: 150,
+          dataYMin: -50,
+          dataYMax: 150,
+          plotWidth: 1600,
+          plotHeight: 1200,
+        );
+        cacheManager.generatePicture(
+          elements: [],
+          plotAreaSize: const Size(1600, 1200),
+          currentTransform: transform,
+          pictureTransform: pictureTransform,
+          painter: (canvas, size) {},
+        );
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        expect(
+          cacheManager.drawForTransform(
+            canvas: canvas,
+            elements: [],
+            currentTransform: transform,
+          ),
+          isTrue,
+        );
+        recorder.endRecording().dispose();
       });
     });
 

@@ -2,6 +2,7 @@
 // BravenChartPlus - Series Rendering
 
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/painting.dart'
@@ -626,6 +627,9 @@ class SeriesElement implements DataHitElement {
       _clearResolvedRangeAreaGeometry();
       _visibleHeatmapPointIndicesCache = null;
       _lastHeatmapViewportQuery = null;
+      _heatmapPaintCells = null;
+      _heatmapBorderBatches = null;
+      _heatmapDenseFillVertices = null;
       _computeBounds();
     }
   }
@@ -657,6 +661,9 @@ class SeriesElement implements DataHitElement {
     _heatmapViewportIndex = null;
     _visibleHeatmapPointIndicesCache = null;
     _lastHeatmapViewportQuery = null;
+    _heatmapPaintCells = null;
+    _heatmapBorderBatches = null;
+    _heatmapDenseFillVertices = null;
     _clearResolvedBarGeometry();
     _clearResolvedScatterGeometry();
     _clearResolvedCandlestickGeometry();
@@ -699,6 +706,9 @@ class SeriesElement implements DataHitElement {
     _heatmapViewportIndex = null;
     _visibleHeatmapPointIndicesCache = null;
     _lastHeatmapViewportQuery = null;
+    _heatmapPaintCells = null;
+    _heatmapBorderBatches = null;
+    _heatmapDenseFillVertices = null;
     _labelPainterCache.clear();
   }
 
@@ -777,6 +787,9 @@ class SeriesElement implements DataHitElement {
   HeatmapViewportIndex? _heatmapViewportIndex;
   List<int>? _visibleHeatmapPointIndicesCache;
   HeatmapViewportQuery? _lastHeatmapViewportQuery;
+  List<_HeatmapPaintCell>? _heatmapPaintCells;
+  Map<(Color, double), Path>? _heatmapBorderBatches;
+  List<Vertices>? _heatmapDenseFillVertices;
   int _selectionCandidateCount = 0;
   DataPointLabelLayoutCoordinator? _dataPointLabelLayoutCoordinator;
   List<Rect> _visibleScatterLabelBounds = const [];
@@ -786,6 +799,12 @@ class SeriesElement implements DataHitElement {
 
   /// Number of bar geometries materialized for the current viewport.
   int get visibleBarGeometryCount => _resolveBarGeometries().length;
+
+  /// Whether the current Heatmap paint used the high-density fill mesh.
+  ///
+  /// Exposed for renderer regression tests; low-density and labelled matrices
+  /// deliberately keep the exact rounded-cell path.
+  bool get usesDenseHeatmapFillBatch => _heatmapDenseFillVertices != null;
 
   /// Original series indices represented by the current virtualized geometry.
   List<int> get visibleBarPointIndices => [
@@ -3061,6 +3080,148 @@ class SeriesElement implements DataHitElement {
     return rect;
   }
 
+  List<_HeatmapPaintCell> _resolveHeatmapPaintCells(
+    HeatmapChartSeries heatmap,
+    Rect plotBounds,
+  ) {
+    final cached = _heatmapPaintCells;
+    if (cached != null) return cached;
+    final result = <_HeatmapPaintCell>[];
+    final emptyStyle = heatmap.emptyValueStyle;
+    for (final index in visibleHeatmapPointIndices) {
+      final cell = heatmap.cellAt(index);
+      if (_isHiddenByHeatmapValueFilter(heatmap, cell)) continue;
+      final rect = _heatmapCellRect(heatmap, index);
+      if (!rect.overlaps(plotBounds) || rect.isEmpty) continue;
+      final color = _heatmapCellColor(heatmap, cell);
+      if (color == null || color.a == 0) continue;
+      final isEmptyValue = emptyStyle?.matches(cell) ?? false;
+      final borderWidth = isEmptyValue
+          ? (emptyStyle!.borderWidth ?? heatmap.borderWidth)
+          : heatmap.borderWidth;
+      var borderColor = isEmptyValue
+          ? (emptyStyle!.borderColor ?? heatmap.borderColor)
+          : heatmap.borderColor;
+      final isDimmed = _isDimmedByHeatmapValueFilter(heatmap, cell);
+      if (isDimmed) {
+        borderColor = borderColor.withValues(
+          alpha: borderColor.a * heatmap.valueFilter!.excludedOpacity,
+        );
+      }
+      final radius = Radius.circular(
+        math.min(heatmap.cornerRadius, math.min(rect.width, rect.height) / 2),
+      );
+      result.add(
+        _HeatmapPaintCell(
+          cell: cell,
+          rect: rect,
+          roundedRect: RRect.fromRectAndRadius(rect, radius),
+          color: color,
+          borderColor: borderColor,
+          borderWidth: borderWidth,
+          showLabel: isEmptyValue
+              ? emptyStyle!.showLabel
+              : heatmap.showCellLabels,
+          isDimmed: isDimmed,
+        ),
+      );
+    }
+    return _heatmapPaintCells = List<_HeatmapPaintCell>.unmodifiable(result);
+  }
+
+  Map<(Color, double), Path>? _resolveHeatmapBorderBatches(
+    List<_HeatmapPaintCell> paintCells,
+  ) {
+    final cached = _heatmapBorderBatches;
+    if (cached != null) return cached;
+    if (paintCells.any((paintCell) => paintCell.cell.bounds != null)) {
+      return null;
+    }
+    final result = <(Color, double), Path>{};
+    for (final paintCell in paintCells) {
+      if (paintCell.borderWidth <= 0) continue;
+      final key = (paintCell.borderColor, paintCell.borderWidth);
+      (result[key] ??= Path()).addRRect(paintCell.roundedRect);
+    }
+    return _heatmapBorderBatches = Map.unmodifiable(result);
+  }
+
+  List<Vertices>? _resolveDenseHeatmapFillVertices(
+    HeatmapChartSeries heatmap,
+    List<_HeatmapPaintCell> paintCells,
+  ) {
+    final cached = _heatmapDenseFillVertices;
+    if (cached != null) return cached;
+    // Thousands of individual drawRRect calls are particularly expensive on
+    // Flutter web. At this density the rounded corner is sub-pixel to a few
+    // pixels, labels are already disabled, and one coloured triangle mesh is
+    // visually equivalent at the rendered scale. Zooming below this threshold
+    // automatically restores the exact rounded-cell renderer.
+    if (paintCells.length < 2048 ||
+        heatmap.showCellLabels ||
+        paintCells.any((paintCell) => paintCell.showLabel)) {
+      return null;
+    }
+    // Reuse four corner vertices through six triangle indices rather than
+    // duplicating both shared corners. Uint16 indices cap each mesh at 16,384
+    // cells, so larger visible matrices are split into deterministic chunks.
+    // This keeps the GPU upload and CanvasKit raster payload one third smaller
+    // without changing cell geometry or colour semantics.
+    const maximumCellsPerMesh = 16384;
+    final meshes = <Vertices>[];
+    for (
+      var chunkStart = 0;
+      chunkStart < paintCells.length;
+      chunkStart += maximumCellsPerMesh
+    ) {
+      final chunkEnd = math.min(
+        chunkStart + maximumCellsPerMesh,
+        paintCells.length,
+      );
+      final chunkLength = chunkEnd - chunkStart;
+      final positions = Float32List(chunkLength * 8);
+      final colors = Int32List(chunkLength * 4);
+      final indices = Uint16List(chunkLength * 6);
+      var positionOffset = 0;
+      var colorOffset = 0;
+      var indexOffset = 0;
+      for (var index = chunkStart; index < chunkEnd; index++) {
+        final paintCell = paintCells[index];
+        final rect = paintCell.rect;
+        positions
+          ..[positionOffset++] = rect.left
+          ..[positionOffset++] = rect.top
+          ..[positionOffset++] = rect.right
+          ..[positionOffset++] = rect.top
+          ..[positionOffset++] = rect.right
+          ..[positionOffset++] = rect.bottom
+          ..[positionOffset++] = rect.left
+          ..[positionOffset++] = rect.bottom;
+        final color = paintCell.color.toARGB32();
+        for (var vertex = 0; vertex < 4; vertex++) {
+          colors[colorOffset++] = color;
+        }
+        final firstVertex = (index - chunkStart) * 4;
+        indices
+          ..[indexOffset++] = firstVertex
+          ..[indexOffset++] = firstVertex + 1
+          ..[indexOffset++] = firstVertex + 2
+          ..[indexOffset++] = firstVertex
+          ..[indexOffset++] = firstVertex + 2
+          ..[indexOffset++] = firstVertex + 3;
+      }
+      meshes.add(
+        Vertices.raw(
+          VertexMode.triangles,
+          positions,
+          colors: colors,
+          indices: indices,
+        ),
+      );
+    }
+    return _heatmapDenseFillVertices = List<Vertices>.unmodifiable(meshes);
+  }
+
   int? _heatmapCellIndexAt(Offset position) {
     final heatmap = series;
     if (heatmap is! HeatmapChartSeries) return null;
@@ -3149,13 +3310,22 @@ class SeriesElement implements DataHitElement {
             animation.staggerFraction > 0
         ? _heatmapCoordinateBounds(heatmap)
         : null;
-    for (final index in visibleHeatmapPointIndices) {
-      final cell = heatmap.cellAt(index);
-      if (_isHiddenByHeatmapValueFilter(heatmap, cell)) continue;
-      var rect = _heatmapCellRect(heatmap, index);
-      if (!rect.overlaps(plotBounds) || rect.isEmpty) continue;
-      var color = _heatmapCellColor(heatmap, cell);
-      if (color == null || color.a == 0) continue;
+    final paintCells = _resolveHeatmapPaintCells(heatmap, plotBounds);
+    final borderBatches = hasActiveReveal
+        ? null
+        : _resolveHeatmapBorderBatches(paintCells);
+    final denseFillVertices = hasActiveReveal
+        ? null
+        : _resolveDenseHeatmapFillVertices(heatmap, paintCells);
+    if (denseFillVertices != null) {
+      for (final vertices in denseFillVertices) {
+        canvas.drawVertices(vertices, BlendMode.dst, fill);
+      }
+    }
+    for (final paintCell in paintCells) {
+      final cell = paintCell.cell;
+      var rect = paintCell.rect;
+      var color = paintCell.color;
       final cellProgress = hasActiveReveal
           ? _heatmapCellRevealProgress(heatmap, cell, coordinateBounds)
           : 1.0;
@@ -3174,39 +3344,40 @@ class SeriesElement implements DataHitElement {
       if (cellProgress < 1) {
         color = color.withValues(alpha: color.a * cellProgress);
       }
-      fill.color = color;
-      final radius = Radius.circular(
-        math.min(heatmap.cornerRadius, math.min(rect.width, rect.height) / 2),
-      );
-      final rounded = RRect.fromRectAndRadius(rect, radius);
-      canvas.drawRRect(rounded, fill);
-      final emptyStyle = heatmap.emptyValueStyle;
-      final isEmptyValue = emptyStyle?.matches(cell) ?? false;
-      final borderWidth = isEmptyValue
-          ? (emptyStyle!.borderWidth ?? heatmap.borderWidth)
-          : heatmap.borderWidth;
-      if (borderWidth > 0) {
-        var borderColor = isEmptyValue
-            ? (emptyStyle!.borderColor ?? heatmap.borderColor)
-            : heatmap.borderColor;
-        if (_isDimmedByHeatmapValueFilter(heatmap, cell)) {
-          borderColor = borderColor.withValues(
-            alpha: borderColor.a * heatmap.valueFilter!.excludedOpacity,
-          );
-        }
+      final rounded = rect == paintCell.rect
+          ? paintCell.roundedRect
+          : RRect.fromRectAndRadius(
+              rect,
+              Radius.circular(
+                math.min(
+                  heatmap.cornerRadius,
+                  math.min(rect.width, rect.height) / 2,
+                ),
+              ),
+            );
+      if (denseFillVertices == null) {
+        fill.color = color;
+        canvas.drawRRect(rounded, fill);
+      }
+      if (borderBatches == null && paintCell.borderWidth > 0) {
         border
-          ..color = borderColor
-          ..strokeWidth = borderWidth;
+          ..color = paintCell.borderColor
+          ..strokeWidth = paintCell.borderWidth;
         canvas.drawRRect(rounded, border);
       }
-      final showLabel = isEmptyValue
-          ? emptyStyle!.showLabel
-          : heatmap.showCellLabels;
-      if (showLabel &&
+      if (paintCell.showLabel &&
           !cell.isMissing &&
-          !_isDimmedByHeatmapValueFilter(heatmap, cell) &&
+          !paintCell.isDimmed &&
           cellProgress >= 0.72) {
         _paintHeatmapCellLabel(canvas, heatmap, cell, rect, color);
+      }
+    }
+    if (borderBatches != null) {
+      for (final entry in borderBatches.entries) {
+        border
+          ..color = entry.key.$1
+          ..strokeWidth = entry.key.$2;
+        canvas.drawPath(entry.value, border);
       }
     }
     canvas.restore();
@@ -7154,4 +7325,26 @@ class SeriesElement implements DataHitElement {
       paintBaseSeries: paintBaseSeries,
     );
   }
+}
+
+final class _HeatmapPaintCell {
+  const _HeatmapPaintCell({
+    required this.cell,
+    required this.rect,
+    required this.roundedRect,
+    required this.color,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.showLabel,
+    required this.isDimmed,
+  });
+
+  final HeatmapDataPoint cell;
+  final Rect rect;
+  final RRect roundedRect;
+  final Color color;
+  final Color borderColor;
+  final double borderWidth;
+  final bool showLabel;
+  final bool isDimmed;
 }

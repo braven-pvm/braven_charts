@@ -4,6 +4,8 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../heatmap_benchmark_support.dart';
+
 void main() {
   test('2K observations produce a 32 by 24 density raster promptly', () {
     final observations = [
@@ -18,25 +20,23 @@ void main() {
     final xAxis = HeatmapDensityAxis(minimum: 0, maximum: 10, cellCount: 32);
     final yAxis = HeatmapDensityAxis(minimum: 0, maximum: 100, cellCount: 24);
 
-    final stopwatch = Stopwatch()..start();
-    final result = HeatmapDensityData(
-      observations: observations,
-      xAxis: xAxis,
-      yAxis: yAxis,
-      bandwidthX: 0.6,
-      bandwidthY: 6,
-    );
-    stopwatch.stop();
+    late HeatmapDensityData result;
+    final distribution = measureHeatmapSync(() {
+      result = HeatmapDensityData(
+        observations: observations,
+        xAxis: xAxis,
+        yAxis: yAxis,
+        bandwidthX: 0.6,
+        bandwidthY: 6,
+      );
+    });
 
-    final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-    // ignore: avoid_print
-    print(
-      'Heatmap density transform '
-      '(2,000 observations / 768 cells): '
-      '${elapsedMs.toStringAsFixed(3)}ms',
+    printHeatmapDistribution(
+      'Heatmap density transform (2,000 observations / 768 cells)',
+      distribution,
     );
     expect(result.cells, hasLength(768));
     expect(result.maximumDensity, greaterThan(0));
-    expect(elapsedMs, lessThan(1500));
+    expect(distribution.p95Millis, lessThan(1500));
   });
 }

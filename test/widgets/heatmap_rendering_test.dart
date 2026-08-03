@@ -328,4 +328,77 @@ void main() {
     expect(renderBox.coordinator.hoveredMarker?.markerIndex, 1);
     expect(renderBox.debugSeriesCachePicture, same(picture));
   });
+
+  testWidgets(
+    'dense Heatmap pan reuses one overscanned picture until gesture settle',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      final points = <HeatmapDataPoint>[
+        for (var y = 0; y < 50; y += 1)
+          for (var x = 0; x < 50; x += 1)
+            HeatmapDataPoint(
+              x: x.toDouble(),
+              y: y.toDouble(),
+              value: (x + y).toDouble(),
+            ),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 700,
+              height: 460,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                series: [series(points)],
+                interactionConfig: const InteractionConfig(
+                  enableZoom: true,
+                  enablePan: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.zoomViewport(2), isTrue);
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      final exactPicture = renderBox.debugSeriesCachePicture;
+      final target = tester.getCenter(find.byType(BravenChartPlus));
+      final pointer = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kMiddleMouseButton,
+      );
+      addTearDown(pointer.removePointer);
+      await pointer.down(target);
+      await pointer.moveBy(const Offset(-24, 0));
+      await tester.pump();
+
+      expect(renderBox.coordinator.isPanningOrZooming, isTrue);
+      final interactionPicture = renderBox.debugSeriesCachePicture;
+      expect(interactionPicture, isNotNull);
+      expect(interactionPicture, isNot(same(exactPicture)));
+      expect(renderBox.debugDenseHeatmapInteractionCacheEligible, isTrue);
+      expect(renderBox.debugInteractionPictureContainsViewport, isTrue);
+      expect(renderBox.debugCanReuseDenseHeatmapInteractionPicture, isTrue);
+
+      await pointer.moveBy(const Offset(-24, 0));
+      await tester.pump();
+      expect(renderBox.debugSeriesCachePicture, same(interactionPicture));
+
+      await pointer.up();
+      await tester.pump();
+      expect(renderBox.coordinator.isPanningOrZooming, isFalse);
+      expect(
+        renderBox.debugSeriesCachePicture,
+        isNot(same(interactionPicture)),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
