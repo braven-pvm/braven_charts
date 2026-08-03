@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.17.0 - 2026-08-03
+
 ### Added
 
 - Per-series `showInTrackingTooltip` control. Set it to `false` to omit the
@@ -67,6 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration and hit-test mode); `fillGradient` and `pathAnimation` are not
   carried and a band using either is refused by name rather than emitted
   without it.
+- Collision-aware Cartesian series callouts through `SeriesCalloutConfig` and
+  per-series `SeriesCalloutSpec` overrides. Line and Area charts can place
+  stable connector-backed labels in a shared bounded lane, choose
+  follow-anchor or compact packing, prioritize dense labels, and configure
+  label, connector, glow, and content-sized lane-panel presentation without
+  changing legend, selection, or tracking participation. The complete portable
+  configuration round-trips through artifacts, hydration, JSON, generated
+  Config Dart, fluent APIs, and AI surface definitions; typed Chart Grammar
+  reports its current callout limitation explicitly.
 
 ### Changed
 
@@ -278,18 +289,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and publish an ordinary immutable Heatmap snapshot without adding source
   fetching to the render loop. Workbench Data, Split, Source, capture, and
   artifacts intentionally describe the current resident snapshot.
+- Bounded live Heatmap mutation through typed upsert, remove, and tile
+  invalidation batches. Host-owned controllers merge accepted generations into
+  cached and resident tiles, protect in-flight loads, coalesce immutable
+  publication, and keep the renderer, Workbench, artifacts, and generated
+  source truthful to the current resident snapshot rather than serializing a
+  live transport.
+- Portable viewport-provider descriptors for regular and raster-backed Heatmap
+  sources. Artifact hydration resolves an allowlisted host registry and creates
+  a fresh host-owned runtime without serializing callbacks, credentials,
+  clients, caches, decoded images, or mutation history.
+- Image-backed Heatmap viewport tiles with bounded decoded-byte residency,
+  stale-generation rejection, exact-once resource disposal, atomic retained
+  loading/failure replacement, and optional canonical semantic companions for
+  exact selection, accessibility, Workbench, artifacts, and generated source.
+  The showcase includes a 512-million-cell conceptual spectrogram while the
+  mounted raster and semantic snapshots remain bounded.
 
-### Changed
+### Heatmap integration and performance
 
 - Public catalog, generated README, hosted documentation, feature matrix, API
   overview, package description, and native chart-family media now describe
   thirteen built-in chart families.
+- Heatmap dense geometry now caches visible quad chunks and batches regular
+  borders. Repeated release audits keep 10K dense paint, resident viewport
+  paint, selection overlays, live mutation, regular/raster viewport movement,
+  and measured Chrome presentation within their recorded budgets without
+  weakening the one-frame gates.
 
 ### Notes
 
 - Heatmap compositions accept one or more Heatmap series and optional Line
-  overlays, but do not mix with other Cartesian mark families. Aggregation,
-  streamed cell mutation, image-backed tiles, arbitrary cell polygons, and
+  overlays, but do not mix with other Cartesian mark families. Remote
+  clustering/aggregation pushdown, arbitrary cell polygons, and
   treemap/mosaic/vector/geographic families remain explicitly scoped to later
   work.
 

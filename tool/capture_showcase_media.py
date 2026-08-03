@@ -42,20 +42,18 @@ BRAND = "#4F46E5"
 INK = "#262230"
 SURFACE = "#F8F7FC"
 
-LEFT_CARD = (281, 20, 832, 463)
-RIGHT_CARD = (865, 20, 1416, 463)
 GALLERY_MOSAIC_ASSETS = (
     "gallery_baseline.png",
     "gallery_vo2_stage.png",
     "gallery_glow.png",
     "gallery_lactate.png",
     "gallery_live_sensor.png",
+    "gallery_route_profile.png",
     "gallery_multi_sensor.png",
     "gallery_annotated.png",
     "gallery_dashboard.png",
+    "gallery_monthly_revenue.png",
     "gallery_temperature.png",
-    "gallery_quarterly_pipeline.png",
-    "gallery_experiment_cohorts.png",
     "gallery_revenue_forecast.png",
     "gallery_interpolation.png",
     "gallery_system_load.png",
@@ -462,18 +460,20 @@ def _gallery_stills_intro(
 ) -> None:
     """Capture the first advanced-composition row."""
 
-    # Advanced row 1: baseline response and VO2 stage analysis.
+    # Capture from known absolute positions rather than accumulating wheel
+    # deltas. New Gallery sections can then move one row without corrupting
+    # every image that follows it.
     _load(driver, base_url)
-    _scroll(driver, 780)
+    _scroll(driver, 1700)
     _save_png(
         driver,
         output_dir / "gallery_baseline.png",
-        (281, 323, 832, 766),
+        (281, 345, 832, 789),
     )
     _save_png(
         driver,
         output_dir / "gallery_vo2_stage.png",
-        (865, 323, 1416, 766),
+        (865, 345, 1416, 789),
     )
 
 
@@ -484,76 +484,94 @@ def _gallery_stills_remainder(
 ) -> None:
     """Capture the remaining Gallery cards after the first advanced row."""
     # Advanced row 2: dark glow treatment and lactate small multiples.
-    _scroll(driver, 780)
-    _save_png(driver, output_dir / "gallery_glow.png", LEFT_CARD)
-    _save_png(driver, output_dir / "gallery_lactate.png", RIGHT_CARD)
+    _load(driver, base_url)
+    _scroll(driver, 2200)
+    _save_png(
+        driver,
+        output_dir / "gallery_glow.png",
+        (281, 290, 832, 733),
+    )
+    _save_png(
+        driver,
+        output_dir / "gallery_lactate.png",
+        (865, 290, 1416, 733),
+    )
 
-    # Advanced row 3: live sensor viewport and normalized crosshair tracking.
-    _scroll(driver, 475)
-    _save_png(driver, output_dir / "gallery_live_sensor.png", LEFT_CARD)
-    _save_png(driver, output_dir / "gallery_multi_sensor.png", RIGHT_CARD)
+    # Advanced row 3: live sensor viewport and synchronized route profiling.
+    _load(driver, base_url)
+    _scroll(driver, 2700)
+    _save_png(
+        driver,
+        output_dir / "gallery_live_sensor.png",
+        (281, 298, 832, 741),
+    )
+    _save_png(
+        driver,
+        output_dir / "gallery_route_profile.png",
+        (865, 298, 1416, 741),
+    )
 
-    # Advanced row 4: annotations and a dense analytics dashboard.
-    _scroll(driver, 305)
+    # Advanced row 5: normalized multi-sensor tracking and annotations.
+    _load(driver, base_url)
+    _scroll(driver, 3900)
+    _save_png(
+        driver,
+        output_dir / "gallery_multi_sensor.png",
+        (281, 50, 832, 493),
+    )
     _save_png(
         driver,
         output_dir / "gallery_annotated.png",
-        (281, 191, 832, 634),
-    )
-    _save_png(
-        driver,
-        output_dir / "gallery_dashboard.png",
-        (865, 191, 1416, 634),
+        (865, 50, 1416, 493),
     )
 
-    # Building-block rows: distinct series types and styling treatments.
-    _scroll(driver, 780)
-    _save_png(
-        driver,
-        output_dir / "gallery_monthly_revenue.png",
-        (281, 29, 832, 433),
-    )
-    _save_png(
-        driver,
-        output_dir / "gallery_temperature.png",
-        (865, 29, 1416, 433),
-    )
-    _save_png(
-        driver,
-        output_dir / "gallery_quarterly_pipeline.png",
-        (281, 465, 832, 869),
-    )
-    _save_png(
-        driver,
-        output_dir / "gallery_experiment_cohorts.png",
-        (865, 465, 1416, 869),
-    )
-
-    _scroll(driver, 780)
-    _save_png(
-        driver,
-        output_dir / "gallery_revenue_forecast.png",
-        (281, 121, 832, 525),
-    )
-    _save_png(
-        driver,
-        output_dir / "gallery_interpolation.png",
-        (865, 121, 1416, 525),
-    )
-
-    # Reload before the final row so browser wheel coalescing cannot leave a
-    # sliver of the preceding row in the crop.
+    # Advanced row 6: dense analytics dashboard.
     _load(driver, base_url)
     _scroll(driver, 4200)
     _save_png(
         driver,
+        output_dir / "gallery_dashboard.png",
+        (281, 225, 832, 668),
+    )
+
+    # Building-block rows: distinct series types and styling treatments.
+    _load(driver, base_url)
+    _scroll(driver, 4700)
+    _save_png(
+        driver,
+        output_dir / "gallery_monthly_revenue.png",
+        (281, 343, 832, 747),
+    )
+    _save_png(
+        driver,
+        output_dir / "gallery_temperature.png",
+        (865, 343, 1416, 747),
+    )
+
+    _load(driver, base_url)
+    _scroll(driver, 5300)
+    _save_png(
+        driver,
+        output_dir / "gallery_revenue_forecast.png",
+        (281, 180, 832, 584),
+    )
+    _save_png(
+        driver,
+        output_dir / "gallery_interpolation.png",
+        (865, 180, 1416, 584),
+    )
+
+    _load(driver, base_url)
+    _scroll(driver, 5700)
+    _save_png(
+        driver,
         output_dir / "gallery_system_load.png",
-        (281, 459, 832, 863),
+        (281, 215, 832, 619),
     )
     _save_png(
         driver,
         output_dir / "gallery_profit_loss.png",
-        (865, 459, 1416, 863),
+        (865, 215, 1416, 619),
     )
     _save_gallery_mosaic(output_dir)
 
