@@ -55,6 +55,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered series, tracked snapshot, intersection markers, selection, and
   independently configured axis-side tracking labels.
 
+- The path and marker fields on the Cartesian grammar marks:
+  `tension:`, `dataPointMarkerRadius:`, `dataPointMarkerStyle:`,
+  `dataPointMarkerBackground:`, `lineGlow:`, `inlineLabel:` and
+  `pathAnimation:` on `BravenChart.geomLine()` and `geomArea()`, plus
+  `fillGradient:`, `aboveBaselineFillColor:` and `belowBaselineFillColor:` on
+  `geomArea()`, and `fillGradient:` + `pathAnimation:` on `geomRangeArea()`.
+  Each lowers to the matching `ChartSeries` field and is reversed back into
+  generated Dart source. Every one is nullable on the mark and **null means the
+  series default**, resolved once at lowering, so the mark cannot carry a stale
+  copy of one; the reversal maps a captured value equal to that default back to
+  null, so a chart that sets none of them emits exactly the source it emitted
+  before. A configured Line, Area or Range-Area chart is no longer refused for
+  any of these fields — the `RangeAreaChartsPage` went from 0 to 6 of its 7
+  presets emitting, and the whole-showcase emission census from 59 to 75.
 - A measure unit on the Cartesian grammar marks: `unit:` on
   `BravenChart.geomLine()`, `geomArea()`, `geomBar()`, `geomPoint()` and
   `geomCandlestick()`, carried onto the lowered `ChartSeries.unit` and reversed

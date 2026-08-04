@@ -79,6 +79,39 @@ Bring `BarChartSeries`' config modes into the grammar: waterfall, lollipop, bull
 ### 1d — Advanced-field completeness
 Close the "partial emission" gaps so the round-trip proof stops refusing configured Bar/Scatter charts: bar `barStyle`/`minBarLength`/overlay factors; scatter `jitter`/`renderMode`/`cluster`/`bin`/`density`/`interactionStyle`/`dataPointLabels`. Each field either becomes a mark field (entering the drift gates if it's a config object) or is proven inert. Acceptance: the `_firstUncarriedField` refusals (`chart_grammar_source_generator.dart:685`) are eliminated for the showcase charts.
 
+#### 1d slice 1 — the PATH FIELDS. SHIPPED 2026-08-04 (BC-0054, `feature/grammar-path-fields`).
+
+`LineMark`, `AreaMark` and `RangeAreaMark` now carry the path and marker fields their series already had: `tension`, `dataPointMarkerRadius`, `dataPointMarkerStyle`, `dataPointMarkerBackground`, `lineGlow`, `inlineLabel` and `pathAnimation` on the first two; `fillGradient` plus both baseline fill colours on `AreaMark`; `fillGradient` and `pathAnimation` on `RangeAreaMark`. All nullable, null meaning the series default, and the reversal maps a defaulted capture back to null so **existing emission is byte-identical**. The Line, Area and RangeArea arms of `_firstUncarriedField` are now **empty**, like candlestick and heatmap.
+
+**MEASURED delta, both ends run on the same instrument** (`grammar_emission_census_test.dart`; the "before" by restoring `lib/src` to master `b60ec846` in the branch worktree, the "after" on the branch):
+
+| | Before | After |
+|---|---|---|
+| **All emitting** | **59** | **75** |
+| Cartesian | 28 of 129 | **44 of 129** |
+| Radial | 31 of 55 | 31 of 55 (unchanged) |
+| Shadow tiles | 0 of 3 | **3 of 3** |
+
+Composition, because the acceptance bar was the decomposed delta and not the predicted number: **RangeArea 0 → 6** (the five gradient presets plus `gapsAndSteps` on the animation), **Area 3 → 8** (all five that named a slice field first), **Line 3 → 6**, **ValueSummary 4 → 5** (`pinned`), **Workbench 1 → 2**.
+
+The design measured **19** states naming a slice field as their FIRST blocker and called that a ceiling. **16 of the 19 moved.** The three that did not are all on the Line page, and their SECOND blocker is the useful output:
+
+- `Line|Spotlight` — was a fill gradient; now an **unnamed residual loss** on annotation `spotlight-threshold`.
+- `Line|line-playground` — was a marker radius; now an **unnamed residual loss** on annotation `work-stage`.
+- `Line|Forecast` — was a marker style; now the **per-point segment style** on `forecast-continuous`, which BC-0040 refused as inert-and-expensive.
+
+Two of the three are therefore in the "5 unnamed residuals" bucket, which raises the naming slice's value: it is now the only thing between the Line page and 8 of 12.
+
+**Acceptance is on the MOUNTED page**: `example/test/showcase/range_area_charts_page_grammar_test.dart` walks `RangeAreaChartsPage`'s own chip picker and holds 6 of 7 presets emitting a complete, warning-free, compiling chain. `confidence` still refuses on the **x-domain divergence**, pinned by name in that file so a later field slice cannot count it — it belongs to shared-x alignment, not here.
+
+**What remains in 1d after this slice:**
+
+- **The bar bucket (26 states)** — still needs an owner decision before any code. Carrying the roadmap's three named bar fields moves emitting by ≤1 while converting 26 precise refusals into 26 generic-tail ones; `waterfallStyle`, which stands behind 25 of 28 BarLab presets, is not in the roadmap's list.
+- **The scatter cluster** — `jitter`, `renderMode`, `cluster`/`bin`/`density`, `interactionStyle`. `jitter` is the cleanest single win; most Scatter states are held by shared-x first, so measure before sizing.
+- **The naming slice for the 5 unnamed residuals** — worth doing for its own sake, and now worth 2 Line states as well.
+
+Out of 1d entirely, recorded here so they are not re-proposed as field work: **shared-x alignment (24 states)** and **heatmap `yAxisId` unset (11)**, each its own design.
+
 ### Theme-1 acceptance gate
 Every showcase workbench page (all 15) shows a **faithful, round-tripping** grammar chain in its Grammar pane — no "not emitted" comment anywhere. This is the measurable "universal coverage" bar.
 
@@ -118,6 +151,11 @@ heatmap family):
 | **All** | **~201** | **~184** | **59** | **~125** |
 | Cartesian | — | **129** | **28** | **101** |
 | Radial | — | 55 | **31** | 24 |
+
+> **Superseded 2026-08-04 by 1d slice 1 (path fields): 75 emitting, Cartesian
+> 44 of 129, radial unchanged.** Left standing because it is the baseline that
+> delta was measured against. As above: read the pinned constants in the census
+> test, not this table.
 
 - **Cartesian: 28 of 111 emit, up from 0 before 1c′.** On the exact denominator 1c′ was sized against — 100 Cartesian states, `ValueSummaryPage` and `ChartGrammarPage` both outside it — the number is **20 of 100 against a prediction of 21**, reproduced exactly by this instrument.
 - **The one-state shortfall is `Selection|candlestick`**, confirmed by re-measurement: it refuses on `series "price"` for a per-candle field `CandlestickMark` does not carry. Per-point `pointKey` was carried on the four Cartesian *geometry* marks only; `CandlestickMark` was out of the slice's scope. The 21 was measured by patching the PROOF alone, which normalised that away too — an upper bound that assumed emission would follow, and it did everywhere else.

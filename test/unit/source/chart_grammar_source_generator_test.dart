@@ -978,6 +978,15 @@ const List<String> _expectedRangeAreaArguments = <String>[
   'interpolation: LineInterpolation.monotone,',
   'tension: 0.4,',
   'fillOpacity: 0.22,',
+  'fillGradient: AreaGradient(',
+  'colors: [',
+  'Color(0xFF2563EB),',
+  'Color(0x002563EB),',
+  '],',
+  'stops: [0.0, 1.0],',
+  'begin: Alignment.topLeft,',
+  'end: Alignment.bottomRight,',
+  '),',
   'borderMode: RangeAreaBorderMode.closed,',
   'upperBoundaryStyle: RangeAreaBoundaryStyle(',
   'visible: false,',
@@ -1004,6 +1013,18 @@ const List<String> _expectedRangeAreaArguments = <String>[
   'boundaryGap: 6.0,',
   '),',
   'hitTestMode: RangeAreaHitTestMode.nearestBoundary,',
+  'pathAnimation: PathAnimationStyle(',
+  'entranceMode: PathEntranceAnimationMode.reveal,',
+  'dataUpdateMode: PathDataUpdateAnimationMode.interpolate,',
+  'entranceTiming: PathAnimationTiming(',
+  'delay: Duration(microseconds: 120000),',
+  'duration: Duration(microseconds: 450000),',
+  '),',
+  'dataUpdateTiming: PathAnimationTiming(',
+  'delay: Duration(microseconds: 60000),',
+  'duration: Duration(microseconds: 240000),',
+  '),',
+  '),',
 ];
 
 /// The MAXIMAL polar rows: value AND all four advanced per-category channels.
@@ -3410,6 +3431,176 @@ void main() {
       );
     });
 
+    testWidgets('shape 46: a MAXIMAL .geomLine( pins its whole argument list', (
+      tester,
+    ) async {
+      // MAXIMAL fixture for the LINE-SPECIFIC surface, and NEW with the
+      // path-field slice: the line arm had no maximal shape at all before it.
+      // `.geomLine(` is read by eight other whole-list assertions in this file,
+      // but every one of them is the MINIMAL emission of a chart authored for
+      // some other property — shape 29c pins six arguments, shape 30 eight —
+      // so none of them would notice an argument the arm stopped writing that
+      // its own fixture never set. Every optional `_emitGeometry`'s line arm
+      // can write is set here EXPLICITLY and away from its family default, so
+      // no theme-resolved value lands in the list and every conditional
+      // emission path in that arm is live.
+      //
+      // The two nested bodies `_emitPathLabels` reaches —
+      // `SeriesInlineLabelConfig` (with its `SeriesLabelBackground`) and
+      // `PathAnimationStyle` (with both `PathAnimationTiming`s) — flatten into
+      // the list, so their field statements are pinned here as well as in the
+      // area sibling.
+      //
+      // `dataPointLabels:` is set with TWO fields rather than fifteen, and
+      // that is a CHECKED claim, not a shortcut: the fifteen statements live
+      // in `chart_config_dart_emitter._emitDataPointLabelsArgument`, a single
+      // shared body already pinned field by field by shape 38 through the AREA
+      // arm. What shape 38 cannot pin is the LINE arm's own CALL to it, which
+      // is a separate writer statement — that is what this fixture makes live.
+      //
+      // Anything THIS fixture does not emit is NOT pinned by this test.
+      // Deliberately NOT set here: `label:`/`pointKey:` (shape 30/30e, which
+      // read both out of `.geomLine(`'s OWN argument list) and `yAxisId:`
+      // (shape 29c).
+      //
+      // Measured, one mutation set of 8 — 8 of 8 caught here:
+      //   - the 7 statements this fixture makes live in the two shared helpers
+      //     `_emitPathStyle` and `_emitPathLabels`, deleted one at a time:
+      //     `tension`, `dataPointMarkerRadius`, the `dataPointMarkerStyle`
+      //     if-block, `dataPointMarkerBackground`, `lineGlow`, the
+      //     `inlineLabel` if-block, the `pathAnimation` if-block. All seven are
+      //     shared with the AREA arm, so each also reddens shape 38 — recorded
+      //     once, credited to both;
+      //   - 1 unconditional `writer.namedArgument('probe', ...)` added to the
+      //     line arm, which the whole-list EQUALITY catches as an extra entry
+      //     (`'probe: true,' instead of 'dashPattern: <double>[5.0, 3.0],'`).
+      // The shared prologue statements (`id`, `y`, `name`, `color`, `unit`,
+      // `isXOrdered`) and the line arm's own three (`strokeWidth`,
+      // `dashPattern`, `interpolation`) are NOT re-counted here: shape 38's
+      // set of 29 already covers the prologue, and shapes 29c/30 pin the three.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(
+                y: samplePower,
+                name: 'Load',
+                color: const Color(0xFF7C3AED),
+                unit: 'W',
+                isXOrdered: true,
+                strokeWidth: 2.4,
+                dashPattern: const <double>[5, 3],
+                interpolation: LineInterpolation.monotone,
+                tension: 0.6,
+                showDataPointMarkers: true,
+                dataPointMarkerRadius: 4.5,
+                dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+                dataPointMarkerBackground: const Color(0xFF0F172A),
+                lineGlow: 3,
+                dataPointLabels: const DataPointLabelConfig(
+                  show: true,
+                  position: DataPointLabelPosition.below,
+                ),
+                inlineLabel: const SeriesInlineLabelConfig(
+                  text: 'Load',
+                  position: SeriesLabelPosition.left,
+                  offsetY: -3,
+                  color: Color(0xFF0EA5E9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  background: SeriesLabelBackground(
+                    color: Color(0xFFF1F5F9),
+                    cornerRadius: 6,
+                    padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    borderColor: Color(0xFF94A3B8),
+                    borderWidth: 2,
+                  ),
+                ),
+                pathAnimation: const PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                  dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+                  entranceTiming: PathAnimationTiming(
+                    delay: Duration(milliseconds: 120),
+                    duration: Duration(milliseconds: 450),
+                  ),
+                  dataUpdateTiming: PathAnimationTiming(
+                    delay: Duration(milliseconds: 60),
+                    duration: Duration(milliseconds: 240),
+                  ),
+                ),
+              )
+              .build(bravenChartController: controller),
+        ),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+      // `literalArguments` slices from the FIRST occurrence of the opening
+      // token, so a second `.geomLine(` would leave this assertion reading the
+      // wrong literal and silently pinning nothing about the other.
+      expect('.geomLine('.allMatches(generated.source).length, 1);
+      expect(literalArguments(generated.source, '.geomLine('), <String>[
+        "id: 'mark-0',",
+        'y: (row) => row.load,',
+        "name: 'Load',",
+        'color: Color(0xFF7C3AED),',
+        "unit: 'W',",
+        'isXOrdered: true,',
+        'strokeWidth: 2.4,',
+        'dashPattern: <double>[5.0, 3.0],',
+        'interpolation: LineInterpolation.monotone,',
+        'tension: 0.6,',
+        'showDataPointMarkers: true,',
+        'dataPointMarkerRadius: 4.5,',
+        'dataPointMarkerStyle: DataPointMarkerStyle.hollow,',
+        'dataPointMarkerBackground: Color(0xFF0F172A),',
+        'lineGlow: 3.0,',
+        'dataPointLabels: DataPointLabelConfig(',
+        'show: true,',
+        'position: DataPointLabelPosition.below,',
+        '),',
+        'inlineLabel: SeriesInlineLabelConfig(',
+        "text: 'Load',",
+        'position: SeriesLabelPosition.left,',
+        'offsetY: -3.0,',
+        'color: Color(0xFF0EA5E9),',
+        'fontSize: 13.0,',
+        'fontWeight: FontWeight.w700,',
+        'background: SeriesLabelBackground(',
+        'color: Color(0xFFF1F5F9),',
+        'cornerRadius: 6.0,',
+        'padding: EdgeInsets.fromLTRB(6.0, 3.0, 6.0, 3.0),',
+        'borderColor: Color(0xFF94A3B8),',
+        'borderWidth: 2.0,',
+        '),',
+        '),',
+        'pathAnimation: PathAnimationStyle(',
+        'entranceMode: PathEntranceAnimationMode.reveal,',
+        'dataUpdateMode: PathDataUpdateAnimationMode.interpolate,',
+        'entranceTiming: PathAnimationTiming(',
+        'delay: Duration(microseconds: 120000),',
+        'duration: Duration(microseconds: 450000),',
+        '),',
+        'dataUpdateTiming: PathAnimationTiming(',
+        'delay: Duration(microseconds: 60000),',
+        'duration: Duration(microseconds: 240000),',
+        '),',
+        '),',
+      ]);
+      // The list above pins the emitted TEXT; only `dart analyze` proves those
+      // names exist on the real builder. This is the only fixture in the corpus
+      // that emits `tension:`, `dataPointMarkerRadius:`,
+      // `dataPointMarkerStyle:`, `dataPointMarkerBackground:`, `lineGlow:`,
+      // `inlineLabel:` or `pathAnimation:` on `.geomLine(`, so without this
+      // gate those names are compiled by nothing in the repo.
+      await tester.runAsync(
+        () => expectGeneratedSourceCompiles(
+          generated.source,
+          fixtureName: 'grammar_source_line_maximal',
+        ),
+      );
+    });
+
     testWidgets('shape 38: a MAXIMAL .geomArea( pins its whole argument list', (
       tester,
     ) async {
@@ -3440,6 +3631,18 @@ void main() {
       // so a fixture setting it would be testing the warning path instead of
       // this list. It is not claimed as covered here.
       //
+      // GROWN by the path-field slice. `tension`, `dataPointMarkerRadius`,
+      // `dataPointMarkerStyle`, `dataPointMarkerBackground`, `lineGlow`,
+      // `fillGradient`, `aboveBaselineFillColor`, `belowBaselineFillColor`,
+      // `inlineLabel` and `pathAnimation` are all set EXPLICITLY and away from
+      // their family defaults, because a maximal shape that stopped at the
+      // arguments the arm wrote yesterday would leave every new one unpinned —
+      // exactly the hole BC-0046 closed. The three nested bodies
+      // (`AreaGradient`, `SeriesInlineLabelConfig` including its
+      // `SeriesLabelBackground`, and `PathAnimationStyle` including both
+      // `PathAnimationTiming`s) flatten into the list below, so each of their
+      // field statements is pinned here too.
+      //
       // Anything THIS fixture does not emit is NOT pinned by this test.
       // Deliberately NOT set here: `label:`/
       // `pointKey:` (shape 30/30e) and `yAxisId:`. `colorBy:`/`colorEncoding:`
@@ -3462,6 +3665,14 @@ void main() {
       //     `fontWeight`, `showUnit`, `background`, `backgroundOpacity`);
       //   - 1 unconditional `writer.namedArgument('probe', ...)` added to the
       //     area arm.
+      //
+      // The path-field slice adds a SECOND set of 10 over the statements it
+      // introduced — 10 of 10 caught here:
+      //   - the 7 shared `_emitPathStyle`/`_emitPathLabels` statements listed
+      //     in shape 46 above, each of which reddens both shapes;
+      //   - the area arm's own 3: the `emitFillGradient` call, and the
+      //     `aboveBaselineFillColor` and `belowBaselineFillColor` writers.
+      // The probe is not re-counted — the set of 29 already has one.
       final generated = generateGrammar(
         await snapshotOf(
           tester,
@@ -3478,7 +3689,20 @@ void main() {
                 strokeWidth: 2.4,
                 dashPattern: const <double>[5, 3],
                 interpolation: LineInterpolation.monotone,
+                tension: 0.6,
                 showDataPointMarkers: true,
+                dataPointMarkerRadius: 4.5,
+                dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+                dataPointMarkerBackground: const Color(0xFF0F172A),
+                lineGlow: 3,
+                fillGradient: const AreaGradient(
+                  colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+                  stops: <double>[0, 1],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                aboveBaselineFillColor: const Color(0xFF16A34A),
+                belowBaselineFillColor: const Color(0xFFDC2626),
                 dataPointLabels: const DataPointLabelConfig(
                   show: true,
                   position: DataPointLabelPosition.below,
@@ -3495,6 +3719,33 @@ void main() {
                   showUnit: true,
                   background: Color(0xFFF8FAFC),
                   backgroundOpacity: 0.6,
+                ),
+                inlineLabel: const SeriesInlineLabelConfig(
+                  text: 'Load',
+                  position: SeriesLabelPosition.left,
+                  offsetY: -3,
+                  color: Color(0xFF0EA5E9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  background: SeriesLabelBackground(
+                    color: Color(0xFFF1F5F9),
+                    cornerRadius: 6,
+                    padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    borderColor: Color(0xFF94A3B8),
+                    borderWidth: 2,
+                  ),
+                ),
+                pathAnimation: const PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                  dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+                  entranceTiming: PathAnimationTiming(
+                    delay: Duration(milliseconds: 120),
+                    duration: Duration(milliseconds: 450),
+                  ),
+                  dataUpdateTiming: PathAnimationTiming(
+                    delay: Duration(milliseconds: 60),
+                    duration: Duration(milliseconds: 240),
+                  ),
                 ),
               )
               .build(bravenChartController: controller),
@@ -3518,7 +3769,23 @@ void main() {
         'strokeWidth: 2.4,',
         'dashPattern: <double>[5.0, 3.0],',
         'interpolation: LineInterpolation.monotone,',
+        'tension: 0.6,',
         'showDataPointMarkers: true,',
+        'dataPointMarkerRadius: 4.5,',
+        'dataPointMarkerStyle: DataPointMarkerStyle.hollow,',
+        'dataPointMarkerBackground: Color(0xFF0F172A),',
+        'lineGlow: 3.0,',
+        'fillGradient: AreaGradient(',
+        'colors: [',
+        'Color(0xFF2563EB),',
+        'Color(0x002563EB),',
+        '],',
+        'stops: [0.0, 1.0],',
+        'begin: Alignment.topLeft,',
+        'end: Alignment.bottomRight,',
+        '),',
+        'aboveBaselineFillColor: Color(0xFF16A34A),',
+        'belowBaselineFillColor: Color(0xFFDC2626),',
         'dataPointLabels: DataPointLabelConfig(',
         'show: true,',
         'position: DataPointLabelPosition.below,',
@@ -3535,6 +3802,33 @@ void main() {
         'showUnit: true,',
         'background: Color(0xFFF8FAFC),',
         'backgroundOpacity: 0.6,',
+        '),',
+        'inlineLabel: SeriesInlineLabelConfig(',
+        "text: 'Load',",
+        'position: SeriesLabelPosition.left,',
+        'offsetY: -3.0,',
+        'color: Color(0xFF0EA5E9),',
+        'fontSize: 13.0,',
+        'fontWeight: FontWeight.w700,',
+        'background: SeriesLabelBackground(',
+        'color: Color(0xFFF1F5F9),',
+        'cornerRadius: 6.0,',
+        'padding: EdgeInsets.fromLTRB(6.0, 3.0, 6.0, 3.0),',
+        'borderColor: Color(0xFF94A3B8),',
+        'borderWidth: 2.0,',
+        '),',
+        '),',
+        'pathAnimation: PathAnimationStyle(',
+        'entranceMode: PathEntranceAnimationMode.reveal,',
+        'dataUpdateMode: PathDataUpdateAnimationMode.interpolate,',
+        'entranceTiming: PathAnimationTiming(',
+        'delay: Duration(microseconds: 120000),',
+        'duration: Duration(microseconds: 450000),',
+        '),',
+        'dataUpdateTiming: PathAnimationTiming(',
+        'delay: Duration(microseconds: 60000),',
+        'duration: Duration(microseconds: 240000),',
+        '),',
         '),',
       ]);
       // The list above pins the emitted TEXT; only `dart analyze` proves those
@@ -3651,9 +3945,15 @@ void main() {
         // shape's `expect(warnings, isEmpty)` forbids by construction. It is not
         // claimed as covered here — it has its own test in the seams file.
         //
-        // Deliberately NOT set: `yAxisId:` (this is a single-axis chart), and
-        // `fillGradient`/`pathAnimation`, which the mark does not carry and
-        // which are pinned as NAMED REFUSALS by their own cases.
+        // GROWN by the path-field slice. `fillGradient` and `pathAnimation`
+        // used to be the two arguments this fixture deliberately left out,
+        // "pinned as NAMED REFUSALS by their own cases"; `RangeAreaMark` now
+        // carries both, those two cases now assert EMISSION, and so the
+        // maximal shape has to cover the arguments they produce or the slice
+        // would emit two whole nested bodies that no whole-list assertion
+        // reads. Both nested bodies flatten into the list below.
+        //
+        // Deliberately NOT set: `yAxisId:` (this is a single-axis chart).
         //
         // Measured, one mutation set of 20 — 20 of 20 caught:
         //   - the 8 shared-prologue writer statements this fixture makes live,
@@ -3672,6 +3972,15 @@ void main() {
         // deletions fail one line EARLIER, on the `RangeAreaBoundaryStyle(`
         // count (`Expected: <2> Actual: <1>`) — still this test going red, but
         // recorded rather than credited to the list.
+        //
+        // The path-field slice adds a SECOND set of 3 — 3 of 3 caught:
+        //   - the range-area arm's own `emitFillGradient` call and its
+        //     `pathAnimation` if-block, deleted one at a time;
+        //   - 1 fresh unconditional probe placed INSIDE this arm. The first
+        //     attempt at that probe landed one line earlier, at the tail of the
+        //     heatmap arm, and came back GREEN — correctly, since no heatmap
+        //     shape was in the run. Recorded because a probe that misses its
+        //     arm looks exactly like a gap in the assertion.
         final generated = generateGrammar(
           await snapshotOf(tester, (controller) {
             return BravenChartPlus(
@@ -3684,6 +3993,12 @@ void main() {
                   interpolation: LineInterpolation.monotone,
                   tension: 0.4,
                   fillOpacity: 0.22,
+                  fillGradient: const AreaGradient(
+                    colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+                    stops: <double>[0, 1],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderMode: RangeAreaBorderMode.closed,
                   upperBoundaryStyle: const RangeAreaBoundaryStyle(
                     visible: false,
@@ -3708,6 +4023,18 @@ void main() {
                     labels: DataPointLabelConfig(show: true),
                   ),
                   hitTestMode: RangeAreaHitTestMode.nearestBoundary,
+                  pathAnimation: const PathAnimationStyle(
+                    entranceMode: PathEntranceAnimationMode.reveal,
+                    dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+                    entranceTiming: PathAnimationTiming(
+                      delay: Duration(milliseconds: 120),
+                      duration: Duration(milliseconds: 450),
+                    ),
+                    dataUpdateTiming: PathAnimationTiming(
+                      delay: Duration(milliseconds: 60),
+                      duration: Duration(milliseconds: 240),
+                    ),
+                  ),
                   points: <RangeAreaDataPoint>[
                     RangeAreaDataPoint(
                       x: 0,

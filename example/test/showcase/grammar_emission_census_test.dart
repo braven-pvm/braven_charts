@@ -371,24 +371,62 @@ void main() {
 /// `feature/grammar-range-area` where `RangeAreaMark` moved `Selection` from
 /// 7 emitting to 8.
 ///
-/// `RangeArea` stays `[7, 7, 0]`, and that is the honest number rather than a
-/// failure: every band on that page carries a non-default `pathAnimation` and
-/// six of seven a `fillGradient`, both roadmap 1d and both named refusals on
-/// `AreaMark` today, so the mark closes none of its presets.
 /// Re-measured again 2026-08-03 on
 /// `feature/BC-0050-heatmap-live-ingestion`, where the raster Heatmap preset
 /// added one non-emitting Cartesian workbench with a truthful verdict.
+///
+/// Re-measured again 2026-08-04 on `feature/grammar-path-fields` (BC-0054),
+/// where `LineMark`, `AreaMark` and `RangeAreaMark` gained the path and marker
+/// fields their series already had. **Whole repo 59 -> 75 emitting, Cartesian
+/// 28 -> 44 of 129, radial unchanged at 31 of 55.** Both numbers were measured
+/// the same way, one run each: the "before" by restoring `lib/src` to master
+/// `b60ec846` in this worktree and running this file, the "after" by running it
+/// on the branch. The composition, page by page and state by state, because a
+/// +16 that cannot be decomposed is worth less than a smaller one that can:
+///
+///  - **RangeArea 0 -> 6** — the page this slice existed for. Its previous
+///    entry read "`[7, 7, 0]` is the honest number rather than a failure: every
+///    band carries a non-default `pathAnimation` and six of seven a
+///    `fillGradient`". Exactly those six moved (`temperature`, `seasonal`,
+///    `forecastFan`, `volatility`, `interactionStates` on the gradient,
+///    `gapsAndSteps` on the animation).
+///  - **Area 3 -> 8** — all FIVE states that named a slice field first:
+///    `Baseline` (split baseline fill), `Motion` (path animation), `Gradient`
+///    and `Composition` (fill gradient), `area-playground` (line glow).
+///    `Composition` is the one the design predicted would have re-refused one
+///    field later had `inlineLabel` been dropped from the slice; it did not.
+///  - **Line 3 -> 6** — THREE of the six states that named a slice field
+///    first: `Motion` (path animation), `Envelope` (fill gradient),
+///    `Close points` (marker radius). The other three did not move, and their
+///    SECOND blocker is the useful output of this census:
+///      * `Spotlight` — was "a fill gradient"; now an unnamed residual loss on
+///        annotation "spotlight-threshold".
+///      * `Forecast` — was "a data-point marker style"; now the per-point
+///        segment style on "forecast-continuous", which `LineMark` still does
+///        not carry (BC-0040 refused it as inert-and-expensive).
+///      * `line-playground` — was "a data-point marker radius"; now an unnamed
+///        residual loss on annotation "work-stage".
+///    Two of those three are annotation residuals with no named reason, which
+///    is the "5 unnamed residuals" bucket the spec listed as out of scope.
+///  - **ValueSummary 4 -> 5** (`pinned`, marker radius) and
+///    **Workbench 1 -> 2** (`default`, marker radius).
+///
+/// Ceiling and result: the design measured 19 states naming a slice field as
+/// their FIRST blocker and called that a ceiling, not a forecast. 16 of the 19
+/// moved; the 3 that did not are the Line states named above, each with its
+/// second blocker identified. Nothing outside those 19 moved, and no page went
+/// down.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
-  'Line': <int>[16, 13, 3],
-  'Area': <int>[9, 9, 3],
+  'Line': <int>[16, 13, 6],
+  'Area': <int>[9, 9, 8],
   'Scatter': <int>[29, 27, 6],
   'BarLab': <int>[31, 31, 0],
   'Candlestick': <int>[10, 8, 0],
-  'RangeArea': <int>[7, 7, 0],
+  'RangeArea': <int>[7, 7, 6],
   'Heatmap': <int>[19, 16, 0],
-  'ValueSummary': <int>[8, 6, 4],
+  'ValueSummary': <int>[8, 6, 5],
   'Selection': <int>[10, 10, 8],
-  'Workbench': <int>[5, 2, 1],
+  'Workbench': <int>[5, 2, 2],
   'Grammar': <int>[12, 9, 8],
   'Pie': <int>[6, 6, 6],
   'Donut': <int>[5, 5, 5],
@@ -400,21 +438,28 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[28, 133],
+  _Family.cartesian: <int>[44, 133],
   _Family.radial: <int>[31, 55],
 };
 
 const int _expectedWithVerdict = 188;
-const int _expectedEmitting = 59;
+const int _expectedEmitting = 75;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than
-/// inside it. The deterministic generated document carries a marker radius,
-/// which the V1 line mark cannot reproduce, so all three honestly refuse. They
-/// have no Grammar pane. The census that this file replaces counted them in its
-/// headline, which is why they are pinned here instead of merely excluded.
+/// inside it. They have no Grammar pane. The census that this file replaces
+/// counted them in its headline, which is why they are pinned here instead of
+/// merely excluded.
+///
+/// All three refused until 2026-08-04: the deterministic generated document
+/// carries a marker radius, and the V1 line mark could not reproduce one. The
+/// path-field slice gave `LineMark` that field, so all three now emit. They are
+/// still reported separately and still outside the headline — admitting them
+/// would read 187 with a verdict / 78 emitting — but a shadow column that
+/// stayed at 0 through the very slice that unblocked it would be a pin gone
+/// stale rather than a measurement.
 const int _expectedShadowCharts = 3;
-const int _expectedShadowEmitting = 0;
+const int _expectedShadowEmitting = 3;
 
 /// Example chips the census deliberately does not walk, and why.
 ///
