@@ -10,7 +10,7 @@ import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart'
-    show DataPointMarkerStyle, LineInterpolation;
+    show AreaGradient, DataPointMarkerStyle, LineInterpolation;
 import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
@@ -352,6 +352,12 @@ final class BravenChart<T> {
   /// [isXOrdered] declares that the data is already sorted ascending by `x`
   /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
   /// DECLARATION, never inferred from the rows.
+  ///
+  /// [tension], [dataPointMarkerRadius], [dataPointMarkerStyle],
+  /// [dataPointMarkerBackground], [lineGlow], [inlineLabel], [pathAnimation],
+  /// [fillGradient], [aboveBaselineFillColor] and [belowBaselineFillColor] are
+  /// the path, marker and fill styling `AreaChartSeries` carries. Each is null
+  /// by default, which keeps that series default — see [AreaMark.tension].
   BravenChart<T> geomArea({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -371,6 +377,16 @@ final class BravenChart<T> {
     LineInterpolation? interpolation,
     bool? showDataPointMarkers,
     DataPointLabelConfig? dataPointLabels,
+    double? tension,
+    double? dataPointMarkerRadius,
+    DataPointMarkerStyle? dataPointMarkerStyle,
+    Color? dataPointMarkerBackground,
+    double? lineGlow,
+    SeriesInlineLabelConfig? inlineLabel,
+    PathAnimationStyle? pathAnimation,
+    AreaGradient? fillGradient,
+    Color? aboveBaselineFillColor,
+    Color? belowBaselineFillColor,
     String? yAxisId,
   }) => _append(
     AreaMark<T>(
@@ -392,6 +408,16 @@ final class BravenChart<T> {
       interpolation: interpolation,
       showDataPointMarkers: showDataPointMarkers,
       dataPointLabels: dataPointLabels,
+      tension: tension,
+      dataPointMarkerRadius: dataPointMarkerRadius,
+      dataPointMarkerStyle: dataPointMarkerStyle,
+      dataPointMarkerBackground: dataPointMarkerBackground,
+      lineGlow: lineGlow,
+      inlineLabel: inlineLabel,
+      pathAnimation: pathAnimation,
+      fillGradient: fillGradient,
+      aboveBaselineFillColor: aboveBaselineFillColor,
+      belowBaselineFillColor: belowBaselineFillColor,
       yAxisId: yAxisId,
     ),
   );

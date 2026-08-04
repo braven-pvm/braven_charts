@@ -2345,6 +2345,78 @@ void main() {
       },
     );
   });
+
+  group('area path fields', () {
+    test('every path field lowers onto the series', () {
+      final lowered = BravenChart.of(_pathRows)
+          .x((row) => row.x)
+          .geomArea(
+            y: (row) => row.y,
+            tension: 0.6,
+            dataPointMarkerRadius: 4.5,
+            dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+            dataPointMarkerBackground: const Color(0xFF0F172A),
+            lineGlow: 3,
+            inlineLabel: const SeriesInlineLabelConfig(text: 'Load'),
+            pathAnimation: const PathAnimationStyle(
+              entranceMode: PathEntranceAnimationMode.reveal,
+            ),
+            fillGradient: const AreaGradient(
+              colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+            ),
+            aboveBaselineFillColor: const Color(0xFF16A34A),
+            belowBaselineFillColor: const Color(0xFFDC2626),
+          )
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as AreaChartSeries;
+      expect(series.tension, 0.6);
+      expect(series.dataPointMarkerRadius, 4.5);
+      expect(series.dataPointMarkerStyle, DataPointMarkerStyle.hollow);
+      expect(series.dataPointMarkerBackground, const Color(0xFF0F172A));
+      expect(series.lineGlow, 3);
+      expect(series.inlineLabel?.text, 'Load');
+      expect(
+        series.pathAnimation.entranceMode,
+        PathEntranceAnimationMode.reveal,
+      );
+      expect(series.fillGradient?.colors.first, const Color(0xFF2563EB));
+      expect(series.aboveBaselineFillColor, const Color(0xFF16A34A));
+      expect(series.belowBaselineFillColor, const Color(0xFFDC2626));
+    });
+
+    test(
+      'an unset path field lowers to the series default, tracked not copied',
+      () {
+        // Compared against a FRESHLY CONSTRUCTED series so this tracks the class
+        // rather than restating today's literals.
+        const reference = AreaChartSeries(
+          id: 'reference',
+          points: <ChartDataPoint>[],
+        );
+
+        final lowered = BravenChart.of(
+          _pathRows,
+        ).x((row) => row.x).geomArea(y: (row) => row.y).toSpec().lower();
+
+        final series = lowered.series.single as AreaChartSeries;
+        expect(series.tension, reference.tension);
+        expect(series.dataPointMarkerRadius, reference.dataPointMarkerRadius);
+        expect(series.dataPointMarkerStyle, reference.dataPointMarkerStyle);
+        expect(
+          series.dataPointMarkerBackground,
+          reference.dataPointMarkerBackground,
+        );
+        expect(series.lineGlow, reference.lineGlow);
+        expect(series.inlineLabel, reference.inlineLabel);
+        expect(series.pathAnimation, reference.pathAnimation);
+        expect(series.fillGradient, reference.fillGradient);
+        expect(series.aboveBaselineFillColor, reference.aboveBaselineFillColor);
+        expect(series.belowBaselineFillColor, reference.belowBaselineFillColor);
+      },
+    );
+  });
 }
 
 class _PathRow {

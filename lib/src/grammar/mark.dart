@@ -7,7 +7,7 @@ import 'package:flutter/painting.dart' show Color;
 import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
 import '../models/chart_series.dart'
-    show DataPointMarkerStyle, LineInterpolation;
+    show AreaGradient, DataPointMarkerStyle, LineInterpolation;
 import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
@@ -329,6 +329,16 @@ final class AreaMark<T> extends SeriesMark<T> {
     this.interpolation,
     this.showDataPointMarkers,
     this.dataPointLabels,
+    this.tension,
+    this.dataPointMarkerRadius,
+    this.dataPointMarkerStyle,
+    this.dataPointMarkerBackground,
+    this.lineGlow,
+    this.inlineLabel,
+    this.pathAnimation,
+    this.fillGradient,
+    this.aboveBaselineFillColor,
+    this.belowBaselineFillColor,
   });
 
   /// Horizontal position accessor.
@@ -389,6 +399,54 @@ final class AreaMark<T> extends SeriesMark<T> {
   /// (`AreaChartSeries.dataPointLabels`, which is unset).
   final DataPointLabelConfig? dataPointLabels;
 
+  /// Curve tension in `[0, 1]`. Null keeps the series default.
+  ///
+  /// Like every config field on this mark, null means "the `AreaChartSeries`
+  /// default", resolved once at lowering. The defaults live on the series class
+  /// alone, so the mark cannot carry a stale copy of one. That holds even where
+  /// the series field is NON-nullable with a `const` default — [tension],
+  /// [dataPointMarkerRadius], [dataPointMarkerStyle],
+  /// [dataPointMarkerBackground], [lineGlow] and [pathAnimation] all are — so
+  /// the mark deliberately diverges in nullability from the series it lowers
+  /// to. [fillGradient], [inlineLabel], [aboveBaselineFillColor] and
+  /// [belowBaselineFillColor] are already nullable on the series, so for those
+  /// null lowers straight through as null.
+  final double? tension;
+
+  /// Data-point marker radius in logical pixels. Null keeps the series default.
+  final double? dataPointMarkerRadius;
+
+  /// Whether markers are filled or hollow. Null keeps the series default.
+  final DataPointMarkerStyle? dataPointMarkerStyle;
+
+  /// Fill colour behind a hollow marker. Null keeps the series default.
+  final Color? dataPointMarkerBackground;
+
+  /// Outer glow radius on the stroke, in logical pixels. Null keeps the series
+  /// default.
+  final double? lineGlow;
+
+  /// Inline series label drawn beside the path. Null keeps the series default
+  /// (`AreaChartSeries.inlineLabel`, which is unset).
+  final SeriesInlineLabelConfig? inlineLabel;
+
+  /// Entrance and data-update motion for the path. Null keeps the series
+  /// default.
+  final PathAnimationStyle? pathAnimation;
+
+  /// Gradient painted through the fill instead of a flat colour. Null keeps the
+  /// series default (`AreaChartSeries.fillGradient`, which is unset).
+  final AreaGradient? fillGradient;
+
+  /// Fill colour for the part of the area ABOVE [baseline]. Null keeps the
+  /// series default (`AreaChartSeries.aboveBaselineFillColor`, unset — the
+  /// series colour is used for both sides).
+  final Color? aboveBaselineFillColor;
+
+  /// Fill colour for the part of the area BELOW [baseline]. Null keeps the
+  /// series default (`AreaChartSeries.belowBaselineFillColor`, unset).
+  final Color? belowBaselineFillColor;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -411,10 +469,24 @@ final class AreaMark<T> extends SeriesMark<T> {
           listEquals(other.dashPattern, dashPattern) &&
           other.interpolation == interpolation &&
           other.showDataPointMarkers == showDataPointMarkers &&
-          other.dataPointLabels == dataPointLabels;
+          other.dataPointLabels == dataPointLabels &&
+          other.tension == tension &&
+          other.dataPointMarkerRadius == dataPointMarkerRadius &&
+          other.dataPointMarkerStyle == dataPointMarkerStyle &&
+          other.dataPointMarkerBackground == dataPointMarkerBackground &&
+          other.lineGlow == lineGlow &&
+          other.inlineLabel == inlineLabel &&
+          other.pathAnimation == pathAnimation &&
+          other.fillGradient == fillGradient &&
+          other.aboveBaselineFillColor == aboveBaselineFillColor &&
+          other.belowBaselineFillColor == belowBaselineFillColor;
 
+  // `Object.hashAll` rather than `Object.hash`: this mark now has 29 fields and
+  // `Object.hash` takes at most 20 positional arguments. The list form has no
+  // such ceiling, so a field added here fails on its merits rather than on an
+  // arity limit.
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
     x,
     y,
     id,
@@ -434,7 +506,17 @@ final class AreaMark<T> extends SeriesMark<T> {
     interpolation,
     showDataPointMarkers,
     dataPointLabels,
-  );
+    tension,
+    dataPointMarkerRadius,
+    dataPointMarkerStyle,
+    dataPointMarkerBackground,
+    lineGlow,
+    inlineLabel,
+    pathAnimation,
+    fillGradient,
+    aboveBaselineFillColor,
+    belowBaselineFillColor,
+  ]);
 
   @override
   String toString() => 'AreaMark(id: $id, name: $name)';

@@ -962,6 +962,22 @@ AreaChartSeries _lowerArea<T>(
   showDataPointMarkers:
       mark.showDataPointMarkers ?? _areaDefaults.showDataPointMarkers,
   dataPointLabels: mark.dataPointLabels ?? _areaDefaults.dataPointLabels,
+  tension: mark.tension ?? _areaDefaults.tension,
+  dataPointMarkerRadius:
+      mark.dataPointMarkerRadius ?? _areaDefaults.dataPointMarkerRadius,
+  dataPointMarkerStyle:
+      mark.dataPointMarkerStyle ?? _areaDefaults.dataPointMarkerStyle,
+  dataPointMarkerBackground:
+      mark.dataPointMarkerBackground ?? _areaDefaults.dataPointMarkerBackground,
+  lineGlow: mark.lineGlow ?? _areaDefaults.lineGlow,
+  inlineLabel: mark.inlineLabel ?? _areaDefaults.inlineLabel,
+  pathAnimation: mark.pathAnimation ?? _areaDefaults.pathAnimation,
+  // Nullable on the series, so these pass straight through: `?? _areaDefaults`
+  // would be a no-op at best, and for a real gradient it would be wrong to read
+  // as "unset means default" when unset IS the default.
+  fillGradient: mark.fillGradient,
+  aboveBaselineFillColor: mark.aboveBaselineFillColor,
+  belowBaselineFillColor: mark.belowBaselineFillColor,
 );
 
 BarChartSeries _lowerBar<T>(
