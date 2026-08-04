@@ -9,7 +9,8 @@ import '../models/axis_scale_type.dart' show AxisScaleType;
 import '../models/bar_chart_style.dart' show BarLabelStyle, BarLayoutMode;
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart' show AnnotationAxis, TrendType;
-import '../models/chart_series.dart' show LineInterpolation;
+import '../models/chart_series.dart'
+    show DataPointMarkerStyle, LineInterpolation;
 import '../models/data_point_label_config.dart' show DataPointLabelConfig;
 import '../models/enums.dart' show MarkerShape;
 import '../models/chart_state_config.dart' show ChartEmptyStateConfig;
@@ -21,6 +22,7 @@ import '../models/grid_config.dart' show GridConfig;
 import '../models/heatmap_color_scale.dart' show HeatmapColorScale;
 import '../models/heatmap_chart_series.dart' show HeatmapEmptyValueStyle;
 import '../models/interaction_config.dart' show InteractionConfig;
+import '../models/path_animation_style.dart' show PathAnimationStyle;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
 import '../models/polar_chart_config.dart' show PolarChartConfig;
@@ -45,6 +47,7 @@ import '../models/scatter_marker_style.dart'
         ScatterMarkerStyle,
         ScatterOpacityEncoding,
         ScatterSizeEncoding;
+import '../models/series_inline_label_config.dart' show SeriesInlineLabelConfig;
 import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
 import '../models/y_axis_position.dart' show YAxisPosition;
@@ -272,6 +275,11 @@ final class BravenChart<T> {
   /// [isXOrdered] declares that the data is already sorted ascending by `x`
   /// (`ChartSeries.isXOrdered`), which lets hit-testing binary-search. It is a
   /// DECLARATION, never inferred from the rows.
+  ///
+  /// [tension], [dataPointMarkerRadius], [dataPointMarkerStyle],
+  /// [dataPointMarkerBackground], [lineGlow], [inlineLabel] and [pathAnimation]
+  /// are the path and marker styling `LineChartSeries` carries. Each is null by
+  /// default, which keeps that series default — see [LineMark.tension].
   BravenChart<T> geomLine({
     FieldAccessor<T, num>? x,
     FieldAccessor<T, num>? y,
@@ -289,6 +297,13 @@ final class BravenChart<T> {
     LineInterpolation? interpolation,
     bool? showDataPointMarkers,
     DataPointLabelConfig? dataPointLabels,
+    double? tension,
+    double? dataPointMarkerRadius,
+    DataPointMarkerStyle? dataPointMarkerStyle,
+    Color? dataPointMarkerBackground,
+    double? lineGlow,
+    SeriesInlineLabelConfig? inlineLabel,
+    PathAnimationStyle? pathAnimation,
     String? yAxisId,
   }) => _append(
     LineMark<T>(
@@ -308,6 +323,13 @@ final class BravenChart<T> {
       interpolation: interpolation,
       showDataPointMarkers: showDataPointMarkers,
       dataPointLabels: dataPointLabels,
+      tension: tension,
+      dataPointMarkerRadius: dataPointMarkerRadius,
+      dataPointMarkerStyle: dataPointMarkerStyle,
+      dataPointMarkerBackground: dataPointMarkerBackground,
+      lineGlow: lineGlow,
+      inlineLabel: inlineLabel,
+      pathAnimation: pathAnimation,
       yAxisId: yAxisId,
     ),
   );

@@ -918,6 +918,16 @@ LineChartSeries _lowerLine<T>(
   showDataPointMarkers:
       mark.showDataPointMarkers ?? _lineDefaults.showDataPointMarkers,
   dataPointLabels: mark.dataPointLabels ?? _lineDefaults.dataPointLabels,
+  tension: mark.tension ?? _lineDefaults.tension,
+  dataPointMarkerRadius:
+      mark.dataPointMarkerRadius ?? _lineDefaults.dataPointMarkerRadius,
+  dataPointMarkerStyle:
+      mark.dataPointMarkerStyle ?? _lineDefaults.dataPointMarkerStyle,
+  dataPointMarkerBackground:
+      mark.dataPointMarkerBackground ?? _lineDefaults.dataPointMarkerBackground,
+  lineGlow: mark.lineGlow ?? _lineDefaults.lineGlow,
+  inlineLabel: mark.inlineLabel ?? _lineDefaults.inlineLabel,
+  pathAnimation: mark.pathAnimation ?? _lineDefaults.pathAnimation,
 );
 
 AreaChartSeries _lowerArea<T>(
