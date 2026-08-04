@@ -2057,6 +2057,8 @@ void main() {
       expect(series.markerRadius, reference.markerRadius);
       expect(series.labelConfig, reference.labelConfig);
       expect(series.hitTestMode, reference.hitTestMode);
+      expect(series.fillGradient, reference.fillGradient);
+      expect(series.pathAnimation, reference.pathAnimation);
     });
 
     test('both bounds null lowers that row to a gap', () {
@@ -2416,6 +2418,32 @@ void main() {
         expect(series.belowBaselineFillColor, reference.belowBaselineFillColor);
       },
     );
+  });
+
+  group('range area path fields', () {
+    test('a band carries a fill gradient and a path animation', () {
+      final lowered = BravenChart.of(_bandRows)
+          .x((row) => row.x)
+          .geomRangeArea(
+            low: (row) => row.low,
+            high: (row) => row.high,
+            fillGradient: const AreaGradient(
+              colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+            ),
+            pathAnimation: const PathAnimationStyle(
+              entranceMode: PathEntranceAnimationMode.reveal,
+            ),
+          )
+          .toSpec()
+          .lower();
+
+      final series = lowered.series.single as RangeAreaChartSeries;
+      expect(series.fillGradient?.colors.first, const Color(0xFF2563EB));
+      expect(
+        series.pathAnimation.entranceMode,
+        PathEntranceAnimationMode.reveal,
+      );
+    });
   });
 }
 

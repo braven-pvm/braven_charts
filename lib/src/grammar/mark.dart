@@ -1104,6 +1104,8 @@ final class RangeAreaMark<T> extends SeriesMark<T> {
     this.markerRadius,
     this.labelConfig,
     this.hitTestMode,
+    this.fillGradient,
+    this.pathAnimation,
   });
 
   /// Horizontal position accessor. Values must be finite and strictly
@@ -1163,6 +1165,21 @@ final class RangeAreaMark<T> extends SeriesMark<T> {
   /// Which region is interactive. Null keeps the series default.
   final RangeAreaHitTestMode? hitTestMode;
 
+  /// Gradient painted through the band's fill instead of a flat colour. Null
+  /// keeps the series default (`RangeAreaChartSeries.fillGradient`, which is
+  /// unset), which is what null means on the series too.
+  final AreaGradient? fillGradient;
+
+  /// Entrance and data-update motion for the band's paths. Null keeps the
+  /// series default.
+  ///
+  /// `RangeAreaChartSeries.pathAnimation` is NON-nullable with a `const`
+  /// default, so this field deliberately diverges in nullability from the
+  /// series it lowers to — same trade as [labelConfig] and the boundary
+  /// styles. The default lives on the series class alone, so the mark cannot
+  /// carry a stale copy of one.
+  final PathAnimationStyle? pathAnimation;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1187,9 +1204,11 @@ final class RangeAreaMark<T> extends SeriesMark<T> {
           other.showBoundaryMarkers == showBoundaryMarkers &&
           other.markerRadius == markerRadius &&
           other.labelConfig == labelConfig &&
-          other.hitTestMode == hitTestMode;
+          other.hitTestMode == hitTestMode &&
+          other.fillGradient == fillGradient &&
+          other.pathAnimation == pathAnimation;
 
-  // `Object.hashAll` rather than `Object.hash`: this mark has 21 fields and
+  // `Object.hashAll` rather than `Object.hash`: this mark has 23 fields and
   // `Object.hash` takes at most 20 positional arguments.
   @override
   int get hashCode => Object.hashAll(<Object?>[
@@ -1214,6 +1233,8 @@ final class RangeAreaMark<T> extends SeriesMark<T> {
     markerRadius,
     labelConfig,
     hitTestMode,
+    fillGradient,
+    pathAnimation,
   ]);
 
   @override

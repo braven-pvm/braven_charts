@@ -1295,6 +1295,10 @@ RangeAreaChartSeries _lowerRangeArea<T>(
       markerRadius: mark.markerRadius ?? _rangeAreaDefaults.markerRadius,
       labelConfig: mark.labelConfig ?? _rangeAreaDefaults.labelConfig,
       hitTestMode: mark.hitTestMode ?? _rangeAreaDefaults.hitTestMode,
+      // `fillGradient` is nullable on the series, so null passes straight
+      // through; `pathAnimation` is not, so null resolves to the default.
+      fillGradient: mark.fillGradient,
+      pathAnimation: mark.pathAnimation ?? _rangeAreaDefaults.pathAnimation,
     );
   } on ArgumentError catch (error) {
     // The series constructor re-validates the WHOLE band, so two unrelated

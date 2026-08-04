@@ -659,7 +659,9 @@ final class BravenChart<T> {
   /// point a stable identity for selection. Keys must be unique among one
   /// mark's keyed rows.
   ///
-  /// Every styling argument left null keeps the `RangeAreaChartSeries` default.
+  /// Every styling argument left null keeps the `RangeAreaChartSeries` default
+  /// — including [fillGradient], the gradient painted through the band's fill,
+  /// and [pathAnimation], the band's entrance and data-update motion.
   /// A band's rows must be strictly increasing in `x`; unsorted rows raise
   /// `invalidRangeAreaRow` naming the offending index.
   BravenChart<T> geomRangeArea({
@@ -683,6 +685,8 @@ final class BravenChart<T> {
     double? markerRadius,
     RangeAreaLabelConfig? labelConfig,
     RangeAreaHitTestMode? hitTestMode,
+    AreaGradient? fillGradient,
+    PathAnimationStyle? pathAnimation,
     String? yAxisId,
   }) => _append(
     RangeAreaMark<T>(
@@ -706,6 +710,8 @@ final class BravenChart<T> {
       markerRadius: markerRadius,
       labelConfig: labelConfig,
       hitTestMode: hitTestMode,
+      fillGradient: fillGradient,
+      pathAnimation: pathAnimation,
       yAxisId: yAxisId,
     ),
   );
