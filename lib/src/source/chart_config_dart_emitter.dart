@@ -229,6 +229,30 @@ class ChartConfigDartEmitter {
     int seriesIndex,
   ) => _emitRangeAreaLabelConfig(writer, config, seriesIndex);
 
+  /// Writes `fillGradient: AreaGradient(...)` — the field body `geomArea` and
+  /// `geomRangeArea` hand to their `fillGradient:` argument, which is the config
+  /// form's argument name too. Writes NOTHING for null, so the caller can pass
+  /// it unconditionally.
+  void emitFillGradient(DartSourceWriter writer, AreaGradient? gradient) =>
+      _emitFillGradient(writer, gradient);
+
+  /// Writes `pathAnimation: PathAnimationStyle(...)` — the field body the line,
+  /// area and range-area geometry verbs hand to their `pathAnimation:`
+  /// argument. Writes NOTHING for the family default (unless
+  /// `includeDefaultValues`), so the caller can pass it unconditionally.
+  void emitPathAnimationStyle(
+    DartSourceWriter writer,
+    PathAnimationStyle style,
+  ) => _emitPathAnimationStyle(writer, style);
+
+  /// Writes `inlineLabel: SeriesInlineLabelConfig(...)`, the argument name the
+  /// line and area geometry verbs use too. Unconditional: the caller decides
+  /// when the label is present and worth emitting.
+  void emitInlineLabel(
+    DartSourceWriter writer,
+    SeriesInlineLabelConfig inlineLabel,
+  ) => _emitInlineLabelArgument(writer, inlineLabel);
+
   /// Writes `<argument>: PieChartStyle(...)` / `<argument>: DonutChartStyle(...)`
   /// — the field body the radial geometry verbs (`geomPie`/`geomDonut`) hand to
   /// their `style:` argument, the same nested-config rendering the config form's
