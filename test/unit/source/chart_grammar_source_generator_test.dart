@@ -6618,9 +6618,10 @@ void main() {
       expect(generated.warnings, isEmpty);
     });
 
-    testWidgets('a band carrying a 1d field is refused BY NAME', (
-      tester,
-    ) async {
+    testWidgets('a band carrying a path animation EMITS it', (tester) async {
+      // Was "refused BY NAME" until this slice. `RangeAreaMark` now carries
+      // `pathAnimation`, so the honest assertion is the opposite one: the same
+      // chart the refusal test mounted must now produce a chain.
       final generated = generateGrammar(
         await snapshotOf(tester, (controller) {
           return BravenChartPlus(
@@ -6641,19 +6642,25 @@ void main() {
         }),
       );
 
-      expect(generated.source, isNot(contains('= BravenChart.of(')));
       expect(
-        generated.warnings.single.message,
-        contains('a path animation'),
-        reason:
-            'a field the mark deliberately does not carry must be named, not '
-            'dropped: ${generated.warnings.map((w) => w.message).join('\n')}',
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
       );
+      expect(
+        literalArguments(generated.source, '.geomRangeArea('),
+        contains('pathAnimation: PathAnimationStyle('),
+      );
+      expect(
+        generated.source,
+        contains('entranceMode: PathEntranceAnimationMode.reveal,'),
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
     });
 
-    testWidgets('a band carrying a fill gradient is refused BY NAME', (
-      tester,
-    ) async {
+    testWidgets('a band carrying a fill gradient EMITS it', (tester) async {
+      // Was "refused BY NAME" until this slice — see the sibling above.
       final generated = generateGrammar(
         await snapshotOf(tester, (controller) {
           return BravenChartPlus(
@@ -6674,8 +6681,18 @@ void main() {
         }),
       );
 
-      expect(generated.source, isNot(contains('= BravenChart.of(')));
-      expect(generated.warnings.single.message, contains('a fill gradient'));
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(
+        literalArguments(generated.source, '.geomRangeArea('),
+        contains('fillGradient: AreaGradient('),
+      );
+      expect(generated.source, contains('Color(0xFF2563EB),'));
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
     });
 
     testWidgets('a band beside a line on a legacy single-axis chart emits', (
@@ -6712,6 +6729,174 @@ void main() {
       expect(generated.source, contains('.geomRangeArea('));
       expect(generated.source, contains('.geomLine('));
       expect(generated.warnings, isEmpty);
+    });
+
+    // =====================================================================
+    // PATH FIELDS — the reversal of the fields LineMark/AreaMark/RangeAreaMark
+    // gained in this slice. Every one of them is NON-NULLABLE on its series
+    // with a default, so the reversal has to map a defaulted capture back to
+    // null; shape 45d is the guard that proves it does.
+    // =====================================================================
+
+    testWidgets('shape 45a: a line carrying every path field emits a chain', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: const <ChartSeries>[
+              LineChartSeries(
+                id: 'power',
+                name: 'Power',
+                tension: 0.6,
+                dataPointMarkerRadius: 4.5,
+                dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+                dataPointMarkerBackground: Color(0xFF0F172A),
+                lineGlow: 3,
+                inlineLabel: SeriesInlineLabelConfig(text: 'Power'),
+                pathAnimation: PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                ),
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('shape 45b: an area carrying every path field emits a chain', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: const <ChartSeries>[
+              AreaChartSeries(
+                id: 'load',
+                name: 'Load',
+                tension: 0.6,
+                dataPointMarkerRadius: 4.5,
+                dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+                dataPointMarkerBackground: Color(0xFF0F172A),
+                lineGlow: 3,
+                inlineLabel: SeriesInlineLabelConfig(text: 'Load'),
+                pathAnimation: PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                ),
+                fillGradient: AreaGradient(
+                  colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+                ),
+                baselineValue: 180,
+                aboveBaselineFillColor: Color(0xFF16A34A),
+                belowBaselineFillColor: Color(0xFFDC2626),
+                points: <ChartDataPoint>[
+                  ChartDataPoint(x: 0, y: 168),
+                  ChartDataPoint(x: 1, y: 204),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('shape 45c: a band carrying BOTH new fields emits a chain', (
+      tester,
+    ) async {
+      // The two siblings above each carry one field; only this one proves the
+      // range-area arm writes both into the SAME literal.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[
+              RangeAreaChartSeries(
+                id: 'band',
+                fillGradient: const AreaGradient(
+                  colors: <Color>[Color(0xFF2563EB), Color(0x002563EB)],
+                ),
+                pathAnimation: const PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                ),
+                points: <RangeAreaDataPoint>[
+                  RangeAreaDataPoint(x: 0, low: 1, high: 3),
+                  RangeAreaDataPoint(x: 1, low: 2, high: 4),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        emittedChain(generated),
+        isTrue,
+        reason: 'blocked with: ${blockedReason(generated)}',
+      );
+      final args = literalArguments(generated.source, '.geomRangeArea(');
+      expect(args, contains('fillGradient: AreaGradient('));
+      expect(args, contains('pathAnimation: PathAnimationStyle('));
+      expect(generated.warnings, isEmpty);
+      expect(generated.isComplete, isTrue);
+    });
+
+    testWidgets('shape 45d: a chart that sets NO path field emits exactly what '
+        'it emitted before this slice', (tester) async {
+      // The byte-identical guard. Every new field is non-nullable on the series
+      // with a default, so a verbatim reversal would make EVERY line chart in
+      // the corpus start emitting `tension:`/`lineGlow:`/`pathAnimation:`.
+      // `_defaultedOrNull` is what stops that, and this is what proves it.
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomLine(y: samplePower, name: 'Load')
+              .build(bravenChartController: controller),
+        ),
+      );
+
+      final args = literalArguments(generated.source, '.geomLine(');
+      for (final name in const <String>[
+        'tension:',
+        'lineGlow:',
+        'dataPointMarkerRadius:',
+        'dataPointMarkerStyle:',
+        'dataPointMarkerBackground:',
+        'pathAnimation:',
+        'inlineLabel:',
+      ]) {
+        expect(
+          args.where((entry) => entry.startsWith(name)),
+          isEmpty,
+          reason: '$name must not be emitted by a chart that never set it',
+        );
+      }
     });
   });
 
@@ -10150,23 +10335,24 @@ void main() {
     testWidgets('a series option no V1 mark carries is refused, not dropped', (
       tester,
     ) async {
-      // RE-POINTED, not weakened. This used to use `unit: 'W'` as its example
-      // of an uncarried option; the five Cartesian marks now CARRY unit, so
-      // keeping it here would pin a behaviour this slice deliberately removed.
-      // The carried case is asserted positively instead — see round trip
-      // "shape 29" / "29b" / "29d", which require the unit to survive AND to
-      // appear in the emitted text. `tension` is still genuinely uncarried
-      // (LineMark has no curve tension), so the claim in the test's name is
-      // unchanged, and the assertion is now on the diagnostic's full PHRASE
-      // rather than on the bare option word.
+      // RE-POINTED TWICE, not weakened. It used `unit: 'W'` until the five
+      // Cartesian marks gained unit, then `tension: 0.6` until `LineMark`
+      // gained the path fields. Keeping either would pin a behaviour a slice
+      // deliberately removed; the carried cases are asserted POSITIVELY
+      // instead — see round trip "shape 29"/"29b"/"29d" for the unit and
+      // "shape 45a"/"45b"/"45c" for the path fields. `barStyle` is still
+      // genuinely uncarried (`BarMark` has no bar style), so the claim in the
+      // test's name is unchanged, and the assertion stays on the diagnostic's
+      // full PHRASE rather than on the bare option word.
       final snapshot = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
           bravenChartController: controller,
           series: const <ChartSeries>[
-            LineChartSeries(
+            BarChartSeries(
               id: 'power',
-              tension: 0.6,
+              barWidthPercent: 0.7,
+              barStyle: BarChartStyle(cornerRadius: 4),
               points: <ChartDataPoint>[
                 ChartDataPoint(x: 0, y: 1),
                 ChartDataPoint(x: 1, y: 2),
@@ -10184,7 +10370,7 @@ void main() {
         allOf(
           contains('does not reproduce'),
           contains('power'),
-          contains('curve tension'),
+          contains('a bar style'),
         ),
       );
     });
@@ -10577,7 +10763,9 @@ void main() {
 
       // The same chart plus one option no V1 mark carries. It blocks — so
       // `blockedReason` is a real sentence — and that sentence must still name
-      // the tension and neither the grid nor the legend.
+      // the offending series option and neither the grid nor the legend. The
+      // option was `tension: 0.6` until `LineMark` gained the path fields; it
+      // is a bar style now, for the reason the sibling case above records.
       final blockedForOtherReasons = await snapshotOf(
         tester,
         (controller) => BravenChartPlus(
@@ -10585,9 +10773,10 @@ void main() {
           grid: const GridConfig(horizontal: false),
           showLegend: false,
           series: const <ChartSeries>[
-            LineChartSeries(
+            BarChartSeries(
               id: 'power',
-              tension: 0.6,
+              barWidthPercent: 0.7,
+              barStyle: BarChartStyle(cornerRadius: 4),
               points: <ChartDataPoint>[
                 ChartDataPoint(x: 0, y: 1),
                 ChartDataPoint(x: 1, y: 2),
@@ -10602,7 +10791,7 @@ void main() {
         blockedReason(blockedResult),
         allOf(
           isNotNull,
-          contains('curve tension'),
+          contains('a bar style'),
           isNot(contains('grid')),
           isNot(contains('legend')),
         ),
