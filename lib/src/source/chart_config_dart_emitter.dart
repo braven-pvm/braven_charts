@@ -2646,6 +2646,7 @@ class ChartConfigDartEmitter {
   ) {
     _optionalNumber(writer, 'barWidthPercent', series.barWidthPercent);
     _optionalNumber(writer, 'barWidthPixels', series.barWidthPixels);
+    _optionalNumber(writer, 'categorySpacing', series.categorySpacing);
     _numberIf(writer, 'minWidth', series.minWidth, 4);
     _numberIf(writer, 'maxWidth', series.maxWidth, 100);
     _numberIf(writer, 'barGap', series.barGap, 2);
@@ -3022,6 +3023,14 @@ class ChartConfigDartEmitter {
       _numberIf(writer, 'fontSize', style.fontSize, 10);
       _fontWeightIf(writer, 'fontWeight', style.fontWeight, FontWeight.w600);
       _valueIf(writer, 'showUnit', style.showUnit, defaultValue: false);
+      _enumIf(
+        writer,
+        'rotationMode',
+        'BarLabelRotationMode',
+        style.rotationMode.name,
+        defaultName: 'fixed',
+      );
+      _numberIf(writer, 'rotationDegrees', style.rotationDegrees, 0);
       _numberIf(writer, 'padding', style.padding, 4);
       _enumIf(
         writer,

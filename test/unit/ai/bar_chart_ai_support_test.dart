@@ -53,6 +53,7 @@ void main() {
         'bar_layout': 'overlaid',
         'bar_orientation': 'horizontal',
         'bar_width_percent': 0.74,
+        'bar_category_spacing': 1.25,
         'bar_min_width': 6,
         'bar_max_width': 48,
         'bar_gap': 5,
@@ -105,6 +106,8 @@ void main() {
         'bar_label_font_size': 12,
         'bar_label_font_weight': 700,
         'bar_label_show_unit': true,
+        'bar_label_rotation_mode': 'auto_fit',
+        'bar_label_rotation_degrees': -90,
         'bar_label_padding': 6,
         'bar_label_collision': 'reposition',
         'bar_label_plot_edge_aware': true,
@@ -135,6 +138,7 @@ void main() {
     final series = result.series.single as BarChartSeries;
     expect(series.layoutMode, BarLayoutMode.overlaid);
     expect(series.orientation, BarOrientation.horizontal);
+    expect(series.categorySpacing, 1.25);
     expect(series.groupId, 'actual');
     expect(series.overlayWidthFactor, 0.72);
     expect(series.overlayOffsetFactor, -0.1);
@@ -165,6 +169,8 @@ void main() {
     expect(series.labelStyle.position, BarLabelPosition.rangeEnds);
     expect(series.labelStyle.valueMode, BarLabelValueMode.range);
     expect(series.labelStyle.fontWeight, FontWeight.w700);
+    expect(series.labelStyle.rotationMode, BarLabelRotationMode.autoFit);
+    expect(series.labelStyle.rotationDegrees, -90);
     expect(
       series.labelStyle.collisionPolicy,
       BarLabelCollisionPolicy.reposition,

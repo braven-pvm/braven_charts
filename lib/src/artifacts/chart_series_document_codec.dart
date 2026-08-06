@@ -647,6 +647,7 @@ abstract final class ChartSeriesDocumentCodec {
           showInTrackingTooltip: showInTrackingTooltip,
           barWidthPercent: _optionalDouble(style['barWidthPercent']),
           barWidthPixels: _optionalDouble(style['barWidthPixels']),
+          categorySpacing: _optionalDouble(style['barCategorySpacing']),
           minWidth: _double(style, 'minWidth'),
           maxWidth: _double(style, 'maxWidth'),
           barGap: _optionalDouble(style['barGap']) ?? 2.0,
@@ -1402,6 +1403,9 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['barWidthPixels'] = series.barWidthPixels == null
             ? null
             : _number(series.barWidthPixels!)
+        ..['barCategorySpacing'] = series.categorySpacing == null
+            ? null
+            : _number(series.categorySpacing!)
         ..['minWidth'] = _number(series.minWidth)
         ..['maxWidth'] = _number(series.maxWidth)
         ..['barGap'] = _number(series.barGap)
@@ -3184,6 +3188,8 @@ Map<String, Object?> _encodeBarLabels(BarLabelStyle labels) => {
   'fontSize': _number(labels.fontSize),
   'fontWeightIndex': FontWeight.values.indexOf(labels.fontWeight),
   'showUnit': labels.showUnit,
+  'rotationMode': labels.rotationMode.name,
+  'rotationDegrees': _number(labels.rotationDegrees),
   'padding': _number(labels.padding),
   'collisionPolicy': labels.collisionPolicy.name,
   'plotEdgeAware': labels.plotEdgeAware,
@@ -3227,6 +3233,14 @@ BarLabelStyle _decodeBarLabels(Map<String, Object?>? value) {
         ? FontWeight.w600
         : _fontWeight(value, 'fontWeightIndex'),
     showUnit: _bool(value, 'showUnit', fallback: false),
+    rotationMode:
+        _optionalEnum(
+          value['rotationMode'],
+          BarLabelRotationMode.values,
+          r'$.style.barLabels.rotationMode',
+        ) ??
+        BarLabelRotationMode.fixed,
+    rotationDegrees: _optionalDouble(value['rotationDegrees']) ?? 0.0,
     padding: _optionalDouble(value['padding']) ?? 4.0,
     collisionPolicy:
         _optionalEnum(

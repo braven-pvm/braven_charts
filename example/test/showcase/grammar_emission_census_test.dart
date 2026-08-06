@@ -382,7 +382,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[15, 12, 3],
   'Area': <int>[9, 9, 3],
   'Scatter': <int>[29, 27, 6],
-  'BarLab': <int>[28, 28, 0],
+  'BarLab': <int>[31, 31, 0],
   'Candlestick': <int>[10, 8, 0],
   'RangeArea': <int>[7, 7, 0],
   'Heatmap': <int>[19, 16, 0],
@@ -400,11 +400,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[28, 129],
+  _Family.cartesian: <int>[28, 132],
   _Family.radial: <int>[31, 55],
 };
 
-const int _expectedWithVerdict = 184;
+const int _expectedWithVerdict = 187;
 const int _expectedEmitting = 59;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the

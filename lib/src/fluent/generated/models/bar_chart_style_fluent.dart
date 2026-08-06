@@ -414,6 +414,14 @@ extension BarLabelStyleFluent on BarLabelStyle {
   /// Replaces [BarLabelStyle.showUnit] with [value].
   BarLabelStyle withShowUnit(bool value) => copyWith(showUnit: value);
 
+  /// Replaces [BarLabelStyle.rotationMode] with [value].
+  BarLabelStyle withRotationMode(BarLabelRotationMode value) =>
+      copyWith(rotationMode: value);
+
+  /// Replaces [BarLabelStyle.rotationDegrees] with [value].
+  BarLabelStyle withRotationDegrees(double value) =>
+      copyWith(rotationDegrees: value);
+
   /// Replaces [BarLabelStyle.padding] with [value].
   BarLabelStyle withPadding(double value) => copyWith(padding: value);
 

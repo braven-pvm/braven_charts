@@ -33,12 +33,26 @@ enum _BarLabPreset {
   categories,
   stress,
   labels,
+  rotatedLabels,
+  drilldown,
+  race,
   config,
   patterns,
   motion,
   states,
   stacked,
   normalized,
+}
+
+enum _BarDrillDataset { nutrition, regions }
+
+enum _BarRacePeriodPreset {
+  authoredLabel,
+  monthYearLong,
+  monthYearShort,
+  year,
+  isoMonth,
+  custom,
 }
 
 extension on _BarLabPreset {
@@ -64,6 +78,9 @@ extension on _BarLabPreset {
     _BarLabPreset.categories => 'Categories',
     _BarLabPreset.stress => 'Stress',
     _BarLabPreset.labels => 'Labels',
+    _BarLabPreset.rotatedLabels => 'Rotated labels',
+    _BarLabPreset.drilldown => 'Drill-down',
+    _BarLabPreset.race => 'Race',
     _BarLabPreset.config => 'Config',
     _BarLabPreset.patterns => 'Patterns',
     _BarLabPreset.motion => 'Motion',
@@ -94,6 +111,9 @@ extension on _BarLabPreset {
     _BarLabPreset.categories => Icons.view_week_outlined,
     _BarLabPreset.stress => Icons.speed,
     _BarLabPreset.labels => Icons.label_outline,
+    _BarLabPreset.rotatedLabels => Icons.text_rotate_vertical,
+    _BarLabPreset.drilldown => Icons.account_tree_outlined,
+    _BarLabPreset.race => Icons.play_circle_outline,
     _BarLabPreset.config => Icons.data_object,
     _BarLabPreset.patterns => Icons.texture,
     _BarLabPreset.motion => Icons.animation,
@@ -112,6 +132,8 @@ class BarLabPage extends StatefulWidget {
 }
 
 class _BarLabPageState extends State<BarLabPage> {
+  static const String _raceDefaultFrameId = '2006-12';
+
   static const _categoryFormatterId = 'braven.showcase.bar-category';
   final BravenChartController _chartController = BravenChartController();
   final ChartWorkbenchController _workbenchController =
@@ -119,6 +141,8 @@ class _BarLabPageState extends State<BarLabPage> {
   final ChartInteractionGroupController _interactionGroupController =
       ChartInteractionGroupController();
   late final ShowcaseRandomizerController<int> _showcaseRandomizer;
+  late final BarDrilldownController _drilldownController;
+  late final BarRaceController _raceController;
   static const _dayCategories = [
     'Mon',
     'Tue',
@@ -127,6 +151,20 @@ class _BarLabPageState extends State<BarLabPage> {
     'Fri',
     'Sat',
     'Sun',
+  ];
+  static const _cityCategories = [
+    'Tokyo',
+    'Delhi',
+    'Shanghai',
+    'São Paulo',
+    'Mexico City',
+    'Dhaka',
+    'Cairo',
+    'Beijing',
+    'Mumbai',
+    'Osaka',
+    'Karachi',
+    'Chongqing',
   ];
   static const _medalCategories = ['CN', 'US', 'JP', 'AU', 'FR'];
   static const _waterfallCategories = [
@@ -299,6 +337,8 @@ class _BarLabPageState extends State<BarLabPage> {
   bool _showConnectors = true;
   BarCornerRadiusPolicy _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
   BarLabelPosition _labelPosition = BarLabelPosition.auto;
+  BarLabelRotationMode _labelRotationMode = BarLabelRotationMode.fixed;
+  double _labelRotationDegrees = 0;
   double _labelEdgeOffset = 8;
   double _dimmedOpacity = 0.42;
   int _motionRevision = 0;
@@ -346,10 +386,27 @@ class _BarLabPageState extends State<BarLabPage> {
   double _bulletRangeRadius = 4;
   bool _showDivergingCenterLine = true;
   double _divergingCenterLineWidth = 1.25;
+  bool _drillShowBreadcrumbs = true;
+  BarDrillActivation _drillActivation = BarDrillActivation.primaryAction;
+  BarDrillTransition _drillTransition = BarDrillTransition.fadeThrough;
+  BarDrillSelectionPolicy _drillSelectionPolicy = BarDrillSelectionPolicy.clear;
+  _BarDrillDataset _drillDataset = _BarDrillDataset.nutrition;
+  int _drillLazyDelayMs = 600;
+  bool _drillSimulateFailure = false;
 
   @override
   void initState() {
     super.initState();
+    _drilldownController = BarDrilldownController(
+      config: BarDrilldownConfig(
+        root: _buildDrillHierarchy(),
+        lazyResolverBinding: 'showcase.resolveNutritionDetails',
+      ),
+      resolver: _resolveDrillChildren,
+    )..addListener(_onDrilldownChanged);
+    _raceController = BarRaceController(config: _buildPopulationRaceConfig());
+    _seekRaceToDefaultFrame();
+    _raceController.addListener(_onRaceChanged);
     _showcaseRandomizer = ShowcaseRandomizerController<int>(
       initialSeed: 101,
       generate: (seed) => seed,
@@ -408,7 +465,40 @@ class _BarLabPageState extends State<BarLabPage> {
       ..dispose();
     _workbenchController.dispose();
     _interactionGroupController.dispose();
+    _drilldownController
+      ..removeListener(_onDrilldownChanged)
+      ..dispose();
+    _raceController
+      ..removeListener(_onRaceChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onDrilldownChanged() {
+    if (!mounted) return;
+    if (_drillSelectionPolicy == BarDrillSelectionPolicy.clear) {
+      _chartController.clearPointSelection();
+    }
+    setState(() {});
+  }
+
+  void _onRaceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _replaceDrillHierarchy() {
+    _drilldownController.replaceConfig(
+      BarDrilldownConfig(
+        root: _buildDrillHierarchy(),
+        activation: _drillActivation,
+        transition: _drillTransition,
+        showBreadcrumbs: _drillShowBreadcrumbs,
+        selectionPolicy: _drillSelectionPolicy,
+        lazyResolverBinding: _drillDataset == _BarDrillDataset.nutrition
+            ? 'showcase.resolveNutritionDetails'
+            : null,
+      ),
+    );
   }
 
   void _onChartInteractionChanged() {
@@ -447,6 +537,15 @@ class _BarLabPageState extends State<BarLabPage> {
       _showConnectors = random.nextBool();
       _labelPosition = BarLabelPosition
           .values[random.nextInt(BarLabelPosition.values.length)];
+      _labelRotationMode = BarLabelRotationMode
+          .values[random.nextInt(BarLabelRotationMode.values.length)];
+      _labelRotationDegrees = [
+        -90.0,
+        -45.0,
+        0.0,
+        45.0,
+        90.0,
+      ][random.nextInt(5)];
       _labelEdgeOffset = 2 + random.nextDouble() * 14;
       _showTracks = random.nextBool();
       _showDataPointPopup = random.nextBool();
@@ -559,6 +658,625 @@ class _BarLabPageState extends State<BarLabPage> {
     return label is JsonStringValue ? label.value : value.toString();
   }
 
+  BarDrillNode _buildDrillHierarchy() => switch (_drillDataset) {
+    _BarDrillDataset.nutrition => _buildNutritionDrillHierarchy(),
+    _BarDrillDataset.regions => _buildRegionalDrillHierarchy(),
+  };
+
+  Future<List<BarDrillNode>> _resolveDrillChildren(BarDrillNode node) async {
+    await Future<void>.delayed(Duration(milliseconds: _drillLazyDelayMs));
+    if (_drillSimulateFailure) {
+      throw StateError('Simulated showcase network failure');
+    }
+    if (node.id != 'berries') return const <BarDrillNode>[];
+    BarDrillNode detail(
+      String id,
+      String label,
+      List<String> categories,
+      List<double> values,
+    ) => BarDrillNode(
+      id: id,
+      label: label,
+      series: [_drillSeries(id, label, categories, values, unit: '%')],
+      metadata: {'categories': categories, 'unit': '%'},
+    );
+    return <BarDrillNode>[
+      detail(
+        'berry-sugars',
+        'Berry sugars',
+        const ['Glucose', 'Fructose', 'Other sugars'],
+        const [34, 31, 17],
+      ),
+      detail(
+        'berry-fibre',
+        'Berry fibre',
+        const ['Soluble', 'Insoluble'],
+        const [3, 5],
+      ),
+      detail(
+        'berry-micronutrients',
+        'Berry micronutrients',
+        const ['Vitamin C', 'Manganese', 'Other'],
+        const [18, 6, 4],
+      ),
+    ];
+  }
+
+  BarDrillNode _buildRegionalDrillHierarchy() {
+    BarDrillNode market(
+      String id,
+      String label,
+      List<String> categories,
+      List<double> values,
+    ) => BarDrillNode(
+      id: id,
+      label: label,
+      series: [_drillSeries(id, label, categories, values, unit: 'M')],
+      metadata: {'categories': categories, 'unit': 'M'},
+    );
+
+    BarDrillNode region(
+      String id,
+      String label,
+      List<String> categories,
+      List<double> values,
+      List<BarDrillNode> children,
+    ) => BarDrillNode(
+      id: id,
+      label: label,
+      series: [
+        _drillSeries(
+          id,
+          label,
+          categories,
+          values,
+          children: [for (final child in children) child.id],
+          unit: 'M',
+        ),
+      ],
+      children: children,
+      metadata: {'categories': categories, 'unit': 'M'},
+    );
+
+    final americas = region(
+      'region-americas',
+      'Americas',
+      const ['United States', 'Brazil', 'Canada'],
+      const [184, 72, 48],
+      [
+        market(
+          'market-us',
+          'United States',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [96, 58, 30],
+        ),
+        market(
+          'market-brazil',
+          'Brazil',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [29, 25, 18],
+        ),
+        market(
+          'market-canada',
+          'Canada',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [22, 17, 9],
+        ),
+      ],
+    );
+    final emea = region(
+      'region-emea',
+      'EMEA',
+      const ['United Kingdom', 'Germany', 'South Africa'],
+      const [88, 76, 45],
+      [
+        market(
+          'market-uk',
+          'United Kingdom',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [41, 30, 17],
+        ),
+        market(
+          'market-germany',
+          'Germany',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [37, 26, 13],
+        ),
+        market(
+          'market-za',
+          'South Africa',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [18, 16, 11],
+        ),
+      ],
+    );
+    final apac = region(
+      'region-apac',
+      'APAC',
+      const ['Japan', 'Australia', 'Singapore'],
+      const [83, 57, 38],
+      [
+        market(
+          'market-japan',
+          'Japan',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [42, 29, 12],
+        ),
+        market(
+          'market-australia',
+          'Australia',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [25, 20, 12],
+        ),
+        market(
+          'market-singapore',
+          'Singapore',
+          const ['Enterprise', 'Mid-market', 'SMB'],
+          const [19, 12, 7],
+        ),
+      ],
+    );
+    const incubator = BarDrillNode(
+      id: 'region-incubator',
+      label: 'Incubator',
+      series: <ChartSeries>[],
+      metadata: <String, Object?>{'categories': <String>[], 'unit': 'M'},
+    );
+    return BarDrillNode(
+      id: 'global-revenue',
+      label: 'Global revenue',
+      series: [
+        _drillSeries(
+          'global-revenue',
+          'Global revenue',
+          const ['Americas', 'EMEA', 'APAC', 'Incubator'],
+          const [304, 209, 178, 12],
+          children: const [
+            'region-americas',
+            'region-emea',
+            'region-apac',
+            'region-incubator',
+          ],
+          unit: 'M',
+        ),
+      ],
+      children: [americas, emea, apac, incubator],
+      metadata: const {
+        'categories': ['Americas', 'EMEA', 'APAC', 'Incubator'],
+        'unit': 'M',
+      },
+    );
+  }
+
+  BarDrillNode _buildNutritionDrillHierarchy() {
+    BarDrillNode leaf(
+      String id,
+      String label,
+      List<String> categories,
+      List<double> values, {
+      String unit = '%',
+    }) => BarDrillNode(
+      id: id,
+      label: label,
+      series: [_drillSeries(id, label, categories, values, unit: unit)],
+      metadata: {'categories': categories, 'unit': unit},
+    );
+
+    final rolledOats = BarDrillNode(
+      id: 'rolled-oats',
+      label: 'Rolled oats',
+      series: [
+        _drillSeries(
+          'rolled-oats',
+          'Rolled oats',
+          const ['Carbohydrates', 'Fat', 'Protein'],
+          const [67, 6, 13],
+          children: const ['carbohydrates', null, 'protein'],
+          unit: '%',
+        ),
+      ],
+      metadata: const {
+        'categories': ['Carbohydrates', 'Fat', 'Protein'],
+        'unit': '%',
+      },
+      children: [
+        leaf(
+          'carbohydrates',
+          'Carbohydrates',
+          const ['Starch', 'Fibre', 'Sugars'],
+          const [53, 10, 4],
+        ),
+        leaf(
+          'protein',
+          'Protein',
+          const ['Avenalin', 'Avenin', 'Other proteins'],
+          const [8, 3, 2],
+        ),
+      ],
+    );
+    final maple = leaf(
+      'maple-syrup',
+      'Maple syrup',
+      const ['Sucrose', 'Water', 'Minerals'],
+      const [66, 32, 2],
+    );
+    final almonds = leaf(
+      'almonds',
+      'Flaked almonds',
+      const ['Fat', 'Protein', 'Carbohydrates'],
+      const [50, 21, 22],
+    );
+    final berries = BarDrillNode(
+      id: 'berries',
+      label: 'Dried berries',
+      series: [
+        _drillSeries(
+          'berries',
+          'Dried berries',
+          const ['Sugars', 'Fibre', 'Micronutrients'],
+          const [82, 8, 4],
+          children: const [
+            'berry-sugars',
+            'berry-fibre',
+            'berry-micronutrients',
+          ],
+          unit: '%',
+        ),
+      ],
+      metadata: const {
+        'categories': ['Sugars', 'Fibre', 'Micronutrients'],
+        'unit': '%',
+      },
+      mayHaveLazyChildren: true,
+    );
+    const rootCategories = [
+      'Rolled oats',
+      'Maple syrup',
+      'Flaked almonds',
+      'Dried berries',
+      'Sunflower seeds',
+      'Sesame seeds',
+      'Pumpkin seeds',
+      'Coconut',
+      'Honey',
+      'Vegetable oil',
+    ];
+    return BarDrillNode(
+      id: 'ingredients',
+      label: 'Ingredients',
+      series: [
+        _drillSeries(
+          'ingredients',
+          'Ingredient weight',
+          rootCategories,
+          const [300, 170, 100, 98, 52, 50, 49, 47, 42, 25],
+          children: const [
+            'rolled-oats',
+            'maple-syrup',
+            'almonds',
+            'berries',
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+          ],
+          unit: 'g',
+        ),
+      ],
+      metadata: const {'categories': rootCategories, 'unit': 'g'},
+      children: [rolledOats, maple, almonds, berries],
+    );
+  }
+
+  BarRaceConfig _buildPopulationRaceConfig() {
+    const categories = [
+      BarRaceCategory(id: 'chn', label: 'China', color: Color(0xFFEF4444)),
+      BarRaceCategory(id: 'ind', label: 'India', color: Color(0xFFF59E0B)),
+      BarRaceCategory(
+        id: 'usa',
+        label: 'United States',
+        color: Color(0xFF3B82F6),
+      ),
+      BarRaceCategory(id: 'idn', label: 'Indonesia', color: Color(0xFF10B981)),
+      BarRaceCategory(id: 'pak', label: 'Pakistan', color: Color(0xFF8B5CF6)),
+      BarRaceCategory(id: 'nga', label: 'Nigeria', color: Color(0xFFEC4899)),
+      BarRaceCategory(id: 'bra', label: 'Brazil', color: Color(0xFF14B8A6)),
+      BarRaceCategory(id: 'bgd', label: 'Bangladesh', color: Color(0xFF6366F1)),
+      BarRaceCategory(id: 'rus', label: 'Russia', color: Color(0xFF64748B)),
+      BarRaceCategory(id: 'mex', label: 'Mexico', color: Color(0xFF84CC16)),
+      BarRaceCategory(id: 'jpn', label: 'Japan', color: Color(0xFF06B6D4)),
+      BarRaceCategory(id: 'eth', label: 'Ethiopia', color: Color(0xFFF97316)),
+      BarRaceCategory(
+        id: 'phl',
+        label: 'Philippines',
+        color: Color(0xFF0EA5E9),
+      ),
+      BarRaceCategory(id: 'egy', label: 'Egypt', color: Color(0xFFA855F7)),
+      BarRaceCategory(id: 'deu', label: 'Germany', color: Color(0xFF71717A)),
+      BarRaceCategory(id: 'vnm', label: 'Vietnam', color: Color(0xFF22C55E)),
+      BarRaceCategory(id: 'tur', label: 'Türkiye', color: Color(0xFFFB7185)),
+      BarRaceCategory(id: 'cod', label: 'DR Congo', color: Color(0xFF2DD4BF)),
+    ];
+    const anchorYears = [1960, 1980, 2000, 2024];
+    const anchors = <String, List<double>>{
+      'chn': [667, 981, 1264, 1410],
+      'ind': [445, 698, 1057, 1450],
+      'usa': [181, 227, 282, 342],
+      'idn': [88, 148, 216, 281],
+      'pak': [46, 81, 154, 252],
+      'nga': [45, 73, 123, 229],
+      'bra': [72, 121, 175, 216],
+      'bgd': [50, 80, 130, 174],
+      'rus': [120, 139, 146, 144],
+      'mex': [38, 68, 99, 130],
+      'jpn': [93, 117, 127, 123],
+      'eth': [23, 35, 66, 129],
+      'phl': [27, 48, 78, 119],
+      'egy': [27, 44, 71, 114],
+      'deu': [73, 78, 82, 84],
+      'vnm': [33, 54, 79, 101],
+      'tur': [28, 44, 64, 87],
+      // Deliberately accelerated showcase scenario: this category begins
+      // outside the visible top-N, enters the race, and eventually becomes
+      // the leader so entry, overtaking, and first-place transitions are all
+      // inspectable in one deterministic playback sequence.
+      'cod': [15, 70, 420, 1600],
+    };
+
+    double populationAt(String categoryId, double year) {
+      final values = anchors[categoryId]!;
+      for (var index = 0; index < anchorYears.length - 1; index++) {
+        final startYear = anchorYears[index];
+        final endYear = anchorYears[index + 1];
+        if (year > endYear) continue;
+        final progress = (year - startYear) / (endYear - startYear);
+        return values[index] + (values[index + 1] - values[index]) * progress;
+      }
+      return values.last;
+    }
+
+    double showcaseRaceVariation(
+      String categoryId,
+      double year,
+      double population,
+    ) {
+      final categoryIndex = categories.indexWhere(
+        (category) => category.id == categoryId,
+      );
+      final elapsedYears = year - anchorYears.first;
+      // This showcase deliberately adds small, smooth estimate revisions so
+      // similarly sized countries exchange ranks often enough to exercise the
+      // race layout. The dominant long-term population trend still comes from
+      // the authored anchors above.
+      final amplitude = switch (categoryIndex) {
+        < 3 => 0.004,
+        < 8 => 0.035,
+        _ => 0.075,
+      };
+      final primaryCycleYears = 1.2 + (categoryIndex % 5) * 0.28;
+      final secondaryCycleYears = 4.2 + (categoryIndex % 4) * 0.55;
+      final phase = categoryIndex * 1.31;
+      final motion =
+          math.sin((elapsedYears / primaryCycleYears) * math.pi * 2 + phase) *
+              0.72 +
+          math.sin((elapsedYears / secondaryCycleYears) * math.pi * 2 - phase) *
+              0.28;
+      return population * (1 + amplitude * motion);
+    }
+
+    const monthNames = <String>[
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    final frames = <BarRaceFrame>[];
+    final firstMonth = DateTime(1960);
+    final lastMonth = DateTime(2024);
+    for (
+      var month = firstMonth;
+      !month.isAfter(lastMonth);
+      month = DateTime(month.year, month.month + 1)
+    ) {
+      final yearPosition = month.year + (month.month - 1) / 12;
+      final values = <String, double>{
+        for (final category in categories)
+          category.id: showcaseRaceVariation(
+            category.id,
+            yearPosition,
+            populationAt(category.id, yearPosition),
+          ),
+      };
+      frames.add(
+        BarRaceFrame(
+          id: '${month.year}-${month.month.toString().padLeft(2, '0')}',
+          label: '${monthNames[month.month - 1]} ${month.year}',
+          timestamp: month,
+          values: values,
+          total: values.values.fold<double>(0, (sum, value) => sum + value),
+        ),
+      );
+    }
+    return BarRaceConfig(
+      categories: categories,
+      frames: List.unmodifiable(frames),
+      topCount: 15,
+      durationPerFrame: const Duration(milliseconds: 100),
+      axisRange: BarRaceAxisRange.continuous,
+      showPeriod: true,
+      showTotal: true,
+      periodStyle: const BarRacePeriodStyle(
+        position: BarRacePeriodPosition.bottomRight,
+        fontSize: 44,
+        color: Color(0xFF38BDF8),
+        fontWeight: FontWeight.w700,
+        opacity: 0.90,
+        inset: 64,
+        supportingTextSize: 16,
+      ),
+      periodFormat: const BarRacePeriodFormat(pattern: '{MMM} {yyyy}'),
+      valueFormat: const BarRaceValueFormat(
+        pattern: '{value} M',
+        notation: BarRaceValueNotation.standard,
+        decimalPlaces: 3,
+        useGrouping: true,
+        trimTrailingZeros: true,
+        scale: 1,
+      ),
+      totalFormat: const BarRaceValueFormat(
+        pattern: '{value} M combined population',
+        notation: BarRaceValueNotation.standard,
+        decimalPlaces: 0,
+        useGrouping: true,
+        trimTrailingZeros: true,
+        scale: 1,
+      ),
+    );
+  }
+
+  void _seekRaceToDefaultFrame() {
+    final index = _raceController.config.frames.indexWhere(
+      (frame) => frame.id == _raceDefaultFrameId,
+    );
+    _raceController.seekToFrame(index < 0 ? 0 : index);
+  }
+
+  BarChartSeries _drillSeries(
+    String id,
+    String name,
+    List<String> categories,
+    List<double> values, {
+    List<String?>? children,
+    required String unit,
+  }) => BarChartSeries(
+    id: 'drill-$id',
+    name: name,
+    points: [
+      for (var index = 0; index < categories.length; index++)
+        ChartDataPoint(
+          x: index.toDouble(),
+          y: values[index],
+          label: categories[index],
+          metadata:
+              children != null &&
+                  index < children.length &&
+                  children[index] != null
+              ? {barDrillNodeIdMetadataKey: children[index]}
+              : null,
+        ),
+    ],
+    unit: unit,
+    barWidthPercent: 0.72,
+  );
+
+  List<ChartSeries> _buildDrillSeries() => [
+    for (final source in _drilldownController.current.series)
+      if (source is BarChartSeries)
+        source.copyWith(
+          color: const Color(0xFF2389DA),
+          barWidthPercent: _barWidth,
+          barGap: _barGap,
+          orientation: _orientation,
+          layoutMode: BarLayoutMode.grouped,
+          barStyle: BarChartStyle(
+            animationMode: _animateBars
+                ? BarAnimationMode.grow
+                : BarAnimationMode.none,
+            cornerRadius: _cornerRadius,
+            cornerRadiusPolicy: _cornerPolicy,
+            gradient: _showGradient
+                ? const BarGradient(
+                    colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
+                  )
+                : null,
+            border: _showBorder
+                ? const BarBorderStyle(color: Color(0xFF1D4ED8), width: 1.25)
+                : null,
+          ),
+          labelStyle: BarLabelStyle(
+            show: _showLabels,
+            position: _labelPosition,
+            rotationMode: _labelRotationMode,
+            rotationDegrees: _labelRotationDegrees,
+            showUnit: true,
+            padding: _labelEdgeOffset,
+            collisionPolicy: _labelCollisionPolicy,
+            plotEdgeAware: _labelPlotEdgeAware,
+            collisionPadding: _labelCollisionPadding,
+            backgroundColor: _showLabelBackground
+                ? const Color(0xEEFFFFFF)
+                : null,
+          ),
+        ),
+  ];
+
+  List<ChartSeries> _buildRaceSeries() {
+    final config = _raceController.config;
+    final ranked = _raceController.effectiveRankedValues;
+    final valueFormat = config.valueFormat;
+    return <ChartSeries>[
+      BarChartSeries(
+        id: 'population-race',
+        name: 'Population',
+        points: [
+          for (var index = 0; index < ranked.length; index++)
+            ChartDataPoint(
+              x: ranked[index].rank,
+              y: ranked[index].value,
+              pointKey: ranked[index].category.id,
+              label: ranked[index].category.label,
+              pointStyle: PointStyle.color(ranked[index].category.color),
+              metadata: {
+                barRaceCategoryIdMetadataKey: ranked[index].category.id,
+              },
+            ),
+        ],
+        unit: 'M',
+        barWidthPercent: _barWidth,
+        categorySpacing: 1,
+        barGap: _barGap,
+        orientation: BarOrientation.horizontal,
+        layoutMode: BarLayoutMode.grouped,
+        barStyle: BarChartStyle(
+          // The race controller already interpolates values and fractional
+          // ranks on its frame clock. A second chart animation clock can be
+          // restarted by inspector edits and must not compete with it.
+          animationMode: BarAnimationMode.none,
+          cornerRadius: _cornerRadius,
+          cornerRadiusPolicy: _cornerPolicy,
+          border: _showBorder
+              ? const BarBorderStyle(color: Color(0xFF334155), width: 1)
+              : null,
+        ),
+        labelStyle: BarLabelStyle(
+          show: _showLabels,
+          position: _labelPosition,
+          rotationMode: _labelRotationMode,
+          rotationDegrees: _labelRotationDegrees,
+          showUnit: false,
+          formatter: (point) => valueFormat.format(point.y),
+          padding: _labelEdgeOffset,
+          collisionPolicy: _labelCollisionPolicy,
+          plotEdgeAware: _labelPlotEdgeAware,
+          collisionPadding: _labelCollisionPadding,
+          backgroundColor: _showLabelBackground
+              ? const Color(0xEEFFFFFF)
+              : null,
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
@@ -666,6 +1384,12 @@ class _BarLabPageState extends State<BarLabPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_preset == _BarLabPreset.drilldown && _drillShowBreadcrumbs)
+                BarDrilldownBreadcrumbs(
+                  key: const ValueKey('bar-lab-drill-breadcrumbs'),
+                  controller: _drilldownController,
+                ),
+              if (_preset == _BarLabPreset.race) _buildRacePlaybackControls(),
               SizedBox(
                 height: showWaterfallLegend ? 20 : 0,
                 child: Offstage(
@@ -674,7 +1398,31 @@ class _BarLabPageState extends State<BarLabPage> {
                 ),
               ),
               SizedBox(height: showWaterfallLegend ? 8 : 0),
-              Expanded(child: chart),
+              Expanded(
+                child: _preset == _BarLabPreset.race
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          chart,
+                          BarRacePeriodIndicator(
+                            key: const ValueKey('bar-race-period'),
+                            controller: _raceController,
+                          ),
+                        ],
+                      )
+                    : _preset == _BarLabPreset.drilldown
+                    ? AnimatedSwitcher(
+                        duration:
+                            _drillTransition == BarDrillTransition.fadeThrough
+                            ? const Duration(milliseconds: 260)
+                            : Duration.zero,
+                        child: KeyedSubtree(
+                          key: ValueKey(_drilldownController.current.id),
+                          child: chart,
+                        ),
+                      )
+                    : chart,
+              ),
               if (_preset == _BarLabPreset.categories) ...[
                 const SizedBox(height: 8),
                 SizedBox(height: 72, child: _buildCategoryNavigator()),
@@ -684,11 +1432,77 @@ class _BarLabPageState extends State<BarLabPage> {
         },
       ),
     );
-    return Directionality(
+    final directed = Directionality(
       textDirection: _preset == _BarLabPreset.rtl
           ? TextDirection.rtl
           : TextDirection.ltr,
       child: card,
+    );
+    return BarRaceTicker(
+      controller: _raceController,
+      disableMotion: MediaQuery.maybeOf(context)?.disableAnimations ?? false,
+      child: directed,
+    );
+  }
+
+  Widget _buildRacePlaybackControls() {
+    final frame = _raceController.currentFrame;
+    final config = _raceController.config;
+    final period = config.periodFormat.format(frame);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final actions = <Widget>[
+            IconButton(
+              key: const ValueKey('bar-race-play-pause'),
+              tooltip: _raceController.isPlaying ? 'Pause race' : 'Play race',
+              onPressed: _raceController.toggle,
+              icon: Icon(
+                _raceController.isPlaying ? Icons.pause : Icons.play_arrow,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Previous frame',
+              onPressed: _raceController.frameIndex == 0
+                  ? null
+                  : _raceController.previous,
+              icon: const Icon(Icons.skip_previous),
+            ),
+            IconButton(
+              key: const ValueKey('bar-race-next'),
+              tooltip: 'Next frame',
+              onPressed:
+                  _raceController.frameIndex == config.frames.length - 1 &&
+                      !config.loop
+                  ? null
+                  : _raceController.next,
+              icon: const Icon(Icons.skip_next),
+            ),
+          ];
+          final seek = Slider(
+            key: const ValueKey('bar-race-seek'),
+            value: _raceController.progress,
+            semanticFormatterCallback: (_) => 'Period $period',
+            onChanged: _raceController.seek,
+          );
+          if (constraints.maxWidth < 620) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [...actions, const Spacer()]),
+                SizedBox(height: 48, child: seek),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              ...actions,
+              Expanded(child: seek),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -700,15 +1514,21 @@ class _BarLabPageState extends State<BarLabPage> {
         : null;
     return BravenChartPlus(
       key: const ValueKey('bar-lab-chart'),
-      transitionKey: _preset,
+      transitionKey: _preset == _BarLabPreset.drilldown
+          ? _drilldownController.current.id
+          : _preset,
       bravenChartController: controller,
       interactionGroupController: _preset == _BarLabPreset.categories
           ? _interactionGroupController
           : null,
       theme: baseTheme.copyWith(
         animationTheme: baseTheme.animationTheme.copyWith(
-          dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
-          dataUpdateCurve: Curves.easeInOutCubic,
+          dataUpdateDuration: _preset == _BarLabPreset.race
+              ? Duration.zero
+              : Duration(milliseconds: _motionDurationMs.round()),
+          dataUpdateCurve: _preset == _BarLabPreset.race
+              ? Curves.linear
+              : Curves.easeInOutCubic,
         ),
       ),
       series: configured?.series ?? _buildSeries(),
@@ -723,6 +1543,7 @@ class _BarLabPageState extends State<BarLabPage> {
           configured?.showLegend ??
           (_preset != _BarLabPreset.waterfall &&
               _preset != _BarLabPreset.labels &&
+              _preset != _BarLabPreset.race &&
               _preset != _BarLabPreset.stress &&
               _preset != _BarLabPreset.histogram &&
               _preset != _BarLabPreset.rtl),
@@ -755,6 +1576,10 @@ class _BarLabPageState extends State<BarLabPage> {
                 ? 'Stage'
                 : _preset == _BarLabPreset.likert
                 ? 'Survey statement'
+                : _preset == _BarLabPreset.drilldown
+                ? _drilldownController.current.label
+                : _preset == _BarLabPreset.race
+                ? 'Population rank'
                 : _preset == _BarLabPreset.bullet ||
                       _preset == _BarLabPreset.horizontal ||
                       _preset == _BarLabPreset.axes
@@ -810,6 +1635,12 @@ class _BarLabPageState extends State<BarLabPage> {
                             _preset == _BarLabPreset.histogram
                         ? 0
                         : _categoryRotation,
+                    // A race's topCount has already reduced the domain to the
+                    // intended visible ranks. Applying the generic category
+                    // auto-viewport as well would silently reduce that list a
+                    // second time based on panel height (15 ranks became 8 in
+                    // the default showcase workspace).
+                    autoViewport: _preset != _BarLabPreset.race,
                   )
                 : null,
             labelFormatter: _usesNativeCategoryAxis ? null : _categoryLabel,
@@ -846,6 +1677,10 @@ class _BarLabPageState extends State<BarLabPage> {
             ? 'Independent values'
             : _preset == _BarLabPreset.config
             ? 'Configured value'
+            : _preset == _BarLabPreset.drilldown
+            ? 'Amount (${_drilldownController.current.metadata['unit'] ?? ''})'
+            : _preset == _BarLabPreset.race
+            ? 'Population (millions)'
             : _layoutMode == BarLayoutMode.normalizedStacked
             ? 'Share of total (%)'
             : _preset == _BarLabPreset.signed
@@ -859,7 +1694,11 @@ class _BarLabPageState extends State<BarLabPage> {
                   _preset == _BarLabPreset.waterfall)
             ? null
             : 0,
-        max: _layoutMode == BarLayoutMode.normalizedStacked ? 110 : null,
+        max: _preset == _BarLabPreset.race
+            ? _raceController.effectiveAxisMaximum
+            : _layoutMode == BarLayoutMode.normalizedStacked
+            ? 110
+            : null,
         tickCount: 7,
       ),
       interactionConfig: InteractionConfig(
@@ -871,7 +1710,30 @@ class _BarLabPageState extends State<BarLabPage> {
               ? CrosshairDisplayMode.tracking
               : CrosshairDisplayMode.auto,
         ),
+        onSelectionChanged:
+            _preset == _BarLabPreset.drilldown &&
+                _drillActivation == BarDrillActivation.selection
+            ? (points) {
+                if (points.isEmpty) return;
+                final childId = barDrillNodeIdForPointMetadata(
+                  points.last.metadata,
+                );
+                if (childId != null) {
+                  _drilldownController.drillTo(childId);
+                }
+              }
+            : null,
       ),
+      onPointTap:
+          _preset == _BarLabPreset.drilldown &&
+              _drillActivation == BarDrillActivation.primaryAction
+          ? (point, _) {
+              final childId = barDrillNodeIdForPointMetadata(point.metadata);
+              if (childId != null) {
+                _drilldownController.drillTo(childId);
+              }
+            }
+          : null,
     );
   }
 
@@ -915,8 +1777,654 @@ class _BarLabPageState extends State<BarLabPage> {
     ),
   );
 
-  List<Widget> _buildOptions() => [
+  _BarRacePeriodPreset _racePeriodPreset(BarRacePeriodFormat format) =>
+      switch (format.pattern) {
+        '{label}' => _BarRacePeriodPreset.authoredLabel,
+        '{MMMM} {yyyy}' => _BarRacePeriodPreset.monthYearLong,
+        '{MMM} {yyyy}' => _BarRacePeriodPreset.monthYearShort,
+        '{yyyy}' => _BarRacePeriodPreset.year,
+        '{yyyy}-{MM}' => _BarRacePeriodPreset.isoMonth,
+        _ => _BarRacePeriodPreset.custom,
+      };
+
+  void _setRacePeriodPreset(_BarRacePeriodPreset preset) {
+    final pattern = switch (preset) {
+      _BarRacePeriodPreset.authoredLabel => '{label}',
+      _BarRacePeriodPreset.monthYearLong => '{MMMM} {yyyy}',
+      _BarRacePeriodPreset.monthYearShort => '{MMM} {yyyy}',
+      _BarRacePeriodPreset.year => '{yyyy}',
+      _BarRacePeriodPreset.isoMonth => '{yyyy}-{MM}',
+      _BarRacePeriodPreset.custom => 'Period {MMM} {yyyy}',
+    };
+    _raceController.replaceConfig(
+      _raceController.config.copyWith(
+        periodFormat: BarRacePeriodFormat(pattern: pattern),
+      ),
+      preserveFrame: true,
+    );
+  }
+
+  Widget _buildRaceValueFormatPreview() {
+    final format = _raceController.config.valueFormat;
+    final rankedValues = _raceController.effectiveRankedValues;
+    final rawValue = rankedValues.isEmpty ? 0.0 : rankedValues.first.value;
+    final theme = Theme.of(context);
+    final divisor = format.scale.toStringAsFixed(
+      format.scale == format.scale.roundToDouble() ? 0 : 2,
+    );
+    return SearchableOption(
+      key: const ValueKey('bar-race-value-preview'),
+      label: 'Bar value format preview',
+      description:
+          'Shows the current leader before and after division, notation, decimal, grouping, and template formatting.',
+      aliases: const ['format', 'template', 'divisor', 'scale', 'example'],
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.48,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.dividerColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Formatting preview',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${rawValue.toStringAsFixed(3)} ÷ $divisor  →  ${format.format(rawValue)}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Order: divide → notation → decimals and grouping → template',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildOptions() => _prioritizePresetOptions([
+    if (_preset == _BarLabPreset.race)
+      OptionSection(
+        key: const ValueKey('bar-options-race-playback'),
+        title: 'Race playback',
+        icon: Icons.play_circle_outline,
+        children: [
+          IntSliderOption(
+            key: const ValueKey('bar-race-top-count'),
+            label: 'Visible ranks',
+            value: _raceController.config.topCount,
+            min: 3,
+            max: _raceController.config.categories.length,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(topCount: value),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-frame-duration'),
+            label: 'Frame duration',
+            value: _raceController.config.durationPerFrame.inMilliseconds
+                .toDouble(),
+            min: 50,
+            max: 2000,
+            divisions: 39,
+            suffix: 'ms',
+            decimalPlaces: 0,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                durationPerFrame: Duration(milliseconds: value.round()),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-speed'),
+            label: 'Playback speed',
+            value: _raceController.speed,
+            min: 0.25,
+            max: 10,
+            divisions: 39,
+            suffix: '×',
+            decimalPlaces: 2,
+            description:
+                'Scale playback from quarter speed to 10× in 0.25× steps.',
+            onChanged: _raceController.setSpeed,
+          ),
+          EnumOption<BarRaceAxisRange>(
+            key: const ValueKey('bar-race-axis-range'),
+            label: 'Value axis',
+            value: _raceController.config.axisRange,
+            values: BarRaceAxisRange.values,
+            labelBuilder: (value) => switch (value) {
+              BarRaceAxisRange.dynamic => 'Stepped leader headroom',
+              BarRaceAxisRange.continuous => 'Continuous leader headroom',
+              BarRaceAxisRange.fixed => 'Fixed across race',
+            },
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(axisRange: value),
+              preserveFrame: true,
+            ),
+          ),
+          EnumOption<BarRaceSort>(
+            key: const ValueKey('bar-race-sort'),
+            label: 'Rank order',
+            value: _raceController.config.sort,
+            values: BarRaceSort.values,
+            labelBuilder: (value) => switch (value) {
+              BarRaceSort.descending => 'Largest first',
+              BarRaceSort.ascending => 'Smallest first',
+            },
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(sort: value),
+              preserveFrame: true,
+            ),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-loop'),
+            label: 'Loop playback',
+            value: _raceController.config.loop,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(loop: value),
+              preserveFrame: true,
+            ),
+          ),
+        ],
+      ),
+    if (_preset == _BarLabPreset.race)
+      OptionSection(
+        key: const ValueKey('bar-options-race-formatting'),
+        title: 'Race labels and formatting',
+        icon: Icons.format_shapes_outlined,
+        description:
+            'Formats the active period, continuously counting bar values, and the aggregate total.',
+        children: [
+          BoolOption(
+            key: const ValueKey('bar-race-show-period'),
+            label: 'Show period',
+            value: _raceController.config.showPeriod,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(showPeriod: value),
+              preserveFrame: true,
+            ),
+          ),
+          EnumOption<_BarRacePeriodPreset>(
+            key: const ValueKey('bar-race-period-preset'),
+            label: 'Period format',
+            value: _racePeriodPreset(_raceController.config.periodFormat),
+            values: _BarRacePeriodPreset.values,
+            labelBuilder: (value) => switch (value) {
+              _BarRacePeriodPreset.authoredLabel => 'Authored frame label',
+              _BarRacePeriodPreset.monthYearLong => 'January 1965',
+              _BarRacePeriodPreset.monthYearShort => 'Jan 1965',
+              _BarRacePeriodPreset.year => '1965',
+              _BarRacePeriodPreset.isoMonth => '1965-01',
+              _BarRacePeriodPreset.custom => 'Custom pattern',
+            },
+            onChanged: (value) => _setRacePeriodPreset(value),
+          ),
+          TextOption(
+            key: ValueKey(
+              'bar-race-period-pattern-${_racePeriodPreset(_raceController.config.periodFormat).name}',
+            ),
+            label: 'Period pattern',
+            value: _raceController.config.periodFormat.pattern,
+            hint: '{MMMM} {yyyy}',
+            description:
+                'Tokens: {label}, date tokens through {d}, and time tokens {HH}, {H}, {mm}, {m}, {ss}, {s}.',
+            onChanged: (value) {
+              if (value.isEmpty) return;
+              _raceController.replaceConfig(
+                _raceController.config.copyWith(
+                  periodFormat: BarRacePeriodFormat(pattern: value),
+                ),
+                preserveFrame: true,
+              );
+            },
+          ),
+          EnumOption<BarLabelCollisionPolicy>(
+            key: const ValueKey('bar-race-label-collision'),
+            label: 'Transition label behavior',
+            value: _labelCollisionPolicy,
+            values: BarLabelCollisionPolicy.values,
+            labelBuilder: (value) => switch (value) {
+              BarLabelCollisionPolicy.none => 'Keep outside · allow overlap',
+              BarLabelCollisionPolicy.reposition => 'Allow inside fallback',
+              BarLabelCollisionPolicy.hide => 'Keep outside · hide collision',
+            },
+            description:
+                'Controls whether outside-end values remain outside while ranks cross. The default preserves placement and briefly hides only a colliding label.',
+            onChanged: (value) => setState(() => _labelCollisionPolicy = value),
+          ),
+          EnumOption<BarRaceValueNotation>(
+            key: const ValueKey('bar-race-value-notation'),
+            label: 'Bar value notation',
+            value: _raceController.config.valueFormat.notation,
+            values: BarRaceValueNotation.values,
+            labelBuilder: (value) => switch (value) {
+              BarRaceValueNotation.standard => 'Standard',
+              BarRaceValueNotation.compact => 'Compact (k, M, B)',
+              BarRaceValueNotation.scientific => 'Scientific',
+            },
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                valueFormat: _raceController.config.valueFormat.copyWith(
+                  notation: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          TextOption(
+            key: const ValueKey('bar-race-value-pattern'),
+            label: 'Bar value template',
+            value: _raceController.config.valueFormat.pattern,
+            hint: '{value}M',
+            description:
+                'Place {value} where the formatted number belongs. Examples: {value}M, \${value}, or {value} people.',
+            onChanged: (value) {
+              if (value.isEmpty || !value.contains('{value}')) return;
+              _raceController.replaceConfig(
+                _raceController.config.copyWith(
+                  valueFormat: _raceController.config.valueFormat.copyWith(
+                    pattern: value,
+                  ),
+                ),
+                preserveFrame: true,
+              );
+            },
+          ),
+          IntSliderOption(
+            key: const ValueKey('bar-race-value-decimals'),
+            label: 'Bar value decimals',
+            value: _raceController.config.valueFormat.decimalPlaces,
+            min: 0,
+            max: 4,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                valueFormat: _raceController.config.valueFormat.copyWith(
+                  decimalPlaces: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-value-grouping'),
+            label: 'Group thousands',
+            value: _raceController.config.valueFormat.useGrouping,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                valueFormat: _raceController.config.valueFormat.copyWith(
+                  useGrouping: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          TextOption(
+            key: const ValueKey('bar-race-value-scale'),
+            label: 'Scale divisor',
+            value: _raceController.config.valueFormat.scale.toString(),
+            hint: '1',
+            description:
+                'Divide the raw value before notation and decimals. Use 1 for no scaling, 1000 to convert thousands to millions.',
+            onChanged: (value) {
+              final scale = double.tryParse(value);
+              if (scale == null || !scale.isFinite || scale <= 0) return;
+              _raceController.replaceConfig(
+                _raceController.config.copyWith(
+                  valueFormat: _raceController.config.valueFormat.copyWith(
+                    scale: scale,
+                  ),
+                ),
+                preserveFrame: true,
+              );
+            },
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-value-trim-zeros'),
+            label: 'Trim trailing zeros',
+            value: _raceController.config.valueFormat.trimTrailingZeros,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                valueFormat: _raceController.config.valueFormat.copyWith(
+                  trimTrailingZeros: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          _buildRaceValueFormatPreview(),
+          BoolOption(
+            key: const ValueKey('bar-race-show-total'),
+            label: 'Show total',
+            value: _raceController.config.showTotal,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(showTotal: value),
+              preserveFrame: true,
+            ),
+          ),
+          TextOption(
+            key: const ValueKey('bar-race-total-pattern'),
+            label: 'Total pattern',
+            value: _raceController.config.totalFormat.pattern,
+            hint: '{value}M combined population',
+            description:
+                'The continuously interpolated aggregate replaces {value}.',
+            onChanged: (value) {
+              if (value.isEmpty || !value.contains('{value}')) return;
+              _raceController.replaceConfig(
+                _raceController.config.copyWith(
+                  totalFormat: _raceController.config.totalFormat.copyWith(
+                    pattern: value,
+                  ),
+                ),
+                preserveFrame: true,
+              );
+            },
+          ),
+          EnumOption<BarRaceValueNotation>(
+            key: const ValueKey('bar-race-total-notation'),
+            label: 'Total notation',
+            value: _raceController.config.totalFormat.notation,
+            values: BarRaceValueNotation.values,
+            labelBuilder: (value) => switch (value) {
+              BarRaceValueNotation.standard => 'Standard',
+              BarRaceValueNotation.compact => 'Compact (k, M, B)',
+              BarRaceValueNotation.scientific => 'Scientific',
+            },
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                totalFormat: _raceController.config.totalFormat.copyWith(
+                  notation: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          IntSliderOption(
+            key: const ValueKey('bar-race-total-decimals'),
+            label: 'Total decimals',
+            value: _raceController.config.totalFormat.decimalPlaces,
+            min: 0,
+            max: 4,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                totalFormat: _raceController.config.totalFormat.copyWith(
+                  decimalPlaces: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-total-grouping'),
+            label: 'Group total thousands',
+            value: _raceController.config.totalFormat.useGrouping,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                totalFormat: _raceController.config.totalFormat.copyWith(
+                  useGrouping: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-total-trim-zeros'),
+            label: 'Trim total trailing zeros',
+            value: _raceController.config.totalFormat.trimTrailingZeros,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                totalFormat: _raceController.config.totalFormat.copyWith(
+                  trimTrailingZeros: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          TextOption(
+            key: const ValueKey('bar-race-total-scale'),
+            label: 'Total divisor',
+            value: _raceController.config.totalFormat.scale.toString(),
+            hint: '1',
+            description: 'Divide the aggregate before applying its pattern.',
+            onChanged: (value) {
+              final scale = double.tryParse(value);
+              if (scale == null || !scale.isFinite || scale <= 0) return;
+              _raceController.replaceConfig(
+                _raceController.config.copyWith(
+                  totalFormat: _raceController.config.totalFormat.copyWith(
+                    scale: scale,
+                  ),
+                ),
+                preserveFrame: true,
+              );
+            },
+          ),
+          EnumOption<BarRacePeriodPosition>(
+            key: const ValueKey('bar-race-period-position'),
+            label: 'Period position',
+            value: _raceController.config.periodStyle.position,
+            values: BarRacePeriodPosition.values,
+            labelBuilder: (value) => switch (value) {
+              BarRacePeriodPosition.topLeft => 'Top left',
+              BarRacePeriodPosition.topRight => 'Top right',
+              BarRacePeriodPosition.bottomLeft => 'Bottom left',
+              BarRacePeriodPosition.bottomRight => 'Bottom right',
+            },
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  position: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-period-size'),
+            label: 'Period text size',
+            value: _raceController.config.periodStyle.fontSize,
+            min: 24,
+            max: 96,
+            divisions: 18,
+            decimalPlaces: 0,
+            suffix: 'px',
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  fontSize: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-total-size'),
+            label: 'Total text size',
+            value: _raceController.config.periodStyle.supportingTextSize,
+            min: 8,
+            max: 28,
+            divisions: 20,
+            decimalPlaces: 0,
+            suffix: 'px',
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  supportingTextSize: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-period-opacity'),
+            label: 'Period opacity',
+            value: _raceController.config.periodStyle.opacity,
+            min: 0.1,
+            max: 1,
+            divisions: 18,
+            decimalPlaces: 2,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  opacity: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          SliderOption(
+            key: const ValueKey('bar-race-period-inset'),
+            label: 'Period edge inset',
+            value: _raceController.config.periodStyle.inset,
+            min: 0,
+            max: 64,
+            divisions: 16,
+            decimalPlaces: 0,
+            suffix: 'px',
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  inset: value,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-race-period-bold'),
+            label: 'Bold period label',
+            value:
+                _raceController.config.periodStyle.fontWeight ==
+                FontWeight.w700,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  fontWeight: value ? FontWeight.w700 : FontWeight.w400,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('bar-race-period-color'),
+            keyPrefix: 'bar-race-period-color',
+            label: 'Period color',
+            value: _raceController.config.periodStyle.color,
+            customColorFallback: Theme.of(context).colorScheme.onSurface,
+            onChanged: (value) => _raceController.replaceConfig(
+              _raceController.config.copyWith(
+                periodStyle: _raceController.config.periodStyle.copyWith(
+                  color: value,
+                  clearColor: value == null,
+                ),
+              ),
+              preserveFrame: true,
+            ),
+          ),
+        ],
+      ),
+    if (_preset == _BarLabPreset.drilldown)
+      OptionSection(
+        key: const ValueKey('bar-options-hierarchy'),
+        title: 'Hierarchy',
+        icon: Icons.account_tree_outlined,
+        children: [
+          EnumOption<_BarDrillDataset>(
+            key: const ValueKey('bar-drill-dataset'),
+            label: 'Example data',
+            value: _drillDataset,
+            values: _BarDrillDataset.values,
+            labelBuilder: (value) => switch (value) {
+              _BarDrillDataset.nutrition => 'Nutrition hierarchy',
+              _BarDrillDataset.regions => 'Regional revenue',
+            },
+            onChanged: (value) {
+              _drillDataset = value;
+              _replaceDrillHierarchy();
+            },
+          ),
+          BoolOption(
+            key: const ValueKey('bar-drill-show-breadcrumbs'),
+            label: 'Show breadcrumbs',
+            subtitle: 'Expose the complete current path and back navigation',
+            value: _drillShowBreadcrumbs,
+            onChanged: (value) => setState(() => _drillShowBreadcrumbs = value),
+          ),
+          EnumOption<BarDrillActivation>(
+            key: const ValueKey('bar-drill-activation'),
+            label: 'Activation',
+            value: _drillActivation,
+            values: BarDrillActivation.values,
+            labelBuilder: (value) => switch (value) {
+              BarDrillActivation.primaryAction => 'Tap / primary action',
+              BarDrillActivation.selection => 'Selection change',
+            },
+            onChanged: (value) => setState(() => _drillActivation = value),
+          ),
+          EnumOption<BarDrillTransition>(
+            key: const ValueKey('bar-drill-transition'),
+            label: 'Level transition',
+            value: _drillTransition,
+            values: BarDrillTransition.values,
+            labelBuilder: (value) => switch (value) {
+              BarDrillTransition.none => 'Immediate',
+              BarDrillTransition.fadeThrough => 'Fade through',
+            },
+            onChanged: (value) => setState(() => _drillTransition = value),
+          ),
+          EnumOption<BarDrillSelectionPolicy>(
+            key: const ValueKey('bar-drill-selection-policy'),
+            label: 'Selection on navigation',
+            value: _drillSelectionPolicy,
+            values: BarDrillSelectionPolicy.values,
+            labelBuilder: (value) => switch (value) {
+              BarDrillSelectionPolicy.clear => 'Clear selection',
+              BarDrillSelectionPolicy.preserveStableIdentities =>
+                'Preserve stable IDs',
+            },
+            onChanged: (value) => setState(() => _drillSelectionPolicy = value),
+          ),
+          IntSliderOption(
+            key: const ValueKey('bar-drill-lazy-delay'),
+            label: 'Lazy-load delay',
+            description: 'Applied when Dried berries loads its third level.',
+            value: _drillLazyDelayMs,
+            min: 0,
+            max: 1600,
+            suffix: 'ms',
+            onChanged: (value) => setState(() => _drillLazyDelayMs = value),
+          ),
+          BoolOption(
+            key: const ValueKey('bar-drill-simulate-failure'),
+            label: 'Simulate lazy failure',
+            subtitle: 'Reset the hierarchy, then use Retry after disabling',
+            value: _drillSimulateFailure,
+            onChanged: (value) {
+              _drillSimulateFailure = value;
+              _replaceDrillHierarchy();
+            },
+          ),
+        ],
+      ),
     OptionSection(
+      key: const ValueKey('bar-options-composition'),
       title: 'Composition',
       icon: Icons.view_week_outlined,
       children: [
@@ -1015,6 +2523,7 @@ class _BarLabPageState extends State<BarLabPage> {
     ),
     if (_playgroundActive || _preset == _BarLabPreset.pareto)
       OptionSection(
+        key: const ValueKey('bar-options-cumulative-line'),
         title: 'Cumulative line',
         icon: Icons.trending_up,
         children: [
@@ -1048,6 +2557,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
     if (_playgroundActive || _preset == _BarLabPreset.histogram)
       OptionSection(
+        key: const ValueKey('bar-options-binning'),
         title: 'Binning',
         icon: Icons.grid_on_outlined,
         children: [
@@ -1091,6 +2601,7 @@ class _BarLabPageState extends State<BarLabPage> {
         _preset == _BarLabPreset.categories ||
         _preset == _BarLabPreset.stress)
       OptionSection(
+        key: const ValueKey('bar-options-category-axis'),
         title: 'Category axis',
         icon: Icons.view_week_outlined,
         children: [
@@ -1156,6 +2667,7 @@ class _BarLabPageState extends State<BarLabPage> {
         ],
       ),
     OptionSection(
+      key: const ValueKey('bar-options-shape'),
       title: 'Shape',
       icon: Icons.rounded_corner,
       children: [
@@ -1243,6 +2755,7 @@ class _BarLabPageState extends State<BarLabPage> {
     ),
     if (_playgroundActive || _preset == _BarLabPreset.patterns)
       OptionSection(
+        key: const ValueKey('bar-options-pattern-encoding'),
         title: 'Pattern encoding',
         icon: Icons.texture,
         children: [
@@ -1289,6 +2802,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
     if (_playgroundActive || _preset == _BarLabPreset.bullet)
       OptionSection(
+        key: const ValueKey('bar-options-bullet-ranges'),
         title: 'Bullet ranges',
         icon: Icons.linear_scale,
         children: [
@@ -1325,6 +2839,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
     if (_playgroundActive || _preset == _BarLabPreset.likert)
       OptionSection(
+        key: const ValueKey('bar-options-diverging-scale'),
         title: 'Diverging scale',
         icon: Icons.balance,
         children: [
@@ -1352,6 +2867,7 @@ class _BarLabPageState extends State<BarLabPage> {
         ],
       ),
     OptionSection(
+      key: const ValueKey('bar-options-labels'),
       title: 'Labels',
       icon: Icons.label_outline,
       children: [
@@ -1382,6 +2898,30 @@ class _BarLabPageState extends State<BarLabPage> {
               BarLabelPosition.rangeEnds => 'Range ends',
             },
             onChanged: (value) => setState(() => _labelPosition = value),
+          ),
+        if (_playgroundActive || _showLabels)
+          EnumOption<BarLabelRotationMode>(
+            key: const ValueKey('bar-lab-label-rotation-mode'),
+            label: 'Rotation behavior',
+            value: _labelRotationMode,
+            values: BarLabelRotationMode.values,
+            labelBuilder: (value) => switch (value) {
+              BarLabelRotationMode.fixed => 'Fixed angle',
+              BarLabelRotationMode.autoFit => 'Auto fit',
+            },
+            onChanged: (value) => setState(() => _labelRotationMode = value),
+          ),
+        if (_playgroundActive || _showLabels)
+          SliderOption(
+            key: const ValueKey('bar-lab-label-rotation-degrees'),
+            label: 'Value-label angle',
+            value: _labelRotationDegrees,
+            min: -180,
+            max: 180,
+            divisions: 24,
+            suffix: '°',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _labelRotationDegrees = value),
           ),
         if (_playgroundActive ||
             (_showLabels && _labelPosition != BarLabelPosition.insideCenter))
@@ -1480,6 +3020,7 @@ class _BarLabPageState extends State<BarLabPage> {
             (_layoutMode == BarLayoutMode.grouped ||
                 _layoutMode == BarLayoutMode.overlaid)))
       OptionSection(
+        key: const ValueKey('bar-options-benchmarks'),
         title: 'Benchmarks',
         icon: Icons.flag_outlined,
         children: [
@@ -1518,6 +3059,7 @@ class _BarLabPageState extends State<BarLabPage> {
             (_layoutMode == BarLayoutMode.grouped ||
                 _layoutMode == BarLayoutMode.overlaid)))
       OptionSection(
+        key: const ValueKey('bar-options-uncertainty'),
         title: 'Uncertainty',
         icon: Icons.align_vertical_center,
         children: [
@@ -1552,6 +3094,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
     if (_playgroundActive || _preset == _BarLabPreset.states)
       OptionSection(
+        key: const ValueKey('bar-options-interaction'),
         title: 'Interaction',
         icon: Icons.touch_app_outlined,
         children: [
@@ -1580,6 +3123,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
     if (_playgroundActive || _preset == _BarLabPreset.motion)
       OptionSection(
+        key: const ValueKey('bar-options-motion'),
         title: 'Motion',
         icon: Icons.animation,
         children: [
@@ -1649,6 +3193,7 @@ class _BarLabPageState extends State<BarLabPage> {
         ],
       ),
     OptionSection(
+      key: const ValueKey('bar-options-point-popup'),
       title: 'Point popup',
       icon: Icons.chat_bubble_outline,
       children: [
@@ -1662,7 +3207,29 @@ class _BarLabPageState extends State<BarLabPage> {
         ),
       ],
     ),
-  ];
+  ]);
+
+  List<Widget> _prioritizePresetOptions(List<Widget> options) {
+    final preferredKey = switch (_preset) {
+      _BarLabPreset.targets => 'bar-options-benchmarks',
+      _BarLabPreset.bullet => 'bar-options-bullet-ranges',
+      _BarLabPreset.uncertainty => 'bar-options-uncertainty',
+      _BarLabPreset.states => 'bar-options-interaction',
+      _BarLabPreset.motion => 'bar-options-motion',
+      _BarLabPreset.rotatedLabels ||
+      _BarLabPreset.labels => 'bar-options-labels',
+      _ => null,
+    };
+    if (preferredKey == null) return options;
+
+    final index = options.indexWhere(
+      (option) => option.key == ValueKey<String>(preferredKey),
+    );
+    if (index <= 0) return options;
+
+    final preferred = options.removeAt(index);
+    return <Widget>[preferred, ...options];
+  }
 
   ChartBuildResult get _agentBuildResult {
     final layout = switch (_layoutMode) {
@@ -1791,6 +3358,11 @@ class _BarLabPageState extends State<BarLabPage> {
           BarLabelPosition.outsideEnd => 'outside_end',
           BarLabelPosition.rangeEnds => 'range_ends',
         },
+        'bar_label_rotation_mode': switch (_labelRotationMode) {
+          BarLabelRotationMode.fixed => 'fixed',
+          BarLabelRotationMode.autoFit => 'auto_fit',
+        },
+        'bar_label_rotation_degrees': _labelRotationDegrees,
         'bar_label_value_mode': _layoutMode == BarLayoutMode.normalizedStacked
             ? 'percentage'
             : 'value',
@@ -1824,6 +3396,8 @@ class _BarLabPageState extends State<BarLabPage> {
     if (_preset == _BarLabPreset.config) return _agentBuildResult.series;
     if (_preset == _BarLabPreset.pareto) return _buildParetoSeries();
     if (_preset == _BarLabPreset.histogram) return _buildHistogramSeries();
+    if (_preset == _BarLabPreset.drilldown) return _buildDrillSeries();
+    if (_preset == _BarLabPreset.race) return _buildRaceSeries();
     final values = _playgroundActive
         ? _playgroundValues
         : switch (_preset) {
@@ -1925,6 +3499,22 @@ class _BarLabPageState extends State<BarLabPage> {
               growable: false,
             ),
             _BarLabPreset.labels => const <double>[88, 91, 86, 93, 89, 95, 87],
+            _BarLabPreset.rotatedLabels => const <double>[
+              37.3,
+              31.2,
+              27.8,
+              22.2,
+              21.9,
+              21.7,
+              21.3,
+              20.9,
+              20.7,
+              19.1,
+              16.5,
+              16.4,
+            ],
+            _BarLabPreset.drilldown => const <double>[],
+            _BarLabPreset.race => const <double>[],
             _BarLabPreset.config => const <double>[],
             _BarLabPreset.patterns => const <double>[
               74,
@@ -2002,6 +3592,22 @@ class _BarLabPageState extends State<BarLabPage> {
         growable: false,
       ),
       _BarLabPreset.labels => const <double>[90, 87, 92, 89, 94, 88, 93],
+      _BarLabPreset.rotatedLabels => const <double>[
+        35.8,
+        29.7,
+        26.4,
+        21.1,
+        20.8,
+        20.5,
+        19.9,
+        19.7,
+        19.4,
+        18.6,
+        15.9,
+        15.6,
+      ],
+      _BarLabPreset.drilldown => const <double>[],
+      _BarLabPreset.race => const <double>[],
       _BarLabPreset.config => const <double>[],
       _BarLabPreset.patterns => const <double>[62, 81, 71, 89, 68, 94, 76],
       _BarLabPreset.motion =>
@@ -2109,6 +3715,8 @@ class _BarLabPageState extends State<BarLabPage> {
         labelStyle: BarLabelStyle(
           show: _showLabels,
           position: _labelPosition,
+          rotationMode: _labelRotationMode,
+          rotationDegrees: _labelRotationDegrees,
           showUnit: _histogramValueMode == HistogramValueMode.percentage,
           padding: _labelEdgeOffset,
           plotEdgeAware: true,
@@ -2158,6 +3766,8 @@ class _BarLabPageState extends State<BarLabPage> {
         labelStyle: BarLabelStyle(
           show: _showLabels,
           position: _labelPosition,
+          rotationMode: _labelRotationMode,
+          rotationDegrees: _labelRotationDegrees,
           padding: _labelEdgeOffset,
           plotEdgeAware: true,
         ),
@@ -2294,6 +3904,15 @@ class _BarLabPageState extends State<BarLabPage> {
       }
       if (_preset == _BarLabPreset.labels) {
         return (82 + seed % 15).toDouble();
+      }
+      if (_preset == _BarLabPreset.rotatedLabels) {
+        return (14 + seed % 24).toDouble();
+      }
+      if (_preset == _BarLabPreset.drilldown) {
+        return (18 + seed % 45).toDouble();
+      }
+      if (_preset == _BarLabPreset.race) {
+        return (40 + seed % 120).toDouble();
       }
       return (24 + seed % 73).toDouble();
     }, growable: false);
@@ -2515,6 +4134,8 @@ class _BarLabPageState extends State<BarLabPage> {
             _showLabels &&
             (_layoutMode != BarLayoutMode.overlaid || isFrontOverlayLayer),
         position: _labelPosition,
+        rotationMode: _labelRotationMode,
+        rotationDegrees: _labelRotationDegrees,
         valueMode:
             _layoutMode == BarLayoutMode.normalizedStacked ||
                 _layoutMode == BarLayoutMode.divergingStacked
@@ -2729,6 +4350,17 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.axes => _channelCategories,
     _BarLabPreset.categories => _denseCategories,
     _BarLabPreset.stress => _stressCategories.sublist(0, _stressCategoryCount),
+    _BarLabPreset.rotatedLabels => _cityCategories,
+    _BarLabPreset.drilldown => [
+      for (final value
+          in (_drilldownController.current.metadata['categories']
+                  as List<Object?>? ??
+              const <Object?>[]))
+        value.toString(),
+    ],
+    _BarLabPreset.race => [
+      for (final value in _raceController.rankedValues) value.category.label,
+    ],
     _ => _dayCategories,
   };
 
@@ -2737,15 +4369,26 @@ class _BarLabPageState extends State<BarLabPage> {
       _preset == _BarLabPreset.stress ||
       _preset == _BarLabPreset.pareto ||
       _preset == _BarLabPreset.histogram ||
-      _preset == _BarLabPreset.rtl;
+      _preset == _BarLabPreset.rtl ||
+      _preset == _BarLabPreset.rotatedLabels ||
+      _preset == _BarLabPreset.drilldown ||
+      _preset == _BarLabPreset.race;
 
   void _applyPreset(_BarLabPreset preset) {
     _showcaseRandomizer.pause();
+    _raceController.pause();
+    if (preset == _BarLabPreset.race) {
+      _raceController
+        ..replaceConfig(_buildPopulationRaceConfig())
+        ..setSpeed(1);
+      _seekRaceToDefaultFrame();
+    }
     _showcaseRandomizer.clear();
     _interactionGroupController.reset();
     _chartController
       ..clearPointFocus()
       ..clearPointSelection();
+    _drilldownController.root();
     setState(() {
       _playgroundActive = false;
       _authoredPreset = preset;
@@ -2761,6 +4404,8 @@ class _BarLabPageState extends State<BarLabPage> {
     _overlayWidthStep = 22;
     _overlayOffsetStep = 0;
     _labelPosition = BarLabelPosition.auto;
+    _labelRotationMode = BarLabelRotationMode.fixed;
+    _labelRotationDegrees = 0;
     _labelEdgeOffset = 8;
     _orientation = BarOrientation.vertical;
     _motionRevision = 0;
@@ -2799,6 +4444,10 @@ class _BarLabPageState extends State<BarLabPage> {
     _bulletRangeRadius = 4;
     _showDivergingCenterLine = true;
     _divergingCenterLineWidth = 1.25;
+    _drillShowBreadcrumbs = true;
+    _drillActivation = BarDrillActivation.primaryAction;
+    _drillTransition = BarDrillTransition.fadeThrough;
+    _drillSelectionPolicy = BarDrillSelectionPolicy.clear;
     _selectionScope = ChartSelectionScope.mark;
     switch (preset) {
       case _BarLabPreset.capacity:
@@ -3107,6 +4756,84 @@ class _BarLabPageState extends State<BarLabPage> {
         _showLabelBackground = true;
         _showLabelCallouts = true;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.rotatedLabels:
+        _seriesCount = 1;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _orientation = BarOrientation.vertical;
+        _barWidth = 0.66;
+        _barGap = 3;
+        _cornerRadius = 2;
+        _showTracks = false;
+        _showGradient = true;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
+        _labelRotationMode = BarLabelRotationMode.fixed;
+        _labelRotationDegrees = -90;
+        _labelEdgeOffset = 5;
+        _labelCollisionPolicy = BarLabelCollisionPolicy.hide;
+        _labelCollisionPadding = 2;
+        _showLabelBackground = true;
+        _showLabelCallouts = false;
+        _categoryLabelDensity = CategoryLabelDensity.showAll;
+        _categoryLabelOverflow = CategoryLabelOverflow.ellipsis;
+        _categoryMinimumExtent = 48;
+        _categoryMaxLines = 1;
+        _categoryRotation = -45;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.drilldown:
+        _seriesCount = 1;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _orientation = BarOrientation.vertical;
+        _barWidth = 0.68;
+        _barGap = 5;
+        _cornerRadius = 3;
+        _showTracks = false;
+        _showGradient = true;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.outsideEnd;
+        _labelRotationMode = BarLabelRotationMode.fixed;
+        _labelRotationDegrees = 0;
+        _labelEdgeOffset = 6;
+        _labelCollisionPolicy = BarLabelCollisionPolicy.reposition;
+        _labelCollisionPadding = 3;
+        _showLabelBackground = false;
+        _showLabelCallouts = false;
+        _categoryLabelDensity = CategoryLabelDensity.showAll;
+        _categoryLabelOverflow = CategoryLabelOverflow.ellipsis;
+        _categoryMinimumExtent = 56;
+        _categoryMaxLines = 1;
+        _categoryRotation = -45;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.race:
+        _seriesCount = 1;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _orientation = BarOrientation.horizontal;
+        _barWidth = 0.72;
+        _barGap = 4;
+        _cornerRadius = 4;
+        _showTracks = false;
+        _showGradient = false;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.rangeEnds;
+        _labelRotationMode = BarLabelRotationMode.fixed;
+        _labelRotationDegrees = 0;
+        _labelEdgeOffset = 12;
+        _labelCollisionPolicy = BarLabelCollisionPolicy.hide;
+        _labelCollisionPadding = 2;
+        _showLabelBackground = false;
+        _showLabelCallouts = false;
+        _categoryLabelDensity = CategoryLabelDensity.showAll;
+        _categoryLabelOverflow = CategoryLabelOverflow.ellipsis;
+        _categoryMinimumExtent = 42;
+        _categoryMaxLines = 1;
+        _categoryRotation = 0;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.config:
         _seriesCount = 3;
         _stackGroupCount = 1;
@@ -3237,6 +4964,12 @@ class _BarLabPageState extends State<BarLabPage> {
           _BarLabPreset.categories => 'Dense categorical comparison',
           _BarLabPreset.stress => 'Dense category and label stress',
           _BarLabPreset.labels => 'Collision-aware value labels',
+          _BarLabPreset.rotatedLabels => 'Vertical value labels',
+          _BarLabPreset.drilldown =>
+            _drillDataset == _BarDrillDataset.nutrition
+                ? 'Granola recipe · ${_drilldownController.current.label}'
+                : 'Revenue hierarchy · ${_drilldownController.current.label}',
+          _BarLabPreset.race => 'Population by country',
           _BarLabPreset.config => 'Tool-configured analytical bars',
           _BarLabPreset.patterns => 'Pattern-coded comparisons',
           _BarLabPreset.motion => 'Keyed lifecycle motion',
@@ -3288,6 +5021,12 @@ class _BarLabPageState extends State<BarLabPage> {
       'Hundreds of normalized segments exercise category scrolling and chart-wide label collision indexing without sacrificing frame time.',
     _BarLabPreset.labels =>
       'Labels share one chart-wide layout pass, fall back inside the bar, and can use restrained boxes or callouts.',
+    _BarLabPreset.rotatedLabels =>
+      'Value labels rotate independently from the category axis and can turn automatically when the authored angle does not fit.',
+    _BarLabPreset.drilldown =>
+      'Activate a bar to replace the effective dataset, then use the accessible breadcrumb to return to any ancestor.',
+    _BarLabPreset.race =>
+      'Illustrative stress data keeps country identities stable: close ranks exchange often and one off-screen challenger climbs into first place.',
     _BarLabPreset.config =>
       'Every visible series, category, benchmark, uncertainty interval, style, and label is rebuilt from the public tool JSON contract.',
     _BarLabPreset.patterns =>
@@ -3340,6 +5079,12 @@ class _BarLabPageState extends State<BarLabPage> {
         '${_categories.length} native categories',
       if (_preset == _BarLabPreset.stress)
         '${_categories.length * _seriesCount} labelled segments',
+      if (_showLabels && _labelRotationDegrees != 0)
+        '${_labelRotationDegrees.round()}° value labels',
+      if (_preset == _BarLabPreset.drilldown)
+        '${_drilldownController.path.length} hierarchy level${_drilldownController.path.length == 1 ? '' : 's'}',
+      if (_preset == _BarLabPreset.race)
+        '${_raceController.config.periodFormat.format(_raceController.currentFrame)} · top ${_raceController.config.topCount} · ${_raceController.config.axisRange.name} axis',
       if (_preset == _BarLabPreset.config) 'public tool JSON',
       if (_preset == _BarLabPreset.patterns && _showPatterns)
         '$_seriesCount pattern encodings',

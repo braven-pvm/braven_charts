@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 151 of 153 classes have a synthesizable subject: every verb they
+// 159 of 161 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 1987 verbs total; 13 of them have an argument type with no
+// 2047 verbs total; 13 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 151;
+const int _executedClasses = 159;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
@@ -611,7 +611,7 @@ void _smokeBarLabelCalloutStyle(_Verb verb, BarLabelCalloutStyle subject) {
   );
 }
 
-/// Smoke coverage for [BarLabelStyle]'s 22 executable verb(s).
+/// Smoke coverage for [BarLabelStyle]'s 24 executable verb(s).
 void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
   verb('BarLabelStyleFluent.withShow', () => subject.withShow(false));
   verb(
@@ -633,6 +633,14 @@ void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
     () => subject.withFontWeight(FontWeight.w600),
   );
   verb('BarLabelStyleFluent.withShowUnit', () => subject.withShowUnit(false));
+  verb(
+    'BarLabelStyleFluent.withRotationMode',
+    () => subject.withRotationMode(BarLabelRotationMode.fixed),
+  );
+  verb(
+    'BarLabelStyleFluent.withRotationDegrees',
+    () => subject.withRotationDegrees(0.0),
+  );
   verb('BarLabelStyleFluent.withPadding', () => subject.withPadding(4.0));
   verb(
     'BarLabelStyleFluent.withCollisionPolicy',
@@ -685,6 +693,207 @@ void _smokeBarLabelStyle(_Verb verb, BarLabelStyle subject) {
   verb(
     'BarLabelStyleFluent.withShowStackTotal',
     () => subject.withShowStackTotal(false),
+  );
+}
+
+/// Smoke coverage for [BarDrillNode]'s 6 executable verb(s).
+void _smokeBarDrillNode(_Verb verb, BarDrillNode subject) {
+  verb('BarDrillNodeFluent.withId', () => subject.withId('y'));
+  verb('BarDrillNodeFluent.withLabel', () => subject.withLabel('y'));
+  verb(
+    'BarDrillNodeFluent.withSeries',
+    () => subject.withSeries(const <ChartSeries>[]),
+  );
+  verb(
+    'BarDrillNodeFluent.withChildren',
+    () => subject.withChildren(const <BarDrillNode>[]),
+  );
+  verb(
+    'BarDrillNodeFluent.withMetadata',
+    () => subject.withMetadata(const <String, Object?>{}),
+  );
+  verb(
+    'BarDrillNodeFluent.withMayHaveLazyChildren',
+    () => subject.withMayHaveLazyChildren(false),
+  );
+}
+
+/// Smoke coverage for [BarDrilldownConfig]'s 8 executable verb(s).
+void _smokeBarDrilldownConfig(_Verb verb, BarDrilldownConfig subject) {
+  verb(
+    'BarDrilldownConfigFluent.withRoot',
+    () => subject.withRoot(
+      BarDrillNode(id: 'y', label: 'y', series: const <ChartSeries>[]),
+    ),
+  );
+  verb(
+    'BarDrilldownConfigFluent.updateRoot',
+    () => subject.updateRoot((current) => current),
+  );
+  verb(
+    'BarDrilldownConfigFluent.withActivation',
+    () => subject.withActivation(BarDrillActivation.primaryAction),
+  );
+  verb(
+    'BarDrilldownConfigFluent.withTransition',
+    () => subject.withTransition(BarDrillTransition.fadeThrough),
+  );
+  verb(
+    'BarDrilldownConfigFluent.withShowBreadcrumbs',
+    () => subject.withShowBreadcrumbs(true),
+  );
+  verb(
+    'BarDrilldownConfigFluent.withSelectionPolicy',
+    () => subject.withSelectionPolicy(BarDrillSelectionPolicy.clear),
+  );
+  verb(
+    'BarDrilldownConfigFluent.withLazyResolverBinding',
+    () => subject.withLazyResolverBinding('y'),
+  );
+  verb(
+    'BarDrilldownConfigFluent.clearLazyResolverBinding',
+    () => subject.clearLazyResolverBinding(),
+  );
+}
+
+/// Smoke coverage for [BarRaceValueFormat]'s 6 executable verb(s).
+void _smokeBarRaceValueFormat(_Verb verb, BarRaceValueFormat subject) {
+  verb('BarRaceValueFormatFluent.withPattern', () => subject.withPattern('y'));
+  verb(
+    'BarRaceValueFormatFluent.withNotation',
+    () => subject.withNotation(BarRaceValueNotation.standard),
+  );
+  verb(
+    'BarRaceValueFormatFluent.withDecimalPlaces',
+    () => subject.withDecimalPlaces(0),
+  );
+  verb(
+    'BarRaceValueFormatFluent.withUseGrouping',
+    () => subject.withUseGrouping(true),
+  );
+  verb(
+    'BarRaceValueFormatFluent.withTrimTrailingZeros',
+    () => subject.withTrimTrailingZeros(true),
+  );
+  verb('BarRaceValueFormatFluent.withScale', () => subject.withScale(1));
+}
+
+/// Smoke coverage for [BarRacePeriodFormat]'s 1 executable verb(s).
+void _smokeBarRacePeriodFormat(_Verb verb, BarRacePeriodFormat subject) {
+  verb('BarRacePeriodFormatFluent.withPattern', () => subject.withPattern('y'));
+}
+
+/// Smoke coverage for [BarRacePeriodStyle]'s 8 executable verb(s).
+void _smokeBarRacePeriodStyle(_Verb verb, BarRacePeriodStyle subject) {
+  verb(
+    'BarRacePeriodStyleFluent.withPosition',
+    () => subject.withPosition(BarRacePeriodPosition.bottomRight),
+  );
+  verb('BarRacePeriodStyleFluent.withFontSize', () => subject.withFontSize(72));
+  verb(
+    'BarRacePeriodStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('BarRacePeriodStyleFluent.clearColor', () => subject.clearColor());
+  verb(
+    'BarRacePeriodStyleFluent.withFontWeight',
+    () => subject.withFontWeight(FontWeight.w700),
+  );
+  verb('BarRacePeriodStyleFluent.withOpacity', () => subject.withOpacity(0.22));
+  verb('BarRacePeriodStyleFluent.withInset', () => subject.withInset(24));
+  verb(
+    'BarRacePeriodStyleFluent.withSupportingTextSize',
+    () => subject.withSupportingTextSize(12),
+  );
+}
+
+/// Smoke coverage for [BarRaceCategory]'s 3 executable verb(s).
+void _smokeBarRaceCategory(_Verb verb, BarRaceCategory subject) {
+  verb('BarRaceCategoryFluent.withId', () => subject.withId('y'));
+  verb('BarRaceCategoryFluent.withLabel', () => subject.withLabel('y'));
+  verb(
+    'BarRaceCategoryFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+}
+
+/// Smoke coverage for [BarRaceFrame]'s 7 executable verb(s).
+void _smokeBarRaceFrame(_Verb verb, BarRaceFrame subject) {
+  verb('BarRaceFrameFluent.withId', () => subject.withId('y'));
+  verb('BarRaceFrameFluent.withLabel', () => subject.withLabel('y'));
+  verb(
+    'BarRaceFrameFluent.withValues',
+    () => subject.withValues(const <String, double>{}),
+  );
+  verb(
+    'BarRaceFrameFluent.withTimestamp',
+    () => subject.withTimestamp(DateTime.utc(2026)),
+  );
+  verb('BarRaceFrameFluent.clearTimestamp', () => subject.clearTimestamp());
+  verb('BarRaceFrameFluent.withTotal', () => subject.withTotal(1.0));
+  verb('BarRaceFrameFluent.clearTotal', () => subject.clearTotal());
+}
+
+/// Smoke coverage for [BarRaceConfig]'s 17 executable verb(s).
+void _smokeBarRaceConfig(_Verb verb, BarRaceConfig subject) {
+  verb(
+    'BarRaceConfigFluent.withCategories',
+    () => subject.withCategories(const <BarRaceCategory>[]),
+  );
+  verb(
+    'BarRaceConfigFluent.withFrames',
+    () => subject.withFrames(const <BarRaceFrame>[]),
+  );
+  verb('BarRaceConfigFluent.withTopCount', () => subject.withTopCount(10));
+  verb(
+    'BarRaceConfigFluent.withDurationPerFrame',
+    () => subject.withDurationPerFrame(const Duration(milliseconds: 1)),
+  );
+  verb(
+    'BarRaceConfigFluent.withAxisRange',
+    () => subject.withAxisRange(BarRaceAxisRange.dynamic),
+  );
+  verb(
+    'BarRaceConfigFluent.withSort',
+    () => subject.withSort(BarRaceSort.descending),
+  );
+  verb('BarRaceConfigFluent.withLoop', () => subject.withLoop(false));
+  verb(
+    'BarRaceConfigFluent.withShowPeriod',
+    () => subject.withShowPeriod(true),
+  );
+  verb('BarRaceConfigFluent.withShowTotal', () => subject.withShowTotal(false));
+  verb(
+    'BarRaceConfigFluent.withPeriodStyle',
+    () => subject.withPeriodStyle(const BarRacePeriodStyle()),
+  );
+  verb(
+    'BarRaceConfigFluent.updatePeriodStyle',
+    () => subject.updatePeriodStyle((current) => current),
+  );
+  verb(
+    'BarRaceConfigFluent.withPeriodFormat',
+    () => subject.withPeriodFormat(const BarRacePeriodFormat()),
+  );
+  verb(
+    'BarRaceConfigFluent.updatePeriodFormat',
+    () => subject.updatePeriodFormat((current) => current),
+  );
+  verb(
+    'BarRaceConfigFluent.withValueFormat',
+    () => subject.withValueFormat(const BarRaceValueFormat()),
+  );
+  verb(
+    'BarRaceConfigFluent.updateValueFormat',
+    () => subject.updateValueFormat((current) => current),
+  );
+  verb(
+    'BarRaceConfigFluent.withTotalFormat',
+    () => subject.withTotalFormat(BarRaceValueFormat()),
+  );
+  verb(
+    'BarRaceConfigFluent.updateTotalFormat',
+    () => subject.updateTotalFormat((current) => current),
   );
 }
 
@@ -2367,7 +2576,7 @@ void _compileAreaChartSeries(AreaChartSeries subject, AreaGradient a0) {
   subject.withFillGradient(a0);
 }
 
-/// Smoke coverage for [BarChartSeries]'s 54 executable verb(s).
+/// Smoke coverage for [BarChartSeries]'s 56 executable verb(s).
 void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb('BarChartSeriesFluent.withName', () => subject.withName('y'));
   verb('BarChartSeriesFluent.clearName', () => subject.clearName());
@@ -2420,6 +2629,14 @@ void _smokeBarChartSeries(_Verb verb, BarChartSeries subject) {
   verb(
     'BarChartSeriesFluent.withShowInTrackingTooltip',
     () => subject.withShowInTrackingTooltip(true),
+  );
+  verb(
+    'BarChartSeriesFluent.withCategorySpacing',
+    () => subject.withCategorySpacing(1.0),
+  );
+  verb(
+    'BarChartSeriesFluent.clearCategorySpacing',
+    () => subject.clearCategorySpacing(),
   );
   verb('BarChartSeriesFluent.withBarGap', () => subject.withBarGap(2.0));
   verb(
@@ -8238,6 +8455,102 @@ void main() {
         reason: 'generated BarLabelStyleFluent verb(s) threw',
       );
     });
+    test('BarDrillNode', () {
+      final subject = _subject(
+        () => BarDrillNode(id: 'x', label: 'x', series: const <ChartSeries>[]),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarDrillNode, subject),
+        isEmpty,
+        reason: 'generated BarDrillNodeFluent verb(s) threw',
+      );
+    });
+    test('BarDrilldownConfig', () {
+      final subject = _subject(
+        () => BarDrilldownConfig(
+          root: BarDrillNode(
+            id: 'x',
+            label: 'x',
+            series: const <ChartSeries>[],
+          ),
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarDrilldownConfig, subject),
+        isEmpty,
+        reason: 'generated BarDrilldownConfigFluent verb(s) threw',
+      );
+    });
+    test('BarRaceValueFormat', () {
+      final subject = _subject(() => BarRaceValueFormat());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRaceValueFormat, subject),
+        isEmpty,
+        reason: 'generated BarRaceValueFormatFluent verb(s) threw',
+      );
+    });
+    test('BarRacePeriodFormat', () {
+      final subject = _subject(() => BarRacePeriodFormat());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRacePeriodFormat, subject),
+        isEmpty,
+        reason: 'generated BarRacePeriodFormatFluent verb(s) threw',
+      );
+    });
+    test('BarRacePeriodStyle', () {
+      final subject = _subject(() => BarRacePeriodStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRacePeriodStyle, subject),
+        isEmpty,
+        reason: 'generated BarRacePeriodStyleFluent verb(s) threw',
+      );
+    });
+    test('BarRaceCategory', () {
+      final subject = _subject(
+        () => BarRaceCategory(
+          id: 'x',
+          label: 'x',
+          color: const Color(0xFF2196F3),
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRaceCategory, subject),
+        isEmpty,
+        reason: 'generated BarRaceCategoryFluent verb(s) threw',
+      );
+    });
+    test('BarRaceFrame', () {
+      final subject = _subject(
+        () =>
+            BarRaceFrame(id: 'x', label: 'x', values: const <String, double>{}),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRaceFrame, subject),
+        isEmpty,
+        reason: 'generated BarRaceFrameFluent verb(s) threw',
+      );
+    });
+    test('BarRaceConfig', () {
+      final subject = _subject(
+        () => BarRaceConfig(
+          categories: const <BarRaceCategory>[],
+          frames: const <BarRaceFrame>[],
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeBarRaceConfig, subject),
+        isEmpty,
+        reason: 'generated BarRaceConfigFluent verb(s) threw',
+      );
+    });
     test('CandlestickChartSeries', () {
       final subject = _subject(
         () => CandlestickChartSeries(
@@ -9912,7 +10225,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 151);
+    expect(_executedClasses, 159);
     expect(_skippedClasses, 2);
     expect(_compileOnlyCases, hasLength(8));
     expect(_compileOnlyVerbs, hasLength(13));

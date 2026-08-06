@@ -1356,6 +1356,7 @@ class ChartConfigBuilder {
         isXOrdered: layout == BarLayoutMode.waterfall,
         barWidthPercent:
             (style['bar_width_percent'] as num?)?.toDouble() ?? 0.8,
+        categorySpacing: (style['bar_category_spacing'] as num?)?.toDouble(),
         minWidth: (style['bar_min_width'] as num?)?.toDouble() ?? 4,
         maxWidth: (style['bar_max_width'] as num?)?.toDouble() ?? 100,
         barGap: (style['bar_gap'] as num?)?.toDouble() ?? 2,
@@ -1753,6 +1754,15 @@ class ChartConfigBuilder {
     fontSize: (json['bar_label_font_size'] as num?)?.toDouble() ?? 10,
     fontWeight: _parseBarLabelFontWeight(json['bar_label_font_weight']),
     showUnit: json['bar_label_show_unit'] as bool? ?? false,
+    rotationMode: switch (json['bar_label_rotation_mode']) {
+      null || 'fixed' => BarLabelRotationMode.fixed,
+      'auto_fit' => BarLabelRotationMode.autoFit,
+      final value => throw FormatException(
+        'Unknown bar_label_rotation_mode "$value".',
+      ),
+    },
+    rotationDegrees:
+        (json['bar_label_rotation_degrees'] as num?)?.toDouble() ?? 0,
     padding: (json['bar_label_padding'] as num?)?.toDouble() ?? 4,
     collisionPolicy: switch (json['bar_label_collision']) {
       null || 'none' => BarLabelCollisionPolicy.none,

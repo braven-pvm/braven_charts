@@ -1382,6 +1382,455 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('rotates value labels independently from category labels', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('bar-lab-preset-rotatedLabels')),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final series = chart.series.single as BarChartSeries;
+    expect(series.labelStyle.rotationMode, BarLabelRotationMode.fixed);
+    expect(series.labelStyle.rotationDegrees, -90);
+    expect(chart.xAxisConfig?.categoryAxis?.labelRotationDegrees, -45);
+    expect(series.points, hasLength(12));
+
+    final angle = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-lab-label-rotation-degrees')),
+    );
+    angle.onChanged(90);
+    await tester.pump();
+    final updated = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (updated.series.single as BarChartSeries).labelStyle.rotationDegrees,
+      90,
+    );
+  });
+
+  testWidgets('drills through point metadata and navigates by breadcrumb', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-drilldown')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Granola recipe · Ingredients'), findsOneWidget);
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final rootSeries = chart.series.single as BarChartSeries;
+    chart.onPointTap!(rootSeries.points.first, rootSeries.id);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Granola recipe · Rolled oats'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-drill-back')), findsOneWidget);
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect((chart.series.single as BarChartSeries).points, hasLength(3));
+
+    await tester.tap(find.text('Ingredients'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Granola recipe · Ingredients'), findsOneWidget);
+  });
+
+  testWidgets('shows lazy drill loading and hydrates the resolved level', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-drilldown')));
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final root = chart.series.single as BarChartSeries;
+    chart.onPointTap!(root.points[3], root.id);
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(
+      find.textContaining('Granola recipe · Dried berries'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final berries = chart.series.single as BarChartSeries;
+    chart.onPointTap!(berries.points.first, berries.id);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Granola recipe · Berry sugars'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the population race clock unified after inspector edits', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-race')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Population by country'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-race-period')), findsOneWidget);
+    expect(find.text('Dec 2006'), findsOneWidget);
+    expect(find.text('Continuous leader headroom'), findsOneWidget);
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(chart.theme?.animationTheme.dataUpdateDuration, Duration.zero);
+    expect(chart.theme?.animationTheme.dataUpdateCurve, Curves.linear);
+    var race = chart.series.single as BarChartSeries;
+    expect(race.orientation, BarOrientation.horizontal);
+    expect(race.barStyle.animationMode, BarAnimationMode.none);
+    expect(race.points, hasLength(15));
+    expect(race.labelStyle.position, BarLabelPosition.rangeEnds);
+    expect(race.labelStyle.padding, 12);
+    expect(
+      race.labelStyle.collisionPolicy,
+      BarLabelCollisionPolicy.hide,
+      reason: 'rank transitions must not move outside labels inside bars',
+    );
+    expect(race.categorySpacing, 1);
+    expect(race.labelStyle.formatter!(race.points.first), endsWith(' M'));
+    expect(race.points.map((point) => point.pointKey).toSet(), hasLength(15));
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(15));
+    expect(
+      chart.xAxisConfig?.categoryAxis?.autoViewport,
+      isFalse,
+      reason:
+          'topCount is the race viewport; category auto-viewport must not hide additional ranks on first render',
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-period-position')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('bar-race-period-color')), findsOneWidget);
+    final initialPeriodIndicator = tester.widget<BarRacePeriodIndicator>(
+      find.byKey(const ValueKey('bar-race-period')),
+    );
+    final initialRaceConfig = initialPeriodIndicator.controller.config;
+    expect(initialRaceConfig.topCount, 15);
+    expect(
+      initialRaceConfig.durationPerFrame,
+      const Duration(milliseconds: 100),
+    );
+    expect(initialPeriodIndicator.controller.speed, 1);
+    expect(initialRaceConfig.periodFormat.pattern, '{MMM} {yyyy}');
+    expect(
+      initialRaceConfig.periodStyle.position,
+      BarRacePeriodPosition.bottomRight,
+    );
+    expect(initialRaceConfig.periodStyle.fontSize, 44);
+    expect(initialRaceConfig.periodStyle.color, const Color(0xFF38BDF8));
+    expect(initialRaceConfig.periodStyle.fontWeight, FontWeight.w700);
+    expect(initialRaceConfig.periodStyle.opacity, 0.90);
+    expect(initialRaceConfig.periodStyle.inset, 64);
+    expect(initialRaceConfig.periodStyle.supportingTextSize, 16);
+
+    final frameDuration = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-race-frame-duration')),
+    );
+    expect(frameDuration.value, 100);
+    expect(frameDuration.min, 50);
+    expect(frameDuration.max, 2000);
+    expect(frameDuration.divisions, 39);
+    expect(initialRaceConfig.valueFormat.pattern, '{value} M');
+    expect(initialRaceConfig.valueFormat.decimalPlaces, 3);
+    expect(initialRaceConfig.valueFormat.useGrouping, isTrue);
+    expect(initialRaceConfig.valueFormat.format(389.0974), '389.097 M');
+    expect(
+      initialRaceConfig.totalFormat.pattern,
+      '{value} M combined population',
+    );
+    expect(initialRaceConfig.totalFormat.decimalPlaces, 0);
+    expect(initialRaceConfig.totalFormat.useGrouping, isTrue);
+    expect(
+      initialRaceConfig.totalFormat.format(5370.2),
+      '5,370 M combined population',
+    );
+    expect(
+      find.byKey(const ValueKey('bar-options-race-formatting')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-period-preset')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-value-notation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-value-decimals')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-total-notation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-label-collision')),
+      findsOneWidget,
+    );
+    final speed = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-race-speed')),
+    );
+    expect(speed.min, 0.25);
+    expect(speed.max, 10);
+    expect(speed.divisions, 39);
+    speed.onChanged(10);
+    await tester.pump();
+    expect(
+      race.points.every(
+        (point) => point.metadata?[barRaceCategoryIdMetadataKey] is String,
+      ),
+      isTrue,
+    );
+
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-period-pattern-monthYearShort')),
+        )
+        .onChanged('{MMM} {yy}');
+    await tester.pump();
+    final periodIndicator = tester.widget<BarRacePeriodIndicator>(
+      find.byKey(const ValueKey('bar-race-period')),
+    );
+    expect(periodIndicator.controller.speed, 10);
+    List<String> rankOrder(BarRaceFrame frame) {
+      final ranked = frame.values.entries.toList()
+        ..sort((left, right) => right.value.compareTo(left.value));
+      return ranked
+          .take(periodIndicator.controller.config.topCount)
+          .map((entry) => entry.key)
+          .toList(growable: false);
+    }
+
+    var monthlyRankChanges = 0;
+    final raceFrames = periodIndicator.controller.config.frames;
+    expect(rankOrder(raceFrames.first), isNot(contains('cod')));
+    final challengerEntryFrame = raceFrames.indexWhere(
+      (frame) => rankOrder(frame).contains('cod'),
+    );
+    expect(challengerEntryFrame, greaterThan(0));
+    expect(challengerEntryFrame, lessThan(raceFrames.length - 1));
+    expect(rankOrder(raceFrames.last).first, 'cod');
+    for (var index = 1; index < raceFrames.length; index++) {
+      if (rankOrder(raceFrames[index - 1]).join('|') !=
+          rankOrder(raceFrames[index]).join('|')) {
+        monthlyRankChanges++;
+      }
+    }
+    expect(
+      monthlyRankChanges,
+      greaterThanOrEqualTo(150),
+      reason: 'the showcase race should visibly exchange close ranks often',
+    );
+    expect(
+      periodIndicator.controller.config.periodFormat.pattern,
+      '{MMM} {yy}',
+    );
+    expect(
+      periodIndicator.controller.config.periodFormat.format(
+        periodIndicator.controller.currentFrame,
+      ),
+      'Dec 06',
+    );
+    expect(find.text('Dec 06'), findsOneWidget);
+
+    final transitionLabels = tester.widget<EnumOption<BarLabelCollisionPolicy>>(
+      find.byKey(const ValueKey('bar-race-label-collision')),
+    );
+    transitionLabels.onChanged(BarLabelCollisionPolicy.reposition);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (chart.series.single as BarChartSeries).labelStyle.collisionPolicy,
+      BarLabelCollisionPolicy.reposition,
+    );
+    tester
+        .widget<EnumOption<BarLabelCollisionPolicy>>(
+          find.byKey(const ValueKey('bar-race-label-collision')),
+        )
+        .onChanged(BarLabelCollisionPolicy.hide);
+    await tester.pump();
+
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-value-pattern')),
+        )
+        .onChanged('{value} million');
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-race-value-decimals')),
+        )
+        .onChanged(3);
+    tester
+        .widget<TextOption>(find.byKey(const ValueKey('bar-race-value-scale')))
+        .onChanged('2');
+    tester
+        .widget<BoolOption>(
+          find.byKey(const ValueKey('bar-race-value-trim-zeros')),
+        )
+        .onChanged(false);
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-total-pattern')),
+        )
+        .onChanged('{value}M people');
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.labelStyle.formatter!(race.points.first), endsWith(' million'));
+    expect(find.textContaining('M people'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bar-race-value-preview')),
+        matching: find.textContaining('÷ 2'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bar-race-value-preview')),
+        matching: find.textContaining('million'),
+      ),
+      findsOneWidget,
+    );
+
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-race-top-count')),
+        )
+        .onChanged(18);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('bar-race-frame-duration')),
+        )
+        .onChanged(50);
+    tester
+        .widget<SliderOption>(find.byKey(const ValueKey('bar-race-speed')))
+        .onChanged(1.75);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.points, hasLength(18));
+
+    final initialRankOrder = race.points
+        .map((point) => point.pointKey)
+        .toList();
+
+    await tester.tap(find.byKey(const ValueKey('bar-race-next')));
+    await tester.pump();
+    expect(find.text('Jan 07'), findsOneWidget);
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.points, hasLength(18));
+
+    final seek = tester.widget<Slider>(
+      find.byKey(const ValueKey('bar-race-seek')),
+    );
+    seek.onChanged!(1);
+    await tester.pump();
+    expect(find.text('Jan 24'), findsOneWidget);
+
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    final finalRankOrder = race.points.map((point) => point.pointKey).toList();
+    expect(finalRankOrder, isNot(initialRankOrder));
+    expect(finalRankOrder.first, 'cod');
+
+    await tester.tap(find.byKey(const ValueKey('bar-race-play-pause')));
+    await tester.pump();
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+
+    var playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final frameSeries = playingChart.series;
+    final frameValues = (frameSeries.single as BarChartSeries).points
+        .map((point) => point.y)
+        .toList();
+    await tester.pump(const Duration(milliseconds: 10));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (playingChart.series.single as BarChartSeries).points
+          .map((point) => point.y)
+          .toList(),
+      frameValues,
+      reason: 'the initial frame remains settled until the first boundary',
+    );
+
+    await tester.pump(const Duration(milliseconds: 30));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final nextFrameSeries = playingChart.series;
+    final transitionStartValues = (nextFrameSeries.single as BarChartSeries)
+        .points
+        .map((point) => point.y)
+        .toList();
+    await tester.pump(const Duration(milliseconds: 10));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (playingChart.series.single as BarChartSeries).points
+          .map((point) => point.y)
+          .toList(),
+      isNot(transitionStartValues),
+      reason:
+          'inspector edits must not stop values interpolating on the race clock',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('rebuilds advanced bars through the public tool contract', (
     tester,
   ) async {

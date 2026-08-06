@@ -805,6 +805,189 @@ retains its previous paint order until the shared timeline completes.
 The same options are available to tool calls as `bar_animation_order` and
 `bar_animation_stagger`, globally or as per-series overrides.
 
+## Rotated value labels
+
+`BarLabelStyle` rotates labels attached to bars independently from category
+axis labels. A fixed angle is useful for narrow columns; `autoFit` may choose
+the perpendicular orientation when the authored angle does not fit the mark.
+Backgrounds, borders, collision bounds, callouts, clipping, and contrast all
+use the same transformed label geometry.
+
+```dart
+labelStyle: const BarLabelStyle(
+  show: true,
+  position: BarLabelPosition.insideEnd,
+  rotationMode: BarLabelRotationMode.autoFit,
+  rotationDegrees: -90,
+  backgroundColor: Color(0xCC111827),
+  textColor: Colors.white,
+),
+```
+
+Positive angles rotate clockwise in screen coordinates. Use
+`XAxisConfig.tickLabelRotationDegrees` or
+`CategoryAxisConfig.labelRotationDegrees` when the category labels beneath the
+plot should rotate instead.
+
+## Hierarchical drill-down
+
+`BarDrillNode` keeps each hierarchy level as ordinary chart series, while
+`BarDrilldownController` owns the current path, loading state, retry behavior,
+and deterministic navigation. A point links to a child with
+`barDrillNodeIdMetadataKey`; the renderer remains unaware of navigation.
+
+```dart
+final config = BarDrilldownConfig(
+  root: BarDrillNode(
+    id: 'ingredients',
+    label: 'Ingredients',
+    series: rootSeries,
+    children: [rolledOatsNode, driedFruitNode],
+  ),
+  selectionPolicy: BarDrillSelectionPolicy.clear,
+);
+
+final controller = BarDrilldownController(config: config);
+
+Column(
+  children: [
+    BarDrilldownBreadcrumbs(controller: controller),
+    Expanded(
+      child: BravenChartPlus(
+        transitionKey: controller.current.id,
+        series: controller.current.series,
+      ),
+    ),
+  ],
+);
+```
+
+Static hierarchies round-trip with `BarDrilldownConfigCodec`. For a lazy node,
+set `mayHaveLazyChildren` and give the config a `lazyResolverBinding`; the host
+must provide the executable `BarDrilldownResolver`. Callbacks are deliberately
+not serialized. Loading, empty, error, Retry, back, and ancestor navigation are
+available through the controller and breadcrumb widget. Workbench Data and
+Source views describe the current effective level; persist the hierarchy
+config separately when the application must reconstruct navigation itself.
+
+## Bar race playback
+
+A bar race is a timeline of ordinary horizontal bar configurations. Category
+IDs stay stable while their rank changes, so interpolation, hover, selection,
+labels, and semantics follow the category rather than its temporary row.
+
+```dart
+final controller = BarRaceController(
+  config: BarRaceConfig(
+    categories: categories,
+    frames: yearlyFrames,
+    topCount: 10,
+    durationPerFrame: const Duration(milliseconds: 800),
+    axisRange: BarRaceAxisRange.continuous,
+    showPeriod: true,
+    periodFormat: const BarRacePeriodFormat(pattern: '{MMMM} {yyyy}'),
+    valueFormat: const BarRaceValueFormat(
+      pattern: '{value}M',
+      decimalPlaces: 1,
+    ),
+    totalFormat: const BarRaceValueFormat(
+      pattern: '{value}M combined population',
+    ),
+  ),
+);
+
+BarRaceTicker(
+  controller: controller,
+  disableMotion: MediaQuery.disableAnimationsOf(context),
+  child: Stack(
+    children: [
+      BravenChartPlus(
+        theme: ChartTheme.light.copyWith(
+          animationTheme: ChartTheme.light.animationTheme.copyWith(
+            dataUpdateDuration: controller.effectiveDuration,
+            dataUpdateCurve: Curves.linear,
+          ),
+        ),
+        series: [
+          BarChartSeries(
+            id: 'population-race',
+            points: pointsFor(controller.rankedValues),
+            orientation: BarOrientation.horizontal,
+            barWidthPercent: 0.72,
+            categorySpacing: 1,
+            labelStyle: BarLabelStyle(
+              show: true,
+              formatter: (point) =>
+                  controller.config.valueFormat.format(point.y),
+            ),
+          ),
+        ],
+      ),
+      BarRacePeriodIndicator(controller: controller),
+    ],
+  ),
+);
+```
+
+`BarRaceFrame.label` remains the authored fallback for any ordered dimension.
+Calendar races may also set `BarRaceFrame.timestamp` and format the prominent
+period through the portable `BarRacePeriodFormat` pattern. Supported tokens
+are `{label}`, `{yyyy}`, `{yy}`, `{MMMM}`, `{MMM}`, `{MM}`, `{M}`, `{dd}`, and
+`{d}`, plus `{HH}`, `{H}`, `{mm}`, `{m}`, `{ss}`, and `{s}` for intraday
+timelines. Frames without a timestamp fall back safely to their authored
+label.
+`BarRacePeriodStyle` controls the overlay's corner, size, colour, weight,
+opacity, and inset.
+
+`BarRaceValueFormat` is shared by continuously counting bar labels and totals.
+It provides standard, compact, and scientific notation, decimal precision,
+grouping, trailing-zero trimming, a scale divisor, and a custom pattern whose
+`{value}` token is replaced by the formatted number. Runtime formatter
+callbacks remain optional widget/series overrides; the descriptors survive
+artifact export and hydration. The indicator ignores pointer input so chart
+interaction remains available underneath it. Its total is interpolated on the
+same frame clock as the bars, so it counts towards the next aggregate instead
+of snapping before the geometry arrives.
+
+The maintained population race uses monthly frames such as `January 1965` and
+`February 1965`. Values are interpolated between annual source anchors, so the
+month label advances with a real monthly data frame rather than acting as an
+unrelated timer overlay.
+
+Use a linear curve and the complete `effectiveDuration` for uninterrupted
+race motion. Shorter transitions or easing curves introduce a visible idle
+tail and repeated acceleration/deceleration between frames.
+
+`BarRaceAxisRange.dynamic` uses monotonic human-readable headroom steps rather
+than binding the axis maximum to every leader update. This keeps a growing
+race legible without making all bars pulse as the value domain changes.
+`BarRaceAxisRange.continuous` initially preserves the same readable headroom,
+then follows the running leader once it reaches 90% of the domain. The domain
+never contracts during forward playback and interpolates with the values,
+which gives dense monthly races a smooth fill-and-expand rhythm. Use
+`BarRaceAxisRange.fixed` when comparisons require one immutable scale.
+
+`categorySpacing` is the stable distance between rank slots in data units.
+Set it for keyed reorder animations so the temporary moment when two bars
+cross the same fractional rank cannot collapse their thickness. Ordinary bar
+charts can continue to omit it and derive spacing from their data.
+
+`BarRaceController` supports play, pause, next, previous, normalized seek,
+frame seek, speed, looping, fixed, stepped, or continuous axis bounds, and ascending
+or descending rank. `BarRaceTicker` advances from Flutter's frame clock and
+pauses when its app lifecycle or `TickerMode` becomes inactive. Hosts remain
+responsible for composing their preferred playback chrome. The maintained Bar
+Lab demonstrates accessible play/pause, stepping, seeking, speed, top-N,
+period, total, period styling, date patterns, number notation, precision,
+grouping, scaling, custom value text, and responsive controls.
+`BarRaceConfigCodec` preserves the complete portable timeline, timestamps,
+indicator style, and format descriptors. Schema 2 still hydrates schema-1
+artifacts with the original defaults.
+
+Ranking projections use a bounded 32-frame LRU cache, and fixed-axis maxima
+are precomputed when configuration changes. This keeps rebuild work bounded
+without creating a renderer-specific race layer.
+
 ## Interaction and artifacts
 
 Hit testing, focus outlines, durable selection, tooltips, and bounds all use
@@ -945,6 +1128,8 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=bullet`, `?page=bar-lab&preset=likert`,
 `?page=bar-lab&preset=targets`, `?page=bar-lab&preset=uncertainty`,
 `?page=bar-lab&preset=patterns`, `?page=bar-lab&preset=motion`,
+`?page=bar-lab&preset=rotatedLabels`, `?page=bar-lab&preset=drilldown`,
+`?page=bar-lab&preset=race`,
 `?page=bar-lab&preset=rtl`, `?page=bar-lab&preset=stress`,
 `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

@@ -1,8 +1,10 @@
 import 'package:braven_charts/src/models/bar_chart_style.dart';
+import 'package:braven_charts/src/models/bar_race.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/segment_style.dart';
 import 'package:braven_charts/src/utils/bar_series_transition.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -192,6 +194,151 @@ void main() {
 
       expect(midpoint.points[0].y, 25);
       expect(midpoint.points[1].y, 14);
+    });
+
+    test('follows stable metadata identity while race ranks reorder', () {
+      const from = BarChartSeries(
+        id: 'race',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 100,
+            label: 'Alpha',
+            metadata: {barRaceCategoryIdMetadataKey: 'alpha'},
+          ),
+          ChartDataPoint(
+            x: 1,
+            y: 50,
+            label: 'Beta',
+            metadata: {barRaceCategoryIdMetadataKey: 'beta'},
+          ),
+        ],
+        barWidthPercent: 0.7,
+        categorySpacing: 1,
+      );
+      const to = BarChartSeries(
+        id: 'race',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 70,
+            label: 'Beta',
+            metadata: {barRaceCategoryIdMetadataKey: 'beta'},
+          ),
+          ChartDataPoint(
+            x: 1,
+            y: 120,
+            label: 'Alpha',
+            metadata: {barRaceCategoryIdMetadataKey: 'alpha'},
+          ),
+        ],
+        barWidthPercent: 0.7,
+        categorySpacing: 1,
+      );
+
+      final midpoint = BarSeriesTransition.interpolate(
+        from: from,
+        to: to,
+        progress: 0.5,
+      );
+
+      expect(midpoint.points[0].label, 'Beta');
+      expect(midpoint.points[0].x, 0.5);
+      expect(midpoint.points[0].y, 60);
+      expect(midpoint.points[1].label, 'Alpha');
+      expect(midpoint.points[1].x, 0.5);
+      expect(midpoint.points[1].y, 110);
+      expect(midpoint.categorySpacing, 1);
+    });
+
+    test('retains a stable-identity race exit until its bar collapses', () {
+      const previous = BarChartSeries(
+        id: 'race',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 90,
+            label: 'Alpha',
+            metadata: {barRaceCategoryIdMetadataKey: 'alpha'},
+          ),
+          ChartDataPoint(
+            x: 1,
+            y: 70,
+            label: 'Beta',
+            metadata: {barRaceCategoryIdMetadataKey: 'beta'},
+          ),
+        ],
+        barWidthPercent: 0.7,
+      );
+      const next = BarChartSeries(
+        id: 'race',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 95,
+            label: 'Beta',
+            metadata: {barRaceCategoryIdMetadataKey: 'beta'},
+          ),
+        ],
+        barWidthPercent: 0.7,
+      );
+
+      final target = BarSeriesTransition.withExitingPoints(
+        previous: previous,
+        next: next,
+      );
+
+      expect(target.points, hasLength(2));
+      expect(target.points.first.label, 'Alpha');
+      expect(target.points.first.y, 0);
+      expect(target.points.last.label, 'Beta');
+      expect(target.points.last.y, 95);
+    });
+
+    test('fades stable-identity race entries and exits with their bars', () {
+      const previous = BarChartSeries(
+        id: 'race-opacity',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 80,
+            pointKey: 'leaving',
+            pointStyle: PointStyle.color(Colors.blue),
+          ),
+        ],
+        barWidthPercent: 0.7,
+      );
+      const next = BarChartSeries(
+        id: 'race-opacity',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 100,
+            pointKey: 'entering',
+            pointStyle: PointStyle.color(Colors.red),
+          ),
+        ],
+        barWidthPercent: 0.7,
+      );
+
+      final target = BarSeriesTransition.withExitingPoints(
+        previous: previous,
+        next: next,
+      );
+      final midpoint = BarSeriesTransition.interpolate(
+        from: previous,
+        to: target,
+        progress: 0.5,
+      );
+
+      expect(midpoint.points, hasLength(2));
+      final byIdentity = {
+        for (final point in midpoint.points) point.pointKey!: point,
+      };
+      expect(byIdentity['leaving']!.pointStyle!.color!.a, closeTo(0.5, 0.01));
+      expect(byIdentity['entering']!.pointStyle!.color!.a, closeTo(0.5, 0.01));
+      expect(byIdentity['leaving']!.y, 40);
+      expect(byIdentity['entering']!.y, 50);
     });
 
     for (final entry in <BarAnimationOrder, List<double>>{
