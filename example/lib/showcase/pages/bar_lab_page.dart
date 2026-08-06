@@ -132,6 +132,8 @@ class BarLabPage extends StatefulWidget {
 }
 
 class _BarLabPageState extends State<BarLabPage> {
+  static const String _raceDefaultFrameId = '2006-12';
+
   static const _categoryFormatterId = 'braven.showcase.bar-category';
   final BravenChartController _chartController = BravenChartController();
   final ChartWorkbenchController _workbenchController =
@@ -402,8 +404,9 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
       resolver: _resolveDrillChildren,
     )..addListener(_onDrilldownChanged);
-    _raceController = BarRaceController(config: _buildPopulationRaceConfig())
-      ..addListener(_onRaceChanged);
+    _raceController = BarRaceController(config: _buildPopulationRaceConfig());
+    _seekRaceToDefaultFrame();
+    _raceController.addListener(_onRaceChanged);
     _showcaseRandomizer = ShowcaseRandomizerController<int>(
       initialSeed: 101,
       generate: (seed) => seed,
@@ -1015,7 +1018,11 @@ class _BarLabPageState extends State<BarLabPage> {
       'deu': [73, 78, 82, 84],
       'vnm': [33, 54, 79, 101],
       'tur': [28, 44, 64, 87],
-      'cod': [15, 27, 49, 109],
+      // Deliberately accelerated showcase scenario: this category begins
+      // outside the visible top-N, enters the race, and eventually becomes
+      // the leader so entry, overtaking, and first-place transitions are all
+      // inspectable in one deterministic playback sequence.
+      'cod': [15, 70, 420, 1600],
     };
 
     double populationAt(String categoryId, double year) {
@@ -1028,6 +1035,35 @@ class _BarLabPageState extends State<BarLabPage> {
         return values[index] + (values[index + 1] - values[index]) * progress;
       }
       return values.last;
+    }
+
+    double showcaseRaceVariation(
+      String categoryId,
+      double year,
+      double population,
+    ) {
+      final categoryIndex = categories.indexWhere(
+        (category) => category.id == categoryId,
+      );
+      final elapsedYears = year - anchorYears.first;
+      // This showcase deliberately adds small, smooth estimate revisions so
+      // similarly sized countries exchange ranks often enough to exercise the
+      // race layout. The dominant long-term population trend still comes from
+      // the authored anchors above.
+      final amplitude = switch (categoryIndex) {
+        < 3 => 0.004,
+        < 8 => 0.035,
+        _ => 0.075,
+      };
+      final primaryCycleYears = 1.2 + (categoryIndex % 5) * 0.28;
+      final secondaryCycleYears = 4.2 + (categoryIndex % 4) * 0.55;
+      final phase = categoryIndex * 1.31;
+      final motion =
+          math.sin((elapsedYears / primaryCycleYears) * math.pi * 2 + phase) *
+              0.72 +
+          math.sin((elapsedYears / secondaryCycleYears) * math.pi * 2 - phase) *
+              0.28;
+      return population * (1 + amplitude * motion);
     }
 
     const monthNames = <String>[
@@ -1055,7 +1091,11 @@ class _BarLabPageState extends State<BarLabPage> {
       final yearPosition = month.year + (month.month - 1) / 12;
       final values = <String, double>{
         for (final category in categories)
-          category.id: populationAt(category.id, yearPosition),
+          category.id: showcaseRaceVariation(
+            category.id,
+            yearPosition,
+            populationAt(category.id, yearPosition),
+          ),
       };
       frames.add(
         BarRaceFrame(
@@ -1070,21 +1110,45 @@ class _BarLabPageState extends State<BarLabPage> {
     return BarRaceConfig(
       categories: categories,
       frames: List.unmodifiable(frames),
-      topCount: 12,
+      topCount: 15,
       durationPerFrame: const Duration(milliseconds: 100),
       axisRange: BarRaceAxisRange.continuous,
       showPeriod: true,
       showTotal: true,
-      periodFormat: const BarRacePeriodFormat(pattern: '{MMMM} {yyyy}'),
+      periodStyle: const BarRacePeriodStyle(
+        position: BarRacePeriodPosition.bottomRight,
+        fontSize: 44,
+        color: Color(0xFF38BDF8),
+        fontWeight: FontWeight.w700,
+        opacity: 0.90,
+        inset: 64,
+        supportingTextSize: 16,
+      ),
+      periodFormat: const BarRacePeriodFormat(pattern: '{MMM} {yyyy}'),
       valueFormat: const BarRaceValueFormat(
-        pattern: '{value}M',
-        decimalPlaces: 1,
+        pattern: '{value} M',
+        notation: BarRaceValueNotation.standard,
+        decimalPlaces: 3,
+        useGrouping: true,
+        trimTrailingZeros: true,
+        scale: 1,
       ),
       totalFormat: const BarRaceValueFormat(
-        pattern: '{value}M combined population',
+        pattern: '{value} M combined population',
+        notation: BarRaceValueNotation.standard,
         decimalPlaces: 0,
+        useGrouping: true,
+        trimTrailingZeros: true,
+        scale: 1,
       ),
     );
+  }
+
+  void _seekRaceToDefaultFrame() {
+    final index = _raceController.config.frames.indexWhere(
+      (frame) => frame.id == _raceDefaultFrameId,
+    );
+    _raceController.seekToFrame(index < 0 ? 0 : index);
   }
 
   BarChartSeries _drillSeries(
@@ -1571,6 +1635,12 @@ class _BarLabPageState extends State<BarLabPage> {
                             _preset == _BarLabPreset.histogram
                         ? 0
                         : _categoryRotation,
+                    // A race's topCount has already reduced the domain to the
+                    // intended visible ranks. Applying the generic category
+                    // auto-viewport as well would silently reduce that list a
+                    // second time based on panel height (15 ranks became 8 in
+                    // the default showcase workspace).
+                    autoViewport: _preset != _BarLabPreset.race,
                   )
                 : null,
             labelFormatter: _usesNativeCategoryAxis ? null : _categoryLabel,
@@ -1734,6 +1804,58 @@ class _BarLabPageState extends State<BarLabPage> {
     );
   }
 
+  Widget _buildRaceValueFormatPreview() {
+    final format = _raceController.config.valueFormat;
+    final rankedValues = _raceController.effectiveRankedValues;
+    final rawValue = rankedValues.isEmpty ? 0.0 : rankedValues.first.value;
+    final theme = Theme.of(context);
+    final divisor = format.scale.toStringAsFixed(
+      format.scale == format.scale.roundToDouble() ? 0 : 2,
+    );
+    return SearchableOption(
+      key: const ValueKey('bar-race-value-preview'),
+      label: 'Bar value format preview',
+      description:
+          'Shows the current leader before and after division, notation, decimal, grouping, and template formatting.',
+      aliases: const ['format', 'template', 'divisor', 'scale', 'example'],
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.48,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.dividerColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Formatting preview',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${rawValue.toStringAsFixed(3)} ÷ $divisor  →  ${format.format(rawValue)}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Order: divide → notation → decimals and grouping → template',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> _buildOptions() => _prioritizePresetOptions([
     if (_preset == _BarLabPreset.race)
       OptionSection(
@@ -1758,8 +1880,8 @@ class _BarLabPageState extends State<BarLabPage> {
             value: _raceController.config.durationPerFrame.inMilliseconds
                 .toDouble(),
             min: 50,
-            max: 1000,
-            divisions: 19,
+            max: 2000,
+            divisions: 39,
             suffix: 'ms',
             decimalPlaces: 0,
             onChanged: (value) => _raceController.replaceConfig(
@@ -1774,10 +1896,12 @@ class _BarLabPageState extends State<BarLabPage> {
             label: 'Playback speed',
             value: _raceController.speed,
             min: 0.25,
-            max: 3,
-            divisions: 11,
+            max: 10,
+            divisions: 39,
             suffix: '×',
             decimalPlaces: 2,
+            description:
+                'Scale playback from quarter speed to 10× in 0.25× steps.',
             onChanged: _raceController.setSpeed,
           ),
           EnumOption<BarRaceAxisRange>(
@@ -1871,6 +1995,20 @@ class _BarLabPageState extends State<BarLabPage> {
               );
             },
           ),
+          EnumOption<BarLabelCollisionPolicy>(
+            key: const ValueKey('bar-race-label-collision'),
+            label: 'Transition label behavior',
+            value: _labelCollisionPolicy,
+            values: BarLabelCollisionPolicy.values,
+            labelBuilder: (value) => switch (value) {
+              BarLabelCollisionPolicy.none => 'Keep outside · allow overlap',
+              BarLabelCollisionPolicy.reposition => 'Allow inside fallback',
+              BarLabelCollisionPolicy.hide => 'Keep outside · hide collision',
+            },
+            description:
+                'Controls whether outside-end values remain outside while ranks cross. The default preserves placement and briefly hides only a colliding label.',
+            onChanged: (value) => setState(() => _labelCollisionPolicy = value),
+          ),
           EnumOption<BarRaceValueNotation>(
             key: const ValueKey('bar-race-value-notation'),
             label: 'Bar value notation',
@@ -1892,11 +2030,11 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
           TextOption(
             key: const ValueKey('bar-race-value-pattern'),
-            label: 'Bar value pattern',
+            label: 'Bar value template',
             value: _raceController.config.valueFormat.pattern,
             hint: '{value}M',
             description:
-                'Use {value} wherever the formatted number should appear.',
+                'Place {value} where the formatted number belongs. Examples: {value}M, \${value}, or {value} people.',
             onChanged: (value) {
               if (value.isEmpty || !value.contains('{value}')) return;
               _raceController.replaceConfig(
@@ -1939,11 +2077,11 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
           TextOption(
             key: const ValueKey('bar-race-value-scale'),
-            label: 'Bar value divisor',
+            label: 'Scale divisor',
             value: _raceController.config.valueFormat.scale.toString(),
             hint: '1',
             description:
-                'Divide raw values before formatting; use 1000 for values stored in thousands.',
+                'Divide the raw value before notation and decimals. Use 1 for no scaling, 1000 to convert thousands to millions.',
             onChanged: (value) {
               final scale = double.tryParse(value);
               if (scale == null || !scale.isFinite || scale <= 0) return;
@@ -1970,6 +2108,7 @@ class _BarLabPageState extends State<BarLabPage> {
               preserveFrame: true,
             ),
           ),
+          _buildRaceValueFormatPreview(),
           BoolOption(
             key: const ValueKey('bar-race-show-total'),
             label: 'Show total',
@@ -4242,6 +4381,7 @@ class _BarLabPageState extends State<BarLabPage> {
       _raceController
         ..replaceConfig(_buildPopulationRaceConfig())
         ..setSpeed(1);
+      _seekRaceToDefaultFrame();
     }
     _showcaseRandomizer.clear();
     _interactionGroupController.reset();
@@ -4680,11 +4820,11 @@ class _BarLabPageState extends State<BarLabPage> {
         _showGradient = false;
         _showBorder = false;
         _showLabels = true;
-        _labelPosition = BarLabelPosition.outsideEnd;
+        _labelPosition = BarLabelPosition.rangeEnds;
         _labelRotationMode = BarLabelRotationMode.fixed;
         _labelRotationDegrees = 0;
-        _labelEdgeOffset = 6;
-        _labelCollisionPolicy = BarLabelCollisionPolicy.reposition;
+        _labelEdgeOffset = 12;
+        _labelCollisionPolicy = BarLabelCollisionPolicy.hide;
         _labelCollisionPadding = 2;
         _showLabelBackground = false;
         _showLabelCallouts = false;
@@ -4886,7 +5026,7 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.drilldown =>
       'Activate a bar to replace the effective dataset, then use the accessible breadcrumb to return to any ancestor.',
     _BarLabPreset.race =>
-      'Stable country identities reorder across time while playback, seeking, top-N membership, and the value axis remain inspectable.',
+      'Illustrative stress data keeps country identities stable: close ranks exchange often and one off-screen challenger climbs into first place.',
     _BarLabPreset.config =>
       'Every visible series, category, benchmark, uncertainty interval, style, and label is rebuilt from the public tool JSON contract.',
     _BarLabPreset.patterns =>

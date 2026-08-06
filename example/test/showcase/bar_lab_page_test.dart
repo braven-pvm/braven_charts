@@ -1506,7 +1506,7 @@ void main() {
 
     expect(find.text('Population by country'), findsOneWidget);
     expect(find.byKey(const ValueKey('bar-race-period')), findsOneWidget);
-    expect(find.text('January 1960'), findsOneWidget);
+    expect(find.text('Dec 2006'), findsOneWidget);
     expect(find.text('Continuous leader headroom'), findsOneWidget);
     var chart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('bar-lab-chart')),
@@ -1516,14 +1516,72 @@ void main() {
     var race = chart.series.single as BarChartSeries;
     expect(race.orientation, BarOrientation.horizontal);
     expect(race.barStyle.animationMode, BarAnimationMode.none);
-    expect(race.points, hasLength(12));
+    expect(race.points, hasLength(15));
+    expect(race.labelStyle.position, BarLabelPosition.rangeEnds);
+    expect(race.labelStyle.padding, 12);
+    expect(
+      race.labelStyle.collisionPolicy,
+      BarLabelCollisionPolicy.hide,
+      reason: 'rank transitions must not move outside labels inside bars',
+    );
     expect(race.categorySpacing, 1);
-    expect(race.points.map((point) => point.pointKey).toSet(), hasLength(12));
+    expect(race.labelStyle.formatter!(race.points.first), endsWith(' M'));
+    expect(race.points.map((point) => point.pointKey).toSet(), hasLength(15));
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(15));
+    expect(
+      chart.xAxisConfig?.categoryAxis?.autoViewport,
+      isFalse,
+      reason:
+          'topCount is the race viewport; category auto-viewport must not hide additional ranks on first render',
+    );
     expect(
       find.byKey(const ValueKey('bar-race-period-position')),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('bar-race-period-color')), findsOneWidget);
+    final initialPeriodIndicator = tester.widget<BarRacePeriodIndicator>(
+      find.byKey(const ValueKey('bar-race-period')),
+    );
+    final initialRaceConfig = initialPeriodIndicator.controller.config;
+    expect(initialRaceConfig.topCount, 15);
+    expect(
+      initialRaceConfig.durationPerFrame,
+      const Duration(milliseconds: 100),
+    );
+    expect(initialPeriodIndicator.controller.speed, 1);
+    expect(initialRaceConfig.periodFormat.pattern, '{MMM} {yyyy}');
+    expect(
+      initialRaceConfig.periodStyle.position,
+      BarRacePeriodPosition.bottomRight,
+    );
+    expect(initialRaceConfig.periodStyle.fontSize, 44);
+    expect(initialRaceConfig.periodStyle.color, const Color(0xFF38BDF8));
+    expect(initialRaceConfig.periodStyle.fontWeight, FontWeight.w700);
+    expect(initialRaceConfig.periodStyle.opacity, 0.90);
+    expect(initialRaceConfig.periodStyle.inset, 64);
+    expect(initialRaceConfig.periodStyle.supportingTextSize, 16);
+
+    final frameDuration = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-race-frame-duration')),
+    );
+    expect(frameDuration.value, 100);
+    expect(frameDuration.min, 50);
+    expect(frameDuration.max, 2000);
+    expect(frameDuration.divisions, 39);
+    expect(initialRaceConfig.valueFormat.pattern, '{value} M');
+    expect(initialRaceConfig.valueFormat.decimalPlaces, 3);
+    expect(initialRaceConfig.valueFormat.useGrouping, isTrue);
+    expect(initialRaceConfig.valueFormat.format(389.0974), '389.097 M');
+    expect(
+      initialRaceConfig.totalFormat.pattern,
+      '{value} M combined population',
+    );
+    expect(initialRaceConfig.totalFormat.decimalPlaces, 0);
+    expect(initialRaceConfig.totalFormat.useGrouping, isTrue);
+    expect(
+      initialRaceConfig.totalFormat.format(5370.2),
+      '5,370 M combined population',
+    );
     expect(
       find.byKey(const ValueKey('bar-options-race-formatting')),
       findsOneWidget,
@@ -1545,6 +1603,18 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey('bar-race-label-collision')),
+      findsOneWidget,
+    );
+    final speed = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-race-speed')),
+    );
+    expect(speed.min, 0.25);
+    expect(speed.max, 10);
+    expect(speed.divisions, 39);
+    speed.onChanged(10);
+    await tester.pump();
+    expect(
       race.points.every(
         (point) => point.metadata?[barRaceCategoryIdMetadataKey] is String,
       ),
@@ -1553,12 +1623,42 @@ void main() {
 
     tester
         .widget<TextOption>(
-          find.byKey(const ValueKey('bar-race-period-pattern-monthYearLong')),
+          find.byKey(const ValueKey('bar-race-period-pattern-monthYearShort')),
         )
         .onChanged('{MMM} {yy}');
     await tester.pump();
     final periodIndicator = tester.widget<BarRacePeriodIndicator>(
       find.byKey(const ValueKey('bar-race-period')),
+    );
+    expect(periodIndicator.controller.speed, 10);
+    List<String> rankOrder(BarRaceFrame frame) {
+      final ranked = frame.values.entries.toList()
+        ..sort((left, right) => right.value.compareTo(left.value));
+      return ranked
+          .take(periodIndicator.controller.config.topCount)
+          .map((entry) => entry.key)
+          .toList(growable: false);
+    }
+
+    var monthlyRankChanges = 0;
+    final raceFrames = periodIndicator.controller.config.frames;
+    expect(rankOrder(raceFrames.first), isNot(contains('cod')));
+    final challengerEntryFrame = raceFrames.indexWhere(
+      (frame) => rankOrder(frame).contains('cod'),
+    );
+    expect(challengerEntryFrame, greaterThan(0));
+    expect(challengerEntryFrame, lessThan(raceFrames.length - 1));
+    expect(rankOrder(raceFrames.last).first, 'cod');
+    for (var index = 1; index < raceFrames.length; index++) {
+      if (rankOrder(raceFrames[index - 1]).join('|') !=
+          rankOrder(raceFrames[index]).join('|')) {
+        monthlyRankChanges++;
+      }
+    }
+    expect(
+      monthlyRankChanges,
+      greaterThanOrEqualTo(150),
+      reason: 'the showcase race should visibly exchange close ranks often',
     );
     expect(
       periodIndicator.controller.config.periodFormat.pattern,
@@ -1568,15 +1668,47 @@ void main() {
       periodIndicator.controller.config.periodFormat.format(
         periodIndicator.controller.currentFrame,
       ),
-      'Jan 60',
+      'Dec 06',
     );
-    expect(find.text('Jan 60'), findsOneWidget);
+    expect(find.text('Dec 06'), findsOneWidget);
+
+    final transitionLabels = tester.widget<EnumOption<BarLabelCollisionPolicy>>(
+      find.byKey(const ValueKey('bar-race-label-collision')),
+    );
+    transitionLabels.onChanged(BarLabelCollisionPolicy.reposition);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (chart.series.single as BarChartSeries).labelStyle.collisionPolicy,
+      BarLabelCollisionPolicy.reposition,
+    );
+    tester
+        .widget<EnumOption<BarLabelCollisionPolicy>>(
+          find.byKey(const ValueKey('bar-race-label-collision')),
+        )
+        .onChanged(BarLabelCollisionPolicy.hide);
+    await tester.pump();
 
     tester
         .widget<TextOption>(
           find.byKey(const ValueKey('bar-race-value-pattern')),
         )
         .onChanged('{value} million');
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-race-value-decimals')),
+        )
+        .onChanged(3);
+    tester
+        .widget<TextOption>(find.byKey(const ValueKey('bar-race-value-scale')))
+        .onChanged('2');
+    tester
+        .widget<BoolOption>(
+          find.byKey(const ValueKey('bar-race-value-trim-zeros')),
+        )
+        .onChanged(false);
     tester
         .widget<TextOption>(
           find.byKey(const ValueKey('bar-race-total-pattern')),
@@ -1589,6 +1721,20 @@ void main() {
     race = chart.series.single as BarChartSeries;
     expect(race.labelStyle.formatter!(race.points.first), endsWith(' million'));
     expect(find.textContaining('M people'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bar-race-value-preview')),
+        matching: find.textContaining('÷ 2'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bar-race-value-preview')),
+        matching: find.textContaining('million'),
+      ),
+      findsOneWidget,
+    );
 
     tester
         .widget<IntSliderOption>(
@@ -1616,7 +1762,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('bar-race-next')));
     await tester.pump();
-    expect(find.text('Feb 60'), findsOneWidget);
+    expect(find.text('Jan 07'), findsOneWidget);
     chart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('bar-lab-chart')),
     );
@@ -1636,7 +1782,7 @@ void main() {
     race = chart.series.single as BarChartSeries;
     final finalRankOrder = race.points.map((point) => point.pointKey).toList();
     expect(finalRankOrder, isNot(initialRankOrder));
-    expect(finalRankOrder.first, 'ind');
+    expect(finalRankOrder.first, 'cod');
 
     await tester.tap(find.byKey(const ValueKey('bar-race-play-pause')));
     await tester.pump();
