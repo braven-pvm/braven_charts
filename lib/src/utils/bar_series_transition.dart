@@ -1,9 +1,13 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'package:flutter/material.dart';
+
 import '../models/bar_chart_style.dart';
+import '../models/bar_race.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/segment_style.dart';
 
 /// Pure interpolation helpers for canonical bar-series transitions.
 ///
@@ -67,12 +71,24 @@ abstract final class BarSeriesTransition {
     required BarChartSeries next,
   }) {
     final nextIndexByX = <double, int>{};
+    final nextIndexByStableIdentity = <Object, int>{};
     for (var index = 0; index < next.points.length; index++) {
-      nextIndexByX.putIfAbsent(next.points[index].x, () => index);
+      final point = next.points[index];
+      nextIndexByX.putIfAbsent(point.x, () => index);
+      final identity = _stableIdentity(point);
+      if (identity != null) {
+        nextIndexByStableIdentity.putIfAbsent(identity, () => index);
+      }
     }
     final exitingIndices = <int>[
       for (var index = 0; index < previous.points.length; index++)
-        if (!nextIndexByX.containsKey(previous.points[index].x)) index,
+        if (_matchingPointIndex(
+              previous.points[index],
+              indexByStableIdentity: nextIndexByStableIdentity,
+              indexByX: nextIndexByX,
+            ) ==
+            null)
+          index,
     ];
     if (exitingIndices.isEmpty) return next;
 
@@ -82,7 +98,11 @@ abstract final class BarSeriesTransition {
     );
     int? nextAnchor;
     for (var index = previous.points.length - 1; index >= 0; index--) {
-      final matchingNextIndex = nextIndexByX[previous.points[index].x];
+      final matchingNextIndex = _matchingPointIndex(
+        previous.points[index],
+        indexByStableIdentity: nextIndexByStableIdentity,
+        indexByX: nextIndexByX,
+      );
       if (matchingNextIndex != null) {
         nextAnchor = matchingNextIndex;
       } else {
@@ -147,7 +167,12 @@ abstract final class BarSeriesTransition {
       final baseline = previous.layoutMode == BarLayoutMode.waterfall
           ? 0.0
           : previous.rangeStartValueFor(previousIndex);
-      points.add(previousPoint.copyWith(y: baseline));
+      points.add(
+        previousPoint.copyWith(
+          y: baseline,
+          pointStyle: _pointStyleWithOpacity(previousPoint.pointStyle, 0),
+        ),
+      );
       if (hasRangeStarts) {
         rangeStarts.add(
           previousIndex < previous.rangeStartValues.length
@@ -203,10 +228,15 @@ abstract final class BarSeriesTransition {
     final animatedErrorUpper = <double?>[];
     final sourceIndexByIdentity = <(double, String?), int>{};
     final sourceIndexByX = <double, int>{};
+    final sourceIndexByStableIdentity = <Object, int>{};
     for (var index = 0; index < from.points.length; index++) {
       final point = from.points[index];
       sourceIndexByIdentity.putIfAbsent((point.x, point.label), () => index);
       sourceIndexByX.putIfAbsent(point.x, () => index);
+      final stableIdentity = _stableIdentity(point);
+      if (stableIdentity != null) {
+        sourceIndexByStableIdentity.putIfAbsent(stableIdentity, () => index);
+      }
     }
     for (var index = 0; index < to.points.length; index++) {
       final pointProgress = _pointProgress(
@@ -216,20 +246,28 @@ abstract final class BarSeriesTransition {
         motion: to.barStyle.motion,
       );
       final targetPoint = to.points[index];
-      final sourceIndex =
-          sourceIndexByIdentity[(targetPoint.x, targetPoint.label)] ??
-          sourceIndexByX[targetPoint.x];
+      final stableIdentity = _stableIdentity(targetPoint);
+      final sourceIndex = stableIdentity != null
+          ? sourceIndexByStableIdentity[stableIdentity]
+          : sourceIndexByIdentity[(targetPoint.x, targetPoint.label)] ??
+                sourceIndexByX[targetPoint.x];
       final sourcePoint = sourceIndex == null
           ? targetPoint.copyWith(
               y: to.layoutMode == BarLayoutMode.waterfall
                   ? 0
                   : to.rangeStartValueFor(index),
+              pointStyle: _pointStyleWithOpacity(targetPoint.pointStyle, 0),
             )
           : from.points[sourceIndex];
       animatedPoints.add(
         targetPoint.copyWith(
           x: _lerp(sourcePoint.x, targetPoint.x, pointProgress),
           y: _lerp(sourcePoint.y, targetPoint.y, pointProgress),
+          pointStyle: _lerpPointStyle(
+            sourcePoint.pointStyle,
+            targetPoint.pointStyle,
+            pointProgress,
+          ),
         ),
       );
 
@@ -294,6 +332,39 @@ abstract final class BarSeriesTransition {
 
   static double _lerp(double from, double to, double t) =>
       from + (to - from) * t;
+
+  static PointStyle? _pointStyleWithOpacity(PointStyle? style, double opacity) {
+    final color = style?.color;
+    if (color == null) return style;
+    return style!.copyWith(color: color.withValues(alpha: opacity));
+  }
+
+  static PointStyle? _lerpPointStyle(
+    PointStyle? from,
+    PointStyle? to,
+    double progress,
+  ) {
+    final fromColor = from?.color;
+    final toColor = to?.color;
+    if (fromColor == null && toColor == null) return to;
+    final start = fromColor ?? toColor!.withValues(alpha: 0);
+    final end = toColor ?? fromColor!.withValues(alpha: 0);
+    return (to ?? from)!.copyWith(color: Color.lerp(start, end, progress));
+  }
+
+  static Object? _stableIdentity(ChartDataPoint point) =>
+      point.pointKey ?? point.metadata?[barRaceCategoryIdMetadataKey];
+
+  static int? _matchingPointIndex(
+    ChartDataPoint point, {
+    required Map<Object, int> indexByStableIdentity,
+    required Map<double, int> indexByX,
+  }) {
+    final identity = _stableIdentity(point);
+    return identity != null
+        ? indexByStableIdentity[identity]
+        : indexByX[point.x];
+  }
 
   static double _pointProgress({
     required double progress,

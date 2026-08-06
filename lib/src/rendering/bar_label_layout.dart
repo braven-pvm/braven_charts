@@ -3,8 +3,77 @@
 
 import 'dart:ui';
 
+import 'dart:math' as math;
+
 import '../models/bar_chart_style.dart';
 import 'bar_geometry.dart';
+
+/// Resolved rotation and transformed bounds for one bar label box.
+class BarLabelTransform {
+  const BarLabelTransform({
+    required this.localSize,
+    required this.visualSize,
+    required this.radians,
+  });
+
+  final Size localSize;
+  final Size visualSize;
+  final double radians;
+
+  /// Paints [paintLocal] in local label coordinates, centred in [visualRect].
+  void paint(Canvas canvas, Rect visualRect, void Function() paintLocal) {
+    canvas.save();
+    canvas.translate(visualRect.center.dx, visualRect.center.dy);
+    canvas.rotate(radians);
+    canvas.translate(-localSize.width / 2, -localSize.height / 2);
+    paintLocal();
+    canvas.restore();
+  }
+}
+
+/// Resolves the label angle and its axis-aligned collision bounds.
+BarLabelTransform resolveBarLabelTransform({
+  required Size localSize,
+  required BarLabelRotationMode mode,
+  required double rotationDegrees,
+  Size? fitSize,
+}) {
+  var radians = rotationDegrees * math.pi / 180;
+  var visualSize = _rotatedSize(localSize, radians);
+  if (mode == BarLabelRotationMode.autoFit &&
+      fitSize != null &&
+      !_fitsWithin(visualSize, fitSize)) {
+    final perpendicular = radians + math.pi / 2;
+    final perpendicularSize = _rotatedSize(localSize, perpendicular);
+    if (_fitsWithin(perpendicularSize, fitSize) ||
+        _overflow(perpendicularSize, fitSize) <
+            _overflow(visualSize, fitSize)) {
+      radians = perpendicular;
+      visualSize = perpendicularSize;
+    }
+  }
+  return BarLabelTransform(
+    localSize: localSize,
+    visualSize: visualSize,
+    radians: radians,
+  );
+}
+
+Size _rotatedSize(Size size, double radians) {
+  final cosine = math.cos(radians).abs();
+  final sine = math.sin(radians).abs();
+  return Size(
+    size.width * cosine + size.height * sine,
+    size.width * sine + size.height * cosine,
+  );
+}
+
+bool _fitsWithin(Size size, Size available) =>
+    size.width <= available.width && size.height <= available.height;
+
+double _overflow(Size size, Size available) =>
+    math.max(0, size.width - available.width) +
+    math.max(0, size.height - available.height);
 
 /// Places an outside-end label beyond the visible value mark.
 ///

@@ -1382,6 +1382,309 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('rotates value labels independently from category labels', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('bar-lab-preset-rotatedLabels')),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final series = chart.series.single as BarChartSeries;
+    expect(series.labelStyle.rotationMode, BarLabelRotationMode.fixed);
+    expect(series.labelStyle.rotationDegrees, -90);
+    expect(chart.xAxisConfig?.categoryAxis?.labelRotationDegrees, -45);
+    expect(series.points, hasLength(12));
+
+    final angle = tester.widget<SliderOption>(
+      find.byKey(const ValueKey('bar-lab-label-rotation-degrees')),
+    );
+    angle.onChanged(90);
+    await tester.pump();
+    final updated = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (updated.series.single as BarChartSeries).labelStyle.rotationDegrees,
+      90,
+    );
+  });
+
+  testWidgets('drills through point metadata and navigates by breadcrumb', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-drilldown')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Granola recipe · Ingredients'), findsOneWidget);
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final rootSeries = chart.series.single as BarChartSeries;
+    chart.onPointTap!(rootSeries.points.first, rootSeries.id);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Granola recipe · Rolled oats'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-drill-back')), findsOneWidget);
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect((chart.series.single as BarChartSeries).points, hasLength(3));
+
+    await tester.tap(find.text('Ingredients'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Granola recipe · Ingredients'), findsOneWidget);
+  });
+
+  testWidgets('shows lazy drill loading and hydrates the resolved level', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-drilldown')));
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final root = chart.series.single as BarChartSeries;
+    chart.onPointTap!(root.points[3], root.id);
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(
+      find.textContaining('Granola recipe · Dried berries'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final berries = chart.series.single as BarChartSeries;
+    chart.onPointTap!(berries.points.first, berries.id);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Granola recipe · Berry sugars'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the population race clock unified after inspector edits', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-race')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Population by country'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-race-period')), findsOneWidget);
+    expect(find.text('January 1960'), findsOneWidget);
+    expect(find.text('Continuous leader headroom'), findsOneWidget);
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(chart.theme?.animationTheme.dataUpdateDuration, Duration.zero);
+    expect(chart.theme?.animationTheme.dataUpdateCurve, Curves.linear);
+    var race = chart.series.single as BarChartSeries;
+    expect(race.orientation, BarOrientation.horizontal);
+    expect(race.barStyle.animationMode, BarAnimationMode.none);
+    expect(race.points, hasLength(12));
+    expect(race.categorySpacing, 1);
+    expect(race.points.map((point) => point.pointKey).toSet(), hasLength(12));
+    expect(
+      find.byKey(const ValueKey('bar-race-period-position')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('bar-race-period-color')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('bar-options-race-formatting')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-period-preset')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-value-notation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-value-decimals')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('bar-race-total-notation')),
+      findsOneWidget,
+    );
+    expect(
+      race.points.every(
+        (point) => point.metadata?[barRaceCategoryIdMetadataKey] is String,
+      ),
+      isTrue,
+    );
+
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-period-pattern-monthYearLong')),
+        )
+        .onChanged('{MMM} {yy}');
+    await tester.pump();
+    final periodIndicator = tester.widget<BarRacePeriodIndicator>(
+      find.byKey(const ValueKey('bar-race-period')),
+    );
+    expect(
+      periodIndicator.controller.config.periodFormat.pattern,
+      '{MMM} {yy}',
+    );
+    expect(
+      periodIndicator.controller.config.periodFormat.format(
+        periodIndicator.controller.currentFrame,
+      ),
+      'Jan 60',
+    );
+    expect(find.text('Jan 60'), findsOneWidget);
+
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-value-pattern')),
+        )
+        .onChanged('{value} million');
+    tester
+        .widget<TextOption>(
+          find.byKey(const ValueKey('bar-race-total-pattern')),
+        )
+        .onChanged('{value}M people');
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.labelStyle.formatter!(race.points.first), endsWith(' million'));
+    expect(find.textContaining('M people'), findsOneWidget);
+
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-race-top-count')),
+        )
+        .onChanged(18);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('bar-race-frame-duration')),
+        )
+        .onChanged(50);
+    tester
+        .widget<SliderOption>(find.byKey(const ValueKey('bar-race-speed')))
+        .onChanged(1.75);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.points, hasLength(18));
+
+    final initialRankOrder = race.points
+        .map((point) => point.pointKey)
+        .toList();
+
+    await tester.tap(find.byKey(const ValueKey('bar-race-next')));
+    await tester.pump();
+    expect(find.text('Feb 60'), findsOneWidget);
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    expect(race.points, hasLength(18));
+
+    final seek = tester.widget<Slider>(
+      find.byKey(const ValueKey('bar-race-seek')),
+    );
+    seek.onChanged!(1);
+    await tester.pump();
+    expect(find.text('Jan 24'), findsOneWidget);
+
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    race = chart.series.single as BarChartSeries;
+    final finalRankOrder = race.points.map((point) => point.pointKey).toList();
+    expect(finalRankOrder, isNot(initialRankOrder));
+    expect(finalRankOrder.first, 'ind');
+
+    await tester.tap(find.byKey(const ValueKey('bar-race-play-pause')));
+    await tester.pump();
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+
+    var playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final frameSeries = playingChart.series;
+    final frameValues = (frameSeries.single as BarChartSeries).points
+        .map((point) => point.y)
+        .toList();
+    await tester.pump(const Duration(milliseconds: 10));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (playingChart.series.single as BarChartSeries).points
+          .map((point) => point.y)
+          .toList(),
+      frameValues,
+      reason: 'the initial frame remains settled until the first boundary',
+    );
+
+    await tester.pump(const Duration(milliseconds: 30));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    final nextFrameSeries = playingChart.series;
+    final transitionStartValues = (nextFrameSeries.single as BarChartSeries)
+        .points
+        .map((point) => point.y)
+        .toList();
+    await tester.pump(const Duration(milliseconds: 10));
+    playingChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('bar-lab-chart')),
+    );
+    expect(
+      (playingChart.series.single as BarChartSeries).points
+          .map((point) => point.y)
+          .toList(),
+      isNot(transitionStartValues),
+      reason:
+          'inspector edits must not stop values interpolating on the race clock',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('rebuilds advanced bars through the public tool contract', (
     tester,
   ) async {

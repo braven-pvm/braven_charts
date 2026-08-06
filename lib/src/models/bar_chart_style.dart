@@ -308,13 +308,8 @@ class BarBorderStyle {
   final Color color;
   final double width;
 
-  BarBorderStyle copyWith({
-    Color? color,
-    double? width,
-  }) => BarBorderStyle(
-    color: color ?? this.color,
-    width: width ?? this.width,
-  );
+  BarBorderStyle copyWith({Color? color, double? width}) =>
+      BarBorderStyle(color: color ?? this.color, width: width ?? this.width);
 
   @override
   bool operator ==(Object other) =>
@@ -574,7 +569,9 @@ class BarTrackStyle {
     color: color ?? this.color,
     value: clearValue ? null : (value ?? this.value),
     opacity: opacity ?? this.opacity,
-    cornerRadius: clearCornerRadius ? null : (cornerRadius ?? this.cornerRadius),
+    cornerRadius: clearCornerRadius
+        ? null
+        : (cornerRadius ?? this.cornerRadius),
     border: clearBorder ? null : (border ?? this.border),
   );
 
@@ -999,6 +996,16 @@ enum BarLabelCollisionPolicy {
   hide,
 }
 
+/// Controls how a bar value label chooses its painted angle.
+enum BarLabelRotationMode {
+  /// Always use [BarLabelStyle.rotationDegrees].
+  fixed,
+
+  /// Prefer [BarLabelStyle.rotationDegrees], but use its perpendicular angle
+  /// when that is the only orientation that fits the available bar slot.
+  autoFit,
+}
+
 /// Optional connector drawn between a displaced label and its bar value end.
 @chartSurface
 class BarLabelCalloutStyle {
@@ -1055,6 +1062,8 @@ class BarLabelStyle {
     this.fontSize = 10.0,
     this.fontWeight = FontWeight.w600,
     this.showUnit = false,
+    this.rotationMode = BarLabelRotationMode.fixed,
+    this.rotationDegrees = 0.0,
     this.padding = 4.0,
     this.collisionPolicy = BarLabelCollisionPolicy.none,
     this.plotEdgeAware = true,
@@ -1084,6 +1093,12 @@ class BarLabelStyle {
   final double fontSize;
   final FontWeight fontWeight;
   final bool showUnit;
+
+  /// Whether the authored rotation is fixed or may turn perpendicular to fit.
+  final BarLabelRotationMode rotationMode;
+
+  /// Clockwise rotation in degrees around the centre of the label box.
+  final double rotationDegrees;
 
   /// Minimum logical-pixel gap between an end label and the bar edge.
   ///
@@ -1125,6 +1140,8 @@ class BarLabelStyle {
     double? fontSize,
     FontWeight? fontWeight,
     bool? showUnit,
+    BarLabelRotationMode? rotationMode,
+    double? rotationDegrees,
     double? padding,
     BarLabelCollisionPolicy? collisionPolicy,
     bool? plotEdgeAware,
@@ -1149,6 +1166,8 @@ class BarLabelStyle {
     fontSize: fontSize ?? this.fontSize,
     fontWeight: fontWeight ?? this.fontWeight,
     showUnit: showUnit ?? this.showUnit,
+    rotationMode: rotationMode ?? this.rotationMode,
+    rotationDegrees: rotationDegrees ?? this.rotationDegrees,
     padding: padding ?? this.padding,
     collisionPolicy: collisionPolicy ?? this.collisionPolicy,
     plotEdgeAware: plotEdgeAware ?? this.plotEdgeAware,
@@ -1176,6 +1195,8 @@ class BarLabelStyle {
           other.fontSize == fontSize &&
           other.fontWeight == fontWeight &&
           other.showUnit == showUnit &&
+          other.rotationMode == rotationMode &&
+          other.rotationDegrees == rotationDegrees &&
           other.padding == padding &&
           other.collisionPolicy == collisionPolicy &&
           other.plotEdgeAware == plotEdgeAware &&
@@ -1190,7 +1211,7 @@ class BarLabelStyle {
           other.formatter == formatter;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     show,
     position,
     valueMode,
@@ -1198,6 +1219,8 @@ class BarLabelStyle {
     fontSize,
     fontWeight,
     showUnit,
+    rotationMode,
+    rotationDegrees,
     padding,
     collisionPolicy,
     plotEdgeAware,
@@ -1210,7 +1233,7 @@ class BarLabelStyle {
     callout,
     showStackTotal,
     formatter,
-  );
+  ]);
 }
 
 bool _listEquals<T>(List<T>? left, List<T>? right) {

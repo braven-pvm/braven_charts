@@ -93,6 +93,8 @@ const List<String> _codecFiles = <String>[
   'chart_theme_document_codec.dart',
   'chart_annotation_document_codec.dart',
   'donut_center_content_document_codec.dart',
+  'bar_drilldown_config_codec.dart',
+  'bar_race_config_codec.dart',
 ];
 
 String _artifactPath(String file) =>

@@ -30,6 +30,8 @@ export 'src/fluent/generated/artifacts/chart_document_extractor_fluent.dart';
 export 'src/fluent/generated/models/annotation_style_fluent.dart';
 export 'src/fluent/generated/models/auto_scroll_config_fluent.dart';
 export 'src/fluent/generated/models/bar_chart_style_fluent.dart';
+export 'src/fluent/generated/models/bar_drilldown_fluent.dart';
+export 'src/fluent/generated/models/bar_race_fluent.dart';
 export 'src/fluent/generated/models/candlestick_chart_series_fluent.dart';
 export 'src/fluent/generated/models/candlestick_chart_style_fluent.dart';
 export 'src/fluent/generated/models/candlestick_data_point_fluent.dart';

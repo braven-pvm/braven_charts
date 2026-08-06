@@ -304,6 +304,7 @@ void main() {
         const BarChartSeries(
           id: 'bar',
           barWidthPercent: 0.7,
+          categorySpacing: 1,
           points: [ChartDataPoint(x: 0, y: 4)],
         ),
         PieChartSeries.fromMap(id: 'pie', values: const {'Core': 5}),
@@ -359,6 +360,9 @@ void main() {
             ),
           );
           expect(generated.source, contains('offsetX: 4.0,'));
+        }
+        if (item is BarChartSeries) {
+          expect(generated.source, contains('categorySpacing: 1.0,'));
         }
       }
     });
@@ -1588,6 +1592,8 @@ void main() {
               labelStyle: BarLabelStyle(
                 show: true,
                 position: BarLabelPosition.outsideEnd,
+                rotationMode: BarLabelRotationMode.autoFit,
+                rotationDegrees: 90,
               ),
             ),
           ),
@@ -1604,6 +1610,8 @@ void main() {
         'errorBarStyle:',
         'labelStyle: BarLabelStyle(',
         'position: BarLabelPosition.outsideEnd',
+        'rotationMode: BarLabelRotationMode.autoFit',
+        'rotationDegrees: 90.0',
       ]) {
         expect(generated.source, contains(source));
       }

@@ -102,6 +102,32 @@ const Map<String, String> _classesNotEmittedBySource = <String, String>{
       'persist this component, so the hydrated ChartTheme never carries a '
       'non-default value and the emitter has nothing to write. (The '
       'per-chart CartesianValueSummaryConfig IS emitted via _emitValueSummary.)',
+  'BarDrillNode':
+      'Drill hierarchy nodes are persisted through BarDrilldownConfigCodec and '
+      'drive a controller outside HydratedChartConfiguration; chart source '
+      'generation therefore has no hierarchy node to reconstruct.',
+  'BarDrilldownConfig':
+      'Drill-down is an orchestration config around successive independent '
+      'charts. It has a dedicated portable codec and is intentionally outside '
+      'the single-chart ChartConfigDartEmitter input graph.',
+  'BarRaceCategory':
+      'Race category identity belongs to BarRaceConfigCodec and its playback '
+      'controller, not to one hydrated chart snapshot emitted as Dart source.',
+  'BarRaceFrame':
+      'Race frames are playback input persisted by BarRaceConfigCodec; the '
+      'chart source emitter only sees the currently projected frame series.',
+  'BarRaceConfig':
+      'Bar race is a time-sequenced chart orchestration with a dedicated '
+      'portable codec and controller, outside the single-chart source graph.',
+  'BarRacePeriodFormat':
+      'Race period formatting is playback chrome persisted by '
+      'BarRaceConfigCodec; it is outside the hydrated single-chart source graph.',
+  'BarRacePeriodStyle':
+      'The race period indicator is playback chrome persisted by '
+      'BarRaceConfigCodec; it is not part of a hydrated single-chart snapshot.',
+  'BarRaceValueFormat':
+      'Race value and total formatting belongs to BarRaceConfigCodec playback '
+      'orchestration, outside the hydrated single-chart source graph.',
 };
 
 /// Individual modelled properties the emitter does not name, inside classes it

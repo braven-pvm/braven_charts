@@ -952,9 +952,9 @@ class SeriesElement implements DataHitElement {
     final effectiveTransform = _currentTransform.copyWith(
       transposed: currentSeries.orientation == BarOrientation.horizontal,
     );
-    final categorySpacing = viewportIndex.categorySpacingPixels(
-      effectiveTransform,
-    );
+    final categorySpacing = currentSeries.categorySpacing == null
+        ? viewportIndex.categorySpacingPixels(effectiveTransform)
+        : currentSeries.categorySpacing! * effectiveTransform.pixelsPerDataX;
     final passiveCategoryFactor = math.max(
       1,
       math.max(
@@ -6185,7 +6185,9 @@ class SeriesElement implements DataHitElement {
             gradient.stops,
           );
         } else {
-          barPaint.color = barColor.withValues(alpha: pointOpacity);
+          barPaint.color = barColor.withValues(
+            alpha: barColor.a * pointOpacity,
+          );
         }
         canvas.drawRRect(geometry.rrect, barPaint);
 
@@ -6397,16 +6399,26 @@ class SeriesElement implements DataHitElement {
       config.fontSize,
       config.fontWeight,
     );
+    final provisionalTransform = resolveBarLabelTransform(
+      localSize: provisionalPainter.size,
+      mode: config.rotationMode,
+      rotationDegrees: config.rotationDegrees,
+      fitSize: geometry.rect.size,
+    );
     final insideEndOffset = _barLabelInsideEndOffset(series, geometry);
     final fitsInside =
         series.lollipopStyle == null &&
         (series.orientation == BarOrientation.horizontal
-            ? geometry.rect.height >= provisionalPainter.height + 4 &&
+            ? geometry.rect.height >=
+                      provisionalTransform.visualSize.height + 4 &&
                   geometry.rect.width >=
-                      provisionalPainter.width + insideEndOffset * 2
+                      provisionalTransform.visualSize.width +
+                          insideEndOffset * 2
             : geometry.rect.height >=
-                      provisionalPainter.height + insideEndOffset * 2 &&
-                  geometry.rect.width >= provisionalPainter.width + 4);
+                      provisionalTransform.visualSize.height +
+                          insideEndOffset * 2 &&
+                  geometry.rect.width >=
+                      provisionalTransform.visualSize.width + 4);
     final positions = switch (config.position) {
       BarLabelPosition.auto =>
         fitsInside
@@ -6493,13 +6505,19 @@ class SeriesElement implements DataHitElement {
         config.backgroundColor != null ||
         config.borderColor != null && config.borderWidth > 0;
     final boxPadding = hasContainer ? config.backgroundPadding : 0.0;
-    final boxSize = Size(
+    final localBoxSize = Size(
       provisionalPainter.width + boxPadding * 2,
       provisionalPainter.height + boxPadding * 2,
     );
+    final transform = resolveBarLabelTransform(
+      localSize: localBoxSize,
+      mode: config.rotationMode,
+      rotationDegrees: config.rotationDegrees,
+      fitSize: geometry.rect.size,
+    );
     final candidates = [
       for (final position in positions)
-        _barLabelRect(series, geometry, position, boxSize),
+        _barLabelRect(series, geometry, position, transform.visualSize),
     ];
     final displacementDirection = _barLabelDisplacementDirection(
       series,
@@ -6513,8 +6531,8 @@ class SeriesElement implements DataHitElement {
       displacementDirection: displacementDirection,
       displacementStep:
           (series.orientation == BarOrientation.horizontal
-              ? boxSize.width
-              : boxSize.height) +
+              ? transform.visualSize.width
+              : transform.visualSize.height) +
           config.collisionPadding,
     );
     if (_barLabelLayoutCoordinator != null && result == null) return;
@@ -6539,8 +6557,11 @@ class SeriesElement implements DataHitElement {
     );
 
     _paintBarLabelCallout(canvas, geometry, labelRect, labelColor, config);
-    _paintBarLabelContainer(canvas, labelRect, config);
-    painter.paint(canvas, labelRect.topLeft + Offset(boxPadding, boxPadding));
+    transform.paint(canvas, labelRect, () {
+      final localRect = Offset.zero & localBoxSize;
+      _paintBarLabelContainer(canvas, localRect, config);
+      painter.paint(canvas, Offset(boxPadding, boxPadding));
+    });
   }
 
   Rect _barLabelRect(
@@ -6746,10 +6767,17 @@ class SeriesElement implements DataHitElement {
       config.fontWeight,
     );
     final padding = _barLabelBoxPadding(config);
-    final size = Size(
+    final localSize = Size(
       painter.width + padding * 2,
       painter.height + padding * 2,
     );
+    final transform = resolveBarLabelTransform(
+      localSize: localSize,
+      mode: config.rotationMode,
+      rotationDegrees: config.rotationDegrees,
+      fitSize: Size(double.infinity, geometry.rect.height),
+    );
+    final size = transform.visualSize;
     final outsideX = placeAtStart
         ? geometry.rect.left - config.padding - size.width
         : geometry.rect.right + config.padding;
@@ -6781,6 +6809,8 @@ class SeriesElement implements DataHitElement {
           ? geometry.rect.centerLeft
           : geometry.rect.centerRight,
       displacementDirection: const Offset(0, 1),
+      displacementStep: size.height + config.collisionPadding,
+      transform: transform,
     );
   }
 
@@ -6830,13 +6860,30 @@ class SeriesElement implements DataHitElement {
       );
     }
 
-    final rotate = painter.width > availableWidth;
-    if (rotate) painter = horizontalPainter;
+    final useLegacyPerpendicularFallback =
+        config.rotationMode == BarLabelRotationMode.fixed &&
+        config.rotationDegrees == 0 &&
+        painter.width > availableWidth;
+    if (useLegacyPerpendicularFallback) painter = horizontalPainter;
     final centerX = geometry.rect.center.dx;
     final boxPadding = _barLabelBoxPadding(config);
-    final visualSize = rotate
-        ? Size(painter.height + boxPadding * 2, painter.width + boxPadding * 2)
-        : Size(painter.width + boxPadding * 2, painter.height + boxPadding * 2);
+    final localSize = Size(
+      painter.width + boxPadding * 2,
+      painter.height + boxPadding * 2,
+    );
+    final transform = useLegacyPerpendicularFallback
+        ? BarLabelTransform(
+            localSize: localSize,
+            visualSize: Size(localSize.height, localSize.width),
+            radians: math.pi / 2,
+          )
+        : resolveBarLabelTransform(
+            localSize: localSize,
+            mode: config.rotationMode,
+            rotationDegrees: config.rotationDegrees,
+            fitSize: Size(availableWidth, double.infinity),
+          );
+    final visualSize = transform.visualSize;
     final outsideY = placeAbove
         ? geometry.rect.top - config.padding - visualSize.height
         : geometry.rect.bottom + config.padding;
@@ -6866,7 +6913,8 @@ class SeriesElement implements DataHitElement {
       ],
       anchor: placeAbove ? geometry.rect.topCenter : geometry.rect.bottomCenter,
       displacementDirection: const Offset(1, 0),
-      rotate: rotate,
+      displacementStep: visualSize.width + config.collisionPadding,
+      transform: transform,
     );
   }
 
@@ -6886,7 +6934,8 @@ class SeriesElement implements DataHitElement {
     required List<Rect> candidates,
     required Offset anchor,
     required Offset displacementDirection,
-    bool rotate = false,
+    required double displacementStep,
+    required BarLabelTransform transform,
   }) {
     final result = _barLabelLayoutCoordinator?.place(
       candidates: candidates,
@@ -6894,8 +6943,7 @@ class SeriesElement implements DataHitElement {
       plotEdgeAware: config.plotEdgeAware,
       collisionPadding: config.collisionPadding,
       displacementDirection: displacementDirection,
-      displacementStep:
-          (rotate ? painter.height : painter.width) + config.collisionPadding,
+      displacementStep: displacementStep,
     );
     if (_barLabelLayoutCoordinator != null && result == null) return;
     final rect = result?.rect ?? candidates.first;
@@ -6907,16 +6955,14 @@ class SeriesElement implements DataHitElement {
       config,
       anchor: anchor,
     );
-    _paintBarLabelContainer(canvas, rect, config);
-    if (!rotate) {
-      painter.paint(canvas, rect.topLeft + Offset(padding, padding));
-      return;
-    }
-    canvas.save();
-    canvas.translate(rect.left + padding + painter.height, rect.top + padding);
-    canvas.rotate(math.pi / 2);
-    painter.paint(canvas, Offset.zero);
-    canvas.restore();
+    transform.paint(canvas, rect, () {
+      _paintBarLabelContainer(
+        canvas,
+        Offset.zero & transform.localSize,
+        config,
+      );
+      painter.paint(canvas, Offset(padding, padding));
+    });
   }
 
   TextPainter _barLabelPainter(

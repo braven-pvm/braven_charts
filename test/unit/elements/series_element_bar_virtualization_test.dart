@@ -173,6 +173,27 @@ void main() {
       expect(element.barGeometryForPoint(0)!.rect.width, 20);
     });
 
+    test('keeps stable slot thickness while keyed categories cross ranks', () {
+      final element = SeriesElement(
+        series: const BarChartSeries(
+          id: 'race-crossing',
+          points: [
+            ChartDataPoint(x: 0.49, y: 90, pointKey: 'alpha'),
+            ChartDataPoint(x: 0.51, y: 88, pointKey: 'beta'),
+            ChartDataPoint(x: 2, y: 70, pointKey: 'gamma'),
+            ChartDataPoint(x: 3, y: 60, pointKey: 'delta'),
+          ],
+          barWidthPercent: 0.72,
+          categorySpacing: 1,
+          orientation: BarOrientation.horizontal,
+        ),
+        transform: _transform(0, 4),
+      );
+
+      expect(element.barGeometryForPoint(0)!.rect.height, 100);
+      expect(element.barGeometryForPoint(1)!.rect.height, 100);
+    });
+
     test('bounds the hit index for an extreme finite point width', () {
       final element = SeriesElement(
         series: const BarChartSeries(

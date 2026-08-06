@@ -957,6 +957,7 @@ void main() {
                   points: [ChartDataPoint(x: 1, y: 3)],
                   style: SeriesStyle.bar,
                   barWidthPixels: 14,
+                  categorySpacing: 1.25,
                   minWidth: 5,
                   maxWidth: 42,
                   barGap: 6,
@@ -1032,6 +1033,8 @@ void main() {
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     showUnit: true,
+                    rotationMode: BarLabelRotationMode.autoFit,
+                    rotationDegrees: -90,
                     padding: 5,
                     collisionPolicy: BarLabelCollisionPolicy.reposition,
                     plotEdgeAware: false,
@@ -1055,6 +1058,7 @@ void main() {
       expect(bar.style, SeriesStyle.bar);
       expect(bar.barWidthPercent, isNull);
       expect(bar.barWidthPixels, 14);
+      expect(bar.categorySpacing, 1.25);
       expect(bar.minWidth, 5);
       expect(bar.maxWidth, 42);
       expect(bar.barGap, 6);
@@ -1125,6 +1129,8 @@ void main() {
       expect(bar.labelStyle.position, BarLabelPosition.insideEnd);
       expect(bar.labelStyle.valueMode, BarLabelValueMode.percentage);
       expect(bar.labelStyle.fontWeight, FontWeight.w700);
+      expect(bar.labelStyle.rotationMode, BarLabelRotationMode.autoFit);
+      expect(bar.labelStyle.rotationDegrees, -90);
       expect(bar.labelStyle.padding, 5);
       expect(
         bar.labelStyle.collisionPolicy,

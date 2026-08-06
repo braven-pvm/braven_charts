@@ -1029,6 +1029,7 @@ class BarChartSeries extends ChartSeries {
     super.showInTrackingTooltip,
     this.barWidthPercent,
     this.barWidthPixels,
+    this.categorySpacing,
     this.minWidth = 4.0,
     this.maxWidth = 100.0,
     this.barGap = 2.0,
@@ -1063,6 +1064,11 @@ class BarChartSeries extends ChartSeries {
              (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
          'barWidthPercent must be between 0.0 and 1.0',
        ),
+       assert(
+         categorySpacing == null ||
+             (categorySpacing > 0 && categorySpacing < double.infinity),
+         'categorySpacing must be finite and greater than zero',
+       ),
        assert(minWidth >= 0, 'minWidth must be non-negative'),
        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
        assert(barGap >= 0, 'barGap must be non-negative'),
@@ -1079,6 +1085,16 @@ class BarChartSeries extends ChartSeries {
   final double?
   barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
   final double? barWidthPixels; // Fixed width in logical pixels
+
+  /// Optional stable category-slot spacing in data units.
+  ///
+  /// By default the renderer derives spacing from the smallest current gap
+  /// between category coordinates. Set this when keyed categories animate
+  /// through one another (for example, a bar-race rank overtake), because the
+  /// temporary midpoint gap is zero even though the authored slot spacing is
+  /// unchanged.
+  final double? categorySpacing;
+
   final double minWidth; // Minimum bar width in logical pixels
   final double maxWidth; // Maximum bar width in logical pixels
 
@@ -1429,6 +1445,8 @@ class BarChartSeries extends ChartSeries {
     bool? showInTrackingTooltip,
     double? barWidthPercent,
     double? barWidthPixels,
+    double? categorySpacing,
+    bool clearCategorySpacing = false,
     double? minWidth,
     double? maxWidth,
     double? barGap,
@@ -1482,6 +1500,9 @@ class BarChartSeries extends ChartSeries {
           showInTrackingTooltip ?? this.showInTrackingTooltip,
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
+      categorySpacing: clearCategorySpacing
+          ? null
+          : (categorySpacing ?? this.categorySpacing),
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
       barGap: barGap ?? this.barGap,
@@ -1529,6 +1550,7 @@ class BarChartSeries extends ChartSeries {
           super == other &&
           other.barWidthPercent == barWidthPercent &&
           other.barWidthPixels == barWidthPixels &&
+          other.categorySpacing == categorySpacing &&
           other.minWidth == minWidth &&
           other.maxWidth == maxWidth &&
           other.barGap == barGap &&
@@ -1561,6 +1583,7 @@ class BarChartSeries extends ChartSeries {
     super.hashCode,
     barWidthPercent,
     barWidthPixels,
+    categorySpacing,
     minWidth,
     maxWidth,
     barGap,

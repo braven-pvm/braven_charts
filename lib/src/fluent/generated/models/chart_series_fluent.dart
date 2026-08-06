@@ -545,6 +545,13 @@ extension BarChartSeriesFluent on BarChartSeries {
   BarChartSeries withShowInTrackingTooltip(bool value) =>
       copyWith(showInTrackingTooltip: value);
 
+  /// Replaces [BarChartSeries.categorySpacing] with [value].
+  BarChartSeries withCategorySpacing(double value) =>
+      copyWith(categorySpacing: value);
+
+  /// Clears [BarChartSeries.categorySpacing] to `null`.
+  BarChartSeries clearCategorySpacing() => copyWith(clearCategorySpacing: true);
+
   /// Replaces [BarChartSeries.barGap] with [value].
   BarChartSeries withBarGap(double value) => copyWith(barGap: value);
 

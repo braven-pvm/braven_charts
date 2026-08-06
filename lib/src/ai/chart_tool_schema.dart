@@ -966,6 +966,12 @@ same radial interaction contract.
               'maximum': 1,
               'description': 'Bar width as a fraction of its category slot.',
             },
+            'bar_category_spacing': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description':
+                  'Optional stable category-slot spacing in data units. Use 1 for keyed rank animations so bars retain their authored thickness while categories cross.',
+            },
             'bar_min_width': {
               'type': 'number',
               'minimum': 0,
@@ -1349,6 +1355,19 @@ same radial interaction contract.
               'type': 'number',
               'exclusiveMinimum': 0,
               'description': 'Bar-label font size.',
+            },
+            'bar_label_rotation_mode': {
+              'type': 'string',
+              'enum': ['fixed', 'auto_fit'],
+              'description':
+                  'Use the authored value-label angle or turn it perpendicular when required to fit.',
+            },
+            'bar_label_rotation_degrees': {
+              'type': 'number',
+              'minimum': -180,
+              'maximum': 180,
+              'description':
+                  'Clockwise rotation of labels attached to bars, in degrees.',
             },
             'bar_label_font_weight': {
               'type': 'integer',

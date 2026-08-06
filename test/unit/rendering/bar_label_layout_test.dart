@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'dart:math' as math;
+
 import 'package:braven_charts/src/models/bar_chart_style.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/rendering/bar_geometry.dart';
@@ -7,6 +9,44 @@ import 'package:braven_charts/src/rendering/bar_label_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('resolveBarLabelTransform', () {
+    test('uses transformed bounds for a fixed vertical label', () {
+      final transform = resolveBarLabelTransform(
+        localSize: const Size(40, 12),
+        mode: BarLabelRotationMode.fixed,
+        rotationDegrees: 90,
+      );
+
+      expect(transform.visualSize.width, closeTo(12, 0.0001));
+      expect(transform.visualSize.height, closeTo(40, 0.0001));
+    });
+
+    test('auto fit turns a wide label when the perpendicular fits', () {
+      final transform = resolveBarLabelTransform(
+        localSize: const Size(48, 12),
+        mode: BarLabelRotationMode.autoFit,
+        rotationDegrees: 0,
+        fitSize: const Size(16, 60),
+      );
+
+      expect(transform.visualSize.width, closeTo(12, 0.0001));
+      expect(transform.visualSize.height, closeTo(48, 0.0001));
+      expect(transform.radians, closeTo(math.pi / 2, 0.0001));
+    });
+
+    test('fixed mode preserves an overflowing authored angle', () {
+      final transform = resolveBarLabelTransform(
+        localSize: const Size(48, 12),
+        mode: BarLabelRotationMode.fixed,
+        rotationDegrees: 0,
+        fitSize: const Size(16, 60),
+      );
+
+      expect(transform.visualSize, const Size(48, 12));
+      expect(transform.radians, 0);
+    });
+  });
+
   group('resolveBarOutsideEndLabelRect', () {
     test('clears a vertical lollipop marker by its radius plus padding', () {
       final geometry = _lollipopGeometry(
