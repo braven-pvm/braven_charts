@@ -208,6 +208,91 @@ class MobileAppsShowcasePage extends StatelessWidget {
   }
 }
 
+/// Compact live preview used to make the mobile showcase visible from Gallery.
+///
+/// The preview deliberately reuses the real phone compositions rather than a
+/// screenshot. Narrow layouts focus on the recovery experience; wider layouts
+/// show three distinct mobile products together.
+class MobileAppsGalleryPreview extends StatelessWidget {
+  const MobileAppsGalleryPreview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final phoneCount = compact ? 1 : 3;
+        final canvasWidth = phoneCount * 344.0 + (phoneCount - 1) * 24.0;
+
+        final phones = compact
+            ? const <Widget>[
+                SizedBox(
+                  width: 344,
+                  child: _PhoneExperience(
+                    semanticLabel: 'Recovery readiness mobile app',
+                    surfaceColor: Color(0xFF0B1220),
+                    dark: true,
+                    child: _RecoveryExperience(),
+                  ),
+                ),
+              ]
+            : const <Widget>[
+                SizedBox(
+                  width: 344,
+                  child: _PhoneExperience(
+                    semanticLabel: 'Endurance activity mobile app',
+                    surfaceColor: Color(0xFFF7FAFC),
+                    child: _EnduranceExperience(),
+                  ),
+                ),
+                SizedBox(width: 24),
+                SizedBox(
+                  width: 344,
+                  child: _PhoneExperience(
+                    semanticLabel: 'Recovery readiness mobile app',
+                    surfaceColor: Color(0xFF0B1220),
+                    dark: true,
+                    child: _RecoveryExperience(),
+                  ),
+                ),
+                SizedBox(width: 24),
+                SizedBox(
+                  width: 344,
+                  child: _PhoneExperience(
+                    semanticLabel: 'Live match mobile app',
+                    surfaceColor: Color(0xFFF8F7FC),
+                    child: _MatchExperience(),
+                  ),
+                ),
+              ];
+
+        return SizedBox(
+          key: const ValueKey('gallery-mobile-apps-live-preview'),
+          height: compact ? 420 : 440,
+          child: Semantics(
+            image: true,
+            label:
+                'Live preview of Braven Charts inside focused Flutter mobile apps',
+            child: ExcludeSemantics(
+              child: IgnorePointer(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: canvasWidth,
+                    height: 694,
+                    child: Row(children: phones),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _FeaturePill extends StatelessWidget {
   const _FeaturePill({required this.icon, required this.label});
 
@@ -619,78 +704,392 @@ class _RecoveryExperience extends StatelessWidget {
           child: SizedBox(
             height: 220,
             child: BravenChartPlus(
-              concentricDonutConfig: const ConcentricDonutConfig(
-                innerRadiusFactor: 0.30,
-                outerRadiusFactor: 0.90,
-                ringGap: 5,
-                ringWeights: {
-                  'readiness-ring': 1.35,
-                  'sleep-ring': 0.92,
-                  'strain-ring': 0.78,
-                },
-                centerContent: DonutCenterContent(
-                  label: 'RECOVERY',
-                  valueMode: DonutCenterValueMode.custom,
-                  customValue: '86',
-                  labelStyle: LabelStyle(
-                    textStyle: TextStyle(
-                      color: muted,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
-                    backgroundColor: Colors.transparent,
-                    borderColor: Colors.transparent,
-                    borderWidth: 0,
-                    borderRadius: 0,
-                    padding: EdgeInsets.zero,
-                  ),
-                  valueStyle: LabelStyle(
-                    textStyle: TextStyle(
-                      color: text,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    backgroundColor: Colors.transparent,
-                    borderColor: Colors.transparent,
-                    borderWidth: 0,
-                    borderRadius: 0,
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
               series: [
-                _recoveryRing(
-                  id: 'readiness-ring',
-                  name: 'Readiness',
-                  value: 86,
-                  color: mint,
-                  remainingColor: const Color(0xFF233147),
-                  startAngle: -90,
-                ),
-                _recoveryRing(
-                  id: 'sleep-ring',
-                  name: 'Sleep',
-                  value: 91,
-                  color: const Color(0xFF8B7CFF),
-                  remainingColor: const Color(0xFF202B43),
-                  startAngle: -68,
-                ),
-                _recoveryRing(
-                  id: 'strain-ring',
-                  name: 'Strain',
-                  value: 72,
-                  color: const Color(0xFF22D3EE),
-                  remainingColor: const Color(0xFF1B2940),
-                  startAngle: -46,
+                DonutChartSeries(
+                  id: 'donut-contribution',
+                  name: 'Recovery drivers',
+                  points: const [
+                    ChartDataPoint(
+                      x: 0,
+                      y: 36,
+                      label: 'Sleep',
+                      pointStyle: PointStyle(color: Color(0xFF2563EB)),
+                    ),
+                    ChartDataPoint(
+                      x: 1,
+                      y: 34,
+                      label: 'HRV',
+                      pointStyle: PointStyle(color: Color(0xFF0D9488)),
+                    ),
+                    ChartDataPoint(
+                      x: 2,
+                      y: 30,
+                      label: 'Load',
+                      pointStyle: PointStyle(color: Color(0xFF7C3AED)),
+                    ),
+                  ],
+                  unit: '%',
+                  donutStyle: const DonutChartStyle(
+                    innerRadiusFactor: 0.52,
+                    sweepAngleDegrees: 330,
+                    startAngleDegrees: 30,
+                    radiusFactor: 0.94,
+                    sliceGap: 3,
+                    borderColorMode: PieBorderColorMode.slice,
+                    borderHueShiftDegrees: 0,
+                    borderLightnessShift: -0.18,
+                    selectionExplodeOffset: 10,
+                    opacity: 0.98,
+                    cornerRadius: 5,
+                    cornerTreatment: PieCornerTreatment.roundAll,
+                    animationMode: PieAnimationMode.grow,
+                    gradient: PieGradientStyle(
+                      startLightnessShift: 0.14,
+                      endLightnessShift: -0.08,
+                      angleDegrees: -30,
+                    ),
+                  ),
+                  selectionStyle: const RadialSelectionStyle(
+                    effect: RadialSelectionEffect.lift,
+                    liftScale: 1.1,
+                  ),
+                  centerContent: const DonutCenterContent(
+                    label: 'RECOVERY',
+                    valueMode: DonutCenterValueMode.custom,
+                    customValue: '86',
+                    labelStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFF8D9AAF),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                      backgroundColor: Colors.transparent,
+                      borderColor: Colors.transparent,
+                      borderWidth: 0,
+                      borderRadius: 0,
+                      padding: EdgeInsets.zero,
+                    ),
+                    valueStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      backgroundColor: Colors.transparent,
+                      borderColor: Colors.transparent,
+                      borderWidth: 0,
+                      borderRadius: 0,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  dataLabels: const PieDataLabelConfig(
+                    position: PieDataLabelPosition.inside,
+                    content: PieDataLabelContent.category,
+                    minimumShare: 0,
+                    minimumSweepDegrees: 0,
+                    padding: 0,
+                    insideOffset: -6,
+                    outsideOffset: 4,
+                    connectorLength: 12,
+                    connectorColor: Color(0xFF0D9488),
+                    calloutStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      backgroundColor: Colors.transparent,
+                      borderColor: Colors.transparent,
+                      borderWidth: 0,
+                      borderRadius: 0,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
                 ),
               ],
-              theme: chartTheme,
-              showLegend: false,
-              grid: const GridConfig(horizontal: false, vertical: false),
               xAxisConfig: const XAxisConfig(visible: false),
               yAxis: YAxisConfig(position: YAxisPosition.hidden),
-              interactionConfig: InteractionConfig.none(),
+              theme: chartTheme.copyWith(
+                backgroundColor: const Color(0xFF0B1220),
+                gridStyle: const GridStyle(
+                  majorColor: Color(0xFF0B1220),
+                  majorWidth: 1,
+                  majorDashPattern: [],
+                  minorDashPattern: [],
+                  showMinor: false,
+                ),
+                axisStyle: const AxisStyle(
+                  lineColor: Color(0xFF000000),
+                  lineWidth: 1,
+                  labelStyle: TextStyle(
+                    color: Color(0xFF000000),
+                    fontSize: 12,
+                    fontFamily: 'Roboto',
+                  ),
+                  titleStyle: TextStyle(
+                    color: Color(0xFF000000),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Roboto',
+                  ),
+                  showTicks: true,
+                  tickLength: 6,
+                  tickColor: Color(0xFF000000),
+                  tickWidth: 1,
+                ),
+                seriesTheme: SeriesTheme(
+                  colors: [
+                    const Color(0xFF2563EB),
+                    const Color(0xFF0D9488),
+                    const Color(0xFF06B6D4),
+                    const Color(0xFF7C3AED),
+                    const Color(0xFF64748B),
+                  ],
+                  lineWidths: [2],
+                  markerSizes: [6],
+                  markerShapes: [SeriesMarkerShape.circle],
+                ),
+                interactionTheme: const InteractionTheme(
+                  crosshairColor: Color(0xFF757575),
+                  crosshairWidth: 1,
+                  crosshairDashPattern: [5, 3],
+                  crosshairBandColor: Color(0x00000000),
+                  crosshairBandWidth: 0,
+                  crosshairLabelStyle: LabelStyle(
+                    textStyle: TextStyle(
+                      color: Color(0xFF212121),
+                      fontSize: 10,
+                    ),
+                    backgroundColor: Color(0xFF0B1220),
+                    borderColor: Color(0xFFBDBDBD),
+                    borderWidth: 0.5,
+                    borderRadius: 3,
+                    padding: EdgeInsets.fromLTRB(4, 2, 4, 2),
+                  ),
+                  tooltipStyle: LabelStyle(
+                    textStyle: TextStyle(
+                      color: Color(0xFF212121),
+                      fontSize: 12,
+                    ),
+                    backgroundColor: Color(0xE6FFFFFF),
+                    borderColor: Color(0xFFBDBDBD),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
+                    shadowColor: Color(0x33000000),
+                    shadowBlurRadius: 4,
+                  ),
+                  selectionColor: Color(0x4D2196F3),
+                ),
+                typographyTheme: TypographyTheme(
+                  fontFamily: 'Roboto',
+                  baseFontSize: 12,
+                  scaleFactorMobile: 0.9,
+                  scaleFactorTablet: 1,
+                  scaleFactorDesktop: 1.1,
+                  titleMultiplier: 1.4,
+                  labelMultiplier: 1,
+                ),
+                animationTheme: AnimationTheme(
+                  dataUpdateDuration: const Duration(microseconds: 400000),
+                  dataUpdateCurve: Curves.easeInOutCubic,
+                  themeChangeDuration: const Duration(microseconds: 300000),
+                  themeChangeCurve: Curves.easeOut,
+                  interactionDuration: const Duration(microseconds: 150000),
+                  interactionCurve: Curves.easeOut,
+                ),
+                annotationTheme: const AnnotationTheme(
+                  pointDefaults: PointAnnotationDefaults(
+                    markerShape: SeriesMarkerShape.circle,
+                    markerSize: 8,
+                    normalColor: Color(0xFF2196F3),
+                    selectedColor: Color(0xFF1976D2),
+                    hoveredColor: Color(0xFF64B5F6),
+                    draggingColor: Color(0xFF1976D2),
+                    ghostOpacity: 0.3,
+                    previewOpacity: 0.8,
+                    previewScale: 1.2,
+                    labelStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFF212121),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        fontFamily: 'Roboto',
+                      ),
+                      backgroundColor: Color(0xF0FFFFFF),
+                      borderColor: Color(0xFF2196F3),
+                      borderWidth: 0.5,
+                      borderRadius: 4,
+                      padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    ),
+                  ),
+                  rangeDefaults: RangeAnnotationDefaults(
+                    normalFillColor: Color(0x332196F3),
+                    selectedFillColor: Color(0x4D2196F3),
+                    hoveredFillColor: Color(0x4064B5F6),
+                    draggingFillColor: Color(0x4D1976D2),
+                    normalBorderColor: Color(0xFF2196F3),
+                    selectedBorderColor: Color(0xFF1976D2),
+                    hoveredBorderColor: Color(0xFF64B5F6),
+                    draggingBorderColor: Color(0xFF1976D2),
+                    borderWidth: 1.5,
+                    labelStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFF212121),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Roboto',
+                      ),
+                      backgroundColor: Color(0xF0FFFFFF),
+                      borderColor: Color(0xFF2196F3),
+                      borderWidth: 0.5,
+                      borderRadius: 4,
+                      padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    ),
+                  ),
+                  textDefaults: TextAnnotationDefaults(
+                    textStyle: TextStyle(
+                      color: Color(0xFF212121),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Roboto',
+                    ),
+                    backgroundColor: Color(0xF0FFFFFF),
+                    borderColor: Color(0xFFBDBDBD),
+                    borderWidth: 0.5,
+                    borderRadius: 4,
+                    padding: EdgeInsets.fromLTRB(8, 4, 8, 4),
+                  ),
+                  thresholdDefaults: ThresholdAnnotationDefaults(
+                    lineColor: Color(0xFFF44336),
+                    lineWidth: 2,
+                    dashPattern: [5, 3],
+                    labelStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFFF44336),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Roboto',
+                      ),
+                      backgroundColor: Color(0xF0FFFFFF),
+                      borderColor: Color(0xFFF44336),
+                      borderWidth: 0.5,
+                      borderRadius: 4,
+                      padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    ),
+                  ),
+                  trendDefaults: TrendAnnotationDefaults(
+                    lineColor: Color(0xFF4CAF50),
+                    lineWidth: 2,
+                    dashPattern: [5, 5],
+                    confidenceBandColor: Color(0xFF4CAF50),
+                    confidenceBandOpacity: 0.1,
+                    labelStyle: LabelStyle(
+                      textStyle: TextStyle(
+                        color: Color(0xFF2E7D32),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Roboto',
+                      ),
+                      backgroundColor: Color(0xF0FFFFFF),
+                      borderColor: Color(0xFF4CAF50),
+                      borderWidth: 0.5,
+                      borderRadius: 4,
+                      padding: EdgeInsets.fromLTRB(6, 3, 6, 3),
+                    ),
+                  ),
+                ),
+                scrollbarConfig: const ScrollbarConfig(
+                  thickness: 11.5,
+                  minHandleSize: 23,
+                  trackColor: Color(0xFFF5F5F5),
+                  handleColor: Color(0xFFBDBDBD),
+                  handleHoverColor: Color(0xFF9E9E9E),
+                  edgeZoneColor: Color(0xFFD0D0D0),
+                  edgeHoverColor: Color(0xFF2196F3),
+                  handleActiveColor: Color(0xFF757575),
+                  handleDisabledColor: Color(0xFFEEEEEE),
+                  trackHoverColor: Color(0xFFE0E0E0),
+                  borderRadius: 4,
+                  edgeGripWidth: 40,
+                  showGripIndicator: true,
+                  gripIndicatorColor: Color(0xFF757575),
+                  autoHide: true,
+                  autoHideDelay: Duration(microseconds: 2000000),
+                  fadeDuration: Duration(microseconds: 200000),
+                  enableResizeHandles: true,
+                  minZoomRatio: 0.01,
+                  maxZoomRatio: 1,
+                  padding: 4,
+                  forcedColorsMode: false,
+                  prefersReducedMotion: false,
+                ),
+                legendStyle: const LegendStyle(
+                  position: LegendPosition.bottomCenter,
+                  textStyle: TextStyle(color: Color(0xDD000000), fontSize: 10),
+                  backgroundColor: Color(0x99FFFFFF),
+                  markerSize: 10,
+                  markerShape: LegendMarkerShape.circle,
+                ),
+                pieChartTheme: const PieChartTheme(
+                  opacity: 1,
+                  cornerRadius: 0,
+                  cornerTreatment: PieCornerTreatment.roundAll,
+                  shadow: PieElevationStyle(),
+                  selectedElevation: PieElevationStyle(
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    opacity: 0.38,
+                  ),
+                  borderColorMode: PieBorderColorMode.chartTheme,
+                  borderHueShiftDegrees: 0,
+                  borderSaturationShift: 0,
+                  borderLightnessShift: -0.12,
+                  animationMode: PieAnimationMode.grow,
+                ),
+                candlestickTheme: const CandlestickTheme(
+                  risingBodyFillColor: Color(0xFFCCFBF1),
+                  fallingBodyFillColor: Color(0xFFEF4444),
+                  dojiBodyFillColor: Color(0xFF64748B),
+                  risingBorderColor: Color(0xFF0F766E),
+                  fallingBorderColor: Color(0xFFB91C1C),
+                  dojiBorderColor: Color(0xFF475569),
+                  risingWickColor: Color(0xFF0F766E),
+                  fallingWickColor: Color(0xFFB91C1C),
+                  dojiWickColor: Color(0xFF475569),
+                  selectionColor: Color(0xFF2563EB),
+                  focusColor: Color(0xFF334155),
+                ),
+                rangeAreaTheme: const RangeAreaTheme(
+                  fillOpacity: 0.26,
+                  boundaryOpacity: 0.92,
+                  boundaryWidth: 1.5,
+                  markerFillColor: Color(0xFFFFFFFF),
+                  markerStrokeColor: Color(0xFF2563EB),
+                  markerStrokeWidth: 1.5,
+                  selectionColor: Color(0xFF2563EB),
+                  focusColor: Color(0xFF334155),
+                ),
+                focusBorderColor: const Color(0xFF2196F3),
+                focusBorderWidth: 2,
+                focusBorderRadius: 0,
+              ),
+              interactionConfig: const InteractionConfig(
+                enableZoom: false,
+                enablePan: false,
+                crosshair: CrosshairConfig(enabled: false),
+                tooltip: TooltipConfig(triggerMode: TooltipTriggerMode.both),
+              ),
+              showLegend: false,
+              legendStyle: const LegendStyle(
+                position: LegendPosition.bottomCenter,
+                textStyle: TextStyle(color: Color(0xDD000000), fontSize: 10),
+                backgroundColor: Color(0x99FFFFFF),
+                markerSize: 10,
+                markerShape: LegendMarkerShape.circle,
+              ),
+              backgroundColor: surface,
             ),
           ),
         ),
@@ -782,42 +1181,6 @@ class _RecoveryExperience extends StatelessWidget {
     );
   }
 }
-
-DonutChartSeries _recoveryRing({
-  required String id,
-  required String name,
-  required double value,
-  required Color color,
-  required Color remainingColor,
-  required double startAngle,
-}) => DonutChartSeries.fromMap(
-  id: id,
-  name: name,
-  values: {'$name score': value, '$name remaining': 100 - value},
-  sliceColors: {'$name score': color, '$name remaining': remainingColor},
-  donutStyle: DonutChartStyle(
-    innerRadiusFactor: 0.34,
-    startAngleDegrees: startAngle,
-    sliceGap: 2.4,
-    borderWidth: 0.8,
-    borderColorMode: PieBorderColorMode.slice,
-    borderLightnessShift: -0.24,
-    gradient: const PieGradientStyle(
-      type: PieGradientType.radial,
-      startLightnessShift: 0.30,
-      endLightnessShift: -0.18,
-    ),
-    cornerRadius: 8,
-    cornerTreatment: PieCornerTreatment.roundAll,
-    shadow: const PieElevationStyle(
-      blurRadius: 14,
-      spreadRadius: 1.5,
-      opacity: 0.42,
-    ),
-    animationMode: PieAnimationMode.sweep,
-  ),
-  dataLabels: const PieDataLabelConfig(isVisible: false),
-);
 
 class _MatchExperience extends StatelessWidget {
   const _MatchExperience();
@@ -1101,6 +1464,7 @@ class _TrainingLoadExperience extends StatelessWidget {
               BarChartSeries(
                 id: 'load-range',
                 name: 'Load range',
+                unit: 'TSS',
                 color: coral,
                 barWidthPercent: 0.58,
                 rangeStartValues: [32, 42, 38, 54, 48, 61, 44],
@@ -1117,14 +1481,30 @@ class _TrainingLoadExperience extends StatelessWidget {
                     staggerFraction: 0.46,
                   ),
                 ),
+                labelStyle: BarLabelStyle(
+                  show: true,
+                  position: BarLabelPosition.rangeEnds,
+                  valueMode: BarLabelValueMode.range,
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700,
+                  padding: 3,
+                  collisionPolicy: BarLabelCollisionPolicy.reposition,
+                  collisionPadding: 2,
+                  backgroundColor: Color(0xCC10131E),
+                  borderColor: Color(0x55FFC857),
+                  borderWidth: 0.6,
+                  borderRadius: 4,
+                  backgroundPadding: 2,
+                ),
                 points: [
-                  ChartDataPoint(x: 0, y: 58),
-                  ChartDataPoint(x: 1, y: 72),
-                  ChartDataPoint(x: 2, y: 68),
-                  ChartDataPoint(x: 3, y: 88),
-                  ChartDataPoint(x: 4, y: 83),
-                  ChartDataPoint(x: 5, y: 98),
-                  ChartDataPoint(x: 6, y: 75),
+                  ChartDataPoint(x: 0, y: 58, label: 'Monday'),
+                  ChartDataPoint(x: 1, y: 72, label: 'Tuesday'),
+                  ChartDataPoint(x: 2, y: 68, label: 'Wednesday'),
+                  ChartDataPoint(x: 3, y: 88, label: 'Thursday'),
+                  ChartDataPoint(x: 4, y: 83, label: 'Friday'),
+                  ChartDataPoint(x: 5, y: 98, label: 'Saturday'),
+                  ChartDataPoint(x: 6, y: 75, label: 'Sunday'),
                 ],
               ),
             ],
@@ -1209,6 +1589,19 @@ class _HabitStreakExperience extends StatelessWidget {
     final chartTheme = ChartTheme.light.copyWith(
       backgroundColor: surface,
       seriesTheme: ChartTheme.light.seriesTheme.copyWith(colors: const [green]),
+      axisStyle: ChartTheme.light.axisStyle.copyWith(
+        lineColor: Colors.transparent,
+        lineWidth: 0,
+        labelStyle: const TextStyle(
+          color: muted,
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+        ),
+        showTicks: false,
+        tickLength: 0,
+        tickColor: Colors.transparent,
+        tickWidth: 0,
+      ),
     );
 
     return Column(
@@ -1344,13 +1737,62 @@ class _HabitStreakExperience extends StatelessWidget {
                       borderColor: const Color(0x2215342A),
                       borderWidth: 0.5,
                       cornerRadius: 4,
+                      emptyValueStyle: const HeatmapEmptyValueStyle(
+                        fillColor: Color(0xFFEAF5EF),
+                        showInLegend: false,
+                        legendLabel: 'Rest day',
+                      ),
                     ),
                   ],
                   theme: chartTheme,
                   showLegend: false,
                   grid: const GridConfig(horizontal: false, vertical: false),
-                  xAxisConfig: const XAxisConfig(visible: false),
-                  yAxis: YAxisConfig(position: YAxisPosition.hidden),
+                  xAxisConfig: const XAxisConfig(
+                    showAxisLine: false,
+                    showTicks: false,
+                    minHeight: 24,
+                    maxHeight: 24,
+                    tickLabelPadding: 2,
+                    axisMargin: 0,
+                    categoryAxis: CategoryAxisConfig(
+                      categories: [
+                        '1',
+                        '2',
+                        '3',
+                        '4',
+                        '5',
+                        '6',
+                        '7',
+                        '8',
+                        '9',
+                        '10',
+                      ],
+                      minimumCategoryExtent: 20,
+                      maximumLabelExtent: 20,
+                    ),
+                  ),
+                  yAxis: YAxisConfig(
+                    position: YAxisPosition.left,
+                    showAxisLine: false,
+                    showTicks: false,
+                    minWidth: 30,
+                    maxWidth: 30,
+                    tickLabelPadding: 3,
+                    axisMargin: 0,
+                    categoryAxis: const CategoryAxisConfig(
+                      categories: [
+                        'Sun',
+                        'Sat',
+                        'Fri',
+                        'Thu',
+                        'Wed',
+                        'Tue',
+                        'Mon',
+                      ],
+                      minimumCategoryExtent: 24,
+                      maximumLabelExtent: 28,
+                    ),
+                  ),
                   interactionConfig: InteractionConfig.none(),
                 ),
               ),
@@ -1558,16 +2000,31 @@ class _PickupDensityExperience extends StatelessWidget {
   }
 }
 
-List<HeatmapDataPoint> _habitHeatmapPoints() => [
-  for (var week = 0; week < 10; week++)
-    for (var day = 0; day < 7; day++)
-      HeatmapDataPoint(
-        x: week.toDouble(),
-        y: day.toDouble(),
-        value: ((week * 11 + day * 7 + (week + day) * 3) % 5).toDouble(),
-        pointKey: 'habit-$week-$day',
-      ),
-];
+List<HeatmapDataPoint> _habitHeatmapPoints() {
+  const weeklyActivity = <List<double>>[
+    [0, 2, 4, 3, 0, 1, 3],
+    [3, 0, 2, 4, 3, 0, 2],
+    [1, 4, 3, 0, 2, 4, 0],
+    [4, 2, 0, 3, 4, 1, 2],
+    [2, 3, 4, 1, 0, 3, 4],
+    [0, 1, 2, 0, 3, 4, 2],
+    [4, 3, 2, 4, 3, 2, 4],
+    [3, 0, 4, 3, 2, 4, 3],
+    [2, 4, 3, 0, 4, 3, 2],
+    [4, 3, 0, 4, 3, 2, 0],
+  ];
+
+  return [
+    for (final (week, days) in weeklyActivity.indexed)
+      for (final (day, value) in days.indexed)
+        HeatmapDataPoint(
+          x: week.toDouble(),
+          y: day.toDouble(),
+          value: value,
+          pointKey: 'habit-$week-$day',
+        ),
+  ];
+}
 
 List<ChartDataPoint> _pickupDensityPoints() {
   const centers = [(27.0, 34.0), (67.0, 58.0), (48.0, 78.0)];

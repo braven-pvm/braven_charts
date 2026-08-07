@@ -4,13 +4,13 @@
 [![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.35-02569B.svg)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0F766E.svg)](https://github.com/braven-pvm/braven_charts/blob/master/LICENSE)
 
-Braven Charts is a native Flutter charting system for interactive, production-grade data visualization.
+Braven Charts is a native Flutter charting system for focused mobile apps, interactive dashboards, and production-grade data visualization.
 
 Render thirteen chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
 
 [![Thirteen chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
-**[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
+**[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [See mobile apps](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
 
 ## Why Braven Charts
 
@@ -23,13 +23,14 @@ Render thirteen chart families through one custom `RenderBox` and `Canvas` pipel
 - **[Product-ready chart surfaces](https://braven-pvm.github.io/braven_charts/?page=chart-workbench):** Add Chart, Data, Split, Source, tables, CSV, themes, and artifacts.
 <!-- END GENERATED: FEATURES -->
 
-## Mobile apps, not miniature dashboards
+## Built for real Flutter mobile apps
 
 [![Six phone-native sports, wellness, training, and mobility experiences built with Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/mobile_apps_showcase.png)](https://braven-pvm.github.io/braven_charts/?page=mobile-apps)
 
-Compose focused phone experiences with the same native renderer: minimal axes,
-clear primary metrics, touch-safe spacing, and responsive layouts that do
-not inherit desktop dashboard chrome.
+Building a sports, wellness, health, finance, habit, or mobility app? Compose
+focused phone experiences with the same native renderer: minimal axes, clear
+primary metrics, touch-safe spacing, and responsive layouts that do not inherit
+desktop dashboard chrome.
 
 **[Explore the mobile app showcase](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) · [Review mobile interaction patterns](https://braven-pvm.github.io/braven_charts/?page=mobile-interaction)**
 
