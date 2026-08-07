@@ -23,6 +23,16 @@ Render thirteen chart families through one custom `RenderBox` and `Canvas` pipel
 - **[Product-ready chart surfaces](https://braven-pvm.github.io/braven_charts/?page=chart-workbench):** Add Chart, Data, Split, Source, tables, CSV, themes, and artifacts.
 <!-- END GENERATED: FEATURES -->
 
+## Mobile apps, not miniature dashboards
+
+[![Six phone-native sports, wellness, training, and mobility experiences built with Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/mobile_apps_showcase.png)](https://braven-pvm.github.io/braven_charts/?page=mobile-apps)
+
+Compose focused phone experiences with the same native renderer: minimal axes,
+clear primary metrics, touch-safe spacing, and responsive layouts that do
+not inherit desktop dashboard chrome.
+
+**[Explore the mobile app showcase](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) · [Review mobile interaction patterns](https://braven-pvm.github.io/braven_charts/?page=mobile-interaction)**
+
 ## Choose a chart family
 
 Start with the question your data needs to answer. Every visual opens the exact
@@ -166,6 +176,7 @@ developer task.
 ### Interaction and display
 
 - [Tracking and value display](https://braven-pvm.github.io/braven_charts/guides/tracking-and-value-display/) — Compose crosshairs, tooltips, markers, and persistent value summaries.
+- [Mobile app compositions](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) — See six focused endurance, recovery, live-sport, training, habit, and mobility layouts built for phone screens.
 - [Mobile interaction](https://braven-pvm.github.io/braven_charts/guides/mobile-interaction/) — Keep scrolling natural, inspect with a hold, and opt into short-tap selection only where it fits.
 - [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, linked data, and persistent X/Y brushes.
 - [Series label callouts](https://braven-pvm.github.io/braven_charts/guides/series-label-callouts/) — Anchor, prioritize, style, and selectively hide dense line and area labels.

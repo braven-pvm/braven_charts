@@ -28,6 +28,7 @@ import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/mobile_showcase_page.dart';
+import 'pages/mobile_apps_showcase_page.dart';
 import 'pages/mobile_interaction_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/pie_charts_page.dart';
@@ -241,6 +242,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.touch_app_outlined,
       selectedIcon: Icons.touch_app,
       page: InteractionPage(),
+    ),
+    const NavDestination(
+      label: 'Mobile Apps',
+      icon: Icons.phone_iphone_outlined,
+      selectedIcon: Icons.phone_iphone_rounded,
+      page: MobileAppsShowcasePage(),
+      routeSlug: 'mobile-apps',
     ),
     const NavDestination(
       label: 'Mobile Interaction',
@@ -475,6 +483,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     if (capture == 'polar-column-gallery') {
       return const PolarColumnGalleryMediaPanel();
     }
+    if (capture == 'mobile-apps') {
+      return const MobileAppsShowcasePage();
+    }
     final width = MediaQuery.of(context).size.width;
     final selectedDestination = _destinations[_selectedIndex];
 
@@ -485,7 +496,8 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     // Adaptive layout breakpoints
     if (width < 600) {
       final selectedSlug = _destinations[_selectedIndex].slug;
-      if (selectedSlug == 'mobile-interaction') {
+      if (selectedSlug == 'mobile-interaction' ||
+          selectedSlug == 'mobile-apps') {
         return _buildSelectedPage();
       }
       final isChartTypeRoute = showcaseChartTypes.any(
@@ -497,6 +509,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       return MobileShowcasePage(
         initialChartSlug: isChartTypeRoute ? selectedSlug : null,
         onChartTypeSelected: _selectSlug,
+        onOpenMobileApps: () => _selectSlug('mobile-apps'),
         onOpenPublicUrl: _openPublicUrl,
       );
     } else if (width < 900) {

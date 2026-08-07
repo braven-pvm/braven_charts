@@ -25,6 +25,10 @@ screenshots:
       including markers, grid control, and a threshold reference.
     path: doc/screenshots/grammar_authoring.png
   - description: >-
+      Six phone-native sports, wellness, training, habit, and mobility
+      experiences rendered as real Flutter chart compositions.
+    path: doc/screenshots/mobile_apps_showcase.png
+  - description: >-
       Calendar Heatmap with explicit missing cells, labelled values, a
       sequential colour scale, and native Cartesian interaction.
     path: doc/screenshots/heatmap_calendar.png
@@ -52,10 +56,6 @@ screenshots:
       Pointer zoom and drag-to-pan on a dark multi-axis chart with a
       synchronized scrollbar.
     path: doc/screenshots/zoom_pan_demo.gif
-  - description: >-
-      A live chart pauses while samples continue buffering, then resumes with
-      bounded catch-up and a follow-latest viewport.
-    path: doc/screenshots/live_stream_demo.gif
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

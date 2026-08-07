@@ -21,11 +21,13 @@ class MobileShowcasePage extends StatefulWidget {
     super.key,
     this.initialChartSlug,
     this.onChartTypeSelected,
+    this.onOpenMobileApps,
     this.onOpenPublicUrl,
   });
 
   final String? initialChartSlug;
   final ValueChanged<String>? onChartTypeSelected;
+  final VoidCallback? onOpenMobileApps;
   final ValueChanged<String>? onOpenPublicUrl;
 
   @override
@@ -131,6 +133,13 @@ class _MobileShowcasePageState extends State<MobileShowcasePage> {
       appBar: AppBar(
         title: const BravenBrand(markSize: 34),
         actions: [
+          if (widget.onOpenMobileApps != null)
+            IconButton(
+              key: const ValueKey('open-mobile-apps-showcase'),
+              tooltip: 'See finished mobile apps',
+              onPressed: widget.onOpenMobileApps,
+              icon: const Icon(Icons.phone_iphone_rounded),
+            ),
           if (guide != null && widget.onOpenPublicUrl != null)
             IconButton(
               key: const ValueKey('mobile-showcase-guide-button'),

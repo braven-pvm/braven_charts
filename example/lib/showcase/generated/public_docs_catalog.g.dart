@@ -697,6 +697,17 @@ const publicDocsGuides = <PublicDocsGuideEntry>[
     snippet: null,
   ),
   (
+    id: "mobile-apps",
+    title: "Mobile app compositions",
+    group: "Interaction and display",
+    summary:
+        "See six focused endurance, recovery, live-sport, training, habit, and mobility layouts built for phone screens.",
+    page: "mobile-apps",
+    guideId: null,
+    apiPath: null,
+    snippet: null,
+  ),
+  (
     id: "mobile-interaction",
     title: "Mobile interaction",
     group: "Interaction and display",
