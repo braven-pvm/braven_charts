@@ -1,5 +1,7 @@
 # Braven Charts
 
+[![Thirteen chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_family_grid.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
+
 [![Pub version](https://img.shields.io/pub/v/braven_charts.svg)](https://pub.dev/packages/braven_charts)
 [![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.35-02569B.svg)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0F766E.svg)](https://github.com/braven-pvm/braven_charts/blob/master/LICENSE)
@@ -7,8 +9,6 @@
 Braven Charts is a native Flutter charting system for interactive, production-grade data visualization.
 
 Render thirteen chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
-
-[![Thirteen chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
 **[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
 
@@ -71,7 +71,7 @@ relevant Chart, Data, Split, and Source views.
 <!-- BEGIN GENERATED: INSTALL -->
 ```yaml
 dependencies:
-  braven_charts: ^0.17.0
+  braven_charts: ^0.17.1
 ```
 
 Then run `flutter pub get`.
