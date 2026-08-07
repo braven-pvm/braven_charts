@@ -1071,11 +1071,16 @@ final class CandlestickMark<T> extends SeriesMark<T> {
 ///
 /// ## What this mark does NOT carry
 ///
-/// `pathAnimation` and `fillGradient` are roadmap 1d: they are named refusals on
-/// [AreaMark] today and must stay symmetric across the Cartesian families rather
-/// than being fixed here for one of them. `isXOrdered` is absent because
-/// `RangeAreaChartSeries` hard-codes it `true` in its constructor — exactly as
-/// `CandlestickChartSeries` does — so a knob would be a lie.
+/// `isXOrdered` is absent because `RangeAreaChartSeries` hard-codes it `true` in
+/// its constructor — exactly as `CandlestickChartSeries` does — so a knob would
+/// be a lie.
+///
+/// [fillGradient] and [pathAnimation] WERE in this list. They were deliberately
+/// withheld when this mark shipped, because [AreaMark] and [LineMark] still
+/// refused the same two and carrying them here would have left an asymmetry a
+/// user hits immediately. Roadmap 1d closed that by giving all three families
+/// the path fields in one slice, which is why they are constructor parameters
+/// now rather than named refusals.
 ///
 /// Every config field is nullable and null means "the `RangeAreaChartSeries`
 /// default". The defaults live on the series class alone and are resolved once

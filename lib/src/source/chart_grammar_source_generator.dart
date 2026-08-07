@@ -2238,7 +2238,12 @@ class _GrammarChainEmitter {
   ///
   /// Dropping it silently would change the dashes and colours the chart draws,
   /// so the honest outcome is a NAMED boundary rather than the generic tail.
-  /// Revisit with roadmap item 1d.
+  ///
+  /// Roadmap item 1d's path-field slice has since landed and deliberately did
+  /// NOT take this: the three reasons above all still hold, and the slice
+  /// measured `Line|Forecast` moving from a marker-style refusal onto exactly
+  /// this one. So it remains open, and it is the only per-point option in that
+  /// state — a later slice needs the new row-field kind, not another field.
   ///
   /// That last collision is why there are TWO sentences rather than one. A
   /// style setting `strokeWidth` or `dashPattern` is one no V1 mark can produce
