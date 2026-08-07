@@ -29,6 +29,15 @@ jobs:
       - name: Verify changed Dart files are formatted
         run: dart run tool/check_dart_format.dart
 
+      # Every other job in this workflow resolves on `channel: stable`, so the
+      # Flutter floor declared in pubspec.yaml is never exercised. That is how
+      # flex_color_picker ^3.8.0 shipped in 0.14.0 through 0.17.0 while the
+      # package advertised Flutter >=3.35.0: the only release in that range
+      # requires >=3.38.0, so version solving failed outright for anyone on
+      # 3.35 to 3.37 and no gate noticed (BC-0060, BC-0063).
+      - name: Verify dependencies resolve on the declared SDK floor
+        run: dart run tool/check_dependency_floor.dart
+
       - name: Verify public documentation catalog
         run: |
           dart run tool/public_docs.dart --check
