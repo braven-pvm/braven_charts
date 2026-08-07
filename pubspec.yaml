@@ -1,8 +1,9 @@
 name: braven_charts
 description: >-
-  Native Flutter charts with thirteen families, typed grammar, interaction,
-  live data, generated source, and portable artifacts.
-version: 0.17.0
+  The full-featured open-source Flutter charting system. Thirteen native chart
+  families with multi-axis, live streaming, crosshair tracking, annotations,
+  and typed grammar.
+version: 0.17.1
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -67,7 +68,7 @@ dependencies:
   #   git:
   #     url: https://github.com/forcegage-pvm/braven_data.git
   fleather: ^1.27.0
-  flex_color_picker: ^3.8.0
+  flex_color_picker: ^3.7.2
   parchment: ^1.27.0
   crypto: ^3.0.7
   web: ^1.1.1

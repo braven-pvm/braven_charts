@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 0.17.0 - 2026-08-03
+## 0.17.1 - 2026-08-07
+
+### Fixed
+
+- Restored the declared Flutter 3.35 floor. `flex_color_picker` was constrained
+  to `^3.8.0`, whose only release requires Flutter `>=3.38.0`, so version
+  solving failed outright for every consumer on Flutter 3.35, 3.36, or 3.37 —
+  the package could not be installed across part of the range it advertised.
+  The constraint is now `^3.7.2`, which still resolves to the latest release on
+  current Flutter and falls back to `3.7.2` on older toolchains.
+
+### Changed
+
+- Rewrote the package description to state what the package is and lead with the
+  capabilities developers search for, rather than internal subsystem names.
+  Package directories and pub.dev render this text verbatim.
 
 ### Added
 
