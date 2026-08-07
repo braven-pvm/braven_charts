@@ -22,11 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Rewrote the package description to state what the package is and lead with the
   capabilities developers search for, rather than internal subsystem names.
-- Replaced the README hero image with a near-square thirteen-family showcase
-  grid. The previous 2400x280 strip rendered as an illegible sliver wherever a
-  package directory or social card crops to a squarer aspect, and the hero now
-  appears above the badges so link previews and directory scrapers resolve the
-  chart grid rather than a version badge.
+  Package directories and pub.dev render this text verbatim.
 
 ### Added
 
