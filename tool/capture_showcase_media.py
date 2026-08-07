@@ -130,6 +130,23 @@ def _mobile_showcase_still(base_url: str, output_dir: Path) -> None:
         driver.quit()
 
 
+def _mobile_apps_still(base_url: str, output_dir: Path) -> None:
+    """Capture both rows of phone-app compositions for public surfaces."""
+    driver = _driver(viewport=(1920, 1900))
+    try:
+        _load(driver, f"{base_url}?capture=mobile-apps")
+        time.sleep(2)
+        image = Image.open(io.BytesIO(driver.get_screenshot_as_png())).convert("RGB")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        image.save(
+            output_dir / "mobile_apps_showcase.png",
+            format="PNG",
+            optimize=True,
+        )
+    finally:
+        driver.quit()
+
+
 def _load(driver: webdriver.Chrome, url: str) -> None:
     driver.get(url)
     deadline = time.monotonic() + 20
@@ -1049,6 +1066,7 @@ def main() -> None:
             "cartesian-0.10",
             "grammar-0.12",
             "mobile-0.13",
+            "mobile-apps",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -1100,6 +1118,9 @@ def main() -> None:
         return
     if args.capture == "mobile-0.13":
         _mobile_showcase_still(base_url, args.output_dir)
+        return
+    if args.capture == "mobile-apps":
+        _mobile_apps_still(base_url, args.output_dir)
         return
 
     driver = _driver()
