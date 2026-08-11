@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 0.17.1 - 2026-08-07
+## 0.17.1 - 2026-08-11
 
 ### Fixed
 
@@ -23,6 +23,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rewrote the package description to state what the package is and lead with the
   capabilities developers search for, rather than internal subsystem names.
   Package directories and pub.dev render this text verbatim.
+- Replaced the ultra-wide README strip with a near-square thirteen-family hero
+  that remains legible in package-directory and social-card layouts.
+
+### Added
+
+- A dedicated mobile-app showcase with six live phone-native compositions for
+  endurance, recovery, live sport, training, habits, and urban mobility. The
+  mobile experience is directly routable, discoverable from desktop and phone
+  navigation, featured in the main Gallery, and included as the second pub.dev
+  screenshot.
+- Deterministic Line Race playback with a portable model and controller,
+  play/pause, seek, step, speed and reduced-motion behavior, interpolated
+  frontiers, collision-aware endpoint labels, artifact/source round-tripping,
+  and a complete F1-style showcase preset.
+- Bar label rotation, portable static or lazy hierarchical drill-down with
+  breadcrumb navigation, and deterministic Bar Race playback with stable rank
+  identity, one animation clock, configurable period/aggregate presentation,
+  artifacts, generated source, accessibility, and showcase controls.
+- A CI dependency-floor gate that proves every direct hosted dependency admits
+  a version compatible with the Dart and Flutter floors declared by the
+  package, including a non-vacuous regression for the fixed colour-picker
+  constraint.
+
+## 0.17.0 - 2026-08-03
 
 ### Added
 

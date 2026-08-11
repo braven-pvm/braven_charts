@@ -15,7 +15,7 @@ const _galleryPagePath = 'example/lib/showcase/pages/gallery_page.dart';
 const _mediaCapturePath = 'tool/capture_pubdev_static_media_test.dart';
 const _showcaseAppPath = 'example/lib/showcase/showcase_app.dart';
 const _pubspecPath = 'pubspec.yaml';
-const _heroMediaPath = 'doc/screenshots/chart_type_strip.png';
+const _heroMediaPath = 'doc/screenshots/chart_family_grid.png';
 const _chartFamilyTopicPath = 'doc/topics/chart_families.md';
 
 const _generatedSections = <String>[
@@ -254,8 +254,8 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     root,
     _heroMediaPath,
     field: 'README hero media',
-    width: 2400,
-    height: 280,
+    width: 1488,
+    height: 1592,
     errors: errors,
   );
   _validateHeroCaptureFamilies(root, families, errors);
