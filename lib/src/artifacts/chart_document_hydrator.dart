@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 
 import '../braven_chart_plus.dart';
 import '../controllers/annotation_controller.dart';
@@ -28,6 +29,8 @@ import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_config.dart';
 import '../models/radial_bar_chart_series.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
 import '../models/series_callout_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -94,6 +97,7 @@ class HydratedChartConfiguration {
     this.height,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radarChartConfig,
     this.radialBarChartConfig,
     this.gaugeChartConfig,
     this.seriesCallouts = const SeriesCalloutConfig(),
@@ -142,6 +146,9 @@ class HydratedChartConfiguration {
 
   /// Plot-level pane and axes restored for an axis-based polar chart.
   final PolarChartConfig? polarChartConfig;
+
+  /// Plot-level pane and shared axes restored for a Radar chart.
+  final RadarChartConfig? radarChartConfig;
 
   /// Plot-level pane, tracks, and guides restored for a Radial Bar chart.
   final RadialBarChartConfig? radialBarChartConfig;
@@ -430,6 +437,7 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       concentricDonutConfig:
           config.concentricDonutConfig ?? const ConcentricDonutConfig(),
       polarChartConfig: config.polarChartConfig ?? const PolarChartConfig(),
+      radarChartConfig: config.radarChartConfig ?? const RadarChartConfig(),
       radialBarChartConfig:
           config.radialBarChartConfig ?? const RadialBarChartConfig(),
       gaugeChartConfig: config.gaugeChartConfig ?? const GaugeChartConfig(),
@@ -550,6 +558,9 @@ abstract final class ChartDocumentHydrator {
     'series.gauge.v1',
     'chart.gauge.config.v1',
     'chart.polar.config.v1',
+    'series.radar',
+    'series.radar.v1',
+    'chart.radar.config.v1',
     'chart.polar.thresholds.v1',
     'chart.cartesian.value-summary.v1',
     PolarChartConfig.labelAppearanceCapability,
@@ -588,6 +599,7 @@ abstract final class ChartDocumentHydrator {
     'pie',
     'donut',
     'polarColumn',
+    'radar',
     'radialBar',
     'gauge',
   };
@@ -922,6 +934,17 @@ abstract final class ChartDocumentHydrator {
         series: series,
         config: polarChartConfig,
       );
+      final radarChartConfig = _requireValue(
+        ChartConfigurationDocumentCodec.decodeRadarChart(
+          document.configuration,
+        ),
+        warnings,
+      );
+      _validateRadarComposition(
+        document: document,
+        series: series,
+        config: radarChartConfig,
+      );
       final radialBarChartConfig = _requireValue(
         ChartConfigurationDocumentCodec.decodeRadialBarChart(
           document.configuration,
@@ -975,6 +998,7 @@ abstract final class ChartDocumentHydrator {
           height: layout.height?.asDouble,
           concentricDonutConfig: concentricDonutConfig,
           polarChartConfig: polarChartConfig,
+          radarChartConfig: radarChartConfig,
           radialBarChartConfig: radialBarChartConfig,
           gaugeChartConfig: gaugeChartConfig,
           seriesCallouts: seriesCallouts,
@@ -1594,6 +1618,74 @@ abstract final class ChartDocumentHydrator {
         ),
         const [],
       );
+    }
+  }
+
+  static void _validateRadarComposition({
+    required ChartDocument document,
+    required List<ChartSeries> series,
+    required RadarChartConfig? config,
+  }) {
+    final radarSeries = series.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    if (config == null) {
+      if (radarSeries.isNotEmpty) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message: 'Radar series require chart-level Radar configuration.',
+            path: r'$.document.configuration.radarChart',
+          ),
+          [],
+        );
+      }
+      return;
+    }
+    if (!document.requiredCapabilities.contains('chart.radar.config.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Radar configuration must declare chart.radar.config.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (radarSeries.isEmpty || radarSeries.length != series.length) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Radar configuration requires Radar series and cannot mix chart families.',
+          path: r'$.document.configuration.radarChart',
+        ),
+        [],
+      );
+    }
+    if (!document.requiredCapabilities.contains('series.radar.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Radar series must declare series.radar.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    final expected = radarSeries.first.categories;
+    for (final candidate in radarSeries.skip(1)) {
+      if (!listEquals(candidate.categories, expected)) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Every Radar series must preserve the same ordered category schema.',
+            path: r'$.document.series',
+          ),
+          [],
+        );
+      }
     }
   }
 

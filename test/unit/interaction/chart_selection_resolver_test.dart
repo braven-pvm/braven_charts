@@ -328,6 +328,46 @@ void main() {
       });
     });
 
+    test('category follows labels across reordered Radar profiles', () {
+      final allocated = RadarChartSeries.fromMap(
+        id: 'allocated',
+        values: const <String, num>{
+          'Sales': 42,
+          'Marketing': 18,
+          'Development': 35,
+        },
+      );
+      final actual = RadarChartSeries.fromMap(
+        id: 'actual',
+        values: const <String, num>{
+          'Development': 29,
+          'Sales': 47,
+          'Marketing': 31,
+        },
+      );
+      final targets = ChartSelectionResolver.resolve(
+        scope: ChartSelectionScope.category,
+        hits: <ChartDataHit>[
+          ChartDataHit(
+            seriesId: 'allocated',
+            pointIndex: 1,
+            plotPosition: Offset.zero,
+            semanticBounds: Rect.zero,
+            point: allocated.points[1],
+            formattedValue: '18',
+            ordinal: 2,
+            count: 3,
+          ),
+        ],
+        series: <ChartSeries>[allocated, actual],
+      );
+
+      expect(targets.pointRefs, <ChartPointRef>{
+        const ChartPointRef(seriesId: 'allocated', pointIndex: 1),
+        const ChartPointRef(seriesId: 'actual', pointIndex: 2),
+      });
+    });
+
     test('stack follows polar category and signed stack identity', () {
       final positive = PolarColumnChartSeries.fromMap(
         id: 'positive',

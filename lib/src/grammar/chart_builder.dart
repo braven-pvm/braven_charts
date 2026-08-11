@@ -26,6 +26,8 @@ import '../models/path_animation_style.dart' show PathAnimationStyle;
 import '../models/pie_chart_config.dart'
     show PieChartStyle, PieDataLabelConfig, RadialSliceRadiusConfig;
 import '../models/polar_chart_config.dart' show PolarChartConfig;
+import '../models/radar_chart_config.dart'
+    show RadarChartConfig, RadarSeriesStyle;
 import '../models/polar_column_chart_series.dart'
     show
         PolarColumnIntervalStyle,
@@ -125,6 +127,7 @@ final class BravenChart<T> {
     bool? showLegend,
     FacetSpec<T>? facet,
     PolarChartConfig? polar,
+    RadarChartConfig? radar,
   }) : _rows = rows,
        _marks = marks,
        _yAxes = yAxes,
@@ -144,7 +147,8 @@ final class BravenChart<T> {
        _subtitle = subtitle,
        _showLegend = showLegend,
        _facet = facet,
-       _polar = polar;
+       _polar = polar,
+       _radar = radar;
 
   /// Starts a chain over [rows].
   static BravenChart<T> of<T>(List<T> rows) => BravenChart<T>._(
@@ -180,6 +184,7 @@ final class BravenChart<T> {
   final bool? _showLegend;
   final FacetSpec<T>? _facet;
   final PolarChartConfig? _polar;
+  final RadarChartConfig? _radar;
 
   BravenChart<T> _copy({
     List<Mark<T>>? marks,
@@ -201,6 +206,7 @@ final class BravenChart<T> {
     bool? showLegend,
     FacetSpec<T>? facet,
     PolarChartConfig? polar,
+    RadarChartConfig? radar,
   }) => BravenChart<T>._(
     rows: _rows,
     marks: marks ?? _marks,
@@ -222,6 +228,7 @@ final class BravenChart<T> {
     showLegend: showLegend ?? _showLegend,
     facet: facet ?? _facet,
     polar: polar ?? _polar,
+    radar: radar ?? _radar,
   );
 
   BravenChart<T> _append(Mark<T> mark) =>
@@ -881,6 +888,31 @@ final class BravenChart<T> {
     ),
   );
 
+  /// Appends one Radar/Spider profile over an ordered category domain.
+  ///
+  /// Repeat this verb to compare aligned profiles. Every Radar mark must
+  /// resolve the same category identities in the same order and uses the
+  /// shared plot-level configuration supplied by [radarConfig].
+  BravenChart<T> geomRadar({
+    required FieldAccessor<T, Object?> category,
+    required FieldAccessor<T, num> value,
+    String? id,
+    String? name,
+    Color? color,
+    String? unit,
+    RadarSeriesStyle? style,
+  }) => _append(
+    RadarMark<T>(
+      id: _idFor(id),
+      category: category,
+      value: value,
+      name: name,
+      color: color,
+      unit: unit,
+      style: style,
+    ),
+  );
+
   /// Fits a statistic over a geometry already in the chain.
   ///
   /// [of] names the geometry's mark id; leaving it null uses the geometry
@@ -1056,6 +1088,10 @@ final class BravenChart<T> {
   /// chain whose radial geometry is not polar is rejected at lowering.
   BravenChart<T> polarConfig(PolarChartConfig config) => _copy(polar: config);
 
+  /// Configures the shared pane, category web, and radial scale for every
+  /// [RadarMark] in this chain.
+  BravenChart<T> radarConfig(RadarChartConfig config) => _copy(radar: config);
+
   /// Sets the chart [title], and optionally a [subtitle] beneath it.
   BravenChart<T> title(String title, {String? subtitle}) =>
       _copy(title: title, subtitle: subtitle);
@@ -1097,6 +1133,7 @@ final class BravenChart<T> {
       showLegend: _showLegend,
       facet: _facet,
       polar: _polar,
+      radar: _radar,
     );
   }
 

@@ -54,6 +54,7 @@ import 'package:braven_charts_example/showcase/pages/gauge_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/heatmap_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
+import 'package:braven_charts_example/showcase/pages/radar_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/radial_bar_page.dart';
 import 'package:braven_charts_example/showcase/pages/range_area_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/selection_showcase_page.dart';
@@ -106,6 +107,7 @@ _Family _familyOf(BravenChartPlus chart) {
     'PieChartSeries',
     'DonutChartSeries',
     'PolarColumnChartSeries',
+    'RadarChartSeries',
     'RadialBarChartSeries',
     'GaugeChartSeries',
   };
@@ -275,6 +277,13 @@ const List<_CensusPage> _censusPages = <_CensusPage>[
     statePrefixes: <String>['polar-presentation-', 'polar-playground'],
   ),
   _CensusPage(
+    name: 'Radar',
+    build: RadarChartsPage.new,
+    sourceFile: 'radar_charts_page.dart',
+    mountSites: 1,
+    statePrefixes: <String>['radar-presentation-'],
+  ),
+  _CensusPage(
     name: 'RadialBar',
     build: RadialBarPage.new,
     sourceFile: 'radial_bar_page.dart',
@@ -416,6 +425,9 @@ void main() {
 /// moved; the 3 that did not are the Line states named above, each with its
 /// second blocker identified. Nothing outside those 19 moved, and no page went
 /// down.
+///
+/// Re-measured 2026-08-07 for BC-0061: the three authored Radar presentations
+/// all emit faithful repeated `geomRadar` chains.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[16, 13, 6],
   'Area': <int>[9, 9, 8],
@@ -432,6 +444,7 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Donut': <int>[5, 5, 5],
   'ConcentricDonut': <int>[6, 6, 6],
   'PolarColumn': <int>[9, 9, 9],
+  'Radar': <int>[3, 3, 3],
   'RadialBar': <int>[12, 12, 0],
   'Gauge': <int>[12, 12, 0],
 };
@@ -439,11 +452,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
   _Family.cartesian: <int>[44, 133],
-  _Family.radial: <int>[31, 55],
+  _Family.radial: <int>[34, 58],
 };
 
-const int _expectedWithVerdict = 188;
-const int _expectedEmitting = 75;
+const int _expectedWithVerdict = 191;
+const int _expectedEmitting = 78;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than
@@ -514,8 +527,8 @@ void _mountSiteGuard() {
   expect(found, declared, reason: 'mount-site counts moved');
   expect(
     found.values.fold<int>(0, (a, b) => a + b),
-    17,
-    reason: 'the census is sized against 17 mount sites; found $found',
+    18,
+    reason: 'the census is sized against 18 mount sites; found $found',
   );
 }
 

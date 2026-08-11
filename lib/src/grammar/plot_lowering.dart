@@ -25,6 +25,9 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
+import '../layout/radar_composition.dart';
 import '../models/radial_selection_style.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
@@ -78,6 +81,7 @@ class LoweredPlot {
     this.showLegend,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radarChartConfig,
   });
 
   /// One series per geometry mark, in spec order.
@@ -121,6 +125,10 @@ class LoweredPlot {
   /// The polar pane/axis config, when the lowered chart is a polar column.
   /// Null for every other family.
   final PolarChartConfig? polarChartConfig;
+
+  /// The Radar pane/category/radial-axis config for Radar profiles.
+  /// Null for every other family.
+  final RadarChartConfig? radarChartConfig;
 }
 
 // Const prototypes. Reading defaults off a real instance instead of
@@ -277,6 +285,9 @@ LoweredPlot _lower<T>(PlotSpec<T> spec) {
   // `multipleRadialGeoms` must be reported first.
   if (spec.polar != null && !spec.isRadial) {
     throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds.first);
+  }
+  if (spec.radar != null && !spec.isRadial) {
+    throw GrammarSpecException.radarConfigOnNonRadarSpec(markIds.first);
   }
   if (spec.isRadial) return _lowerRadial<T>(spec, markIds);
   final axes = _resolveAxes(spec.yAxes);
@@ -1413,13 +1424,16 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     for (var index = 0; index < spec.marks.length; index++)
       if (spec.marks[index] is RadialMark<T>) index,
   ];
-  // Multiple radial marks are legal ONLY when every one is a polar column:
-  // polar composition (layered/grouped/stacked) genuinely spans series, while
-  // two pies or a pie plus a donut have no shared coordinate meaning.
+  // Multiple radial marks are legal when every mark belongs to one reviewed
+  // multi-series family: Polar Column or Radar. Pies/donuts have no shared
+  // coordinate meaning across several marks.
   final allPolar = radialIndices.every(
     (index) => spec.marks[index] is PolarMark<T>,
   );
-  if (radialIndices.length > 1 && !allPolar) {
+  final allRadar = radialIndices.every(
+    (index) => spec.marks[index] is RadarMark<T>,
+  );
+  if (radialIndices.length > 1 && !allPolar && !allRadar) {
     throw GrammarSpecException.multipleRadialGeoms(<String>[
       for (final index in radialIndices) markIds[index],
     ]);
@@ -1461,6 +1475,9 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   // (The Cartesian case is caught earlier, in `_lower`.)
   if (spec.polar != null && !allPolar) {
     throw GrammarSpecException.polarConfigOnNonPolarSpec(markIds[markIndex]);
+  }
+  if (spec.radar != null && !allRadar) {
+    throw GrammarSpecException.radarConfigOnNonRadarSpec(markIds[markIndex]);
   }
 
   // A ConcentricDonutConfig owns the shared center through its centerContent,
@@ -1552,8 +1569,28 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
   final series = <ChartSeries>[];
   ConcentricDonutConfig? concentric;
   PolarChartConfig? polar;
+  RadarChartConfig? radar;
 
-  if (allPolar) {
+  if (allRadar) {
+    final profiles = <RadarChartSeries>[
+      for (final index in radialIndices)
+        _lowerRadar<T>(
+          spec.marks[index] as RadarMark<T>,
+          markIds[index],
+          spec.data,
+        ),
+    ];
+    radar = spec.radar ?? const RadarChartConfig();
+    try {
+      radar.validate();
+      RadarComposition.validate(profiles);
+    } on ArgumentError catch (error) {
+      throw GrammarSpecException.invalidRadarComposition(
+        _authorityDetail(error),
+      );
+    }
+    series.addAll(profiles);
+  } else if (allPolar) {
     final columns = <PolarColumnChartSeries>[
       for (final index in radialIndices)
         _lowerPolar<T>(
@@ -1662,6 +1699,7 @@ LoweredPlot _lowerRadial<T>(PlotSpec<T> spec, List<String> markIds) {
     showLegend: spec.showLegend,
     concentricDonutConfig: concentric,
     polarChartConfig: polar,
+    radarChartConfig: radar,
   );
 }
 
@@ -1920,6 +1958,21 @@ PieChartSeries _lowerPie<T>(PieMark<T> mark, String id, List<T> data) =>
       pieStyle: mark.style ?? const PieChartStyle(),
       selectionStyle: mark.selectionStyle ?? const RadialSelectionStyle(),
       dataLabels: mark.dataLabels ?? const PieDataLabelConfig(),
+    );
+
+/// Materializes one Radar profile while preserving authored category order.
+///
+/// Cross-profile alignment is deliberately validated once all profiles have
+/// been lowered in [_lowerRadial], because a single mark cannot prove the
+/// shared-category contract by itself.
+RadarChartSeries _lowerRadar<T>(RadarMark<T> mark, String id, List<T> data) =>
+    RadarChartSeries.fromMap(
+      id: id,
+      name: mark.name,
+      color: mark.color,
+      unit: mark.unit,
+      values: _radialValues(data, mark.category, mark.value),
+      radarStyle: mark.style ?? const RadarSeriesStyle(),
     );
 
 /// Builds the single (ring-less) donut. [center] is the center resolved by the

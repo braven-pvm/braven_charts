@@ -24,6 +24,8 @@ import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/polar_column_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/radar_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/range_area_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/scatter_gallery_cards.dart';
@@ -197,6 +199,36 @@ void main() {
       }
     },
   );
+
+  testWidgets('capture pub.dev Radar media through the public preview API', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    for (final source in const [
+      (
+        fileName: 'radar_budget_comparison.png',
+        widget: BudgetComparisonRadarGalleryCard(),
+      ),
+      (
+        fileName: 'radar_capability_profile.png',
+        widget: CapabilityRadarGalleryCard(),
+      ),
+      (
+        fileName: 'radar_service_health.png',
+        widget: ServiceHealthRadarGalleryCard(),
+      ),
+    ]) {
+      await _capturePie(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: source.fileName,
+        source: source.widget,
+      );
+    }
+  });
 
   testWidgets('capture pub.dev Bar media through the public preview API', (
     tester,
@@ -529,6 +561,7 @@ Future<Uint8List> _capturePie(
             interactionConfig: galleryChart.interactionConfig,
             concentricDonutConfig: galleryChart.concentricDonutConfig,
             polarChartConfig: galleryChart.polarChartConfig,
+            radarChartConfig: galleryChart.radarChartConfig,
           ),
         ),
       ),
@@ -1089,6 +1122,7 @@ Future<_ChartTypeCapture> _captureChartType(
             interactionConfig: InteractionConfig.none(),
             concentricDonutConfig: asset.concentricDonutConfig,
             polarChartConfig: asset.polarChartConfig,
+            radarChartConfig: asset.radarChartConfig,
             radialBarChartConfig: asset.radialBarChartConfig,
             gaugeChartConfig: asset.gaugeChartConfig,
           ),
@@ -1495,6 +1529,11 @@ Future<void> _captureFamilyPairs(
       primary: 'chart_type_radial_bar.png',
       secondary: 'radial_bar_signed.png',
     ),
+    (
+      output: 'family_radar_pair.png',
+      primary: 'chart_type_radar.png',
+      secondary: 'radar_capability_profile.png',
+    ),
   ];
 
   for (final pair in pairs) {
@@ -1756,6 +1795,7 @@ class _ChartTypeAsset {
     this.grid = const GridConfig(horizontal: true, vertical: false),
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
+    this.radarChartConfig = const RadarChartConfig(),
     this.radialBarChartConfig = const RadialBarChartConfig(),
     this.gaugeChartConfig = const GaugeChartConfig(),
     this.persistCapture = true,
@@ -1770,6 +1810,7 @@ class _ChartTypeAsset {
   final GridConfig grid;
   final ConcentricDonutConfig concentricDonutConfig;
   final PolarChartConfig polarChartConfig;
+  final RadarChartConfig radarChartConfig;
   final RadialBarChartConfig radialBarChartConfig;
   final GaugeChartConfig gaugeChartConfig;
   final bool persistCapture;
@@ -1855,6 +1896,9 @@ List<_ChartTypeAsset> _chartTypeAssets() {
   );
   final polarTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFF4FAFF),
+  );
+  final radarTheme = ChartTheme.light.copyWith(
+    backgroundColor: const Color(0xFFF8F7FF),
   );
   final radialBarTheme = ChartTheme.light.copyWith(
     backgroundColor: const Color(0xFFF8FAFF),
@@ -2508,6 +2552,68 @@ List<_ChartTypeAsset> _chartTypeAssets() {
             cornerRadius: 8,
             trackOpacity: 0.1,
             showDataLabels: true,
+          ),
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
+      label: 'Radar',
+      fileName: 'chart_type_radar.png',
+      theme: radarTheme,
+      headerColor: const Color(0xFFEDE9FE),
+      headerTextColor: const Color(0xFF5B21B6),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      radarChartConfig: const RadarChartConfig(
+        pane: PolarPaneConfig(outerRadiusFactor: 0.72),
+        categoryAxis: RadarCategoryAxisConfig(
+          showLabels: false,
+          showSpokes: true,
+        ),
+        radialAxis: RadarNumericAxisConfig(
+          maximum: 100,
+          tickCount: 4,
+          showLabels: false,
+          gridShape: RadarGridShape.polygon,
+        ),
+      ),
+      series: [
+        RadarChartSeries.fromMap(
+          id: 'radar-budget',
+          name: 'Budget',
+          color: const Color(0xFF2563EB),
+          values: const {
+            'Sales': 78,
+            'Marketing': 46,
+            'Development': 84,
+            'Support': 58,
+            'Technology': 67,
+            'Administration': 42,
+          },
+          radarStyle: const RadarSeriesStyle(
+            strokeWidth: 2.5,
+            fillOpacity: 0.14,
+            showMarkers: true,
+            markerRadius: 3,
+          ),
+        ),
+        RadarChartSeries.fromMap(
+          id: 'radar-actual',
+          name: 'Actual',
+          color: const Color(0xFF7C3AED),
+          values: const {
+            'Sales': 69,
+            'Marketing': 78,
+            'Development': 74,
+            'Support': 52,
+            'Technology': 38,
+            'Administration': 31,
+          },
+          radarStyle: const RadarSeriesStyle(
+            strokeWidth: 2,
+            strokeDashPattern: [5, 3],
+            fillOpacity: 0.07,
+            showMarkers: true,
+            markerRadius: 2.5,
           ),
         ),
       ],

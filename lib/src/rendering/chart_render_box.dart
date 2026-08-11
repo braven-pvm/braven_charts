@@ -25,6 +25,7 @@ import '../axis/log_ticks.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/pie_series_element.dart';
+import '../elements/radar_series_element.dart';
 import '../elements/radial_bar_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
@@ -5632,7 +5633,10 @@ class ChartRenderBox extends RenderBox {
     final isRadialBar = _elements.any(
       (element) => element is RadialBarSeriesElement,
     );
-    config.label = isRadialBar
+    final radarProfiles = _elements.whereType<RadarSeriesElement>().length;
+    config.label = radarProfiles > 0
+        ? 'Radar chart with $hitCount vertices across $radarProfiles profiles'
+        : isRadialBar
         ? 'Radial Bar chart with $hitCount categories'
         : groupCount != null
         ? 'Concentric Donut chart with $groupCount rings and $hitCount slices'

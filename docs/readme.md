@@ -16,6 +16,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
 - [guides/mobile-interaction.md](guides/mobile-interaction.md) - Scroll-first Browse gestures, long-press tracking, and opt-in short-tap selection
 - [guides/bar-charts.md](guides/bar-charts.md) - Bar orientation, composition, floating ranges, styling, labels, and interaction
+- [guides/radar-charts.md](guides/radar-charts.md) - Radar and Spider category domains, shared scales, webs, profiles, interaction, portability, and accessibility
 - [guides/pie-charts.md](guides/pie-charts.md) - Pie data, advanced theming, labels, legends, selection, motion, tables, artifacts, and accessibility
 - [../doc/concentric_donut_charts.md](../doc/concentric_donut_charts.md) - independent Donut rings, allocation, legends, tables, selection, centers, and artifacts
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide

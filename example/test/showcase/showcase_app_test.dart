@@ -131,6 +131,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('direct Radar route opens the authored Spider comparison', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'radar-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Radar and Spider Charts'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('radar-chart-budget-polygon')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('direct Selection route mounts the cross-family test lab', (
     tester,
   ) async {

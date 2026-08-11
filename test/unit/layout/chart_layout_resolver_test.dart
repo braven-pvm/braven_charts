@@ -205,6 +205,80 @@ void main() {
       expect(ChartLayoutResolver.resolve([polar]), ChartLayoutKind.polarAxis);
     });
 
+    test('accepts aligned Radar profiles on the polar-axis layout', () {
+      final budget = RadarChartSeries.fromMap(
+        id: 'budget',
+        values: const {'Sales': 43, 'Marketing': 19, 'Development': 60},
+        unit: 'USD',
+      );
+      final spending = RadarChartSeries.fromMap(
+        id: 'spending',
+        values: const {'Sales': 50, 'Marketing': 39, 'Development': 42},
+        unit: 'USD',
+      );
+
+      expect(
+        ChartLayoutResolver.resolve([budget, spending]),
+        ChartLayoutKind.polarAxis,
+      );
+    });
+
+    test('rejects mixed or misaligned Radar compositions', () {
+      final reference = RadarChartSeries.fromMap(
+        id: 'reference',
+        values: const {'A': 1, 'B': 2, 'C': 3},
+        unit: 'score',
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          RadarChartSeries.fromMap(
+            id: 'reordered',
+            values: const {'B': 2, 'A': 1, 'C': 3},
+            unit: 'score',
+          ),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('same categories in the same order'),
+          ),
+        ),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          RadarChartSeries.fromMap(
+            id: 'unit',
+            values: const {'A': 1, 'B': 2, 'C': 3},
+            unit: 'USD',
+          ),
+        ]),
+        throwsArgumentError,
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          PolarColumnChartSeries.fromMap(id: 'polar', values: const {'A': 1}),
+        ]),
+        throwsArgumentError,
+      );
+      expect(
+        () => ChartLayoutResolver.resolve(const [
+          ChartSeries(id: 'fake-radar', points: [], style: SeriesStyle.radar),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('requires a RadarChartSeries'),
+          ),
+        ),
+      );
+    });
+
     test('uses polar-axis layout for exactly one RadialBarChartSeries', () {
       final radialBar = RadialBarChartSeries.fromMap(
         id: 'progress',

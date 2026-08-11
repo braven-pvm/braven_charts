@@ -7,6 +7,7 @@ import '../models/chart_theme.dart' show ChartTheme;
 import '../models/grid_config.dart' show GridConfig;
 import '../models/interaction_config.dart' show InteractionConfig;
 import '../models/polar_chart_config.dart' show PolarChartConfig;
+import '../models/radar_chart_config.dart' show RadarChartConfig;
 import '../models/x_axis_config.dart' show XAxisConfig;
 import '../models/y_axis_config.dart' show YAxisConfig;
 import 'facet_spec.dart';
@@ -53,6 +54,7 @@ class PlotSpec<T> {
     this.showLegend,
     this.facet,
     this.polar,
+    this.radar,
   });
 
   /// Rows every mark's accessors read from.
@@ -127,6 +129,11 @@ class PlotSpec<T> {
   /// `LoweredPlot.polarChartConfig` stays null.)
   final PolarChartConfig? polar;
 
+  /// Optional plot-level Radar pane and axis configuration shared by every
+  /// [RadarMark] profile. A Radar spec without one uses
+  /// `const RadarChartConfig()`; non-Radar specs may not carry it.
+  final RadarChartConfig? radar;
+
   /// A copy of this spec with [facet] cleared and everything else identical.
   ///
   /// `BravenFacetPlot` lowers each panel from a facet-cleared copy, so the
@@ -144,6 +151,7 @@ class PlotSpec<T> {
     subtitle: subtitle,
     showLegend: showLegend,
     polar: polar,
+    radar: radar,
   );
 
   /// Whether any mark is a radial geometry.
@@ -168,7 +176,8 @@ class PlotSpec<T> {
           other.subtitle == subtitle &&
           other.showLegend == showLegend &&
           other.facet == facet &&
-          other.polar == polar;
+          other.polar == polar &&
+          other.radar == radar;
 
   @override
   int get hashCode => Object.hash(
@@ -185,6 +194,7 @@ class PlotSpec<T> {
     showLegend,
     facet,
     polar,
+    radar,
   );
 
   @override

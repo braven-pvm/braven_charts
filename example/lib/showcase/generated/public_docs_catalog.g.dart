@@ -66,7 +66,7 @@ const publicDocsFlutterConstraint = ">=3.35.0";
 const publicDocsFeatures = <PublicDocsFeatureEntry>[
   (
     id: "chart-families",
-    title: "Thirteen chart families",
+    title: "Fourteen chart families",
     summary:
         "Build Cartesian, financial, radial, and polar charts in one native renderer.",
     page: "chart-types",
@@ -439,6 +439,38 @@ const publicDocsChartFamilies = <PublicDocsChartFamilyEntry>[
     ),
   ),
   (
+    id: "radar",
+    label: "Radar / Spider",
+    group: "Polar",
+    summary: "Aligned multidimensional profiles",
+    bestFor:
+        "Comparing a small number of profiles across one ordered, shared dimension set",
+    page: "radar-charts",
+    guideId: "radar",
+    pairAsset: "doc/screenshots/family_radar_pair.png",
+    apiSymbols: <String>[
+      "RadarChartSeries",
+      "RadarChartConfig",
+      "RadarSeriesStyle",
+    ],
+    primaryExample: (
+      title: "Radar and Spider chart family",
+      asset: "doc/screenshots/chart_type_radar.png",
+      page: "radar-charts",
+      preset: null,
+      view: null,
+      animated: false,
+    ),
+    secondaryExample: (
+      title: "Capability profile",
+      asset: "doc/screenshots/radar_capability_profile.png",
+      page: "radar-charts",
+      preset: null,
+      view: null,
+      animated: false,
+    ),
+  ),
+  (
     id: "gauge",
     label: "Gauge / Solid Gauge",
     group: "Indicator radial",
@@ -564,6 +596,15 @@ const publicDocsHostedGuides = <PublicDocsHostedGuideEntry>[
     path: "chart-families/radial-bar/",
   ),
   (
+    id: "radar",
+    title: "Radar and Spider charts",
+    group: "Chart families",
+    summary:
+        "Compare aligned multidimensional profiles on one explicit shared radial scale.",
+    sourcePath: "docs/guides/radar-charts.md",
+    path: "chart-families/radar/",
+  ),
+  (
     id: "gauge",
     title: "Gauge and Solid Gauge charts",
     group: "Chart families",
@@ -682,6 +723,17 @@ const publicDocsGuides = <PublicDocsGuideEntry>[
     summary: "Start with the data question and compare all built-in families.",
     page: "chart-types",
     guideId: null,
+    apiPath: null,
+    snippet: null,
+  ),
+  (
+    id: "radar",
+    title: "Radar and Spider charts",
+    group: "Get started",
+    summary:
+        "Compare aligned multidimensional profiles without confusing a profile with a part-to-whole chart.",
+    page: "radar-charts",
+    guideId: "radar",
     apiPath: null,
     snippet: null,
   ),

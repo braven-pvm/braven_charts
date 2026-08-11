@@ -39,6 +39,7 @@ enum SeriesStyle {
   donut,
   candlestick,
   polarColumn,
+  radar,
   radialBar,
   gauge,
   heatmap,

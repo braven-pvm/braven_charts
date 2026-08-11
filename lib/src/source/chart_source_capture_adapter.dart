@@ -14,6 +14,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
+import '../models/radar_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_style.dart';
 
@@ -208,6 +209,7 @@ abstract final class ChartSourceCaptureAdapter {
         PolarColumnChartSeries() => withoutCallbacks,
         RadialBarChartSeries() => withoutCallbacks,
         GaugeChartSeries() => withoutCallbacks,
+        RadarChartSeries() => withoutCallbacks,
         ChartSeries() => withoutCallbacks.copyWith(annotations: annotations),
       };
     };
@@ -232,6 +234,7 @@ abstract final class ChartSourceCaptureAdapter {
       height: source.height,
       concentricDonutConfig: source.concentricDonutConfig,
       polarChartConfig: source.polarChartConfig,
+      radarChartConfig: source.radarChartConfig,
       radialBarChartConfig: source.radialBarChartConfig,
       gaugeChartConfig: source.gaugeChartConfig,
       seriesCallouts: source.seriesCallouts,

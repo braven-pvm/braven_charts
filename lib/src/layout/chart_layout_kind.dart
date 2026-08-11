@@ -5,10 +5,12 @@ import '../models/gauge_chart_series.dart';
 import '../models/heatmap_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radar_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/range_area_chart_series.dart';
 import 'polar_column_composition.dart';
+import 'radar_composition.dart';
 
 /// Internal coordinate/composition family selected for a chart.
 ///
@@ -33,6 +35,7 @@ class ChartLayoutResolver {
     final allSeries = List<ChartSeries>.unmodifiable(series);
     final radialSeries = allSeries.whereType<RadialCategorySeries>().toList();
     final polarSeries = allSeries.whereType<PolarColumnChartSeries>().toList();
+    final radarSeries = allSeries.whereType<RadarChartSeries>().toList();
     final radialBarSeries = allSeries
         .whereType<RadialBarChartSeries>()
         .toList();
@@ -42,6 +45,7 @@ class ChartLayoutResolver {
         SeriesStyle.pie => candidate is! PieChartSeries,
         SeriesStyle.donut => candidate is! DonutChartSeries,
         SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
+        SeriesStyle.radar => candidate is! RadarChartSeries,
         SeriesStyle.radialBar => candidate is! RadialBarChartSeries,
         SeriesStyle.gauge => candidate is! GaugeChartSeries,
         SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
@@ -61,6 +65,7 @@ class ChartLayoutResolver {
           SeriesStyle.donut => 'SeriesStyle.donut requires a DonutChartSeries',
           SeriesStyle.polarColumn =>
             'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
+          SeriesStyle.radar => 'SeriesStyle.radar requires a RadarChartSeries',
           SeriesStyle.radialBar =>
             'SeriesStyle.radialBar requires a RadialBarChartSeries',
           SeriesStyle.gauge => 'SeriesStyle.gauge requires a GaugeChartSeries',
@@ -108,6 +113,18 @@ class ChartLayoutResolver {
           'Radial Bar v0.1 accepts exactly one RadialBarChartSeries',
         );
       }
+      return ChartLayoutKind.polarAxis;
+    }
+    if (radarSeries.isNotEmpty) {
+      if (allSeries.length != radarSeries.length) {
+        throw ArgumentError.value(
+          allSeries.length,
+          'series',
+          'Radar cannot be mixed with Cartesian, Polar Column, Radial Bar, '
+              'Pie, Donut, or Gauge series',
+        );
+      }
+      RadarComposition.validate(radarSeries);
       return ChartLayoutKind.polarAxis;
     }
     if (polarSeries.isNotEmpty) {

@@ -231,6 +231,7 @@ const Map<String, List<String>> _seriesEmitMethods = <String, List<String>>{
   'PieChartSeries': <String>['_emitPieOptions', '_emitAdvancedRadial'],
   'DonutChartSeries': <String>['_emitDonutOptions', '_emitAdvancedRadial'],
   'PolarColumnChartSeries': <String>['_emitPolarColumnOptions'],
+  'RadarChartSeries': <String>[],
   'RadialBarChartSeries': <String>['_emitRadialBarOptions'],
   'GaugeChartSeries': <String>['_emitGaugeSeries'],
   'ScatterChartSeries': <String>[],
@@ -434,6 +435,19 @@ String _scatterCaseSlice(String source) {
   return nextCase == null ? rest : rest.substring(0, nextCase.start);
 }
 
+/// `RadarChartSeries` also emits its family-specific style inline in the
+/// `_emitSeries` switch. Keep that constructor-field attribution separate from
+/// the shared series slice so dropping the Radar arm fails this gate.
+String _radarCaseSlice(String source) {
+  final emitSeries = _methodSlice(source, '_emitSeries');
+  const marker = 'case RadarChartSeries():';
+  final start = emitSeries.indexOf(marker);
+  if (start == -1) return '';
+  final rest = emitSeries.substring(start + marker.length);
+  final nextCase = RegExp(r'\n\s*case ').firstMatch(rest);
+  return nextCase == null ? rest : rest.substring(0, nextCase.start);
+}
+
 /// The union of emitted names for a series: shared base + its mapped method
 /// bodies (+ the scatter-case slice for the inline scatter series), plus the
 /// per-series `style` / `isXOrdered` attribution.
@@ -447,6 +461,7 @@ String _scatterCaseSlice(String source) {
 Set<String> _seriesEmittedNames(String source, String className) {
   final parts = <String>[_sharedSeriesBaseSlice(source)];
   if (className == 'ScatterChartSeries') parts.add(_scatterCaseSlice(source));
+  if (className == 'RadarChartSeries') parts.add(_radarCaseSlice(source));
   for (final method in _seriesEmitMethods[className] ?? const <String>[]) {
     parts.add(_methodSlice(source, method));
   }
@@ -862,6 +877,13 @@ void main() {
       reason:
           'the inline ScatterChartSeries case in _emitSeries was not found '
           '— the scatter-case slicer needs revisiting.',
+    );
+    expect(
+      _radarCaseSlice(source),
+      isNotEmpty,
+      reason:
+          'the inline RadarChartSeries case in _emitSeries was not found '
+          '— the Radar-case slicer needs revisiting.',
     );
   });
 

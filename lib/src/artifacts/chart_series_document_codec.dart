@@ -24,6 +24,8 @@ import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/range_area_style.dart';
@@ -244,6 +246,7 @@ abstract final class ChartSeriesDocumentCodec {
               'series.polar.column.intervals.v1',
             if (series is RadialBarChartSeries) 'series.radial.bar.v1',
             if (series is GaugeChartSeries) 'series.gauge.v1',
+            if (series is RadarChartSeries) 'series.radar.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -846,6 +849,18 @@ abstract final class ChartSeriesDocumentCodec {
                   _map(style, 'polarIntervalStyle'),
                 ),
         ),
+        'radar' => RadarChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
+          radarStyle: _decodeRadarSeriesStyle(_map(style, 'radarStyle')),
+        ),
         'radialBar' => RadialBarChartSeries(
           id: document.id,
           name: document.name,
@@ -931,6 +946,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   PieChartSeries() => 'pie',
   DonutChartSeries() => 'donut',
   PolarColumnChartSeries() => 'polarColumn',
+  RadarChartSeries() => 'radar',
   RadialBarChartSeries() => 'radialBar',
   GaugeChartSeries() => 'gauge',
   ChartSeries() => 'base',
@@ -1561,6 +1577,8 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['polarIntervalStyle'] = series.hasIntervals
             ? _encodePolarColumnIntervalStyle(series.intervalStyle)
             : null;
+    case RadarChartSeries():
+      result['radarStyle'] = _encodeRadarSeriesStyle(series.radarStyle);
     case RadialBarChartSeries():
       result
         ..['radialBarMinimum'] = _number(series.minimum)
@@ -1594,6 +1612,36 @@ Map<String, Object?> _encodeSeriesStyle(
   result.removeWhere((_, value) => value == null);
   return result;
 }
+
+Map<String, Object?> _encodeRadarSeriesStyle(RadarSeriesStyle style) => {
+  'strokeWidth': _number(style.strokeWidth),
+  'strokeOpacity': _number(style.strokeOpacity),
+  'strokeDashPattern': [
+    for (final interval in style.strokeDashPattern) _number(interval),
+  ],
+  if (style.fillColor != null) 'fillColor': style.fillColor!.toARGB32(),
+  'fillOpacity': _number(style.fillOpacity),
+  'showMarkers': style.showMarkers,
+  'markerRadius': _number(style.markerRadius),
+  'showDataLabels': style.showDataLabels,
+  'animationMode': style.animationMode.name,
+};
+
+RadarSeriesStyle _decodeRadarSeriesStyle(Map<String, Object?> value) =>
+    RadarSeriesStyle(
+      strokeWidth: _double(value, 'strokeWidth'),
+      strokeOpacity: _double(value, 'strokeOpacity'),
+      strokeDashPattern: _decodeDashPattern(value['strokeDashPattern']),
+      fillColor: _optionalColor(
+        value['fillColor'],
+        r'$.style.radarStyle.fillColor',
+      ),
+      fillOpacity: _double(value, 'fillOpacity'),
+      showMarkers: _bool(value, 'showMarkers'),
+      markerRadius: _double(value, 'markerRadius'),
+      showDataLabels: _bool(value, 'showDataLabels'),
+      animationMode: _enum(value, 'animationMode', RadarAnimationMode.values),
+    );
 
 Map<String, Object?> _encodeHeatmapColorScale(HeatmapColorScale scale) => {
   'type': scale.type.name,

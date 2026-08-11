@@ -8,14 +8,14 @@
 
 Braven Charts is a native Flutter charting system for focused mobile apps, interactive dashboards, and production-grade data visualization.
 
-Render thirteen chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
+Render 14 chart families through one custom `RenderBox` and `Canvas` pipeline. Author charts directly, through the checked typed Grammar of Graphics API, or with fluent modifiers. Then add selection, tracking, live data, multi-axis analysis, generated source, tables, and portable artifacts without leaving Flutter's rendering system.
 
 **[Open the live showcase](https://braven-pvm.github.io/braven_charts/) · [See mobile apps](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) · [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) · [Browse documentation](https://braven-pvm.github.io/braven_charts/?page=docs)**
 
 ## Why Braven Charts
 
 <!-- BEGIN GENERATED: FEATURES -->
-- **[Thirteen chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
+- **[Fourteen chart families](https://braven-pvm.github.io/braven_charts/?page=chart-types):** Build Cartesian, financial, radial, and polar charts in one native renderer.
 - **[Interaction and selection](https://braven-pvm.github.io/braven_charts/?page=selection):** Zoom, pan, track, annotate, select, and manipulate durable interval brushes.
 - **[Multi-axis analysis](https://braven-pvm.github.io/braven_charts/?page=multi-axis):** Coordinate independent axes, normalized series, navigators, and summaries.
 - **[Typed authoring and source](https://braven-pvm.github.io/braven_charts/?page=chart-grammar):** Choose direct config, checked Grammar, fluent modifiers, or generated Dart.
@@ -71,10 +71,10 @@ relevant Chart, Data, Split, and Source views.
 | [![Area-correct rose columns arranged on a polar axis and Lifecycle arc](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_polar_column_pair.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) | [![Radial bars comparing category progress on an explicit numeric scale and Signed baseline comparison](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_radial_bar_pair.png)](https://braven-pvm.github.io/braven_charts/?page=radial-bar) |
 | Cyclical categories and compact magnitude profiles<br>[Polar Column and Rose chart family](https://braven-pvm.github.io/braven_charts/?page=polar-column) · [Lifecycle arc](https://braven-pvm.github.io/braven_charts/?page=polar-column)<br>[Open all Polar Column / Rose examples](https://braven-pvm.github.io/braven_charts/?page=polar-column) · [Polar Column / Rose guide](https://braven-pvm.github.io/braven_charts/guides/chart-families/polar-column/) | Category progress, targets, signed baselines, and compact KPI tracks<br>[Radial Bar chart family](https://braven-pvm.github.io/braven_charts/?page=radial-bar) · [Signed baseline comparison](https://braven-pvm.github.io/braven_charts/?page=radial-bar)<br>[Open all Radial Bar examples](https://braven-pvm.github.io/braven_charts/?page=radial-bar) · [Radial Bar guide](https://braven-pvm.github.io/braven_charts/guides/chart-families/radial-bar/) |
 
-| **[Gauge / Solid Gauge](https://braven-pvm.github.io/braven_charts/?page=gauge-charts)** |
-| --- |
-| [![Needle and Solid Gauge indicators with zones and targets and a second curated example](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_gauge_pair.png)](https://braven-pvm.github.io/braven_charts/?page=gauge-charts) |
-| Operational state, targets, thresholds, zones, and compact KPI status<br>[Gauge and Solid Gauge family](https://braven-pvm.github.io/braven_charts/?page=gauge-charts)<br>[Open all Gauge / Solid Gauge examples](https://braven-pvm.github.io/braven_charts/?page=gauge-charts) · [Gauge / Solid Gauge guide](https://braven-pvm.github.io/braven_charts/guides/chart-families/gauge/) |
+| **[Radar / Spider](https://braven-pvm.github.io/braven_charts/?page=radar-charts)** | **[Gauge / Solid Gauge](https://braven-pvm.github.io/braven_charts/?page=gauge-charts)** |
+| --- | --- |
+| [![Two aligned profiles compared across six dimensions on a polygon web and Capability profile](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_radar_pair.png)](https://braven-pvm.github.io/braven_charts/?page=radar-charts) | [![Needle and Solid Gauge indicators with zones and targets and a second curated example](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/family_gauge_pair.png)](https://braven-pvm.github.io/braven_charts/?page=gauge-charts) |
+| Comparing a small number of profiles across one ordered, shared dimension set<br>[Radar and Spider chart family](https://braven-pvm.github.io/braven_charts/?page=radar-charts) · [Capability profile](https://braven-pvm.github.io/braven_charts/?page=radar-charts)<br>[Open all Radar / Spider examples](https://braven-pvm.github.io/braven_charts/?page=radar-charts) · [Radar / Spider guide](https://braven-pvm.github.io/braven_charts/guides/chart-families/radar/) | Operational state, targets, thresholds, zones, and compact KPI status<br>[Gauge and Solid Gauge family](https://braven-pvm.github.io/braven_charts/?page=gauge-charts)<br>[Open all Gauge / Solid Gauge examples](https://braven-pvm.github.io/braven_charts/?page=gauge-charts) · [Gauge / Solid Gauge guide](https://braven-pvm.github.io/braven_charts/guides/chart-families/gauge/) |
 <!-- END GENERATED: FAMILIES -->
 
 ## Install
@@ -173,6 +173,7 @@ developer task.
 - [Build your first chart](#quick-start) — Install the package and render a small, interactive line chart.
 - [Author with Chart Grammar](https://braven-pvm.github.io/braven_charts/?page=chart-grammar) — Describe data accessors and marks through a checked typed chain.
 - [Choose a chart family](https://braven-pvm.github.io/braven_charts/?page=chart-types) — Start with the data question and compare all built-in families.
+- [Radar and Spider charts](https://braven-pvm.github.io/braven_charts/guides/chart-families/radar/) — Compare aligned multidimensional profiles without confusing a profile with a part-to-whole chart.
 
 ### Interaction and display
 

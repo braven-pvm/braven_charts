@@ -10,6 +10,7 @@ import '../models/chart_series.dart';
 import '../models/chart_state_config.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/polar_chart_config.dart';
+import '../models/radar_chart_config.dart';
 import '../models/y_axis_config.dart' show YAxisConfig;
 import 'facet_panel_scope.dart';
 import 'grammar_diagnostics.dart';
@@ -203,6 +204,8 @@ class BravenPlot<T> extends StatelessWidget {
       // MARK, so there is nothing to read off the spec here.)
       polarChartConfig:
           lowered?.polarChartConfig ?? spec.polar ?? const PolarChartConfig(),
+      radarChartConfig:
+          lowered?.radarChartConfig ?? spec.radar ?? const RadarChartConfig(),
       emptyStateConfig: emptyStateConfig,
       bravenChartController: bravenChartController,
       interactionGroupController: interactionGroupController,
