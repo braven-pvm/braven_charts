@@ -167,6 +167,7 @@ class ChartRenderBox extends RenderBox {
        ) {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
+    _seriesCalloutRenderer = SeriesCalloutRenderer(onRepaint: markNeedsPaint);
     _zoomAnimator = ZoomAnimator(
       onUpdate: _onZoomAnimationUpdate,
       onComplete: _onZoomAnimationComplete,
@@ -287,8 +288,7 @@ class ChartRenderBox extends RenderBox {
 
   SeriesCalloutConfig _seriesCallouts;
 
-  final SeriesCalloutRenderer _seriesCalloutRenderer =
-      const SeriesCalloutRenderer();
+  late final SeriesCalloutRenderer _seriesCalloutRenderer;
 
   /// Grid configuration for controlling grid line visibility.
   GridConfig? _gridConfig;
@@ -1380,6 +1380,7 @@ class ChartRenderBox extends RenderBox {
     }
     _seriesCacheManager.dispose();
     _tooltipAnimator.dispose();
+    _seriesCalloutRenderer.dispose();
     _zoomAnimator.dispose();
     _scrollbarManager.dispose();
     _streamingManager.dispose();
@@ -5095,6 +5096,7 @@ class ChartRenderBox extends RenderBox {
       theme: _theme ?? ChartTheme.light,
       textScaleFactor: _textScaleFactor,
       textDirection: _textDirection,
+      animate: !_disableAnimations,
     );
 
     // LAYER 2: Foreground annotations (handles, points, text, thresholds, etc.)

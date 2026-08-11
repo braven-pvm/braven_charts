@@ -256,7 +256,15 @@ Future<void> _pumpPreset(WidgetTester tester, String preset) async {
 }
 
 BravenChartPlus _liveChart(WidgetTester tester) =>
-    tester.widget<BravenChartPlus>(find.byKey(const ValueKey('area-chart')));
+    tester.widget<BravenChartPlus>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is BravenChartPlus &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith('area-chart-'),
+        description: 'active preset-keyed Area chart',
+      ),
+    );
 
 /// Runs the grammar generator over the LIVE document of the chart the page
 /// mounted, extracted with the page's OWN workbench options.

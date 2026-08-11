@@ -192,6 +192,13 @@ zero-duration theme always render the final frame immediately, even when a
 series declares a non-zero delay or duration. An explicit zero series duration
 also renders that series immediately and ignores its delay.
 
+For cumulative timelines that reveal every participant on one fixed domain,
+compose a [`LineRaceController`](line-race.md) with ordinary line series and
+`SeriesCalloutConfig(anchor: SeriesCalloutAnchor.lastVisible)`. The controller
+owns the only animation clock, preserves sparse gaps, and exposes deterministic
+play, pause, seek, speed, and loop controls. The maintained F1 example is
+available at `?page=line-charts&preset=race`.
+
 Attach a `BravenChartController` to replay the configured entrance:
 
 ```dart

@@ -124,6 +124,10 @@ extension SeriesCalloutConfigFluent on SeriesCalloutConfig {
   SeriesCalloutConfig withSide(SeriesCalloutSide value) =>
       copyWith(side: value);
 
+  /// Replaces [SeriesCalloutConfig.lanePlacement] with [value].
+  SeriesCalloutConfig withLanePlacement(SeriesCalloutLanePlacement value) =>
+      copyWith(lanePlacement: value);
+
   /// Replaces [SeriesCalloutConfig.anchor] with [value].
   SeriesCalloutConfig withAnchor(SeriesCalloutAnchor value) =>
       copyWith(anchor: value);
@@ -155,6 +159,10 @@ extension SeriesCalloutConfigFluent on SeriesCalloutConfig {
   /// Replaces [SeriesCalloutConfig.maximumVisible] with [value].
   SeriesCalloutConfig withMaximumVisible(int value) =>
       copyWith(maximumVisible: value);
+
+  /// Replaces [SeriesCalloutConfig.collisionFadeDuration] with [value].
+  SeriesCalloutConfig withCollisionFadeDuration(Duration value) =>
+      copyWith(collisionFadeDuration: value);
 
   /// Replaces [SeriesCalloutConfig.connectorColor] with [value].
   SeriesCalloutConfig withConnectorColor(Color value) =>

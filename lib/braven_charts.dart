@@ -76,6 +76,7 @@ export 'src/artifacts/chart_preview_capture.dart';
 export 'src/artifacts/chart_series_document_codec.dart';
 export 'src/artifacts/bar_drilldown_config_codec.dart';
 export 'src/artifacts/bar_race_config_codec.dart';
+export 'src/artifacts/line_race_config_codec.dart';
 export 'src/artifacts/chart_theme_document_codec.dart';
 export 'src/artifacts/chart_view_state.dart';
 export 'src/table/chart_table_model.dart';
@@ -94,6 +95,7 @@ export 'src/braven_chart_plus.dart';
 export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/bar_drilldown_controller.dart';
 export 'src/controllers/bar_race_controller.dart';
+export 'src/controllers/line_race_controller.dart';
 export 'src/controllers/chart_controller.dart';
 export 'src/controllers/chart_interaction_group_controller.dart'
     hide ChartInteractionGroupParticipant;
@@ -135,6 +137,7 @@ export 'src/models/axis_scale_type.dart';
 export 'src/models/bar_chart_style.dart';
 export 'src/models/bar_drilldown.dart';
 export 'src/models/bar_race.dart';
+export 'src/models/line_race.dart';
 export 'src/models/bar_group_info.dart';
 export 'src/models/category_axis_config.dart';
 export 'src/models/candlestick_chart_series.dart';
@@ -224,6 +227,7 @@ export 'src/rendering/multi_axis_painter.dart';
 // Composable chart-family chrome
 export 'src/widgets/bar_drilldown_breadcrumbs.dart';
 export 'src/widgets/bar_race_ticker.dart';
+export 'src/widgets/line_race_ticker.dart';
 export 'src/widgets/bar_race_period_indicator.dart';
 // Generated Dart source
 export 'src/source/chart_dart_source_generator.dart';

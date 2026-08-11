@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 159 of 161 classes have a synthesizable subject: every verb they
+// 162 of 164 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 2047 verbs total; 13 of them have an argument type with no
+// 2060 verbs total; 13 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 159;
+const int _executedClasses = 162;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
@@ -4886,6 +4886,44 @@ void _smokeLegendStyle(_Verb verb, LegendStyle subject) {
   verb('LegendStyleFluent.withOffset', () => subject.withOffset(Offset.zero));
 }
 
+/// Smoke coverage for [LineRaceSeries]'s 3 executable verb(s).
+void _smokeLineRaceSeries(_Verb verb, LineRaceSeries subject) {
+  verb('LineRaceSeriesFluent.withId', () => subject.withId('y'));
+  verb('LineRaceSeriesFluent.withName', () => subject.withName('y'));
+  verb(
+    'LineRaceSeriesFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+}
+
+/// Smoke coverage for [LineRaceFrame]'s 4 executable verb(s).
+void _smokeLineRaceFrame(_Verb verb, LineRaceFrame subject) {
+  verb('LineRaceFrameFluent.withId', () => subject.withId('y'));
+  verb('LineRaceFrameFluent.withLabel', () => subject.withLabel('y'));
+  verb('LineRaceFrameFluent.withX', () => subject.withX(1.0));
+  verb(
+    'LineRaceFrameFluent.withValues',
+    () => subject.withValues(const <String, double>{}),
+  );
+}
+
+/// Smoke coverage for [LineRaceConfig]'s 4 executable verb(s).
+void _smokeLineRaceConfig(_Verb verb, LineRaceConfig subject) {
+  verb(
+    'LineRaceConfigFluent.withSeries',
+    () => subject.withSeries(const <LineRaceSeries>[]),
+  );
+  verb(
+    'LineRaceConfigFluent.withFrames',
+    () => subject.withFrames(const <LineRaceFrame>[]),
+  );
+  verb(
+    'LineRaceConfigFluent.withDurationPerFrame',
+    () => subject.withDurationPerFrame(const Duration(milliseconds: 1)),
+  );
+  verb('LineRaceConfigFluent.withLoop', () => subject.withLoop(false));
+}
+
 /// Smoke coverage for [MultiAxisConfig]'s 3 executable verb(s).
 void _smokeMultiAxisConfig(_Verb verb, MultiAxisConfig subject) {
   verb('MultiAxisConfigFluent.withAxes', () => subject.withAxes(const []));
@@ -6875,7 +6913,7 @@ void _smokeSeriesCalloutSpec(_Verb verb, SeriesCalloutSpec subject) {
   );
 }
 
-/// Smoke coverage for [SeriesCalloutConfig]'s 36 executable verb(s).
+/// Smoke coverage for [SeriesCalloutConfig]'s 38 executable verb(s).
 void _smokeSeriesCalloutConfig(_Verb verb, SeriesCalloutConfig subject) {
   verb(
     'SeriesCalloutConfigFluent.withEnabled',
@@ -6888,6 +6926,10 @@ void _smokeSeriesCalloutConfig(_Verb verb, SeriesCalloutConfig subject) {
   verb(
     'SeriesCalloutConfigFluent.withSide',
     () => subject.withSide(SeriesCalloutSide.right),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withLanePlacement',
+    () => subject.withLanePlacement(SeriesCalloutLanePlacement.plotEdge),
   );
   verb(
     'SeriesCalloutConfigFluent.withAnchor',
@@ -6915,6 +6957,10 @@ void _smokeSeriesCalloutConfig(_Verb verb, SeriesCalloutConfig subject) {
   verb(
     'SeriesCalloutConfigFluent.withMaximumVisible',
     () => subject.withMaximumVisible(12),
+  );
+  verb(
+    'SeriesCalloutConfigFluent.withCollisionFadeDuration',
+    () => subject.withCollisionFadeDuration(const Duration(milliseconds: 1)),
   );
   verb(
     'SeriesCalloutConfigFluent.withConnectorColor',
@@ -9327,6 +9373,48 @@ void main() {
         reason: 'generated LegendStyleFluent verb(s) threw',
       );
     });
+    test('LineRaceSeries', () {
+      final subject = _subject(
+        () =>
+            LineRaceSeries(id: 'x', name: 'x', color: const Color(0xFF2196F3)),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeLineRaceSeries, subject),
+        isEmpty,
+        reason: 'generated LineRaceSeriesFluent verb(s) threw',
+      );
+    });
+    test('LineRaceFrame', () {
+      final subject = _subject(
+        () => LineRaceFrame(
+          id: 'x',
+          label: 'x',
+          x: 0.5,
+          values: const <String, double>{},
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeLineRaceFrame, subject),
+        isEmpty,
+        reason: 'generated LineRaceFrameFluent verb(s) threw',
+      );
+    });
+    test('LineRaceConfig', () {
+      final subject = _subject(
+        () => LineRaceConfig(
+          series: const <LineRaceSeries>[],
+          frames: const <LineRaceFrame>[],
+        ),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeLineRaceConfig, subject),
+        isEmpty,
+        reason: 'generated LineRaceConfigFluent verb(s) threw',
+      );
+    });
     test('MultiAxisConfig', () {
       final subject = _subject(() => MultiAxisConfig());
       if (subject == null) return;
@@ -10225,7 +10313,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 159);
+    expect(_executedClasses, 162);
     expect(_skippedClasses, 2);
     expect(_compileOnlyCases, hasLength(8));
     expect(_compileOnlyVerbs, hasLength(13));

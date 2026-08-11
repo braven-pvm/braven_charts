@@ -89,6 +89,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     const ChartOptions(showDataMarkers: true),
   );
   late final ShowcaseRandomizerController<int> _showcaseRandomizer;
+  late final LineRaceController _lineRaceController;
 
   int _presetIndex = 0;
   int _authoredPresetIndex = 0;
@@ -101,6 +102,38 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _markerRadius = 5;
   double _lineMarkerRadius = 3;
   DataPointMarkerStyle _lineMarkerStyle = DataPointMarkerStyle.filled;
+  double _lineRaceSpeed = 1;
+  int _lineRaceDurationMs = 700;
+  bool _lineRaceLoop = false;
+  double _lineRaceXAxisRightPaddingPercent = 12;
+  bool _lineRaceShowEndpointLabels = true;
+  bool _lineRaceShowEndpointMarkers = true;
+  SeriesCalloutSide _lineRaceCalloutSide = SeriesCalloutSide.right;
+  SeriesCalloutLanePlacement _lineRaceCalloutLanePlacement =
+      SeriesCalloutLanePlacement.anchorFrontier;
+  SeriesCalloutConnector _lineRaceCalloutConnector =
+      SeriesCalloutConnector.elbow;
+  SeriesCalloutPacking _lineRaceCalloutPacking =
+      SeriesCalloutPacking.hideCollisions;
+  double _lineRaceCalloutLaneWidth = 144;
+  double _lineRaceCalloutInset = 8;
+  double _lineRaceCalloutMinimumGap = 5;
+  int _lineRaceCalloutMaximumVisible = 10;
+  double _lineRaceCalloutCollisionFadeMs = 180;
+  bool _lineRaceShowConnectors = false;
+  bool _lineRaceIncludeValuesInLabels = false;
+  double _lineRaceCalloutConnectorWidth = 1.25;
+  double _lineRaceCalloutAnchorRadius = 3;
+  double _lineRaceCalloutTextSize = 11;
+  Color? _lineRaceCalloutTextColor;
+  bool _lineRaceShowLabelBackground = false;
+  Color? _lineRaceCalloutBackgroundColor;
+  double _lineRaceCalloutBackgroundOpacity = 0.88;
+  bool _lineRaceShowLabelBorder = false;
+  Color? _lineRaceCalloutBorderColor;
+  double _lineRaceCalloutBorderWidth = 1;
+  double _lineRaceCalloutBorderRadius = 5;
+  double _lineRaceCalloutLabelPadding = 6;
   SeriesMarkerShape _scatterMarkerShape = SeriesMarkerShape.circle;
   _ScatterFillTone _scatterFillTone = _ScatterFillTone.indigo;
   double _scatterMarkerWidth = 18;
@@ -272,6 +305,13 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   @override
   void initState() {
     super.initState();
+    _lineRaceController = LineRaceController(
+      config: _lineRaceF1Config.copyWith(
+        durationPerFrame: Duration(milliseconds: _lineRaceDurationMs),
+        loop: _lineRaceLoop,
+      ),
+    );
+    _lineRaceController.setSpeed(_lineRaceSpeed);
     _showcaseRandomizer = ShowcaseRandomizerController<int>(
       initialSeed: 601 + widget.family.index * 100,
       generate: (seed) => seed,
@@ -301,6 +341,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   @override
   void dispose() {
+    _lineRaceController.dispose();
     _showcaseRandomizer.dispose();
     _chartController.removeListener(_handleChartControllerChanged);
     _chartController.dispose();
@@ -336,6 +377,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _chartController.clearPointFocus();
     _chartController.clearPointSelection();
     _chartController.clearSelection();
+    _lineRaceController.pause();
     setState(() {
       _playgroundActive = false;
       _authoredPresetIndex = index;
@@ -743,6 +785,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         description:
             'Tightly clustered X values stress Bézier control handles without allowing backward folds.',
       ),
+      _ChartTypePreset(
+        label: 'Race',
+        icon: Icons.flag_outlined,
+        description:
+            'Stable driver identities accumulate points across a fixed season while endpoint labels follow the live frontier.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -962,6 +1010,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool get _isLineClosePointsPreset =>
       widget.family == _CartesianFamily.line && _presetIndex == 11;
 
+  bool get _isLineRacePreset =>
+      widget.family == _CartesianFamily.line && _presetIndex == 12;
+
   bool get _isAreaSelectionPreset =>
       widget.family == _CartesianFamily.area && _presetIndex == 7;
 
@@ -1174,8 +1225,119 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 _buildPathSelectionToolbar(),
                 const SizedBox(height: 8),
               ],
+              if (_isLineRacePreset) ...[
+                _buildLineRacePlayback(),
+                const SizedBox(height: 8),
+              ],
               Expanded(child: workbench),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLineRacePlayback() {
+    final theme = Theme.of(context);
+    return ListenableBuilder(
+      listenable: _lineRaceController,
+      builder: (context, _) {
+        final snapshot = _lineRaceController.snapshot;
+        return Semantics(
+          container: true,
+          label: 'Line race playback controls',
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLowest,
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final transport = <Widget>[
+                    IconButton(
+                      key: const ValueKey('line-race-play-pause'),
+                      tooltip: _lineRaceController.isPlaying
+                          ? 'Pause race'
+                          : 'Play race',
+                      onPressed: _lineRaceController.toggle,
+                      icon: Icon(
+                        _lineRaceController.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                      ),
+                    ),
+                    IconButton(
+                      key: const ValueKey('line-race-previous'),
+                      tooltip: 'Previous round',
+                      onPressed: _lineRaceController.frameIndex == 0
+                          ? null
+                          : _lineRaceController.previous,
+                      icon: const Icon(Icons.skip_previous),
+                    ),
+                    IconButton(
+                      key: const ValueKey('line-race-next'),
+                      tooltip: 'Next round',
+                      onPressed:
+                          _lineRaceController.frameIndex ==
+                              _lineRaceController.config.frames.length - 1
+                          ? null
+                          : _lineRaceController.next,
+                      icon: const Icon(Icons.skip_next),
+                    ),
+                  ];
+                  final seek = Slider(
+                    key: const ValueKey('line-race-seek'),
+                    value: snapshot.progress.clamp(0, 1),
+                    onChanged: _lineRaceController.seek,
+                    semanticFormatterCallback: (value) {
+                      final frame =
+                          (value *
+                                  (_lineRaceController.config.frames.length -
+                                      1))
+                              .round();
+                      return _lineRaceController.config.frames[frame].label;
+                    },
+                  );
+                  final label = Text(
+                    snapshot.frame.label,
+                    key: const ValueKey('line-race-round-label'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                  if (constraints.maxWidth < 560) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            ...transport,
+                            Expanded(child: label),
+                          ],
+                        ),
+                        SizedBox(height: 32, child: seek),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      ...transport,
+                      Expanded(child: seek),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 86),
+                        child: label,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         );
       },
@@ -1450,6 +1612,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     final baseTheme = options.theme ?? ChartTheme.light;
     final presetTheme = _isLineSpotlight ? ChartTheme.dark : baseTheme;
     final effectiveTheme = _applyScatterThemeOverrides(presetTheme);
+    if (_isLineRacePreset) {
+      return _buildLineRaceChart(options, controller, effectiveTheme);
+    }
     if (_isScatterMarginalPreset) {
       return _ScatterMarginalExample(
         key: ValueKey(
@@ -1472,7 +1637,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       );
     }
     return BravenChartPlus(
-      key: ValueKey('${widget.family.name}-chart'),
+      key: ValueKey('${widget.family.name}-chart-$_presetIndex'),
       bravenChartController: controller,
       interactionGroupController: _showsGuideNavigator
           ? _interactionGroupController
@@ -1587,6 +1752,155 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     );
   }
 
+  Widget _buildLineRaceChart(
+    ChartOptions options,
+    BravenChartController controller,
+    ChartTheme theme,
+  ) => LineRaceTicker(
+    controller: _lineRaceController,
+    child: AnimatedBuilder(
+      animation: _lineRaceController,
+      builder: (context, _) {
+        final snapshot = _lineRaceController.snapshot;
+        final xMinimum = _lineRaceController.xMinimum;
+        final xMaximum = _lineRaceController.xMaximum;
+        final xSpan = xMaximum - xMinimum;
+        final paddedXMaximum =
+            xMaximum + xSpan * (_lineRaceXAxisRightPaddingPercent / 100);
+        final labelColor =
+            _lineRaceCalloutTextColor ??
+            theme.axisStyle.labelStyle.color ??
+            (ThemeData.estimateBrightnessForColor(theme.backgroundColor) ==
+                    Brightness.dark
+                ? Colors.white
+                : Colors.black87);
+        final calloutSpecs = <String, SeriesCalloutSpec>{};
+        for (final raceSeries in _lineRaceController.config.series) {
+          final points = snapshot.pointsFor(raceSeries.id);
+          final value = points.isEmpty ? null : points.last.y;
+          calloutSpecs['line-race-${raceSeries.id}'] = SeriesCalloutSpec(
+            label:
+                !_lineRaceIncludeValuesInLabels ||
+                    value == null ||
+                    !value.isFinite
+                ? raceSeries.name
+                : '${raceSeries.name} ${value.round()}',
+            priority: value?.round() ?? 0,
+          );
+        }
+        return BravenChartPlus(
+          key: const ValueKey('line-race-chart'),
+          bravenChartController: controller,
+          series: [
+            for (final raceSeries in _lineRaceController.config.series)
+              LineChartSeries(
+                id: 'line-race-${raceSeries.id}',
+                name: raceSeries.name,
+                points: snapshot.pointsFor(raceSeries.id),
+                color: raceSeries.color,
+                isXOrdered: true,
+                interpolation: _interpolation,
+                strokeWidth: _strokeWidth,
+                lineGlow: _lineGlow,
+                showDataPointMarkers: false,
+                pathAnimation: const PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.none,
+                  dataUpdateMode: PathDataUpdateAnimationMode.none,
+                ),
+              ),
+          ],
+          theme: theme.copyWith(
+            animationTheme: theme.animationTheme.copyWith(
+              dataUpdateDuration: Duration.zero,
+            ),
+          ),
+          showLegend: options.showLegend,
+          seriesCallouts: SeriesCalloutConfig(
+            enabled: _lineRaceShowEndpointLabels,
+            side: _lineRaceCalloutSide,
+            lanePlacement: _lineRaceCalloutLanePlacement,
+            anchor: SeriesCalloutAnchor.lastVisible,
+            connector: _lineRaceCalloutConnector,
+            packing: _lineRaceCalloutPacking,
+            laneWidth: _lineRaceCalloutLaneWidth,
+            inset: _lineRaceCalloutInset,
+            minimumGap: _lineRaceCalloutMinimumGap,
+            maximumVisible: math.min(
+              _lineRaceController.config.series.length,
+              math.max(1, _lineRaceCalloutMaximumVisible),
+            ),
+            collisionFadeDuration: Duration(
+              milliseconds: _lineRaceCalloutCollisionFadeMs.round(),
+            ),
+            connectorWidth: _lineRaceCalloutConnectorWidth,
+            connectorOpacity: _lineRaceShowConnectors ? 1 : 0,
+            anchorRadius: _lineRaceShowEndpointMarkers
+                ? _lineRaceCalloutAnchorRadius
+                : 0,
+            labelPadding:
+                _lineRaceShowLabelBackground || _lineRaceShowLabelBorder
+                ? EdgeInsets.symmetric(
+                    horizontal: _lineRaceCalloutLabelPadding,
+                    vertical: _lineRaceCalloutLabelPadding / 2,
+                  )
+                : EdgeInsets.zero,
+            labelStyle: TextStyle(
+              fontSize: _lineRaceCalloutTextSize,
+              fontWeight: FontWeight.w600,
+              color: labelColor,
+            ),
+            backgroundColor:
+                _lineRaceCalloutBackgroundColor ?? theme.backgroundColor,
+            backgroundOpacity: _lineRaceShowLabelBackground
+                ? _lineRaceCalloutBackgroundOpacity
+                : 0,
+            borderColor:
+                _lineRaceCalloutBorderColor ??
+                theme.axisStyle.lineColor.withValues(alpha: 0.35),
+            borderWidth: _lineRaceShowLabelBorder
+                ? _lineRaceCalloutBorderWidth
+                : 0,
+            borderRadius: _lineRaceCalloutBorderRadius,
+            series: calloutSpecs,
+          ),
+          showXScrollbar: options.showXScrollbar,
+          showYScrollbar: options.showYScrollbar,
+          grid: GridConfig(
+            horizontal: options.showGrid,
+            vertical: options.showGrid,
+          ),
+          xAxisConfig: XAxisConfig(
+            label: _xAxisLabel,
+            min: xMinimum,
+            max: paddedXMaximum,
+            renderMax: xMaximum,
+            showAxisLine: options.showAxisLines,
+          ),
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            label: _yAxisLabel,
+            min: 0,
+            max: 320,
+            showAxisLine: options.showAxisLines,
+          ),
+          interactionConfig: InteractionConfig(
+            enableZoom: options.enableZoom,
+            enablePan: options.enablePan,
+            showXScrollbar: options.showXScrollbar,
+            showYScrollbar: options.showYScrollbar,
+            crosshair: CrosshairConfig(
+              enabled: options.showCrosshair,
+              mode: CrosshairMode.both,
+              snapToDataPoint: true,
+              displayMode: CrosshairDisplayMode.tracking,
+            ),
+            tooltip: TooltipConfig(enabled: options.showDataPointPopup),
+          ),
+        );
+      },
+    ),
+  );
+
   ChartTheme _applyScatterThemeOverrides(ChartTheme theme) {
     if (widget.family != _CartesianFamily.scatter) return theme;
     final axisColor = _scatterAxisColorOverride;
@@ -1633,6 +1947,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ? '2 sensor streams · 4 invalid samples shown as gaps · finite observations remain interactive'
             : _isLineClosePointsPreset
             ? 'Bézier vs linear reference · 2 close clusters · 11 clustered samples · tension ${_bezierTension.toStringAsFixed(2)}'
+            : _isLineRacePreset
+            ? '${_lineRaceController.config.series.length} stable drivers · ${_lineRaceController.config.frames.length} rounds · ${_lineRaceDurationMs}ms cadence · fixed season domain · live-frontier labels'
             : _isLineForecast
             ? 'Observed + prognosis · dotted forecast · current-time boundary'
             : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
@@ -1686,6 +2002,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       return '${_pageTitle.replaceAll(' Charts', '')} playground';
     }
     if (widget.family != _CartesianFamily.scatter) {
+      if (_isLineRacePreset) return 'F1 2012 championship race';
       return _presets[_presetIndex].label;
     }
     return switch (_presetIndex) {
@@ -1826,7 +2143,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   String get _xAxisLabel => switch (widget.family) {
     _CartesianFamily.line =>
-      _isLineForecast
+      _isLineRacePreset
+          ? 'Round'
+          : _isLineForecast
           ? 'Hour'
           : _isLineClosePointsPreset
           ? 'Elapsed time (min)'
@@ -1859,7 +2178,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   String get _yAxisLabel => switch (widget.family) {
     _CartesianFamily.line =>
-      _isLineForecast
+      _isLineRacePreset
+          ? 'Championship points'
+          : _isLineForecast
           ? 'Temperature (°C)'
           : _isLineClosePointsPreset
           ? 'Response (L/min)'
@@ -1889,6 +2210,20 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _ => 'Outcome',
     },
   };
+
+  void _updateLineRaceConfig() {
+    final wasPlaying = _lineRaceController.isPlaying;
+    _lineRaceController.replaceConfig(
+      _lineRaceF1Config.copyWith(
+        durationPerFrame: Duration(milliseconds: _lineRaceDurationMs),
+        loop: _lineRaceLoop,
+      ),
+      preserveFrame: true,
+    );
+    _lineRaceController.setSpeed(_lineRaceSpeed);
+    if (wasPlaying) _lineRaceController.play();
+    if (mounted) setState(() {});
+  }
 
   List<Widget> _buildOptions() {
     final typeOptions = <Widget>[
@@ -2113,7 +2448,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _markerRadius = value),
         ),
       if (widget.family == _CartesianFamily.line &&
-          (_playgroundActive || !_isLineForecast))
+          (_playgroundActive || (!_isLineForecast && !_isLineRacePreset)))
         EnumOption<DataPointMarkerStyle>(
           key: const ValueKey('line-marker-style'),
           label: 'Marker style',
@@ -2125,7 +2460,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           },
           onChanged: (value) => setState(() => _lineMarkerStyle = value),
         ),
-      if (widget.family == _CartesianFamily.line)
+      if (widget.family == _CartesianFamily.line && !_isLineRacePreset)
         SliderOption(
           key: const ValueKey('line-marker-radius'),
           label: 'Marker radius',
@@ -2242,6 +2577,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       if (_playgroundActive ||
           (!_isLineForecast &&
               !_isLineSynchronized &&
+              !_isLineRacePreset &&
               (widget.family != _CartesianFamily.scatter || _presetIndex < 3)))
         BoolOption(
           label: widget.family == _CartesianFamily.scatter
@@ -2256,7 +2592,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           onChanged: (value) => setState(() => _showSecondSeries = value),
         ),
       if (widget.family != _CartesianFamily.scatter &&
-          (_playgroundActive || !_isLineSynchronized))
+          (_playgroundActive || (!_isLineSynchronized && !_isLineRacePreset)))
         BoolOption(
           label: 'Show point labels',
           value: _showPointLabels,
@@ -2550,6 +2886,346 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     ];
 
     return [
+      if (_isLineRacePreset)
+        OptionSection(
+          title: 'Race playback',
+          icon: Icons.flag_outlined,
+          children: [
+            SliderOption(
+              key: const ValueKey('line-race-frame-duration'),
+              label: 'Round duration',
+              description:
+                  'Authored time for one round transition before playback speed is applied.',
+              value: _lineRaceDurationMs.toDouble(),
+              min: 200,
+              max: 2000,
+              divisions: 18,
+              suffix: 'ms',
+              decimalPlaces: 0,
+              onChanged: (value) {
+                _lineRaceDurationMs = value.round();
+                _updateLineRaceConfig();
+              },
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-speed'),
+              label: 'Playback speed',
+              value: _lineRaceSpeed,
+              min: 0.25,
+              max: 4,
+              divisions: 15,
+              suffix: '×',
+              decimalPlaces: 2,
+              onChanged: (value) {
+                setState(() => _lineRaceSpeed = value);
+                _lineRaceController.setSpeed(value);
+              },
+            ),
+            BoolOption(
+              key: const ValueKey('line-race-loop'),
+              label: 'Loop season',
+              subtitle:
+                  'Restart at round 1 without drawing a false last-to-first bridge',
+              value: _lineRaceLoop,
+              onChanged: (value) {
+                _lineRaceLoop = value;
+                _updateLineRaceConfig();
+              },
+            ),
+          ],
+        ),
+      if (_isLineRacePreset)
+        OptionSection(
+          title: 'Live series labels',
+          icon: Icons.label_outline,
+          children: [
+            BoolOption(
+              key: const ValueKey('line-race-callouts'),
+              label: 'Show moving labels',
+              subtitle:
+                  'Collision-aware labels follow the last visible point on every driver line',
+              value: _lineRaceShowEndpointLabels,
+              onChanged: (value) =>
+                  setState(() => _lineRaceShowEndpointLabels = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-x-axis-right-padding'),
+              label: 'Right axis padding',
+              description:
+                  'Reserve responsive data-space headroom after the final round so frontier labels stay inside the plot. Extra ticks remain hidden.',
+              value: _lineRaceXAxisRightPaddingPercent,
+              min: 0,
+              max: 30,
+              divisions: 30,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceXAxisRightPaddingPercent = value),
+            ),
+            EnumOption<SeriesCalloutLanePlacement>(
+              key: const ValueKey('line-race-callout-lane-placement'),
+              label: 'Label lane',
+              value: _lineRaceCalloutLanePlacement,
+              values: SeriesCalloutLanePlacement.values,
+              labelBuilder: (value) => switch (value) {
+                SeriesCalloutLanePlacement.plotEdge => 'Plot edge',
+                SeriesCalloutLanePlacement.anchorFrontier =>
+                  'Follow current frontier',
+              },
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutLanePlacement = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-frontier-offset'),
+              label: 'Distance from frontier',
+              value: _lineRaceCalloutInset,
+              min: 0,
+              max: 32,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutInset = value),
+            ),
+            BoolOption(
+              key: const ValueKey('line-race-endpoint-markers'),
+              label: 'Show endpoint anchors',
+              value: _lineRaceShowEndpointMarkers,
+              onChanged: (value) =>
+                  setState(() => _lineRaceShowEndpointMarkers = value),
+            ),
+            EnumOption<SeriesCalloutSide>(
+              key: const ValueKey('line-race-callout-side'),
+              label: 'Label side',
+              value: _lineRaceCalloutSide,
+              values: SeriesCalloutSide.values,
+              labelBuilder: (value) =>
+                  value == SeriesCalloutSide.left ? 'Left' : 'Right',
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutSide = value),
+            ),
+            EnumOption<SeriesCalloutConnector>(
+              key: const ValueKey('line-race-callout-connector'),
+              label: 'Connector shape',
+              value: _lineRaceCalloutConnector,
+              values: SeriesCalloutConnector.values,
+              labelBuilder: (value) => switch (value) {
+                SeriesCalloutConnector.straight => 'Straight',
+                SeriesCalloutConnector.elbow => 'Elbow',
+              },
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutConnector = value),
+            ),
+            BoolOption(
+              key: const ValueKey('line-race-callout-connectors'),
+              label: 'Show connectors',
+              subtitle:
+                  'Keep labels collision-aware without requiring leader lines',
+              value: _lineRaceShowConnectors,
+              onChanged: (value) =>
+                  setState(() => _lineRaceShowConnectors = value),
+            ),
+            EnumOption<SeriesCalloutPacking>(
+              key: const ValueKey('line-race-callout-packing'),
+              label: 'Label packing',
+              value: _lineRaceCalloutPacking,
+              values: SeriesCalloutPacking.values,
+              labelBuilder: (value) => switch (value) {
+                SeriesCalloutPacking.hideCollisions => 'Hide collisions',
+                SeriesCalloutPacking.followAnchors => 'Follow endpoints',
+                SeriesCalloutPacking.compact => 'Compact lane',
+              },
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutPacking = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-lane-width'),
+              label: 'Label lane width',
+              value: _lineRaceCalloutLaneWidth,
+              min: 88,
+              max: 220,
+              divisions: 22,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutLaneWidth = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-gap'),
+              label: 'Minimum label gap',
+              value: _lineRaceCalloutMinimumGap,
+              min: 0,
+              max: 16,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutMinimumGap = value),
+            ),
+            IntSliderOption(
+              key: const ValueKey('line-race-callout-maximum-visible'),
+              label: 'Maximum labels',
+              value: _lineRaceCalloutMaximumVisible,
+              min: 1,
+              max: _lineRaceController.config.series.length,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutMaximumVisible = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-collision-fade'),
+              label: 'Collision fade',
+              description:
+                  'Ease labels in and out when collision priority changes; zero snaps immediately',
+              value: _lineRaceCalloutCollisionFadeMs,
+              min: 0,
+              max: 400,
+              divisions: 20,
+              suffix: 'ms',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutCollisionFadeMs = value),
+            ),
+            BoolOption(
+              key: const ValueKey('line-race-callout-include-values'),
+              label: 'Include current values',
+              subtitle:
+                  'Append the live score to each driver name; off matches the reference race.',
+              value: _lineRaceIncludeValuesInLabels,
+              onChanged: (value) =>
+                  setState(() => _lineRaceIncludeValuesInLabels = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-text-size'),
+              label: 'Label text size',
+              value: _lineRaceCalloutTextSize,
+              min: 8,
+              max: 16,
+              divisions: 8,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutTextSize = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('line-race-callout-text-color'),
+              keyPrefix: 'line-race-callout-text-color',
+              label: 'Label text color',
+              subtitle: 'Clear to inherit the active chart theme',
+              value: _lineRaceCalloutTextColor,
+              customColorFallback:
+                  _optionsController.theme?.axisStyle.labelStyle.color ??
+                  Colors.black87,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutTextColor = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('line-race-callout-background-color'),
+              keyPrefix: 'line-race-callout-background-color',
+              label: 'Label background',
+              subtitle: 'Off by default for direct frontier labels',
+              enabled: _lineRaceShowLabelBackground,
+              onEnabledChanged: (value) =>
+                  setState(() => _lineRaceShowLabelBackground = value),
+              value: _lineRaceCalloutBackgroundColor,
+              customColorFallback:
+                  _optionsController.theme?.backgroundColor ?? Colors.white,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutBackgroundColor = value),
+            ),
+            if (_lineRaceShowLabelBackground)
+              SliderOption(
+                key: const ValueKey('line-race-callout-background-opacity'),
+                label: 'Background opacity',
+                value: _lineRaceCalloutBackgroundOpacity * 100,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(
+                  () => _lineRaceCalloutBackgroundOpacity = value / 100,
+                ),
+              ),
+            PaletteColorOption(
+              key: const ValueKey('line-race-callout-border-color'),
+              keyPrefix: 'line-race-callout-border-color',
+              label: 'Label border',
+              subtitle: 'Off by default for direct frontier labels',
+              enabled: _lineRaceShowLabelBorder,
+              onEnabledChanged: (value) =>
+                  setState(() => _lineRaceShowLabelBorder = value),
+              value: _lineRaceCalloutBorderColor,
+              customColorFallback:
+                  _optionsController.theme?.axisStyle.lineColor ??
+                  Colors.black54,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutBorderColor = value),
+            ),
+            if (_lineRaceShowLabelBorder) ...[
+              SliderOption(
+                key: const ValueKey('line-race-callout-border-width'),
+                label: 'Border width',
+                value: _lineRaceCalloutBorderWidth,
+                min: 0.5,
+                max: 4,
+                divisions: 14,
+                suffix: 'px',
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _lineRaceCalloutBorderWidth = value),
+              ),
+              SliderOption(
+                key: const ValueKey('line-race-callout-border-radius'),
+                label: 'Corner radius',
+                value: _lineRaceCalloutBorderRadius,
+                min: 0,
+                max: 16,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _lineRaceCalloutBorderRadius = value),
+              ),
+            ],
+            if (_lineRaceShowLabelBackground || _lineRaceShowLabelBorder)
+              SliderOption(
+                key: const ValueKey('line-race-callout-label-padding'),
+                label: 'Label padding',
+                value: _lineRaceCalloutLabelPadding,
+                min: 0,
+                max: 16,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _lineRaceCalloutLabelPadding = value),
+              ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-connector-width'),
+              label: 'Connector width',
+              value: _lineRaceCalloutConnectorWidth,
+              min: 0.5,
+              max: 4,
+              divisions: 14,
+              suffix: 'px',
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutConnectorWidth = value),
+            ),
+            SliderOption(
+              key: const ValueKey('line-race-callout-anchor-radius'),
+              label: 'Endpoint radius',
+              value: _lineRaceCalloutAnchorRadius,
+              min: 0,
+              max: 8,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) =>
+                  setState(() => _lineRaceCalloutAnchorRadius = value),
+            ),
+          ],
+        ),
       OptionSection(
         title: '${_pageTitle.replaceAll(' Charts', '')} options',
         icon: switch (widget.family) {
@@ -5912,6 +6588,35 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _markerRadius = 5;
       _lineMarkerRadius = 3;
       _lineMarkerStyle = DataPointMarkerStyle.filled;
+      _lineRaceSpeed = 1;
+      _lineRaceDurationMs = 700;
+      _lineRaceLoop = false;
+      _lineRaceXAxisRightPaddingPercent = 12;
+      _lineRaceShowEndpointLabels = true;
+      _lineRaceShowEndpointMarkers = true;
+      _lineRaceCalloutSide = SeriesCalloutSide.right;
+      _lineRaceCalloutLanePlacement = SeriesCalloutLanePlacement.anchorFrontier;
+      _lineRaceCalloutConnector = SeriesCalloutConnector.elbow;
+      _lineRaceCalloutPacking = SeriesCalloutPacking.hideCollisions;
+      _lineRaceCalloutLaneWidth = 144;
+      _lineRaceCalloutInset = 8;
+      _lineRaceCalloutMinimumGap = 5;
+      _lineRaceCalloutMaximumVisible = 10;
+      _lineRaceCalloutCollisionFadeMs = 180;
+      _lineRaceShowConnectors = false;
+      _lineRaceIncludeValuesInLabels = false;
+      _lineRaceCalloutConnectorWidth = 1.25;
+      _lineRaceCalloutAnchorRadius = 3;
+      _lineRaceCalloutTextSize = 11;
+      _lineRaceCalloutTextColor = null;
+      _lineRaceShowLabelBackground = false;
+      _lineRaceCalloutBackgroundColor = null;
+      _lineRaceCalloutBackgroundOpacity = 0.88;
+      _lineRaceShowLabelBorder = false;
+      _lineRaceCalloutBorderColor = null;
+      _lineRaceCalloutBorderWidth = 1;
+      _lineRaceCalloutBorderRadius = 5;
+      _lineRaceCalloutLabelPadding = 6;
       _scatterMarkerShape = SeriesMarkerShape.circle;
       _scatterFillTone = _ScatterFillTone.indigo;
       _scatterMarkerWidth = 18;
@@ -6059,6 +6764,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _resetMotionData();
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));
+    _lineRaceController.replaceConfig(
+      _lineRaceF1Config.copyWith(
+        durationPerFrame: const Duration(milliseconds: 700),
+      ),
+    );
+    _lineRaceController.setSpeed(1);
     _chartController.clearPointSelection();
     _chartController.clearSelection();
   }
@@ -8782,3 +9493,389 @@ const _scatterStatePrevious = [
   ChartDataPoint(x: 5.0, y: 75, label: 'Week 5 · 75%'),
   ChartDataPoint(x: 5.4, y: 83, label: 'Week 5.4 · 83%'),
 ];
+
+const _lineRaceF1Config = LineRaceConfig(
+  durationPerFrame: Duration(milliseconds: 700),
+  series: [
+    LineRaceSeries(
+      id: 'vettel',
+      name: 'Sebastian Vettel',
+      color: Color(0xFF2563EB),
+    ),
+    LineRaceSeries(
+      id: 'alonso',
+      name: 'Fernando Alonso',
+      color: Color(0xFFEF4444),
+    ),
+    LineRaceSeries(
+      id: 'raikkonen',
+      name: 'Kimi Räikkönen',
+      color: Color(0xFFF59E0B),
+    ),
+    LineRaceSeries(
+      id: 'hamilton',
+      name: 'Lewis Hamilton',
+      color: Color(0xFF06B6D4),
+    ),
+    LineRaceSeries(
+      id: 'button',
+      name: 'Jenson Button',
+      color: Color(0xFF8B5CF6),
+    ),
+    LineRaceSeries(id: 'webber', name: 'Mark Webber', color: Color(0xFF0F9F8F)),
+    LineRaceSeries(id: 'massa', name: 'Felipe Massa', color: Color(0xFFE11D48)),
+    LineRaceSeries(
+      id: 'grosjean',
+      name: 'Romain Grosjean',
+      color: Color(0xFF84CC16),
+    ),
+    LineRaceSeries(
+      id: 'rosberg',
+      name: 'Nico Rosberg',
+      color: Color(0xFF64748B),
+    ),
+    LineRaceSeries(id: 'perez', name: 'Sergio Pérez', color: Color(0xFFEC4899)),
+  ],
+  frames: [
+    LineRaceFrame(
+      id: 'aus',
+      label: 'Round 1 · Australia',
+      x: 1,
+      values: {
+        'vettel': 18,
+        'alonso': 10,
+        'raikkonen': 6,
+        'hamilton': 15,
+        'button': 25,
+        'webber': 12,
+        'massa': 0,
+        'grosjean': 0,
+        'rosberg': 0,
+        'perez': 0,
+      },
+    ),
+    LineRaceFrame(
+      id: 'mal',
+      label: 'Round 2 · Malaysia',
+      x: 2,
+      values: {
+        'vettel': 18,
+        'alonso': 35,
+        'raikkonen': 16,
+        'hamilton': 30,
+        'button': 25,
+        'webber': 24,
+        'massa': 0,
+        'grosjean': 0,
+        'rosberg': 6,
+        'perez': 15,
+      },
+    ),
+    LineRaceFrame(
+      id: 'chn',
+      label: 'Round 3 · China',
+      x: 3,
+      values: {
+        'vettel': 28,
+        'alonso': 37,
+        'raikkonen': 16,
+        'hamilton': 45,
+        'button': 43,
+        'webber': 36,
+        'massa': 2,
+        'grosjean': 0,
+        'rosberg': 25,
+        'perez': 15,
+      },
+    ),
+    LineRaceFrame(
+      id: 'bhr',
+      label: 'Round 4 · Bahrain',
+      x: 4,
+      values: {
+        'vettel': 53,
+        'alonso': 43,
+        'raikkonen': 34,
+        'hamilton': 49,
+        'button': 43,
+        'webber': 48,
+        'massa': 2,
+        'grosjean': 15,
+        'rosberg': 35,
+        'perez': 15,
+      },
+    ),
+    LineRaceFrame(
+      id: 'esp',
+      label: 'Round 5 · Spain',
+      x: 5,
+      values: {
+        'vettel': 61,
+        'alonso': 61,
+        'raikkonen': 49,
+        'hamilton': 53,
+        'button': 45,
+        'webber': 48,
+        'massa': 2,
+        'grosjean': 25,
+        'rosberg': 41,
+        'perez': 22,
+      },
+    ),
+    LineRaceFrame(
+      id: 'mon',
+      label: 'Round 6 · Monaco',
+      x: 6,
+      values: {
+        'vettel': 73,
+        'alonso': 76,
+        'raikkonen': 51,
+        'hamilton': 63,
+        'button': 45,
+        'webber': 73,
+        'massa': 2,
+        'grosjean': 35,
+        'rosberg': 59,
+        'perez': 22,
+      },
+    ),
+    LineRaceFrame(
+      id: 'can',
+      label: 'Round 7 · Canada',
+      x: 7,
+      values: {
+        'vettel': 85,
+        'alonso': 96,
+        'raikkonen': 73,
+        'hamilton': 88,
+        'button': 45,
+        'webber': 79,
+        'massa': 11,
+        'grosjean': 53,
+        'rosberg': 67,
+        'perez': 37,
+      },
+    ),
+    LineRaceFrame(
+      id: 'eur',
+      label: 'Round 8 · Europe',
+      x: 8,
+      values: {
+        'vettel': 85,
+        'alonso': 111,
+        'raikkonen': 73,
+        'hamilton': 88,
+        'button': 49,
+        'webber': 91,
+        'massa': 11,
+        'grosjean': 61,
+        'rosberg': 75,
+        'perez': 39,
+      },
+    ),
+    LineRaceFrame(
+      id: 'gbr',
+      label: 'Round 9 · Britain',
+      x: 9,
+      values: {
+        'vettel': 100,
+        'alonso': 129,
+        'raikkonen': 83,
+        'hamilton': 92,
+        'button': 50,
+        'webber': 116,
+        'massa': 23,
+        'grosjean': 61,
+        'rosberg': 75,
+        'perez': 47,
+      },
+    ),
+    LineRaceFrame(
+      id: 'deu',
+      label: 'Round 10 · Germany',
+      x: 10,
+      values: {
+        'vettel': 110,
+        'alonso': 154,
+        'raikkonen': 98,
+        'hamilton': 92,
+        'button': 68,
+        'webber': 120,
+        'massa': 23,
+        'grosjean': 61,
+        'rosberg': 77,
+        'perez': 47,
+      },
+    ),
+    LineRaceFrame(
+      id: 'hun',
+      label: 'Round 11 · Hungary',
+      x: 11,
+      values: {
+        'vettel': 122,
+        'alonso': 164,
+        'raikkonen': 116,
+        'hamilton': 117,
+        'button': 76,
+        'webber': 124,
+        'massa': 25,
+        'grosjean': 76,
+        'rosberg': 77,
+        'perez': 47,
+      },
+    ),
+    LineRaceFrame(
+      id: 'bel',
+      label: 'Round 12 · Belgium',
+      x: 12,
+      values: {
+        'vettel': 140,
+        'alonso': 164,
+        'raikkonen': 131,
+        'hamilton': 117,
+        'button': 101,
+        'webber': 132,
+        'massa': 35,
+        'grosjean': 76,
+        'rosberg': 77,
+        'perez': 65,
+      },
+    ),
+    LineRaceFrame(
+      id: 'ita',
+      label: 'Round 13 · Italy',
+      x: 13,
+      values: {
+        'vettel': 140,
+        'alonso': 179,
+        'raikkonen': 141,
+        'hamilton': 142,
+        'button': 101,
+        'webber': 132,
+        'massa': 47,
+        'grosjean': 76,
+        'rosberg': 93,
+        'perez': 65,
+      },
+    ),
+    LineRaceFrame(
+      id: 'sgp',
+      label: 'Round 14 · Singapore',
+      x: 14,
+      values: {
+        'vettel': 165,
+        'alonso': 194,
+        'raikkonen': 149,
+        'hamilton': 142,
+        'button': 119,
+        'webber': 134,
+        'massa': 51,
+        'grosjean': 82,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'jpn',
+      label: 'Round 15 · Japan',
+      x: 15,
+      values: {
+        'vettel': 190,
+        'alonso': 194,
+        'raikkonen': 157,
+        'hamilton': 152,
+        'button': 131,
+        'webber': 134,
+        'massa': 69,
+        'grosjean': 82,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'kor',
+      label: 'Round 16 · Korea',
+      x: 16,
+      values: {
+        'vettel': 215,
+        'alonso': 209,
+        'raikkonen': 167,
+        'hamilton': 153,
+        'button': 131,
+        'webber': 152,
+        'massa': 81,
+        'grosjean': 82,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'ind',
+      label: 'Round 17 · India',
+      x: 17,
+      values: {
+        'vettel': 240,
+        'alonso': 227,
+        'raikkonen': 173,
+        'hamilton': 165,
+        'button': 141,
+        'webber': 167,
+        'massa': 89,
+        'grosjean': 90,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'uae',
+      label: 'Round 18 · Abu Dhabi',
+      x: 18,
+      values: {
+        'vettel': 255,
+        'alonso': 245,
+        'raikkonen': 198,
+        'hamilton': 165,
+        'button': 153,
+        'webber': 167,
+        'massa': 107,
+        'grosjean': 90,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'usa',
+      label: 'Round 19 · United States',
+      x: 19,
+      values: {
+        'vettel': 273,
+        'alonso': 260,
+        'raikkonen': 206,
+        'hamilton': 190,
+        'button': 163,
+        'webber': 167,
+        'massa': 107,
+        'grosjean': 96,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+    LineRaceFrame(
+      id: 'bra',
+      label: 'Round 20 · Brazil',
+      x: 20,
+      values: {
+        'vettel': 281,
+        'alonso': 278,
+        'raikkonen': 207,
+        'hamilton': 190,
+        'button': 188,
+        'webber': 179,
+        'massa': 122,
+        'grosjean': 96,
+        'rosberg': 93,
+        'perez': 66,
+      },
+    ),
+  ],
+);

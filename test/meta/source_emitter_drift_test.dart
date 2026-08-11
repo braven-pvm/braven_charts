@@ -128,6 +128,17 @@ const Map<String, String> _classesNotEmittedBySource = <String, String>{
   'BarRaceValueFormat':
       'Race value and total formatting belongs to BarRaceConfigCodec playback '
       'orchestration, outside the hydrated single-chart source graph.',
+  'LineRaceSeries':
+      'Line-race participant identity belongs to LineRaceConfigCodec and its '
+      'playback controller, not to one hydrated chart snapshot emitted as '
+      'Dart source.',
+  'LineRaceFrame':
+      'Line-race frames are authored playback input persisted by '
+      'LineRaceConfigCodec; the chart source emitter only sees the currently '
+      'projected line-series snapshot.',
+  'LineRaceConfig':
+      'Line race is a time-sequenced chart orchestration with a dedicated '
+      'portable codec and controller, outside the single-chart source graph.',
 };
 
 /// Individual modelled properties the emitter does not name, inside classes it
@@ -799,7 +810,7 @@ void main() {
 
   test('the per-series map covers every manifest series subclass', () {
     final manifestSeries = surface.keys
-        .where((c) => c.endsWith('Series'))
+        .where((c) => c.endsWith('ChartSeries'))
         .toSet();
     final unmapped =
         manifestSeries.difference(_seriesEmitMethods.keys.toSet()).toList()

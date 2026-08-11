@@ -7,6 +7,18 @@ import '../meta/chart_surface.dart';
 /// Side of the plot used by the shared series-callout lane.
 enum SeriesCalloutSide { left, right }
 
+/// Horizontal placement of the shared series-callout lane.
+enum SeriesCalloutLanePlacement {
+  /// Pin the lane to the selected [SeriesCalloutSide] of the plot.
+  plotEdge,
+
+  /// Keep the lane beside the furthest resolved series anchor.
+  ///
+  /// This is useful for progressive charts such as line races, where the
+  /// current data frontier advances through a wider, stable X-axis domain.
+  anchorFrontier,
+}
+
 /// Data feature used to anchor a callout connector to a series.
 enum SeriesCalloutAnchor {
   /// The last finite point inside the visible X window.
@@ -30,6 +42,13 @@ enum SeriesCalloutConnector { straight, elbow }
 
 /// How resolved callout labels occupy their shared vertical lane.
 enum SeriesCalloutPacking {
+  /// Keep labels at their exact anchor positions and hide lower-priority
+  /// labels that would collide.
+  ///
+  /// This is useful for moving-frontier charts where displacing a label would
+  /// imply that it belongs to a different data value.
+  hideCollisions,
+
   /// Keep each label as close as possible to its own series anchor.
   followAnchors,
 
@@ -252,6 +271,7 @@ class SeriesCalloutConfig {
     this.enabled = false,
     this.showByDefault = true,
     this.side = SeriesCalloutSide.right,
+    this.lanePlacement = SeriesCalloutLanePlacement.plotEdge,
     this.anchor = SeriesCalloutAnchor.lastVisible,
     this.anchorX,
     this.connector = SeriesCalloutConnector.elbow,
@@ -260,6 +280,7 @@ class SeriesCalloutConfig {
     this.inset = 8,
     this.minimumGap = 6,
     this.maximumVisible = 12,
+    this.collisionFadeDuration = const Duration(milliseconds: 180),
     this.connectorColor,
     this.connectorWidth = 1.25,
     this.connectorOpacity = 1,
@@ -300,6 +321,7 @@ class SeriesCalloutConfig {
   final bool enabled;
   final bool showByDefault;
   final SeriesCalloutSide side;
+  final SeriesCalloutLanePlacement lanePlacement;
   final SeriesCalloutAnchor anchor;
   final double? anchorX;
   final SeriesCalloutConnector connector;
@@ -308,6 +330,12 @@ class SeriesCalloutConfig {
   final double inset;
   final double minimumGap;
   final int maximumVisible;
+
+  /// Time used to fade labels when collision acceptance changes.
+  ///
+  /// Set to [Duration.zero] to switch visibility immediately. Ambient reduced
+  /// motion also bypasses this transition.
+  final Duration collisionFadeDuration;
 
   /// Fixed connector color. Null inherits each series color.
   final Color? connectorColor;
@@ -344,6 +372,7 @@ class SeriesCalloutConfig {
     bool? enabled,
     bool? showByDefault,
     SeriesCalloutSide? side,
+    SeriesCalloutLanePlacement? lanePlacement,
     SeriesCalloutAnchor? anchor,
     double? anchorX,
     SeriesCalloutConnector? connector,
@@ -352,6 +381,7 @@ class SeriesCalloutConfig {
     double? inset,
     double? minimumGap,
     int? maximumVisible,
+    Duration? collisionFadeDuration,
     Color? connectorColor,
     double? connectorWidth,
     double? connectorOpacity,
@@ -381,6 +411,7 @@ class SeriesCalloutConfig {
     enabled: enabled ?? this.enabled,
     showByDefault: showByDefault ?? this.showByDefault,
     side: side ?? this.side,
+    lanePlacement: lanePlacement ?? this.lanePlacement,
     anchor: anchor ?? this.anchor,
     anchorX: clearAnchorX ? null : (anchorX ?? this.anchorX),
     connector: connector ?? this.connector,
@@ -389,6 +420,7 @@ class SeriesCalloutConfig {
     inset: inset ?? this.inset,
     minimumGap: minimumGap ?? this.minimumGap,
     maximumVisible: maximumVisible ?? this.maximumVisible,
+    collisionFadeDuration: collisionFadeDuration ?? this.collisionFadeDuration,
     connectorColor: clearConnectorColor
         ? null
         : (connectorColor ?? this.connectorColor),
@@ -425,6 +457,7 @@ class SeriesCalloutConfig {
           other.enabled == enabled &&
           other.showByDefault == showByDefault &&
           other.side == side &&
+          other.lanePlacement == lanePlacement &&
           other.anchor == anchor &&
           other.anchorX == anchorX &&
           other.connector == connector &&
@@ -433,6 +466,7 @@ class SeriesCalloutConfig {
           other.inset == inset &&
           other.minimumGap == minimumGap &&
           other.maximumVisible == maximumVisible &&
+          other.collisionFadeDuration == collisionFadeDuration &&
           other.connectorColor == connectorColor &&
           other.connectorWidth == connectorWidth &&
           other.connectorOpacity == connectorOpacity &&
@@ -458,6 +492,7 @@ class SeriesCalloutConfig {
     enabled,
     showByDefault,
     side,
+    lanePlacement,
     anchor,
     anchorX,
     connector,
@@ -466,6 +501,7 @@ class SeriesCalloutConfig {
     inset,
     minimumGap,
     maximumVisible,
+    collisionFadeDuration,
     connectorColor,
     connectorWidth,
     connectorOpacity,

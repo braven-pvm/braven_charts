@@ -55,6 +55,7 @@ export 'src/fluent/generated/models/heatmap_chart_series_fluent.dart';
 export 'src/fluent/generated/models/heatmap_data_point_fluent.dart';
 export 'src/fluent/generated/models/interaction_config_fluent.dart';
 export 'src/fluent/generated/models/legend_style_fluent.dart';
+export 'src/fluent/generated/models/line_race_fluent.dart';
 export 'src/fluent/generated/models/multi_axis_config_fluent.dart';
 export 'src/fluent/generated/models/path_animation_style_fluent.dart';
 export 'src/fluent/generated/models/pie_chart_config_fluent.dart';

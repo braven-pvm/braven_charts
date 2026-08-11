@@ -28,6 +28,32 @@ class SeriesCalloutLayoutResult {
   final double top;
 }
 
+/// Resolves the horizontal boundary used to align a shared callout lane.
+///
+/// For a right-side lane this is the labels' left edge; for a left-side lane
+/// it is their right edge. [anchorXs] are plot-local coordinates.
+double resolveSeriesCalloutLaneBoundary({
+  required SeriesCalloutLanePlacement placement,
+  required SeriesCalloutSide side,
+  required List<double> anchorXs,
+  required double plotWidth,
+  required double inset,
+  required double maximumBoxWidth,
+}) {
+  final edgeBoundary = side == SeriesCalloutSide.right
+      ? plotWidth - inset - maximumBoxWidth
+      : inset + maximumBoxWidth;
+  if (placement == SeriesCalloutLanePlacement.plotEdge || anchorXs.isEmpty) {
+    return edgeBoundary;
+  }
+  if (side == SeriesCalloutSide.right) {
+    final desired = anchorXs.reduce(math.max) + inset;
+    return math.max(inset, math.min(desired, edgeBoundary));
+  }
+  final desired = anchorXs.reduce(math.min) - inset;
+  return math.min(plotWidth - inset, math.max(desired, edgeBoundary));
+}
+
 /// Returns the smallest panel that contains [labelRects] plus [padding].
 ///
 /// The result is clipped to [plotBounds], so a large padding value cannot
@@ -75,6 +101,33 @@ List<SeriesCalloutLayoutResult> layoutSeriesCallouts({
   if (selected.length > maximumVisible) {
     selected.removeRange(maximumVisible, selected.length);
   }
+
+  if (packing == SeriesCalloutPacking.hideCollisions) {
+    final accepted = <({SeriesCalloutLayoutCandidate candidate, double top})>[];
+    for (final candidate in selected) {
+      if (candidate.size.height > maximumY - minimumY) continue;
+      final top = (candidate.desiredCenterY - candidate.size.height / 2)
+          .clamp(minimumY, maximumY - candidate.size.height)
+          .toDouble();
+      final bottom = top + candidate.size.height;
+      final collides = accepted.any((item) {
+        final itemBottom = item.top + item.candidate.size.height;
+        return top < itemBottom + gap && bottom + gap > item.top;
+      });
+      if (!collides) accepted.add((candidate: candidate, top: top));
+    }
+    accepted.sort((a, b) {
+      final position = a.top.compareTo(b.top);
+      return position != 0
+          ? position
+          : a.candidate.id.compareTo(b.candidate.id);
+    });
+    return [
+      for (final item in accepted)
+        SeriesCalloutLayoutResult(id: item.candidate.id, top: item.top),
+    ];
+  }
+
   selected.sort((a, b) {
     final position = a.desiredCenterY.compareTo(b.desiredCenterY);
     return position != 0 ? position : a.id.compareTo(b.id);
