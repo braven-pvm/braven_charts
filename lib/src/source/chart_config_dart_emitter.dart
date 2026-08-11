@@ -6868,6 +6868,13 @@ class ChartConfigDartEmitter {
       );
       _enumIf(
         writer,
+        'lanePlacement',
+        'SeriesCalloutLanePlacement',
+        config.lanePlacement.name,
+        defaultName: 'plotEdge',
+      );
+      _enumIf(
+        writer,
         'anchor',
         'SeriesCalloutAnchor',
         config.anchor.name,
@@ -6892,6 +6899,12 @@ class ChartConfigDartEmitter {
       _numberIf(writer, 'inset', config.inset, 8);
       _numberIf(writer, 'minimumGap', config.minimumGap, 6);
       _numberIf(writer, 'maximumVisible', config.maximumVisible, 12);
+      _durationIf(
+        writer,
+        'collisionFadeDuration',
+        config.collisionFadeDuration,
+        const Duration(milliseconds: 180),
+      );
       _optionalColor(writer, 'connectorColor', config.connectorColor);
       _numberIf(writer, 'connectorWidth', config.connectorWidth, 1.25);
       _numberIf(writer, 'connectorOpacity', config.connectorOpacity, 1);

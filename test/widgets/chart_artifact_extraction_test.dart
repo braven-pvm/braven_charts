@@ -170,6 +170,10 @@ void main() {
     expect(hydrated.seriesCallouts.enabled, isTrue);
     expect(hydrated.seriesCallouts.side, SeriesCalloutSide.left);
     expect(
+      hydrated.seriesCallouts.lanePlacement,
+      SeriesCalloutLanePlacement.anchorFrontier,
+    );
+    expect(
       hydrated.seriesCallouts.specFor('power'),
       const SeriesCalloutSpec(
         label: 'Peak power',
@@ -246,6 +250,7 @@ Widget _calloutHost(BravenChartController controller) => MaterialApp(
         seriesCallouts: const SeriesCalloutConfig(
           enabled: true,
           side: SeriesCalloutSide.left,
+          lanePlacement: SeriesCalloutLanePlacement.anchorFrontier,
           series: {
             'power': SeriesCalloutSpec(
               label: 'Peak power',

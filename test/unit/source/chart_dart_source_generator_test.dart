@@ -16,8 +16,10 @@ void main() {
             seriesCallouts: const SeriesCalloutConfig(
               enabled: true,
               side: SeriesCalloutSide.left,
+              lanePlacement: SeriesCalloutLanePlacement.anchorFrontier,
               anchor: SeriesCalloutAnchor.maximumVisible,
               packing: SeriesCalloutPacking.compact,
+              collisionFadeDuration: Duration(milliseconds: 240),
               connectorColor: Color(0xFF0F766E),
               connectorOpacity: 0.7,
               connectorGlow: 5,
@@ -53,6 +55,10 @@ void main() {
       expect(generated.source, contains('side: SeriesCalloutSide.left,'));
       expect(
         generated.source,
+        contains('lanePlacement: SeriesCalloutLanePlacement.anchorFrontier,'),
+      );
+      expect(
+        generated.source,
         contains('anchor: SeriesCalloutAnchor.maximumVisible,'),
       );
       expect(generated.source, contains("'power': SeriesCalloutSpec("));
@@ -61,6 +67,10 @@ void main() {
       expect(
         generated.source,
         contains('packing: SeriesCalloutPacking.compact,'),
+      );
+      expect(
+        generated.source,
+        contains('collisionFadeDuration: Duration(microseconds: 240000),'),
       );
       expect(generated.source, contains('connectorGlow: 5.0,'));
       expect(generated.source, contains('panelBorderWidth: 1.5,'));

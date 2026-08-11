@@ -33,6 +33,7 @@ abstract final class ChartConfigurationDocumentCodec {
             'enabled': config.enabled,
             'showByDefault': config.showByDefault,
             'side': config.side.name,
+            'lanePlacement': config.lanePlacement.name,
             'anchor': config.anchor.name,
             if (config.anchorX != null) 'anchorX': config.anchorX,
             'connector': config.connector.name,
@@ -41,6 +42,8 @@ abstract final class ChartConfigurationDocumentCodec {
             'inset': config.inset,
             'minimumGap': config.minimumGap,
             'maximumVisible': config.maximumVisible,
+            'collisionFadeDurationMicros':
+                config.collisionFadeDuration.inMicroseconds,
             if (config.connectorColor != null)
               'connectorColor': config.connectorColor!.toARGB32(),
             'connectorWidth': config.connectorWidth,
@@ -205,6 +208,14 @@ abstract final class ChartConfigurationDocumentCodec {
           enabled: _requiredBool(map, 'enabled', path),
           showByDefault: _requiredBool(map, 'showByDefault', path),
           side: _requiredEnum(map, 'side', SeriesCalloutSide.values, path),
+          lanePlacement:
+              _optionalEnum(
+                map,
+                'lanePlacement',
+                SeriesCalloutLanePlacement.values,
+                path,
+              ) ??
+              SeriesCalloutLanePlacement.plotEdge,
           anchor: _requiredEnum(
             map,
             'anchor',
@@ -230,6 +241,11 @@ abstract final class ChartConfigurationDocumentCodec {
           inset: _requiredDouble(map, 'inset', path),
           minimumGap: _requiredDouble(map, 'minimumGap', path),
           maximumVisible: _requiredInt(map, 'maximumVisible', path),
+          collisionFadeDuration: Duration(
+            microseconds:
+                _optionalInt(map, 'collisionFadeDurationMicros', path) ??
+                const Duration(milliseconds: 180).inMicroseconds,
+          ),
           connectorColor: _optionalConfigurationColor(map['connectorColor']),
           connectorWidth: _requiredDouble(map, 'connectorWidth', path),
           connectorOpacity: _requiredDouble(map, 'connectorOpacity', path),

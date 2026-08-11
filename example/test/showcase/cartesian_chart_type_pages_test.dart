@@ -195,6 +195,7 @@ void main() {
       expect(find.text('Synchronized'), findsWidgets);
       expect(find.text('Data gaps'), findsWidgets);
       expect(find.text('Close points'), findsWidgets);
+      expect(find.text('Race'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -211,6 +212,180 @@ void main() {
       );
       expect(chart.series, hasLength(3));
       expect(chart.normalizationMode, NormalizationMode.perSeries);
+    },
+  );
+
+  testWidgets(
+    'Line Race keeps the season domain fixed while round controls advance every driver',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final race = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Race'),
+      );
+      await tester.ensureVisible(race);
+      await tester.pumpAndSettle();
+      await tester.tap(race);
+      await tester.pumpAndSettle();
+
+      var chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('line-race-chart')),
+      );
+      expect(chart.series.whereType<LineChartSeries>(), hasLength(10));
+      expect(chart.xAxisConfig?.min, 1);
+      expect(chart.xAxisConfig?.max, closeTo(22.28, 0.001));
+      expect(chart.xAxisConfig?.renderMax, 20);
+      expect(chart.seriesCallouts.enabled, isTrue);
+      expect(chart.seriesCallouts.anchor, SeriesCalloutAnchor.lastVisible);
+      expect(
+        chart.seriesCallouts.lanePlacement,
+        SeriesCalloutLanePlacement.anchorFrontier,
+      );
+      expect(chart.seriesCallouts.packing, SeriesCalloutPacking.hideCollisions);
+      expect(
+        chart.seriesCallouts.collisionFadeDuration,
+        const Duration(milliseconds: 180),
+      );
+      expect(chart.seriesCallouts.connectorOpacity, 0);
+      expect(chart.seriesCallouts.backgroundOpacity, 0);
+      expect(chart.seriesCallouts.borderWidth, 0);
+      expect(chart.seriesCallouts.labelPadding, EdgeInsets.zero);
+      expect(chart.seriesCallouts.labelStyle.color, isNotNull);
+      expect(find.text('Round 1 · Australia'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('line-race-next')));
+      await tester.pump();
+
+      chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('line-race-chart')),
+      );
+      expect(find.text('Round 2 · Malaysia'), findsOneWidget);
+      expect(
+        chart.series.whereType<LineChartSeries>().every(
+          (series) => series.points.length == 2,
+        ),
+        isTrue,
+      );
+      expect(chart.xAxisConfig?.min, 1);
+      expect(chart.xAxisConfig?.max, closeTo(22.28, 0.001));
+      expect(chart.xAxisConfig?.renderMax, 20);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Line Race playback and endpoint options remain live on the shared chart',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final race = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Race'),
+      );
+      await tester.ensureVisible(race);
+      await tester.tap(race);
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('line-race-frame-duration')),
+          )
+          .onChanged(1000);
+      tester
+          .widget<SliderOption>(find.byKey(const ValueKey('line-race-speed')))
+          .onChanged(2);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('line-race-x-axis-right-padding')),
+          )
+          .onChanged(20);
+      tester
+          .widget<EnumOption<SeriesCalloutLanePlacement>>(
+            find.byKey(const ValueKey('line-race-callout-lane-placement')),
+          )
+          .onChanged(SeriesCalloutLanePlacement.anchorFrontier);
+      tester
+          .widget<EnumOption<SeriesCalloutSide>>(
+            find.byKey(const ValueKey('line-race-callout-side')),
+          )
+          .onChanged(SeriesCalloutSide.left);
+      tester
+          .widget<EnumOption<SeriesCalloutConnector>>(
+            find.byKey(const ValueKey('line-race-callout-connector')),
+          )
+          .onChanged(SeriesCalloutConnector.straight);
+      tester
+          .widget<EnumOption<SeriesCalloutPacking>>(
+            find.byKey(const ValueKey('line-race-callout-packing')),
+          )
+          .onChanged(SeriesCalloutPacking.compact);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('line-race-callout-frontier-offset')),
+          )
+          .onChanged(14);
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('line-race-callout-maximum-visible')),
+          )
+          .onChanged(6);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('line-race-callout-collision-fade')),
+          )
+          .onChanged(260);
+      tester
+          .widget<PaletteColorOption>(
+            find.byKey(const ValueKey('line-race-callout-background-color')),
+          )
+          .onEnabledChanged!(true);
+      tester
+          .widget<PaletteColorOption>(
+            find.byKey(const ValueKey('line-race-callout-border-color')),
+          )
+          .onEnabledChanged!(true);
+      await tester.pump();
+
+      var chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('line-race-chart')),
+      );
+      expect(chart.seriesCallouts.side, SeriesCalloutSide.left);
+      expect(
+        chart.seriesCallouts.lanePlacement,
+        SeriesCalloutLanePlacement.anchorFrontier,
+      );
+      expect(chart.seriesCallouts.connector, SeriesCalloutConnector.straight);
+      expect(chart.seriesCallouts.packing, SeriesCalloutPacking.compact);
+      expect(chart.seriesCallouts.inset, 14);
+      expect(chart.seriesCallouts.maximumVisible, 6);
+      expect(
+        chart.seriesCallouts.collisionFadeDuration,
+        const Duration(milliseconds: 260),
+      );
+      expect(chart.seriesCallouts.backgroundOpacity, greaterThan(0));
+      expect(chart.seriesCallouts.borderWidth, greaterThan(0));
+      expect(chart.seriesCallouts.labelPadding, isNot(EdgeInsets.zero));
+      expect(chart.xAxisConfig?.max, closeTo(23.8, 0.001));
+      expect(chart.xAxisConfig?.renderMax, 20);
+      expect(find.textContaining('1000ms cadence'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('line-race-play-pause')));
+      await tester.pump();
+      expect(find.byIcon(Icons.pause), findsOneWidget);
+      // Cross the cadence boundary rather than landing on the exact test-clock
+      // timestamp at which the next AnimationController leg is scheduled.
+      await tester.pump(const Duration(milliseconds: 510));
+      await tester.pump(const Duration(milliseconds: 250));
+
+      chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('line-race-chart')),
+      );
+      final leadingSeries = chart.series.whereType<LineChartSeries>().first;
+      expect(leadingSeries.points, hasLength(2));
+      expect(leadingSeries.points.last.x, closeTo(1.5, 0.02));
+      expect(chart.xAxisConfig?.min, 1);
+      expect(chart.xAxisConfig?.max, closeTo(23.8, 0.001));
+      expect(chart.xAxisConfig?.renderMax, 20);
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -3714,6 +3889,7 @@ void main() {
         'Spotlight': 'spotlight-signal',
         'Forecast': 'forecast-continuous',
         'Selection': 'selection-observed',
+        'Race': 'line-race-vettel',
       };
       const families = <({String name, Widget page, List<String> presets})>[
         (
@@ -3730,6 +3906,7 @@ void main() {
             'Forecast',
             'Synchronized',
             'Selection',
+            'Race',
           ],
         ),
         (
@@ -3884,6 +4061,7 @@ void main() {
           'Forecast',
           'Synchronized',
           'Selection',
+          'Race',
         ],
       ),
       (

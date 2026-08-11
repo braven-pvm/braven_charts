@@ -95,6 +95,7 @@ const List<String> _codecFiles = <String>[
   'donut_center_content_document_codec.dart',
   'bar_drilldown_config_codec.dart',
   'bar_race_config_codec.dart',
+  'line_race_config_codec.dart',
 ];
 
 String _artifactPath(String file) =>
@@ -179,6 +180,7 @@ const String _axisFile = 'chart_axis_document_codec.dart';
 const String _configFile = 'chart_configuration_document_codec.dart';
 const String _interactionFile = 'chart_interaction_document_codec.dart';
 const String _annotationFile = 'chart_annotation_document_codec.dart';
+const String _lineRaceFile = 'line_race_config_codec.dart';
 
 const Map<String, List<List<String>>>
 _inlineEncodeSources = <String, List<List<String>>>{
@@ -272,6 +274,14 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'DonutChartStyle': [
     [_seriesFile, '_encodeDonutStyle'],
     [_seriesFile, '_encodePieStyle'],
+  ],
+  // Standalone line-race timeline values are serialized inline by the
+  // dedicated portable codec rather than through per-value encode methods.
+  'LineRaceSeries': [
+    [_lineRaceFile, 'encode'],
+  ],
+  'LineRaceFrame': [
+    [_lineRaceFile, 'encode'],
   ],
 };
 

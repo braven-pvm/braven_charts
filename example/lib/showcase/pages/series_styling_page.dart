@@ -897,6 +897,7 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
               value: _calloutPacking,
               values: SeriesCalloutPacking.values,
               labelBuilder: (value) => switch (value) {
+                SeriesCalloutPacking.hideCollisions => 'Hide collisions',
                 SeriesCalloutPacking.followAnchors => 'Follow anchors',
                 SeriesCalloutPacking.compact => 'Compact stack',
               },

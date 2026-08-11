@@ -6,6 +6,47 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('resolveSeriesCalloutLaneBoundary', () {
+    test('follows the furthest live anchor on the right', () {
+      final boundary = resolveSeriesCalloutLaneBoundary(
+        placement: SeriesCalloutLanePlacement.anchorFrontier,
+        side: SeriesCalloutSide.right,
+        anchorXs: const [40, 44, 42],
+        plotWidth: 500,
+        inset: 8,
+        maximumBoxWidth: 100,
+      );
+
+      expect(boundary, 52);
+    });
+
+    test('clamps a moving right lane inside the plot', () {
+      final boundary = resolveSeriesCalloutLaneBoundary(
+        placement: SeriesCalloutLanePlacement.anchorFrontier,
+        side: SeriesCalloutSide.right,
+        anchorXs: const [470],
+        plotWidth: 500,
+        inset: 8,
+        maximumBoxWidth: 100,
+      );
+
+      expect(boundary, 392);
+    });
+
+    test('preserves the original plot-edge lane by default', () {
+      final boundary = resolveSeriesCalloutLaneBoundary(
+        placement: SeriesCalloutLanePlacement.plotEdge,
+        side: SeriesCalloutSide.left,
+        anchorXs: const [240],
+        plotWidth: 500,
+        inset: 8,
+        maximumBoxWidth: 100,
+      );
+
+      expect(boundary, 108);
+    });
+  });
+
   group('layoutSeriesCallouts', () {
     test('packs dense labels without overlap and inside the lane', () {
       final result = layoutSeriesCallouts(
@@ -135,6 +176,67 @@ void main() {
       expect(result[2].top - (result[1].top + 22), closeTo(6, 0.001));
       expect(result.first.top, greaterThanOrEqualTo(4));
       expect(result.last.top + 20, lessThanOrEqualTo(200));
+    });
+
+    test('hide collisions preserves exact endpoint alignment', () {
+      final result = layoutSeriesCallouts(
+        candidates: const [
+          SeriesCalloutLayoutCandidate(
+            id: 'leader',
+            desiredCenterY: 42,
+            size: Size(80, 18),
+            priority: 100,
+          ),
+          SeriesCalloutLayoutCandidate(
+            id: 'colliding',
+            desiredCenterY: 47,
+            size: Size(80, 18),
+            priority: 50,
+          ),
+          SeriesCalloutLayoutCandidate(
+            id: 'clear',
+            desiredCenterY: 80,
+            size: Size(80, 18),
+            priority: 25,
+          ),
+        ],
+        minimumY: 0,
+        maximumY: 100,
+        gap: 4,
+        maximumVisible: 10,
+        packing: SeriesCalloutPacking.hideCollisions,
+      );
+
+      expect(result.map((item) => item.id), ['leader', 'clear']);
+      expect(result[0].top, 33);
+      expect(result[1].top, 71);
+    });
+
+    test('hide collisions clamps edge labels without moving clear labels', () {
+      final result = layoutSeriesCallouts(
+        candidates: const [
+          SeriesCalloutLayoutCandidate(
+            id: 'top',
+            desiredCenterY: 2,
+            size: Size(80, 18),
+            priority: 10,
+          ),
+          SeriesCalloutLayoutCandidate(
+            id: 'middle',
+            desiredCenterY: 50,
+            size: Size(80, 18),
+            priority: 5,
+          ),
+        ],
+        minimumY: 4,
+        maximumY: 96,
+        gap: 4,
+        maximumVisible: 10,
+        packing: SeriesCalloutPacking.hideCollisions,
+      );
+
+      expect(result[0].top, 4);
+      expect(result[1].top, 41);
     });
   });
 

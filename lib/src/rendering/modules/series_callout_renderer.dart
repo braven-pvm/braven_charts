@@ -10,6 +10,7 @@ import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
 import '../../models/series_callout_config.dart';
 import 'series_callout_layout.dart';
+import 'series_callout_visibility_animator.dart';
 
 class _ResolvedSeriesCallout {
   const _ResolvedSeriesCallout({
@@ -47,7 +48,14 @@ class _ResolvedSeriesCallout {
 
 /// Paints one shared, collision-aware direct-label lane for Cartesian series.
 class SeriesCalloutRenderer {
-  const SeriesCalloutRenderer();
+  SeriesCalloutRenderer({required void Function() onRepaint})
+    : _visibilityAnimator = SeriesCalloutVisibilityAnimator(
+        onRepaint: onRepaint,
+      );
+
+  final SeriesCalloutVisibilityAnimator _visibilityAnimator;
+
+  void dispose() => _visibilityAnimator.dispose();
 
   void paint({
     required Canvas canvas,
@@ -57,8 +65,12 @@ class SeriesCalloutRenderer {
     required ChartTheme theme,
     required double textScaleFactor,
     required TextDirection textDirection,
+    required bool animate,
   }) {
-    if (!config.enabled || plotSize.isEmpty) return;
+    if (!config.enabled || plotSize.isEmpty) {
+      _visibilityAnimator.reset();
+      return;
+    }
     final resolved = <_ResolvedSeriesCallout>[];
     for (final element in seriesElements) {
       final series = element.series;
@@ -139,7 +151,10 @@ class SeriesCalloutRenderer {
         ),
       );
     }
-    if (resolved.isEmpty) return;
+    if (resolved.isEmpty) {
+      _visibilityAnimator.reset();
+      return;
+    }
 
     final layout = layoutSeriesCallouts(
       candidates: [
@@ -160,12 +175,36 @@ class SeriesCalloutRenderer {
     final calloutById = {
       for (final callout in resolved) callout.element.series.id: callout,
     };
+    final visibleIds = layout.map((position) => position.id).toSet();
+    _visibilityAnimator.update(
+      allIds: calloutById.keys.toSet(),
+      visibleIds: visibleIds,
+      duration: config.collisionFadeDuration,
+      animate: animate,
+    );
+    final maximumBoxWidth = resolved
+        .map((callout) => callout.boxSize.width)
+        .reduce(math.max);
+    final laneBoundary = resolveSeriesCalloutLaneBoundary(
+      placement: config.lanePlacement,
+      side: config.side,
+      anchorXs: resolved.map((callout) => callout.anchor.dx).toList(),
+      plotWidth: plotSize.width,
+      inset: config.inset,
+      maximumBoxWidth: maximumBoxWidth,
+    );
     final boxesById = <String, Rect>{};
     for (final position in layout) {
       final callout = calloutById[position.id]!;
-      final boxLeft = config.side == SeriesCalloutSide.right
-          ? plotSize.width - config.inset - callout.boxSize.width
-          : config.inset;
+      final boxLeft = switch ((config.lanePlacement, config.side)) {
+        (SeriesCalloutLanePlacement.anchorFrontier, SeriesCalloutSide.right) =>
+          laneBoundary,
+        (SeriesCalloutLanePlacement.anchorFrontier, SeriesCalloutSide.left) =>
+          laneBoundary - callout.boxSize.width,
+        (_, SeriesCalloutSide.right) =>
+          plotSize.width - config.inset - callout.boxSize.width,
+        (_, SeriesCalloutSide.left) => config.inset,
+      };
       boxesById[position.id] = Rect.fromLTWH(
         boxLeft,
         position.top,
@@ -173,17 +212,55 @@ class SeriesCalloutRenderer {
         callout.boxSize.height,
       );
     }
+    for (final callout in resolved) {
+      final id = callout.element.series.id;
+      if (boxesById.containsKey(id) ||
+          _visibilityAnimator.opacityFor(id) <= 0.001) {
+        continue;
+      }
+      final boxLeft = switch ((config.lanePlacement, config.side)) {
+        (SeriesCalloutLanePlacement.anchorFrontier, SeriesCalloutSide.right) =>
+          laneBoundary,
+        (SeriesCalloutLanePlacement.anchorFrontier, SeriesCalloutSide.left) =>
+          laneBoundary - callout.boxSize.width,
+        (_, SeriesCalloutSide.right) =>
+          plotSize.width - config.inset - callout.boxSize.width,
+        (_, SeriesCalloutSide.left) => config.inset,
+      };
+      final top = (callout.anchor.dy - callout.boxSize.height / 2)
+          .clamp(
+            config.inset,
+            plotSize.height - config.inset - callout.boxSize.height,
+          )
+          .toDouble();
+      boxesById[id] = Rect.fromLTWH(
+        boxLeft,
+        top,
+        callout.boxSize.width,
+        callout.boxSize.height,
+      );
+    }
     _paintLanePanel(canvas, plotSize, config, boxesById.values.toList());
-    for (final position in layout) {
-      final callout = calloutById[position.id]!;
-      final box = boxesById[position.id]!;
+    final paintCallouts =
+        resolved
+            .where(
+              (callout) =>
+                  _visibilityAnimator.opacityFor(callout.element.series.id) >
+                  0.001,
+            )
+            .toList()
+          ..sort((a, b) => a.priority.compareTo(b.priority));
+    for (final callout in paintCallouts) {
+      final id = callout.element.series.id;
+      final opacity = _visibilityAnimator.opacityFor(id).clamp(0.0, 1.0);
+      final box = boxesById[id]!;
       final target = Offset(
         config.side == SeriesCalloutSide.right ? box.left : box.right,
         box.center.dy,
       );
       final connectorPaint = Paint()
         ..color = callout.color.withValues(
-          alpha: callout.color.a * callout.connectorOpacity,
+          alpha: callout.color.a * callout.connectorOpacity * opacity,
         )
         ..strokeWidth = callout.connectorWidth
         ..style = PaintingStyle.stroke
@@ -205,7 +282,8 @@ class SeriesCalloutRenderer {
           connectorPath,
           Paint()
             ..color = callout.color.withValues(
-              alpha: callout.color.a * callout.connectorOpacity * 0.35,
+              alpha:
+                  callout.color.a * callout.connectorOpacity * 0.35 * opacity,
             )
             ..strokeWidth = callout.connectorWidth + callout.connectorGlow * 2
             ..style = PaintingStyle.stroke
@@ -224,12 +302,19 @@ class SeriesCalloutRenderer {
           config.anchorRadius,
           Paint()
             ..color = callout.color.withValues(
-              alpha: callout.color.a * callout.connectorOpacity,
+              alpha: callout.color.a * callout.connectorOpacity * opacity,
             ),
         );
       }
       final radius = Radius.circular(callout.borderRadius);
       final roundedBox = RRect.fromRectAndRadius(box, radius);
+      final fadeLayer = opacity < 0.999;
+      if (fadeLayer) {
+        canvas.saveLayer(
+          box.inflate(math.max(1, callout.borderWidth)),
+          Paint()..color = Colors.white.withValues(alpha: opacity),
+        );
+      }
       canvas.drawRRect(
         roundedBox,
         Paint()
@@ -254,6 +339,7 @@ class SeriesCalloutRenderer {
           box.top + config.labelPadding.top,
         ),
       );
+      if (fadeLayer) canvas.restore();
     }
   }
 
