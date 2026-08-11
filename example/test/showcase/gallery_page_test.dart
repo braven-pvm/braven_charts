@@ -121,13 +121,34 @@ void main() {
   });
 
   testWidgets(
-    'gallery leads with chart families and mounts flagship analysis',
+    'gallery leads with mobile products, then chart families and flagship analysis',
     (tester) async {
       final pixelRatio = tester.view.devicePixelRatio;
       tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(const MaterialApp(home: GalleryPage()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.byKey(const ValueKey('gallery-mobile-apps-spotlight')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('gallery-mobile-apps-live-preview')),
+        findsOneWidget,
+      );
+      expect(find.text('Charts built for apps in your hand'), findsOneWidget);
+      expect(
+        find.text('Real Flutter widgets, not dashboard screenshots'),
+        findsOneWidget,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('Thirteen chart guides, grouped by visual grammar'),
+        600,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
@@ -197,7 +218,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       expect(find.text('Live sensor stream'), findsOneWidget);
-      expect(find.text('LIVE'), findsOneWidget);
+      expect(find.text('LIVE'), findsWidgets);
       expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(1));
 
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -4300));
@@ -207,6 +228,29 @@ void main() {
       expect(_gridCount(tester, 'gallery-building-blocks-curated'), 6);
     },
   );
+
+  testWidgets('mobile spotlight opens the dedicated app gallery', (
+    tester,
+  ) async {
+    String? openedSlug;
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GalleryPage(onOpenChartType: (slug) => openedSlug = slug),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final action = find.byKey(const ValueKey('gallery-open-mobile-apps'));
+    expect(action, findsOneWidget);
+    await tester.tap(action);
+    await tester.pump();
+
+    expect(openedSlug, 'mobile-apps');
+  });
 
   testWidgets('Radial Bar family tile opens its complete workbench', (
     tester,
@@ -227,6 +271,12 @@ void main() {
       const ValueKey('chart-type-card-radial-bar'),
     );
     expect(radialBarCard, findsOneWidget);
+    await tester.scrollUntilVisible(
+      radialBarCard,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.tap(radialBarCard);
     await tester.pump();
 

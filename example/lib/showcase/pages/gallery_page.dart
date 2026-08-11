@@ -20,6 +20,7 @@ import '../widgets/range_area_gallery_cards.dart';
 import '../widgets/scatter_gallery_cards.dart';
 import '../widgets/synchronized_cartesian_gallery_card.dart';
 import '../widgets/chart_type_catalog.dart';
+import 'mobile_apps_showcase_page.dart';
 
 const _capabilities = <(IconData, String)>[
   (Icons.open_with, 'Zoom, pan & scroll'),
@@ -169,6 +170,16 @@ class _GalleryPageState extends State<GalleryPage> {
                     },
                   ),
                 ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+              child: _MobileAppsGallerySpotlight(
+                onOpen: widget.onOpenChartType == null
+                    ? null
+                    : () => widget.onOpenChartType!('mobile-apps'),
               ),
             ),
           ),
@@ -2674,6 +2685,113 @@ class _CapabilityChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileAppsGallerySpotlight extends StatelessWidget {
+  const _MobileAppsGallerySpotlight({this.onOpen});
+
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return DecoratedBox(
+      key: const ValueKey('gallery-mobile-apps-spotlight'),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final copy = ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'MOBILE-NATIVE FLUTTER',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Charts built for apps in your hand',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Six live phone-native products show how Braven Charts fits sports, wellness, habits, and mobility—without desktop dashboard chrome.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.flutter_dash_rounded,
+                        size: 20,
+                        color: scheme.onSecondaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Real Flutter widgets, not dashboard screenshots',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (onOpen != null) ...[
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      key: const ValueKey('gallery-open-mobile-apps'),
+                      onPressed: onOpen,
+                      icon: const Icon(Icons.phone_iphone_rounded),
+                      label: const Text('Open mobile app gallery'),
+                    ),
+                  ],
+                ],
+              ),
+            );
+            const preview = MobileAppsGalleryPreview();
+
+            if (constraints.maxWidth >= 1040) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  copy,
+                  const SizedBox(width: 32),
+                  const Expanded(child: preview),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [copy, const SizedBox(height: 32), preview],
+            );
+          },
         ),
       ),
     );
