@@ -379,7 +379,7 @@ void main() {
 /// `feature/BC-0050-heatmap-live-ingestion`, where the raster Heatmap preset
 /// added one non-emitting Cartesian workbench with a truthful verdict.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
-  'Line': <int>[15, 12, 3],
+  'Line': <int>[16, 13, 3],
   'Area': <int>[9, 9, 3],
   'Scatter': <int>[29, 27, 6],
   'BarLab': <int>[31, 31, 0],
@@ -400,11 +400,11 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
-  _Family.cartesian: <int>[28, 132],
+  _Family.cartesian: <int>[28, 133],
   _Family.radial: <int>[31, 55],
 };
 
-const int _expectedWithVerdict = 187;
+const int _expectedWithVerdict = 188;
 const int _expectedEmitting = 59;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
