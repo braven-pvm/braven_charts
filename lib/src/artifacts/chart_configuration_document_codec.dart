@@ -755,6 +755,7 @@ abstract final class ChartConfigurationDocumentCodec {
                 config.radialAxis.labelStyle,
               ),
             },
+            'webStyle': _encodeRadarWebStyle(config.webStyle),
           }, path: path),
         }),
       );
@@ -872,6 +873,7 @@ abstract final class ChartConfigurationDocumentCodec {
             defaults: const PolarLabelStyle(fontSize: 10),
           ),
         ),
+        webStyle: _decodeRadarWebStyle(map['webStyle'], '$path.webStyle'),
       );
       config.validate();
       return ChartArtifactSuccess(value: config);
@@ -880,6 +882,52 @@ abstract final class ChartConfigurationDocumentCodec {
     } on Object catch (error) {
       return _polarConfigurationFailure(error, path);
     }
+  }
+
+  static Map<String, Object?> _encodeRadarWebStyle(RadarWebStyle style) => {
+    if (style.ringColor != null) 'ringColor': style.ringColor!.toARGB32(),
+    if (style.ringWidth != null) 'ringWidth': style.ringWidth,
+    if (style.ringDashPattern != null) 'ringDashPattern': style.ringDashPattern,
+    if (style.spokeColor != null) 'spokeColor': style.spokeColor!.toARGB32(),
+    if (style.spokeWidth != null) 'spokeWidth': style.spokeWidth,
+    if (style.spokeDashPattern != null)
+      'spokeDashPattern': style.spokeDashPattern,
+    if (style.boundaryColor != null)
+      'boundaryColor': style.boundaryColor!.toARGB32(),
+    if (style.boundaryWidth != null) 'boundaryWidth': style.boundaryWidth,
+    if (style.boundaryDashPattern != null)
+      'boundaryDashPattern': style.boundaryDashPattern,
+  };
+
+  static RadarWebStyle _decodeRadarWebStyle(Object? value, String path) {
+    if (value == null) return const RadarWebStyle();
+    if (value is! Map) {
+      throw _ConfigurationFormatException(
+        'Radar web style must be an object.',
+        path,
+      );
+    }
+    final map = value.cast<String, Object?>();
+    return RadarWebStyle(
+      ringColor: _optionalConfigurationColor(map['ringColor']),
+      ringWidth: _optionalDouble(map, 'ringWidth', path),
+      ringDashPattern: _optionalNumericList(
+        map['ringDashPattern'],
+        '$path.ringDashPattern',
+      ),
+      spokeColor: _optionalConfigurationColor(map['spokeColor']),
+      spokeWidth: _optionalDouble(map, 'spokeWidth', path),
+      spokeDashPattern: _optionalNumericList(
+        map['spokeDashPattern'],
+        '$path.spokeDashPattern',
+      ),
+      boundaryColor: _optionalConfigurationColor(map['boundaryColor']),
+      boundaryWidth: _optionalDouble(map, 'boundaryWidth', path),
+      boundaryDashPattern: _optionalNumericList(
+        map['boundaryDashPattern'],
+        '$path.boundaryDashPattern',
+      ),
+    );
   }
 
   /// Encodes the pane, track layout, scale guides, and thresholds shared by a
@@ -1717,6 +1765,26 @@ int? _optionalInt(Map<String, Object?> map, String key, String path) {
     );
   }
   return value;
+}
+
+List<double>? _optionalNumericList(Object? value, String path) {
+  if (value == null) return null;
+  if (value is! List) {
+    throw _ConfigurationFormatException(
+      'Optional numeric list is invalid.',
+      path,
+    );
+  }
+  return <double>[
+    for (final item in value)
+      if (item is num && item.toDouble().isFinite)
+        item.toDouble()
+      else
+        throw _ConfigurationFormatException(
+          'Optional numeric list contains an invalid value.',
+          path,
+        ),
+  ];
 }
 
 bool _requiredBool(Map<String, Object?> map, String key, String path) {

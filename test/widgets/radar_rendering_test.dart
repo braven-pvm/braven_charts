@@ -248,7 +248,9 @@ void main() {
     await tester.pump();
 
     expect(
-      find.semantics.byLabel('Radar chart with 6 vertices across 2 profiles'),
+      find.semantics.byLabel(
+        'Radar chart with 3 categories, 2 profiles, and 6 values',
+      ),
       findsOneWidget,
     );
     final renderBox = tester.renderObject<ChartRenderBox>(

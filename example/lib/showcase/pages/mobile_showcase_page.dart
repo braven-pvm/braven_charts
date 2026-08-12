@@ -1677,6 +1677,10 @@ class _MobileChartCard extends StatelessWidget {
         chartType.type == ChartType.radialBar ||
         chartType.type == ChartType.gauge;
     final showAxes = chartChrome == _MobileChartChrome.axes;
+    final showLegend =
+        example.showLegend &&
+        chartChrome != _MobileChartChrome.clean &&
+        chartType.type != ChartType.radar;
     final axisLineColor = presentation.palette[index % 5];
     final axisLabelColor = presentation.palette[(index + 1) % 5];
     final axisTitleColor = presentation.palette[(index + 2) % 5];
@@ -1715,6 +1719,19 @@ class _MobileChartCard extends StatelessWidget {
         },
       ),
     );
+    final legendStyle =
+        example.legendStyle ??
+        chartTheme.legendStyle.copyWith(
+          position: LegendPosition.topRight,
+          orientation: LegendOrientation.horizontal,
+          textStyle: chartTheme.legendStyle.textStyle.copyWith(
+            color: presentation.onSurfaceVariant,
+          ),
+          backgroundColor: presentation.surface.withValues(alpha: 0.92),
+          borderColor: presentation.border.withValues(alpha: 0.72),
+          borderWidth: 0.75,
+          allowDragging: false,
+        );
     final xAxisConfig =
         example.xAxisConfig ??
         (isRadial
@@ -1932,15 +1949,8 @@ class _MobileChartCard extends StatelessWidget {
                 series: example.series,
                 annotations: example.annotations,
                 theme: chartTheme,
-                showLegend: example.showLegend,
-                legendStyle: example.showLegend
-                    ? example.legendStyle ??
-                          const LegendStyle(
-                            position: LegendPosition.topRight,
-                            orientation: LegendOrientation.horizontal,
-                            allowDragging: false,
-                          )
-                    : null,
+                showLegend: showLegend,
+                legendStyle: showLegend ? legendStyle : null,
                 radialLegendItemBuilder: example.radialLegendItemBuilder,
                 grid: effectiveGrid,
                 xAxisConfig: showAxes
@@ -2243,7 +2253,6 @@ List<_MobileChartExample> _mobileExamples(
             (slug == 'scatter-charts' && index > 0) ||
             (slug == 'candlestick-charts' && index > 0) ||
             (slug == 'concentric-donut' && index == 0) ||
-            (slug == 'radar-charts' && index > 0) ||
             (slug == 'polar-column' && index > 0),
         xAxisConfig: _mobileXAxis(slug, index),
         yAxis: _mobileYAxis(slug, index),
@@ -2276,7 +2285,7 @@ List<_MobileChartExample> _mobileExamples(
           ('heatmap-charts', _) => 300,
           ('pie-charts', 1) => 330,
           ('concentric-donut', _) => 310,
-          ('radar-charts', _) => 310,
+          ('radar-charts', _) => 340,
           ('polar-column', _) => 310,
           ('gauge-charts', _) => 310,
           _ => null,
@@ -2720,7 +2729,7 @@ ConcentricDonutConfig _mobileConcentricConfig(int index) => switch (index) {
 RadarChartConfig _mobileRadarConfig(int index) => RadarChartConfig(
   pane: PolarPaneConfig(
     startAngleDegrees: index == 3 ? -54 : -90,
-    outerRadiusFactor: 0.76,
+    outerRadiusFactor: 0.98,
   ),
   categoryAxis: const RadarCategoryAxisConfig(
     labelOffset: 6,

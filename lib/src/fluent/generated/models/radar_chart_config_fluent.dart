@@ -5,7 +5,126 @@
 // Regenerate: dart run build_runner build
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/widgets.dart' show Color;
+import 'package:flutter/widgets.dart' show Color, Offset;
+
+/// Generated fluent modifiers for [RadarGradientStyle].
+extension RadarGradientStyleFluent on RadarGradientStyle {
+  /// Replaces [RadarGradientStyle.enabled] with [value].
+  RadarGradientStyle withEnabled(bool value) => copyWith(enabled: value);
+
+  /// Replaces [RadarGradientStyle.type] with [value].
+  RadarGradientStyle withType(RadarGradientType value) => copyWith(type: value);
+
+  /// Replaces [RadarGradientStyle.startColor] with [value].
+  RadarGradientStyle withStartColor(Color value) => copyWith(startColor: value);
+
+  /// Clears [RadarGradientStyle.startColor] to `null`.
+  RadarGradientStyle clearStartColor() => copyWith(clearStartColor: true);
+
+  /// Replaces [RadarGradientStyle.endColor] with [value].
+  RadarGradientStyle withEndColor(Color value) => copyWith(endColor: value);
+
+  /// Clears [RadarGradientStyle.endColor] to `null`.
+  RadarGradientStyle clearEndColor() => copyWith(clearEndColor: true);
+
+  /// Replaces [RadarGradientStyle.startLightnessShift] with [value].
+  RadarGradientStyle withStartLightnessShift(double value) =>
+      copyWith(startLightnessShift: value);
+
+  /// Replaces [RadarGradientStyle.endLightnessShift] with [value].
+  RadarGradientStyle withEndLightnessShift(double value) =>
+      copyWith(endLightnessShift: value);
+
+  /// Replaces [RadarGradientStyle.angleDegrees] with [value].
+  RadarGradientStyle withAngleDegrees(double value) =>
+      copyWith(angleDegrees: value);
+}
+
+/// Generated fluent modifiers for [RadarShadowStyle].
+extension RadarShadowStyleFluent on RadarShadowStyle {
+  /// Replaces [RadarShadowStyle.color] with [value].
+  RadarShadowStyle withColor(Color value) => copyWith(color: value);
+
+  /// Clears [RadarShadowStyle.color] to `null`.
+  RadarShadowStyle clearColor() => copyWith(clearColor: true);
+
+  /// Replaces [RadarShadowStyle.blurRadius] with [value].
+  RadarShadowStyle withBlurRadius(double value) => copyWith(blurRadius: value);
+
+  /// Replaces [RadarShadowStyle.spreadRadius] with [value].
+  RadarShadowStyle withSpreadRadius(double value) =>
+      copyWith(spreadRadius: value);
+
+  /// Replaces [RadarShadowStyle.offset] with [value].
+  RadarShadowStyle withOffset(Offset value) => copyWith(offset: value);
+
+  /// Replaces [RadarShadowStyle.opacity] with [value].
+  RadarShadowStyle withOpacity(double value) => copyWith(opacity: value);
+}
+
+/// Generated fluent modifiers for [RadarWebStyle].
+extension RadarWebStyleFluent on RadarWebStyle {
+  /// Replaces [RadarWebStyle.ringColor] with [value].
+  RadarWebStyle withRingColor(Color value) => copyWith(ringColor: value);
+
+  /// Clears [RadarWebStyle.ringColor] to `null`.
+  RadarWebStyle clearRingColor() => copyWith(clearRingColor: true);
+
+  /// Replaces [RadarWebStyle.ringWidth] with [value].
+  RadarWebStyle withRingWidth(double value) => copyWith(ringWidth: value);
+
+  /// Clears [RadarWebStyle.ringWidth] to `null`.
+  RadarWebStyle clearRingWidth() => copyWith(clearRingWidth: true);
+
+  /// Replaces [RadarWebStyle.ringDashPattern] with [value].
+  RadarWebStyle withRingDashPattern(List<double> value) =>
+      copyWith(ringDashPattern: value);
+
+  /// Clears [RadarWebStyle.ringDashPattern] to `null`.
+  RadarWebStyle clearRingDashPattern() => copyWith(clearRingDashPattern: true);
+
+  /// Replaces [RadarWebStyle.spokeColor] with [value].
+  RadarWebStyle withSpokeColor(Color value) => copyWith(spokeColor: value);
+
+  /// Clears [RadarWebStyle.spokeColor] to `null`.
+  RadarWebStyle clearSpokeColor() => copyWith(clearSpokeColor: true);
+
+  /// Replaces [RadarWebStyle.spokeWidth] with [value].
+  RadarWebStyle withSpokeWidth(double value) => copyWith(spokeWidth: value);
+
+  /// Clears [RadarWebStyle.spokeWidth] to `null`.
+  RadarWebStyle clearSpokeWidth() => copyWith(clearSpokeWidth: true);
+
+  /// Replaces [RadarWebStyle.spokeDashPattern] with [value].
+  RadarWebStyle withSpokeDashPattern(List<double> value) =>
+      copyWith(spokeDashPattern: value);
+
+  /// Clears [RadarWebStyle.spokeDashPattern] to `null`.
+  RadarWebStyle clearSpokeDashPattern() =>
+      copyWith(clearSpokeDashPattern: true);
+
+  /// Replaces [RadarWebStyle.boundaryColor] with [value].
+  RadarWebStyle withBoundaryColor(Color value) =>
+      copyWith(boundaryColor: value);
+
+  /// Clears [RadarWebStyle.boundaryColor] to `null`.
+  RadarWebStyle clearBoundaryColor() => copyWith(clearBoundaryColor: true);
+
+  /// Replaces [RadarWebStyle.boundaryWidth] with [value].
+  RadarWebStyle withBoundaryWidth(double value) =>
+      copyWith(boundaryWidth: value);
+
+  /// Clears [RadarWebStyle.boundaryWidth] to `null`.
+  RadarWebStyle clearBoundaryWidth() => copyWith(clearBoundaryWidth: true);
+
+  /// Replaces [RadarWebStyle.boundaryDashPattern] with [value].
+  RadarWebStyle withBoundaryDashPattern(List<double> value) =>
+      copyWith(boundaryDashPattern: value);
+
+  /// Clears [RadarWebStyle.boundaryDashPattern] to `null`.
+  RadarWebStyle clearBoundaryDashPattern() =>
+      copyWith(clearBoundaryDashPattern: true);
+}
 
 /// Generated fluent modifiers for [RadarSeriesStyle].
 extension RadarSeriesStyleFluent on RadarSeriesStyle {
@@ -31,16 +150,79 @@ extension RadarSeriesStyleFluent on RadarSeriesStyle {
   RadarSeriesStyle withFillOpacity(double value) =>
       copyWith(fillOpacity: value);
 
+  /// Replaces [RadarSeriesStyle.gradient] with [value].
+  RadarSeriesStyle withGradient(RadarGradientStyle value) =>
+      copyWith(gradient: value);
+
+  /// Clears [RadarSeriesStyle.gradient] to `null`.
+  RadarSeriesStyle clearGradient() => copyWith(clearGradient: true);
+
+  /// Replaces [RadarSeriesStyle.shadow] with [value].
+  RadarSeriesStyle withShadow(RadarShadowStyle value) =>
+      copyWith(shadow: value);
+
+  /// Rebuilds [RadarSeriesStyle.shadow] from its current value.
+  ///
+  /// `update` receives the current [RadarShadowStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadarSeriesStyle updateShadow(
+    RadarShadowStyle Function(RadarShadowStyle current) update,
+  ) => copyWith(shadow: update(shadow));
+
   /// Replaces [RadarSeriesStyle.showMarkers] with [value].
   RadarSeriesStyle withShowMarkers(bool value) => copyWith(showMarkers: value);
+
+  /// Replaces [RadarSeriesStyle.markerShape] with [value].
+  RadarSeriesStyle withMarkerShape(SeriesMarkerShape value) =>
+      copyWith(markerShape: value);
 
   /// Replaces [RadarSeriesStyle.markerRadius] with [value].
   RadarSeriesStyle withMarkerRadius(double value) =>
       copyWith(markerRadius: value);
 
+  /// Replaces [RadarSeriesStyle.markerFillColor] with [value].
+  RadarSeriesStyle withMarkerFillColor(Color value) =>
+      copyWith(markerFillColor: value);
+
+  /// Clears [RadarSeriesStyle.markerFillColor] to `null`.
+  RadarSeriesStyle clearMarkerFillColor() =>
+      copyWith(clearMarkerFillColor: true);
+
+  /// Replaces [RadarSeriesStyle.markerBorderColor] with [value].
+  RadarSeriesStyle withMarkerBorderColor(Color value) =>
+      copyWith(markerBorderColor: value);
+
+  /// Clears [RadarSeriesStyle.markerBorderColor] to `null`.
+  RadarSeriesStyle clearMarkerBorderColor() =>
+      copyWith(clearMarkerBorderColor: true);
+
+  /// Replaces [RadarSeriesStyle.markerBorderWidth] with [value].
+  RadarSeriesStyle withMarkerBorderWidth(double value) =>
+      copyWith(markerBorderWidth: value);
+
   /// Replaces [RadarSeriesStyle.showDataLabels] with [value].
   RadarSeriesStyle withShowDataLabels(bool value) =>
       copyWith(showDataLabels: value);
+
+  /// Replaces [RadarSeriesStyle.maximumVisibleDataLabels] with [value].
+  RadarSeriesStyle withMaximumVisibleDataLabels(int value) =>
+      copyWith(maximumVisibleDataLabels: value);
+
+  /// Replaces [RadarSeriesStyle.dataLabelOffset] with [value].
+  RadarSeriesStyle withDataLabelOffset(double value) =>
+      copyWith(dataLabelOffset: value);
+
+  /// Replaces [RadarSeriesStyle.dataLabelStyle] with [value].
+  RadarSeriesStyle withDataLabelStyle(PolarLabelStyle value) =>
+      copyWith(dataLabelStyle: value);
+
+  /// Rebuilds [RadarSeriesStyle.dataLabelStyle] from its current value.
+  ///
+  /// `update` receives the current [PolarLabelStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadarSeriesStyle updateDataLabelStyle(
+    PolarLabelStyle Function(PolarLabelStyle current) update,
+  ) => copyWith(dataLabelStyle: update(dataLabelStyle));
 
   /// Replaces [RadarSeriesStyle.animationMode] with [value].
   RadarSeriesStyle withAnimationMode(RadarAnimationMode value) =>
@@ -165,4 +347,16 @@ extension RadarChartConfigFluent on RadarChartConfig {
   RadarChartConfig updateRadialAxis(
     RadarNumericAxisConfig Function(RadarNumericAxisConfig current) update,
   ) => copyWith(radialAxis: update(radialAxis));
+
+  /// Replaces [RadarChartConfig.webStyle] with [value].
+  RadarChartConfig withWebStyle(RadarWebStyle value) =>
+      copyWith(webStyle: value);
+
+  /// Rebuilds [RadarChartConfig.webStyle] from its current value.
+  ///
+  /// `update` receives the current [RadarWebStyle] and returns the replacement, so
+  /// nested configuration is edited without re-stating the enclosing config.
+  RadarChartConfig updateWebStyle(
+    RadarWebStyle Function(RadarWebStyle current) update,
+  ) => copyWith(webStyle: update(webStyle));
 }

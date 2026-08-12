@@ -1621,9 +1621,20 @@ Map<String, Object?> _encodeRadarSeriesStyle(RadarSeriesStyle style) => {
   ],
   if (style.fillColor != null) 'fillColor': style.fillColor!.toARGB32(),
   'fillOpacity': _number(style.fillOpacity),
+  if (style.gradient != null) 'gradient': _encodeRadarGradient(style.gradient!),
+  'shadow': _encodeRadarShadow(style.shadow),
   'showMarkers': style.showMarkers,
+  'markerShape': style.markerShape.name,
   'markerRadius': _number(style.markerRadius),
+  if (style.markerFillColor != null)
+    'markerFillColor': style.markerFillColor!.toARGB32(),
+  if (style.markerBorderColor != null)
+    'markerBorderColor': style.markerBorderColor!.toARGB32(),
+  'markerBorderWidth': _number(style.markerBorderWidth),
   'showDataLabels': style.showDataLabels,
+  'maximumVisibleDataLabels': style.maximumVisibleDataLabels,
+  'dataLabelOffset': _number(style.dataLabelOffset),
+  'dataLabelStyle': _encodePolarLabelStyle(style.dataLabelStyle),
   'animationMode': style.animationMode.name,
 };
 
@@ -1637,10 +1648,83 @@ RadarSeriesStyle _decodeRadarSeriesStyle(Map<String, Object?> value) =>
         r'$.style.radarStyle.fillColor',
       ),
       fillOpacity: _double(value, 'fillOpacity'),
+      gradient: _optionalMap(value, 'gradient') == null
+          ? null
+          : _decodeRadarGradient(_map(value, 'gradient')),
+      shadow: _optionalMap(value, 'shadow') == null
+          ? const RadarShadowStyle()
+          : _decodeRadarShadow(_map(value, 'shadow')),
       showMarkers: _bool(value, 'showMarkers'),
+      markerShape:
+          _optionalEnum(
+            value['markerShape'],
+            SeriesMarkerShape.values,
+            r'$.style.radarStyle.markerShape',
+          ) ??
+          SeriesMarkerShape.circle,
       markerRadius: _double(value, 'markerRadius'),
+      markerFillColor: _optionalColor(
+        value['markerFillColor'],
+        r'$.style.radarStyle.markerFillColor',
+      ),
+      markerBorderColor: _optionalColor(
+        value['markerBorderColor'],
+        r'$.style.radarStyle.markerBorderColor',
+      ),
+      markerBorderWidth: _optionalDouble(value['markerBorderWidth']) ?? 0,
       showDataLabels: _bool(value, 'showDataLabels'),
+      maximumVisibleDataLabels:
+          _optionalInt(value['maximumVisibleDataLabels']) ?? 24,
+      dataLabelOffset: _optionalDouble(value['dataLabelOffset']) ?? 8,
+      dataLabelStyle: value['dataLabelStyle'] == null
+          ? const PolarLabelStyle()
+          : _decodePolarLabelStyle(value['dataLabelStyle']),
       animationMode: _enum(value, 'animationMode', RadarAnimationMode.values),
+    );
+
+Map<String, Object?> _encodeRadarGradient(RadarGradientStyle style) => {
+  'enabled': style.enabled,
+  'type': style.type.name,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _number(style.startLightnessShift),
+  'endLightnessShift': _number(style.endLightnessShift),
+  'angleDegrees': _number(style.angleDegrees),
+};
+
+RadarGradientStyle _decodeRadarGradient(Map<String, Object?> value) =>
+    RadarGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: _enum(value, 'type', RadarGradientType.values),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.radarStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.radarStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+      angleDegrees: _double(value, 'angleDegrees'),
+    );
+
+Map<String, Object?> _encodeRadarShadow(RadarShadowStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _number(style.blurRadius),
+  'spreadRadius': _number(style.spreadRadius),
+  'offsetX': _number(style.offset.dx),
+  'offsetY': _number(style.offset.dy),
+  'opacity': _number(style.opacity),
+};
+
+RadarShadowStyle _decodeRadarShadow(Map<String, Object?> value) =>
+    RadarShadowStyle(
+      color: _optionalColor(value['color'], r'$.style.radarStyle.shadow.color'),
+      blurRadius: _double(value, 'blurRadius'),
+      spreadRadius: _double(value, 'spreadRadius'),
+      offset: Offset(_double(value, 'offsetX'), _double(value, 'offsetY')),
+      opacity: _double(value, 'opacity'),
     );
 
 Map<String, Object?> _encodeHeatmapColorScale(HeatmapColorScale scale) => {

@@ -3197,14 +3197,76 @@ class ChartConfigDartEmitter {
       }
       _optionalColor(writer, 'fillColor', style.fillColor);
       _numberIf(writer, 'fillOpacity', style.fillOpacity, 0.12);
+      if (style.gradient case final gradient?) {
+        writer.writeLine('gradient: RadarGradientStyle(');
+        writer.indented(() {
+          _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+          _enumIf(
+            writer,
+            'type',
+            'RadarGradientType',
+            gradient.type.name,
+            defaultName: 'radial',
+          );
+          _optionalColor(writer, 'startColor', gradient.startColor);
+          _optionalColor(writer, 'endColor', gradient.endColor);
+          _numberIf(
+            writer,
+            'startLightnessShift',
+            gradient.startLightnessShift,
+            0.2,
+          );
+          _numberIf(
+            writer,
+            'endLightnessShift',
+            gradient.endLightnessShift,
+            -0.14,
+          );
+          _numberIf(writer, 'angleDegrees', gradient.angleDegrees, 0);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          style.shadow != const RadarShadowStyle()) {
+        writer.writeLine('shadow: RadarShadowStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'color', style.shadow.color);
+          _numberIf(writer, 'blurRadius', style.shadow.blurRadius, 0);
+          _numberIf(writer, 'spreadRadius', style.shadow.spreadRadius, 0);
+          _offsetIf(writer, 'offset', style.shadow.offset, Offset.zero);
+          _numberIf(writer, 'opacity', style.shadow.opacity, 0.28);
+        });
+        writer.writeLine('),');
+      }
       _valueIf(writer, 'showMarkers', style.showMarkers, defaultValue: true);
+      _enumIf(
+        writer,
+        'markerShape',
+        'SeriesMarkerShape',
+        style.markerShape.name,
+        defaultName: 'circle',
+      );
       _numberIf(writer, 'markerRadius', style.markerRadius, 3);
+      _optionalColor(writer, 'markerFillColor', style.markerFillColor);
+      _optionalColor(writer, 'markerBorderColor', style.markerBorderColor);
+      _numberIf(writer, 'markerBorderWidth', style.markerBorderWidth, 0);
       _valueIf(
         writer,
         'showDataLabels',
         style.showDataLabels,
         defaultValue: false,
       );
+      _valueIf(
+        writer,
+        'maximumVisibleDataLabels',
+        style.maximumVisibleDataLabels,
+        defaultValue: 24,
+      );
+      _numberIf(writer, 'dataLabelOffset', style.dataLabelOffset, 8);
+      if (options.includeDefaultValues ||
+          style.dataLabelStyle != const PolarLabelStyle()) {
+        _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
+      }
       _enumIf(
         writer,
         'animationMode',
@@ -4076,6 +4138,42 @@ class ChartConfigDartEmitter {
               config.radialAxis.labelStyle,
             );
           }
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.webStyle != const RadarWebStyle()) {
+        writer.writeLine('webStyle: RadarWebStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'ringColor', config.webStyle.ringColor);
+          _optionalNumber(writer, 'ringWidth', config.webStyle.ringWidth);
+          _optionalNumberList(
+            writer,
+            'ringDashPattern',
+            config.webStyle.ringDashPattern,
+          );
+          _optionalColor(writer, 'spokeColor', config.webStyle.spokeColor);
+          _optionalNumber(writer, 'spokeWidth', config.webStyle.spokeWidth);
+          _optionalNumberList(
+            writer,
+            'spokeDashPattern',
+            config.webStyle.spokeDashPattern,
+          );
+          _optionalColor(
+            writer,
+            'boundaryColor',
+            config.webStyle.boundaryColor,
+          );
+          _optionalNumber(
+            writer,
+            'boundaryWidth',
+            config.webStyle.boundaryWidth,
+          );
+          _optionalNumberList(
+            writer,
+            'boundaryDashPattern',
+            config.webStyle.boundaryDashPattern,
+          );
         });
         writer.writeLine('),');
       }

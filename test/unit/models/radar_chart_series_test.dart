@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -109,6 +111,78 @@ void main() {
       );
       expect(
         const RadarSeriesStyle(fillOpacity: 1.1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadarGradientStyle(startLightnessShift: 1.1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadarShadowStyle(blurRadius: -1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadarWebStyle(ringDashPattern: <double>[4]).validate,
+        throwsArgumentError,
+      );
+    });
+
+    test('preserves independent profile and web appearance overrides', () {
+      const style = RadarSeriesStyle(
+        gradient: RadarGradientStyle(
+          type: RadarGradientType.linear,
+          angleDegrees: 35,
+        ),
+        shadow: RadarShadowStyle(
+          blurRadius: 8,
+          spreadRadius: 2,
+          offset: Offset(2, 3),
+        ),
+        markerShape: SeriesMarkerShape.diamond,
+        markerRadius: 5,
+        markerFillColor: Color(0xFF38BDF8),
+        markerBorderColor: Color(0xFF0F172A),
+        markerBorderWidth: 1.5,
+        showDataLabels: true,
+        maximumVisibleDataLabels: 8,
+        dataLabelOffset: 12,
+        dataLabelStyle: PolarLabelStyle(
+          color: Color(0xFF1E293B),
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+      const config = RadarChartConfig(
+        webStyle: RadarWebStyle(
+          ringColor: Color(0xFF334155),
+          ringWidth: 1.5,
+          ringDashPattern: <double>[5, 3],
+          spokeColor: Color(0xFF64748B),
+          spokeWidth: 0.75,
+          spokeDashPattern: <double>[],
+          boundaryColor: Color(0xFF0F172A),
+          boundaryWidth: 2,
+          boundaryDashPattern: <double>[8, 2],
+        ),
+      );
+
+      expect(style.validate, returnsNormally);
+      expect(config.validate, returnsNormally);
+      expect(style.copyWith(), style);
+      expect(config.copyWith(), config);
+    });
+
+    test('rejects invalid marker and direct-value presentation', () {
+      expect(
+        const RadarSeriesStyle(markerBorderWidth: -1).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadarSeriesStyle(maximumVisibleDataLabels: 0).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const RadarSeriesStyle(dataLabelOffset: double.infinity).validate,
         throwsArgumentError,
       );
     });

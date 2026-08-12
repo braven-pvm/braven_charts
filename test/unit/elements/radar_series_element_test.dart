@@ -71,6 +71,21 @@ void main() {
         polygon.gridRingPaths.last.getBounds(),
         equals(circle.gridRingPaths.last.getBounds()),
       );
+      expect(
+        polygon.boundaryPath.computeMetrics().single.length,
+        closeTo(
+          polygon.gridRingPaths.last.computeMetrics().single.length,
+          1e-6,
+        ),
+      );
+      expect(
+        circle.boundaryPath.computeMetrics().single.length,
+        closeTo(circle.gridRingPaths.last.computeMetrics().single.length, 1e-6),
+      );
+      expect(
+        polygon.boundaryPath.computeMetrics().single.length,
+        isNot(closeTo(circle.boundaryPath.computeMetrics().single.length, 1)),
+      );
       expect(polygon.numericScale.maximum, 100);
       expect(circle.numericScale.maximum, 100);
     });
@@ -160,6 +175,118 @@ void main() {
       expect(build(0).profile.vertices, build(1).profile.vertices);
       expect(build(0).fadeProgress, 0);
       expect(build(1).fadeProgress, 1);
+    });
+
+    test('paints portable gradients, shadows, and independent web styles', () {
+      final element = RadarSeriesElement(
+        series: RadarChartSeries.fromMap(
+          id: 'styled',
+          color: const Color(0xFF2563EB),
+          values: const {'A': 40, 'B': 65, 'C': 80, 'D': 55},
+          radarStyle: const RadarSeriesStyle(
+            fillOpacity: 0.35,
+            gradient: RadarGradientStyle(
+              type: RadarGradientType.linear,
+              startColor: Color(0xFF22D3EE),
+              endColor: Color(0xFF7C3AED),
+              angleDegrees: 30,
+            ),
+            shadow: RadarShadowStyle(
+              color: Color(0xFF0F172A),
+              blurRadius: 12,
+              spreadRadius: 2,
+              offset: Offset(4, 5),
+              opacity: 0.4,
+            ),
+          ),
+        ),
+        config: const RadarChartConfig(
+          webStyle: RadarWebStyle(
+            ringColor: Color(0xFF14B8A6),
+            ringWidth: 2,
+            ringDashPattern: <double>[3, 2],
+            spokeColor: Color(0xFFF97316),
+            spokeWidth: 1.5,
+            spokeDashPattern: <double>[6, 3],
+            boundaryColor: Color(0xFF111827),
+            boundaryWidth: 3,
+          ),
+        ),
+        size: const Size.square(360),
+        theme: ChartTheme.light,
+      );
+
+      final plain = RadarSeriesElement(
+        series: RadarChartSeries.fromMap(
+          id: 'plain',
+          values: const {'A': 40, 'B': 65, 'C': 80, 'D': 55},
+        ),
+        config: const RadarChartConfig(),
+        size: const Size.square(360),
+        theme: ChartTheme.light,
+      );
+      expect(element.pane.outerRadius, lessThan(plain.pane.outerRadius));
+      expect(element.gridRingPaths, hasLength(5));
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(360));
+      expect(recorder.endRecording(), isNotNull);
+    });
+
+    test('constrains large shadows and labels inside compact panes', () {
+      final element = RadarSeriesElement(
+        series: RadarChartSeries.fromMap(
+          id: 'compact-elevated',
+          values: const {
+            'Dimension one': 40,
+            'Dimension two': 65,
+            'Dimension three': 80,
+            'Dimension four': 55,
+          },
+          radarStyle: const RadarSeriesStyle(
+            shadow: RadarShadowStyle(
+              blurRadius: 30,
+              spreadRadius: 10,
+              offset: Offset(12, -12),
+            ),
+          ),
+        ),
+        config: const RadarChartConfig(
+          categoryAxis: RadarCategoryAxisConfig(labelOffset: 28),
+        ),
+        size: const Size(170, 140),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.pane.outerRadius, greaterThan(0));
+      expect(element.pane.plotBounds.width, greaterThan(0));
+      expect(element.pane.plotBounds.height, greaterThan(0));
+    });
+
+    test('keeps all-zero profiles finite on the automatic fallback domain', () {
+      final element = RadarSeriesElement(
+        series: RadarChartSeries.fromMap(
+          id: 'zero-profile',
+          values: const {'A': 0, 'B': 0, 'C': 0, 'D': 0},
+        ),
+        config: const RadarChartConfig(),
+        size: const Size(220, 180),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.numericScale.minimum, 0);
+      expect(element.numericScale.maximum, 1);
+      expect(
+        element.profile.vertices.every(
+          (vertex) => vertex.dx.isFinite && vertex.dy.isFinite,
+        ),
+        isTrue,
+      );
+      expect(
+        element.profile.vertices.every(
+          (vertex) => (vertex - element.pane.center).distance < 1e-6,
+        ),
+        isTrue,
+      );
     });
   });
 }

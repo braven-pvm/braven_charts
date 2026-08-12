@@ -513,6 +513,101 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'phone Clean mode hides legends and Axes uses the selected dark theme',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MobileShowcasePage(initialChartSlug: 'line-charts'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final comparisonCard = find.byKey(
+        const ValueKey('mobile-chart-card-line-charts-1'),
+      );
+
+      BravenChartPlus comparison() => tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: comparisonCard,
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+
+      expect(comparison().showLegend, isFalse);
+
+      await tester.tap(find.byKey(const ValueKey('mobile-style-midnight')));
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.byKey(const ValueKey('mobile-view-touch-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('mobile-chart-chrome-axes')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('mobile-touch-options-done')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        comparisonCard,
+        420,
+        scrollable: _verticalMobileScroll(),
+      );
+
+      expect(comparison().showLegend, isTrue);
+      expect(
+        comparison().legendStyle?.textStyle.color,
+        const Color(0xFFB7C3D4),
+      );
+      expect(
+        comparison().legendStyle?.backgroundColor,
+        const Color(0xFF0F172A).withValues(alpha: 0.92),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('phone Radar examples reserve the pane for the chart', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MobileShowcasePage(initialChartSlug: 'radar-charts'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    for (var index = 0; index < 4; index++) {
+      final card = find.byKey(
+        ValueKey('mobile-chart-card-radar-charts-$index'),
+      );
+      await tester.scrollUntilVisible(
+        card,
+        420,
+        scrollable: _verticalMobileScroll(),
+      );
+      final chartFinder = find.descendant(
+        of: card,
+        matching: find.byType(BravenChartPlus),
+      );
+      final chart = tester.widget<BravenChartPlus>(chartFinder);
+      expect(chart.showLegend, isFalse);
+      expect(chart.radarChartConfig.pane.outerRadiusFactor, 0.98);
+      expect(
+        tester
+            .getSize(find.byKey(ValueKey('mobile-chart-radar-charts-$index')))
+            .height,
+        340,
+      );
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('phone gesture and tap profiles are explicit and chart-wide', (
     tester,
   ) async {
@@ -602,7 +697,7 @@ void main() {
       ),
     );
     expect(comparison.series, hasLength(3));
-    expect(comparison.showLegend, isTrue);
+    expect(comparison.showLegend, isFalse);
 
     final forecast = tester.widget<BravenChartPlus>(
       find.descendant(
@@ -649,9 +744,7 @@ void main() {
           expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
         case 'bar-charts':
           expect(chart.series, hasLength(5));
-          expect(chart.legendStyle?.position, LegendPosition.topLeft);
-          expect(chart.legendStyle?.orientation, LegendOrientation.vertical);
-          expect(chart.legendStyle?.textStyle.fontSize, 8);
+          expect(chart.showLegend, isFalse);
           expect(
             chart.series.cast<BarChartSeries>().every(
               (series) =>
@@ -789,9 +882,7 @@ void main() {
       comparison.concentricDonutConfig.legendMode,
       ConcentricDonutLegendMode.flat,
     );
-    expect(comparison.showLegend, isTrue);
-    expect(comparison.legendStyle?.position, LegendPosition.bottomCenter);
-    expect(comparison.legendStyle?.orientation, LegendOrientation.horizontal);
+    expect(comparison.showLegend, isFalse);
     expect(comparison.radialLegendItemBuilder, isNotNull);
     expect(
       comparison.series.whereType<DonutChartSeries>().every(

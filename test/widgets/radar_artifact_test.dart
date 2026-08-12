@@ -28,8 +28,32 @@ void main() {
             strokeDashPattern: <double>[8, 4],
             fillColor: Color(0x332563EB),
             fillOpacity: 0.2,
+            gradient: RadarGradientStyle(
+              type: RadarGradientType.linear,
+              startColor: Color(0xFF38BDF8),
+              endColor: Color(0xFF1D4ED8),
+              angleDegrees: 30,
+            ),
+            shadow: RadarShadowStyle(
+              color: Color(0xFF1E3A8A),
+              blurRadius: 9,
+              spreadRadius: 1.5,
+              offset: Offset(2, 3),
+              opacity: 0.32,
+            ),
+            markerShape: SeriesMarkerShape.diamond,
             markerRadius: 4,
+            markerFillColor: Color(0xFFF8FAFC),
+            markerBorderColor: Color(0xFF1E3A8A),
+            markerBorderWidth: 1.5,
             showDataLabels: true,
+            maximumVisibleDataLabels: 3,
+            dataLabelOffset: 11,
+            dataLabelStyle: PolarLabelStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         RadarChartSeries.fromMap(
@@ -58,6 +82,17 @@ void main() {
           labelPosition: PolarRadialLabelPosition.end,
           labelAngleOffsetDegrees: 8,
           labelOffset: 6,
+        ),
+        webStyle: RadarWebStyle(
+          ringColor: Color(0xFFCBD5E1),
+          ringWidth: 1.25,
+          ringDashPattern: <double>[4, 3],
+          spokeColor: Color(0xFF94A3B8),
+          spokeWidth: 0.75,
+          spokeDashPattern: <double>[],
+          boundaryColor: Color(0xFF475569),
+          boundaryWidth: 2,
+          boundaryDashPattern: <double>[8, 3],
         ),
       );
 
@@ -128,6 +163,14 @@ void main() {
       expect(direct, contains('RadarChartSeries('));
       expect(direct, contains('radarChartConfig: RadarChartConfig('));
       expect(direct, contains('strokeDashPattern: <double>[8.0, 4.0]'));
+      expect(direct, contains('gradient: RadarGradientStyle('));
+      expect(direct, contains('shadow: RadarShadowStyle('));
+      expect(direct, contains('markerShape: SeriesMarkerShape.diamond'));
+      expect(direct, contains('markerBorderWidth: 1.5'));
+      expect(direct, contains('maximumVisibleDataLabels: 3'));
+      expect(direct, contains('dataLabelOffset: 11.0'));
+      expect(direct, contains('dataLabelStyle: PolarLabelStyle('));
+      expect(direct, contains('webStyle: RadarWebStyle('));
 
       final grammar = _success(
         ChartGrammarSourceGenerator.generate(

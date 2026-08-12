@@ -426,8 +426,10 @@ void main() {
 /// second blocker identified. Nothing outside those 19 moved, and no page went
 /// down.
 ///
-/// Re-measured 2026-08-07 for BC-0061: the three authored Radar presentations
-/// all emit faithful repeated `geomRadar` chains.
+/// Re-measured 2026-08-12 for BC-0061 after reconciling the complete Radar
+/// showcase onto current master. Seven of the eleven mounted presentations
+/// emit faithful repeated `geomRadar` chains; the deliberately stress-oriented
+/// states retain explicit refusal verdicts.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[16, 13, 6],
   'Area': <int>[9, 9, 8],
@@ -444,7 +446,10 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Donut': <int>[5, 5, 5],
   'ConcentricDonut': <int>[6, 6, 6],
   'PolarColumn': <int>[9, 9, 9],
-  'Radar': <int>[3, 3, 3],
+  // 2026-08-12: Compact KPI adds one intentionally grammar-compatible Radar
+  // presentation while the risk and long-label stress recipes retain the
+  // existing explicit refusal/coverage balance.
+  'Radar': <int>[11, 11, 8],
   'RadialBar': <int>[12, 12, 0],
   'Gauge': <int>[12, 12, 0],
 };
@@ -452,11 +457,15 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
   _Family.cartesian: <int>[44, 133],
-  _Family.radial: <int>[34, 58],
+  // 2026-08-12: Eight new Radar states; five emit across primary/shadow paths.
+  _Family.radial: <int>[39, 66],
 };
 
-const int _expectedWithVerdict = 191;
-const int _expectedEmitting = 78;
+// 2026-08-12: Radar grew from three audited showcase states to eleven. All
+// eight additions have an explicit verdict. Primary and shadow/source verdicts
+// together add five emitting results to the aggregate census.
+const int _expectedWithVerdict = 199;
+const int _expectedEmitting = 83;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than

@@ -5634,8 +5634,13 @@ class ChartRenderBox extends RenderBox {
       (element) => element is RadialBarSeriesElement,
     );
     final radarProfiles = _elements.whereType<RadarSeriesElement>().length;
+    final radarCategories = _elements
+        .whereType<RadarSeriesElement>()
+        .firstOrNull
+        ?.pointCount;
     config.label = radarProfiles > 0
-        ? 'Radar chart with $hitCount vertices across $radarProfiles profiles'
+        ? 'Radar chart with $radarCategories categories, $radarProfiles '
+              'profiles, and $hitCount values'
         : isRadialBar
         ? 'Radial Bar chart with $hitCount categories'
         : groupCount != null

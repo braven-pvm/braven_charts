@@ -4,7 +4,7 @@
 **Register:** `BC-0061`  
 **Branch:** `feature/BC-0061-radar-chart`  
 **Worktree:** `F:\Repositories\braven_charts-spiderweb-research`  
-**Status:** Review complete; Slices 1–7 ready for delivery  
+**Status:** Review complete; release gates passed and PR delivery authorized
 **Parent architecture:**
 `docs/superpowers/specs/2026-07-18-radial-chart-family-roadmap.md`
 
@@ -598,6 +598,55 @@ machine, comfortably inside the 16.67 ms frame budget. The publish dry-run
 validates package content and reports only the expected uncommitted-worktree
 warning. Desktop/network visual review passed on 2026-08-11; delivery
 reconciliation against current `origin/master` remains before PR handoff.
+
+## Slice 8 — Presentation and inspector parity
+
+**Delivery status:** Implementation assembled on 2026-08-11 after review of the
+actual public surface found that passing infrastructure and round-trip gates
+did not prove the complete visual-customization contract. Portable web,
+gradient, shadow, marker, and data-label styling now round-trips through the
+public model, renderer, artifacts, generated Dart, fluent, and AI surfaces.
+Seven stable authored presentations expose deliberate visual combinations;
+the eighth Playground now provides a seeded full-property generator and timed
+playback so unusual combinations can be reproduced rather than dismissed as
+random noise. That generator exposed a real compact-pane failure when large
+shadow and label reserves consumed the pane; layout now constrains those
+reserves proportionally and a renderer regression test protects the case.
+An adversarial pass on 2026-08-12 expanded the surface to eleven presentations,
+including compact KPI, risk-exposure, and deliberately long-label cases, plus
+three touch-first recipes that reuse the one mounted workbench rather than
+creating hidden chart runtimes. It also found and fixed a native renderer defect:
+polygon webs painted circular outer boundaries even though their rings and
+spokes were polygonal. Regression coverage now protects polygon/circle
+boundaries, all-zero automatic domains, category/profile/value semantics,
+160% text scaling, compact panes, and 28 px touch hit radii. Focused automated
+review, maintainer visual review, package generation drift, release-web
+compilation, and package validation are complete. The mobile clean presentation
+now removes legends entirely and gives Radar the full available chart height;
+the opt-in axes presentation retains theme-correct legend chrome.
+
+### Scope
+
+- portable Radar gradient and shadow/elevation models with renderer, codec,
+  hydration, source, grammar, fluent, and AI parity;
+- independently configurable web rings, spokes, boundary, and radial/category
+  label appearance rather than theme-only rendering;
+- complete profile stroke, fill, marker, data-label, palette, and opacity
+  controls in the standard inspector;
+- complete legend, tooltip, interaction, and selection controls using the
+  existing shared configuration models;
+- authored high-contrast, comparison, normalized-scorecard, and dense-stress
+  presentations plus a deterministic playground/property randomizer;
+- focused visual, portability, constrained/mobile, and regression tests for
+  every newly exposed property.
+
+### Gate
+
+Every inspector control must modify the same public portable configuration a
+package user can author. The authored examples must visibly differ in more than
+data shape, and gradients, shadows, web styling, label styling, tooltips,
+legend behavior, selection, artifacts, and generated source must survive the
+standard Radar product workflow.
 
 ### Focused verification
 

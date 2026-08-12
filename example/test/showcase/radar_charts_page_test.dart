@@ -1,6 +1,8 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/radar_series_element.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/radar_charts_page.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,6 +20,14 @@ void main() {
     expect(find.text('Budget vs spending'), findsWidgets);
     expect(find.text('Capability profile'), findsOneWidget);
     expect(find.text('Service health'), findsOneWidget);
+    expect(find.text('Product comparison'), findsOneWidget);
+    expect(find.text('Normalized scorecard'), findsOneWidget);
+    expect(find.text('High contrast'), findsOneWidget);
+    expect(find.text('Compact KPI'), findsOneWidget);
+    expect(find.text('Risk exposure'), findsOneWidget);
+    expect(find.text('Long labels'), findsOneWidget);
+    expect(find.text('Dense stress'), findsOneWidget);
+    expect(find.text('Playground'), findsOneWidget);
 
     final chart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('radar-chart-budget-polygon')),
@@ -25,6 +35,175 @@ void main() {
     expect(chart.series.whereType<RadarChartSeries>(), hasLength(2));
     expect(chart.radarChartConfig.radialAxis.maximum, 100);
     expect(chart.radarChartConfig.radialAxis.gridShape, RadarGridShape.polygon);
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final radarElement = renderBox.debugElements
+        .whereType<RadarSeriesElement>()
+        .first;
+    expect(
+      radarElement.pane.outerRadius,
+      greaterThanOrEqualTo(100),
+      reason:
+          'The default desktop workbench must present Radar as a primary chart, '
+          'not collapse it into a thumbnail after host and legend chrome.',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Radar mobile review recipes reuse the single workbench chart', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: RadarChartsPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byKey(const ValueKey('radar-mobile-examples')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('radar-mobile-example-snapshot')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('radar-mobile-example-touchComparison')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('radar-mobile-example-largeText')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    final openSnapshot = find.byKey(
+      const ValueKey('radar-mobile-open-snapshot'),
+    );
+    await tester.ensureVisible(openSnapshot);
+    await tester.pumpAndSettle();
+    await tester.tap(openSnapshot);
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('radar-chart-compact-circle')),
+    );
+    expect(chart.series.whereType<RadarChartSeries>(), hasLength(1));
+    expect(chart.showLegend, isFalse);
+    expect(
+      chart.interactionConfig!.selection.dataPointHitRadius,
+      greaterThanOrEqualTo(28),
+    );
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final openTouch = find.byKey(
+      const ValueKey('radar-mobile-open-touchComparison'),
+    );
+    await tester.ensureVisible(openTouch);
+    await tester.pumpAndSettle();
+    await tester.tap(openTouch);
+    await tester.pump();
+
+    final touchChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('radar-chart-service-polygon')),
+    );
+    expect(
+      touchChart.series.whereType<RadarChartSeries>().every(
+        (series) => series.radarStyle.markerRadius >= 5,
+      ),
+      isTrue,
+    );
+    expect(
+      touchChart.interactionConfig!.selection.dataPointHitRadius,
+      greaterThanOrEqualTo(28),
+    );
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+
+    final openLargeText = find.byKey(
+      const ValueKey('radar-mobile-open-largeText'),
+    );
+    await tester.ensureVisible(openLargeText);
+    await tester.pumpAndSettle();
+    await tester.tap(openLargeText);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('radar-chart-longLabels-polygon')),
+      findsOneWidget,
+    );
+    expect(
+      MediaQuery.textScalerOf(
+        tester.element(
+          find.byKey(const ValueKey('radar-chart-longLabels-polygon')),
+        ),
+      ).scale(1),
+      1.6,
+    );
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Radar playground randomizes every portable presentation layer', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: RadarChartsPage()));
+    await tester.pump();
+    await tester.tap(find.text('Playground'));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('radar-randomizer-editor')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('radar-randomizer-editor')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('radar-randomizer-status')),
+      findsOneWidget,
+    );
+    expect(find.text('Inspecting seed 47'), findsOneWidget);
+
+    BravenChartPlus chart() =>
+        tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final initialChart = chart();
+    final initialValues = initialChart.series
+        .whereType<RadarChartSeries>()
+        .expand((series) => series.points)
+        .map((point) => point.y)
+        .toList();
+    final profiles = initialChart.series.whereType<RadarChartSeries>().toList();
+    expect(profiles.length, inInclusiveRange(2, 6));
+    expect(profiles.first.points.length, inInclusiveRange(5, 18));
+    expect(initialChart.radarChartConfig.webStyle.ringWidth, isNotNull);
+    expect(initialChart.radarChartConfig.webStyle.spokeWidth, isNotNull);
+    expect(initialChart.radarChartConfig.webStyle.boundaryWidth, isNotNull);
+
+    await tester.tap(find.byKey(const ValueKey('radar-randomizer-generate')));
+    await tester.pump();
+    final repeatedValues = chart().series
+        .whereType<RadarChartSeries>()
+        .expand((series) => series.points)
+        .map((point) => point.y)
+        .toList();
+    expect(repeatedValues, initialValues);
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('radar-randomizer-next')));
+    await tester.pump();
+    expect(find.textContaining('seed 48'), findsOneWidget);
+    final nextValues = chart().series
+        .whereType<RadarChartSeries>()
+        .expand((series) => series.points)
+        .map((point) => point.y)
+        .toList();
+    expect(nextValues, isNot(equals(initialValues)));
     expect(tester.takeException(), isNull);
   });
 
@@ -59,6 +238,16 @@ void main() {
     expect(serviceSeries.first.points, hasLength(8));
     expect(
       serviceSeries.every((series) => series.radarStyle.showDataLabels),
+      isTrue,
+    );
+    expect(
+      serviceSeries.every(
+        (series) => series.radarStyle.maximumVisibleDataLabels == 12,
+      ),
+      isTrue,
+    );
+    expect(
+      serviceSeries.every((series) => series.radarStyle.dataLabelOffset == 10),
       isTrue,
     );
     expect(tester.takeException(), isNull);
@@ -192,6 +381,13 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
 
+    await tester.scrollUntilVisible(
+      find.text('Preview reduced motion'),
+      400,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -160));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Preview reduced motion'));
     await tester.pump();
     expect(
