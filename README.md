@@ -1,6 +1,6 @@
 # Braven Charts
 
-[![Thirteen chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_family_grid.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
+[![14 chart families rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_family_grid.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
 [![Pub version](https://img.shields.io/pub/v/braven_charts.svg)](https://pub.dev/packages/braven_charts)
 [![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.35-02569B.svg)](https://flutter.dev)
