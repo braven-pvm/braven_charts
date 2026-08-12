@@ -25,9 +25,9 @@ Render thirteen chart families through one custom `RenderBox` and `Canvas` pipel
 
 ## Built for real Flutter mobile apps
 
-[![Six phone-native sports, wellness, training, and mobility experiences built with Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/mobile_apps_showcase.png)](https://braven-pvm.github.io/braven_charts/?page=mobile-apps)
+[![Nine phone-native sports, wellness, finance, weather, habit, energy, and mobility experiences built with Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/mobile_apps_showcase.png)](https://braven-pvm.github.io/braven_charts/?page=mobile-apps)
 
-Building a sports, wellness, health, finance, habit, or mobility app? Compose
+Building a sports, wellness, health, finance, weather, energy, habit, or mobility app? Compose
 focused phone experiences with the same native renderer: minimal axes, clear
 primary metrics, touch-safe spacing, and responsive layouts that do not inherit
 desktop dashboard chrome.
@@ -177,7 +177,7 @@ developer task.
 ### Interaction and display
 
 - [Tracking and value display](https://braven-pvm.github.io/braven_charts/guides/tracking-and-value-display/) — Compose crosshairs, tooltips, markers, and persistent value summaries.
-- [Mobile app compositions](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) — See six focused endurance, recovery, live-sport, training, habit, and mobility layouts built for phone screens.
+- [Mobile app compositions](https://braven-pvm.github.io/braven_charts/?page=mobile-apps) — See nine focused sports, wellness, finance, weather, training, habit, energy, and mobility layouts built for phone screens.
 - [Mobile interaction](https://braven-pvm.github.io/braven_charts/guides/mobile-interaction/) — Keep scrolling natural, inspect with a hold, and opt into short-tap selection only where it fits.
 - [Selection and linked brushing](https://braven-pvm.github.io/braven_charts/?page=selection) — Select points, ranges, categories, series, linked data, and persistent X/Y brushes.
 - [Series label callouts](https://braven-pvm.github.io/braven_charts/guides/series-label-callouts/) — Anchor, prioritize, style, and selectively hide dense line and area labels.
@@ -257,6 +257,12 @@ Each image opens its exact showcase page or preset.
 | Revenue contribution | Campaign reach | Seasonal rose |
 | --- | --- | --- |
 | [![Pie chart with outside contribution labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Variable-radius donut encoding campaign reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Area-correct seasonal rose chart across twelve months](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_seasonal_rose.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |
+
+### Race charts in motion
+
+| Championship line race | Population bar race |
+| --- | --- |
+| [![Animated line race with cumulative championship standings and moving endpoint labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_race_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=race) | [![Animated horizontal bar race with changing population ranks and period indicator](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_race_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=bar-charts&preset=race) |
 <!-- END GENERATED: GALLERY -->
 
 ## License

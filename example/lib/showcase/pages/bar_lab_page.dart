@@ -125,7 +125,10 @@ extension on _BarLabPreset {
 
 /// Interactive review surface for the modern bar geometry and style system.
 class BarLabPage extends StatefulWidget {
-  const BarLabPage({super.key});
+  const BarLabPage({super.key, this.mediaCapturePreset});
+
+  /// Renders one preset without showcase chrome for deterministic package media.
+  final String? mediaCapturePreset;
 
   @override
   State<BarLabPage> createState() => _BarLabPageState();
@@ -420,13 +423,25 @@ class _BarLabPageState extends State<BarLabPage> {
         break;
       }
     }
-    final requestedPreset = Uri.base.queryParameters['preset'];
+    final requestedPreset =
+        widget.mediaCapturePreset ?? Uri.base.queryParameters['preset'];
     for (final preset in _BarLabPreset.values) {
       if (preset.name == requestedPreset) {
         _preset = preset;
         _setPresetValues(preset);
         break;
       }
+    }
+    if (widget.mediaCapturePreset == 'race') {
+      _raceController.replaceConfig(
+        _raceController.config.copyWith(loop: true),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _raceController.seekToFrame(0);
+          _raceController.play();
+        }
+      });
     }
     final requestedSeries = int.tryParse(
       Uri.base.queryParameters['series'] ?? '',
@@ -1279,6 +1294,15 @@ class _BarLabPageState extends State<BarLabPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mediaCapturePreset != null) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildChartCard(),
+        ),
+      );
+    }
     return ChartPageLayout(
       title: 'Bar Charts',
       subtitle:

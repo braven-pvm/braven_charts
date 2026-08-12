@@ -2735,7 +2735,7 @@ class _MobileAppsGallerySpotlight extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Six live phone-native products show how Braven Charts fits sports, wellness, habits, and mobility—without desktop dashboard chrome.',
+                    'Nine live phone-native products show how Braven Charts fits sports, wellness, finance, weather, energy, habits, and mobility—without desktop dashboard chrome.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: scheme.onSurfaceVariant,
                       height: 1.5,

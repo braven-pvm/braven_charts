@@ -195,6 +195,72 @@ class MobileAppsShowcasePage extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 64),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 720),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Markets, forecasts, and smart systems',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Financial movement, forecast uncertainty, and household energy—three more production-shaped mobile stories, rendered live.',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: rowWidth),
+                          child: Wrap(
+                            key: const ValueKey(
+                              'mobile-app-device-gallery-systems',
+                            ),
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            spacing: 28,
+                            runSpacing: 32,
+                            children: [
+                              SizedBox(
+                                width: phoneWidth,
+                                child: const _PhoneExperience(
+                                  semanticLabel:
+                                      'Personal investing mobile app',
+                                  surfaceColor: Color(0xFF0D1524),
+                                  dark: true,
+                                  child: _MarketExperience(),
+                                ),
+                              ),
+                              SizedBox(
+                                width: phoneWidth,
+                                child: const _PhoneExperience(
+                                  semanticLabel: 'Weather forecast mobile app',
+                                  surfaceColor: Color(0xFFF4F9FF),
+                                  child: _ForecastExperience(),
+                                ),
+                              ),
+                              SizedBox(
+                                width: phoneWidth,
+                                child: const _PhoneExperience(
+                                  semanticLabel: 'Smart home energy mobile app',
+                                  surfaceColor: Color(0xFFFCFAF4),
+                                  child: _EnergyExperience(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     );
                   },
@@ -2045,6 +2111,633 @@ List<ChartDataPoint> _pickupDensityPoints() {
   return points;
 }
 
+class _MarketExperience extends StatelessWidget {
+  const _MarketExperience();
+
+  @override
+  Widget build(BuildContext context) {
+    const surface = Color(0xFF0D1524);
+    const text = Color(0xFFF8FAFC);
+    const muted = Color(0xFF8D9AAF);
+    const mint = Color(0xFF35D0A0);
+    const coral = Color(0xFFFF6B7A);
+    final chartTheme = ChartTheme.dark.copyWith(
+      backgroundColor: surface,
+      seriesTheme: ChartTheme.dark.seriesTheme.copyWith(
+        colors: const [mint, coral, Color(0xFF7AA2FF)],
+      ),
+    );
+
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _AppMark(
+                    background: Color(0xFF14372F),
+                    icon: Icons.candlestick_chart_rounded,
+                    iconColor: mint,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ledger',
+                          style: TextStyle(
+                            color: text,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Personal investing',
+                          style: TextStyle(color: muted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _StatusPill(
+                    label: 'OPEN',
+                    color: mint,
+                    background: Color(0xFF14372F),
+                  ),
+                ],
+              ),
+              SizedBox(height: 22),
+              Text(
+                'Portfolio value',
+                style: TextStyle(color: muted, fontSize: 12),
+              ),
+              SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.bottomLeft,
+                      child: Text(
+                        '\$24,680',
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 34,
+                          height: 1,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  _StatusPill(
+                    label: '+4.8%',
+                    color: mint,
+                    background: Color(0xFF14372F),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              _ChartLegendLine(
+                color: Color(0xFF7AA2FF),
+                label: '20-day average',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          key: const ValueKey('mobile-app-market-chart'),
+          height: 235,
+          child: BravenChartPlus(
+            series: [
+              CandlestickChartSeries(
+                id: 'mobile-market-price',
+                name: 'Price',
+                candlestickStyle: const CandlestickChartStyle(
+                  risingBodyFillColor: mint,
+                  risingBorderColor: mint,
+                  risingWickColor: mint,
+                  fallingBodyFillColor: coral,
+                  fallingBorderColor: coral,
+                  fallingWickColor: coral,
+                  bodyFillMode: CandlestickBodyFillMode.filled,
+                  bodyCornerRadius: 2,
+                ),
+                points: [
+                  CandlestickDataPoint(
+                    x: 1,
+                    open: 42,
+                    high: 48,
+                    low: 40,
+                    close: 46,
+                  ),
+                  CandlestickDataPoint(
+                    x: 2,
+                    open: 46,
+                    high: 50,
+                    low: 44,
+                    close: 48,
+                  ),
+                  CandlestickDataPoint(
+                    x: 3,
+                    open: 48,
+                    high: 49,
+                    low: 42,
+                    close: 44,
+                  ),
+                  CandlestickDataPoint(
+                    x: 4,
+                    open: 44,
+                    high: 52,
+                    low: 43,
+                    close: 50,
+                  ),
+                  CandlestickDataPoint(
+                    x: 5,
+                    open: 50,
+                    high: 56,
+                    low: 48,
+                    close: 54,
+                  ),
+                  CandlestickDataPoint(
+                    x: 6,
+                    open: 54,
+                    high: 55,
+                    low: 50,
+                    close: 51,
+                  ),
+                  CandlestickDataPoint(
+                    x: 7,
+                    open: 51,
+                    high: 59,
+                    low: 50,
+                    close: 57,
+                  ),
+                  CandlestickDataPoint(
+                    x: 8,
+                    open: 57,
+                    high: 62,
+                    low: 55,
+                    close: 60,
+                  ),
+                  CandlestickDataPoint(
+                    x: 9,
+                    open: 60,
+                    high: 61,
+                    low: 54,
+                    close: 56,
+                  ),
+                  CandlestickDataPoint(
+                    x: 10,
+                    open: 56,
+                    high: 64,
+                    low: 55,
+                    close: 62,
+                  ),
+                ],
+              ),
+              const LineChartSeries(
+                id: 'mobile-market-average',
+                name: 'Average',
+                color: Color(0xFF7AA2FF),
+                interpolation: LineInterpolation.monotone,
+                strokeWidth: 2,
+                points: [
+                  ChartDataPoint(x: 1, y: 44),
+                  ChartDataPoint(x: 2, y: 45),
+                  ChartDataPoint(x: 3, y: 45.5),
+                  ChartDataPoint(x: 4, y: 47),
+                  ChartDataPoint(x: 5, y: 49),
+                  ChartDataPoint(x: 6, y: 50.5),
+                  ChartDataPoint(x: 7, y: 53),
+                  ChartDataPoint(x: 8, y: 55.5),
+                  ChartDataPoint(x: 9, y: 57),
+                  ChartDataPoint(x: 10, y: 59),
+                ],
+              ),
+            ],
+            theme: chartTheme,
+            showLegend: false,
+            grid: const GridConfig(horizontal: true, vertical: false),
+            xAxisConfig: const XAxisConfig(visible: false),
+            yAxis: YAxisConfig(position: YAxisPosition.hidden),
+            interactionConfig: InteractionConfig.none(),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Metric(
+                  label: 'Day high',
+                  value: '\$64.20',
+                  unit: '',
+                  dark: true,
+                ),
+              ),
+              _MetricDivider(dark: true),
+              Expanded(
+                child: _Metric(
+                  label: 'Volume',
+                  value: '1.8M',
+                  unit: '',
+                  dark: true,
+                ),
+              ),
+              _MetricDivider(dark: true),
+              Expanded(
+                child: _Metric(
+                  label: 'Risk',
+                  value: 'Low',
+                  unit: '',
+                  dark: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        const _PhoneNav(
+          activeIndex: 0,
+          dark: true,
+          activeColor: mint,
+          items: [
+            (Icons.show_chart_rounded, 'Markets'),
+            (Icons.pie_chart_rounded, 'Portfolio'),
+            (Icons.receipt_long_rounded, 'Orders'),
+            (Icons.person_rounded, 'You'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ForecastExperience extends StatelessWidget {
+  const _ForecastExperience();
+
+  @override
+  Widget build(BuildContext context) {
+    const surface = Color(0xFFF4F9FF);
+    const ink = Color(0xFF17324D);
+    const muted = Color(0xFF6A7D91);
+    const blue = Color(0xFF3689FF);
+    const sky = Color(0xFF8BD3FF);
+    final chartTheme = ChartTheme.light.copyWith(
+      backgroundColor: surface,
+      seriesTheme: ChartTheme.light.seriesTheme.copyWith(
+        colors: const [sky, blue],
+      ),
+    );
+
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _AppMark(
+                    background: Color(0xFFDDEEFF),
+                    icon: Icons.cloud_rounded,
+                    iconColor: blue,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Skyline',
+                          style: TextStyle(
+                            color: ink,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Cape Town forecast',
+                          style: TextStyle(color: muted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _RoundIcon(icon: Icons.location_on_rounded, color: ink),
+                ],
+              ),
+              SizedBox(height: 22),
+              Text(
+                'A clearer afternoon',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'The forecast band narrows after midday.',
+                style: TextStyle(color: muted, fontSize: 11),
+              ),
+              SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '23°',
+                    style: TextStyle(
+                      color: ink,
+                      fontSize: 42,
+                      height: 1,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.5,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      'Feels like 22°',
+                      style: TextStyle(color: muted, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          key: const ValueKey('mobile-app-forecast-chart'),
+          height: 220,
+          child: BravenChartPlus(
+            series: [
+              RangeAreaChartSeries(
+                id: 'mobile-weather-range',
+                name: 'Expected range',
+                color: sky,
+                interpolation: LineInterpolation.monotone,
+                fillOpacity: 0.34,
+                points: [
+                  RangeAreaDataPoint(x: 6, low: 14, high: 18),
+                  RangeAreaDataPoint(x: 8, low: 15, high: 20),
+                  RangeAreaDataPoint(x: 10, low: 17, high: 22),
+                  RangeAreaDataPoint(x: 12, low: 19, high: 24),
+                  RangeAreaDataPoint(x: 14, low: 20, high: 25),
+                  RangeAreaDataPoint(x: 16, low: 19, high: 24),
+                  RangeAreaDataPoint(x: 18, low: 18, high: 22),
+                  RangeAreaDataPoint(x: 20, low: 16, high: 20),
+                ],
+              ),
+              const LineChartSeries(
+                id: 'mobile-weather-centre',
+                name: 'Forecast',
+                color: blue,
+                interpolation: LineInterpolation.monotone,
+                strokeWidth: 3,
+                showDataPointMarkers: true,
+                dataPointMarkerRadius: 2.5,
+                points: [
+                  ChartDataPoint(x: 6, y: 16),
+                  ChartDataPoint(x: 8, y: 17.5),
+                  ChartDataPoint(x: 10, y: 19.5),
+                  ChartDataPoint(x: 12, y: 21.5),
+                  ChartDataPoint(x: 14, y: 23),
+                  ChartDataPoint(x: 16, y: 22),
+                  ChartDataPoint(x: 18, y: 20),
+                  ChartDataPoint(x: 20, y: 18),
+                ],
+              ),
+            ],
+            theme: chartTheme,
+            showLegend: false,
+            grid: const GridConfig(horizontal: false, vertical: false),
+            xAxisConfig: const XAxisConfig(visible: false),
+            yAxis: YAxisConfig(position: YAxisPosition.hidden),
+            interactionConfig: InteractionConfig.none(),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Metric(label: 'Rain', value: '12', unit: '%'),
+              ),
+              _MetricDivider(),
+              Expanded(
+                child: _Metric(label: 'Wind', value: '18', unit: 'km/h'),
+              ),
+              _MetricDivider(),
+              Expanded(
+                child: _Metric(label: 'UV', value: '5', unit: 'moderate'),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        const _PhoneNav(
+          activeIndex: 0,
+          dark: false,
+          activeColor: blue,
+          items: [
+            (Icons.wb_sunny_rounded, 'Today'),
+            (Icons.calendar_view_week_rounded, '10 day'),
+            (Icons.map_rounded, 'Map'),
+            (Icons.tune_rounded, 'Details'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EnergyExperience extends StatelessWidget {
+  const _EnergyExperience();
+
+  @override
+  Widget build(BuildContext context) {
+    const surface = Color(0xFFFCFAF4);
+    const ink = Color(0xFF253027);
+    const muted = Color(0xFF738077);
+    const green = Color(0xFF2E9E62);
+    const amber = Color(0xFFF6B73C);
+    final chartTheme = ChartTheme.light.copyWith(
+      backgroundColor: surface,
+      seriesTheme: ChartTheme.light.seriesTheme.copyWith(
+        colors: const [green, amber, Color(0xFFEF6A5B)],
+      ),
+    );
+
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _AppMark(
+                    background: Color(0xFFE3F4E8),
+                    icon: Icons.bolt_rounded,
+                    iconColor: green,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Watt',
+                          style: TextStyle(
+                            color: ink,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Smart home energy',
+                          style: TextStyle(color: muted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _StatusPill(
+                    label: 'LIVE',
+                    color: green,
+                    background: Color(0xFFE3F4E8),
+                  ),
+                ],
+              ),
+              SizedBox(height: 22),
+              Text(
+                'Running below target',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Live household load against today’s efficiency goal.',
+                style: TextStyle(color: muted, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          key: const ValueKey('mobile-app-energy-gauge-chart'),
+          height: 285,
+          child: BravenChartPlus(
+            series: [
+              GaugeChartSeries.needle(
+                id: 'mobile-energy-load',
+                name: 'Household load',
+                metric: 'Live load',
+                unit: 'kW',
+                value: 3.2,
+                minimum: 0,
+                maximum: 6,
+                color: green,
+                target: const GaugeTarget(
+                  value: 4,
+                  label: 'Target',
+                  color: amber,
+                ),
+                zones: const [
+                  GaugeZone(
+                    from: 0,
+                    to: 3.5,
+                    status: 'Efficient',
+                    color: green,
+                  ),
+                  GaugeZone(from: 3.5, to: 4.5, status: 'Watch', color: amber),
+                  GaugeZone(
+                    from: 4.5,
+                    to: 6,
+                    status: 'High',
+                    color: Color(0xFFEF6A5B),
+                  ),
+                ],
+                style: const NeedleGaugeStyle(
+                  needleColor: green,
+                  pivotColor: green,
+                  axisColor: Color(0xFFE2DED2),
+                  axisThickness: 14,
+                ),
+              ),
+            ],
+            theme: chartTheme,
+            showLegend: false,
+            grid: const GridConfig(horizontal: false, vertical: false),
+            xAxisConfig: const XAxisConfig(visible: false),
+            yAxis: YAxisConfig(position: YAxisPosition.hidden),
+            gaugeChartConfig: const GaugeChartConfig(
+              pane: PolarPaneConfig(
+                startAngleDegrees: -135,
+                sweepAngleDegrees: 270,
+                innerRadiusFactor: 0.5,
+                outerRadiusFactor: 0.92,
+              ),
+              tickCount: 7,
+              showTickLabels: true,
+              center: GaugeCenterConfig(
+                showMetric: true,
+                showValue: true,
+                showTarget: true,
+                showStatus: true,
+              ),
+            ),
+            interactionConfig: InteractionConfig.none(),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Metric(label: 'Solar', value: '2.1', unit: 'kW'),
+              ),
+              _MetricDivider(),
+              Expanded(
+                child: _Metric(label: 'Grid', value: '1.1', unit: 'kW'),
+              ),
+              _MetricDivider(),
+              Expanded(
+                child: _Metric(label: 'Saved', value: '18', unit: '%'),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        const _PhoneNav(
+          activeIndex: 0,
+          dark: false,
+          activeColor: green,
+          items: [
+            (Icons.bolt_rounded, 'Live'),
+            (Icons.solar_power_rounded, 'Solar'),
+            (Icons.insights_rounded, 'History'),
+            (Icons.settings_rounded, 'Home'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({
     required this.label,
@@ -2296,11 +2989,17 @@ class _RangeTabs extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value, required this.unit});
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.unit,
+    this.dark = false,
+  });
 
   final String label;
   final String value;
   final String unit;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -2308,7 +3007,10 @@ class _Metric extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(color: Color(0xFF697386), fontSize: 10),
+        style: TextStyle(
+          color: dark ? const Color(0xFF8D9AAF) : const Color(0xFF697386),
+          fontSize: 10,
+        ),
       ),
       const SizedBox(height: 4),
       Text.rich(
@@ -2316,8 +3018,8 @@ class _Metric extends StatelessWidget {
           children: [
             TextSpan(
               text: value,
-              style: const TextStyle(
-                color: Color(0xFF172033),
+              style: TextStyle(
+                color: dark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
@@ -2325,7 +3027,12 @@ class _Metric extends StatelessWidget {
             if (unit.isNotEmpty)
               TextSpan(
                 text: ' $unit',
-                style: const TextStyle(color: Color(0xFF697386), fontSize: 9),
+                style: TextStyle(
+                  color: dark
+                      ? const Color(0xFF8D9AAF)
+                      : const Color(0xFF697386),
+                  fontSize: 9,
+                ),
               ),
           ],
         ),
@@ -2335,13 +3042,18 @@ class _Metric extends StatelessWidget {
 }
 
 class _MetricDivider extends StatelessWidget {
-  const _MetricDivider();
+  const _MetricDivider({this.dark = false});
+
+  final bool dark;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     height: 34,
     width: 20,
-    child: VerticalDivider(color: Color(0xFFDDE3EC), thickness: 1),
+    child: VerticalDivider(
+      color: dark ? const Color(0xFF273449) : const Color(0xFFDDE3EC),
+      thickness: 1,
+    ),
   );
 }
 

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('desktop route presents six live phone-native experiences', (
+  testWidgets('desktop route presents nine live phone-native experiences', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1600, 1000);
@@ -28,7 +28,10 @@ void main() {
     expect(find.text('Summit'), findsOneWidget);
     expect(find.text('Loop'), findsOneWidget);
     expect(find.text('Citypulse'), findsOneWidget);
-    expect(find.byType(BravenChartPlus), findsNWidgets(6));
+    expect(find.text('Ledger'), findsOneWidget);
+    expect(find.text('Skyline'), findsOneWidget);
+    expect(find.text('Watt'), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsNWidgets(9));
     expect(
       find.byKey(const ValueKey('mobile-app-endurance-chart')),
       findsOneWidget,
@@ -51,6 +54,18 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('mobile-app-pickup-hexbin-chart')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-app-market-chart')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-app-forecast-chart')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-app-energy-gauge-chart')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -82,7 +97,13 @@ void main() {
     expect(moreGallery, findsOneWidget);
     expect(tester.getRect(moreGallery).left, greaterThanOrEqualTo(0));
     expect(tester.getRect(moreGallery).right, lessThanOrEqualTo(390));
-    expect(find.byType(BravenChartPlus), findsNWidgets(6));
+    final systemsGallery = find.byKey(
+      const ValueKey('mobile-app-device-gallery-systems'),
+    );
+    expect(systemsGallery, findsOneWidget);
+    expect(tester.getRect(systemsGallery).left, greaterThanOrEqualTo(0));
+    expect(tester.getRect(systemsGallery).right, lessThanOrEqualTo(390));
+    expect(find.byType(BravenChartPlus), findsNWidgets(9));
     expect(tester.takeException(), isNull);
   });
 

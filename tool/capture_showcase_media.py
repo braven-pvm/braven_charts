@@ -36,6 +36,7 @@ INTERACTION_SIZE = (900, 400)
 LIVE_SIZE = (754, 522)
 FOCUSED_MEDIA_CROP = (120, 112, 1320, 787)
 FOCUSED_MEDIA_SIZE = (800, 450)
+RACE_MEDIA_CROP = (20, 20, 1420, 808)
 PATH_WORKBENCH_CROP = (264, 112, 1120, 884)
 FRAME_DURATION_MS = 110
 BRAND = "#4F46E5"
@@ -131,8 +132,8 @@ def _mobile_showcase_still(base_url: str, output_dir: Path) -> None:
 
 
 def _mobile_apps_still(base_url: str, output_dir: Path) -> None:
-    """Capture both rows of phone-app compositions for public surfaces."""
-    driver = _driver(viewport=(1920, 1900))
+    """Capture all three rows of phone-app compositions for public surfaces."""
+    driver = _driver(viewport=(1920, 2700))
     try:
         _load(driver, f"{base_url}?capture=mobile-apps")
         time.sleep(2)
@@ -1029,6 +1030,34 @@ def _live_stream(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
     _save(frames, output, LIVE_SIZE)
 
 
+def _race_demo(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output: Path,
+    capture: str,
+) -> None:
+    """Record one loop from a navigation-free live race composition."""
+    _load(driver, f"{base_url}?capture={capture}")
+    frames: list[Image.Image] = []
+    deadline = time.monotonic() + 12
+    while len(frames) < 42 and time.monotonic() < deadline:
+        frame = _raw_frame(driver, None, RACE_MEDIA_CROP)
+        sample = frame.resize((160, 90), Image.Resampling.BILINEAR)
+        visible_pixels = sum(
+            1
+            for red, green, blue in sample.getdata()
+            if min(red, green, blue) < 238
+        )
+        if visible_pixels / (sample.width * sample.height) > 0.008:
+            frames.append(frame)
+        time.sleep(FRAME_DURATION_MS / 1000)
+    if len(frames) < 42:
+        raise RuntimeError(
+            f"{capture} produced only {len(frames)} non-blank race frames"
+        )
+    _save(frames, output, FOCUSED_MEDIA_SIZE)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1067,6 +1096,9 @@ def main() -> None:
             "grammar-0.12",
             "mobile-0.13",
             "mobile-apps",
+            "races",
+            "line-race",
+            "bar-race",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -1148,6 +1180,20 @@ def main() -> None:
                 driver,
                 base_url,
                 args.output_dir / "live_stream_demo.gif",
+            )
+        if args.capture in ("all", "races", "line-race"):
+            _race_demo(
+                driver,
+                base_url,
+                args.output_dir / "line_race_demo.gif",
+                "line-race",
+            )
+        if args.capture in ("all", "races", "bar-race"):
+            _race_demo(
+                driver,
+                base_url,
+                args.output_dir / "bar_race_demo.gif",
+                "bar-race",
             )
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
