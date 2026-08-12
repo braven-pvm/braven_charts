@@ -1,9 +1,9 @@
 name: braven_charts
 description: >-
-  The full-featured open-source Flutter charting system. Thirteen native chart
+  The full-featured open-source Flutter charting system. Fourteen native chart
   families with multi-axis, live streaming, crosshair tracking, annotations,
   and typed grammar.
-version: 0.17.1
+version: 0.18.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues

@@ -5,10 +5,15 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.18.0 - 2026-08-12
 
 ### Added
 
+- A native Radar and Spider chart family with polygon and circular webs,
+  configurable category axes and labels, per-series fill, gradient, stroke,
+  marker and glow styling, animation, selection, tooltips, legends, portable
+  artifacts, generated source, typed Grammar and fluent authoring, tables, and
+  a complete responsive showcase and public guide.
 - The path and marker fields on the Cartesian grammar marks:
   `tension:`, `dataPointMarkerRadius:`, `dataPointMarkerStyle:`,
   `dataPointMarkerBackground:`, `lineGlow:`, `inlineLabel:` and
@@ -23,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before. A configured Line, Area or Range-Area chart is no longer refused for
   any of these fields — the `RangeAreaChartsPage` went from 0 to 6 of its 7
   presets emitting, and the whole-showcase emission census from 59 to 75.
+
+### Changed
+
+- Expanded the mobile-app showcase from six to nine live Flutter phone
+  compositions spanning sports, wellness, finance, weather, habits, energy,
+  and mobility. The experience is prominent in the README, second in the
+  pub.dev screenshot gallery, directly routable, responsive on real phones,
+  and discoverable from the main showcase Gallery.
+- Rebuilt the public chart-family hero as an equal-cell, aspect-safe grid that
+  represents all fourteen chart families and selected advanced compositions;
+  added a thumbnail-aware pub.dev package cover and compact animated Line Race
+  and Bar Race examples to the curated README gallery.
 
 ## 0.17.1 - 2026-08-11
 
