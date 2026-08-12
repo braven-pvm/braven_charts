@@ -88,7 +88,7 @@ Close the "partial emission" gaps so the round-trip proof stops refusing configu
 | | Before | After |
 |---|---|---|
 | **All emitting** | **59** | **75** |
-| Cartesian | 28 of 129 | **44 of 129** |
+| Cartesian | 28 of 133 | **44 of 133** |
 | Radial | 31 of 55 | 31 of 55 (unchanged) |
 | Shadow tiles | 0 of 3 | **3 of 3** |
 
@@ -153,7 +153,7 @@ heatmap family):
 | Radial | — | 55 | **31** | 24 |
 
 > **Superseded 2026-08-04 by 1d slice 1 (path fields): 75 emitting, Cartesian
-> 44 of 129, radial unchanged.** Left standing because it is the baseline that
+> 44 of 133, radial unchanged.** Left standing because it is the baseline that
 > delta was measured against. As above: read the pinned constants in the census
 > test, not this table.
 

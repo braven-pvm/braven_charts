@@ -387,7 +387,7 @@ void main() {
 /// Re-measured again 2026-08-04 on `feature/grammar-path-fields` (BC-0054),
 /// where `LineMark`, `AreaMark` and `RangeAreaMark` gained the path and marker
 /// fields their series already had. **Whole repo 59 -> 75 emitting, Cartesian
-/// 28 -> 44 of 129, radial unchanged at 31 of 55.** Both numbers were measured
+/// 28 -> 44 of 133, radial unchanged at 31 of 55.** Both numbers were measured
 /// the same way, one run each: the "before" by restoring `lib/src` to master
 /// `b60ec846` in this worktree and running this file, the "after" by running it
 /// on the branch. The composition, page by page and state by state, because a
@@ -477,7 +477,7 @@ const int _expectedEmitting = 83;
 /// carries a marker radius, and the V1 line mark could not reproduce one. The
 /// path-field slice gave `LineMark` that field, so all three now emit. They are
 /// still reported separately and still outside the headline — admitting them
-/// would read 187 with a verdict / 78 emitting — but a shadow column that
+/// would read 191 with a verdict / 78 emitting — but a shadow column that
 /// stayed at 0 through the very slice that unblocked it would be a pin gone
 /// stale rather than a measurement.
 const int _expectedShadowCharts = 3;
@@ -851,6 +851,20 @@ String _firstBlocker(String source) {
 /// splits one gap across as many buckets as there are series ids. Both forms
 /// are printed: the bucket is the number the roadmap carries, the raw sentence
 /// is what makes it checkable.
+///
+/// SIX ENTRIES BELOW ARE CURRENTLY UNREACHABLE, and are kept deliberately:
+/// `fill gradient`, `path animation`, `split baseline fill`, `line glow`,
+/// `data-point marker radius` and `data-point marker style`. Item 1d's
+/// path-field slice carried all six onto `LineMark`/`AreaMark`/`RangeAreaMark`,
+/// which emptied the Line, Area and RangeArea arms of `_firstUncarriedField`,
+/// so no refusal can produce those sentences today.
+///
+/// They stay because this map is a VOCABULARY, not a census of live gaps: a
+/// bucket that disappears the moment its gap closes cannot tell a later reader
+/// that the gap ever existed, and any future family that gains one of these
+/// fields without carrying it would otherwise land in the unnamed tail. The
+/// reachable-vs-vocabulary distinction is stated here rather than left for the
+/// next person to rediscover by grepping for a phrase nothing emits.
 String _blockerBucket(String detail) {
   const named = <String, String>{
     'It carries a bar style': 'bar style',
