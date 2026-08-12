@@ -8,11 +8,19 @@
 /// the live document is read off that chart's OWN controller, and the grammar
 /// generator runs on it.
 ///
-/// This family is the deliverable of roadmap item 1b-1. The `RangeAreaChartsPage`
-/// is NOT: every band there carries a non-default `pathAnimation` and six of
-/// seven a `fillGradient`, both roadmap 1d and both named refusals on `AreaMark`
-/// today. This lab's bands diverge only on range-area-native fields, which is
-/// exactly why it is the honest measure of what the mark closes.
+/// This family was the deliverable of roadmap item 1b-1, when the
+/// `RangeAreaChartsPage` was NOT: every band there carried a non-default
+/// `pathAnimation` and six of seven a `fillGradient`, and both were then named
+/// refusals on `AreaMark`. This lab's bands diverged only on range-area-native
+/// fields, which is exactly why it was the honest measure of what the mark
+/// closed.
+///
+/// **Item 1d's path-field slice has since carried both onto `AreaMark`,
+/// `LineMark` and `RangeAreaMark`, and the RangeArea page now emits 6 of its 7
+/// presets** (`range_area_charts_page_grammar_test.dart`). The paragraph above
+/// is kept in the past tense rather than deleted because it records WHY this
+/// lab, not that page, was 1b-1's measure — a reader comparing the two
+/// acceptance files otherwise has no way to tell.
 library;
 
 import 'package:braven_charts/braven_charts.dart';

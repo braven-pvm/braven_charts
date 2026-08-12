@@ -134,7 +134,6 @@ import '../models/polar_column_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
-
 import '../models/series_callout_config.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/x_axis_config.dart';
