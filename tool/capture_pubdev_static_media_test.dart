@@ -1253,6 +1253,7 @@ Future<void> _captureChartFamilyShowcase(
       _ChartFamilyShowcaseSlot('chart_type_concentric.png'),
       _ChartFamilyShowcaseSlot('chart_type_polar_column.png'),
       _ChartFamilyShowcaseSlot('chart_type_radial_bar.png'),
+      _ChartFamilyShowcaseSlot('chart_type_radar.png'),
       _ChartFamilyShowcaseSlot('chart_type_gauge.png'),
     ],
   ];
