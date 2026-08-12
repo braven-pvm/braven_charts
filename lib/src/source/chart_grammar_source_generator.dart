@@ -126,6 +126,7 @@ import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/heatmap_chart_series.dart';
 import '../models/interaction_config.dart';
+import '../models/path_animation_style.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
@@ -133,7 +134,9 @@ import '../models/polar_column_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
+
 import '../models/series_callout_config.dart';
+import '../models/series_inline_label_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_config_dart_emitter.dart';
@@ -343,6 +346,24 @@ V? _defaultedOrNull<V>(V value, V fallback) => value == fallback ? null : value;
 final RangeAreaChartSeries _rangeAreaEmitDefaults = RangeAreaChartSeries(
   id: '',
   points: const <RangeAreaDataPoint>[],
+);
+
+/// Read only for its DEFAULTS, exactly as [_rangeAreaEmitDefaults] is. `const`
+/// here because `LineChartSeries` validates nothing in its constructor body.
+///
+/// These are the emitter's OWN instances, deliberately separate from
+/// `plot_lowering.dart`'s `_lineDefaults`/`_areaDefaults`: that library is not
+/// this one's, and both read the same class, so the two cannot disagree about a
+/// default without the class itself having two.
+const LineChartSeries _lineEmitDefaults = LineChartSeries(
+  id: '',
+  points: <ChartDataPoint>[],
+);
+
+/// Read only for its DEFAULTS — see [_lineEmitDefaults].
+const AreaChartSeries _areaEmitDefaults = AreaChartSeries(
+  id: '',
+  points: <ChartDataPoint>[],
 );
 
 /// A planned donut center together with the document site it was CAPTURED
@@ -2138,44 +2159,28 @@ class _GrammarChainEmitter {
     }
     switch (expected) {
       case LineChartSeries():
-        final actual = lowered as LineChartSeries;
-        // showDataPointMarkers and dataPointLabels are now carried by LineMark,
-        // so they are no longer in the uncarried set.
-        if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
-          return 'a data-point marker radius';
-        }
-        if (expected.dataPointMarkerStyle != actual.dataPointMarkerStyle) {
-          return 'a data-point marker style';
-        }
-        if (expected.tension != actual.tension) return 'a curve tension';
-        if (expected.lineGlow != actual.lineGlow) return 'a line glow';
-        if (expected.inlineLabel != actual.inlineLabel) {
-          return 'an inline series label';
-        }
-        if (expected.pathAnimation != actual.pathAnimation) {
-          return 'a path animation';
-        }
+        // EMPTY, like the candlestick and heatmap arms below. `LineMark` now
+        // carries every LineChartSeries field this arm used to name — the
+        // marker radius, style and background, the curve tension, the line
+        // glow, the inline label, the path animation, and before them
+        // showDataPointMarkers and dataPointLabels — so each check was DELETED
+        // rather than left dead (BC-0040's precedent).
+        //
+        // What still falls through to the generic tail: `style`, `metadata`,
+        // the legend and tracking flags, and the per-point fields, which
+        // [_pointLossDetail] names separately.
+        break;
       case AreaChartSeries():
-        final actual = lowered as AreaChartSeries;
-        // showDataPointMarkers and dataPointLabels are now carried by AreaMark,
-        // so they are no longer in the uncarried set.
-        if (expected.dataPointMarkerRadius != actual.dataPointMarkerRadius) {
-          return 'a data-point marker radius';
-        }
-        if (expected.fillGradient != actual.fillGradient) {
-          return 'a fill gradient';
-        }
-        if (expected.aboveBaselineFillColor != actual.aboveBaselineFillColor ||
-            expected.belowBaselineFillColor != actual.belowBaselineFillColor) {
-          return 'a split baseline fill';
-        }
-        if (expected.lineGlow != actual.lineGlow) return 'a line glow';
-        if (expected.inlineLabel != actual.inlineLabel) {
-          return 'an inline series label';
-        }
-        if (expected.pathAnimation != actual.pathAnimation) {
-          return 'a path animation';
-        }
+        // EMPTY for the same reason as the line arm above: `AreaMark` carries
+        // the marker fields, the tension, the glow, the inline label, the path
+        // animation, the fill gradient and both baseline fill colours. The
+        // tension and marker-style checks this arm NEVER had — an area
+        // differing only in those fell to the unnamed tail — are closed at
+        // source by the mark carrying them.
+        //
+        // What still falls through to the generic tail: the same shared
+        // ChartSeries fields the line arm lists.
+        break;
       case BarChartSeries():
         final actual = lowered as BarChartSeries;
         // labelStyle is now carried by BarMark, so it is no longer in the
@@ -2206,15 +2211,12 @@ class _GrammarChainEmitter {
         // identities, is carried by HeatmapMark.
         break;
       case RangeAreaChartSeries():
-        final actual = lowered as RangeAreaChartSeries;
-        // Roadmap 1d, and named rather than dropped: the mark deliberately does
-        // not carry either, so a band using one must say WHICH.
-        if (expected.fillGradient != actual.fillGradient) {
-          return 'a fill gradient';
-        }
-        if (expected.pathAnimation != actual.pathAnimation) {
-          return 'a path animation';
-        }
+        // EMPTY: `RangeAreaMark` now carries `fillGradient` and
+        // `pathAnimation`, the two this arm named as roadmap-1d refusals, and
+        // every other range-area field was already carried. What still falls
+        // through to the generic tail is the shared ChartSeries surface —
+        // `style`, `metadata`, the legend and tracking flags.
+        break;
     }
     return null;
   }
@@ -2236,7 +2238,12 @@ class _GrammarChainEmitter {
   ///
   /// Dropping it silently would change the dashes and colours the chart draws,
   /// so the honest outcome is a NAMED boundary rather than the generic tail.
-  /// Revisit with roadmap item 1d.
+  ///
+  /// Roadmap item 1d's path-field slice has since landed and deliberately did
+  /// NOT take this: the three reasons above all still hold, and the slice
+  /// measured `Line|Forecast` moving from a marker-style refusal onto exactly
+  /// this one. So it remains open, and it is the only per-point option in that
+  /// state — a later slice needs the new row-field kind, not another field.
   ///
   /// That last collision is why there are TWO sentences rather than one. A
   /// style setting `strokeWidth` or `dashPattern` is one no V1 mark can produce
@@ -2669,6 +2676,14 @@ class _GrammarChainEmitter {
               series.hitTestMode,
               _rangeAreaEmitDefaults.hitTestMode,
             ),
+            // `fillGradient` is already nullable on the series and passes
+            // through; `pathAnimation` is not, so it takes the same
+            // defaulted-to-null treatment as everything above it.
+            fillGradient: series.fillGradient,
+            pathAnimation: _defaultedOrNull(
+              series.pathAnimation,
+              _rangeAreaEmitDefaults.pathAnimation,
+            ),
           ),
         );
 
@@ -2708,6 +2723,39 @@ class _GrammarChainEmitter {
             interpolation: series.interpolation,
             showDataPointMarkers: series.showDataPointMarkers,
             dataPointLabels: series.dataPointLabels,
+            // Null when the captured value IS the family default, so a chart
+            // that sets none of these emits exactly the text it emitted before
+            // they were carried. Every one of them is NON-nullable on
+            // `LineChartSeries` with a default, so carrying one VERBATIM — the
+            // convention the five fields above still follow — would make every
+            // line chart in the corpus start emitting an argument it never set.
+            // `inlineLabel` is already nullable on the series, so it passes
+            // through directly.
+            tension: _defaultedOrNull(
+              series.tension,
+              _lineEmitDefaults.tension,
+            ),
+            dataPointMarkerRadius: _defaultedOrNull(
+              series.dataPointMarkerRadius,
+              _lineEmitDefaults.dataPointMarkerRadius,
+            ),
+            dataPointMarkerStyle: _defaultedOrNull(
+              series.dataPointMarkerStyle,
+              _lineEmitDefaults.dataPointMarkerStyle,
+            ),
+            dataPointMarkerBackground: _defaultedOrNull(
+              series.dataPointMarkerBackground,
+              _lineEmitDefaults.dataPointMarkerBackground,
+            ),
+            lineGlow: _defaultedOrNull(
+              series.lineGlow,
+              _lineEmitDefaults.lineGlow,
+            ),
+            inlineLabel: series.inlineLabel,
+            pathAnimation: _defaultedOrNull(
+              series.pathAnimation,
+              _lineEmitDefaults.pathAnimation,
+            ),
           ),
         );
 
@@ -2824,6 +2872,38 @@ class _GrammarChainEmitter {
             interpolation: series.interpolation,
             showDataPointMarkers: series.showDataPointMarkers,
             dataPointLabels: series.dataPointLabels,
+            // Null when the captured value IS the family default — see the line
+            // arm above for why these cannot be carried verbatim. `fillGradient`
+            // `inlineLabel` and the two baseline colours are already nullable on
+            // `AreaChartSeries`, so those four pass through directly.
+            tension: _defaultedOrNull(
+              series.tension,
+              _areaEmitDefaults.tension,
+            ),
+            dataPointMarkerRadius: _defaultedOrNull(
+              series.dataPointMarkerRadius,
+              _areaEmitDefaults.dataPointMarkerRadius,
+            ),
+            dataPointMarkerStyle: _defaultedOrNull(
+              series.dataPointMarkerStyle,
+              _areaEmitDefaults.dataPointMarkerStyle,
+            ),
+            dataPointMarkerBackground: _defaultedOrNull(
+              series.dataPointMarkerBackground,
+              _areaEmitDefaults.dataPointMarkerBackground,
+            ),
+            lineGlow: _defaultedOrNull(
+              series.lineGlow,
+              _areaEmitDefaults.lineGlow,
+            ),
+            inlineLabel: series.inlineLabel,
+            pathAnimation: _defaultedOrNull(
+              series.pathAnimation,
+              _areaEmitDefaults.pathAnimation,
+            ),
+            fillGradient: series.fillGradient,
+            aboveBaselineFillColor: series.aboveBaselineFillColor,
+            belowBaselineFillColor: series.belowBaselineFillColor,
           ),
         );
 
@@ -3698,10 +3778,20 @@ class _GrammarChainEmitter {
               'LineInterpolation.${mark.interpolation!.name}',
             );
           }
-          _emitDataPointMarkers(
+          _emitPathStyle(
             writer,
+            tension: mark.tension,
             showDataPointMarkers: mark.showDataPointMarkers,
+            dataPointMarkerRadius: mark.dataPointMarkerRadius,
+            dataPointMarkerStyle: mark.dataPointMarkerStyle,
+            dataPointMarkerBackground: mark.dataPointMarkerBackground,
+            lineGlow: mark.lineGlow,
+          );
+          _emitPathLabels(
+            writer,
             dataPointLabels: mark.dataPointLabels,
+            inlineLabel: mark.inlineLabel,
+            pathAnimation: mark.pathAnimation,
           );
         case AreaMark<_SourceRow>():
           _optionalNumber(writer, 'baseline', mark.baseline);
@@ -3714,10 +3804,34 @@ class _GrammarChainEmitter {
               'LineInterpolation.${mark.interpolation!.name}',
             );
           }
-          _emitDataPointMarkers(
+          _emitPathStyle(
             writer,
+            tension: mark.tension,
             showDataPointMarkers: mark.showDataPointMarkers,
+            dataPointMarkerRadius: mark.dataPointMarkerRadius,
+            dataPointMarkerStyle: mark.dataPointMarkerStyle,
+            dataPointMarkerBackground: mark.dataPointMarkerBackground,
+            lineGlow: mark.lineGlow,
+          );
+          // The three fill fields sit between the marker run and the label tail
+          // in `_emitAreaOptions` too, so the two forms read alike.
+          _config.emitFillGradient(writer, mark.fillGradient);
+          _absorbConfigWarnings();
+          _optionalColor(
+            writer,
+            'aboveBaselineFillColor',
+            mark.aboveBaselineFillColor,
+          );
+          _optionalColor(
+            writer,
+            'belowBaselineFillColor',
+            mark.belowBaselineFillColor,
+          );
+          _emitPathLabels(
+            writer,
             dataPointLabels: mark.dataPointLabels,
+            inlineLabel: mark.inlineLabel,
+            pathAnimation: mark.pathAnimation,
           );
         case BarMark<_SourceRow>():
           _optionalNumber(writer, 'barWidthPercent', mark.barWidthPercent);
@@ -3754,6 +3868,8 @@ class _GrammarChainEmitter {
           }
           _optionalNumber(writer, 'tension', mark.tension);
           _optionalNumber(writer, 'fillOpacity', mark.fillOpacity);
+          _config.emitFillGradient(writer, mark.fillGradient);
+          _absorbConfigWarnings();
           if (mark.borderMode != null) {
             writer.namedArgument(
               'borderMode',
@@ -3796,6 +3912,10 @@ class _GrammarChainEmitter {
               'RangeAreaHitTestMode.${mark.hitTestMode!.name}',
             );
           }
+          if (mark.pathAnimation != null) {
+            _config.emitPathAnimationStyle(writer, mark.pathAnimation!);
+            _absorbConfigWarnings();
+          }
         case TrendMark<_SourceRow>():
           break;
         case ThresholdMark<_SourceRow>() ||
@@ -3810,19 +3930,60 @@ class _GrammarChainEmitter {
     writer.writeLine(')');
   }
 
-  /// Emits the shared line/area data-point marker fields: the boolean toggle
-  /// when set, and the label configuration when present. Both default to unset
-  /// on the mark, so a V1 series (markers off, no labels) emits neither.
-  void _emitDataPointMarkers(
+  /// Emits the shared line/area path-and-marker run, in the order
+  /// `_emitLineOptions` / `_emitAreaOptions` write the same fields, so the
+  /// config form and the grammar form read alike.
+  ///
+  /// Every argument is unset on a mark that did not declare it — the planner
+  /// maps a capture equal to the family default back to null — so a V1 series
+  /// emits none of them and its text is unchanged by their arrival.
+  void _emitPathStyle(
     DartSourceWriter writer, {
+    required double? tension,
     required bool? showDataPointMarkers,
-    required DataPointLabelConfig? dataPointLabels,
+    required double? dataPointMarkerRadius,
+    required DataPointMarkerStyle? dataPointMarkerStyle,
+    required Color? dataPointMarkerBackground,
+    required double? lineGlow,
   }) {
+    _optionalNumber(writer, 'tension', tension);
     if (showDataPointMarkers ?? false) {
       writer.namedArgument('showDataPointMarkers', 'true');
     }
+    _optionalNumber(writer, 'dataPointMarkerRadius', dataPointMarkerRadius);
+    if (dataPointMarkerStyle != null) {
+      writer.namedArgument(
+        'dataPointMarkerStyle',
+        'DataPointMarkerStyle.${dataPointMarkerStyle.name}',
+      );
+    }
+    _optionalColor(
+      writer,
+      'dataPointMarkerBackground',
+      dataPointMarkerBackground,
+    );
+    _optionalNumber(writer, 'lineGlow', lineGlow);
+  }
+
+  /// Emits the shared line/area label-and-motion tail, in `_emitLineOptions`'s
+  /// order. Each is written only when the mark carries it, so a V1 series emits
+  /// none of the three.
+  void _emitPathLabels(
+    DartSourceWriter writer, {
+    required DataPointLabelConfig? dataPointLabels,
+    required SeriesInlineLabelConfig? inlineLabel,
+    required PathAnimationStyle? pathAnimation,
+  }) {
     if (dataPointLabels != null) {
       _config.emitDataPointLabels(writer, dataPointLabels);
+      _absorbConfigWarnings();
+    }
+    if (inlineLabel != null) {
+      _config.emitInlineLabel(writer, inlineLabel);
+      _absorbConfigWarnings();
+    }
+    if (pathAnimation != null) {
+      _config.emitPathAnimationStyle(writer, pathAnimation);
       _absorbConfigWarnings();
     }
   }

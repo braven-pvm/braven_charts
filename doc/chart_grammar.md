@@ -343,6 +343,37 @@ DataPointLabelConfig? dataPointLabels, // → *ChartSeries.dataPointLabels
 BarLabelStyle? labelStyle,           // → BarChartSeries.labelStyle
 ```
 
+**The path and marker fields.** `geomLine` and `geomArea` carry the rest of what
+`LineChartSeries` and `AreaChartSeries` already had, so a configured path chart
+is no longer refused for styling the grammar could express all along:
+
+```dart
+// on geomLine AND geomArea:
+double? tension,                          // → *ChartSeries.tension
+double? dataPointMarkerRadius,            // → *ChartSeries.dataPointMarkerRadius
+DataPointMarkerStyle? dataPointMarkerStyle,
+Color? dataPointMarkerBackground,
+double? lineGlow,
+SeriesInlineLabelConfig? inlineLabel,
+PathAnimationStyle? pathAnimation,
+// on geomArea only:
+AreaGradient? fillGradient,
+Color? aboveBaselineFillColor,
+Color? belowBaselineFillColor,
+```
+
+Every one of them is **nullable on the mark, and null means "the series
+default"**, resolved once at lowering. Six of the shared seven —
+everything but `inlineLabel` — are NON-nullable on their series with a
+default, so the mark deliberately diverges from the class it lowers to rather
+than carrying a copy of a default that can go stale. The defaults live on
+`LineChartSeries` / `AreaChartSeries` alone.
+
+The same rule runs backwards through the source emitter: a captured value that
+**equals** the family default reverses to `null` on the mark and emits nothing,
+so a chart that sets none of these produces exactly the text it produced before
+they were carried. Only a value that differs is written.
+
 #### Bands: `geomRangeArea`
 
 A filled band between paired bounds, lowering to `RangeAreaChartSeries`. It sits
@@ -364,6 +395,8 @@ BravenChart<T> geomRangeArea({
   bool? connectGaps, bool? showBoundaryMarkers, double? markerRadius,
   RangeAreaLabelConfig? labelConfig,
   RangeAreaHitTestMode? hitTestMode,
+  AreaGradient? fillGradient,
+  PathAnimationStyle? pathAnimation,
 });
 ```
 
@@ -381,10 +414,12 @@ BravenChart<T> geomRangeArea({
 - **No channels.** Deliberate: the range-area painter reads no per-point colour
   — it paints from the series colour, `fillOpacity`, the two boundary styles and
   the theme — so a `colorBy` or size channel would be accepted and then ignored.
-- **`pathAnimation` and `fillGradient` are not carried**, matching `AreaMark`;
-  both are deferred to the same roadmap item that fixes them for every Cartesian
-  family at once. A captured band using either is refused **by name** rather than
-  emitted without it. `isXOrdered` is absent because `RangeAreaChartSeries`
+- **`pathAnimation` and `fillGradient` ARE carried**, as of the path-field
+  slice, alongside the same two on `AreaMark` and `LineMark` — the roadmap item
+  that fixed them for every Cartesian family at once, rather than for range area
+  alone. `fillGradient` is nullable on the series and passes straight through;
+  `pathAnimation` is not, so null on the mark means the series default.
+  `isXOrdered` is absent because `RangeAreaChartSeries`
   hard-codes it `true` in its constructor, exactly as `CandlestickChartSeries`
   does, so a knob would be a lie.
 
@@ -753,7 +788,8 @@ runtime-only bindings.
 | --- | --- |
 | A radial family — pie, donut, concentric donut or polar column | **EMITTED** *(V2.0)* as `geomPie` / `geomDonut(ring:)` / `geomPolar`, carrying the series style, unit, selection and slice configs. A layered/grouped/stacked polar composition emits **one `geomPolar` per series** over a shared category field; a customised `PolarChartConfig` emits as `.polarConfig(...)` and a non-default `ConcentricDonutConfig` as `geomDonut(concentric: ...)`. Narrowed by the **Blocked** radial rows that follow — read them together before reading this row as "every radial chart emits". |
 | A radial family with no grammar geometry — radial bar, gauge | **Blocked**, naming each series and its family: no mark reverses it. |
-| A range-area band | **EMITTED** *(V2.0)* as `geomRangeArea(low:, high:)`, carrying the interval bounds, the per-point label and key, and the range-area-native styling (interpolation, tension, fill opacity, border mode, both boundary styles, gap connection, boundary markers, marker radius, label config and hit-test mode). A gap row travels as two `null` bounds and comes back a gap. A band carrying `fillGradient` or `pathAnimation` is **Blocked** naming that field — the mark does not carry either, matching `AreaMark`. |
+| A range-area band | **EMITTED** *(V2.0)* as `geomRangeArea(low:, high:)`, carrying the interval bounds, the per-point label and key, and the range-area-native styling (interpolation, tension, fill opacity, border mode, both boundary styles, gap connection, boundary markers, marker radius, label config and hit-test mode). A gap row travels as two `null` bounds and comes back a gap. `fillGradient` and `pathAnimation` are carried too, as of the path-field slice; a captured value equal to the family default emits nothing, so a plain band's text is unchanged. |
+| A line or area carrying path, marker or fill styling | **EMITTED** as `tension:`, `dataPointMarkerRadius:`, `dataPointMarkerStyle:`, `dataPointMarkerBackground:`, `lineGlow:`, `inlineLabel:`, `pathAnimation:` and — on an area — `fillGradient:`, `aboveBaselineFillColor:` and `belowBaselineFillColor:`. Each is written **only when the captured value differs from the family default**, so a chart that sets none of them emits exactly the text it emitted before they were carried. The Line, Area and RangeArea uncarried-field arms are now empty; what remains for those families falls to the generic unnamed tail (`style`, `metadata`, the legend and tracking flags) or to `_pointLossDetail`. |
 | A concentric composition whose ring series ids do not follow `'<markId>-<ring>'` | **EMITTED** *(V2.0)* as `geomDonut(ringIds: {...})` — an explicit ring-key→series-id map, so a composition that chose its ids independently of its ring names keeps them. The emitter consults it **only when the `'<markId>-<ring>'` pattern fails** to recover a markId, so a conforming composition takes the original path and emits exactly the text it emitted before. The map is keyed by the BARE ring key and is ALL OR NOTHING: naming some rings and not others raises `partialRingIds`, a key naming no ring raises `unknownRingKey`, and a non-empty map with no `ring:` raises `perRingOverrideOnRinglessDonut`. |
 | A concentric composition whose rings are **unnamed or share a name** | **Blocked**, naming each series and its name: the ring key *is* the series name, so no `ring:` channel could bucket those rows apart — every row would fall into one ring. |
 | A pie or donut carrying **per-slice colours** (`sliceColors`, i.e. a per-point `PointStyle.color`) | **EMITTED** *(V2.0)* as a `sliceColor:` row channel. `PieMark`/`DonutMark` carry one of their own, mirroring `PolarMark.columnColor`; a concentric composition resolves it **per ring bucket**, so the same category may take a different colour in each ring. |
@@ -806,14 +842,24 @@ already understood (details under *V2.0 verbs* above):
   and `dataPointLabels` on `geomLine`/`geomArea`, and `labelStyle` on `geomBar`.
 - **Range-area bands.** `geomRangeArea(low:, high:)` lowers to
   `RangeAreaChartSeries` and reverses back out of a captured chart. Its bounds
-  are nullable so a gap has a row shape; `pathAnimation` and `fillGradient` stay
-  named refusals, as on `AreaMark`. Verified on the MOUNTED page —
+  are nullable so a gap has a row shape. Verified on the MOUNTED page —
   `example/test/showcase/selection_showcase_range_area_grammar_test.dart` pumps
   the selection lab, selects its Range Area family through the real picker and
   runs the generator on the live document, which emits a complete, warning-free
-  chain for both bands and the centre line. The `RangeAreaChartsPage`'s seven
-  presets still refuse, and by name: every band there carries a non-default
-  `pathAnimation` and six of seven a `fillGradient`.
+  chain for both bands and the centre line.
+- **The path and marker fields on `geomLine`, `geomArea` and `geomRangeArea`.**
+  `tension`, `dataPointMarkerRadius`, `dataPointMarkerStyle`,
+  `dataPointMarkerBackground`, `lineGlow`, `inlineLabel` and `pathAnimation` on
+  the first two, plus `fillGradient` and both baseline fill colours on
+  `geomArea`, and `fillGradient` + `pathAnimation` on `geomRangeArea`. Nullable
+  throughout; a defaulted capture reverses to null, so existing emission is
+  byte-identical. Verified on the MOUNTED page —
+  `example/test/showcase/range_area_charts_page_grammar_test.dart` walks
+  `RangeAreaChartsPage`'s own preset picker and holds **6 of its 7 presets**
+  emitting a complete, warning-free, compiling chain. The seventh,
+  `confidence`, still refuses on the **x-domain divergence** between its band
+  and its observed line — the shared-x limitation, a separate design — and that
+  file pins the refusal by name so a later slice cannot count it here.
 - **Radial geometries.** `geomPie`, `geomDonut` (with the `ring:` channel for a
   concentric composition and `concentric:` for its configuration) and
   `geomPolar`, plus the spec-level `.polarConfig(...)`. Multi-series polar

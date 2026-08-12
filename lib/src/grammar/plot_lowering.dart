@@ -918,6 +918,16 @@ LineChartSeries _lowerLine<T>(
   showDataPointMarkers:
       mark.showDataPointMarkers ?? _lineDefaults.showDataPointMarkers,
   dataPointLabels: mark.dataPointLabels ?? _lineDefaults.dataPointLabels,
+  tension: mark.tension ?? _lineDefaults.tension,
+  dataPointMarkerRadius:
+      mark.dataPointMarkerRadius ?? _lineDefaults.dataPointMarkerRadius,
+  dataPointMarkerStyle:
+      mark.dataPointMarkerStyle ?? _lineDefaults.dataPointMarkerStyle,
+  dataPointMarkerBackground:
+      mark.dataPointMarkerBackground ?? _lineDefaults.dataPointMarkerBackground,
+  lineGlow: mark.lineGlow ?? _lineDefaults.lineGlow,
+  inlineLabel: mark.inlineLabel ?? _lineDefaults.inlineLabel,
+  pathAnimation: mark.pathAnimation ?? _lineDefaults.pathAnimation,
 );
 
 AreaChartSeries _lowerArea<T>(
@@ -952,6 +962,22 @@ AreaChartSeries _lowerArea<T>(
   showDataPointMarkers:
       mark.showDataPointMarkers ?? _areaDefaults.showDataPointMarkers,
   dataPointLabels: mark.dataPointLabels ?? _areaDefaults.dataPointLabels,
+  tension: mark.tension ?? _areaDefaults.tension,
+  dataPointMarkerRadius:
+      mark.dataPointMarkerRadius ?? _areaDefaults.dataPointMarkerRadius,
+  dataPointMarkerStyle:
+      mark.dataPointMarkerStyle ?? _areaDefaults.dataPointMarkerStyle,
+  dataPointMarkerBackground:
+      mark.dataPointMarkerBackground ?? _areaDefaults.dataPointMarkerBackground,
+  lineGlow: mark.lineGlow ?? _areaDefaults.lineGlow,
+  inlineLabel: mark.inlineLabel ?? _areaDefaults.inlineLabel,
+  pathAnimation: mark.pathAnimation ?? _areaDefaults.pathAnimation,
+  // Nullable on the series, so these pass straight through: `?? _areaDefaults`
+  // would be a no-op at best, and for a real gradient it would be wrong to read
+  // as "unset means default" when unset IS the default.
+  fillGradient: mark.fillGradient,
+  aboveBaselineFillColor: mark.aboveBaselineFillColor,
+  belowBaselineFillColor: mark.belowBaselineFillColor,
 );
 
 BarChartSeries _lowerBar<T>(
@@ -1269,6 +1295,10 @@ RangeAreaChartSeries _lowerRangeArea<T>(
       markerRadius: mark.markerRadius ?? _rangeAreaDefaults.markerRadius,
       labelConfig: mark.labelConfig ?? _rangeAreaDefaults.labelConfig,
       hitTestMode: mark.hitTestMode ?? _rangeAreaDefaults.hitTestMode,
+      // `fillGradient` is nullable on the series, so null passes straight
+      // through; `pathAnimation` is not, so null resolves to the default.
+      fillGradient: mark.fillGradient,
+      pathAnimation: mark.pathAnimation ?? _rangeAreaDefaults.pathAnimation,
     );
   } on ArgumentError catch (error) {
     // The series constructor re-validates the WHOLE band, so two unrelated
