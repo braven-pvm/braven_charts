@@ -7225,6 +7225,84 @@ void main() {
         );
       }
     });
+
+    // 45d covers `.geomLine(` only. Shapes 38 and 44 were GROWN into maximal
+    // fixtures by this slice, which means the corpus lost its whole-list pin for
+    // a PLAIN, unset area or band — so nothing would have caught a regression
+    // that made a defaulted one start emitting an argument. 45e and 45f are that
+    // pin. They are separate tests rather than a loop because the two families
+    // carry different field sets and a shared list would silently under-check
+    // whichever family has more.
+    testWidgets('shape 45e: a plain .geomArea( emits NONE of the path fields', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomArea(y: samplePower, name: 'Load')
+              .build(bravenChartController: controller),
+        ),
+      );
+
+      final args = literalArguments(generated.source, '.geomArea(');
+      for (final name in const <String>[
+        'tension:',
+        'lineGlow:',
+        'dataPointMarkerRadius:',
+        'dataPointMarkerStyle:',
+        'dataPointMarkerBackground:',
+        'pathAnimation:',
+        'inlineLabel:',
+        'fillGradient:',
+        'aboveBaselineFillColor:',
+        'belowBaselineFillColor:',
+      ]) {
+        expect(
+          args.where((entry) => entry.startsWith(name)),
+          isEmpty,
+          reason: '$name must not be emitted by an area that never set it',
+        );
+      }
+    });
+
+    // MUTATION NOTE, so a future sweep does not misread this test as dead.
+    // 45e reddens on a SINGLE mutation — area's scalars go through
+    // `_optionalNumber` with no second suppression, so breaking
+    // `_defaultedOrNull` in the planner is enough (verified: area `tension`
+    // carried verbatim fails it).
+    //
+    // 45f does NOT. The range-area path fields pass through CONFIG SEAMS that
+    // suppress their own defaults, so THREE guards sit in series: the planner's
+    // `_defaultedOrNull`, the null-gate in `_emitGeometry`, and the seam's own
+    // early return. Breaking any ONE leaves the emitted text unchanged —
+    // measured, both singly. It reddens only when the planner AND the seam are
+    // broken together, which is what it is for: the conjunction is the contract,
+    // and a change that removed both suppressions is exactly the regression a
+    // plain band could not otherwise catch.
+    testWidgets('shape 45f: a plain .geomRangeArea( emits NEITHER path field', (
+      tester,
+    ) async {
+      final generated = generateGrammar(
+        await snapshotOf(
+          tester,
+          (controller) => BravenChart.of(rows)
+              .x(sampleT)
+              .geomRangeArea(low: sampleLow, high: sampleHigh, name: 'Band')
+              .build(bravenChartController: controller),
+        ),
+      );
+
+      final args = literalArguments(generated.source, '.geomRangeArea(');
+      for (final name in const <String>['fillGradient:', 'pathAnimation:']) {
+        expect(
+          args.where((entry) => entry.startsWith(name)),
+          isEmpty,
+          reason: '$name must not be emitted by a band that never set it',
+        );
+      }
+    });
   });
 
   // =========================================================================
